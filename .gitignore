@@ -1,0 +1,9 @@
+# This repository holds no build output and no keys: APKs go to Releases, keys never leave the owner's machine
+*.apk
+*.aab
+*.jks
+*.keystore
+*.p12
+.env
+.env.*
+.DS_Store

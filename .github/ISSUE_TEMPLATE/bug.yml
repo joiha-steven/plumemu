@@ -1,0 +1,35 @@
+name: Something is wrong
+description: Plumemu does something it should not, or fails to do what it should.
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Plumemu version
+      description: Settings › About
+      placeholder: 0.0.1-alpha
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: AYN Thor, Android 13
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, step by step, and what you saw.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or anything else
+      description: Drag images here. Please do not attach ROMs, BIOS files or keys.

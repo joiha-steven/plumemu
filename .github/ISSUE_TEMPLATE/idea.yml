@@ -1,0 +1,15 @@
+name: Idea
+description: Something Plumemu could do, or do better.
+labels: [idea]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What you would like, and when it would help you.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Your device (optional)
