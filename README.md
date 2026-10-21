@@ -3,11 +3,11 @@
 <p align="center">A calm, light launcher for Android retro handhelds.</p>
 
 <p align="center">
-  <img src="media/home.png" width="720" alt="Plumemu's main screen: systems on the left, Super Nintendo games in a list">
+  <img src="media/hero.png" width="100%" alt="Plumemu: the system list in front, a light game list and the colour settings behind">
 </p>
 
 <p align="center">
-  <b>Alpha 0.0.1</b> · Android 6.0 or later · tested on the AYN Thor only ·
+  <b>0.0.1-alpha</b> · Android 6.0 or later · tested on the AYN Thor only ·
   <a href="../../releases">Download</a>
 </p>
 
@@ -102,6 +102,6 @@ own developers.
 
 - Report a problem or an idea: [Issues](../../issues), with the Plumemu version (Settings ›
   About), your device and its Android version.
-- [Privacy](PRIVACY.md): this alpha sends nothing anywhere.
+- [Privacy](PRIVACY.md)
 - [Licence](LICENSE.md): free to download and use; not open source, all rights reserved.
 - [Third-party material](THIRD_PARTY.md): fonts, libraries and data inside the app.
