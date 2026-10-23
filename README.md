@@ -69,16 +69,16 @@
 ## Light on the hardware
 
 Many retro handhelds are slow and run old Android, so Plumemu is built to use as little as it
-can. Measured with 0.0.1-alpha on a slow Android 6.0 emulator (2 GB of memory) with a library of
+can. Measured with 0.0.2-alpha on a slow Android 6.0 emulator (2 GB of memory) with a library of
 10,000 games:
 
 | | |
 |---|---|
-| Download | 7.8 MB (0.0.2-alpha; 3.8 MB before box art) |
-| Start to your library | 0.2 s |
-| Memory | 44–53 MB |
+| Download | 7.8 MB |
+| Start to your library | 0.25 s |
+| Memory | 54 MB |
 | CPU while it sits on the home screen | none; the clock redraws once a minute |
-| Running in the background | nothing |
+| Running in the background | nothing, except box art downloads you asked for |
 
 ## Devices
 
