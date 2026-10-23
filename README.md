@@ -3,7 +3,7 @@
 <p align="center">A calm, light launcher for Android retro handhelds.</p>
 
 <p align="center">
-  <img src="media/hero.png" width="100%" alt="Plumemu on the AYN Thor: the PlayStation game list with Silent Hill chosen and its cover on the second screen; below, a grid of GameCube covers, search across systems, and Settings with Back up and Restore">
+  <img src="media/hero.png" width="100%" alt="Six Plumemu screens from the AYN Thor in four colour schemes: the system list in Plum, Paper and Sand, search across every system, the ROM folder settings, and Back up and Restore">
 </p>
 
 <p align="center">
