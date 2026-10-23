@@ -3,7 +3,7 @@
 <p align="center">A calm, light launcher for Android retro handhelds.</p>
 
 <p align="center">
-  <img src="media/hero.png" width="100%" alt="Plumemu: the system list in front, a light game list and the colour settings behind">
+  <img src="media/hero.png" width="100%" alt="Plumemu on the AYN Thor: the PlayStation game list with Silent Hill chosen, and its cover and details on the second screen">
 </p>
 
 <p align="center">
