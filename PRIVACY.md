@@ -1,12 +1,30 @@
 # Privacy
 
-Last updated: 23 October 2026.
+Last updated: 24 October 2026.
 
-## Alpha builds send nothing to Plumemu
+## Alpha and beta builds send nothing about you
 
-Builds marked alpha (tags `alpha.*`) have no Plumemu account, no usage statistics and no crash
-reports. Nothing Plumemu sees is sent to Plumemu or to anyone else, with one exception you choose
-yourself: box art from ScreenScraper, below.
+Builds marked alpha or beta (tags `alpha.*`, `beta.*`) have no Plumemu account, no usage statistics and no crash
+reports. Nothing Plumemu knows about you, your games or your device is sent to Plumemu or to anyone
+else. Two things go over the network: the update check, below, which carries nothing about you,
+and box art from ScreenScraper, only if you sign in.
+
+## Update check
+
+Once a day, on Wi-Fi or Ethernet that is not metered, when Plumemu comes to the front, it asks
+`plumemu-app.stevensdesk.com` whether there is a newer version. It also asks when you press
+Settings › About › Check for updates.
+
+- **What is sent**: a plain HTTPS request for one file, `update/latest.json`. No identifier, no
+  account, nothing about your library, your device or the version you have.
+- **Who sees it**: the server is hosted by Cloudflare, which sees your IP address and that the
+  request comes from an app (`okhttp/<version>`), as for any web request.
+- **Downloading an update** happens only after you press Update (on mobile data only after a
+  second yes), from the same server.
+- **What stays on the device**: when it last checked and what it found, in storage that is never
+  backed up.
+- **Turn it off** with Settings › About › Check for updates daily. Check for updates then runs only
+  when you press it.
 
 ## Box art from ScreenScraper (only if you sign in)
 
@@ -14,31 +32,45 @@ Box art and game details come from [ScreenScraper](https://www.screenscraper.fr)
 ScreenScraper account. Without an account Plumemu does not contact ScreenScraper at all.
 
 - **What is sent to ScreenScraper**: your ScreenScraper user name and password, and for each
-  game its system, its file name and size, and, when Plumemu knows them, the file's checksum and
-  the game's serial code. When you search for a cover from the game menu, your search words are
-  sent too. Box art is fetched over Wi-Fi only. ScreenScraper's own privacy terms apply to what
-  it receives.
+  game its system, its file name and size, and, when Plumemu knows them, the file's checksum
+  (CRC32) and the game's serial code; if those find nothing, the game's title, to search by name.
+  When you rename a game with Fix name, the new name is sent
+  once to look up its box art. When you search for a cover from the game menu, your search words
+  are sent too. Box art is fetched over Wi-Fi only. ScreenScraper's own privacy terms apply to
+  what it receives.
 - **What stays on the device**: the box art and details it sends back, and your password,
   encrypted with a key that never leaves the device.
 - **Sign out** in Settings › Library › ScreenScraper removes the account from the device.
 - Your ScreenScraper account is never written to Plumemu's logs.
 
+## Battery use
+
+On a handheld with two screens, while you play with the lower screen's clock and Show battery on,
+Plumemu reads the battery level and current to say how long the charge lasts. For each play it
+keeps how long it measured, the charge at the start and the end, and the average draw, so it can
+tell a game's usual pace.
+
+- **Recorded on the device only, never sent** to Plumemu or anyone else.
+- It is read only while that clock shows and the screen is on.
+- **Turn it off** with Show battery off, or the lower screen set to black while you play.
+
 ## Backups
 
 Settings › Advanced › Back up… saves a file where you choose. It holds your settings and, while
 you are signed in, your ScreenScraper user name and password in plain text, so keep it private. A
-backup of everything also holds your library, box art and play time. Plumemu never sends a
-backup anywhere; where the file goes is up to you.
+backup of everything also holds your library, box art, play time and battery use. Plumemu never
+sends a backup anywhere; where the file goes is up to you.
 
 ## What Plumemu reads on the device
 
 - **The folders you pick** in Android's folder picker. Plumemu cannot see any other folder, and
-  you can remove a folder at any time in Settings.
+  you can remove a folder at any time in Settings. It never deletes, moves or renames your files.
 - **Which emulators are installed**, by asking Android about a fixed list of known emulator apps.
 - **The apps you can open**, to show them under Apps.
 - **Shortcuts you add to Plumemu** from other apps (for example a Steam game from GameNative),
   kept as games.
 - **When and how long you play**, to show play time under Settings › Statistics.
+- **The battery**, while you play on two screens, as above.
 
 All of it stays on the device, in Plumemu's own storage, and is removed when Plumemu is
 uninstalled.
@@ -52,3 +84,4 @@ sent, where to, and how long it is kept.
 ## Questions
 
 Open an issue under [Issues](../../issues).
+

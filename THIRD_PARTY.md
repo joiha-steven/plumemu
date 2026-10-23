@@ -2,7 +2,7 @@
 
 Fonts, libraries and data inside the Plumemu app, with their licences. The same list, with the
 full licence texts, is in the app under Settings › About › Open-source licenses. Updated with each
-release; this list matches 0.0.2-alpha.
+release; this list matches 0.0.3-beta.
 
 | What | Licence |
 |---|---|
