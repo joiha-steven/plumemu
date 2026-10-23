@@ -113,6 +113,7 @@ own developers.
 
 - Report a problem or an idea: [Issues](../../issues), with the Plumemu version (Settings ›
   About), your device and its Android version.
+- [Changelog](CHANGELOG.md): what changed in each version.
 - [Privacy](PRIVACY.md)
 - [Licence](LICENSE.md): free to download and use; not open source, all rights reserved.
 - [Third-party material](THIRD_PARTY.md): fonts, libraries and data inside the app.
