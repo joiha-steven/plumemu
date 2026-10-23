@@ -3,7 +3,7 @@
 <p align="center">A calm, light launcher for Android retro handhelds.</p>
 
 <p align="center">
-  <img src="media/hero.png" width="100%" alt="Plumemu on the AYN Thor: the PlayStation game list with Silent Hill chosen, and its cover and details on the second screen">
+  <img src="media/hero.png" width="100%" alt="Plumemu on the AYN Thor: the PlayStation game list with Silent Hill chosen and its cover on the second screen; below, a grid of GameCube covers, search across systems, and Settings with Back up and Restore">
 </p>
 
 <p align="center">
@@ -35,19 +35,7 @@
   one file, and put it back on this device or a new one.
 - **Your colours.** A background, light or dark text and an accent, used exactly as you pick them.
 
-<p align="center">
-  <img src="media/two-screens.png" width="70%" alt="The AYN Thor's two screens: a grid of GameCube covers above, the chosen game's cover and details below">
-</p>
-
 <table>
-  <tr>
-    <td><img src="media/search.png" alt="Search across every system, with each game's system next to it"></td>
-    <td><img src="media/backup.png" alt="Settings, Advanced: Back up and Restore"></td>
-  </tr>
-  <tr>
-    <td align="center">One search for every system</td>
-    <td align="center">Back up and restore</td>
-  </tr>
   <tr>
     <td><img src="media/setup.png" alt="Setup: the chosen ROMs folder and Continue"></td>
     <td><img src="media/game-info.png" alt="Game info, including where the game's name came from"></td>
