@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <b>0.0.1-alpha</b> · Android 6.0 or later · tested on the AYN Thor only ·
+  <b>0.0.2-alpha</b> · Android 6.0 or later · tested on the AYN Thor only ·
   <a href="../../releases">Download</a>
 </p>
 
@@ -25,9 +25,29 @@
 - **One sliding view.** Systems, games and details move as one strip, laid out for 16:9 and 4:3
   screens.
 - **Buttons and touch**, equally, everywhere.
+- **Box art, if you want it.** Sign in with your own free [ScreenScraper](https://www.screenscraper.fr)
+  account and Plumemu fetches box art and game details over Wi-Fi. Show any system as a list or
+  as a grid of covers in three sizes. Wrong cover? Pick the right one from the game menu.
+- **Second screen.** On a handheld with two screens, like the AYN Thor, the lower screen shows
+  the chosen game's cover and details, your statistics while Settings is open, and a clock or
+  nothing at all while you play. Everything still works on one screen.
+- **Back up and restore.** Save your settings, or everything (library, box art, play time), into
+  one file, and put it back on this device or a new one.
 - **Your colours.** A background, light or dark text and an accent, used exactly as you pick them.
 
+<p align="center">
+  <img src="media/two-screens.png" width="70%" alt="The AYN Thor's two screens: a grid of GameCube covers above, the chosen game's cover and details below">
+</p>
+
 <table>
+  <tr>
+    <td><img src="media/search.png" alt="Search across every system, with each game's system next to it"></td>
+    <td><img src="media/backup.png" alt="Settings, Advanced: Back up and Restore"></td>
+  </tr>
+  <tr>
+    <td align="center">One search for every system</td>
+    <td align="center">Back up and restore</td>
+  </tr>
   <tr>
     <td><img src="media/setup.png" alt="Setup: the chosen ROMs folder and Continue"></td>
     <td><img src="media/game-info.png" alt="Game info, including where the game's name came from"></td>
@@ -49,11 +69,12 @@
 ## Light on the hardware
 
 Many retro handhelds are slow and run old Android, so Plumemu is built to use as little as it
-can. Measured on a slow Android 6.0 emulator (2 GB of memory) with a library of 10,000 games:
+can. Measured with 0.0.1-alpha on a slow Android 6.0 emulator (2 GB of memory) with a library of
+10,000 games:
 
 | | |
 |---|---|
-| Download | 3.8 MB |
+| Download | 7.8 MB (0.0.2-alpha; 3.8 MB before box art) |
 | Start to your library | 0.2 s |
 | Memory | 44–53 MB |
 | CPU while it sits on the home screen | none; the clock redraws once a minute |
@@ -64,11 +85,12 @@ can. Measured on a slow Android 6.0 emulator (2 GB of memory) with a library of 
 **Tested on the AYN Thor (upper screen) only, the one device I have.** Plumemu is laid out for
 handheld screens from 4.5 to 6 inches in 16:9 and 4:3 (Retroid Pocket 5, 4 Pro, Mini and Nova,
 AYN Odin, and similar), but those are untested. If you try it on one, a short report under
-[Issues](../../issues) helps a lot. Plumemu uses one screen.
+[Issues](../../issues) helps a lot. A second screen is optional: on the Thor it shows details and
+a clock, and nothing needs it.
 
 ## Install
 
-1. Download `plumemu-0.0.1-alpha.apk` from the latest [release](../../releases).
+1. Download `plumemu-0.0.2-alpha.apk` from the latest [release](../../releases).
 2. Open it on the device and allow the install when Android asks.
 3. Open Plumemu and pick your ROMs folder. To make it the home screen, say yes when it asks, or
    press Home and choose Plumemu.
@@ -82,16 +104,17 @@ AYN Odin, and similar), but those are untested. If you try it on one, a short re
 | X | Search |
 | Y | Add to or remove from Favorites |
 | START | Game menu; Settings from the system column |
-| L1 / R1 | Previous / next system |
+| SELECT | List or grid of covers |
+| L1 / R1 | Previous / next system; in a grid, smaller / larger covers |
+| Home | With Plumemu as the home screen: back to the game you played last |
 
 The button printed A confirms. Settings › Advanced can make the bottom button (B, or ✕) confirm
 instead. Touch works everywhere: tap to select, tap again to play.
 
 ## Not in this alpha
 
-- Box art and game details (they come with ScreenScraper, using your own account).
 - Languages other than English.
-- More name lists: for now names come from MAME's data, the game's own code and the file name.
+- Screenshots and videos of games; box art and details only for now.
 
 ## Not included, ever
 
