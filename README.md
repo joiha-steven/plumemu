@@ -4,7 +4,7 @@
 
 
 <p align="center">
-  <img src="media/hero.png" width="100%" alt="Plumemu on the AYN Thor: Super Nintendo as a grid of covers (drawn stand-ins); below, Dreamcast with its system band in Ivory and the library in the Plumemu colors; then five smaller screens: Paper, Indigo search, Charcoal colors, Banana and the second screen">
+  <img src="media/hero.png" width="100%" alt="Plumemu on the AYN Thor: the Super Nintendo list with the chosen game's cover, year, maker, genre, rating and description on the right (the cover is a drawn stand-in); below, the same system as a grid of covers and Dreamcast with its system band in Ivory; then five smaller screens: Paper, Indigo search, Charcoal colors, Banana and the second screen">
 </p>
 
 <p align="center">
