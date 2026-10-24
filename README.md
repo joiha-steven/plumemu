@@ -4,7 +4,7 @@
 
 
 <p align="center">
-  <img src="media/hero.png" width="100%" alt="Plumemu on the AYN Thor: the system list in the Plumemu colors, and five smaller screens: Paper, Indigo search, Charcoal colors, Ivory settings and the second screen">
+  <img src="media/hero.png" width="100%" alt="Plumemu on the AYN Thor: Super Nintendo as a grid of covers (drawn stand-ins); below, Dreamcast with its system band in Ivory and the library in the Plumemu colors; then five smaller screens: Paper, Indigo search, Charcoal colors, Banana and the second screen">
 </p>
 
 <p align="center">
@@ -16,34 +16,38 @@
 
 ## What it does
 
-- **Two-minute setup.** Pick your ROMs folder in Android's own folder picker. No access to all
-  your files, ever, and Plumemu never deletes, moves or renames a game file.
-- **Emulators picked for you.** Plumemu finds the emulators you have installed and picks one per
-  system. Any game or system can use another one.
 - **Names your games itself, offline.** It reads the game's own code inside zip, 7z and CHD files
   and disc images, knows about 42,000 arcade sets by their short names, and cleans up messy file
   names. Arcade games get their clean name, with the region in its own column. No account, no
   internet. Wrong name? Fix it from the game menu; the fix sticks.
-- **One row per game.** Copies of one game (regions, revisions, arcade sets) show as one row.
-  Other versions in the game menu picks which one plays.
-- **New games show up by themselves.** Copy games in or put in an SD card, and they appear when you
-  come back to Plumemu.
-- **About each system.** Above a system's games, a short band with its badge, the years it was
-  made and a few lines about it. Settings › Home screen › System info turns it off.
-- **One sliding view.** Systems, games and details move as one strip, laid out for 16:9 and 4:3
-  screens.
-- **Buttons and touch**, equally, everywhere. Plumemu has its own compact keyboard, made for the
-  D-pad, so Search keeps its results in view while you type.
-- **Box art, if you want it.** Sign in with your own free [ScreenScraper](https://www.screenscraper.fr)
-  account and Plumemu fetches box art and game details over Wi-Fi. Show any system, Recent or
-  Favorites as a list or as a grid of covers in three sizes. Apps can be a grid of icons too. Wrong cover? Pick the right one from the game menu.
 - **Second screen, and your battery.** On a handheld with two screens, like the AYN Thor, the lower
   screen shows the chosen game's details, your statistics while Settings is open, and while you
   play a clock with how long the battery lasts at this game's pace. A game you have played says
   "2 h on this charge" before you start it. Everything still works on one screen.
+- **Light enough for old handhelds.** An 8.3 MB download that runs on Android 6.0, opens your
+  library in about a quarter of a second, and uses no CPU while it sits on the home screen.
+  [Measured](#light-on-the-hardware) on a slow emulator with 10,000 games.
+- **Your files stay yours.** Setup takes two minutes: pick your ROMs folder in Android's own
+  folder picker. No access to all your files, ever, and Plumemu never deletes, moves or renames
+  a game file.
+- **One row per game.** Copies of one game (regions, revisions, arcade sets) show as one row.
+  Other versions in the game menu picks which one plays.
+- **New games show up by themselves.** Copy games in or put in an SD card, and they appear when you
+  come back to Plumemu.
+- **Emulators picked for you.** Plumemu finds the emulators you have installed and picks one per
+  system. Any game or system can use another one.
+- **Box art, if you want it.** Sign in with your own free [ScreenScraper](https://www.screenscraper.fr)
+  account and Plumemu fetches box art and game details over Wi-Fi. Show any system, Recent or
+  Favorites as a list or as a grid of covers in three sizes. Apps can be a grid of icons too. Wrong cover? Pick the right one from the game menu.
+- **About each system.** Above a system's games, a short band with its badge, the years it was
+  made and a few lines about it. Settings › Home screen › System info turns it off.
 - **Colors.** Ten ready-made color sets: Plumemu, Paper, Pocket, Dot matrix, Super, Indigo,
   Charcoal, Ivory, Banana and Cream, each previewed before you pick it. Super, Charcoal and Ivory
   color the A, B, X and Y keys. Or choose your own background, text and accent colors.
+- **One sliding view.** Systems, games and details move as one strip, laid out for 16:9 and 4:3
+  screens.
+- **Buttons and touch**, equally, everywhere. Plumemu has its own compact keyboard, made for the
+  D-pad, so Search keeps its results in view while you type.
 - **Back up and restore.** Save your settings, or everything (library, box art, play time), into
   one file, checked after writing, and put it back on this device or a new one.
 - **Updates from inside the app.** Once a day on Wi-Fi Plumemu looks for a new version; Settings ›
@@ -51,42 +55,46 @@
 - **Anonymous usage statistics and crash reports**, to decide what to fix first. Setup asks, and
   Settings › Statistics turns them off at any time. [Privacy](PRIVACY.md) lists what is sent.
 
+<p align="center">
+  <img src="media/color-sets.png" width="100%" alt="The same Dreamcast screen in all ten ready-made color sets, tilted side by side: Plumemu, Paper, Pocket, Dot matrix, Super, Indigo, Charcoal, Ivory, Banana and Cream">
+</p>
+
 <table>
   <tr>
-    <td><img src="media/battery-in-game.png" alt="The lower screen while a game runs: the clock, the time left on this charge and a chart of this play's battery use"></td>
-    <td><img src="media/keyboard.png" alt="Search with Plumemu's own keyboard; the results stay in view above it"></td>
+    <td width="50%"><img src="media/battery-in-game.png" alt="The lower screen while a game runs: the clock, the time left on this charge and a chart of this play's battery use"></td>
+    <td width="50%"><img src="media/system-card.png" alt="The lower screen's card for Dreamcast: the same facts, the number of games and the game played last"></td>
   </tr>
   <tr>
     <td align="center">How long your battery lasts, while you play</td>
-    <td align="center">A keyboard made for the D-pad</td>
+    <td align="center">Each system's facts on the second screen</td>
   </tr>
   <tr>
-    <td><img src="media/grid.png" alt="Super Nintendo as a grid of covers in dark colors, Donkey Kong Country 2 selected (the covers are drawn stand-ins)"></td>
-    <td><img src="media/grid-light.png" alt="The same Super Nintendo grid in the light Paper colors"></td>
+    <td width="50%"><img src="media/grid.png" alt="Super Nintendo as a grid of covers in dark colors, Donkey Kong Country 2 selected (the covers are drawn stand-ins)"></td>
+    <td width="50%"><img src="media/grid-light.png" alt="The same Super Nintendo grid in the light Paper colors"></td>
   </tr>
   <tr>
     <td align="center">Any system as a grid of covers</td>
     <td align="center">In three sizes, light or dark</td>
   </tr>
   <tr>
-    <td><img src="media/system-info.png" alt="Dreamcast's games with a short band above them: its badge, Sega, home console, 1998 to 2001, and one line about it"></td>
-    <td><img src="media/system-card.png" alt="The lower screen's card for Dreamcast: the same facts, the number of games and the game played last"></td>
+    <td width="50%"><img src="media/system-info.png" alt="Dreamcast's games with a short band above them: its badge, Sega, home console, 1998 to 2001, and one line about it"></td>
+    <td width="50%"><img src="media/keyboard.png" alt="Search with Plumemu's own keyboard; the results stay in view above it"></td>
   </tr>
   <tr>
     <td align="center">A few lines about each system</td>
-    <td align="center">The same on the second screen</td>
+    <td align="center">A keyboard made for the D-pad</td>
   </tr>
   <tr>
-    <td><img src="media/colors.png" alt="Settings › Appearance › Colors: the ten ready-made color sets, each shown as a small preview"></td>
-    <td><img src="media/button-colors.png" alt="Game Boy Advance games in the Super color set, with the A, B, X and Y keys in red, yellow, blue and green"></td>
+    <td width="50%"><img src="media/colors.png" alt="Settings › Appearance › Colors: the ten ready-made color sets, each shown as a small preview"></td>
+    <td width="50%"><img src="media/button-colors.png" alt="Game Boy Advance games in the Super color set, with the A, B, X and Y keys in red, yellow, blue and green"></td>
   </tr>
   <tr>
     <td align="center">Ten ready-made color sets</td>
     <td align="center">A, B, X and Y in their classic colors</td>
   </tr>
   <tr>
-    <td><img src="media/settings.png" alt="Settings › Library: ROM folders, Rescan library, Find new games automatically, Sort games, System order, Systems, ScreenScraper and Box art region"></td>
-    <td><img src="media/update.png" alt="Settings › About: an update is available, with its notes and an Update button"></td>
+    <td width="50%"><img src="media/settings.png" alt="Settings › Library: ROM folders, Rescan library, Find new games automatically, Sort games, System order, Systems, ScreenScraper and Box art region"></td>
+    <td width="50%"><img src="media/update.png" alt="Settings › About: an update is available, with its notes and an Update button"></td>
   </tr>
   <tr>
     <td align="center">Settings that say what they do</td>
