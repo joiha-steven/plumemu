@@ -4,7 +4,7 @@
 
 
 <p align="center">
-  <img src="media/hero.png" width="100%" alt="Plumemu on the AYN Thor: the system list in the Plumemu colors, and four smaller screens in other color sets">
+  <img src="media/hero.png" width="100%" alt="Plumemu on the AYN Thor: the system list in the Plumemu colors, and five smaller screens: Paper, Indigo search, Charcoal colors, Ivory settings and the second screen">
 </p>
 
 <p align="center">
@@ -55,6 +55,14 @@
   <tr>
     <td align="center">How long your battery lasts, while you play</td>
     <td align="center">A keyboard made for the D-pad</td>
+  </tr>
+  <tr>
+    <td><img src="media/grid.png" alt="Super Nintendo as a grid of covers in dark colors, Donkey Kong Country 2 selected (the covers are drawn stand-ins)"></td>
+    <td><img src="media/grid-light.png" alt="The same Super Nintendo grid in the light Paper colors"></td>
+  </tr>
+  <tr>
+    <td align="center">Any system as a grid of covers</td>
+    <td align="center">In three sizes, light or dark</td>
   </tr>
   <tr>
     <td><img src="media/colors.png" alt="Settings › Appearance › Colors: the ten ready-made color sets, each shown as a small preview"></td>
