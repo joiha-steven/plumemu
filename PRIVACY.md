@@ -2,11 +2,32 @@
 
 Last updated: 24 October 2026.
 
-## Alpha and beta builds send nothing about you
+## Usage statistics and crash reports
 
-Builds marked alpha or beta (tags `alpha.*`, `beta.*`) have no Plumemu account, no usage statistics and no crash
-reports. Nothing Plumemu knows about you, your games or your device is sent to Plumemu or to anyone
-else. Two things go over the network: the update check, below, which carries nothing about you,
+Plumemu sends anonymous usage statistics and crash reports to the developer. Sending starts at the
+first launch and is on by default; you can switch it off in the setup or later in Settings ›
+Advanced › Send usage statistics.
+
+- **What is sent**: your country, your device model, the Android and Plumemu versions, a random
+  install number that is not linked to you, which screens and settings are used, how often and how
+  long Plumemu is used, and how long you play, by system and emulator. Crash reports hold what
+  went wrong and where in the app, and may contain file and folder names.
+- **What is never sent**: game titles, the words you search for, your ScreenScraper account, the
+  other apps on your device, your advertising ID. Your IP address reaches the server with any
+  connection; it is used only to tell the country and is not kept.
+- **Switching it off** sends one anonymous "switched off" count, with your country and device
+  details but no install number, and then nothing more. Crash reports stop too.
+- **Kept** by the developer, with no time limit.
+
+## Problem reports
+
+Settings › About › Report a problem sends a report only when you press Send. It holds what you
+wrote, an e-mail address if you give one, and, unless you untick it, Plumemu's log and device
+details. The log may contain file and folder names. You see what will be sent before you press
+Send. Settings › Advanced › Export logs only shares the log file where you choose; Plumemu sends
+nothing itself. Reports are kept by the developer, with no time limit.
+
+Two other things go over the network: the update check, below, which carries nothing about you,
 and box art from ScreenScraper, only if you sign in.
 
 ## Update check
@@ -74,12 +95,6 @@ sends a backup anywhere; where the file goes is up to you.
 
 All of it stays on the device, in Plumemu's own storage, and is removed when Plumemu is
 uninstalled.
-
-## Later versions
-
-Later versions are planned to send anonymous usage statistics, with a switch in setup and in
-Settings to turn them off. Before any version sends anything, this page will say exactly what is
-sent, where to, and how long it is kept.
 
 ## Questions
 

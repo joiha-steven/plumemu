@@ -28,6 +28,8 @@
   Other versions in the game menu picks which one plays.
 - **New games show up by themselves.** Copy games in or put in an SD card, and they appear when you
   come back to Plumemu.
+- **About each system.** Above a system's games, a short band with its badge, the years it was
+  made and a few lines about it. Settings › Home screen › System info turns it off.
 - **One sliding view.** Systems, games and details move as one strip, laid out for 16:9 and 4:3
   screens.
 - **Buttons and touch**, equally, everywhere. Plumemu has its own compact keyboard, made for the
@@ -46,6 +48,8 @@
   one file, checked after writing, and put it back on this device or a new one.
 - **Updates from inside the app.** Once a day on Wi-Fi Plumemu looks for a new version; Settings ›
   About › Update installs it.
+- **Anonymous usage statistics and crash reports**, to decide what to fix first. Setup asks, and
+  Settings › Statistics turns them off at any time. [Privacy](PRIVACY.md) lists what is sent.
 
 <table>
   <tr>
@@ -63,6 +67,14 @@
   <tr>
     <td align="center">Any system as a grid of covers</td>
     <td align="center">In three sizes, light or dark</td>
+  </tr>
+  <tr>
+    <td><img src="media/system-info.png" alt="Dreamcast's games with a short band above them: its badge, Sega, home console, 1998 to 2001, and one line about it"></td>
+    <td><img src="media/system-card.png" alt="The lower screen's card for Dreamcast: the same facts, the number of games and the game played last"></td>
+  </tr>
+  <tr>
+    <td align="center">A few lines about each system</td>
+    <td align="center">The same on the second screen</td>
   </tr>
   <tr>
     <td><img src="media/colors.png" alt="Settings › Appearance › Colors: the ten ready-made color sets, each shown as a small preview"></td>
@@ -90,12 +102,12 @@ can. Measured with 0.0.3-beta on a slow Android 6.0 emulator (2 GB of memory) wi
 
 | | |
 |---|---|
-| Download | 8.2 MB |
+| Download | 8.3 MB |
 | Start to your library | 0.24 s |
 | Memory | 56 MB |
 | CPU while it sits on the home screen | none; the clock redraws once a minute |
 | Looking for new games when you come back to Plumemu | usually 12 to 22 ms when nothing changed |
-| Running in the background | nothing, except box art downloads you asked for |
+| Running in the background | nothing, except box art downloads you asked for and one read of new game files after a scan |
 
 The battery figures read the battery only while the lower screen's clock shows and the screen is
 on: once a second for two minutes, then every ten seconds. On a 24-minute recording of the AYN Thor
@@ -134,7 +146,8 @@ play. Settings › About › Check for updates daily turns the daily check off.
 | Y | Add to or remove from Favorites |
 | START | Game menu; Settings from the system column |
 | SELECT | List or grid (covers, or app icons in Apps) |
-| L1 / R1 | Previous / next system; in a grid, smaller / larger covers |
+| L2 / R2 | Previous / next system |
+| L1 / R1 | In a list, previous / next letter; in a game grid, smaller / larger covers |
 | Home | With Plumemu as the home screen: back to the game you played last |
 
 The button printed A confirms. Settings › Advanced can make the bottom button (B, or ✕) confirm
@@ -157,8 +170,9 @@ own developers.
 
 ## More
 
-- Report a problem or an idea: [Issues](../../issues), with the Plumemu version (Settings ›
-  About), your device and its Android version.
+- Report a problem or an idea: Settings › About › Report a problem inside the app, or
+  [Issues](../../issues) with the Plumemu version (Settings › About), your device and its Android
+  version.
 - [Changelog](CHANGELOG.md): what changed in each version.
 - [Privacy](PRIVACY.md)
 - [License](LICENSE.md): free to download and use; not open source, all rights reserved.

@@ -9,45 +9,49 @@ The first beta.
 
 ### New
 
-- **Colors.** Ten ready-made color sets: Plumemu, Paper, Pocket, Dot matrix, Super, Indigo,
-  Charcoal, Ivory, Banana and Cream, each shown as a small preview in Settings › Appearance › Colors.
-  Super, Charcoal and Ivory color the A, B, X and Y keys. Your own colors stay under Custom.
+- **Colors.** Ten ready-made sets, previewed in Settings › Appearance › Colors: Plumemu, Paper,
+  Pocket, Dot matrix, Super, Indigo, Charcoal, Ivory, Banana and Cream. Super, Charcoal and Ivory
+  color the A, B, X and Y keys; Ivory as on the AYN Thor. Your own colors stay under Custom.
 - **Battery use on the second screen.** While you play: the time left ("About 4 h 15 min left",
   "empty at 22:32"), this play on a three-hour chart, and its pace against the game's usual one.
   While picking, a game measured before says "2 h on this charge · 30% an hour". With Show battery on.
 - **Updates from inside Plumemu.** Once a day on Wi-Fi it checks for a new version; START Settings
   shows a dot, and Settings › About › Update installs it after checking it really is Plumemu.
+  About shows the version with its build number, as in 0.0.3-beta (549).
 - **Plumemu's own keyboard everywhere you type:** Search, game names, Fix box art, color codes and
   the ScreenScraper sign-in. Made for the D-pad; results stay in view. Settings › Controls ›
   Keyboard switches back to Android's.
 - **Arcade games by their clean name**, the region in its own column, and the sets of one game as
   one row. **Other versions** in the game menu picks which copy plays (regions, revisions, arcade
   sets), and Plumemu remembers it.
+- **About each system.** Above a system's games, a short band shows its badge, the years it was
+  made and a few lines about it; it scrolls away with the list. The second screen's system card
+  shows the same facts. Settings › Home screen › System info turns it off.
+- **New games show up by themselves.** Copy games in or put in an SD card, and they appear when
+  you come back to Plumemu; only changed folders are read. Loose cartridges are then read whole in
+  the background, so more games get their exact name.
+- **Box art matches better.** A cover found by a product code must come from the same system (some
+  Game Boy Advance, Super Nintendo and DS games had another game's); those are asked again. After
+  Fix name, the new name is looked up and its cover taken only on an exact match.
+- **Anonymous usage statistics and crash reports**, to decide what to fix first. Setup asks;
+  Settings › Statistics › Send usage statistics turns them off. Settings › About › Report a problem
+  sends a message. Privacy lists exactly what is sent.
 - **Safer backups.** A backup is read back and checked before it says Saved; a damaged file is
   deleted and you are told. A restore skips a damaged picture, says how many it left out, and goes on.
-- **Cleaner text:** one set of text sizes on every screen, focused rows in a real medium weight, and
-  Info scrolls with Up and Down, or a finger, instead of leaving rows out.
-- **New games show up by themselves.** Copy games into a ROM folder or put in an SD card, and they
-  appear when you come back to Plumemu. Only folders that changed are read.
-- **Push right twice to play** (off by default; setup asks): play with one hand. The first push marks
-  the game, the second starts it.
-- **Rename a game, get its box art.** After Fix name, Plumemu looks the new name up on ScreenScraper
-  and takes the cover only when the match is exact.
-- **Grid:** smaller covers by default, a thin edge so dark covers no longer melt into the
-  background, covers no longer vanish under the cursor, and each system stays a list or a grid
-  after a restart or an update.
+- **L2 / R2 switch system** on the main screen, in lists and grids alike (buttons or analog
+  triggers). L1 / R1 jump to the previous / next letter in a list and change the size in a game
+  grid. The D-pad and arrows only move.
+- **Grid:** starts at Medium; a thin edge so dark covers no longer melt into the background;
+  covers no longer vanish under the cursor; each system stays a list or a grid after a restart.
 - **Grid view for Recent, Favorites and Apps.** SELECT switches, and each remembers it. Recent and
-  Favorites keep every cover's own shape and name its system; Apps shows app icons at one size,
-  with or without box art.
-- **Details** show real play facts; on wide screens games without box art get a text column. Game
-  rows show year and region where the title still fits.
-- **Settings reordered and reworded.** Statistics comes right after Home screen; labels say what
-  they do (Find new games automatically, Show clock, Send usage statistics); rows that open a page
-  say Open. Privacy says exactly what goes to ScreenScraper.
-- **The buttons stay with Plumemu.** After the AYN button or a touch on the lower screen, the
-  controller comes back to the upper screen by itself.
-- Anything you ask for yourself says why it cannot run (no Wi-Fi, sign-in needed, daily limit), and a
-  low battery no longer stops it. Apps open with A or a second tap, or say why they cannot.
+  Favorites keep every cover's own shape and name its system; Apps shows app icons at one size.
+- **Cleaner text and details:** one set of text sizes on every screen, focused rows in a real
+  medium weight, Info scrolls, Details show real play facts, and game rows show year and region
+  where the title still fits.
+- **Controls:** push right twice to play with one hand (off by default; setup asks). After the AYN
+  button or a touch on the lower screen, the buttons come back to Plumemu by themselves.
+- **Settings reordered and reworded**, so each label says what it does. Anything you ask for says
+  why it cannot run (no Wi-Fi, sign-in needed, daily limit). Android's Settings is first in Apps.
 
 ### Not in this version
 
@@ -57,8 +61,7 @@ The first beta.
 ### Known issues
 
 - Updating from 0.0.2-alpha is a manual install; updates from inside Plumemu start with this version.
-- Some covers belong to another game (seen on Game Boy Advance). Game menu › Fix box art… picks
-  the right one.
+- A few covers may still belong to another game. Game menu › Fix box art… picks the right one.
 - The second screen is tested on the AYN Thor only. A game never measured shows "Measuring battery
   use…" for its first minute. In a game, after the AYN button's panel, tap the upper screen once if
   the game misses the buttons.
