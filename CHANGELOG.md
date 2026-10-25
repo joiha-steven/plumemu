@@ -3,6 +3,40 @@
 What changed in each version of Plumemu, newest first. Downloads are under
 [Releases](../../releases).
 
+## 0.0.4-beta (25 October 2026)
+
+### New
+
+- **Your own colors, any color.** The text color is now a color of its own, not just light or
+  dark. Settings › Appearance › Colors only offers colors you can read: anything too faint is
+  left out, and a color code that would be unreadable says so instead of applying.
+- **Hue, Saturation and Lightness sliders** on the + page of each color, kept to colors you can
+  read. B puts the color back as it was.
+- **Brighter backgrounds:** a more vivid palette, and named text colors to go with each background.
+- **Accent By system:** each system can bring its own accent color while you look at its games,
+  on the home screen, in Settings and on the second screen. Your accent stays as the fallback.
+- **A color set's A, B, X and Y colors stay** when you fine-tune its other colors.
+- **Presses you can see.** Holding a button makes its on-screen hint look pressed, and the row,
+  tile or button you choose dips while the confirm button or your finger is down. A scroll by
+  finger never flashes a row.
+- **Settings say what a row does:** a value that opens a page ends in »; values you change in place
+  keep ‹ ›; rows that only show information can no longer be picked.
+- **Statistics:** the total comes first, and A on a most-played game starts it, with its details
+  beside the list.
+- **Two screens:** with the second screen showing a system's facts, the band above the home
+  screen's games starts off.
+
+### Not in this version
+
+- Shortcuts added from other apps are listed but cannot be started yet. No screenshots or videos of
+  games yet. English only.
+
+### Known issues
+
+- A few covers may still belong to another game. Game menu › Fix box art… picks the right one.
+- The second screen is tested on the AYN Thor only. In a game, after the AYN button's panel, tap
+  the upper screen once if the game misses the buttons.
+
 ## 0.0.3-beta (24 October 2026)
 
 The first beta.

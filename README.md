@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <b>0.0.3-beta</b> · Android 6.0 or later · tested on the AYN Thor only ·
+  <b>0.0.4-beta</b> · Android 6.0 or later · tested on the AYN Thor only ·
   <a href="../../releases">Download</a> · <a href="https://plumemu.stevensdesk.com">Website</a>
 </p>
 
@@ -132,7 +132,7 @@ and nothing needs it.
 
 ## Install
 
-1. Download `plumemu-0.0.3-beta.apk` from the latest [release](../../releases) or from the
+1. Download `plumemu-0.0.4-beta.apk` from the latest [release](../../releases) or from the
    [website](https://plumemu.stevensdesk.com).
 2. Open it on the device and allow the install when Android asks.
 3. Open Plumemu and pick your ROMs folder. To make it the home screen, say yes when it asks, or
