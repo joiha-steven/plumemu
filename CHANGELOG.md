@@ -25,11 +25,16 @@ What changed in each version of Plumemu, newest first. Downloads are under
   beside the list.
 - **Two screens:** with the second screen showing a system's facts, the band above the home
   screen's games starts off.
+- **Seven languages:** English, Spanish, Vietnamese, Simplified and Traditional Chinese, Korean and
+  Japanese. Settings › About › Language picks one, or follows Android.
+- **Apps:** START on an app opens App info or Uninstall. An app without its own icon shows a tile
+  with its first letter.
+- **Typing on Plumemu's keyboard** no longer makes the field row dip with each key.
 
 ### Not in this version
 
 - Shortcuts added from other apps are listed but cannot be started yet. No screenshots or videos of
-  games yet. English only.
+  games yet.
 
 ### Known issues
 

@@ -167,7 +167,6 @@ cursor. Settings › Controls › Keyboard switches to Android's keyboard.
 
 ## Not in this beta
 
-- Languages other than English.
 - Screenshots and videos of games; box art and details only for now.
 - Shortcuts added from other apps are listed but cannot be started yet.
 
