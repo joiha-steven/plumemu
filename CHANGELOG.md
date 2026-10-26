@@ -3,6 +3,47 @@
 What changed in each version of Plumemu, newest first. Downloads are under
 [Releases](../../releases).
 
+## 0.0.5-beta (26 October 2026)
+
+### New
+
+- **Fits 4:3 screens.** On the Retroid Pocket Nova and other 4:3 handhelds, nothing runs past the
+  right edge any more: the home details, the games list and its year and region columns all fit.
+- **Text weight:** Settings › Appearance › Text weight picks Thin, Medium or Bold. Medium is the
+  new default; Thin is the look of earlier versions.
+- **Text size starts at Large** on a fresh install. Settings › Appearance › Text size changes it.
+- **Left edge:** Settings › Appearance › Left edge picks what the narrow strip beside the games
+  shows: game counts (the default), a three-letter code per system, or a letter rail. Tap or
+  drag the letter rail to jump to that letter. In System codes, the opened system's column keeps
+  its counts.
+- **Unknown folders:** a folder Plumemu cannot place in a system is listed in Settings › Library,
+  where you pick its system. Home tells you when there is one.
+- **Home tells you about new games,** and an empty library offers to add a folder right there.
+- **Setup:** the folder step keeps its note in view next to its buttons.
+- **Reset library warns you to back up first.** "Hide unidentified files", a setting that did
+  nothing, is gone. A game on a removed SD card now says its storage was not found.
+- **Name fields show the start of a name** until you type, so a long name is not cut at the front.
+- **Settings › Advanced:** a Language list, sounds Off, Quiet or Loud (they follow the media
+  volume), and vibration on by default.
+- **Names for newer Switch games** now come from GameTDB, and ScreenScraper name search copes with
+  punctuation and tries earlier misses once more.
+- **ScreenScraper descriptions** show quotes and ampersands as they should, not as `&quot;` or
+  `&amp;`.
+- **No Android backup:** Plumemu's data is no longer copied into Android's own backups; use
+  Settings › Back up instead.
+
+### Not in this version
+
+- Shortcuts added from other apps are listed but cannot be started yet. No screenshots or videos of
+  games yet.
+
+### Known issues
+
+- A few covers may still belong to another game. Game menu › Fix box art… picks the right one.
+- The second screen is tested on the AYN Thor only. In a game, after the AYN button's panel, tap
+  the upper screen once if the game misses the buttons.
+- The 4:3 layout is checked on the Retroid Pocket Nova; other 4:3 handhelds are untested.
+
 ## 0.0.4-beta (25 October 2026)
 
 ### New
