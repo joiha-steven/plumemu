@@ -1,0 +1,50 @@
+name: Wrong translation
+description: A text on screen that is wrongly translated, unclear or too long in your language.
+labels: [translation]
+body:
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options:
+        - Vietnamese (vi)
+        - Spanish (es)
+        - Japanese (ja)
+        - Korean (ko)
+        - Chinese, Simplified (zh)
+        - Chinese, Traditional (zh-rTW)
+        - English (en)
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where on the screen
+      description: The screen and the row, button or message.
+      placeholder: Settings › Home screen, the third row
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: The text as it is now
+      description: Copy it exactly, or describe it if it is cut off.
+    validations:
+      required: true
+  - type: textarea
+    id: suggested
+    attributes:
+      label: The text you suggest
+      description: And why, if it is not obvious. Several strings of the same language can go in one issue.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Plumemu version (optional)
+      description: Settings › About
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or anything else
+      description: Drag images here.

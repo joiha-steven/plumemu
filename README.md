@@ -175,11 +175,21 @@ cursor. Settings › Controls › Keyboard switches to Android's keyboard.
 No games, BIOS files, keys, firmware or emulators. Use files you own; emulators come from their
 own developers.
 
+## Translations
+
+Plumemu speaks English, Vietnamese, Spanish, Japanese, Korean and Chinese (Simplified and
+Traditional). Most translations have not been read by a native speaker yet. The texts are in
+[translations](translations/): report a wrong one with the
+[translation template](https://github.com/joiha-steven/plumemu/issues/new?template=translation.yml),
+or fix it in a pull request.
+
 ## More
 
 - Report a problem or an idea: Settings › About › Report a problem inside the app, or
   [Issues](../../issues) with the Plumemu version (Settings › About), your device and its Android
   version.
+- [Guide](GUIDE.md): how to lay out your games folder, BIOS files, emulators, names, settings.
+- [Colors](COLORS.md): the ready-made color sets, and how to suggest one.
 - [Changelog](CHANGELOG.md): what changed in each version.
 - [Privacy](PRIVACY.md)
 - [License](LICENSE.md): free to download and use; not open source, all rights reserved.

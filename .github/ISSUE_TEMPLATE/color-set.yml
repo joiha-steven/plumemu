@@ -1,0 +1,56 @@
+name: Color set
+description: Suggest a ready-made color set for Settings › Appearance › Colors.
+labels: [colors]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Build the set in the app first (Settings › Appearance › Background, Text color, Accent color), then fill this in. The sets that exist and what a set needs are in [COLORS.md](https://github.com/joiha-steven/plumemu/blob/main/COLORS.md).
+  - type: input
+    id: name
+    attributes:
+      label: Name
+      description: Its own name; not the name of a console, a company or a brand.
+      placeholder: Lagoon
+    validations:
+      required: true
+  - type: input
+    id: background
+    attributes:
+      label: Background
+      placeholder: "#1B3A4B"
+    validations:
+      required: true
+  - type: dropdown
+    id: text
+    attributes:
+      label: Text
+      options:
+        - Light
+        - Dark
+    validations:
+      required: true
+  - type: input
+    id: accent
+    attributes:
+      label: Accent
+      placeholder: "#F2A65A"
+    validations:
+      required: true
+  - type: input
+    id: keys
+    attributes:
+      label: A / B / X / Y key colors (optional)
+      description: Four colors in that order, or leave empty to keep the usual look.
+      placeholder: "#CF3A3A / #D9A400 / #2F6FDB / #2E9A47"
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshots
+      description: The home screen and a game list with the set in use. Drag images here.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: What inspired it (optional)
