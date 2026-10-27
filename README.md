@@ -11,6 +11,9 @@
   <b>0.0.5-beta</b> · Android 6.0 or later · tested on the AYN Thor and the Retroid Pocket Nova ·
   <a href="../../releases">Download</a> · <a href="https://plumemu.stevensdesk.com">Website</a>
 </p>
+<p align="center">
+  This is a beta: it still has gaps and rough edges, and it is updated often.
+</p>
 
 ---
 
@@ -145,7 +148,7 @@ and nothing needs it.
 
 ## Install
 
-1. Download `plumemu-0.0.5-beta.apk` from the latest [release](../../releases) or from the
+1. Download `plumemu-0.0.5-beta-663.apk` from the latest [release](../../releases) or from the
    [website](https://plumemu.stevensdesk.com).
 2. Open it on the device and allow the install when Android asks.
 3. Open Plumemu and pick your ROMs folder. To make it the home screen, say yes when it asks, or
