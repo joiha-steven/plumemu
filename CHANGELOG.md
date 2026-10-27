@@ -3,6 +3,40 @@
 What changed in each version of Plumemu, newest first. Downloads are under
 [Releases](../../releases).
 
+## 0.0.6-beta (27 October 2026)
+
+### New
+
+- **Info tells you more:** year, publisher, developer, genre and players, and the whole
+  description, which scrolls. Sort games has a new Year order.
+- **"Did the game start?"** The first time a game comes back from a RetroArch core Plumemu has not
+  seen work, it asks. No takes the play time back and offers the other emulators, because the core
+  may not be installed.
+- **The right emulators for each file:** an emulator is only offered for the file types it opens.
+- **Copies of one game are one row:** region copies kept in separate folders show as one game with
+  Other versions…, and the parts of `.cue`, `.gdi` and `.m3u` games no longer show as their own rows.
+- **Variants are labelled:** games with the same name show Rev 1, Beta, translation or hack, in
+  the lists, in search and in Info.
+- **Hacks and translations keep their own name** instead of taking the original game's. Download
+  copies like `Game (1)`, full-width names and list numbers are cleaned up; BIOS files are not games.
+- **Box art panel:** shows the space used, has Clear box art…, removes images of deleted games
+  every day, and stops retrying games the server keeps failing on after 3 days.
+- **Pinned shortcuts start:** Steam and Windows shortcuts pinned to Plumemu now launch.
+- **4:3 and small screens:** the game's details peek in beside the list. With "Push right twice
+  to play", Right opens the details first and Right twice there plays.
+- **Clearer messages:** an emulator that closes at once, a game you hide and signing out of
+  ScreenScraper (which now asks first) each say what happened.
+
+### Not in this version
+
+- No screenshots or videos of games yet.
+
+### Known issues
+
+- A few covers may still belong to another game. Game menu › Fix box art… picks the right one.
+- The second screen is tested on the AYN Thor only.
+- The 4:3 layout is checked on the Retroid Pocket Nova; other 4:3 handhelds are untested.
+
 ## 0.0.5-beta (26 October 2026)
 
 ### New

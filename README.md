@@ -8,8 +8,12 @@
 </p>
 
 <p align="center">
-  <b>0.0.5-beta</b> · Android 6.0 or later · tested on the AYN Thor and the Retroid Pocket Nova ·
+  <b>0.0.6-beta</b> · Android 6.0 or later · tested on the AYN Thor and the Retroid Pocket Nova ·
   <a href="../../releases">Download</a> · <a href="https://plumemu.stevensdesk.com">Website</a>
+</p>
+
+<p align="center">
+  This is a beta: it still has gaps and rough edges, and it is updated often.
 </p>
 
 ---
@@ -30,16 +34,23 @@
 - **Your files stay yours.** Setup takes two minutes: pick your ROMs folder in Android's own
   folder picker. No access to all your files, ever, and Plumemu never deletes, moves or renames
   a game file.
-- **One row per game.** Copies of one game (regions, revisions, arcade sets) show as one row.
-  Other versions in the game menu picks which one plays.
+- **One row per game.** Copies of one game (regions, revisions, arcade sets) show as one row,
+  even when they sit in separate folders. Other versions in the game menu picks which one plays,
+  and same-name variants show their label (Rev 1, Beta, translation, hack). .cue, .gdi and .m3u
+  parts no longer show as rows of their own.
+- **Details and sorting.** Info shows the year, publisher, developer, genre and players, and the
+  whole description. Sort games by Year. On 4:3 and narrow screens the game's details peek in
+  beside the list, and with Push right twice to play, Right opens the details first.
 - **New games show up by themselves.** Copy games in or put in an SD card, and they appear when you
   come back to Plumemu, and Home tells you about them. A folder Plumemu cannot place in a system is
   listed in Settings › Library, where you pick its system.
 - **Emulators picked for you.** Plumemu finds the emulators you have installed and picks one per
-  system. Any game or system can use another one.
+  system. Any game or system can use another one. Each emulator is offered only for the file
+  types it opens. If a RetroArch core may be missing, Plumemu asks "Did the game start?" and
+  offers other emulators.
 - **Box art, if you want it.** Sign in with your own free [ScreenScraper](https://www.screenscraper.fr)
   account and Plumemu fetches box art and game details over Wi-Fi. Show any system, Recent or
-  Favorites as a list or as a grid of covers in three sizes. Apps can be a grid of icons too. Wrong cover? Pick the right one from the game menu.
+  Favorites as a list or as a grid of covers in three sizes. Apps can be a grid of icons too. Wrong cover? Pick the right one from the game menu. The box art panel shows the space used and has Clear box art; a daily cleanup removes orphaned images, and games that keep failing on the server stop retrying after 3 days.
 - **About each system.** Above a system's games, a short band with its badge, the years it was
   made and a few lines about it. Settings › Home screen › System info turns it off.
 - **Sounds and vibration.** Settings › Advanced sets sounds Off, Quiet or Loud (they follow the
@@ -118,7 +129,7 @@
 ## Light on the hardware
 
 Many retro handhelds are slow and run old Android, so Plumemu is built to use as little as it
-can. Measured with 0.0.3-beta (not measured again for 0.0.5-beta) on a slow Android 6.0 emulator (2 GB of memory) with a library of
+can. Measured with 0.0.3-beta (not measured again for 0.0.6-beta) on a slow Android 6.0 emulator (2 GB of memory) with a library of
 10,000 games:
 
 | | |
@@ -143,9 +154,11 @@ Mini, AYN Odin, and similar), but those are untested. If you try it on one, a sh
 [Issues](../../issues) helps a lot. A second screen is optional: on the Thor it shows details, a clock and your battery,
 and nothing needs it.
 
+This is a beta. It still has gaps and rough edges, and it is updated often.
+
 ## Install
 
-1. Download `plumemu-0.0.5-beta.apk` from the latest [release](../../releases) or from the
+1. Download `plumemu-0.0.6-beta-716.apk` from the latest [release](../../releases) or from the
    [website](https://plumemu.stevensdesk.com).
 2. Open it on the device and allow the install when Android asks.
 3. Open Plumemu and pick your ROMs folder. To make it the home screen, say yes when it asks, or
@@ -173,7 +186,8 @@ play. Settings › About › Check for updates daily turns the daily check off.
 
 The button printed A confirms. Settings › Advanced can make the bottom button (B, or ✕) confirm
 instead. Touch works everywhere: tap to select, tap again to play. Settings › Controls › Push
-right to play lets one hand do it: push right once to mark a game, again to start it.
+right to play lets one hand do it: push right once to mark a game, again to start it. Pinned shortcuts (Steam,
+Windows) start from Plumemu.
 
 On Plumemu's keyboard: A types, B deletes, X is a space, Y switches to numbers, L1 / R1 move the
 cursor. Settings › Controls › Keyboard switches to Android's keyboard.
@@ -181,7 +195,6 @@ cursor. Settings › Controls › Keyboard switches to Android's keyboard.
 ## Not in this beta
 
 - Screenshots and videos of games; box art and details only for now.
-- Shortcuts added from other apps are listed but cannot be started yet.
 
 ## Not included, ever
 
