@@ -3,6 +3,36 @@
 What changed in each version of Plumemu, newest first. Downloads are under
 [Releases](../../releases).
 
+## 0.0.7-beta (28 October 2026)
+
+### New
+
+- **Colour sliders follow your finger:** Hue, Saturation and Lightness move smoothly under a
+  finger, the whole screen shows the colour as you drag, and it is saved once you let go.
+- **A cleaner own-colour page:** fewer swatches, none alike and all readable, a tick on the colour
+  in use, full-length sliders with the stretches you cannot pick dimmed, everything in one width.
+- **Banana and Pocket button colours:** Banana's A, B, X and Y are red, teal and dark yellow; Pocket's
+  are all magenta, like the handhelds they come from.
+- **GameCube in a folder named "Cube"** is found, also in a library scanned before.
+- **Fewer wrong names:** translated and hacked cartridges (Star Ocean with an English patch, for
+  one) no longer keep a game from another system; 32X games in a Mega Drive folder keep their box art.
+- **Faster first scan:** naming reads 4 files at a time (Retroid Pocket Nova, cold SD card: 25 s to
+  7 s), setup is ready once the folders are walked, and the name packs are 1.26 MB smaller.
+- **More arcade games named:** 1,222 more MAME sets.
+- **Setup:** one tap on Start playing is enough.
+- **Two copies of one title** told apart only by region show the region after the title.
+
+### Not in this version
+
+- No screenshots or videos of games yet.
+
+### Known issues
+
+- A few covers may still belong to another game. Game menu › Fix box art… picks the right one.
+- The second screen is tested on the AYN Thor only.
+- Tested on the AYN Thor, the Retroid Pocket Nova and the Retroid Pocket Classic; other handhelds
+  are untested.
+
 ## 0.0.6-beta (27 October 2026)
 
 ### New

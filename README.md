@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <b>0.0.6-beta</b> · Android 6.0 or later · tested on the AYN Thor and the Retroid Pocket Nova ·
+  <b>0.0.7-beta</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket Nova and the Retroid Pocket Classic ·
   <a href="../../releases">Download</a> · <a href="https://plumemu.stevensdesk.com">Website</a>
 </p>
 
@@ -132,7 +132,7 @@
 ## Light on the hardware
 
 Many retro handhelds are slow and run old Android, so Plumemu is built to use as little as it
-can. Measured with 0.0.3-beta (not measured again for 0.0.6-beta) on a slow Android 6.0 emulator (2 GB of memory) with a library of
+can. Measured with 0.0.3-beta (not measured again for 0.0.7-beta) on a slow Android 6.0 emulator (2 GB of memory) with a library of
 10,000 games:
 
 | | |
@@ -151,7 +151,8 @@ fifteen minutes.
 
 ## Devices
 
-**Tested on** the AYN Thor (both of its screens) and the Retroid Pocket Nova (4:3). Plumemu is
+**Tested on** the AYN Thor (both of its screens), the Retroid Pocket Nova (4:3) and the Retroid
+Pocket Classic. Plumemu is
 laid out for handheld screens from 4.5 to 6 inches in 16:9 and 4:3 (Retroid Pocket 5, 4 Pro and
 Mini, AYN Odin, and similar), but those are untested. If you try it on one, a short report under
 [Issues](../../issues) helps a lot. A second screen is optional: on the Thor it shows details, a clock and your battery,
@@ -161,7 +162,7 @@ This is a beta. It still has gaps and rough edges, and it is updated often.
 
 ## Install
 
-1. Download `plumemu-0.0.6-beta-746.apk` from the latest [release](../../releases) or from the
+1. Download `plumemu-0.0.7-beta-821.apk` from the latest [release](../../releases) or from the
    [website](https://plumemu.stevensdesk.com).
 2. Open it on the device and allow the install when Android asks.
 3. Open Plumemu and pick your ROMs folder. To make it the home screen, say yes when it asks, or
