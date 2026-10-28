@@ -18,55 +18,86 @@
 
 ---
 
+## Why Plumemu
+
+1. **Your games have names from the first minute, offline.** No account, no scraping, no internet:
+   Plumemu reads each game's own code and knows 42,000 arcade sets, so a folder of cryptic files
+   becomes a tidy list the moment setup ends.
+2. **It works out of the box.** Pick your ROMs folder and you are playing: it finds the emulators
+   you have installed, picks one for each system and adds new games by itself. Setup takes two
+   minutes.
+3. **It is light, even on old handhelds.** An 8.0 MB download that runs on Android 6.0, opens a
+   library of 10,000 games in about a quarter of a second and uses no CPU while it waits.
+4. **It never touches your files.** It sees only the folder you pick, and never deletes, moves or
+   renames a game file.
+5. **It uses everything your handheld has.** The second screen shows details and how long your
+   battery lasts at this game's pace, and every screen works with both buttons and touch.
+
 ## What it does
 
+### Your games, named and in order
+
 - **Names your games itself, offline.** It reads the game's own code inside zip, 7z and CHD files
-  and disc images, knows about 42,000 arcade sets by their short names, and cleans up messy file
-  names, and takes names for newer Switch games from GameTDB. Arcade games get their clean name, with the region in its own column. No account, no
-  internet. Wrong name? Fix it from the game menu; the fix sticks.
-- **Second screen, and your battery.** On a handheld with two screens, like the AYN Thor, the lower
-  screen shows the chosen game's details, your statistics while Settings is open, and while you
-  play a clock with how long the battery lasts at this game's pace. A game you have played says
-  "2 h on this charge" before you start it. Everything still works on one screen.
-- **Light enough for old handhelds.** An 8.3 MB download that runs on Android 6.0, opens your
-  library in about a quarter of a second, and uses no CPU while it sits on the home screen.
-  [Measured](#light-on-the-hardware) on a slow emulator with 10,000 games.
-- **Your files stay yours.** Setup takes two minutes: pick your ROMs folder in Android's own
-  folder picker. No access to all your files, ever, and Plumemu never deletes, moves or renames
-  a game file.
-- **One row per game.** Copies of one game (regions, revisions, arcade sets) show as one row,
-  even when they sit in separate folders. Other versions in the game menu picks which one plays,
-  and same-name variants show their label (Rev 1, Beta, translation, hack). .cue, .gdi and .m3u
-  parts no longer show as rows of their own.
-- **Details and sorting.** Info shows the year, publisher, developer, genre and players, and the
-  whole description. Sort games by Year. On 4:3 and narrow screens the game's details peek in
-  beside the list, and with Push right twice to play, Right opens the details first.
-- **Android games and Ports.** Installed Android games get a system of their own, and native
-  port apps (Delta Touch and others) join Ports. Plumemu picks them out by itself; Show as game,
-  Show as port and Not a game in the menus correct it.
-- **New games show up by themselves.** Copy games in or put in an SD card, and they appear when you
+  and disc images, knows about 42,000 arcade sets by their short names, takes names for newer
+  Switch games from GameTDB and cleans up messy file names. Arcade games get a clean name with the
+  region in its own column. No account, no internet. A wrong name is fixed from the game menu, and
+  the fix sticks.
+- **One row per game.** Copies of one game (regions, revisions, arcade sets) show as one row, even
+  from separate folders; Other versions in the game menu picks which one plays. Same-name variants
+  carry a label (Rev 1, Beta, translation, hack), and `.cue`, `.gdi` and `.m3u` parts are not rows
+  of their own.
+- **New games show up by themselves.** Copy games in or put in an SD card: they appear when you
   come back to Plumemu, and Home tells you about them. A folder Plumemu cannot place in a system is
   listed in Settings › Library, where you pick its system.
+- **Android games and Ports.** Installed Android games get a system of their own, and native port
+  apps (Delta Touch and others) join Ports. Show as game, Show as port and Not a game in the menus
+  correct Plumemu's choice.
+- **Box art, if you want it.** Sign in with your own free
+  [ScreenScraper](https://www.screenscraper.fr) account and Plumemu fetches box art and game
+  details over Wi-Fi. A wrong cover is replaced from the game menu. The box art panel shows the
+  space used and has Clear box art; a daily cleanup removes orphaned images, and games that keep
+  failing on the server stop retrying after 3 days.
+- **Details and sorting.** Info shows the year, publisher, developer, genre, players and the whole
+  description. Sort games has a Year order.
+
+### Playing
+
 - **Emulators picked for you.** Plumemu finds the emulators you have installed and picks one per
-  system. Any game or system can use another one. Each emulator is offered only for the file
-  types it opens. If a RetroArch core may be missing, Plumemu asks "Did the game start?" and
-  offers other emulators.
-- **Box art, if you want it.** Sign in with your own free [ScreenScraper](https://www.screenscraper.fr)
-  account and Plumemu fetches box art and game details over Wi-Fi. Show any system, Recent or
-  Favorites as a list or as a grid of covers in three sizes. Apps can be a grid of icons too. Wrong cover? Pick the right one from the game menu. The box art panel shows the space used and has Clear box art; a daily cleanup removes orphaned images, and games that keep failing on the server stop retrying after 3 days.
+  system; any game or system can use another. Each emulator is offered only for the file types it
+  opens. If a RetroArch core may be missing, Plumemu asks "Did the game start?" and offers the
+  other emulators.
+- **Second screen, and your battery.** On a handheld with two screens, like the AYN Thor, the lower
+  screen shows the chosen game's details, your statistics while Settings is open, and, while you
+  play, a clock with how long the battery lasts at this game's pace. A game you have played says
+  "2 h on this charge" before you start it. Everything still works on one screen.
+- **Light enough for old handhelds.** An 8.0 MB download that runs on Android 6.0, opens your
+  library in about a quarter of a second and uses no CPU while it sits on the home screen.
+  [Measured](#light-on-the-hardware) on a slow emulator with 10,000 games.
+
+### Make it yours
+
+- **Colors.** Ten ready-made sets, each previewed before you pick it: Plumemu, Paper, Pocket, Dot
+  matrix, Super, Indigo, Charcoal, Ivory, Banana and Cream. Super, Charcoal, Ivory, Banana and
+  Pocket color the A, B, X and Y keys. Or make your own background, text and accent colors with
+  sliders that show the whole screen in the new color as you drag.
+- **Lists or covers.** Show any system, Recent or Favorites as a list or as a grid of covers in
+  three sizes. Apps can be a grid of icons too.
+- **One sliding view.** Systems, games and details move as one strip, laid out for 16:9 and 4:3
+  screens. On 4:3 and narrow screens the game's details peek in beside the list. Beside the games,
+  a narrow strip shows game counts, a code per system or a letter rail you can tap or drag.
 - **About each system.** Above a system's games, a short band with its badge, the years it was
   made and a few lines about it. Settings › Home screen › System info turns it off.
+- **Text you can set.** Text size starts at Large, and Text weight is Thin, Medium or Bold.
 - **Sounds and vibration.** Settings › Advanced sets sounds Off, Quiet or Loud (they follow the
   media volume) and vibration, which is on by default. A Language list is there too.
-- **Colors.** Ten ready-made color sets: Plumemu, Paper, Pocket, Dot matrix, Super, Indigo,
-  Charcoal, Ivory, Banana and Cream, each previewed before you pick it. Super, Charcoal and Ivory
-  color the A, B, X and Y keys. Or choose your own background, text and accent colors.
-- **One sliding view.** Systems, games and details move as one strip, laid out for 16:9 and 4:3
-  screens. Beside the games, a narrow strip shows game counts, a code per system or a letter rail
-  you can tap or drag.
-- **Text you can set.** Text size starts at Large, and Text weight is Thin, Medium or Bold.
 - **Buttons and touch**, equally, everywhere. Plumemu has its own compact keyboard, made for the
   D-pad, so Search keeps its results in view while you type.
+
+### Your files and your data
+
+- **Your files stay yours.** Setup takes two minutes: pick your ROMs folder in Android's own folder
+  picker. No access to all your files, ever, and Plumemu never deletes, moves or renames a game
+  file.
 - **Back up and restore.** Save your settings, or everything (library, box art, play time), into
   one file, checked after writing, and put it back on this device or a new one.
 - **Updates from inside the app.** Once a day on Wi-Fi Plumemu looks for a new version; Settings ›
