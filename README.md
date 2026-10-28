@@ -4,7 +4,7 @@
 
 
 <p align="center">
-  <img src="media/hero.png" width="100%" alt="Plumemu on the AYN Thor: the Super Nintendo list with the chosen game's cover, year, maker, genre, rating and description on the right (the cover is a drawn stand-in); below, the same system as a grid of covers and Dreamcast with its system band in Ivory; then five smaller screens: Paper, Indigo search, Charcoal colors, Banana and the second screen">
+  <img src="media/hero.png" width="100%" alt="Plumemu on the AYN Thor in Indigo: the Super Nintendo list with Super Metroid chosen, its cover, year, maker, genre, rating and description on the right (covers are drawn stand-ins); below, Super Nintendo as a grid of covers in Pocket, Dreamcast with its system band in Banana, and search in Super">
 </p>
 
 <p align="center">
@@ -106,53 +106,53 @@
   Settings › Statistics turns them off at any time. [Privacy](PRIVACY.md) lists what is sent.
 
 <p align="center">
-  <img src="media/color-sets.png" width="100%" alt="The same Dreamcast screen in all ten ready-made color sets, tilted side by side: Plumemu, Paper, Pocket, Dot matrix, Super, Indigo, Charcoal, Ivory, Banana and Cream">
+  <img src="media/color-sets.png" width="100%" alt="The same Super Nintendo screen in all ten ready-made color sets, each named below: Plumemu, Paper, Pocket, Dot matrix, Super, Indigo, Charcoal, Ivory, Banana and Cream">
 </p>
 
 <table>
   <tr>
     <td width="50%"><img src="media/battery-in-game.png" alt="The lower screen while a game runs: the clock, the time left on this charge and a chart of this play's battery use"></td>
-    <td width="50%"><img src="media/system-card.png" alt="The lower screen's card for Dreamcast: the same facts, the number of games and the game played last"></td>
+    <td width="50%"><img src="media/system-card.png" alt="The lower screen's card for Super Nintendo: its badge, the number of games, the facts and the game played last"></td>
   </tr>
   <tr>
     <td align="center">How long your battery lasts, while you play</td>
     <td align="center">Each system's facts on the second screen</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/grid.png" alt="Super Nintendo as a grid of covers in dark colors, Donkey Kong Country 2 selected (the covers are drawn stand-ins)"></td>
-    <td width="50%"><img src="media/grid-light.png" alt="The same Super Nintendo grid in the light Paper colors"></td>
+    <td width="50%"><img src="media/grid.png" alt="Super Nintendo as a grid of covers in dark colors, F-Zero selected (the covers are drawn stand-ins)"></td>
+    <td width="50%"><img src="media/grid-light.png" alt="PlayStation as a smaller grid of covers in the light Paper colors, Final Fantasy VII selected"></td>
   </tr>
   <tr>
     <td align="center">Any system as a grid of covers</td>
     <td align="center">In three sizes, light or dark</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/system-info.png" alt="Dreamcast's games with a short band above them: its badge, Sega, home console, 1998 to 2001, and one line about it"></td>
-    <td width="50%"><img src="media/keyboard.png" alt="Search with Plumemu's own keyboard; the results stay in view above it"></td>
+    <td width="50%"><img src="media/system-info.png" alt="Super Nintendo's games in Ivory with a short band above them: its badge, Nintendo, home console, 1990 to 2003; Chrono Trigger's cover and description on the right"></td>
+    <td width="50%"><img src="media/keyboard.png" alt="Search in Indigo with Plumemu's own keyboard: zelda typed, eight results stay in view above it"></td>
   </tr>
   <tr>
     <td align="center">A few lines about each system</td>
     <td align="center">A keyboard made for the D-pad</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/four-three.png" alt="Plumemu on the Retroid Pocket Nova's 4:3 screen in a custom wine color: the systems with their game counts, Neo Geo chosen, and its games with the system band above them"></td>
+    <td width="50%"><img src="media/four-three.png" alt="Plumemu on a 4:3 screen in a custom wine color: the Super Nintendo list, with the chosen game's details peeking in from the right"></td>
     <td width="50%"><img src="media/system-codes.png" alt="Super Nintendo's games with a code per system in the narrow strip on the left: REC, FAV, APP, SNS, GBA, PS1, PSP, NDS, GC and MD"></td>
   </tr>
   <tr>
-    <td align="center">4:3 screens, like the Retroid Pocket Nova</td>
+    <td align="center">4:3 screens, like the Retroid Pocket Classic</td>
     <td align="center">Counts, system codes or a letter rail at the edge</td>
   </tr>
   <tr>
     <td width="50%"><img src="media/colors.png" alt="Settings › Appearance › Colors: the ten ready-made color sets, each shown as a small preview"></td>
-    <td width="50%"><img src="media/button-colors.png" alt="Game Boy Advance games in the Super color set, with the A, B, X and Y keys in red, yellow, blue and green"></td>
+    <td width="50%"><img src="media/button-colors.png" alt="Super Nintendo in the Banana color set, with the A, B, X and Y keys each in its own color; Zelda: A Link to the Past's cover and description on the right"></td>
   </tr>
   <tr>
     <td align="center">Ten ready-made color sets</td>
     <td align="center">A, B, X and Y in their classic colors</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/settings.png" alt="Settings › Library: ROM folders, Rescan library, Find new games automatically, Sort games, System order, Systems, ScreenScraper and Box art region"></td>
-    <td width="50%"><img src="media/update.png" alt="Settings › About: an update is available, with its notes and an Update button"></td>
+    <td width="50%"><img src="media/settings.png" alt="Settings › Library in Dot matrix: ROM folders, Rescan library, Find new games automatically, Sort games, System order, ScreenScraper and Box art region; the ROM folders on the right"></td>
+    <td width="50%"><img src="media/update.png" alt="Settings › About: version 0.0.8-beta is available, with its notes and an Update button"></td>
   </tr>
   <tr>
     <td align="center">Settings that say what they do</td>
