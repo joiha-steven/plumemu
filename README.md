@@ -135,11 +135,11 @@
     <td align="center">A keyboard made for the D-pad</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/four-three.png" alt="Plumemu on a 4:3 screen in a custom wine color: the Super Nintendo list, with the chosen game's details peeking in from the right"></td>
+    <td width="50%"><img src="media/four-three.png" alt="Plumemu on the Retroid Pocket Nova's 4:3 screen in a custom wine color: the Super Nintendo list, with the chosen game's details peeking in from the right"></td>
     <td width="50%"><img src="media/system-codes.png" alt="Super Nintendo's games with a code per system in the narrow strip on the left: REC, FAV, APP, SNS, GBA, PS1, PSP, NDS, GC and MD"></td>
   </tr>
   <tr>
-    <td align="center">4:3 screens, like the Retroid Pocket Classic</td>
+    <td align="center">4:3 screens, like the Retroid Pocket Nova</td>
     <td align="center">Counts, system codes or a letter rail at the edge</td>
   </tr>
   <tr>
