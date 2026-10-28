@@ -163,17 +163,25 @@
 ## Light on the hardware
 
 Many retro handhelds are slow and run old Android, so Plumemu is built to use as little as it
-can. Measured with 0.0.3-beta (not measured again for 0.0.7-beta) on a slow Android 6.0 emulator (2 GB of memory) with a library of
+can. Measured with 0.0.7-beta on a slow Android 6.0 emulator (2 GB of memory) with a library of
 10,000 games:
 
 | | |
 |---|---|
-| Download | 8.3 MB |
-| Start to your library | 0.24 s |
-| Memory | 56 MB |
-| CPU while it sits on the home screen | none; the clock redraws once a minute |
+| Download | 8.0 MB |
+| Start to your library | 0.25 s |
+| Memory | 63 MB |
+| CPU while it sits on the home screen | almost none (one CPU tick in 60 s); the clock redraws once a minute |
 | Looking for new games when you come back to Plumemu | usually 12 to 22 ms when nothing changed |
 | Running in the background | nothing, except box art downloads you asked for and one read of new game files after a scan |
+
+And on the handhelds, with their owner's own library (median of 11 cold starts):
+
+| Handheld | Library | Start to your library |
+|---|---|---|
+| AYN Thor (Android 13) | 2,058 games | 0.31 s |
+| Retroid Pocket Nova (Android 13) | 1,865 games | 0.31 s |
+| Retroid Pocket Classic (Android 14) | the owner's library | first frame in 0.28 s |
 
 The battery figures read the battery only while the lower screen's clock shows and the screen is
 on: once a second for two minutes, then every ten seconds. On a 24-minute recording of the AYN Thor
