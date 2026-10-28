@@ -21,7 +21,7 @@
 ## Why Plumemu
 
 1. **Your games have names from the first minute, offline.** No account, no scraping, no internet:
-   Plumemu reads each game's own code and knows 42,000 arcade sets, so a folder of cryptic files
+   Plumemu reads each game's own code and knows about 29,000 arcade sets, so a folder of cryptic files
    becomes a tidy list the moment setup ends.
 2. **It works out of the box.** Pick your ROMs folder and you are playing: it finds the emulators
    you have installed, picks one for each system and adds new games by itself. Setup takes two
@@ -38,7 +38,7 @@
 ### Your games, named and in order
 
 - **Names your games itself, offline.** It reads the game's own code inside zip, 7z and CHD files
-  and disc images, knows about 42,000 arcade sets by their short names, takes names for newer
+  and disc images, knows about 29,000 arcade sets by their short names, takes names for newer
   Switch games from GameTDB and cleans up messy file names. Arcade games get a clean name with the
   region in its own column. No account, no internet. A wrong name is fixed from the game menu, and
   the fix sticks.
