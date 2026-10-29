@@ -3,6 +3,32 @@
 What changed in each version of Plumemu, newest first. Downloads are under
 [Releases](../../releases).
 
+## 0.0.8-beta (29 October 2026)
+
+### New
+
+- **A new look for what is selected:** the selected row in every list and menu is a soft pill in your
+  accent colour with a thin ring, no more dot, and the text no longer shifts when you move.
+- **Covers and app icons that lift:** the selected cover or icon grows, rises a little and gets a ring
+  in your accent colour that follows its shape; nothing else is dimmed. Covers have a soft shadow, a
+  thin light edge and a glow in their own colour; a quick shine on the cover you stop on.
+- **Apps without a box around them:** the Apps grid shows just the icons and their names.
+- **More box art:** Steam games get their art by their Steam number, games no other source has are
+  looked up in the libretro thumbnails, and a hack or translation takes its original game's cover.
+- **Better name matches:** when two games fit a title, the one named exactly like it wins.
+- **Clearer colour sets:** Ivory, Super and Dot matrix have a slightly deeper accent so the selection
+  ring stands out; text on accent buttons is readable on every background. Your chosen set is kept.
+- **DroidDeck:** a picked folder that was deleted is forgotten; Steam shortcut games get box art.
+- **Faster scans** after a library change: game details are written a page at a time.
+
+### Not in this version
+
+- No screenshots or videos of games yet.
+
+### Known issues
+
+- A few games have no box art in any source (some Switch titles). Game menu › Fix box art… picks one.
+
 ## 0.0.7-beta (28 October 2026)
 
 ### New
