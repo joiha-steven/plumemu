@@ -102,8 +102,9 @@
   one file, checked after writing, and put it back on this device or a new one.
 - **Updates from inside the app.** Once a day on Wi-Fi Plumemu looks for a new version; Settings ›
   About › Update installs it.
-- **Anonymous usage statistics and crash reports**, to decide what to fix first. Setup asks, and
-  Settings › Statistics turns them off at any time. [Privacy](PRIVACY.md) lists what is sent.
+- **Anonymous usage statistics and crash reports, only if you want them.** They are off until you
+  switch them on in the setup or in Settings › Advanced › Send usage statistics.
+  [What Plumemu sends](#what-plumemu-sends) lists every connection.
 
 <p align="center">
   <img src="media/color-sets.png" width="100%" alt="The same Super Nintendo screen in all ten ready-made color sets, each named below: Plumemu, Paper, Pocket, Dot matrix, Super, Indigo, Charcoal, Ivory, Banana and Cream">
@@ -201,7 +202,7 @@ This is a beta. It still has gaps and rough edges, and it is updated often.
 
 ## Install
 
-1. Download `plumemu-0.0.8-beta-843.apk` from the latest [release](../../releases) or from the
+1. Download `plumemu-0.0.8-beta-850.apk` from the latest [release](../../releases) or from the
    [website](https://plumemu.stevensdesk.com).
 2. Open it on the device and allow the install when Android asks.
 3. Open Plumemu and pick your ROMs folder. To make it the home screen, say yes when it asks, or
@@ -243,6 +244,22 @@ cursor. Settings › Controls › Keyboard switches to Android's keyboard.
 
 No games, BIOS files, keys, firmware or emulators. Use files you own; emulators come from their
 own developers.
+
+## What Plumemu sends
+
+Nothing leaves your device unless you switch it on or press a button for it. Everything Plumemu can
+send, and to whom:
+
+| What | Sent to | When | Turn it off |
+|---|---|---|---|
+| Usage statistics and crash reports: device model, Android and Plumemu versions, a random install number, which screens and settings are used, play time by system. Never game titles or search words. | The developer (`plumemu.stevensdesk.com`) | Only after you switch it on | Settings › Advanced › Send usage statistics |
+| A problem report: what you wrote, an e-mail if you give one, the log unless you untick it | The developer | Only when you press Send | Do not press Send |
+| An update check: a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | Once a day on Wi-Fi, or when you press Check for updates | Settings › About › Check for updates daily |
+| Box art lookups: your ScreenScraper account, and each game's file name, size, checksum and title | [ScreenScraper](https://www.screenscraper.fr) | Only while you are signed in, on Wi-Fi | Settings › Library › ScreenScraper: Sign out or Pause |
+| Box art ScreenScraper lacks: a Steam game's title, or a game's file name | Steam (Valve) and the libretro thumbnail server | Only while you are signed in to ScreenScraper, on Wi-Fi | The same |
+
+Your IP address reaches each server with any connection, as for any web request. The full detail is
+in [Privacy](PRIVACY.md).
 
 ## Translations
 

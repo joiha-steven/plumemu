@@ -1,12 +1,13 @@
 # Privacy
 
-Last updated: 24 October 2026.
+Last updated: 29 October 2026.
 
 ## Usage statistics and crash reports
 
-Plumemu sends anonymous usage statistics and crash reports to the developer. Sending starts at the
-first launch and is on by default; you can switch it off in the setup or later in Settings ›
-Advanced › Send usage statistics.
+Plumemu can send anonymous usage statistics and crash reports to the developer, to decide what to
+fix first. They are **off unless you switch them on**, in the setup or later in Settings ›
+Advanced › Send usage statistics. (Copies installed before 0.0.8-beta build 850, when the setup
+had it on, keep the choice they have; the same switch turns it off.)
 
 - **What is sent**: your country, your device model, the Android and Plumemu versions, a random
   install number that is not linked to you, which screens and settings are used, how often and how
@@ -15,7 +16,7 @@ Advanced › Send usage statistics.
 - **What is never sent**: game titles, the words you search for, your ScreenScraper account, the
   other apps on your device, your advertising ID. Your IP address reaches the server with any
   connection; it is used only to tell the country and is not kept.
-- **Switching it off** sends one anonymous "switched off" count, with your country and device
+- **Switching it off** after it was on sends one anonymous "switched off" count, with your country and device
   details but no install number, and then nothing more. Crash reports stop too.
 - **Kept** by the developer, with no time limit.
 
@@ -28,7 +29,7 @@ Send. Settings › Advanced › Export logs only shares the log file where you c
 nothing itself. Reports are kept by the developer, with no time limit.
 
 Two other things go over the network: the update check, below, which carries nothing about you,
-and box art from ScreenScraper, only if you sign in.
+and box art, only if you sign in to ScreenScraper.
 
 ## Update check
 
@@ -47,7 +48,7 @@ Settings › About › Check for updates.
 - **Turn it off** with Settings › About › Check for updates daily. Check for updates then runs only
   when you press it.
 
-## Box art from ScreenScraper (only if you sign in)
+## Box art (only if you sign in to ScreenScraper)
 
 Box art and game details come from [ScreenScraper](https://www.screenscraper.fr), using your own
 ScreenScraper account. Without an account Plumemu does not contact ScreenScraper at all.
@@ -59,6 +60,11 @@ ScreenScraper account. Without an account Plumemu does not contact ScreenScraper
   once to look up its box art. When you search for a cover from the game menu, your search words
   are sent too. Box art is fetched over Wi-Fi only. ScreenScraper's own privacy terms apply to
   what it receives.
+- **When ScreenScraper has no box art** for a game, Plumemu also asks two public image servers,
+  during the same signed-in fetch on Wi-Fi: for a Steam game without its Steam number, the game's
+  title is sent to Steam's store search (Valve), and its pictures come from Steam's image server
+  by that number; for other games, the game's file name is sent to the libretro thumbnail server
+  (`thumbnails.libretro.com`). Nothing else, and no account, goes to either.
 - **What stays on the device**: the box art and details it sends back, and your password,
   encrypted with a key that never leaves the device.
 - **Sign out** in Settings › Library › ScreenScraper removes the account from the device.
