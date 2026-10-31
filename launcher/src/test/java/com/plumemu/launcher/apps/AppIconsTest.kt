@@ -60,7 +60,8 @@ class AppIconsTest {
         val caller = Thread.currentThread()
         val result = icons(io = ioThread.asCoroutineDispatcher()).load(alpha, 48)
         assertTrue(result is AppIcon.Picture)
-        assertEquals("icons-io-test", askedOn.single().name)
+        // Coroutine debug mode (on where the JVM runs with assertions on some runners) appends " @coroutine#N".
+        assertEquals("icons-io-test", askedOn.single().name.substringBefore(" @coroutine#"))
         assertNotEquals(caller, askedOn.single())
     }
 

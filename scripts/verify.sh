@@ -162,8 +162,9 @@ GRADLE_LOG="$LOG_DIR/gradle.log"
 GRADLE_STARTED=$(date +%s)
 GRADLE_ARGS=()
 # Shared CI runners are several times slower than the development machine: absolute time budgets in unit
-# tests are skipped there (the ratio checks and every correctness assertion still run).
-[[ $ON_CI == 1 ]] && GRADLE_ARGS+=(-Pplumemu.timingBudgets=false)
+# tests are skipped there (the ratio checks and every correctness assertion still run). --continue: one CI run
+# reports every failing module, not just the first.
+[[ $ON_CI == 1 ]] && GRADLE_ARGS+=(-Pplumemu.timingBudgets=false --continue)
 ./gradlew --console=plain ${GRADLE_ARGS[@]+"${GRADLE_ARGS[@]}"} "${TASKS[@]}" >"$GRADLE_LOG" 2>&1
 gradle_rc=$?
 GRADLE_SECONDS=$(( $(date +%s) - GRADLE_STARTED ))
