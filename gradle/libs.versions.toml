@@ -1,0 +1,87 @@
+# Every library here must be on the project's allowed list and support minSdk 23.
+[versions]
+agp = "9.4.1"
+kotlin = "2.4.21"
+composeBom = "2026.09.00"
+activityCompose = "1.13.0"
+junit = "4.13.2"
+roborazzi = "1.76.0"
+robolectric = "4.17"
+kotlinxSerialization = "1.12.0"
+# Matches the kotlinx-coroutines-core that Compose brings in; the test library must not be newer.
+coroutinesTest = "1.9.0"
+room = "2.8.5"
+# KSP is Room's required compiler plugin; it runs at build time only and is not in the APK.
+ksp = "2.3.12"
+# kotlinx-coroutines-core for core-data and library; same line as Compose brings in.
+coroutines = "1.9.0"
+androidxTestCore = "1.7.0"
+androidxTestRunner = "1.7.0"
+androidxTestExtJunit = "1.3.0"
+uiautomator = "2.3.0"
+# Macrobenchmark and Baseline Profiles (allowed list). The benchmark module
+# is test-only; profileinstaller ships in the app to install the Baseline Profile (Android 7+).
+benchmark = "1.5.0"
+profileinstaller = "1.4.1"
+# Preferences DataStore for Settings; 1.1.x supports minSdk 21.
+datastore = "1.1.7"
+
+# OkHttp 5 and its test server for the scraper; okhttp-android is minSdk 21.
+okhttp = "5.5.0"
+# WorkManager 2.12 needs minSdk 24; 2.11.x is the last line with minSdk 23.
+work = "2.11.2"
+# Coil 2 decodes the box art the scraper saved (local files only, no network fetcher used);
+# minSdk 21. Only coil-base: the home screen draws the decoded bitmaps itself (fade, placeholder).
+coil = "2.7.0"
+
+# Android levels shared by every module; read in each module's build.gradle.kts.
+compileSdk = "37"
+targetSdk = "37"
+minSdk = "23"
+
+[libraries]
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-text = { group = "androidx.compose.ui", name = "ui-text" }
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+# Test-only: screenshot and Compose tests on the JVM (docs/conventions/testing.md). Never in the APK.
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+roborazzi = { group = "io.github.takahirom.roborazzi", name = "roborazzi", version.ref = "roborazzi" }
+roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "roborazzi" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+# Test-only: Room migration tests, coroutine tests, androidx.test on the JVM (Robolectric) and on
+# a device (the scan timing test). Never in the APK.
+androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
+androidx-test-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
+# Test-only: the benchmark module (startup, scrolling, Baseline Profile generation). Never in the APK.
+androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
+androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+coil-base = { group = "io.coil-kt", name = "coil-base", version.ref = "coil" }
+androidx-work-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
+# Test-only: a local fake HTTP server and WorkManager's test helpers for the scraper. Never in the APK.
+okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver3", version.ref = "okhttp" }
+androidx-work-testing = { group = "androidx.work", name = "work-testing", version.ref = "work" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+android-test = { id = "com.android.test", version.ref = "agp" }
+androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "benchmark" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+androidx-room = { id = "androidx.room", version.ref = "room" }

@@ -1,0 +1,23 @@
+
+------------------------------------------------------------
+Project ':app'
+------------------------------------------------------------
+
+debugCompileClasspath - Compile classpath for '/debug'.
++--- org.bad:gpl-cpe:1.0
+\--- org.bad:mystery:1.0
+
+debugRuntimeClasspath - Runtime classpath of '/debug'.
++--- org.ok:apache-lib:0.9 -> 1.0
++--- project ':core-ui'
+|    +--- org.ok:platform-bom:1.0
+|    |    \--- org.bad:gpl-cpe:1.0 (c)
+|    \--- org.ok:mit-child -> 2.0
+\--- org.ok:allowlisted:1.0 (*)
+
+releaseRuntimeClasspath - Runtime classpath of '/release'.
++--- org.ok:apache-lib:1.0
+\--- org.ok:mit-child:2.0
+
+releaseUnitTestRuntimeClasspath - Runtime classpath of '/releaseUnitTest'.
+\--- org.bad:lgpl-lib:3.0

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" /> <!-- BAD -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" /> <!-- BAD -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /> <!-- BAD -->
+    <uses-permission-sdk-23 android:name="android.permission.WRITE_EXTERNAL_STORAGE" /> <!-- BAD -->
+    <uses-permission android:name="android.permission.CAMERA" /> <!-- BAD -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" /> <!-- BAD -->
+    <uses-permission android:name="org.example.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" /> <!-- BAD -->
+    <!-- BAD --> <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" tools:node="replace" /> <!-- BAD -->
+</manifest>

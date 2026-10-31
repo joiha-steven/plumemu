@@ -67,6 +67,13 @@ whose type only one system uses goes to that system wherever it sits: a `.gba` i
 is a Game Boy Advance game. Types many systems share (`.iso`, `.bin`, `.zip`) need the right
 folder.
 
+### Leaving out a sub-folder
+
+To keep a sub-folder out of your library (demos, backups, a half-sorted pile), open Settings ›
+Library › ROM folders, choose the folder, then "Skip a sub-folder…". Its games leave the library
+on the next scan, with their favorites and play time. Choose it under "Skipped" to read it again.
+Nothing on disk changes.
+
 ### A folder Plumemu does not recognise
 
 If a folder's name matches no system but holds files an emulator can open, Settings › Library
@@ -115,6 +122,8 @@ Install emulators from their own developers. Plumemu finds the ones installed (i
 - **Names** come from the game itself, offline, without an account: Plumemu reads the game's own
   code, knows arcade sets by their short names (`sf2.zip` is Street Fighter II), and cleans up
   file names. Wrong name? Game menu › Fix name; your fix stays.
+- **Source builds** have no name packs, so games are named from their cleaned file names; Fix name
+  still works.
 - **Box art** is optional: sign in with your own free [ScreenScraper](https://www.screenscraper.fr)
   account in setup or in Settings › Library › ScreenScraper. It downloads on Wi-Fi only. Wrong
   cover? Game menu › Fix box art.
@@ -122,6 +131,9 @@ Install emulators from their own developers. Plumemu finds the ones installed (i
 ## Lists and keeping things tidy
 
 - **Recent, Favorites and Apps** sit at the top of the system column. Y adds or removes a favorite.
+- **Recent** keeps 10, 20 or 50 games (Settings › Library › Recent size; 20 to begin with). In a
+  game's menu, "Remove from Recent" takes one out; Settings › Library › Clear Recent… empties it.
+  Play time and statistics stay either way.
 - **Search**: X.
 - **Hide a game**: game menu › Hide; or Not a game for a file that is not one. Both come back in
   Settings › Library › Hidden games.
@@ -145,7 +157,8 @@ weight, list or grid, grid size. Settings › Advanced › Language picks the la
 - Settings › Advanced › Back up saves your settings, or everything (library, box art, play time),
   to a file; Restore puts it back.
 - Settings › About › Update installs a new version when one is out, keeping your library and
-  settings.
+  settings. Only the official build has this; if you built Plumemu from the source, install new
+  versions yourself.
 
 ## Something wrong?
 

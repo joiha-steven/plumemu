@@ -2,7 +2,7 @@
 
 Plumemu's screens in every language it speaks, English included. Most of them have not yet been
 read by a native speaker. If something reads wrong, too stiff, too long or simply not like your
-language, please tell us or fix it.
+language, please tell me or fix it.
 
 | Folder | Language |
 |---|---|

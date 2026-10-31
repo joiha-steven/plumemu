@@ -1,0 +1,15 @@
+# Corpus scores that must not get worse (library corpus harness).
+# passed/total may only gain passes; missing and junk-shown counts may only fall.
+# Written only by: ./gradlew :library:testDebugUnitTest --tests '*CorpusTest' -Pcorpus.update=true
+owner system 2129/2129  # 100.0%
+owner grouping 2053/2053  # 100.0%
+owner name 2014/2053  # 98.1%
+owner name-readable 2036/2053  # 99.2%
+owner missing 0
+owner junk-shown 0
+synthetic system 6415/6418  # 100.0%
+synthetic grouping 5205/5208  # 99.9%
+synthetic name 5186/5208  # 99.6%
+synthetic name-readable 5200/5208  # 99.8%
+synthetic missing 3
+synthetic junk-shown 0

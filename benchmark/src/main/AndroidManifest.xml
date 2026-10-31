@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Lets the benchmark see and start com.plumemu on Android 11+ (package visibility). -->
+    <queries>
+        <package android:name="com.plumemu" />
+    </queries>
+</manifest>

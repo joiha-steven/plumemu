@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings › Advanced › Export logs (LogExport.kt): the one folder the FileProvider may hand out,
+     the exported copy of the log in the cache (AppLog.EXPORT_DIR). Nothing else of the app's files. -->
+<paths>
+    <cache-path name="logs" path="logs-export/" />
+</paths>

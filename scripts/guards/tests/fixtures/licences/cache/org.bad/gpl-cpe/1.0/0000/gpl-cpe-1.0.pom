@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  
+  <groupId>org.bad</groupId>
+  <artifactId>gpl-cpe</artifactId>
+  <version>1.0</version>
+  <licenses><license><name>GNU General Public License, version 2, with the Classpath Exception</name><url>https://openjdk.org/legal/gplv2+ce.html</url></license></licenses>
+</project>

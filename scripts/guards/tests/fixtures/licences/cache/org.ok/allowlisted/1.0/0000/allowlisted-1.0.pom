@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  
+  <groupId>org.ok</groupId>
+  <artifactId>allowlisted</artifactId>
+  <version>1.0</version>
+  <licenses><license><name>Custom Licence</name><url>https://example.org/licence</url></license></licenses>
+</project>

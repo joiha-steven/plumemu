@@ -1,0 +1,30 @@
+# file kind key=value ... / entry name|size|crc32|file-or-dir (written by make_fixtures.py)
+ps1-cd.cdlz.bin chd-cdlz hunk=19584 crc=82a865fa first=16 lzma=2085
+ps1-cd-64k.cdlz.bin chd-cdlz hunk=66096 crc=4313ab48 first=0 lzma=3295
+ps1-dvd.lzma.bin chd-lzma hunk=16384 crc=b46f91f8 first=16 lzma=2017
+plain.7z 7z header=plain pack=0
+entry Test Game \u00e9 (ZZZE).gba|40000|6e731ae9|file
+lzma-header.7z 7z header=lzma pack=6402
+entry Test Game (NZZE).gba|32768|80bd5262|file
+entry readme.txt|900|675b875a|file
+lzma2-header.7z 7z header=lzma2 pack=10253
+entry Test Game.nes|24592|2e630d52|file
+entry cover.png|30000|bd31f124|file
+solid.7z 7z header=lzma2 pack=7491
+entry Test Game (Disk 1).gb|8192|dd06d4d5|file
+entry Test Game (Disk 2).gb|32768|6aeb65b2|file
+entry notes.txt|500|5e397ac2|file
+empty-and-dir.7z 7z header=lzma pack=3319
+entry roms|0|00000000|dir
+entry roms/empty.gbc|0|00000000|file
+entry roms/Test Game.gbc|16384|4fc3b437|file
+bcj-header.7z 7z header=bcj pack=1115 note=BCJ+LZMA_not_read
+entry Test Game.gba|4096|0005594b|file
+encrypted-header.7z 7z header=aes pack=1105 note=encrypted
+entry Test Game.gba|4096|09d3ef88|file
+lclp-header.7z 7z header=lclp pack=1089 note=lc=4_lp=1_not_read
+entry Test Game.gba|4096|b01eaf26|file
+only-empty.7z 7z header=lzma pack=32
+entry saves|0|00000000|dir
+entry saves/empty.srm|0|00000000|file
+entry empty.gba|0|00000000|file

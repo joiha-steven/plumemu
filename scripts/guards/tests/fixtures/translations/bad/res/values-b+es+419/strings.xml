@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A BCP 47 language folder is checked like any other: "kept" is missing (one violation). -->
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="title">Juegos</string>
+    <string name="count_line">%1$s de %2$s juegos, 100%% hecho</string>
+    <string name="wrapped">Hola <xliff:g id="name">%1$s</xliff:g></string>
+    <string name="as_plural">Quedan %1$s</string>
+    <plurals name="as_string">
+        <item quantity="other">%1$s dias</item>
+    </plurals>
+    <plurals name="no_other">
+        <item quantity="other">%1$s elementos</item>
+    </plurals>
+    <plurals name="games">
+        <item quantity="one">%1$s juego</item>
+        <item quantity="other">%1$s juegos</item>
+    </plurals>
+    <plurals name="restored">
+        <item quantity="one">Se restauro un archivo</item>
+        <item quantity="other">Se restauraron %1$d archivos</item>
+    </plurals>
+</resources>

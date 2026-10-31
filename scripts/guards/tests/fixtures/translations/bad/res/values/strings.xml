@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="title">Games</string>
+    <string name="count_line">%1$s of %2$s games, 100%% done</string>
+    <string name="brand" translatable="false">Plumemu</string>
+    <string name="wrapped">Hello <xliff:g id="name">%1$s</xliff:g></string>
+    <string name="kept">Kept</string>
+    <string name="as_plural">%1$s left</string>
+    <plurals name="as_string">
+        <item quantity="other">%1$s days</item>
+    </plurals>
+    <plurals name="no_other">
+        <item quantity="other">%1$s items</item>
+    </plurals>
+    <plurals name="games">
+        <item quantity="one">%1$s game</item>
+        <item quantity="other">%1$s games</item>
+    </plurals>
+    <plurals name="restored">
+        <item quantity="one">One file was restored</item>
+        <item quantity="other">%1$d files were restored</item>
+    </plurals>
+</resources>

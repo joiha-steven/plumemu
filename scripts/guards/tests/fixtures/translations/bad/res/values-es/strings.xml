@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 12 violations: "kept" missing (reported at line 1), and the others noted on their lines. -->
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="title">Juegos e&#x301;</string> <!-- not NFC -->
+    <string name="count_line">%1$s de %3$s, 100%% listo</string> <!-- placeholder renumbered -->
+    <string name="brand">Plumemu</string> <!-- translatable=false in English -->
+    <string name="wrapped">Hola</string> <!-- placeholder dropped -->
+    <string name="old_name">Viejo</string> <!-- not in English -->
+    <plurals name="as_plural"> <!-- a string in English -->
+        <item quantity="other">%1$s</item>
+    </plurals>
+    <string name="as_string">%1$s dias</string> <!-- plurals in English -->
+    <plurals name="no_other"> <!-- no other, and "several" is not a quantity: 2 -->
+        <item quantity="one">%1$s cosa</item>
+        <item quantity="several">%1$s cosas</item>
+    </plurals>
+    <plurals name="games"> <!-- one uses %2$s -->
+        <item quantity="one">%2$s juego</item>
+        <item quantity="other">%1$s juegos</item>
+    </plurals>
+    <plurals name="restored"> <!-- other as %1$s, English %1$d -->
+        <item quantity="other">%1$s archivos</item>
+    </plurals>
+</resources>

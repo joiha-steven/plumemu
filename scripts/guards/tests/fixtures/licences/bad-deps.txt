@@ -1,0 +1,10 @@
+debugRuntimeClasspath - Runtime classpath of '/debug'.
++--- org.ok:apache-lib:1.0
++--- org.bad:gpl-cpe:1.0
++--- org.bad:lgpl-lib:2.0 -> 3.0
+\--- org.bad:mystery:1.0
+
+releaseRuntimeClasspath - Runtime classpath of '/release'.
++--- org.bad:agpl-lib:1.0
++--- org.bad:no-licence:1.0
+\--- org.bad:missing-pom:1.0

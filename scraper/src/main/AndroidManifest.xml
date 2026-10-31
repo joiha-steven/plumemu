@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ScreenScraper API calls. WorkManager adds WAKE_LOCK, RECEIVE_BOOT_COMPLETED and
+         FOREGROUND_SERVICE through its own library manifest: they reach the app's merged manifest
+         when app depends on scraper. The app keeps WAKE_LOCK and RECEIVE_BOOT_COMPLETED (box-art downloads
+         continue with the screen off and restart after a reboot) and removes FOREGROUND_SERVICE (no
+         background work with a notification). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

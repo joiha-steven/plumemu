@@ -1,0 +1,29 @@
+# Hand-written sample for the corpus harness's own test (CorpusHarnessTest); answers for today's code.
+# Rows tagged 'wrong' are wrong on purpose, so the test proves the harness counts failures.
+path	size	system	game	title	tags	content
+psx/Zork Harbor Tales (USA).cue	100	psx	cue-bin	Zork Harbor Tales	cue-bin	-
+psx/Zork Harbor Tales (USA).bin	1000	psx	cue-bin	Zork Harbor Tales	cue-bin	-
+psx/Zork Saga (USA).m3u	60	psx	m3u	Zork Saga	m3u,multi-disc	-
+psx/Zork Saga (USA) (Disc 1).cue	100	psx	m3u	Zork Saga	m3u,multi-disc,cue-bin	-
+psx/Zork Saga (USA) (Disc 1).bin	1000	psx	m3u	Zork Saga	m3u,multi-disc,cue-bin	-
+psx/Zork Saga (USA) (Disc 2).cue	100	psx	m3u	Zork Saga	m3u,multi-disc,cue-bin	-
+psx/Zork Saga (USA) (Disc 2).bin	1000	psx	m3u	Zork Saga	m3u,multi-disc,cue-bin	-
+psx/Moon Zork (Europe) (Disc 1).chd	500	psx	disc-pair	Moon Zork	multi-disc	-
+psx/Moon Zork (Europe) (Disc 2).chd	500	psx	disc-pair	Moon Zork	multi-disc	-
+dreamcast/Zork Sea/Zork Sea.gdi	80	dreamcast	gdi	Zork Sea	gdi,folder-per-game	-
+dreamcast/Zork Sea/track01.bin	1000	dreamcast	gdi	Zork Sea	gdi,folder-per-game	-
+dreamcast/Zork Sea/track02.bin	1000	dreamcast	gdi	Zork Sea	gdi,folder-per-game	-
+dreamcast/Zork Sea/track03.bin	1000	dreamcast	gdi	Zork Sea	gdi,folder-per-game	-
+snes/._Zork Racer (USA).sfc	4096	-	-	-	junk	-
+snes/Zork Racer (USA).sfc	524288	snes	copies	Zork Racer	clean	-
+snes/Zork Racer (Europe).sfc	524288	snes	copies	Zork Racer	clean	-
+gba/renamed by owner.zip	4000000	gba	pack-crc	Bionicle	renamed-content	zip:game.gba:5412a24d:8388608
+snes/super_bomberman_3.sfc	1572864	snes	pack-name	Super Bomberman 3	underscores,lowercase	-
+snes/Caf\u00e9 Zork (Japan).sfc	524288	snes	escaped	Caf\u00e9 Zork || Cafe Zork	japanese	-
+snes/zork-lowercase.sfc	524288	snes	readable-only	Zork Lowercase	lowercase	-
+misc/Zork Mystery.bin	524288	megadrive	wrong-missing	Zork Mystery	wrong	-
+gba/Zork Pinball (USA).gba	4194304	gba	wrong-name	Totally Different Name	wrong	-
+psx/Zork Duo (Disc 1).chd	500	psx	wrong-split-1	Zork Duo	wrong	-
+psx/Zork Duo (Disc 2).chd	500	psx	wrong-split-2	Zork Duo	wrong	-
+snes/Zork Notes.sfc	100	-	-	-	wrong	-
+nes/Zork Wrong System.nes	40976	snes	wrong-system	Zork Wrong System	wrong	-

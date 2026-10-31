@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.plumemu">
+    <!-- A library added this one; only the merged manifest shows it. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+</manifest>

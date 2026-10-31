@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 13+'s per-app language page (android:localeConfig in the manifest). The same tags as
+     language/AppLanguages.kt, in the same order; AppLanguagesTest fails when they differ
+     (docs/conventions/translation.md › Adding a language). -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="es" />
+    <locale android:name="fr" />
+    <locale android:name="vi" />
+    <locale android:name="zh-CN" />
+    <locale android:name="zh-TW" />
+    <locale android:name="ko" />
+    <locale android:name="ja" />
+</locale-config>

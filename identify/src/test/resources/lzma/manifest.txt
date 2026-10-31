@@ -1,0 +1,18 @@
+# file kind size crc32 key=value ... (written by make_fixtures.py)
+text.lzma alone 12000 915b28e2 prefix4096=c4424035
+zeros.lzma alone 65536 d7978eeb prefix4096=c71c0011
+random.lzma alone 8192 96a2c7f3 prefix4096=7c4aea24
+pattern.lzma alone 20000 fb5addd6 prefix4096=3092bd54
+big.lzma alone 204800 6aa83cab prefix4096=805fd65f
+empty.lzma alone 0 00000000
+text.raw-eopm.bin raw-eopm 12000 915b28e2 props=5d dict=12288 prefix4096=c4424035
+pattern.raw-eopm.bin raw-eopm 20000 fb5addd6 props=5d dict=24576 prefix4096=3092bd54
+cdhunk.raw-eopm.bin raw-eopm 18816 fe4ad4d4 props=5d dict=24576 prefix4096=30f47b92
+text.raw.bin raw 12000 915b28e2 props=5d dict=12288 prefix4096=c4424035
+zeros.raw.bin raw 65536 d7978eeb props=5d dict=65536 prefix4096=c71c0011
+pattern.raw.bin raw 20000 fb5addd6 props=5d dict=24576 prefix4096=3092bd54
+cdhunk.raw.bin raw 18816 fe4ad4d4 props=5d dict=24576 prefix4096=30f47b92
+text.lzma2.bin lzma2 12000 915b28e2 dictprop=16 prefix4096=c4424035
+random.lzma2.bin lzma2 8192 96a2c7f3 dictprop=16 prefix4096=7c4aea24
+big.lzma2.bin lzma2 204800 6aa83cab dictprop=16 prefix4096=805fd65f
+mixed.lzma2.bin lzma2 12360 a1a8e5ae dictprop=16 prefix4096=70a47b1d

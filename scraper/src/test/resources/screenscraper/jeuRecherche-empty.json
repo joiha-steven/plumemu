@@ -1,0 +1,7 @@
+{
+  "header": {"APIversion": "2.0", "commandRequested": "https://api.screenscraper.fr/api2/jeuRecherche.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&output=json&recherche=Nothing", "success": "true", "error": ""},
+  "response": {
+    "ssuser": {"id": "test-user", "numid": "1234", "maxthreads": "1"},
+    "jeux": [{}]
+  }
+}

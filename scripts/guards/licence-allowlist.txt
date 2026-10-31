@@ -1,0 +1,6 @@
+# Libraries the licence guard lets through although their POM licence is unknown or not on its
+# list. One per line: `group:artifact` (any version) or `group:artifact:version`, then the reason.
+# GPL, LGPL and AGPL are never listed here without the owner (RULES R23).
+#
+# Example:
+# com.example:widget:1.2.0  Licence is MIT per the project's LICENSE file; the POM omits it.

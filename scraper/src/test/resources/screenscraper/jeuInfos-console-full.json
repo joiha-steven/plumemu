@@ -1,0 +1,393 @@
+{
+ "header": {
+  "APIversion": "2.0",
+  "dateTime": "2026-10-22 10:00:00",
+  "commandRequested": "https://api.screenscraper.fr/api2/jeuInfos.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&ssid=test-user&sspassword=test-user-password&output=json&crc=0D4A1185",
+  "success": "true",
+  "error": ""
+ },
+ "response": {
+  "serveurs": {
+   "cpu1": "10",
+   "threadsmin": "40",
+   "nbscrapeurs": "200",
+   "apiacces": "1000",
+   "closefornomember": "0",
+   "closeforleecher": "0"
+  },
+  "ssuser": {
+   "id": "test-user",
+   "numid": "1234",
+   "niveau": "1",
+   "maxthreads": "1",
+   "requeststoday": "12",
+   "maxrequestspermin": "300",
+   "maxrequestsperday": "20000",
+   "favregion": "eu"
+  },
+  "jeu": {
+   "id": "3001",
+   "romid": "7001",
+   "notgame": "false",
+   "noms": [
+    {
+     "region": "ss",
+     "text": "Comet Runner (SS)"
+    },
+    {
+     "region": "us",
+     "text": "Comet Runner"
+    },
+    {
+     "region": "eu",
+     "text": "Comet Runner: Star Edition"
+    },
+    {
+     "region": "jp",
+     "text": "Komet Ran\u00e2"
+    },
+    {
+     "region": "kr",
+     "text": "  "
+    }
+   ],
+   "cloneof": "0",
+   "systeme": {
+    "id": "1",
+    "text": "Megadrive"
+   },
+   "editeur": {
+    "id": "50",
+    "text": "Nimbus Soft"
+   },
+   "developpeur": {
+    "id": "51",
+    "text": "Nimbus Team"
+   },
+   "joueurs": {
+    "text": "1-2"
+   },
+   "note": {
+    "text": "15"
+   },
+   "topstaff": "1",
+   "rotation": "0",
+   "synopsis": [
+    {
+     "langue": "en",
+     "text": " Pilot a comet through ten belts. "
+    },
+    {
+     "langue": "fr",
+     "text": "Pilotez une com\u00e8te \u00e0 travers dix ceintures."
+    },
+    {
+     "langue": "de",
+     "text": "Steuere einen Kometen."
+    }
+   ],
+   "classifications": [
+    {
+     "type": "PEGI",
+     "text": "7"
+    },
+    {
+     "type": "ESRB",
+     "text": "E"
+    },
+    {
+     "type": "CERO",
+     "text": ""
+    }
+   ],
+   "dates": [
+    {
+     "region": "us",
+     "text": "1993-04-02"
+    },
+    {
+     "region": "eu",
+     "text": "1993"
+    },
+    {
+     "region": "jp",
+     "text": "1992-12-18"
+    }
+   ],
+   "genres": [
+    {
+     "id": "10",
+     "nomcourt": "Action",
+     "principale": "0",
+     "parentid": "0",
+     "noms": [
+      {
+       "langue": "en",
+       "text": "Action"
+      },
+      {
+       "langue": "fr",
+       "text": "Action"
+      }
+     ]
+    },
+    {
+     "id": "7",
+     "nomcourt": "Shooter",
+     "principale": "1",
+     "parentid": "10",
+     "noms": [
+      {
+       "langue": "en",
+       "text": "Shoot'em up"
+      },
+      {
+       "langue": "fr",
+       "text": "Shoot'em up"
+      },
+      {
+       "langue": "de",
+       "text": "Ballerspiel"
+      }
+     ]
+    }
+   ],
+   "modes": [
+    {
+     "id": "102",
+     "nomcourt": "",
+     "principale": "1",
+     "parentid": "0",
+     "noms": [
+      {
+       "langue": "en",
+       "text": "Single player"
+      },
+      {
+       "langue": "fr",
+       "text": "Un joueur"
+      }
+     ]
+    },
+    {
+     "id": "103",
+     "nomcourt": "",
+     "principale": "0",
+     "parentid": "0",
+     "noms": [
+      {
+       "langue": "en",
+       "text": "Co-op"
+      }
+     ]
+    }
+   ],
+   "familles": [
+    {
+     "id": "2720",
+     "nomcourt": "",
+     "principale": "0",
+     "parentid": "0",
+     "noms": [
+      {
+       "langue": "fr",
+       "text": "Comet Runner"
+      }
+     ]
+    }
+   ],
+   "themes": [
+    {
+     "id": "401",
+     "nomcourt": "",
+     "principale": "1",
+     "parentid": "0",
+     "noms": [
+      {
+       "langue": "en",
+       "text": "Space"
+      },
+      {
+       "langue": "fr",
+       "text": "Espace"
+      }
+     ]
+    }
+   ],
+   "styles": [
+    {
+     "id": "501",
+     "nomcourt": "",
+     "principale": "0",
+     "parentid": "0",
+     "noms": [
+      {
+       "langue": "en",
+       "text": "Vertical scrolling"
+      }
+     ]
+    }
+   ],
+   "tips": [
+    {
+     "langue": "fr",
+     "titre": "Astuce",
+     "description": "Appuyez sur haut."
+    }
+   ],
+   "actions": [
+    {
+     "id": "5974",
+     "controle": [
+      {
+       "langue": "en",
+       "text": "Fire",
+       "recalboxtext": "A"
+      }
+     ]
+    }
+   ],
+   "medias": [
+    {
+     "type": "box-2D",
+     "parent": "jeu",
+     "url": "https://neoclone.screenscraper.fr/api2/mediaJeu.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&ssid=test-user&sspassword=test-user-password&systemeid=1&jeuid=3001&media=box-2D(eu)",
+     "region": "eu",
+     "crc": "ABCD0123",
+     "md5": "00000000000000000000000000000e01",
+     "sha1": "",
+     "size": "180000",
+     "format": "png"
+    },
+    {
+     "type": "box-2D",
+     "parent": "jeu",
+     "url": "https://neoclone.screenscraper.fr/api2/mediaJeu.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&ssid=test-user&sspassword=test-user-password&systemeid=1&jeuid=3001&media=box-2D(us)",
+     "region": "us",
+     "crc": "ABCD0123",
+     "md5": "00000000000000000000000000000a01",
+     "sha1": "",
+     "size": "200000",
+     "format": "png"
+    },
+    {
+     "type": "box-2D",
+     "parent": "jeu",
+     "url": "https://neoclone.screenscraper.fr/api2/mediaJeu.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&ssid=test-user&sspassword=test-user-password&systemeid=1&jeuid=3001&media=box-2D(us)",
+     "region": "us",
+     "crc": "ABCD0123",
+     "md5": "00000000000000000000000000000a01",
+     "sha1": "",
+     "size": "200000",
+     "format": "png"
+    },
+    {
+     "type": "support-2D",
+     "parent": "jeu",
+     "url": "https://neoclone.screenscraper.fr/api2/mediaJeu.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&ssid=test-user&sspassword=test-user-password&systemeid=1&jeuid=3001&media=support-2D(us)",
+     "region": "us",
+     "crc": "ABCD0123",
+     "md5": "00000000000000000000000000000a02",
+     "sha1": "",
+     "size": "90000",
+     "format": "png"
+    },
+    {
+     "type": "support-texture",
+     "parent": "jeu",
+     "url": "https://neoclone.screenscraper.fr/api2/mediaJeu.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&ssid=test-user&sspassword=test-user-password&systemeid=1&jeuid=3001&media=support-texture(us)",
+     "region": "us",
+     "crc": "ABCD0123",
+     "md5": "00000000000000000000000000000a03",
+     "sha1": "",
+     "size": "90000",
+     "format": "png"
+    },
+    {
+     "type": "ss",
+     "parent": "jeu",
+     "url": "https://neoclone.screenscraper.fr/api2/mediaJeu.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&ssid=test-user&sspassword=test-user-password&systemeid=1&jeuid=3001&media=ss(wor)",
+     "region": "wor",
+     "crc": "ABCD0123",
+     "md5": "00000000000000000000000000000b01",
+     "sha1": "",
+     "size": "40000",
+     "format": "png"
+    },
+    {
+     "type": "sstitle",
+     "parent": "jeu",
+     "url": "https://neoclone.screenscraper.fr/api2/mediaJeu.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&ssid=test-user&sspassword=test-user-password&systemeid=1&jeuid=3001&media=sstitle(wor)",
+     "region": "wor",
+     "crc": "ABCD0123",
+     "md5": "00000000000000000000000000000b02",
+     "sha1": "",
+     "size": "30000",
+     "format": "png"
+    },
+    {
+     "type": "manuel",
+     "parent": "jeu",
+     "url": "https://neoclone.screenscraper.fr/api2/mediaJeu.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&ssid=test-user&sspassword=test-user-password&systemeid=1&jeuid=3001&media=manuel(us)",
+     "region": "us",
+     "crc": "ABCD0123",
+     "md5": "00000000000000000000000000000c01",
+     "sha1": "",
+     "size": "2500000",
+     "format": "pdf"
+    },
+    {
+     "type": "fanart",
+     "parent": "jeu",
+     "url": "https://neoclone.screenscraper.fr/api2/mediaJeu.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&ssid=test-user&sspassword=test-user-password&systemeid=1&jeuid=3001&media=fanart(None)",
+     "crc": "ABCD0123",
+     "md5": "00000000000000000000000000000d01",
+     "sha1": "",
+     "size": "900000",
+     "format": "jpg"
+    },
+    {
+     "type": "video",
+     "parent": "jeu",
+     "url": "https://neoclone.screenscraper.fr/api2/mediaJeu.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&ssid=test-user&sspassword=test-user-password&systemeid=1&jeuid=3001&media=video(wor)",
+     "region": "wor",
+     "crc": "ABCD0123",
+     "md5": "00000000000000000000000000000d02",
+     "sha1": "",
+     "size": "9000000",
+     "format": "mp4"
+    },
+    {
+     "type": "video-normalized",
+     "parent": "jeu",
+     "url": "https://neoclone.screenscraper.fr/api2/mediaJeu.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&ssid=test-user&sspassword=test-user-password&systemeid=1&jeuid=3001&media=video-normalized(wor)",
+     "region": "wor",
+     "crc": "ABCD0123",
+     "md5": "00000000000000000000000000000d03",
+     "sha1": "",
+     "size": "4000000",
+     "format": "mp4"
+    },
+    {
+     "type": "wheel",
+     "parent": "jeu",
+     "url": "https://neoclone.screenscraper.fr/api2/mediaJeu.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&ssid=test-user&sspassword=test-user-password&systemeid=1&jeuid=3001&media=wheel(wor)",
+     "region": "wor",
+     "crc": "ABCD0123",
+     "md5": "00000000000000000000000000000d04",
+     "sha1": "",
+     "size": "50000",
+     "format": "png"
+    }
+   ],
+   "roms": [],
+   "rom": {
+    "id": "8001",
+    "romfilename": "Comet.md",
+    "romsize": "524288",
+    "romcrc": "0D4A1185"
+   },
+   "hacks": []
+  }
+ }
+}

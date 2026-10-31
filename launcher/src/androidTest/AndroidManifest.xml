@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Test APK only: a documents provider serving one fake game, and an activity that keeps the test
+     app in the foreground so it may start other apps' activities (Android 10 and later). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name="com.plumemu.launcher.HostActivity" android:exported="false" />
+        <provider
+            android:name="com.plumemu.launcher.FakeDocumentsProvider"
+            android:authorities="com.plumemu.launcher.test.documents"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
+    </application>
+</manifest>

@@ -1,0 +1,10 @@
+# Bundled name packs (identify/PACKS.md, "Bundled index"). Written by tools/names/build.py; do not edit.
+# <systemId> <fileName> <dataVersion> <sha256 of the pack, lower-case hex>
+arcade arcade.pack.lzma 20261022 8e4da19f5d256e50ca2b62a9f6932d4ee1003b031d6195e5cfc84ad432ae7a5c
+gba gba.pack.lzma 20261021 7f457357a9303c3cba1d61f13057623a336c012c9ca74ba91783a66ad4ee81be
+gc gc.pack.lzma 20261021 8577d908024b88fe289487bce315a731b3c2123f712e834ff5ae732babcc12f5
+nes nes.pack.lzma 20261021 085fee53420282ac75ec84686bd0462e7b4dd31cf6c48e943b9772646dec4f5a
+psx psx.pack.lzma 20261021 1c77d9da5c761d28bca1aa65c0c7e208c029348cf9be6759257b175fc2fa5c0d
+switch switch.pack.lzma 20261021 76748a5693f7c632036c08199ca92c40458b917c84518ef3755b3c24b34f05eb
+wii wii.pack.lzma 20261021 8b247512749429018e9ab2737139608f73aad4d4fbaed2c49b311c870a9e35d7
+alias wiiware wii

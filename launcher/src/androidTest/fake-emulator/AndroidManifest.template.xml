@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Template for build.sh: PACKAGE_NAME and ACTIVITY_NAME are replaced with an entry of the platform data,
+     REPORT_PACKAGE_VALUE and HOLD_MS_VALUE with where the report goes and how long the "game" stays open. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="PACKAGE_NAME">
+    <application android:label="Fake emulator" android:hasCode="true">
+        <meta-data android:name="com.plumemu.fakeemulator.REPORT_PACKAGE" android:value="REPORT_PACKAGE_VALUE" />
+        <meta-data android:name="com.plumemu.fakeemulator.HOLD_MS" android:value="HOLD_MS_VALUE" />
+        <activity android:name="com.plumemu.fakeemulator.FakeEmulatorActivity" android:exported="false" />
+        <activity-alias
+            android:name="ACTIVITY_NAME"
+            android:exported="true"
+            android:targetActivity="com.plumemu.fakeemulator.FakeEmulatorActivity" />
+    </application>
+</manifest>

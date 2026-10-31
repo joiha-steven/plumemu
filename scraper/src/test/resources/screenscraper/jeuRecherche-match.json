@@ -1,0 +1,23 @@
+{
+  "header": {"APIversion": "2.0", "commandRequested": "https://api.screenscraper.fr/api2/jeuRecherche.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&output=json&ssid=test-user&sspassword=test-user-password&recherche=Pok\u00e9mon", "success": "true", "error": ""},
+  "response": {
+    "ssuser": {"id": "test-user", "numid": "1234", "maxthreads": "1", "requeststoday": "13", "maxrequestsperday": "20000"},
+    "jeux": [
+      {
+        "id": "2001",
+        "noms": [{"region": "wor", "text": "Pok\u00e9mon Puzzle League (N64)"}],
+        "systeme": {"id": "14", "text": "Nintendo 64"}
+      },
+      {
+        "id": "2002",
+        "noms": [{"region": "us", "text": "Pok\u00e9mon Puzzle Challenge"}, {"region": "eu", "text": "Pok\u00e9mon Puzzle Challenge (EU)"}],
+        "systeme": {"id": "10", "text": "Game Boy Color"},
+        "editeur": {"text": "Nintendo"},
+        "dates": [{"region": "us", "text": "2000-12-04"}],
+        "medias": [
+          {"type": "box-2D", "url": "https://neoclone.screenscraper.fr/api2/mediaJeu.php?devid=test-dev-id&devpassword=test-dev-password&softname=Plumemu&ssid=test-user&sspassword=test-user-password&systemeid=10&jeuid=2002&media=box-2D(us)", "region": "us", "format": "png"}
+        ]
+      }
+    ]
+  }
+}

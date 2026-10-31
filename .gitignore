@@ -1,9 +1,29 @@
-# This repository holds no build output and no keys: APKs go to Releases, keys never leave the owner's machine
-*.apk
-*.aab
+# Keys and local settings: never in git
 *.jks
 *.keystore
 *.p12
+keystore.properties
+secrets.properties
+local.properties
 .env
 .env.*
+
+# Build output
+.gradle/
+build/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+output-metadata.json
+
+# IDE and system files
+.idea/
+*.iml
+.vscode/
 .DS_Store
+__pycache__/

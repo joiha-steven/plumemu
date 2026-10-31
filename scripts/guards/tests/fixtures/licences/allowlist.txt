@@ -1,0 +1,2 @@
+# Fixture allowlist for the licence guard self-test.
+org.ok:allowlisted  Custom licence checked by hand (fixture).

@@ -1,6 +1,13 @@
 # Privacy
 
-Last updated: 29 October 2026.
+Last updated: 31 October 2026.
+
+## Builds you make yourself
+
+Plumemu's source is public. A build made from it is made without the addresses of my servers: it
+sends **no usage statistics and no crash reports** (the switch is not shown), **checks for no
+updates**, and has no ScreenScraper account built in, so it contacts none of the servers named
+below. Everything below describes the official build.
 
 ## Usage statistics and crash reports
 

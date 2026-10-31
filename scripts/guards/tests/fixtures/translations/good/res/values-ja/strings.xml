@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Another order, placeholders swapped in the sentence, plurals with only other: all fine. -->
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <plurals name="games">
+        <item quantity="other">%1$s juegos</item>
+    </plurals>
+    <string name="count_line">%2$s de %1$s, 100%% listo%n</string>
+    <string name="title">Juegos</string>
+    <string name="wrapped">Hola <xliff:g id="name">%1$s</xliff:g></string>
+    <plurals name="restored">
+        <item quantity="other">%1$d archivos</item>
+    </plurals>
+</resources>

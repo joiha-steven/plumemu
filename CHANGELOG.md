@@ -3,6 +3,53 @@
 What changed in each version of Plumemu, newest first. Downloads are under
 [Releases](../../releases).
 
+## 0.1.0 (31 October 2026)
+
+The first stable release, and the first with its source open under the GPL-3.0 (see the
+[README](README.md#source)). Nothing has been taken away from the beta; this is the beta, smoother
+and with its loose ends tied.
+
+### New
+
+- **Everything glides:** lists and grids move over a fifth of a second and slow into place, and
+  the selection pill glides with them. Holding a direction scrolls evenly, and changing system no
+  longer stalls: on a Retroid Pocket 6, slow frames fell from 42% to about 4%.
+- **A bolt while charging:** a small bolt stands before the battery percentage in the top bar while the
+  handheld is on its charger.
+- **French**, from a reader's translation (thank you, @oin, issue #2). Settings › Advanced › Language
+  lists Français, and Plumemu follows Android's language when it is French.
+- **Eden Duo and PPSSPP Duo** are recognised as the emulators they are, not as Android games
+  (issue #1). With both a plain build and a Duo build installed, the plain one is used.
+- **Recent, under your control:** "Remove from Recent" in a game's menu, Recent size (10, 20 or 50)
+  and Clear Recent… in Settings › Library. Play time and statistics stay.
+- **Skip a sub-folder:** Settings › Library › ROM folders can leave a sub-folder of a ROM folder out of
+  the scan; its games leave the library, and nothing on disk is touched.
+- **A game that will not start tells you:** "Starting game…" shows while a game starts, and after 20
+  seconds without the emulator Plumemu says so.
+- **Quiet while you play:** reading new files and box art downloads wait until you are back.
+- **A way out of a library error:** if the library cannot be read, START opens Settings (Restore,
+  Reset, Report a problem) and A tries again. Setup's error screen offers Try again and Set up later.
+- **L1 and R1 jump a page** in Recent and in lists sorted by Last played or Year, where there are no
+  letters to jump by.
+- **Tidier screens:** Search and Favorites say something when empty; system counts from 1,000 read
+  "1k"; lists fade the row cut at their edge; Settings rows have an even height; colour sets fit
+  four to a row; and gaps are even across setup.
+- **More folders found:** games on a second Android user, on folders picked through "Documents" and on
+  NTFS or ext4 cards get their files read.
+- **The box art sweep** now also runs after the handheld's clock was set ahead.
+
+### Not in this version
+
+- No screenshots or videos of games yet.
+
+### Known issues
+
+- A few games have no box art in any source (some Switch titles). Game menu › Fix box art… picks one.
+- The second screen is tested on the AYN Thor only.
+- Most translations other than French have not yet been read by a native speaker.
+- Tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket
+  Classic; other handhelds are untested.
+
 ## 0.0.8-beta (29 October 2026)
 
 ### New
