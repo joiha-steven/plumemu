@@ -182,6 +182,7 @@ class AppGameActionsVersionsTest {
         val withVersions = (1..5).map { timed { actions.facts(usa.toString()) } }
         val versionsAlone = (1..5).map { timed { com.plumemu.library.naming.copiesOf(graph.database, null, usa) } }
         println("AppGameActionsVersionsTest: facts ${withVersions.joinToString()} ms, of which versions ${versionsAlone.joinToString()} ms")
+        org.junit.Assume.assumeTrue("absolute time budgets are checked on the development machine, not on shared CI runners", System.getProperty("plumemu.timingBudgets") != "false")
         assertTrue("versions took $versionsAlone ms", versionsAlone.min() < 50)
     }
 

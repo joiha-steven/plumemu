@@ -13,6 +13,11 @@
   a score below `corpus/scores.txt` fails the build. After an intended change:
   `./gradlew :library:testDebugUnitTest --tests '*CorpusTest' -Pcorpus.update=true` and commit
   scores.txt.
+- **Timing budgets in unit tests**: a speed check that holds on any machine is a ratio measured on the same
+  machine (`TitleSearchTest`). A test that asserts an absolute time (ms or s) puts `Assume.assumeTrue(...,
+  System.getProperty("plumemu.timingBudgets") != "false")` right before that assertion, after the correctness
+  assertions. `verify.sh --ci` passes `-Pplumemu.timingBudgets=false` (shared runners are several times slower);
+  everywhere else the budget is checked. A laptop-only measurement stays opt-in (`-Pidentify.measure=true`).
 - **Screenshot tests** (Roborazzi, on the JVM): every screen at 768×432 and 576×432 dp (the 4:3 640×480 and 640×432 on the screens in design/rules.md › Reference sizes, `sizes = ReferenceShots.Size.entries`), dark and
   light, with Plum Sans; key screens also with Plum Serif and Plum Mono. Reference images are committed; a
   difference fails the gate until a person accepts it.

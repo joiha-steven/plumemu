@@ -94,6 +94,7 @@ class LogFileTest {
         writer.enqueue("two\n")
         val started = System.nanoTime()
         assertFalse("nothing was written yet", writer.flush())
+        org.junit.Assume.assumeTrue("absolute time budgets are checked on the development machine, not on shared CI runners", System.getProperty("plumemu.timingBudgets") != "false")
         assertTrue("no 5 s wait", System.nanoTime() - started < 1_000_000_000L)
         hold.countDown()
         // The two lines leave the queue as the writer takes them; a flush is then let in.

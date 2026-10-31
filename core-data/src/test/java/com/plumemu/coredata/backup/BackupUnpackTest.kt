@@ -463,6 +463,7 @@ class BackupUnpackTest {
         assertEquals(count - count / 100, unpacked.damagedMediaFiles)
         assertEquals(account, unpacked.account)
         assertTrue("the reads went ${deepest - firstDepth} frames deeper than the first", deepest - firstDepth < 20)
+        org.junit.Assume.assumeTrue("absolute time budgets are checked on the development machine, not on shared CI runners", System.getProperty("plumemu.timingBudgets") != "false")
         assertTrue("took $seconds s", seconds < 60)
     }
 

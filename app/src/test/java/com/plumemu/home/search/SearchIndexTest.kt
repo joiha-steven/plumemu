@@ -113,6 +113,7 @@ class SearchIndexTest {
         repeat(repeats) { large.find("nintendo title 12") }
         val perQueryMs = (System.nanoTime() - started) / 1_000_000.0 / repeats
         println("search over 10,000 games: %.2f ms per query on the JVM".format(perQueryMs))
+        org.junit.Assume.assumeTrue("absolute time budgets are checked on the development machine, not on shared CI runners", System.getProperty("plumemu.timingBudgets") != "false")
         // A frame is 16 ms; matching runs off the main thread, this only guards against a slow rewrite.
         assertTrue("took $perQueryMs ms", perQueryMs < 16.0)
     }

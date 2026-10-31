@@ -149,6 +149,7 @@ class GraphStatisticsArcadeTest {
             )
             assertEquals(expected.any { it.isPlayed }, figures.hasPlayed)
             assertEquals(listed.sumOf { it.seconds }, figures.topSystem?.seconds ?: 0L)
+            org.junit.Assume.assumeTrue("absolute time budgets are checked on the development machine, not on shared CI runners", System.getProperty("plumemu.timingBudgets") != "false")
             assertTrue("first read took ${first.ms} ms", first < BUDGET_NANOS)
             assertTrue("median read took ${median.ms} ms", median < BUDGET_NANOS)
             played.count { !it.isPrimaryCopy }

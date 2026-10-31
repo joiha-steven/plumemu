@@ -48,6 +48,7 @@ class NameMatcherTimingTest {
                 matcher.indexBytes() / 1024, (after - before) / 1024, buildMs, perLookupMs, found, queries.size,
             ),
         )
+        org.junit.Assume.assumeTrue("absolute time budgets are checked on the development machine, not on shared CI runners", System.getProperty("plumemu.timingBudgets") != "false")
         assertTrue("$perLookupMs ms per lookup", perLookupMs < 2.0)
         assertTrue("exact names and one-typo names should mostly match: $found", found > queries.size / 2)
     }

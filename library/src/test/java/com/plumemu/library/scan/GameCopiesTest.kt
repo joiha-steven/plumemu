@@ -196,6 +196,7 @@ class GameCopiesTest {
             (System.nanoTime() - start) / 1_000_000
         }
         println("GameCopiesTest: copiesOf among 10,000 arcade sets took ${times.joinToString()} ms")
+        org.junit.Assume.assumeTrue("absolute time budgets are checked on the development machine, not on shared CI runners", System.getProperty("plumemu.timingBudgets") != "false")
         assertTrue("copiesOf took $times ms", times.min() < 500)
     }
 

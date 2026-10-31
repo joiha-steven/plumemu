@@ -180,6 +180,7 @@ class LibraryScrapeSourceTest {
         assertEquals(700, lib.db.scrapedGameDao().countPending(lib.now - 30 * DAY))
         val countMillis = (System.nanoTime() - countStarted) / 1_000_000.0
         println("PENDING_TIMING pending(50) over 10,000 games after 300 delivered, ms: ${timings.joinToString { "%.1f".format(it) }}; countPending ms: ${"%.1f".format(countMillis)}")
+        org.junit.Assume.assumeTrue("absolute time budgets are checked on the development machine, not on shared CI runners", System.getProperty("plumemu.timingBudgets") != "false")
         assertTrue("pending(50) took ${timings.minOrNull()} ms", (timings.minOrNull() ?: Double.MAX_VALUE) < 250.0)
     }
 }
