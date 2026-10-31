@@ -148,8 +148,14 @@ internal class GraphScrapeLimitsTest : GraphScrapesHarness() {
         limitsToGive = null
         check = AccountCheck.Refused(UnavailableReason.BadUserCredentials)
 
-        visitUntil { scraper.checks.get() > 1 }
-        val status = withTimeout(5_000) { accounts.status.first { it is AccountStatus.SignedIn && it.isRefused } }
+        // Settings stays open until the answer is recorded: closing it as soon as the check starts
+        // cancelled the check before its answer was kept on a slow machine.
+        val visit = scope.launch { scrapes.accountLimits.collect { } }
+        val status = try {
+            withTimeout(5_000) { accounts.status.first { it is AccountStatus.SignedIn && it.isRefused } }
+        } finally {
+            visit.cancelAndJoin()
+        }
 
         assertEquals(AccountStatus.SignedIn("plumtester", isRefused = true), status)
         assertEquals(2, scraper.checks.get())
