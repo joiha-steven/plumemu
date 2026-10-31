@@ -3,7 +3,8 @@
 
 Text files may use basic ASCII plus the typographic punctuation and symbols in ALLOWED_CHARS.
 Anything else (Vietnamese diacritics, CJK, Cyrillic, emoji, ...) fails with its Unicode name.
-Skipped: `res/values-<lang>/` translation folders, binaries and fonts.
+Skipped: `res/values-<lang>/` translation folders, the public repository's `translations/<lang>/`
+copies of them, binaries and fonts.
 """
 
 import re
@@ -29,7 +30,7 @@ ALLOWED_CHARS = set(
 # Proper names spelled with letters outside basic Latin; each stays exactly as written.
 ALLOWED_WORDS = ("Daijishō",)
 
-SKIP = re.compile(r"(^|/)res/values-[^/]+/")
+SKIP = re.compile(r"(^|/)res/values-[^/]+/|^translations/[^/]+/")
 
 
 def check_line(report, path, number, line):

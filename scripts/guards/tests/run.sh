@@ -94,6 +94,8 @@ write("english/bad/docs/notes.md",
       "e\u0301 combining accent\n")
 write("english/bad/app/src/main/res/values/strings.xml",
       "<resources><string name=\"x\">Tr\u00f2 ch\u01a1i</string></resources>\n")
+write("english/good/translations/es/strings.xml",
+      "<resources><string name=\"x\">Espa\u00f1ol</string></resources>\n")
 write("english/good/docs/notes.md",
       "Settings \u203a About \u00b7 768\u00d7432 \u2014 done \u2192 next \u2265 1 \u2026 "
       "\u201cquoted\u201d \u2713 \u2500\u252c\u2500 Daiji" "sh\u014d\n")
@@ -151,7 +153,7 @@ printf 'public /app/\nprivate /docs/RULES.md\npublic /docs/\nprivate /scripts/\n
 # --- Cases ---------------------------------------------------------------------------------------
 F="$FIXTURES"
 expect_count  "english-only catches non-English letters, design canvas included" 6 "$TMP/english/bad" english-only .
-expect_pass   "english-only passes punctuation, allowed names, values-vi" "$TMP/english/good" english-only .
+expect_pass   "english-only passes punctuation, allowed names, values-vi, translations/es" "$TMP/english/good" english-only .
 
 expect_marked "ui-text catches literal UI text" "$F/ui-text/bad" ui-text .
 expect_pass   "ui-text passes resources, logs, comments, tests" "$F/ui-text/good" ui-text .

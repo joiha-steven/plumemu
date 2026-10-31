@@ -17,7 +17,7 @@ and with its loose ends tied.
 - **A bolt while charging:** a small bolt stands before the battery percentage in the top bar while the
   handheld is on its charger.
 - **French**, from a reader's translation (thank you, @oin, issue #2). Settings › Advanced › Language
-  lists Français, and Plumemu follows Android's language when it is French.
+  lists French in its own name, and Plumemu follows Android's language when it is French.
 - **Eden Duo and PPSSPP Duo** are recognised as the emulators they are, not as Android games
   (issue #1). With both a plain build and a Duo build installed, the plain one is used.
 - **Recent, under your control:** "Remove from Recent" in a game's menu, Recent size (10, 20 or 50)

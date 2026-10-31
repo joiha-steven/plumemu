@@ -32,3 +32,14 @@ jobs:
 
       - name: Build and check
         run: bash scripts/verify.sh --ci
+
+      - name: Keep the test reports of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            build/verify/
+            */build/reports/tests/
+            */build/test-results/
+          if-no-files-found: ignore
