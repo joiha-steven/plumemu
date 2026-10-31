@@ -136,9 +136,11 @@ class DatabaseGateTest {
         val w = database.openHelper.writableDatabase
         val go = java.util.concurrent.CountDownLatch(1)
         val ended = java.util.concurrent.atomic.AtomicBoolean(false)
+        val woke = java.util.concurrent.CountDownLatch(1)
         val writer =
             kotlin.concurrent.thread {
                 go.await()
+                woke.countDown()
                 w.beginTransaction()
                 try {
                     w.execSQL("INSERT INTO system (id, name) VALUES ('snes', 'Super Nintendo')")
@@ -153,6 +155,9 @@ class DatabaseGateTest {
             gate.closeWhenQuiet(database, 5_000) {
                 // The close holds the write lock: let the writer queue behind it, and wait until it does.
                 go.countDown()
+                // Waiting on `go` also reads as not RUNNABLE; on a slow machine the loop below
+                // passed before the writer had even woken, so the close ran ahead of it.
+                woke.await(5, java.util.concurrent.TimeUnit.SECONDS)
                 val deadline = System.currentTimeMillis() + 5_000
                 while (writer.state == Thread.State.RUNNABLE || writer.state == Thread.State.NEW) {
                     if (System.currentTimeMillis() > deadline) break
