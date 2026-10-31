@@ -8,6 +8,11 @@
 </p>
 
 <p align="center">
+  <a href="https://plumemu.stevensdesk.com/assets/media/demo-v010.mp4"><img src="media/demo.jpg" width="100%" alt="Play the one-minute demo: Plumemu on a 4:3 handheld screen driven by its buttons, here the Super Nintendo games as a grid of covers"></a>
+  <br><sub>▶ One minute with the buttons, on a 4:3 screen. The only sound is Plumemu's own clicks.</sub>
+</p>
+
+<p align="center">
   <b>0.1.0</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket Classic ·
   <a href="../../releases">Download</a> · <a href="https://plumemu.stevensdesk.com">Website</a>
 </p>
