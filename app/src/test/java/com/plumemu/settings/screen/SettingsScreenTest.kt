@@ -123,8 +123,10 @@ class SettingsScreenTest {
         showMainScreen()
         compose.onNodeWithTag(HomeTags.HINT_BAR).assertExists()
         send(Action.Menu)
-        down(3) // Controls
-        send(Action.Enter, Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Enter) // Show button hints › off (after Push right to play)
+        down(SettingsSection.Controls.shownIndex)
+        send(Action.Enter)
+        down(SettingsSection.Controls.options.indexOf(SettingsOption.ShowButtonHints))
+        send(Action.Enter) // Show button hints › off
         assertFalse(settings.value.controls.showButtonHints)
         compose.onNodeWithTag(SettingsTags.HINT_BACK).assertIsDisplayed()
         send(Action.Back, Action.Back)
@@ -191,16 +193,18 @@ class SettingsScreenTest {
         showMainScreen()
         send(Action.Menu)
         down()
-        send(Action.Enter, Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Move(Direction.Right)) // under Colors, Background, Text color and Accent: Font › Serif
+        send(Action.Enter)
+        down(SettingsSection.Appearance.options.indexOf(SettingsOption.Font))
+        send(Action.Move(Direction.Right)) // Font › Serif
         assertEquals(FontSetting.Serif, settings.value.appearance.font)
-        compose.onNodeWithText(context.getString(R.string.settings_value_choice, context.getString(R.string.settings_font_serif))).assertIsDisplayed()
+        compose.onNode(androidx.compose.ui.test.hasText(context.getString(R.string.settings_font_serif)) and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag(SettingsTags.value(SettingsOption.Font))), useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
     fun theConfirmButtonSwitchFlipsTheHintLetters() {
         showMainScreen()
         send(Action.Menu)
-        down(SettingsSection.Advanced.ordinal) // Advanced, after Statistics
+        down(SettingsSection.Controls.shownIndex) // Controls: Confirm with B is its first row
         send(Action.Enter)
         hintKey(SettingsTags.HINT_CONFIRM, "A").assertExists()
         hintKey(SettingsTags.HINT_BACK, "B").assertExists()
@@ -227,14 +231,17 @@ class SettingsScreenTest {
         compose.onNodeWithTag(SettingsTags.option(SettingsOption.Version)).assertIsDisplayed()
         compose.onNodeWithTag(SettingsTags.HINT_BACK).performClick()
         compose.waitForIdle()
-        // Statistics sits between Home screen and Advanced: the hint walks through it.
-        compose.onNodeWithTag(SettingsTags.section(SettingsSection.HomeScreen)).performClick()
+        // Statistics and Accounts sit between Controls and Advanced: the hint walks through them.
+        compose.onNodeWithTag(SettingsTags.section(SettingsSection.Controls)).performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(SettingsTags.section(SettingsSection.HomeScreen)).performClick()
+        compose.onNodeWithTag(SettingsTags.section(SettingsSection.Controls)).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(SettingsTags.HINT_SECTION).performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(SettingsTags.statistic(0)).assertIsDisplayed()
+        compose.onNodeWithTag(StatisticsTags.PAGE).assertIsDisplayed()
+        compose.onNodeWithTag(SettingsTags.HINT_SECTION).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(SettingsTags.option(SettingsOption.RetroAchievementsAccount)).assertIsDisplayed()
         compose.onNodeWithTag(SettingsTags.HINT_SECTION).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(SettingsTags.option(SettingsOption.Animations)).assertIsDisplayed()
@@ -246,7 +253,7 @@ class SettingsScreenTest {
         compose.waitForIdle()
         compose.onNodeWithTag(SettingsTags.value(SettingsOption.Font)).performClick()
         compose.waitForIdle()
-        assertEquals("a tap on ‹ › goes to the next value", "Serif", settings.value.appearance.font.name)
+        assertEquals("a tap on the chevrons goes to the next value", "Serif", settings.value.appearance.font.name)
 
         compose.onNodeWithTag(SettingsTags.option(SettingsOption.Background)).performClick()
         compose.waitForIdle()
@@ -259,7 +266,7 @@ class SettingsScreenTest {
     fun resetLibraryRunsOnlyAfterItsConfirmStep() {
         showMainScreen()
         send(Action.Menu)
-        down(SettingsSection.Advanced.ordinal) // Advanced, after Statistics
+        down(SettingsSection.Advanced.shownIndex) // Advanced, after Statistics
         send(Action.Enter)
         // Reset library, the last row of Advanced (Back up… sits before the resets).
         down(SettingsSection.Advanced.options.indexOf(SettingsOption.ResetLibrary))
@@ -276,7 +283,7 @@ class SettingsScreenTest {
         showMainScreen()
         send(Action.Menu)
         down()
-        send(Action.Enter, Action.Move(Direction.Down)) // Background, under Colors
+        send(Action.Enter, Action.Move(Direction.Down), Action.Move(Direction.Down)) // Background, under Language and Colors
         assertEquals("opening the panel changes nothing stored: Light text on Paper stays", TextColorSetting.Light, settings.value.appearance.textColor)
         assertEquals("but it is drawn dark so the screen can be read", com.plumemu.coreui.theme.TextMode.Dark, settings.value.toThemeSettings().textMode)
     }
@@ -292,7 +299,7 @@ class SettingsScreenTest {
             }
         }
         send(Action.Move(Direction.Left), Action.Menu) // Settings
-        send(Action.Move(Direction.Down), Action.Enter, Action.Move(Direction.Down), Action.Enter) // Appearance › Background (under Colors) › presets
+        send(Action.Move(Direction.Down), Action.Enter, Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Enter) // Appearance › Background (under Language and Colors) › presets
         // Down to the last row and right to its end, the "+" (however many swatches a row holds), then into the palette and up onto a swatch.
         send(*Array(6) { Action.Move(Direction.Down) }, *Array(6) { Action.Move(Direction.Right) })
         val opening = settings.value.appearance.background // presets apply as the cursor reaches them

@@ -64,7 +64,7 @@ internal fun GamesListItem(
     val trailing = row.trailing(hasBoxArt, LocalHomeArt.current.slot(row.scrapeKey), showsSystem, joinPlace.takeUnless { mixesSystems || !showsPlace })
     // Only a row whose title another row of the list shares has tags (withVariantTags), so the others read no string.
     val subtitle = remember(resources, row.variantTags, row.variantRegion) { variantSubtitle(resources, row.variantTags, row.variantRegion) }
-    GameRow(title = row.title, trailing = trailing, look = form.look, modifier = tap, isFavorite = row.isFavorite, drawnLook = drawnLook, subtitle = subtitle)
+    GameRow(title = row.title, trailing = trailing, look = form.look, modifier = tap, isFavorite = row.isFavorite, drawnLook = drawnLook, subtitle = subtitle, masteredLabel = masteredLabel(row.id))
 }
 
 /** "· Rev 1" for a row with variant tags, "· Rev 1, EUR" when [region] is given too; empty when neither has a word. */

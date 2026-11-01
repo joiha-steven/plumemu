@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
  * The battery part under it takes
  * its sizes from the second screen's type ramp ([leftRole], [unitRole], [lineRole]) and follows the
  * person's font and Text size like the rest of the second screen, but not Android's font scale
- * ([partStyle]): the chart's fixed three hours and the lit area were measured at these sizes.
+ * ([partStyle]): the lit area was measured at these sizes.
  * Compact is Roomy one ramp step down, its gaps and strokes scaled about as the clock (60 / 84).
  */
 @Immutable
@@ -36,38 +36,40 @@ enum class InGameDimens(
     val partInsetBottom: Dp,
     /** Between the clock card and the time left. */
     val cardToPartGap: Dp,
-    /** Between the time left and the chart. */
+    /** Between the head (the level ring, the time left) and the chart. */
     val headToChartGap: Dp,
-    /** The least room between the hour labels and the key. */
+    /** The least room between the chart's labels and the facts row, and between the facts and the drift note. */
     val labelsToKeyGap: Dp,
+    /** The level ring left of the time left: its radius (to the stroke's middle), stroke, and the gap to the time left. */
+    val ringRadius: Dp,
+    val ringStroke: Dp,
+    val ringGap: Dp,
     /** The chart's height: as much as is left up to [chartMaxHeight]; under [chartMinHeight] the key gives way. */
     val chartMaxHeight: Dp,
     val chartMinHeight: Dp,
-    /** The chart's lines: this play, the line ahead, the usual pace; the dot at now. */
+    /** The chart's lines: this play (thicker), the line ahead (fading along its length), the usual pace; the dot at now. */
     val playedStroke: Dp,
     val aheadStroke: Dp,
     val usualStroke: Dp,
     val nowDotRadius: Dp,
-    /** Between the key's two items. */
-    val keyItemGap: Dp,
 ) {
     Roomy(
         84.dp, 20.dp, 1f,
         leftRole = TypeRole.SecondBatteryLeftRoomy, unitRole = TypeRole.SecondBatteryUnitRoomy,
         partInsetTop = 32.dp, partInsetSide = 40.dp, partInsetBottom = 32.dp,
-        cardToPartGap = 28.dp, headToChartGap = 14.dp, labelsToKeyGap = 12.dp,
+        cardToPartGap = 28.dp, headToChartGap = 16.dp, labelsToKeyGap = 10.dp,
+        ringRadius = 30.dp, ringStroke = 2.dp, ringGap = 20.dp,
         chartMaxHeight = 144.dp, chartMinHeight = 64.dp,
-        playedStroke = 3.5.dp, aheadStroke = 3.dp, usualStroke = 2.5.dp, nowDotRadius = 6.dp,
-        keyItemGap = 28.dp,
+        playedStroke = 3.dp, aheadStroke = 2.dp, usualStroke = 2.dp, nowDotRadius = 5.dp,
     ),
     Compact(
         60.dp, 16.dp, 0.8f,
         leftRole = TypeRole.SecondBatteryLeftCompact, unitRole = TypeRole.SecondBatteryUnitCompact,
         partInsetTop = 32.dp, partInsetSide = 28.dp, partInsetBottom = 32.dp,
-        cardToPartGap = 20.dp, headToChartGap = 10.dp, labelsToKeyGap = 8.dp,
+        cardToPartGap = 20.dp, headToChartGap = 10.dp, labelsToKeyGap = 6.dp,
+        ringRadius = 22.dp, ringStroke = 1.5.dp, ringGap = 14.dp,
         chartMaxHeight = 104.dp, chartMinHeight = 48.dp,
-        playedStroke = 3.dp, aheadStroke = 2.5.dp, usualStroke = 2.dp, nowDotRadius = 5.dp,
-        keyItemGap = 20.dp,
+        playedStroke = 2.5.dp, aheadStroke = 1.5.dp, usualStroke = 1.5.dp, nowDotRadius = 4.dp,
     ),
     ;
 
@@ -105,31 +107,35 @@ enum class InGameDimens(
         /** Between the time and the battery line. */
         val timeToBatteryGap: Dp = 8.dp
 
-        /** The battery part's other lines at both sizes: "empty at 22:35", the hour labels, the key, the notes. */
+        /** The battery part's other lines at both sizes: "empty at about 22:35", the ring's level, the chart's labels, the facts, the notes. */
         val lineRole: TypeRole = TypeRole.SecondBatteryLine
 
-        /** Between the chart and its hour labels; the hour ticks' length (at the chart's bottom only, no grid). */
+        /** Between the chart and its labels; the whole hours' ticks, short, a gap under the chart's floor (no grid, no baseline). */
         val chartToLabelsGap: Dp = 4.dp
-        val tickLength: Dp = 5.dp
+        val tickGap: Dp = 6.dp
+        val tickLength: Dp = 4.dp
         val tickStroke: Dp = 1.5.dp
 
         /** The chart's lines keep this far from its top and bottom, so 100% and 0% are not cut by their stroke. */
         val chartPad: Dp = 4.dp
 
-        /** The ahead line's dashes and the usual pace's dots (a round cap every [usualDotGap]). */
-        val aheadDash: Dp = 8.dp
-        val aheadGap: Dp = 7.dp
+        /** Inside the level ring, between its stroke and the number. */
+        val ringPad: Dp = 6.dp
+
+        /** The ring at the chart's right end (empty or full), and the faint dotted guide down from now. */
+        val endMarkRadius: Dp = 5.dp
+        val endMarkStroke: Dp = 2.dp
+        val nowGuideStroke: Dp = 1.5.dp
+        val nowGuideGap: Dp = 6.dp
+
+        /** The usual pace's dots: a round cap every [usualDotGap]. */
         val usualDotGap: Dp = 7.dp
 
-        /** The least room between two hour labels; less, and the two in the middle give way. */
+        /** The least room between the chart's labels ("Started 21:07", "Empty 23:15"), and between the facts. */
         val labelGap: Dp = 8.dp
 
-        /** The least room between the time left and "empty at 22:35" on one line; less, and it goes under. */
-        val headGap: Dp = 16.dp
-
-        /** A key item: the line's swatch, then its words. */
-        val keySwatchWidth: Dp = 22.dp
-        val keySwatchGap: Dp = 10.dp
+        /** The facts row's pieces: "Played 0:44 · Used 6% · 8% an hour", this gap each side of the separator. */
+        val factGap: Dp = 8.dp
 
         /** The battery glyph at Roomy (the mockup's 26 x 13 cell, 2 thick, a 3 x 5 nub); Compact scales it by [glyphScale]. */
         val glyphBodyWidth: Dp = 26.dp
@@ -184,7 +190,8 @@ enum class InGameDimens(
  * The in-game card's colours: dim on black whatever background the person picked (an OLED stays
  * mostly off; the clock card nothing brighter than [time], about 13% of white's luminance). The
  * battery part under it is a step brighter ([partText], #767676, 18%): small text must read at
- * 4.6:1 (the design's target); it lights about 3.6% of the screen.
+ * 4.6:1 (the design's target). With the chart's soft fill it lights up to about 13% of the screen, at
+ * a mean brightness under 0.5% (the burn-in budget).
  */
 @Immutable
 object InGameColors {
@@ -198,11 +205,25 @@ object InGameColors {
     /**
      * The battery part: its words and this play's line, 4.6:1 on black (small
      * text, WCAG AA); the time left and the line at 15% and below, not charging, 3.3:1 (large text
-     * only); the line ahead 3.1:1; the usual pace 2.8:1; the hour ticks.
+     * only); the line ahead 3.1:1 where it starts, fading along its length; the usual pace 2.8:1;
+     * the hour ticks, the ring's track and the now guide; the mark at the chart's right end.
      */
     val partText: Color = Color(0xFF767676)
     val partLow: Color = Color(0xFFA0404A)
     val ahead: Color = Color(0xFF5C5C5C)
     val usual: Color = Color(0xFF555555)
     val tick: Color = Color(0xFF333333)
+    val endMark: Color = Color(0xFF3A3A3A)
+
+    /** The glow round the chart's dot at now: this play's line colour at this alpha in its middle, none at its edge. */
+    const val NOW_GLOW_ALPHA = 0.25f
+
+    /** The area under this play's line: its colour at this alpha at the line, none at the chart's floor. */
+    const val AREA_ALPHA = 0.12f
+
+    /** The area under the line ahead: this alpha where it starts, none at its end. */
+    const val AHEAD_AREA_ALPHA = 0.04f
+
+    /** The line ahead ends at this share of its colour's alpha. */
+    const val AHEAD_FADE_TO = 0.3f
 }

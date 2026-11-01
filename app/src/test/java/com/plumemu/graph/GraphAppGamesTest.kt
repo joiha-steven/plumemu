@@ -8,6 +8,7 @@ import com.plumemu.coredata.db.AppKind
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.launcher.apps.LaunchableApp
 import com.plumemu.launcher.apps.PackagePresence
+import com.plumemu.platforms.PackageVariant
 import com.plumemu.platforms.PlatformCatalog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -69,11 +70,15 @@ class GraphAppGamesTest {
             presences[packageName] ?: PackagePresence.NotInstalled
         },
         ownPackage = "com.plumemu",
+        isLaunchable = { launchable(it) },
         scope = scope,
         io = io,
         log = { logged += it },
         clock = { 1_000L },
     )
+
+    /** Which emulator builds start (package installed and activity resolves); every listed build unless a test says otherwise. */
+    private var launchable: (PackageVariant) -> Boolean = { true }
 
     private fun app(packageName: String, label: String, isGame: Boolean = false) = LaunchableApp(label, packageName, "$packageName.Main", isGame)
 
@@ -98,6 +103,29 @@ class GraphAppGamesTest {
         assertEquals(expected, listed())
         val celesteGame = graph.database.gameDao().game(graph.database.appGameDao().records().first { it.packageName == "com.celeste" }.gameId)!!
         assertEquals("Celeste", celesteGame.title)
+    }
+
+    @Test
+    fun theRealGenshinUnderAnEmulatorBuildsPackageNameIsStillAnAppGame() = runBlocking {
+        // Eden and Lemon ship a build as com.miHoYo.Yuanshen; the game of that name lacks their activity.
+        val genshin = app("com.miHoYo.Yuanshen", "Genshin Impact", isGame = true)
+        installed = listOf(settings, genshin)
+        launchable = { variant -> variant.packageName != "com.miHoYo.Yuanshen" }
+
+        appGames().syncNow()
+
+        assertEquals(mapOf("com.miHoYo.Yuanshen" to "android"), listed())
+    }
+
+    @Test
+    fun anEmulatorBuildUnderThatPackageNameIsNotAnAppGame() = runBlocking {
+        val spoofed = app("com.miHoYo.Yuanshen", "Eden", isGame = true)
+        installed = listOf(settings, spoofed)
+        launchable = { true } // the activity resolves: it is Eden or Lemon
+
+        appGames().syncNow()
+
+        assertEquals(emptyMap<String, String>(), listed())
     }
 
     @Test

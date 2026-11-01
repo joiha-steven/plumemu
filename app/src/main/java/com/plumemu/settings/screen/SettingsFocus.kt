@@ -2,6 +2,7 @@ package com.plumemu.settings.screen
 
 import com.plumemu.language.AppLanguages
 import androidx.compose.runtime.Immutable
+import com.plumemu.account.RaAccounts
 import com.plumemu.account.ScraperAccounts
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextSizeSetting
@@ -85,6 +86,9 @@ internal interface SettingsActions {
     /** Advanced › Export logs: Android's share sheet with the log file; [onDone] gets false when it could not open. */
     fun exportLogs(onDone: (Boolean) -> Unit) = onDone(false)
 
+    /** Opens [url] in the device's browser; false when none could. */
+    fun openWebPage(url: String): Boolean = false
+
     /** The focus left Library › ROM folders (or Settings closed): the picker's last answer goes. */
     fun forgetFolderAnswer()
 
@@ -100,8 +104,11 @@ internal interface SettingsActions {
     /** The colours a finger shows on the colour sliders before they are written (see [ColorPreview]). */
     val colorPreview: ColorPreview get() = ColorPreview.None
 
-    /** Library's ScreenScraper account: sign in and out. */
+    /** Accounts' ScreenScraper account: sign in and out. */
     val accounts: ScraperAccounts get() = ScraperAccounts.Unavailable
+
+    /** Accounts' RetroAchievements account: sign in and out. */
+    val raAccounts: RaAccounts get() = RaAccounts.None
 
     /** About › Report a problem: queues the report and tries to send it. */
     val problemReports: ProblemReportActions get() = ProblemReportActions.None
@@ -147,7 +154,7 @@ internal data class SettingsFocus(
     val systemId: String? = null,
     /** The unknown folder the panel answers, by id: the list reorders as folders get answered. */
     val folderKey: FolderKey? = null,
-    /** Library › ScreenScraper › Choose systems…: the systems checked, by id (none when it opens). */
+    /** Accounts › ScreenScraper › Choose systems…: the systems checked, by id (none when it opens). */
     val chosenSystems: Set<String> = emptySet(),
     /** What the Re-download confirm is about: these systems, or null for every game. */
     val redownloadSystems: Set<String>? = null,
@@ -227,6 +234,7 @@ internal data class PanelGrid(
                 PanelPage.UndoRestore -> PanelGrid(undoPanelItems(content, focus.undoAsk).size, 1)
                 PanelPage.Licenses -> PanelGrid(LicenseNotices.all.size, 1)
                 PanelPage.ScraperAccount -> PanelGrid(accountPageItems(content).size, 1)
+                PanelPage.RaAccount -> PanelGrid(raPageItems(content).size, 1)
                 PanelPage.ScraperSystems -> PanelGrid(systemsPickCount(content, focus), 1)
                 PanelPage.ScraperConfirm -> PanelGrid(BoxArtConfirmItem.entries.size, 1)
                 PanelPage.ScraperSignOutConfirm -> PanelGrid(SignOutConfirmItem.entries.size, 1)

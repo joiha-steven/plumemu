@@ -65,7 +65,7 @@ class SettingsScreenSoundsTest {
         compose.waitForIdle()
         assertEquals("opening Settings: the press's own confirm and nothing more", listOf(UiSound.Confirm), press(Action.Menu))
         val down = Action.Move(Direction.Down)
-        press(down, down, down, down, down, down, Action.Enter, down, down) // Advanced › Confirm with B, Animations, Sounds
+        press(down, down, down, down, Action.Enter, down, down, down, down, down, down) // Controls › Confirm with B … Keyboard, Sounds
         assertEquals("Loud to Off makes no sound", emptyList<UiSound>(), press(Action.Enter))
         assertEquals(SoundLevel.Off, settings.value.advanced.sounds)
         assertEquals("while off, nothing plays", emptyList<UiSound>(), press(down, Action.Move(Direction.Up)))

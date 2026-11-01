@@ -9,7 +9,7 @@ import com.plumemu.PlumApplication
 import kotlinx.coroutines.launch
 
 /**
- * An Activity in the language of Settings › Advanced › Language ([AppLocale]). MainActivity follows the
+ * An Activity in the language of Settings › Appearance › Language ([AppLocale]). MainActivity follows the
  * stored language while it lives ([followsLanguage]: a change recreates it, or goes to Android's per-app
  * language from Android 13); PinShortcutActivity, a short confirm screen, only starts in it.
  */

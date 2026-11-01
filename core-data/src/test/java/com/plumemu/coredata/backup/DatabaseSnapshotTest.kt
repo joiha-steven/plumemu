@@ -43,7 +43,7 @@ class DatabaseSnapshotTest {
         val copy = File(tmp.root, "copy.db")
         val snapshot = snapshotOffMain(db, copy)
         assertEquals(db.openHelper.readableDatabase.version, snapshot.schemaVersion)
-        assertEquals("the schema since Skipped sub-folders", 13, snapshot.schemaVersion)
+        assertEquals("the schema since RetroAchievements", 14, snapshot.schemaVersion)
         assertEquals(3, snapshot.gameCount)
         assertFalse("no WAL beside the copy", File("${copy.path}-wal").exists())
         assertFalse(File("${copy.path}-shm").exists())

@@ -28,7 +28,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
@@ -43,6 +42,8 @@ import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coreui.theme.ButtonColors
 import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.coreui.theme.PlumColors
+import com.plumemu.coreui.theme.FlatFace
+import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.toComposeColor
@@ -188,10 +189,9 @@ private fun ColorTile(
 
 private const val NAME_LINES = 2
 
-/** A hint glyph of the tile: its fill (null: the `chip` ring), ring and laid-out letter. */
+/** A hint glyph of the tile: its flat face (the set's glyph colour, or the usual key) and laid-out letter. */
 private class TileGlyph(
-    val fill: Color?,
-    val ring: Color,
+    val face: FlatFace,
     val letter: TextLayoutResult,
 )
 
@@ -199,7 +199,7 @@ private class TileGlyph(
  * The tile's picture, in fractions of its size so it reads the same at every width: the background,
  * a text line (the top bar), the focused row's fill with the accent dot and a `strong` title, a
  * `muted` meta line, and the first two hints (confirm and back, by the person's letters) in the
- * set's glyph colours or the usual `chip` ring. Colours and letters are made here, once per size.
+ * set's glyph colours or the usual key face. Colours and letters are made here, once per size.
  */
 private fun CacheDrawScope.tinyHome(
     look: ColorTileLook,
@@ -228,19 +228,18 @@ private fun CacheDrawScope.tinyHome(
     val titleLeft = left + dot + DOT_GAP * w
     val glyph = GLYPH * h
     val glyphY = HINTS_Y * h
-    val ringWidth = GLYPH_RING * glyph
+    val edge = GLYPH_EDGE * glyph
     val letterStyle = keyCap.copy(fontSize = (glyph * GLYPH_LETTER).toSp(), fontWeight = FontWeight.SemiBold, lineHeight = TextStyle.Default.lineHeight)
+    val keyFace = PlumComposeColors.from(t).keyFace
     val glyphs =
         arrayOf(confirm, back).map { letter ->
             val color = look.buttons?.forKeyCap(letter)
-            val ink = color?.letter ?: t.text
+            val ink = color?.letter ?: t.strong
             TileGlyph(
-                fill = color?.fill?.toComposeColor(),
-                ring = t.chip.toComposeColor(),
+                face = color?.fill?.let { FlatFace.accent(it.toComposeColor()) } ?: keyFace,
                 letter = measurer.measure(letter, letterStyle.copy(color = ink.toComposeColor()), maxLines = 1),
             )
         }
-    val ring = Stroke(ringWidth)
     return onDrawBehind {
         drawRoundRect(bg, cornerRadius = tileCorner)
         // The top bar's text.
@@ -254,7 +253,8 @@ private fun CacheDrawScope.tinyHome(
         var x = left
         for (each in glyphs) {
             val center = Offset(x + glyph / 2, glyphY)
-            if (each.fill != null) drawCircle(each.fill, glyph / 2, center) else drawCircle(each.ring, glyph / 2 - ringWidth / 2, center, style = ring)
+            drawCircle(each.face.edge, glyph / 2, center.copy(y = center.y + edge))
+            drawCircle(each.face.face, glyph / 2, center)
             val letter = each.letter
             drawText(letter, topLeft = Offset(center.x - letter.size.width / 2f, center.y - letter.size.height / 2f))
             x += glyph + LABEL_GAP * w
@@ -281,7 +281,7 @@ private const val META_Y = 0.6f // h
 private const val META_W = 0.3f // w
 private const val HINTS_Y = 0.83f // h: the glyphs' centre
 private const val GLYPH = 0.2f // h
-private const val GLYPH_RING = 0.09f // of the glyph
+private const val GLYPH_EDGE = 0.1f // of the glyph: the key's edge under its face
 private const val GLYPH_LETTER = 0.62f // of the glyph
 private const val LABEL_GAP = 0.03f // w
 private const val LABEL_W = 0.12f // w

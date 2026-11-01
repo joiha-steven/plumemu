@@ -26,6 +26,7 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.layout.LocalPinnableContainer
 import androidx.compose.ui.layout.PinnableContainer
 import androidx.compose.ui.layout.layout
@@ -36,7 +37,9 @@ import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.components.GameRowLook
+import com.plumemu.coreui.components.GlidingPillHost
 import com.plumemu.coreui.components.rememberGlidingPill
+import com.plumemu.coreui.components.listEdgeFadeMask
 import com.plumemu.coreui.theme.rememberListGlide
 import kotlin.math.abs
 
@@ -81,14 +84,19 @@ internal fun GamesPages(
     Snapshot.withoutReadObservation {
         if (pages.firstVisibleItemIndex != shownIndex || pages.firstVisibleItemScrollOffset != 0) pages.requestScrollToItem(shownIndex)
     }
+    // The shown page's pill draws its halo from here, outside the lazy row's clip (the pill is as wide as the column): read while drawing.
+    val halos = remember { PageHalos() }
     val probe = remember(pages, prefetch) { GamesPagesProbe(pages, { prefetch.ahead }, { prefetch.pending }) }
     LazyRow(
         state = pages,
-        modifier = modifier.semantics { this[GamesPagesInfo] = probe },
+        modifier =
+            modifier.semantics { this[GamesPagesInfo] = probe }.drawBehind {
+                content.entries.getOrNull(state.focus.systemIndex)?.let { halos.hosts[it.id]?.drawHalo(this) }
+            },
         userScrollEnabled = false,
     ) {
         itemsIndexed(content.entries, key = { _, entry -> entry.id }, contentType = { _, _ -> GAMES_PAGE }) { index, entry ->
-            GamesPage(index, entry, prefetch, content.hasBoxArt, showsPlace, showSystemInfo, state, positions, onAction, panelOpen)
+            GamesPage(index, entry, prefetch, halos, content.hasBoxArt, showsPlace, showSystemInfo, state, positions, onAction, panelOpen)
         }
     }
 }
@@ -104,6 +112,7 @@ private fun LazyItemScope.GamesPage(
     index: Int,
     entry: HomeEntry,
     prefetch: NeighbourPagesPrefetch,
+    halos: PageHalos,
     hasBoxArt: Boolean,
     showsPlace: Boolean,
     showSystemInfo: Boolean,
@@ -131,7 +140,7 @@ private fun LazyItemScope.GamesPage(
     val isShown = remember(state, index) { derivedStateOf { state.focus.systemIndex == index } }
     val shown = remember(isShown) { { isShown.value } }
     val page = remember(shown, keepWhenMeasured) { Modifier.fillParentMaxSize().placedOnlyWhen(shown, keepWhenMeasured).rowsInSemanticsOnlyWhen(shown) }
-    EntryGames(entry, hasBoxArt, showsPlace, showSystemInfo, shown, state, positions, onAction, panelOpen, page)
+    EntryGames(entry, halos, hasBoxArt, showsPlace, showSystemInfo, shown, state, positions, onAction, panelOpen, page)
 }
 
 /**
@@ -150,6 +159,11 @@ private fun Modifier.placedOnlyWhen(
         val placeable = measurable.measure(constraints)
         layout(placeable.width, placeable.height) { if (shown()) placeable.place(0, 0) }
     }
+
+/** The pages' gliding pills by entry id, for the halo pass of [GamesPages]; plain, read only while drawing. */
+internal class PageHalos {
+    val hosts = HashMap<String, GlidingPillHost>()
+}
 
 /** Keeps this lazy item built, though it is not on screen, from [pin] to [release]. */
 private class PageHold(
@@ -178,6 +192,7 @@ private class PageHold(
 @Composable
 private fun EntryGames(
     entry: HomeEntry,
+    halos: PageHalos,
     hasBoxArt: Boolean,
     showsPlace: Boolean,
     showSystemInfo: Boolean,
@@ -215,14 +230,19 @@ private fun EntryGames(
     val visibleWidth = layout.width - PlumDimens.stripMarginSide * 2 - layout.systemsColumnWidth - PlumDimens.columnGap
     // The focus pill is drawn by the list, so it glides from row to row; read while drawing.
     val pill =
-        rememberGlidingPill(listState, glide, rowHeight = layout.gameRowHeight, stride = layout.gameRowHeight + PlumDimens.listRowGap) {
+        rememberGlidingPill(listState, glide, rowHeight = layout.gameRowHeight, stride = layout.gameRowHeight + PlumDimens.listRowGap, haloOutside = true) {
             val row = state.focus.rowOf(entry.id)
             if (gameLook(state.focus, entry.id, row, panelOpen.value) == GameRowLook.Focused) row + bandItems else -1
         }
+    DisposableEffect(halos, entry.id, pill) {
+        halos.hosts[entry.id] = pill
+        onDispose { if (halos.hosts[entry.id] === pill) halos.hosts.remove(entry.id) }
+    }
+    val fades = remember(listState, glide, state, entry.id, bandItems) { ListEdgeFades(listState, glide) { state.focus.rowOf(entry.id) + bandItems } }
     pill.Provide {
         LazyColumn(
             state = listState,
-            modifier = modifier.then(pill.modifier).then(glide.modifier),
+            modifier = modifier.listEdgeFadeMask(fades, PlumTheme.edgeFadeOn).then(pill.modifier).then(glide.modifier),
             contentPadding = PaddingValues(vertical = glide.extra),
             // No spacing: each game row carries its own gap (its tap area).
         ) {

@@ -133,10 +133,15 @@ internal fun KeepFocusedColumn(
         column()
         return
     }
+    // A fade stops short of the focused row: it covers only the room between that row and the edge.
+    val fadePx = with(LocalDensity.current) { PlumDimens.listEdgeFade.toPx() }
+    val focused by rememberUpdatedState(focusedIndex)
+    val reachBelow = remember(follower, fadePx) { { follower.roomPast(focused(), below = true) / fadePx } }
+    val reachAbove = remember(follower, fadePx) { { follower.roomPast(focused(), below = false) / fadePx } }
     Box {
         column()
-        if (scroll.canScrollForward) ListEdgeFade(atBottom = true, Modifier.align(Alignment.BottomCenter).testTag(fadeTag + FADE_BOTTOM_SUFFIX))
-        if (scroll.canScrollBackward) ListEdgeFade(atBottom = false, Modifier.align(Alignment.TopCenter).testTag(fadeTag + FADE_TOP_SUFFIX))
+        if (scroll.canScrollForward) ListEdgeFade(atBottom = true, Modifier.align(Alignment.BottomCenter).testTag(fadeTag + FADE_BOTTOM_SUFFIX), reachBelow)
+        if (scroll.canScrollBackward) ListEdgeFade(atBottom = false, Modifier.align(Alignment.TopCenter).testTag(fadeTag + FADE_TOP_SUFFIX), reachAbove)
     }
 }
 
@@ -185,6 +190,16 @@ private class ColumnFollower(
 
     /** The height of what is shown: the scroll's viewport without the glide's room. */
     fun visible(): Int = (scroll.viewportSize - 2 * extraPx).coerceAtLeast(0)
+
+    /** Px between row [index] and the bottom ([below]) or top edge of what is shown; unbounded when the row is not placed. */
+    fun roomPast(
+        index: Int,
+        below: Boolean,
+    ): Float {
+        val own = spans[index] ?: return Float.MAX_VALUE
+        val now = scroll.value
+        return (if (below) now + visible() - (own.last + 1) else own.first - now).coerceAtLeast(0).toFloat()
+    }
 
     fun follow(
         index: Int,

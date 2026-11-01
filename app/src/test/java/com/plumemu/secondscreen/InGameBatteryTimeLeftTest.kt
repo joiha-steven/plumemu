@@ -27,9 +27,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The time to full as words, from the meter's estimate through the model to the drawn text (Android's time to full is exact, "1 h 03 to full"; the counter's
- * estimate is rounded like the time left). An estimate that rounding leaves whole is still an
- * estimate: "1 h 30 min to full", never Android's clock style.
+ * The time to full as words, from the meter's estimate through the model to the drawn text. It
+ * reads like the time left ("1 h 3 min to full"); Android's time to full is exact, so it has no
+ * "About"; the counter's estimate is rounded like the time left and says "About" when rounding moved it.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -73,9 +73,9 @@ class InGameBatteryTimeLeftTest {
     }
 
     @Test
-    fun androidsOwnTimeToFullReadsLikeAClock() {
-        assertEquals("1 h 30 to full", timeToFull(90.0, androids = true))
-        assertEquals("1 h 03 to full", timeToFull(63.0, androids = true))
+    fun androidsOwnTimeToFullReadsLikeTheTimeLeftWithoutAbout() {
+        assertEquals("1 h 30 min to full", timeToFull(90.0, androids = true))
+        assertEquals("1 h 3 min to full", timeToFull(63.0, androids = true))
     }
 
     @Test

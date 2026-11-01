@@ -21,7 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import com.plumemu.coreui.components.borderDrawn
+import com.plumemu.coreui.components.KeyState
 import com.plumemu.coreui.components.focusPill
+import com.plumemu.coreui.components.rememberKeyState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -32,6 +34,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import com.plumemu.R
 import com.plumemu.account.AccountStatus
+import com.plumemu.account.RaAccountStatus
 import com.plumemu.coredata.settings.BoxArtRegionSetting
 import com.plumemu.secondscreen.isSecondScreenOn
 import com.plumemu.coredata.settings.ColorSetting
@@ -54,8 +57,8 @@ import com.plumemu.coreui.theme.BackgroundPreset
 import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
-import com.plumemu.coreui.theme.TypeRole
-import com.plumemu.game.THUMBNAIL_SLOT
+import com.plumemu.graph.BackupState
+import com.plumemu.graph.RestoreState
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.theme.Rgb
@@ -68,29 +71,47 @@ import com.plumemu.setup.SetupSwitch
 
 /*
  * The options column's rows (the board's RP5-S1-settings): 40 high, 2 apart, 14 inside, the label
- * at the left and the value at the right: text with », ‹ › for left / right choices, a switch, or a
+ * at the left and the value at the right, in normal text brightness: plain text, a choice (chevrons
+ * at its sides on the focused row), text ending in a chevron where A opens a page, a switch, or a
  * colour dot followed by its name (design/rules.md › Settings).
  */
 
 /** How an option row looks, in the one focus language (design/rules.md › Focus and current). */
 internal enum class OptionLook {
-    /** The cursor: `sel` fill, accent dot, `strong` text 500, value `meta`. */
+    /** The cursor: `sel` fill, accent dot, `strong` text 500, value `text`. */
     Focused,
 
-    /** Options have focus, another row: `text2`, value `muted`. */
+    /** Options have focus, another row: `text2`, value `text`. */
     Normal,
 
     /** Its panel has the focus: accent text, no fill. */
     Current,
 
-    /** The sections column has focus: the options are a preview, all `muted`. */
+    /** The sections column has focus: the options are a preview, all `muted` (the value too). */
     Preview,
 }
+
+/** The words of a value that is text, a choice or an opening row; null for a switch or a swatch. */
+internal val OptionValue.words: String?
+    get() =
+        when (this) {
+            is OptionValue.Text -> text
+            is OptionValue.Choice -> text
+            is OptionValue.Opens -> text
+            is OptionValue.Switch, is OptionValue.Swatch -> null
+        }
 
 /** What an option shows at the right. */
 @Immutable
 internal sealed interface OptionValue {
+    /** Plain text: a figure, a version, a state word; nothing to step or open. */
     data class Text(val text: String) : OptionValue
+
+    /** A value that Left / Right step: its chevrons show on the focused row only. */
+    data class Choice(val text: String) : OptionValue
+
+    /** A row that opens a page: the text (empty for none) ends in a chevron; [isSignedIn] puts an accent check before it. */
+    data class Opens(val text: String, val isSignedIn: Boolean = false) : OptionValue
 
     data class Switch(val isOn: Boolean) : OptionValue
 
@@ -108,20 +129,10 @@ internal fun OptionRow(
     label: String = stringResource(option.label),
     tag: String = SettingsTags.option(option),
     valueTag: String = SettingsTags.value(option),
-    /** A line under the label (Statistics), up to two lines; Confirm with B has its own. */
-    detail: String? = null,
-    /** Drawn before the label (Statistics' covers). */
-    leading: (@Composable () -> Unit)? = null,
-    /** A game's title may need a third line at the largest sizes (Statistics). */
+    /** An unknown folder's name may need a third line at the largest sizes. */
     labelLines: Int = 2,
-    /** Statistics: the cover slot's room is kept in a row with no cover, so every row's text starts on one line. */
-    keepsLeadingRoom: Boolean = false,
-    /** Room above and below the text: Statistics' three-line titles keep what a one-line row has; the two-line Confirm row (audit B5) keeps clear of its ring. */
+    /** Room above and below the text: the two-line Confirm row (audit B5) keeps clear of its ring. */
     verticalPadding: Dp = 0.dp,
-    /** Statistics: the page's big figure (the total) in place of the label; the label is then the line under it. */
-    headline: String? = null,
-    /** Tags the text block (label and detail), so a test can measure where the text starts. */
-    textTag: String? = null,
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
@@ -136,41 +147,32 @@ internal fun OptionRow(
             look == OptionLook.Current -> { { colors.accent } }
             else -> { { colors.muted } }
         }
-    val valueColor: () -> Color = if (focused) { { colors.meta } } else { { colors.muted } }
+    // The line under a label (Confirm with B) is secondary text: dimmer on every row but the focused one.
+    val secondaryColor: () -> Color = if (focused) { { colors.meta } } else { { colors.muted } }
+    // Values are in normal text brightness (decision 0011); only the preview, where the whole column is dimmed, mutes them.
+    val valueColor: () -> Color = if (look == OptionLook.Preview) { { colors.muted } } else { { colors.text } }
+    // A switch's knob widens with a tap anywhere on its row.
+    val knob = rememberKeyState()
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
                 .heightIn(min = PlumTheme.layout.rowHeight)
-                .focusPill(focused)
+                .focusPill(focused, mirror = knob)
                 .padding(horizontal = PlumDimens.gameRowPadding, vertical = verticalPadding)
                 .testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (leading != null) {
-            leading()
-            Spacer(Modifier.width(PlumDimens.focusDotGap))
-        } else if (keepsLeadingRoom) {
-            Spacer(Modifier.width(THUMBNAIL_SLOT + PlumDimens.focusDotGap))
-        }
-        Column(Modifier.weight(1f).then(if (textTag != null) Modifier.testTag(textTag) else Modifier)) {
+        Column(Modifier.weight(1f)) {
             val style = if (focused || look == OptionLook.Current) type.settingsOptionFocused else type.settingsOption
-            if (headline != null) {
-                // The figure leads; the label under it is the small line (the second screen's card does the same).
-                val figureColor: () -> Color = if (look == OptionLook.Normal) { { colors.text } } else labelColor
-                Box(valueModifier.testTag(valueTag)) { BasicText(headline, style = type[TypeRole.SecondTitleCompact], color = figureColor, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                BasicText(label, style = type.smallFact, color = valueColor, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            } else {
-                BasicText(label, style = style, color = labelColor, maxLines = labelLines, overflow = TextOverflow.Ellipsis)
-            }
+            BasicText(label, style = style, color = labelColor, maxLines = labelLines, overflow = TextOverflow.Ellipsis)
             // The confirm option names the buttons on a second line; the board's 16 sp label would not fit.
-            val shownDetail = detail ?: if (option == SettingsOption.ConfirmBottom) stringResource(R.string.settings_confirm_bottom_detail) else null
-            if (shownDetail != null) BasicText(shownDetail, style = type.smallFact, color = valueColor, maxLines = if (detail != null) 2 else 1, overflow = TextOverflow.Ellipsis)
+            if (option == SettingsOption.ConfirmBottom) {
+                BasicText(stringResource(R.string.settings_confirm_bottom_detail), style = type.smallFact, color = secondaryColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
-        if (headline == null) {
-            Spacer(Modifier.width(PlumDimens.rowTrailingGap))
-            Box(valueModifier.testTag(valueTag)) { OptionValueView(value, valueColor) }
-        }
+        Spacer(Modifier.width(PlumDimens.rowTrailingGap))
+        Box(valueModifier.testTag(valueTag)) { OptionValueView(value, valueColor, focused, valueTag, knob) }
     }
 }
 
@@ -178,20 +180,49 @@ internal fun OptionRow(
 private fun OptionValueView(
     value: OptionValue,
     color: () -> Color,
+    focused: Boolean,
+    valueTag: String,
+    knob: KeyState,
 ) {
     val colors = PlumTheme.colors
     val style = PlumTheme.type.meta
+    // The marks are dimmed text; a choice's chevrons keep their room while hidden so the value never moves with focus.
+    val dim: () -> Color = { colors.muted }
+    val hidden: () -> Color = { Color.Transparent }
+    // A long value (an emulator, "Ask on the first game") may take two lines, in at most half the row.
+    val widest = Modifier.widthIn(max = PlumTheme.layout.settingsOptionsWidth / 2)
     when (value) {
-        // A long value (an emulator, "Ask on the first game") may take two lines, in at most half the row.
         is OptionValue.Text ->
-            if (value.text.isNotEmpty()) BasicText(value.text, style = style, color = color, maxLines = 2, modifier = Modifier.widthIn(max = PlumTheme.layout.settingsOptionsWidth / 2))
+            if (value.text.isNotEmpty()) BasicText(value.text, style = style, color = color, maxLines = 2, modifier = widest)
+        is OptionValue.Choice ->
+            Row(widest, verticalAlignment = Alignment.CenterVertically) {
+                ValueChevron(ChevronSide.Left, style, if (focused) dim else hidden, tag = SettingsTags.chevronLeft(valueTag))
+                Spacer(Modifier.width(PlumDimens.settingsValueGap))
+                BasicText(value.text, style = style, color = color, maxLines = 2, modifier = Modifier.weight(1f, fill = false).testTag(SettingsTags.valueText(valueTag)))
+                Spacer(Modifier.width(PlumDimens.settingsValueGap))
+                ValueChevron(ChevronSide.Right, style, if (focused) dim else hidden, tag = SettingsTags.chevronRight(valueTag))
+            }
+        is OptionValue.Opens ->
+            Row(widest, verticalAlignment = Alignment.CenterVertically) {
+                if (value.isSignedIn) {
+                    ValueCheck(style, { colors.accent }, tag = SettingsTags.check(valueTag))
+                    Spacer(Modifier.width(PlumDimens.settingsValueGap))
+                }
+                if (value.text.isNotEmpty()) {
+                    BasicText(value.text, style = style, color = color, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).testTag(SettingsTags.valueText(valueTag)))
+                    Spacer(Modifier.width(PlumDimens.settingsValueGap))
+                }
+                ValueChevron(ChevronSide.Right, style, dim, tag = SettingsTags.chevronRight(valueTag))
+            }
         is OptionValue.Switch ->
             SetupSwitch(
                 isOn = value.isOn,
                 stateText = stringResource(if (value.isOn) R.string.settings_switch_on else R.string.settings_switch_off),
+                isFocused = focused,
+                key = knob,
             )
         is OptionValue.Swatch ->
-            SwatchValue(value, style, color)
+            SwatchValue(value, style, color, valueTag)
     }
 }
 
@@ -216,48 +247,57 @@ internal fun optionValue(
         SettingsOption.TextColor ->
             OptionValue.Swatch(theme.textColor.toComposeColor(), stringResource(textColorName(settings.appearance.textColor, theme.backgroundColor)), hasRing = false, live = LiveSwatch.Text)
         SettingsOption.Language ->
-            OptionValue.Text(stringResource(R.string.settings_value_opens, languageName(AppLanguages.byTag(settings.appearance.language)?.tag)))
+            OptionValue.Opens(languageName(AppLanguages.byTag(settings.appearance.language)?.tag))
         SettingsOption.Colors, SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight, SettingsOption.LeftEdge, SettingsOption.GridSize, SettingsOption.SortGames, SettingsOption.RecentSize, SettingsOption.SystemOrder,
         SettingsOption.SecondScreenInGame, SettingsOption.BoxArtRegion, SettingsOption.Keyboard, SettingsOption.SwitchSystemWith, SettingsOption.Sounds,
         ->
-            OptionValue.Text(stringResource(R.string.settings_value_choice, stringResource(choiceName(option, option.choiceIndex(settings, textSizeInUse())))))
-        SettingsOption.ConfirmBottom, SettingsOption.Animations, SettingsOption.Vibration, SettingsOption.UsageStatistics, SettingsOption.ScanOnStartup, SettingsOption.CheckUpdatesDaily,
+            OptionValue.Choice(stringResource(choiceName(option, option.choiceIndex(settings, textSizeInUse()))))
+        SettingsOption.ConfirmBottom, SettingsOption.Animations, SettingsOption.EdgeFade, SettingsOption.Vibration, SettingsOption.UsageStatistics, SettingsOption.ScanOnStartup, SettingsOption.CheckUpdatesDaily,
         SettingsOption.HoldToScrollFaster, SettingsOption.PushRightToPlay, SettingsOption.ShowButtonHints, SettingsOption.ShowApps, SettingsOption.ShowClock, SettingsOption.ShowBattery, SettingsOption.SystemInfo,
         -> OptionValue.Switch(option.switchValue(settings))
         SettingsOption.SecondScreen -> OptionValue.Switch(isSecondScreenOn(settings.secondScreen, content.secondScreen))
         SettingsOption.RomFolders -> {
             val count = content.folders.size
-            OptionValue.Text(stringResource(R.string.settings_value_opens, pluralStringResource(R.plurals.settings_folders_count, count, rememberCountFormat().format(count))))
+            OptionValue.Opens(pluralStringResource(R.plurals.settings_folders_count, count, rememberCountFormat().format(count)))
         }
-        SettingsOption.Systems -> OptionValue.Text(stringResource(R.string.settings_value_opens, systemsShownText(content, settings)))
+        SettingsOption.Systems -> OptionValue.Opens(systemsShownText(content, settings))
         SettingsOption.Rescan -> OptionValue.Text(if (content.isScanning) stringResource(R.string.settings_rescan_running) else "")
-        SettingsOption.SystemEmulator -> OptionValue.Text(stringResource(R.string.settings_value_opens, emulatorValue(content.systems.getOrNull(index))))
-        SettingsOption.UnknownFolder -> OptionValue.Text(stringResource(R.string.settings_value_opens, unknownFolderValue(content, content.unknownFolderAtRow(index))))
+        SettingsOption.SystemEmulator -> OptionValue.Opens(emulatorValue(content.systems.getOrNull(index)))
+        SettingsOption.UnknownFolder -> OptionValue.Opens(unknownFolderValue(content, content.unknownFolderAtRow(index)))
         SettingsOption.DetectEmulators -> OptionValue.Text(if (isDetecting) stringResource(R.string.settings_detect_running) else "")
         // Shown as the board's switch; A asks Android, which is the only one that can change it.
         SettingsOption.UseAsHome -> OptionValue.Switch(content.isHomeApp)
         SettingsOption.Version -> OptionValue.Text(versionName)
-        SettingsOption.UpdateAvailable -> OptionValue.Text(updateRowValue(content.update))
+        SettingsOption.PlatformData -> OptionValue.Text(content.platformData?.let { platformDataRowValue(it) }.orEmpty())
+        SettingsOption.UpdateAvailable -> opensUnlessBusy(updateRowValue(content.update), content.update.isUpdateRunning)
         SettingsOption.CheckForUpdates -> OptionValue.Text(checkRowValue(content.update))
-        SettingsOption.Backup -> OptionValue.Text(backupRowValue(content.backup))
-        SettingsOption.Restore -> OptionValue.Text(restoreRowValue(content.restore))
-        SettingsOption.UndoRestore -> OptionValue.Text(undoRowValue(content))
+        SettingsOption.Backup -> opensUnlessBusy(backupRowValue(content.backup), content.backup is BackupState.Running)
+        SettingsOption.Restore -> opensUnlessBusy(restoreRowValue(content.restore), content.restore.isRunning())
+        SettingsOption.UndoRestore -> opensUnlessBusy(undoRowValue(content), content.restore.let { it is RestoreState.Replacing && it.isUndo })
         SettingsOption.ResetAll, SettingsOption.ResetLibrary, SettingsOption.ClearRecent, SettingsOption.Licenses, SettingsOption.HiddenGames,
         SettingsOption.UnidentifiedGames, SettingsOption.ReportProblem,
         ->
-            OptionValue.Text(stringResource(R.string.settings_value_chevron))
+            OptionValue.Opens("")
         // A page to read beside the row: A opens nothing, so no "»".
         SettingsOption.Privacy, SettingsOption.ExportLogs -> OptionValue.Text("")
         // Signed in: how box art is going in a word or two ("340 of 2,054", "Paused"), else the name; signed out: "Sign in »".
         SettingsOption.ScraperAccount ->
             when (val account = content.account) {
+                // Signed in: a short word when box art has something to say ("340 of 2,054", "Paused"), else who is signed in.
                 is AccountStatus.SignedIn ->
-                    OptionValue.Text(stringResource(R.string.settings_value_opens, boxArtShortText(boxArtLineOf(account, content.boxArt)) ?: account.username))
-                else -> OptionValue.Text(stringResource(R.string.settings_value_opens, stringResource(R.string.settings_account_value_sign_in)))
+                    boxArtShortText(boxArtLineOf(account, content.boxArt))?.let { OptionValue.Opens(it) } ?: signedInValue(account.username)
+                else -> OptionValue.Opens(stringResource(R.string.settings_account_value_sign_in))
+            }
+        SettingsOption.RetroAchievementsAccount ->
+            when (val account = content.raAccount) {
+                is RaAccountStatus.SignedIn ->
+                    if (account.isKeyRefused) OptionValue.Opens(stringResource(R.string.settings_ra_value_refused)) else signedInValue(account.userName)
+                RaAccountStatus.SignedOut -> OptionValue.Opens(stringResource(R.string.settings_account_value_sign_in))
             }
         // The line is the row's label (it may need two lines); nothing on the right.
         SettingsOption.ScraperStatus -> OptionValue.Text("")
-        SettingsOption.Statistic -> OptionValue.Text(statisticValue(content.statisticRows.getOrNull(index), versionName))
+        // Statistics draws its own page (StatisticsPage); its stops have no row.
+        SettingsOption.Statistic -> OptionValue.Text("")
     }
 }
 
@@ -311,167 +351,7 @@ internal fun optionLabel(
         SettingsOption.HiddenGames -> stringResource(R.string.settings_hidden_games, rememberCountFormat().format(content.hiddenGames.size))
         SettingsOption.UnidentifiedGames -> stringResource(R.string.settings_unidentified_games, rememberCountFormat().format(content.unidentifiedGames.size))
         SettingsOption.ScraperStatus -> boxArtLineOf(content.account, content.boxArt)?.let { boxArtLineText(it) }.orEmpty()
-        SettingsOption.Statistic -> statisticLabel(content.statisticRows.getOrNull(index))
         else -> stringResource(option.label)
-    }
-
-/** The name of a ‹ › option's value [index]. */
-internal fun choiceName(
-    option: SettingsOption,
-    index: Int,
-): Int =
-    when (option) {
-        // The sets in order, then Custom (SettingsOption.choiceIndex counts the same way).
-        SettingsOption.Colors -> ColorSet.entries.getOrNull(index)?.let(::colorSetName) ?: R.string.settings_color_custom
-        SettingsOption.Font -> fontName(FontSetting.entries[index])
-        SettingsOption.TextSize ->
-            when (TextSizeSetting.entries[index]) {
-                TextSizeSetting.Small -> R.string.settings_size_small
-                TextSizeSetting.Medium -> R.string.settings_size_medium
-                TextSizeSetting.Large -> R.string.settings_size_large
-                TextSizeSetting.Larger -> R.string.settings_size_larger
-                TextSizeSetting.Huge -> R.string.settings_size_huge
-                TextSizeSetting.Largest -> R.string.settings_size_largest
-            }
-        SettingsOption.TextWeight ->
-            when (TextWeightSetting.entries[index]) {
-                TextWeightSetting.Thin -> R.string.settings_weight_thin
-                TextWeightSetting.Medium -> R.string.settings_weight_medium
-                TextWeightSetting.Bold -> R.string.settings_weight_bold
-            }
-        SettingsOption.LeftEdge -> leftEdgeNameRes(index)
-        SettingsOption.GridSize ->
-            when (GridSizeSetting.entries[index]) {
-                GridSizeSetting.Small -> R.string.settings_size_small
-                GridSizeSetting.Medium -> R.string.settings_size_medium
-                GridSizeSetting.Large -> R.string.settings_size_large
-            }
-        SettingsOption.SortGames ->
-            when (SortGamesSetting.entries[index]) {
-                SortGamesSetting.Name -> R.string.settings_sort_by_name
-                SortGamesSetting.LastPlayed -> R.string.settings_sort_by_last_played
-                SortGamesSetting.Year -> R.string.settings_sort_by_year
-            }
-        SettingsOption.RecentSize ->
-            when (RecentSizeSetting.entries[index]) {
-                RecentSizeSetting.Ten -> R.string.settings_recent_size_10
-                RecentSizeSetting.Twenty -> R.string.settings_recent_size_20
-                RecentSizeSetting.Fifty -> R.string.settings_recent_size_50
-            }
-        SettingsOption.SystemOrder -> systemOrderName(index)
-        SettingsOption.SwitchSystemWith -> if (index == SwitchSystemWithSetting.Triggers.ordinal) R.string.settings_switch_system_triggers else R.string.settings_switch_system_bumpers
-        SettingsOption.Keyboard -> if (index == KeyboardSetting.Plumemu.ordinal) R.string.settings_keyboard_plumemu else R.string.settings_keyboard_android
-        SettingsOption.Sounds ->
-            when (SoundLevel.entries[index]) {
-                SoundLevel.Off -> R.string.settings_sounds_off
-                SoundLevel.Quiet -> R.string.settings_sounds_quiet
-                SoundLevel.Loud -> R.string.settings_sounds_loud
-            }
-        SettingsOption.SecondScreenInGame ->
-            when (InGameSetting.entries[index]) {
-                InGameSetting.Clock -> R.string.settings_second_screen_clock
-                InGameSetting.Black -> R.string.settings_second_screen_black
-            }
-        SettingsOption.BoxArtRegion -> when (BoxArtRegionSetting.entries[index]) {
-            BoxArtRegionSetting.Usa -> R.string.settings_region_usa
-            BoxArtRegionSetting.Europe -> R.string.settings_region_europe
-            BoxArtRegionSetting.Japan -> R.string.settings_region_japan
-            BoxArtRegionSetting.World -> R.string.settings_region_world
-        }
-        else -> R.string.settings_value_chevron
-    }
-
-/**
- * The name the Text color row and panel show: Light and Dark by name, a tinted preset offered on [background]
- * by its own name (Cream, Navy…), any other colour "Custom" (also when no background is given).
- */
-internal fun textColorName(
-    text: TextColorSetting,
-    background: Rgb? = null,
-): Int =
-    when (text) {
-        TextColorSetting.Light -> R.string.settings_text_light
-        TextColorSetting.Dark -> R.string.settings_text_dark
-        is TextColorSetting.Custom -> background?.let { ColorPages.textPresetNameOn(it, text) } ?: R.string.settings_color_custom
-    }
-
-internal fun fontName(font: FontSetting): Int =
-    when (font) {
-        FontSetting.Sans -> R.string.settings_font_sans
-        FontSetting.Serif -> R.string.settings_font_serif
-        FontSetting.Mono -> R.string.settings_font_mono
-    }
-
-/**
- * The name the Background or Accent row shows for [setting]. An own colour is "Custom", unless it is
- * the colour of a ready-made set (the current one first) or of a vivid preset: then that name ("Pocket"), not a code.
- */
-@Composable
-internal fun colorName(
-    setting: ColorSetting,
-    isBackground: Boolean,
-    set: ColorSet?,
-): String =
-    when (setting) {
-        is ColorSetting.Custom -> {
-            // Each row is named by its own colour: the set or vivid preset whose colour it is, even when another row has moved away from that set.
-            val rgb = setting.rgb and RGB_MASK
-            val ofPrevious = set?.takeIf { !isBackground && Rgb(rgb) in it.previousAccents }
-            val named = ofPrevious ?: set?.takeIf { (if (isBackground) it.backgroundColor else it.accentColor).value == rgb } ?: ColorSet.entries.firstOrNull { (if (isBackground) it.backgroundColor else it.accentColor).value == rgb }
-                ?: ColorSet.entries.takeUnless { isBackground }?.firstOrNull { Rgb(rgb) in it.previousAccents }
-            val vivid = if (isBackground) ColorPages.vividBackgrounds.firstOrNull { it.color.value == rgb } else null
-            when {
-                vivid != null -> stringResource(vivid.name)
-                named != null -> stringResource(colorSetName(named))
-                else -> stringResource(R.string.settings_color_custom)
-            }
-        }
-        is ColorSetting.BySystem -> stringResource(R.string.settings_accent_by_system)
-        is ColorSetting.Preset ->
-            if (isBackground) {
-                stringResource(backgroundName(BackgroundPreset.entries.firstOrNull { it.name == setting.name } ?: BackgroundPreset.Black))
-            } else {
-                stringResource(accentName(AccentPreset.entries.firstOrNull { it.name == setting.name } ?: AccentPreset.Default))
-            }
-    }
-
-/** Settings › Appearance › Colors: a ready-made set's name (never a console's). */
-internal fun colorSetName(set: ColorSet): Int =
-    when (set) {
-        ColorSet.Plumemu -> R.string.settings_colors_plumemu
-        ColorSet.Paper -> R.string.settings_colors_paper
-        ColorSet.Pocket -> R.string.settings_colors_pocket
-        ColorSet.DotMatrix -> R.string.settings_colors_dot_matrix
-        ColorSet.Super -> R.string.settings_colors_super
-        ColorSet.Indigo -> R.string.settings_colors_indigo
-        ColorSet.Charcoal -> R.string.settings_colors_charcoal
-        ColorSet.Ivory -> R.string.settings_colors_ivory
-        ColorSet.Banana -> R.string.settings_colors_banana
-        ColorSet.Cream -> R.string.settings_colors_cream
-    }
-
-private const val RGB_MASK = 0xFFFFFF
-
-internal fun backgroundName(preset: BackgroundPreset): Int =
-    when (preset) {
-        BackgroundPreset.Graphite -> R.string.settings_bg_graphite
-        BackgroundPreset.Black -> R.string.settings_bg_black
-        BackgroundPreset.Midnight -> R.string.settings_bg_midnight
-        BackgroundPreset.Plum -> R.string.settings_bg_plum
-        BackgroundPreset.Forest -> R.string.settings_bg_forest
-        BackgroundPreset.Paper -> R.string.settings_bg_paper
-        BackgroundPreset.Sand -> R.string.settings_bg_sand
-        BackgroundPreset.Mist -> R.string.settings_bg_mist
-    }
-
-internal fun accentName(preset: AccentPreset): Int =
-    when (preset) {
-        AccentPreset.Red -> R.string.settings_accent_red
-        AccentPreset.Amber -> R.string.settings_accent_amber
-        AccentPreset.Lilac -> R.string.settings_accent_lilac
-        AccentPreset.Blue -> R.string.settings_accent_blue
-        AccentPreset.Green -> R.string.settings_accent_green
-        AccentPreset.Mono -> R.string.settings_accent_mono
     }
 
 /** A tap target that accessibility services can press too; [onTap] acts through the model. */
@@ -511,6 +391,11 @@ internal object SettingsTags {
     /** Advanced › Back up…'s panel, which scrolls when the text is large. */
     const val BACKUP_PANEL = "settings_backup_panel"
     const val UPDATE_PANEL = "settings_update_panel"
+    const val UPDATE_NOTES = "settings_update_notes"
+    const val UPDATE_HEADING = "settings_update_heading"
+    const val UPDATE_NOTE = "settings_update_note"
+    const val UPDATE_DOT = "settings_update_dot"
+    const val UPDATE_PROGRESS = "settings_update_progress"
     const val RESTORE_PANEL = "settings_restore_panel"
     const val UNDO_PANEL = "settings_undo_restore_panel"
     const val BOX_ART_SYSTEMS = "settings_box_art_systems"
@@ -554,6 +439,15 @@ internal object SettingsTags {
 
     fun value(option: SettingsOption) = "settings_value_${option.name}"
 
+    /** The parts of a value, named from the value's own tag: its words, the chevrons of a choice or opening row, a signed-in check. */
+    fun valueText(valueTag: String) = "settings_part_text_$valueTag"
+
+    fun chevronLeft(valueTag: String) = "settings_part_chevron_left_$valueTag"
+
+    fun chevronRight(valueTag: String) = "settings_part_chevron_right_$valueTag"
+
+    fun check(valueTag: String) = "settings_part_check_$valueTag"
+
     /** A row of Emulators: one per system, by its index among them. */
     fun system(index: Int) = "settings_option_system_$index"
 
@@ -573,14 +467,11 @@ internal object SettingsTags {
     const val COLOR_TILE = "settings_color_tile"
     const val COLOR_TILE_NAME = "settings_color_tile_name"
 
-    /** A row of Statistics, its figure and its cover, by the row's index. */
-    fun statistic(index: Int) = "settings_option_statistic_$index"
-
-    fun statisticValue(index: Int) = "settings_value_statistic_$index"
-
-    const val STATISTIC_GROUP = "settings_statistic_group"
-
-    fun statisticText(index: Int) = "settings_statistic_text_$index"
-
+    /** A most-played game's cover on Statistics' page, by the game's place. */
     fun statisticCover(index: Int) = "settings_statistic_cover_$index"
 }
+
+/** A row that opens a panel shows its chevron, but not while a word such as "Downloading…" tells what runs. */
+internal fun opensUnlessBusy(text: String, isBusy: Boolean): OptionValue = if (isBusy) OptionValue.Text(text) else OptionValue.Opens(text)
+
+internal fun RestoreState.isRunning(): Boolean = this is RestoreState.Reading || this is RestoreState.Replacing

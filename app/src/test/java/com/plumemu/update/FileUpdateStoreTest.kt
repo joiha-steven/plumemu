@@ -23,7 +23,7 @@ class FileUpdateStoreTest {
 
     @Test
     fun aFullRecordComesBackEqual() {
-        val manifest = UpdateManifest(41, "0.0.3-alpha", UpdateFixtures.apkUrl, 1234, "ab".repeat(32), 23, "2026-10-23", listOf("One.", "Two."), null)
+        val manifest = UpdateManifest(41, "0.0.3-alpha", UpdateFixtures.apkUrl, 1234, "ab".repeat(32), 23, "2026-10-23", listOf("One.", "Two."), null, listOf(NoteSection(SectionKind.New, listOf("A.")), NoteSection(SectionKind.Known, listOf("B.", "C."))))
         val record = UpdateRecord(lastSuccessAt = 1_800_000_000_000, lastAutoFailureAt = 1_800_000_050_000, lastCheck = LastCheck(1_800_000_100_000, CheckOutcome.Failed(CheckFailure.Timeout)), found = manifest)
         store().write(record)
         assertEquals(record, store().read())
@@ -45,5 +45,17 @@ class FileUpdateStoreTest {
         file.writeText("{not json")
         assertEquals(UpdateRecord(), store().read())
         assertEquals(1, logs.size)
+    }
+
+    @Test
+    fun aRecordWrittenBeforeSectionsExistedStillLoadsWithNone() {
+        file.writeText(
+            """{"lastSuccessAt":5,"found":{"versionCode":41,"versionName":"0.0.3-alpha","apkUrl":"https://plumemu-app.stevensdesk.com/update/a.apk","size":1234,""" +
+                """"sha256":"${"ab".repeat(32)}","minSdk":23,"released":"2026-10-23","notes":["One."],"notesUrl":null}}""",
+        )
+        val found = store().read().found
+        assertEquals(listOf("One."), found?.notes)
+        assertEquals(emptyList<NoteSection>(), found?.sections)
+        assertEquals(emptyList<String>(), logs)
     }
 }

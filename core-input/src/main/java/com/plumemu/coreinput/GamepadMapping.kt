@@ -48,6 +48,9 @@ internal enum class GamepadControl {
     Start,
     Select,
 
+    /** The right stick pressed in: only Paste, while Plumemu's keyboard is up. */
+    R3,
+
     /** D-pad centre and Enter: always confirm, whatever the layout. */
     Confirm,
 
@@ -90,6 +93,7 @@ internal object GamepadMapping {
             KeyEvent.KEYCODE_BUTTON_R2 -> GamepadControl.R2
             KeyEvent.KEYCODE_BUTTON_START -> GamepadControl.Start
             KeyEvent.KEYCODE_BUTTON_SELECT -> GamepadControl.Select
+            KeyEvent.KEYCODE_BUTTON_THUMBR -> GamepadControl.R3
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> GamepadControl.Confirm
             KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> GamepadControl.Cancel
             else -> null
@@ -151,6 +155,7 @@ internal object GamepadMapping {
             GamepadControl.R2 -> "R2"
             GamepadControl.Start -> "START"
             GamepadControl.Select -> "SELECT"
+            GamepadControl.R3 -> "R3"
             // The confirm hint prints "B" under Confirm with B (swapAB), so D-pad centre and Enter light that cap.
             GamepadControl.Confirm -> (if (settings.swapAB) FaceLetter.B else FaceLetter.A).name
             GamepadControl.Cancel -> (if (settings.swapAB) FaceLetter.A else FaceLetter.B).name
@@ -160,7 +165,7 @@ internal object GamepadMapping {
      * The action a control sends when pressed, or null for a control that is taken (so Android
      * does not turn it into something else) but has no action of its own (the D-pad's directions
      * arrive as moves). With [erasesWithB] (Plumemu's keyboard is up, [TextEntry.Keyboard]) the
-     * letter B erases instead of going back; Back and Escape ([GamepadControl.Cancel]) still go back.
+     * letter B erases instead of going back and R3 pastes; Back and Escape ([GamepadControl.Cancel]) still go back.
      */
     fun actionFor(
         control: GamepadControl,
@@ -183,6 +188,7 @@ internal object GamepadMapping {
             GamepadControl.R2 -> Action.JumpLetterNext
             GamepadControl.Start -> Action.Menu
             GamepadControl.Select -> Action.ToggleView
+            GamepadControl.R3 -> if (erasesWithB) Action.Paste else null
             GamepadControl.Confirm -> Action.Enter
             GamepadControl.Cancel -> Action.Back
             GamepadControl.Up, GamepadControl.Down, GamepadControl.Left, GamepadControl.Right -> null

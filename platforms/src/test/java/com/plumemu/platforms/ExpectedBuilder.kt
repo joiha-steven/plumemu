@@ -25,6 +25,23 @@ internal class SystemBuilder(val id: String, extension: String) {
         entries += ExpectedEntry(key, LaunchSpec(packageName, className, action, category, data, mime, extras, flags))
     }
 
+    /**
+     * Omnidroid, from Daijisho's "<system> - Omnidroid" players:
+     * `-n com.omnidroid/com.omnidroid.app.shared.game.ExternalGameLauncherActivity -a android.intent.action.VIEW
+     * -c android.intent.category.DEFAULT -d {file.uri} -t application/octet-stream --es SYSTEM <value>`.
+     * [number] is the id suffix the converter gives the per-system definitions (sorted by Daijisho id).
+     */
+    fun omnidroid(value: String, number: Int) {
+        entries += ExpectedEntry(
+            "com-omnidroid-$number",
+            LaunchSpec(
+                "com.omnidroid", "com.omnidroid.app.shared.game.ExternalGameLauncherActivity",
+                "android.intent.action.VIEW", "android.intent.category.DEFAULT", URI, "application/octet-stream",
+                mapOf("SYSTEM" to ExtraValue.Text(value)), emptySet(),
+            ),
+        )
+    }
+
     /** RetroArch 64-bit; [core] is the libretro file name, which is also the key. */
     fun retroArch(core: String) {
         val pkg = "com.retroarch.aarch64"

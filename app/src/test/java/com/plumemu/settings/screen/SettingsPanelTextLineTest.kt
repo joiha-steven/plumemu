@@ -20,6 +20,8 @@ import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
 import com.plumemu.update.CheckOutcome
 import com.plumemu.update.LastCheck
+import com.plumemu.update.NoteSection
+import com.plumemu.update.SectionKind
 import com.plumemu.update.UpdateManifest
 import com.plumemu.update.UpdateView
 import org.junit.Assert.assertEquals
@@ -78,7 +80,8 @@ class SettingsPanelTextLineTest {
                 optionsAt(SettingsOption.Accent) to listOf("Red"),
                 optionsAt(SettingsOption.Version) to listOf("Plumemu", "Version 0.0.2-alpha"),
                 SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1)) to
-                    listOf("Plumemu 0.0.3-alpha (41)", "Faster scans."),
+                    // A note's text hangs one indent past the line, after its dot (SettingsUpdateNotesAlignTest).
+                    listOf("Plumemu 0.0.2-alpha → 0.0.3-alpha"),
             )
         for ((at, texts) in cases) {
             focus = at
@@ -90,6 +93,15 @@ class SettingsPanelTextLineTest {
             }
         }
         assertTrue(problems.joinToString("\n"), problems.isEmpty())
+    }
+
+    @Test
+    fun theUpdateNotesHeadingStartsOnTheRowTextLine() {
+        val grouped = SettingsContent(update = UpdateView(lastCheck = LastCheck(1, CheckOutcome.Found), found = release.copy(sections = listOf(NoteSection(SectionKind.New, listOf("One."))))))
+        val inPanel = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1), page = PanelPage.Update)
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { SettingsAt(inPanel, content = grouped) } }
+        val inset = bounds(SettingsTags.UPDATE_HEADING).left.value - bounds(SettingsTags.PANEL).left.value
+        assertTrue("heading starts $inset in, not ${PlumDimens.gameRowPadding}", kotlin.math.abs(inset - PlumDimens.gameRowPadding.value) <= TOLERANCE)
     }
 
     @Test

@@ -9,6 +9,13 @@ python3 -I tools/platforms/convert.py            # rewrites the asset and the <q
 python3 -I -m unittest discover -s tools/platforms -p 'test_*.py'   # converter unit tests
 ```
 
+Writing the asset also keeps `platforms/src/main/assets/platforms-version.json`
+(`{"dataVersion": N, "sha256": ..., "date": ...}`): when the written `platforms.json` bytes have
+another sha256 than the recorded one, it writes dataVersion + 1, the new sha256 and today's date;
+the same output leaves the file untouched. With `--out` elsewhere (the JVM `ConverterTest`) it is
+left alone unless `--version-out` names a file. Network updates of the data are published from it
+(`dataVersion` must grow with every change).
+
 The summary lists systems (tested / untested), emulators, dropped systems and every skipped
 command with its reason. Output is deterministic: the same snapshots give the same bytes. The
 JVM test `ConverterTest` runs the converter and compares with the committed asset.
@@ -95,7 +102,7 @@ JVM test `ConverterTest` runs the converter and compares with the committed asse
     GBA, PS1, MD), at most `MAX_ABBREVIATION` (5) characters, unique ignoring case; shown in Recent, Favorites and
     Search. The converter fails for a system without one, an id that is not a system, a longer one or a duplicate.
     `code` (every system) comes from the hand table `CODE`: three characters at most (`CODE_LENGTH`), unique ignoring
-    case; the home screen's left edge shows it when Settings › Appearance › Left edge is System codes. Same failures as `abbr`.
+    case; the home screen's left edge shows it when Settings › Home screen › Left edge is System codes. Same failures as `abbr`.
 11. **Legal risk.** Every emulator used by a system in `LEGAL_RISK_SYSTEMS` (Switch) gets
     `legalRisk: true` (Switch emulators carry a legal-risk marker the app shows).
 12. **MIME type.** None unless a source sets one. ES-DE's launch code (`es-app/src/FileData.cpp` around
@@ -124,6 +131,12 @@ JVM test `ConverterTest` runs the converter and compares with the committed asse
    `{"mode": "steam_app_id", "target": "extra", "key": "steamAppId", "type": "string"}` (GameHub Lite),
    `{"mode": "steam_app_id", "target": "data", "template": "droiddeck://game/{id}"}` (DroidDeck).
    The launcher reads the file (at most 1025 bytes: `SteamAppId.MAX_FILE_BYTES` + 1).
+   Lemon (Switch, added 2026-11-01, in neither ES-DE nor the Daijisho snapshot of 2026-10-10) is hand-kept
+   too: `TECH_DISCOVERED` and a content URI (Eden's Intent, and Daijisho's for Lemon); its builds are
+   `dev.lemon.lemon_emulator`, `.lite`, `dev.legacy.lemon_emulator` and two that install under AnTuTu's and
+   Genshin's package names, all with `dev.lemon.lemon_emu.activities.EmulationActivity` (detection needs
+   the activity to resolve, so the real AnTuTu is not Lemon). A Daijisho player whose package and activity match a build of a hand-kept
+   emulator lists is skipped (it would list the emulator twice).
 16. **File types.** An emulator's optional `accepts` names the extensions it can open: a hand-kept
    emulator's own field; for a source's, `NOT_ACCEPTED` in `tables.py` names what it cannot open and
    `accepts` is every other extension of its systems (WinNative: all but `steam`, so `amazon`, `app`,
@@ -139,7 +152,7 @@ JVM test `ConverterTest` runs the converter and compares with the committed asse
    The converter fails unless it is a non-empty list of distinct lowercase extensions, each of one
    of the emulator's systems (`common.check_accepts`). Absent: every extension of its systems.
 17. **Whole order.** `SYSTEM_EMULATOR_ORDER` replaces a system's emulator order and must name exactly
-   its emulators (steam: GameNative, GameHub Lite, DroidDeck, WinNative).
+   its emulators (steam: GameNative, GameHub Lite, DroidDeck, WinNative; atari7800 and dos: Omnidroid last, so RetroArch stays the default).
 
 ## What is skipped (never guessed)
 

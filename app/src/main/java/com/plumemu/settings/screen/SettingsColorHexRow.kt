@@ -49,6 +49,7 @@ import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.game.focusFieldAt
 import com.plumemu.game.isTrayUp
+import com.plumemu.game.paste
 import com.plumemu.home.search.hideSystemBars
 import com.plumemu.keyboard.CaretLine
 import com.plumemu.keyboard.KeyboardChoice
@@ -137,6 +138,7 @@ private fun HexOwnKeyboardField(
     text: String,
 ) {
     val onTapAt = remember(typing) { { offset: Int -> typing.focusFieldAt(offset) } }
+    val onPaste = remember(typing) { { typing.paste() } }
     val name = stringResource(R.string.settings_hex_hint)
     CaretLine(
         text = text,
@@ -149,6 +151,7 @@ private fun HexOwnKeyboardField(
         modifier = Modifier.widthIn(min = PlumDimens.settingsPresetSwatch * 2).semantics { contentDescription = name }.testTag(SettingsTags.HEX_FIELD),
         textTag = SettingsTags.HEX_TEXT,
         placeholderTag = SettingsTags.HEX_PLACEHOLDER,
+        onPaste = onPaste,
     )
 }
 

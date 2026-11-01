@@ -4,7 +4,7 @@
 
 
 <p align="center">
-  <img src="media/hero.png" width="100%" alt="Plumemu in Indigo: the Super Nintendo list, 248 games, with Super Metroid selected in a soft accent pill; its cover, year, maker, genre, rating and description on the right (covers are drawn stand-ins). Below, three smaller views: Super Nintendo as a grid of covers in Pocket, the Dreamcast list with its system band in Banana, and Search with its keyboard in Super">
+  <img src="media/hero.png" width="100%" alt="Plumemu in Indigo: the Super Nintendo list, 248 games, with Super Metroid selected in a soft accent pill; its cover, year, maker, genre, rating and description on the right (covers are posters Plumemu draws). Below, three smaller views: Super Nintendo as a grid of covers in Pocket, the Dreamcast list with its system band in Banana, and Search with "super" typed and its keyboard in Super">
 </p>
 
 <p align="center">
@@ -13,12 +13,12 @@
 </p>
 
 <p align="center">
-  <b>0.1.0</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket Classic ·
+  <b>0.1.1</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket Classic ·
   <a href="../../releases">Download</a> · <a href="https://plumemu.stevensdesk.com">Website</a>
 </p>
 
 <p align="center">
-  The first stable release, and the first with its source open: GPL-3.0, see <a href="#source">Source</a>.
+  0.1.1 adds RetroAchievements, a drawn cover for every game so the grid works without an account, and a calmer, softer look. The source is open: GPL-3.0, see <a href="#source">Source</a>.
 </p>
 
 ---
@@ -61,13 +61,22 @@
 - **Android games and Ports.** Installed Android games get a system of their own, and native port
   apps (Delta Touch and others) join Ports. Show as game, Show as port and Not a game in the menus
   correct Plumemu's choice.
-- **Box art, if you want it.** Sign in with your own free
-  [ScreenScraper](https://www.screenscraper.fr) account and Plumemu fetches box art and game
-  details over Wi-Fi. A wrong cover is replaced from the game menu. The box art panel shows the
-  space used and has Clear box art; a daily cleanup removes orphaned images, and games that keep
-  failing on the server stop retrying after 3 days.
-- **Details and sorting.** Info shows the year, publisher, developer, genre, players and the whole
-  description. Sort games has a Year order.
+- **Covers for every game.** A game without box art gets a drawn poster cover with its title, so
+  every system, Recent and Favorites can use the grid, with no account. Android games and Ports
+  show their app icon as a cover card.
+- **Real box art, if you want it.** Sign in with your own free
+  [ScreenScraper](https://www.screenscraper.fr) account (Settings › Accounts › ScreenScraper) and
+  Plumemu fetches box art and game details over Wi-Fi. A wrong cover is replaced from the game
+  menu. The ScreenScraper panel shows the space used, picks the Box art region and has Clear box
+  art; a daily cleanup removes orphaned images, and games that keep failing on the server stop
+  retrying after 3 days.
+- **Achievements, if you use RetroAchievements.** Sign in under Settings › Accounts ›
+  RetroAchievements with your user name and Web API key, never your password. A game's Info lists
+  its achievements with badges, points and dates, and a game you have mastered carries a small
+  trophy in the list. Plumemu only shows them; your emulator awards them. The key is kept
+  encrypted on the device, and Sign out deletes it.
+- **Details and sorting.** Info shows the year, publisher, developer, genre, players, the whole
+  description and, with RetroAchievements, the game's achievements. Sort games has a Year order.
 - **Recent that you control.** Take one game out of Recent from its menu, choose how many it keeps
   (10, 20 or 50) and clear it, all in Settings › Library. Your play time and statistics stay.
 - **Skip a sub-folder.** Settings › Library › ROM folders can leave out a sub-folder (a folder of
@@ -82,11 +91,14 @@
   other emulators. A game that is slow to start shows "Starting game…", and if the emulator has not
   opened after 20 seconds Plumemu says so instead of waiting for ever. While you play, Plumemu holds
   its background work (reading new files, box art downloads) until you are back.
-- **Second screen, and your battery.** On a handheld with two screens, like the AYN Thor, the lower
-  screen shows the chosen game's details, your statistics while Settings is open, and, while you
-  play, a clock with how long the battery lasts at this game's pace. The top bar shows a small bolt
-  before the battery percentage while the device is on its charger. A game you have played says
-  "2 h on this charge" before you start it. Everything still works on one screen.
+- **Second screen, and your battery.** On a handheld with two screens, like the AYN Thor, the
+  lower screen shows the chosen game's details, app icons and the Apps grid, a game's
+  achievements, your statistics while Settings is open, and, while you play, a clock with the
+  battery as a ring, how long it lasts at this game's pace and a chart of the session against your
+  usual pace. The top bar shows a small bolt before the battery percentage while the device is on
+  its charger. A game you have played says "2 h on this charge" before you start it. Its options
+  are in Settings › Second screen, which appears only on a handheld that has one. Everything still
+  works on one screen.
 - **Light enough for old handhelds.** An 8.2 MB download that runs on Android 6.0, opens your
   library in about a quarter of a second and uses no CPU while it sits on the home screen.
   [Measured](#light-on-the-hardware) on a slow emulator with 10,000 games.
@@ -100,18 +112,22 @@
   Pocket color the A, B, X and Y keys. Or make your own background, text and accent colors with
   sliders that show the whole screen in the new color as you drag.
 - **Lists or covers.** Show any system, Recent or Favorites as a list or as a grid of covers in
-  three sizes. Apps can be a grid of icons too.
+  three sizes (Settings › Home screen › Grid size). Apps can be a grid of icons too.
 - **One sliding view.** Systems, games and details move as one strip, laid out for 16:9 and 4:3
   screens. On 4:3 and narrow screens the game's details peek in beside the list. Beside the games,
-  a narrow strip shows game counts, a code per system or a letter rail you can tap or drag.
+  a narrow strip shows game counts, a code per system or a letter rail you can tap or drag
+  (Settings › Home screen › Left edge).
 - **About each system.** Above a system's games, a short band with its badge, the years it was
   made and a few lines about it. Settings › Home screen › System info turns it off.
 - **Text you can set.** Text size starts at Large, and Text weight is Thin, Medium or Bold.
-- **Sounds and vibration.** Settings › Advanced sets sounds Off, Quiet or Loud (they follow the
-  media volume) and vibration, which is on by default. A Language list is there too: English,
-  Vietnamese, Spanish, French, Japanese, Korean and Chinese.
+  Fade list edges (Settings › Appearance) softens the top and bottom of a list where there is more
+  to scroll.
+- **Sounds and vibration.** Settings › Controls sets sounds Off, Quiet or Loud (they follow the
+  media volume) and vibration, which is on by default. Language is in Settings › Appearance:
+  English, Vietnamese, Spanish, French, Japanese, Korean and Chinese.
 - **Buttons and touch**, equally, everywhere. Plumemu has its own compact keyboard, made for the
-  D-pad, so Search keeps its results in view while you type.
+  D-pad, so Search keeps its results in view while you type. It has a Paste key, and sign-in steps
+  open with the keyboard ready.
 
 ### Your files and your data
 
@@ -121,9 +137,10 @@
 - **Back up and restore.** Save your settings, or everything (library, box art, play time), into
   one file, checked after writing, and put it back on this device or a new one.
 - **Updates from inside the app** (official builds). Once a day on Wi-Fi Plumemu looks for a new
-  version; Settings › About › Update installs it.
+  version; the top bar then shows "Update" and the version, and START or Settings › About › Update
+  installs it. After an update a card tells you what is new, once.
 - **Anonymous usage statistics and crash reports, only if you want them** (official builds). They
-  are off until you switch them on in the setup or in Settings › Advanced › Send usage statistics.
+  are off until you switch them on in the setup or in Settings › About › Send usage statistics.
   [What Plumemu sends](#what-plumemu-sends) lists every connection.
 
 <p align="center">
@@ -132,7 +149,7 @@
 
 <table>
   <tr>
-    <td width="50%"><img src="media/battery-in-game.png" alt="The lower screen while a game runs: a large clock, Wi-Fi and 38% battery, \"45 min left\" with \"empty at 22:32\", and a chart of the battery falling at 48% an hour against a dotted usual pace of 40%"></td>
+    <td width="50%"><img src="media/battery-in-game.png" alt="The lower screen while a game runs: a large clock at 21:47, a ring at 38%, \"45 min left\" and \"empty at about 22:32\", a chart of the session with a dotted line for the usual pace, and \"Played 0:40 · Used 32% · 48% an hour · usually 40%\""></td>
     <td width="50%"><img src="media/system-card.png" alt="The lower screen's card for Super Nintendo: the SNES badge, 248 games, Nintendo, home console, 1990 to 2003, and the game played last, Super Metroid, yesterday"></td>
   </tr>
   <tr>
@@ -140,7 +157,7 @@
     <td align="center">Each system's facts on the second screen</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/grid.png" alt="Super Nintendo as a grid of covers on a dark background, with the selected cover raised and ringed in the accent color (the covers are drawn stand-ins)"></td>
+    <td width="50%"><img src="media/grid.png" alt="Super Nintendo as a grid of covers on a dark background, with the selected cover raised and ringed in the accent color (the covers are drawn posters)"></td>
     <td width="50%"><img src="media/grid-light.png" alt="PlayStation as a smaller grid of covers, five to a row, in the light Paper colors, Final Fantasy VII selected and ringed"></td>
   </tr>
   <tr>
@@ -172,8 +189,8 @@
     <td align="center">A, B, X and Y in their classic colors</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/settings.png" alt="Settings › Library in Dot matrix, a green screen: ROM folders (2 folders), Rescan library, Find new games automatically, Sort games, System order, ScreenScraper, Box art region and Recent size; the two ROM folders and their game counts on the right"></td>
-    <td width="50%"><img src="media/update.png" alt="Settings › About in Paper: version 0.1.0 installed, a newer version offered with its release notes and an Update button (an example screen)"></td>
+    <td width="50%"><img src="media/settings.png" alt="Settings › Library in Dot matrix, a green screen: ROM folders (2 folders), Rescan library, Find new games automatically, Sort games, System order, Recent size and Clear Recent…; the ROM folders panel on the right lists Internal storage and SD card with their game counts"></td>
+    <td width="50%"><img src="media/update.png" alt="Settings › About in Paper with the update panel: Plumemu 0.1.0 → 0.1.1, a short list of release notes and an Update button (an example screen)"></td>
   </tr>
   <tr>
     <td align="center">Settings that say what they do</td>
@@ -184,7 +201,7 @@
 ## Light on the hardware
 
 Many retro handhelds are slow and run old Android, so Plumemu is built to use as little as it
-can. Measured with 0.0.7-beta on a slow Android 6.0 emulator (2 GB of memory) with a library of
+can. These figures were measured with 0.0.7-beta (the download size is the current one), on a slow Android 6.0 emulator (2 GB of memory) with a library of
 10,000 games:
 
 | | |
@@ -254,8 +271,8 @@ play. Settings › About › Check for updates daily turns the daily check off.
 | L1 / R1 | In a list sorted by name, previous / next letter; in Recent and in lists sorted by Last played or Year, one page up / down; in a game grid, smaller / larger covers |
 | Home | With Plumemu as the home screen: back to the game you played last |
 
-The button printed A confirms. Settings › Advanced can make the bottom button (B, or ✕) confirm
-instead, and Settings › Controls › Switch system with can move system switching to L1 / R1. Touch
+The button printed A confirms. Settings › Controls › Confirm with B can make the bottom button (B,
+or ✕) confirm instead, and Settings › Controls › Switch system with can move system switching to L1 / R1. Touch
 works everywhere: tap to select, tap again to play. Settings › Controls › Push right to play lets
 one hand do it: push right once to mark a game, again to start it. Pinned shortcuts (Steam,
 Windows) start from Plumemu.
@@ -279,14 +296,16 @@ official build can send, and to whom:
 
 | What | Sent to | When | Turn it off |
 |---|---|---|---|
-| Usage statistics and crash reports: device model, Android and Plumemu versions, a random install number, which screens and settings are used, play time by system. Never game titles or search words. | The developer (`plumemu.stevensdesk.com`) | Only after you switch it on | Settings › Advanced › Send usage statistics |
+| Usage statistics and crash reports: device model, Android and Plumemu versions, a random install number, which screens and settings are used, play time by system. Never game titles or search words. | The developer (`plumemu.stevensdesk.com`) | Only after you switch it on | Settings › About › Send usage statistics |
 | A problem report: what you wrote, an e-mail if you give one, the log unless you untick it | The developer | Only when you press Send | Do not press Send |
 | An update check: a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | Once a day on Wi-Fi, or when you press Check for updates | Settings › About › Check for updates daily |
-| Box art lookups: your ScreenScraper account, and each game's file name, size, checksum and title | [ScreenScraper](https://www.screenscraper.fr) | Only while you are signed in, on Wi-Fi | Settings › Library › ScreenScraper: Sign out or Pause |
+| Box art lookups: your ScreenScraper account, and each game's file name, size, checksum and title | [ScreenScraper](https://www.screenscraper.fr) | Only while you are signed in, on Wi-Fi | Settings › Accounts › ScreenScraper: Sign out or Pause |
 | Box art ScreenScraper lacks: a Steam game's title, or a game's file name | Steam (Valve) and the libretro thumbnail server | Only while you are signed in to ScreenScraper, on Wi-Fi | The same |
+| Achievements: your RetroAchievements user name, your Web API key and the RetroAchievements number of a game, found from a hash of the game file that Plumemu computes on the handheld (no file leaves it). Badge pictures are plain downloads with no account data | [RetroAchievements](https://retroachievements.org) (`retroachievements.org`, badges from `media.retroachievements.org`) | Only while you are signed in: when a game's Info opens, after you play, and once a day on Wi-Fi | Settings › Accounts › RetroAchievements: Sign out deletes your name, key and progress |
+| Platform data (the list of systems and emulators): a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | In the same daily update check | Settings › About › Check for updates daily |
 
 A build you make yourself from the source sends no statistics and checks no updates, and has no
-ScreenScraper account built in (see [Source](#source)). Your IP address reaches each server with
+ScreenScraper or RetroAchievements account built in (see [Source](#source)). Your IP address reaches each server with
 any connection, as for any web request. The full detail is in [Privacy](PRIVACY.md).
 
 ## Source
@@ -313,7 +332,7 @@ the SDK and two test emulators. `bash scripts/verify.sh --quick` runs the checks
 - No update check: a build you made would not install over the official one anyway, because it is
   signed with a different key.
 - No ScreenScraper account is built in, so no box art download unless you add your own developer
-  credentials.
+  credentials. Achievements need no built-in account: you sign in with your own key.
 - No bundled name packs. The packs that turn a game's own code into its title are data I keep
   out of this repository, so a source build names games from their cleaned file names. The code
   that reads files and looks names up is here.

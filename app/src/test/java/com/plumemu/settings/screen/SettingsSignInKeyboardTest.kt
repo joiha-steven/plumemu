@@ -64,9 +64,9 @@ internal class SettingsSignInKeyboardTest : SettingsModelHarness() {
             PlumTheme { SettingsScreen(actions.shown, router, screenActions, versionName = "test", content = content) }
         }
         compose.waitForIdle()
-        repeat(SettingsSection.Library.ordinal) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.Accounts.shownIndex) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
-        repeat(SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.ScraperAccount)) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.Accounts.rowsIn(content).indexOf(SettingsOption.ScraperAccount)) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
         compose.onNodeWithTag(SignInTags.FORM).assertIsDisplayed()
     }

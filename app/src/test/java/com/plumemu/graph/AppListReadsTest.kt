@@ -37,4 +37,33 @@ class AppListReadsTest {
             AppListReads(list) { null }.refresh()
             assertEquals(listOf(app("kept")), list.value)
         }
+
+    @Test
+    fun aListThatDiffersTellsTheIconsAndTheSameListDoesNot() =
+        runTest(UnconfinedTestDispatcher()) {
+            val list = MutableStateFlow<List<LaunchableApp>>(emptyList())
+            var changes = 0
+            val answers = ArrayDeque(listOf(listOf(app("a")), listOf(app("a")), listOf(app("a"), app("b"))))
+            val reads = AppListReads(list, onChanged = { changes++ }) { answers.removeFirst() }
+            reads.refresh() // empty to filled: icons found by package must ask again
+            reads.refresh() // same list
+            assertEquals(1, changes)
+            reads.refresh()
+            assertEquals(2, changes)
+        }
+
+    @Test
+    fun theAppGamesReadWaitsForTheLockAndStoresInOrder() =
+        runTest(UnconfinedTestDispatcher()) {
+            val list = MutableStateFlow<List<LaunchableApp>>(emptyList())
+            val slow = CompletableDeferred<List<LaunchableApp>>()
+            val answers = ArrayDeque<suspend () -> List<LaunchableApp>?>()
+            answers += { slow.await() }
+            answers += { listOf(app("kept")) }
+            val reads = AppListReads(list) { answers.removeFirst()() }
+            launch { reads.read() } // the app games' read, older and slow
+            launch { reads.refresh() } // a package change's read, newer
+            slow.complete(listOf(app("kept"), app("uninstalled")))
+            assertEquals(listOf(app("kept")), list.value)
+        }
 }

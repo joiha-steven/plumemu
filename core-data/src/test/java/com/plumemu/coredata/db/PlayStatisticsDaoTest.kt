@@ -3,7 +3,6 @@ package com.plumemu.coredata.db
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -146,28 +145,19 @@ class PlayStatisticsDaoTest {
             assertEquals(true, copies.getValue(ids.getValue("bios")).isNotGame)
         }
 
+    /** The week's sessions in one read: those that overlap the range, by the same rule as `secondsPlayedBetween`. */
     @Test
-    fun timesPlayedAddsTheSessionsOfEveryCopyAndLastPlayedIsTheNewestOfThem() =
+    fun sessionsBetweenListsTheSessionsThatTouchTheRange() =
         runTest {
-            val ids = insert(game(0, "usa", title = "Zelda"), game(0, "eur", title = "Zelda"), game(0, "other", title = "Metroid"))
-            val usa = ids.getValue("usa")
-            val eur = ids.getValue("eur")
-            dao.addSession(usa, endedAt = 5_000, seconds = 60)
-            dao.addSession(usa, endedAt = 9_000, seconds = 60)
-            dao.addSession(eur, endedAt = 7_000, seconds = 60)
-            dao.addSession(ids.getValue("other"), endedAt = 20_000, seconds = 60)
-            assertEquals("two regional copies add up", 3, dao.sessionCount(listOf(usa, eur)))
-            assertEquals("one copy alone", 1, dao.sessionCount(listOf(eur)))
-            assertEquals("the newest of the copies, not the last listed", 9_000L, dao.lastPlayedAt(listOf(eur, usa)))
-        }
-
-    @Test
-    fun aGameNeverPlayedHasNoSessionsAndNoLastPlayed() =
-        runTest {
-            val ids = insert(game(0, "metroid"))
-            assertEquals(0, dao.sessionCount(listOf(ids.getValue("metroid"))))
-            assertNull(dao.lastPlayedAt(listOf(ids.getValue("metroid"))))
-            assertEquals(0, dao.sessionCount(emptyList()))
-            assertNull(dao.lastPlayedAt(emptyList()))
+            val id = insert(game(0, "metroid")).getValue("metroid")
+            dao.addSession(id, endedAt = 5_000, seconds = 2, startedAt = 3_000)
+            dao.addSession(id, endedAt = 12_000, seconds = 4, startedAt = 8_000)
+            dao.addSession(id, endedAt = 30_000, seconds = 1, startedAt = 29_000)
+            dao.addSession(id, endedAt = 9_500, seconds = 0, startedAt = 9_500)
+            assertEquals(
+                "the one across the start, the zero-length one inside, not the one before or after",
+                listOf(SessionSpan(8_000, 12_000, 4), SessionSpan(9_500, 9_500, 0)),
+                dao.sessionsBetween(9_000, 20_000).sortedBy { it.startedAt },
+            )
         }
 }

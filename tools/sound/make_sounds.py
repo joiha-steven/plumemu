@@ -27,7 +27,7 @@ Airy means a faint high partial well above the tone, and no sub-bass at all.
 
 Every sound has a 1 ms fade-in (no pop on the first sample), an exponential decay, and a short
 fade-out to exact silence (no click at the end). Levels are peak dBFS, deliberately low: the app
-scales them again with Settings > Advanced > Sounds (Quiet is 35 percent, Loud is full), and they
+scales them again with Settings > Controls > Sounds (Quiet is 35 percent, Loud is full), and they
 sit under game audio and the person's own media volume.
 """
 import math

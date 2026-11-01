@@ -238,15 +238,13 @@ class InGameBurnInTest {
         val BATTERY = BatteryReading(percent = 82, isCharging = false)
 
         /**
-         * The design's figures were measured on the mockups: lit 3–3.6% of the screen, mean brightness about
-         * 0.5%. Measured here: lit 3.55–3.72%, brightness 0.39–0.44%. The lit share is
-         * up to 0.12 points over the mockups' 3.6% (counting every antialiased pixel; the type ramp
-         * makes the hour labels 16 where the mockups drew 15), so this guard is the measured
-         * share rounded up to 3.75%, a regression guard, raised to
-         * 4.0% because Large is the default text size (the part follows Text size; measured at Large: 3.78-3.97%), and
-         * brightness the design's own 0.5%.
+         * Brightness is what wears an OLED: the design's mean brightness of 0.5% of white stays the
+         * guard. The lit share (every pixel not black, antialiasing counted) was 4% while the chart
+         * was lines only; the chart's soft area under the line lights much more of the screen at a
+         * very low level (about #151515 at its brightest, none at its floor), so the lit share is now
+         * a looser guard of 13%.
          */
-        const val MAX_LIT_SHARE = 0.04
+        const val MAX_LIT_SHARE = 0.13
         const val MAX_BRIGHTNESS = 0.005
 
         const val SRGB_LINEAR_KNEE = 0.04045f

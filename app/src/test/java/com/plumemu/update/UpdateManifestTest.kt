@@ -5,6 +5,7 @@ import com.plumemu.update.UpdateFixtures.INSTALLED
 import com.plumemu.update.UpdateFixtures.MANIFEST_URL
 import com.plumemu.update.UpdateFixtures.SDK
 import com.plumemu.update.UpdateFixtures.manifestJson
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -125,5 +126,53 @@ class UpdateManifestTest {
     fun anApkInASubfolderOfTheSameServerIsFine() {
         val m = (read(manifestJson { put("apk", "builds/plumemu-0.0.3-alpha.apk") }) as ManifestVerdict.Newer).manifest
         assertEquals("https://plumemu-app.stevensdesk.com/update/builds/plumemu-0.0.3-alpha.apk", m.apkUrl)
+    }
+
+    private fun sectionsOf(value: Any?): List<NoteSection> {
+        val verdict = read(manifestJson { put("sections", value) })
+        return (verdict as ManifestVerdict.Newer).manifest.sections
+    }
+
+    private fun section(
+        kind: Any,
+        vararg items: Any,
+    ) = JSONObject().put("kind", kind).put("items", JSONArray(items.toList()))
+
+    @Test
+    fun validSectionsAreKeptInTheFixedOrderWhateverOrderTheyCame() {
+        val sections = sectionsOf(JSONArray().put(section("fixed", "Grid cut.")).put(section("new", "Updates.", "Faster scans.")))
+        assertEquals(listOf(NoteSection(SectionKind.New, listOf("Updates.", "Faster scans.")), NoteSection(SectionKind.Fixed, listOf("Grid cut."))), sections)
+        val m = (read(manifestJson { put("sections", JSONArray().put(section("known", "x"))) }) as ManifestVerdict.Newer).manifest
+        assertEquals("notes stay as they were", listOf("Updates install from Settings › About.", "Faster scans."), m.notes)
+    }
+
+    @Test
+    fun noSectionsFieldMeansNoSections() {
+        assertEquals(emptyList<NoteSection>(), (read(manifestJson()) as ManifestVerdict.Newer).manifest.sections)
+    }
+
+    @Test
+    fun anUnknownKindDropsOnlyThatSection() {
+        val sections = sectionsOf(JSONArray().put(section("new", "A.")).put(section("secret", "B.")).put(section("fixed", "C.")))
+        assertEquals(listOf(SectionKind.New, SectionKind.Fixed), sections.map { it.kind })
+    }
+
+    @Test
+    fun moreThanTwentyItemsInAllDropsTheSections() {
+        val many = JSONArray().put(section("new", *Array(11) { "n$it" })).put(section("fixed", *Array(10) { "f$it" }))
+        assertEquals(emptyList<NoteSection>(), sectionsOf(many))
+        assertEquals(20, sectionsOf(JSONArray().put(section("new", *Array(20) { "n$it" }))).single().items.size)
+    }
+
+    @Test
+    fun wrongTypesAndBadItemsDropTheSectionsButTheManifestIsStillOffered() {
+        assertEquals(emptyList<NoteSection>(), sectionsOf("new"))
+        assertEquals(emptyList<NoteSection>(), sectionsOf(JSONArray().put("new")))
+        assertEquals(emptyList<NoteSection>(), sectionsOf(JSONArray().put(JSONObject().put("kind", 3).put("items", JSONArray(listOf("a"))))))
+        assertEquals(emptyList<NoteSection>(), sectionsOf(JSONArray().put(JSONObject().put("kind", "new").put("items", "a"))))
+        assertEquals(emptyList<NoteSection>(), sectionsOf(JSONArray().put(section("new"))))
+        assertEquals(emptyList<NoteSection>(), sectionsOf(JSONArray().put(section("new", 5))))
+        assertEquals(emptyList<NoteSection>(), sectionsOf(JSONArray().put(section("new", "x".repeat(301)))))
+        assertEquals(emptyList<NoteSection>(), sectionsOf(JSONArray().put(section("new", " "))))
     }
 }

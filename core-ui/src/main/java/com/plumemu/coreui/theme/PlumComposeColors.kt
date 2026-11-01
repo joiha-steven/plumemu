@@ -38,6 +38,36 @@ class PlumComposeColors private constructor(
     val trayKey: Color get() = tokens.value.trayKey
     val trayEdge: Color get() = tokens.value.trayEdge
 
+    /** The flat face of a key, hint cap or dialog button ([FlatFace.key]). */
+    val keyFace: FlatFace get() = tokens.value.keyFace
+
+    /** The flat face of a toggle or slider knob. */
+    val knobFace: FlatFace get() = tokens.value.knobFace
+
+    /** Black at the inset shadow's alpha: the 1 dp shadow of a sunken track or field. */
+    val inset: Color get() = tokens.value.inset
+
+    /** A panel's hairline edge (the text colour, faint) and soft shadow (black, lighter on a light theme): [PanelLook]. */
+    val panelEdge: Color get() = tokens.value.panelEdge
+    val panelShadow: Color get() = tokens.value.panelShadow
+
+    private var accentMemo: FlatFace? = null
+    private var knobOnMemo: FlatFace? = null
+
+    /** The main button's face, in the accent now drawn (kept until the accent moves, so drawing allocates nothing). */
+    fun accentFace(): FlatFace {
+        val now = accent
+        accentMemo?.let { if (it.face == now) return it }
+        return FlatFace.accent(now).also { accentMemo = it }
+    }
+
+    /** The knob of a switch that is on: `onAccent` (kept like [accentFace]). */
+    fun knobOnFace(): FlatFace {
+        val now = onAccent
+        knobOnMemo?.let { if (it.face == now) return it }
+        return FlatFace.knobOn(now).also { knobOnMemo = it }
+    }
+
     /** The shadow the tray casts upwards: black at [PlumColors.trayShadowAlpha]. */
     val trayShadow: Color get() = tokens.value.trayShadow
 
@@ -53,7 +83,7 @@ class PlumComposeColors private constructor(
     /** Text on an accent fill; follows [accent]. */
     val onAccent: Color get() = accentLook.value.onAccent
 
-    /** The soft glow around a focus ring: accent at 25 % (the board's `accent + '40'`); follows [accent]. */
+    /** The focus halo outside a focus ring (see [FocusHalo]): the accent with its lightness clamped, alpha = its peak; transparent on a light theme. Follows [accent]. */
     val focusGlow: Color get() = accentLook.value.focusGlow
 
     /** The colours of one [PlumColors], as Compose colours (the accent is in [AccentLook]). */
@@ -71,10 +101,22 @@ class PlumComposeColors private constructor(
         val tray: Color,
         val trayKey: Color,
         val trayEdge: Color,
+        val keyFace: FlatFace,
+        val knobFace: FlatFace,
+        val inset: Color,
         val trayShadow: Color,
         val coverEdge: Color,
+        val panelEdge: Color,
+        val panelShadow: Color,
     ) {
         companion object {
+            private fun darkTheme(tokens: PlumColors) = TextMode.of(tokens.text, tokens.bg) == TextMode.Light
+
+            private fun keyColour(
+                tokens: PlumColors,
+                dark: Boolean,
+            ) = ColorMath.mix(tokens.bg, tokens.text, if (dark) FlatFace.KEY_DARK else FlatFace.KEY_LIGHT).toComposeColor()
+
             fun of(tokens: PlumColors) =
                 Tokens(
                     bg = tokens.bg.toComposeColor(),
@@ -89,8 +131,13 @@ class PlumComposeColors private constructor(
                     tray = tokens.tray.toComposeColor(),
                     trayKey = tokens.trayKey.toComposeColor(),
                     trayEdge = tokens.trayEdge.toComposeColor(),
+                    keyFace = darkTheme(tokens).let { dark -> FlatFace.key(keyColour(tokens, dark), dark) },
+                    knobFace = FlatFace.knob(),
+                    inset = Color.Black.copy(alpha = if (darkTheme(tokens)) INSET_ALPHA_DARK else INSET_ALPHA_LIGHT),
                     trayShadow = Color.Black.copy(alpha = tokens.trayShadowAlpha.toFloat()),
                     coverEdge = tokens.coverEdge.toComposeColor(),
+                    panelEdge = tokens.text.toComposeColor().copy(alpha = PanelLook.edgeAlpha(darkTheme(tokens))),
+                    panelShadow = Color.Black.copy(alpha = PanelLook.shadowAlpha(darkTheme(tokens))),
                 )
         }
     }
@@ -122,7 +169,7 @@ class PlumComposeColors private constructor(
     }
 }
 
-/** The colours that follow the accent: the accent, the text on it, the focus glow and the focused row's pill. */
+/** The colours that follow the accent: the accent, the text on it, the focus halo and the focused row's pill. */
 @Immutable
 data class AccentLook(
     val accent: Color,
@@ -131,12 +178,13 @@ data class AccentLook(
     val pill: Color,
 ) {
     companion object {
-        // 0x40 / 0xFF, the alpha byte the board appends to the accent hex.
-        private const val GLOW_ALPHA = 0x40 / 255f
-
         fun of(tokens: PlumColors): AccentLook {
             val accent = tokens.accent.toComposeColor()
-            return AccentLook(accent, tokens.onAccent.toComposeColor(), accent.copy(alpha = GLOW_ALPHA), tokens.pill.toComposeColor())
+            val halo = FocusHalo.look(tokens.accent, tokens.bg)?.let { it.colour.toComposeColor().copy(alpha = it.peak.toFloat()) } ?: Color.Transparent
+            return AccentLook(accent, tokens.onAccent.toComposeColor(), halo, tokens.pill.toComposeColor())
         }
     }
 }
+
+/** What an alpha mask (`BlendMode.DstIn`) keeps whole; only its alpha counts, so it holds on every colour set. */
+val MaskOpaque: Color = Color.Black

@@ -9,7 +9,7 @@ import androidx.compose.ui.res.stringResource
 import com.plumemu.R
 
 /**
- * Settings › Advanced › Language's value for [tag]: "System default" in the screen's language, or the
+ * Settings › Appearance › Language's value for [tag]: "System default" in the screen's language, or the
  * language's own name in itself (its folder's `language_name`), so a person who cannot read the
  * current language still finds theirs.
  */

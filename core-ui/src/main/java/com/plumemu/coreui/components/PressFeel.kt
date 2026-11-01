@@ -67,10 +67,10 @@ fun pressFeelTouchDelayMs(): Long = ViewConfiguration.getTapTimeout().toLong()
 
 /**
  * How pressed an item looks, 0 (rest) to 1; only draw blocks read [progress]. The timing is the hints':
- * 60 ms in, 100 ms out, and the dip stays at least 100 ms. Made once per item, but no coroutine or state
+ * 60 ms in, [outMs] out (rows 100 ms; keys pass `KEY_PRESS_OUT_MS`, 140 ms), and the dip stays at least 100 ms. Made once per item, but no coroutine or state
  * observer is attached until the item is focused or touched.
  */
-internal class PressDip {
+internal class PressDip(private val outMs: Int = PlumMotion.PRESS_OUT_MS) {
     val progress = Animatable(0f)
     private var pressedAt = Long.MIN_VALUE / 2
 
@@ -96,7 +96,7 @@ internal class PressDip {
         }
         val visibleMs = withFrameMillis { it } - pressedAt
         if (visibleMs < PlumMotion.PRESS_MIN_VISIBLE_MS) delay(PlumMotion.PRESS_MIN_VISIBLE_MS - visibleMs)
-        progress.animateTo(0f, tween(PlumMotion.PRESS_OUT_MS, easing = PlumMotion.EaseOut))
+        progress.animateTo(0f, tween(outMs, easing = PlumMotion.EaseOut))
     }
 }
 
@@ -142,13 +142,15 @@ internal suspend fun driveConfirmPress(
 }
 
 /** Shows the press for a finger on the item, after [pressFeelTouchDelayMs] and only if it has not moved past touch slop. */
-private fun Modifier.touchPress(
+internal fun Modifier.touchPress(
     dip: PressDip,
     scope: CoroutineScope,
     motionOn: () -> Boolean,
     onPress: () -> Unit = {},
+    /** A second dip that follows this touch (a switch's knob under its row). */
+    mirror: PressDip? = null,
 ): Modifier =
-    pointerInput(dip) {
+    pointerInput(dip, mirror) {
         val delayMs = pressFeelTouchDelayMs()
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
@@ -176,6 +178,7 @@ private fun Modifier.touchPress(
                     scope.launch {
                         // The button's driver can interrupt this press: `touching` must clear anyway, or the
                         // item stays dipped.
+                        mirror?.let { m -> launch { m.press(motionOn()); m.release(motionOn()) } }
                         try {
                             dip.press(motionOn())
                         } finally {
@@ -190,6 +193,7 @@ private fun Modifier.touchPress(
             onPress()
             dip.touching = true
             val pressing: Job = scope.launch { dip.press(motionOn()) }
+            val mirrorPressing: Job? = mirror?.let { m -> scope.launch { m.press(motionOn()) } }
             try {
                 while (true) {
                     val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id }
@@ -199,6 +203,7 @@ private fun Modifier.touchPress(
                 scope.launch {
                     pressing.join()
                     dip.touching = false
+                    mirror?.let { m -> launch { mirrorPressing?.join(); m.release(motionOn()) } }
                     dip.release(motionOn())
                 }
             }
@@ -247,12 +252,17 @@ internal fun Modifier.pressFeelWith(
     shape: Shape,
     answersButton: Boolean,
     ring: ((PlumComposeColors) -> Color?)?,
+    /** The focus halo outside the pill (null: none); a transparent colour (a light theme) draws none. */
+    halo: ((PlumComposeColors) -> Color?)? = null,
     /** A focused row of a home list: the list draws the pill ([rememberGlidingPill]), so this row draws no fill or ring and hands over its press dip. */
     listDrawsPill: Boolean = false,
+    /** A key inside the row (a switch's knob) that is pressed with every finger press on the row. */
+    mirror: KeyState? = null,
 ): Modifier =
     composed {
         val dip = remember { PressDip() }
         val list = if (listDrawsPill && focused) LocalGlidingPill.current else null
+        val haloOutside = LocalHaloDrawnOutside.current
         if (list != null) {
             SideEffect { list.press = dip }
             DisposableEffect(list, dip) {
@@ -275,7 +285,7 @@ internal fun Modifier.pressFeelWith(
         // The colour set itself, read in the draw block below: a moved colour redraws this and recomposes nothing.
         val colors = PlumTheme.colors
         this
-            .touchPress(dip, scope, motionOn = { motionOn })
+            .touchPress(dip, scope, motionOn = { motionOn }, mirror = mirror?.dip)
             .then(
                 if (list != null && list.measuresRows) {
                     Modifier.onPlaced {
@@ -291,11 +301,14 @@ internal fun Modifier.pressFeelWith(
                 val p = dip.progress.value
                 val fill = if (list != null) null else fill(colors)
                 if (p == 0f) {
+                    if (fill != null && halo != null && !(haloOutside && listDrawsPill)) halo(colors)?.let { drawHaloOutside(shape.createOutline(size, layoutDirection, this), it) }
                     if (fill != null) drawOutline(shape.createOutline(size, layoutDirection, this), fill)
                     if (fill != null && ring != null) ring(colors)?.let { drawRingInside(shape.createOutline(size, layoutDirection, this), it) }
                     drawContent()
                 } else {
                     val scale = if (motionOn) 1f - (1f - PlumMotion.PRESS_SCALE) * p else 1f
+                    // The halo stays at the resting size: it does not dip with the pill, so a press never repaints the neighbours it reaches over.
+                    if (fill != null && halo != null && !(haloOutside && listDrawsPill)) halo(colors)?.let { drawHaloOutside(shape.createOutline(size, layoutDirection, this), it) }
                     withTransform({ scale(scale, scale, center) }) {
                         if (fill != null) drawOutline(shape.createOutline(size, layoutDirection, this), lerp(fill, colors.text, PlumMotion.PRESS_FILL_MIX * p))
                         if (fill != null && ring != null) ring(colors)?.let { drawRingInside(shape.createOutline(size, layoutDirection, this), it) }

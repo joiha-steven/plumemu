@@ -165,7 +165,7 @@ class SettingsScrollFramesTest {
     @Test
     fun sectionsColumn() {
         showSettings(SettingsHost(versionName = "test", update = {}, resetAllSettings = {}, resetLibrary = {}))
-        val lines = walk("sections", SettingsSection.entries.size - 1, SettingsTags.SECTIONS) { SettingsTags.section(SettingsSection.entries[it]) to 0 }
+        val lines = walk("sections", shownSections.size - 1, SettingsTags.SECTIONS) { SettingsTags.section(shownSections[it]) to 0 }
         println(lines.joinToString("\n"))
         assertTrue(lines.joinToString("\n"), lines.none { it.contains(Regex(", [1-9][0-9]* bad frames")) })
     }
@@ -175,7 +175,7 @@ class SettingsScrollFramesTest {
     fun optionsColumn() {
         val systems = List(SYSTEMS) { SystemEmulators("system$it", "System $it", automatic = null, chosen = null, installed = emptyList()) }
         showSettings(SettingsHost(versionName = "test", update = {}, resetAllSettings = {}, resetLibrary = {}, content = flowOf(SettingsContent(systems = systems))))
-        send(Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Enter) // Emulators › its rows
+        send(*Array(SettingsSection.Emulators.shownIndex) { Action.Move(Direction.Down) }, Action.Enter) // Emulators › its rows
         val rows = SettingsSection.Emulators.rowsIn(SettingsContent(systems = systems))
         val lines =
             walk("Emulators options", rows.size - 1, SettingsTags.OPTION_LIST) { i ->

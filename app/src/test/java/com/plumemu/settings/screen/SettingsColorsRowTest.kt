@@ -1,7 +1,13 @@
 package com.plumemu.settings.screen
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -35,9 +41,17 @@ class SettingsColorsRowTest {
 
     private fun text(id: Int) = context.getString(id)
 
-    private fun choice(id: Int) = context.getString(R.string.settings_value_choice, text(id))
+    /** The words of a row's value: text inside a `settings_value_*` node (the label and the panel say the same words). */
+    private fun valueText(id: Int) = valueText(text(id))
 
-    private fun opens(id: Int) = context.getString(R.string.settings_value_opens, text(id))
+    /** The Colors row's own value (the rows below it may say the same set's name). */
+    private fun colorsValue(id: Int) = hasText(text(id)) and hasAnyAncestor(hasTestTag(SettingsTags.value(SettingsOption.Colors)))
+
+    private fun valueText(name: String) =
+        hasText(name) and
+            SemanticsMatcher("inside a settings row's value") { node ->
+                generateSequence(node) { it.parent }.any { (it.config.getOrNull(SemanticsProperties.TestTag) ?: "").startsWith("settings_value_") }
+            }
 
     private fun show(appearance: AppearanceSettings) {
         val stored = PlumSettings(appearance = appearance, flags = SetupFlags(setupCompleted = true))
@@ -48,57 +62,57 @@ class SettingsColorsRowTest {
     fun aFreshInstallShowsPlumemuAndExplainsTheRow() {
         show(AppearanceSettings())
         compose.onAllNodesWithText(text(R.string.settings_colors)).assertCountEquals(2) // the row and its panel's title
-        compose.onNodeWithText(choice(R.string.settings_colors_plumemu)).assertIsDisplayed()
+        compose.onNode(colorsValue(R.string.settings_colors_plumemu), useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.settings_colors_panel_help)).assertIsDisplayed()
         // Plumemu's colours are presets: the rows below name them.
-        compose.onNodeWithText(opens(R.string.settings_bg_black)).assertIsDisplayed()
-        compose.onNodeWithText(opens(R.string.settings_accent_red)).assertIsDisplayed()
+        compose.onNode(valueText(R.string.settings_bg_black), useUnmergedTree = true).assertIsDisplayed()
+        compose.onNode(valueText(R.string.settings_accent_red), useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
     fun aSetsOwnHexColoursShowTheSetsNameNotCustom() {
         show(AppearanceSettings(background = ColorSetting.Custom(0xD9D8D3), textColor = TextColorSetting.Dark, accent = ColorSetting.Custom(0xAA2924)))
-        compose.onNodeWithText(choice(R.string.settings_colors_super)).assertIsDisplayed()
-        compose.onAllNodesWithText(opens(R.string.settings_colors_super)).assertCountEquals(2) // Background and Accent color
-        compose.onNodeWithText(opens(R.string.settings_color_custom)).assertDoesNotExist()
+        compose.onNode(colorsValue(R.string.settings_colors_super), useUnmergedTree = true).assertIsDisplayed()
+        compose.onAllNodes(valueText(R.string.settings_colors_super), useUnmergedTree = true).assertCountEquals(3) // Colors, Background and Accent color
+        compose.onNode(valueText(R.string.settings_color_custom), useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
     fun aSetsPreviousAccentStillShowsTheSetsNameNotCustom() {
         // Stored by Super before the accent changed (#B22B26); the accent row is named by the set it still belongs to.
         show(AppearanceSettings(background = ColorSetting.Custom(0xD9D8D3), textColor = TextColorSetting.Dark, accent = ColorSetting.Custom(0xB22B26)))
-        compose.onNodeWithText(choice(R.string.settings_colors_super)).assertIsDisplayed()
-        compose.onAllNodesWithText(opens(R.string.settings_colors_super)).assertCountEquals(2)
-        compose.onNodeWithText(opens(R.string.settings_color_custom)).assertDoesNotExist()
+        compose.onNode(colorsValue(R.string.settings_colors_super), useUnmergedTree = true).assertIsDisplayed()
+        compose.onAllNodes(valueText(R.string.settings_colors_super), useUnmergedTree = true).assertCountEquals(3)
+        compose.onNode(valueText(R.string.settings_color_custom), useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
     fun theColorsRowReadsCustomButEachRowIsNamedByItsOwnColour() {
         // Super's background with Blue: no set matches, so Colors says Custom; the background is still Super's colour.
         show(AppearanceSettings(background = ColorSetting.Custom(0xD9D8D3), textColor = TextColorSetting.Dark, accent = ColorSetting.Preset("Blue")))
-        compose.onNodeWithText(choice(R.string.settings_color_custom)).assertIsDisplayed()
-        compose.onNodeWithText(opens(R.string.settings_colors_super)).assertIsDisplayed()
-        compose.onNodeWithText(opens(R.string.settings_accent_blue)).assertIsDisplayed()
+        compose.onNode(colorsValue(R.string.settings_color_custom), useUnmergedTree = true).assertIsDisplayed()
+        compose.onNode(valueText(R.string.settings_colors_super), useUnmergedTree = true).assertIsDisplayed()
+        compose.onNode(valueText(R.string.settings_accent_blue), useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
     fun changingOnlyTheTextOfIvoryLeavesBackgroundAndAccentNamedIvory() {
         show(AppearanceSettings(background = ColorSetting.Custom(0xF3EAD0), textColor = TextColorSetting.Custom(0x14213D), accent = ColorSetting.Custom(0x127087)))
-        compose.onNodeWithText(choice(R.string.settings_color_custom)).assertIsDisplayed()
-        compose.onAllNodesWithText(opens(R.string.settings_colors_ivory)).assertCountEquals(2) // Background and Accent color
+        compose.onNode(colorsValue(R.string.settings_color_custom), useUnmergedTree = true).assertIsDisplayed()
+        compose.onAllNodes(valueText(R.string.settings_colors_ivory), useUnmergedTree = true).assertCountEquals(2) // Background and Accent color
     }
 
     @Test
     fun ivorysPreviousAccentWithItsOwnTextIsStillNamedIvory() {
         // The text moved away from Ivory before its accent changed: the stored old accent is not settled, but it is still Ivory's.
         show(AppearanceSettings(background = ColorSetting.Custom(0xF3EAD0), textColor = TextColorSetting.Custom(0x14213D), accent = ColorSetting.Custom(0x1792B0)))
-        compose.onAllNodesWithText(opens(R.string.settings_colors_ivory)).assertCountEquals(2) // Background and Accent color
+        compose.onAllNodes(valueText(R.string.settings_colors_ivory), useUnmergedTree = true).assertCountEquals(2) // Background and Accent color
     }
 
     @Test
     fun aVividPresetBackgroundIsNamedByItsPresetName() {
         show(AppearanceSettings(background = ColorSetting.Custom(ColorPages.vividBackgrounds.first().color.value), textColor = TextColorSetting.Dark))
-        compose.onNodeWithText(opens(ColorPages.vividBackgrounds.first().name)).assertIsDisplayed()
+        compose.onNode(valueText(ColorPages.vividBackgrounds.first().name), useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test

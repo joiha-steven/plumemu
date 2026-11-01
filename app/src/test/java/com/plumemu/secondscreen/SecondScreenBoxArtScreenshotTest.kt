@@ -6,7 +6,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.plumemu.battery.BatteryPace
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.graph.AchievementCount
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
@@ -67,6 +69,10 @@ abstract class SecondScreenBoxArtScreenshotBase(
                 Triple("long_file_name", DETAILS_GAME.copy(art = LANDSCAPE_FRONT, fileName = LONG_FILE_NAME), TextSize.Medium),
                 Triple("long_file_name_no_art", DETAILS_GAME.copy(fileName = LONG_FILE_NAME), TextSize.Medium),
                 Triple("largest_text", portrait, TextSize.Largest),
+                // RetroAchievements line (the game has stored progress); the cases above are the ones without it.
+                Triple("achievements_box", portrait.copy(achievements = AchievementCount(12, 45)), TextSize.Medium),
+                Triple("achievements_no_art", DETAILS_GAME.copy(achievements = AchievementCount(12, 45), batteryPace = BatteryPace(120.0, 30.0)), TextSize.Medium),
+                Triple("achievements_largest_text", portrait.copy(achievements = AchievementCount(12, 45)), TextSize.Largest),
             )
         for ((look, base) in listOf("black" to PlumThemeSettings.Default, "paper" to PlumThemeSettings.Paper)) {
             for ((name, each, textSize) in cases) {

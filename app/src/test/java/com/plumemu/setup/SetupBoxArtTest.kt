@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -50,11 +51,26 @@ class SetupBoxArtTest {
 
     private fun SetupModel.form(): SignInForm = requireNotNull(state.value.boxArt) { "the box art step shows its form" }
 
-    /** Continue on the folders, then Use my account (focused) on the question. */
-    private fun TestScope.openForm(model: SetupModel) {
+    /**
+     * Continue on the folders, then Use my account (focused) on the question: the form opens typing
+     * on the username (keyboard up). With Plumemu's keyboard B then puts the tray away and the form
+     * stays, the cursor on the username; [keepTyping] leaves it up.
+     */
+    private fun TestScope.openForm(
+        model: SetupModel,
+        keepTyping: Boolean = false,
+    ) {
         press(model, Action.Enter)
         assertNull("the question first", model.state.value.boxArt)
         press(model, Action.Enter)
+        val form = model.form()
+        assertEquals("the cursor opens on the empty username", SignInItem.Username, form.focus)
+        assertTrue("the form opens typing, the keyboard up", form.inField)
+        if (keepTyping) return
+        press(model, Action.Back)
+        assertSame("B puts the tray away and the form stays", form, model.state.value.boxArt)
+        assertFalse(form.isTyping)
+        assertEquals(SignInItem.Username, form.focus)
     }
 
     /** Both fields filled, then down to Sign in and A (A on a field only opens its keyboard). */
@@ -92,7 +108,7 @@ class SetupBoxArtTest {
         press(model, Action.Enter)
         assertEquals("the form shares the step's dot", 1, model.state.value.stepDotIndex)
         assertEquals(SignInItem.Username, model.form().focus)
-        assertFalse("the cursor rests on the username with the keyboard down", model.form().inField)
+        assertTrue("the cursor is on the username with its keyboard up", model.form().inField)
     }
 
     @Test
@@ -142,10 +158,9 @@ class SetupBoxArtTest {
         val model = modelWithAFolder(FakeScraperAccounts())
         // Android's keyboard: Back while typing leaves the form at once (Plumemu's tray goes down first, SetupOwnKeyboardTest).
         model.keyboardChoice = KeyboardChoice.Android
-        openForm(model)
+        openForm(model, keepTyping = true)
         val form = model.form()
         form.onUsernameChange("plumtester")
-        press(model, Action.Enter)
         assertTrue(form.inField)
         press(model, Action.Back)
         assertEquals(SetupStep.BoxArt, model.state.value.step)
@@ -154,7 +169,7 @@ class SetupBoxArtTest {
 
         press(model, Action.Enter)
         assertEquals("the name typed is still there", "plumtester", model.form().username)
-        assertFalse("and the keyboard does not come back by itself", model.form().inField)
+        assertTrue("and the keyboard comes up again on the reopened form", model.form().inField)
 
         press(model, Action.Back, Action.Back)
         assertEquals(SetupStep.Folders, model.state.value.step)
@@ -282,8 +297,12 @@ class SetupBoxArtTest {
         val form = model.form()
         assertNull("a refused password is not signed in", form.signedInAs)
         assertEquals("the name is filled in, to sign in again", "plumtester", form.username)
-        assertFalse(form.inField)
+        assertEquals("the cursor opens on the empty password", SignInItem.Password, form.focus)
+        assertTrue("with its keyboard up", form.inField)
 
+        press(model, Action.Back)
+        assertSame("the first B puts the tray away and the form stays", form, model.state.value.boxArt)
+        assertFalse(form.isTyping)
         press(model, Action.Back)
         assertEquals(SetupStep.BoxArt, model.state.value.step)
         assertNull("Back: the question", model.state.value.boxArt)

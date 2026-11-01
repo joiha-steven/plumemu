@@ -37,8 +37,9 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
     @Test
     fun rowsThatOpenAPageOrTheSignInSayOpen() {
         model.content = model.content.copy(account = AccountStatus.SignedOut)
-        for (option in listOf(SettingsOption.RomFolders, SettingsOption.ScraperAccount)) {
-            assertEquals(option.name, R.string.settings_hint_open, hintOn(SettingsSection.Library, option))
+        assertEquals(R.string.settings_hint_open, hintOn(SettingsSection.Library, SettingsOption.RomFolders))
+        for (option in listOf(SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount)) {
+            assertEquals(option.name, R.string.settings_hint_open, hintOn(SettingsSection.Accounts, option))
         }
         for (option in listOf(SettingsOption.Backup, SettingsOption.Restore, SettingsOption.ResetAll, SettingsOption.ResetLibrary)) {
             assertEquals(option.name, R.string.settings_hint_open, hintOn(SettingsSection.Advanced, option))
@@ -49,7 +50,7 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
     @Test
     fun theSignedInAccountRowSaysOpenToo() {
         model.content = model.content.copy(account = AccountStatus.SignedIn("plumtester"))
-        assertEquals(R.string.settings_hint_open, hintOn(SettingsSection.Library, SettingsOption.ScraperAccount))
+        assertEquals(R.string.settings_hint_open, hintOn(SettingsSection.Accounts, SettingsOption.ScraperAccount))
     }
 
     @Test
@@ -103,6 +104,7 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 SettingsOption.TextSize to change,
                 SettingsOption.TextWeight to change,
                 SettingsOption.LeftEdge to change,
+                SettingsOption.EdgeFade to change,
                 SettingsOption.GridSize to change,
                 SettingsOption.ConfirmBottom to change,
                 SettingsOption.Animations to change,
@@ -115,6 +117,7 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 SettingsOption.ResetLibrary to open,
                 SettingsOption.ExportLogs to select,
                 SettingsOption.Version to none,
+                SettingsOption.PlatformData to none,
                 SettingsOption.UpdateAvailable to open,
                 SettingsOption.CheckForUpdates to select,
                 SettingsOption.CheckUpdatesDaily to change,
@@ -150,6 +153,7 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 SettingsOption.SecondScreen to change,
                 SettingsOption.SecondScreenInGame to change,
                 SettingsOption.ScraperAccount to open,
+                SettingsOption.RetroAchievementsAccount to open,
                 SettingsOption.ScraperStatus to none,
                 SettingsOption.BoxArtRegion to change,
                 SettingsOption.Statistic to none,

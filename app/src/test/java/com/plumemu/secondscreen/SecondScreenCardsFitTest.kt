@@ -79,7 +79,10 @@ abstract class SecondScreenCardsFitBase(
                 for ((name, content) in ALL_SAMPLES.filter { it.second != SecondScreenContent.Calm }) {
                     show(PlumThemeSettings.Default.copy(textSize = textSize), content)
                     val card = compose.onNodeWithTag(SecondScreenTags.CARD).fetchSemanticsNode().boundsInRoot
-                    val block = compose.onNodeWithTag(SecondScreenTags.BLOCK).fetchSemanticsNode().boundsInRoot
+                    // The App and Apps cards are fit-checked in SecondScreenCatchUpTest.
+                    // The App cards with an icon (and the details card) fill the margins' box instead of resting a block on it.
+                    val isBlock = compose.onAllNodesWithTag(SecondScreenTags.BLOCK).fetchSemanticsNodes().isNotEmpty()
+                    val block = compose.onNodeWithTag(if (isBlock) SecondScreenTags.BLOCK else SecondScreenTags.DETAILS).fetchSemanticsNode().boundsInRoot
                     val label = "$name $size $textSize"
                     assertEquals("$label bottom", card.bottom - margin * density(), block.bottom, 0.5f)
                     assertEquals("$label left", card.left + margin * density(), block.left, 0.5f)

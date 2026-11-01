@@ -10,8 +10,6 @@ import com.plumemu.coreinput.Column
  * entry never has a details column or a details stop, even with box art (Apps: apps have no art).
  * [itemIds] are the items' ids in screen order (empty: rows are kept by index only); with them the
  * focused row follows its game when the list is re-sorted (names arriving during a scan).
- * [hasGridWithoutArt]: SELECT switches the entry's view even without box art (Apps: its icons come
- * from Android, not from ScreenScraper).
  */
 @Immutable
 data class SystemEntry(
@@ -20,10 +18,9 @@ data class SystemEntry(
     val gridColumns: Int = 1,
     val hasDetails: Boolean = true,
     val itemIds: List<String> = emptyList(),
-    val hasGridWithoutArt: Boolean = false,
 )
 
-/** What the strip shows; [hasBoxArt] false means no details stop and no grid but Apps' ([SystemEntry.hasGridWithoutArt]) (wide screens show a text-only details column, which is not a stop). */
+/** What the strip shows; [hasBoxArt] false means no details stop (grids do not depend on it) (wide screens show a text-only details column, which is not a stop). */
 @Immutable
 data class StripContent(
     val systems: List<SystemEntry>,

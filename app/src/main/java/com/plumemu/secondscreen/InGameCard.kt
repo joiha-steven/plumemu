@@ -120,7 +120,8 @@ internal const val DRIFT_NOTE_MS = 60_000L
  * [part] is the battery part, read in its own scope so a new figure redraws the part
  * and not the clock: with figures the clock card goes to the top and the part fills the rest of
  * the frame; without, the card stays centred as it always was, with the part's note (if any) at the
- * bottom. Everything moves together by [shift].
+ * bottom. Everything moves together by [shift]. While the part's ring shows the level, the clock
+ * card drops its own (glyph and percent) and keeps only the Wi-Fi glyph.
  */
 @Composable
 internal fun InGameCard(
@@ -144,17 +145,22 @@ internal fun InGameCard(
                 translationX = offset.x.toPx()
                 translationY = offset.y.toPx()
             }
+        val hasFigures by remember(part) { derivedStateOf { part()?.figures != null } }
+        // The part's ring shows the level: the clock card then drops its own, keeping the Wi-Fi glyph.
+        // The part says so from its layout, a frame later: until then the clock card keeps the level,
+        // so where the ring gives way the level never goes missing (shown twice for a frame at worst).
+        var ringShown by remember(hasFigures) { mutableStateOf(false) }
+        val levelInRing = hasFigures && ringShown
         val clock =
             @Composable { blockModifier: Modifier ->
                 Column(modifier = blockModifier.testTag(InGameTags.BLOCK), horizontalAlignment = Alignment.CenterHorizontally) {
                     BasicText(text = time, style = dimens.timeStyle(density).copy(color = InGameColors.time), maxLines = 1, softWrap = false)
-                    if (battery != null) {
+                    if (battery != null && (!levelInRing || wifi)) {
                         Spacer(Modifier.height(InGameDimens.timeToBatteryGap))
-                        BatteryLine(battery, wifi, dimens, dimens.batteryStyle(density))
+                        BatteryLine(battery, wifi, dimens, dimens.batteryStyle(density), showLevel = !levelInRing)
                     }
                 }
             }
-        val hasFigures by remember(part) { derivedStateOf { part()?.figures != null } }
         val frame =
             Modifier
                 .fillMaxSize()
@@ -163,7 +169,7 @@ internal fun InGameCard(
             Column(frame.then(shifted).testTag(InGameBatteryTags.FRAME), horizontalAlignment = Alignment.CenterHorizontally) {
                 clock(Modifier)
                 Spacer(Modifier.height(dimens.cardToPartGap))
-                PartFigures(part, dimens, formatTime, Modifier.fillMaxWidth().weight(1f))
+                PartFigures(part, dimens, formatTime, Modifier.fillMaxWidth().weight(1f)) { ringShown = it }
             }
         } else {
             // The layer on the block itself, as before the battery part: the shots and burn-in numbers stay as measured.
@@ -180,9 +186,10 @@ private fun PartFigures(
     dimens: InGameDimens,
     formatTime: (Long) -> String,
     modifier: Modifier,
+    onRingShown: (Boolean) -> Unit,
 ) {
     val figures = part()?.figures ?: return
-    InGameBatteryPart(figures, dimens, formatTime, modifier)
+    InGameBatteryPart(figures, dimens, formatTime, modifier, onRingShown)
 }
 
 /** The clock card alone: the part's note, if any, at the bottom of the frame. */
@@ -211,6 +218,7 @@ private fun BatteryLine(
     wifi: Boolean,
     dimens: InGameDimens,
     style: TextStyle,
+    showLevel: Boolean = true,
 ) {
     val color = if (battery.isLow) InGameColors.batteryLow else InGameColors.battery
     val percent = formatBattery(battery.percent, currentLocale())
@@ -218,11 +226,13 @@ private fun BatteryLine(
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
         if (wifi) {
             WifiGlyph(style, color, stringResource(R.string.wifi_connected), Modifier.testTag(InGameTags.WIFI))
-            Spacer(Modifier.width(InGameDimens.wifiGap))
+            if (showLevel) Spacer(Modifier.width(InGameDimens.wifiGap))
         }
-        BatteryGlyph(battery.percent, color, dimens.glyphScale)
-        Spacer(Modifier.width(InGameDimens.glyphGap))
-        BasicText(text = text, style = style.copy(color = color), maxLines = 1, softWrap = false)
+        if (showLevel) {
+            BatteryGlyph(battery.percent, color, dimens.glyphScale)
+            Spacer(Modifier.width(InGameDimens.glyphGap))
+            BasicText(text = text, style = style.copy(color = color), maxLines = 1, softWrap = false)
+        }
     }
 }
 

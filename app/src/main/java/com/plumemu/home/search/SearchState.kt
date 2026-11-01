@@ -23,6 +23,8 @@ import com.plumemu.coreui.components.keyboard.KeyboardPage
 import com.plumemu.coreui.components.keyboard.KeyboardState
 import com.plumemu.game.KeyboardAsk
 import com.plumemu.keyboard.CaretText
+import com.plumemu.keyboard.PasteBoard
+import com.plumemu.keyboard.pastable
 import com.plumemu.keyboard.KeyboardChoice
 import com.plumemu.sound.Feel
 import com.plumemu.sound.Outcome
@@ -242,6 +244,7 @@ internal class SearchState(
             KeyboardEvent.Delete -> deleteBeforeCaret()
             KeyboardEvent.Action -> toResults()
             KeyboardEvent.Hide -> hideTray()
+            KeyboardEvent.Paste -> paste()
         }
     }
 
@@ -274,6 +277,7 @@ internal class SearchState(
             // The system's Back (or Escape, or the gesture) puts the keyboard away.
             Action.Back -> hideTray()
             Action.Search -> insert(" ")
+            Action.Paste -> paste()
             Action.ToggleFavorite -> keys.togglePage()
             Action.Menu -> toResults()
             Action.PreviousSystem -> moveCaret(-1)
@@ -297,6 +301,7 @@ internal class SearchState(
             is Action.Move -> if (action.direction == Direction.Down) toResults()
             Action.Menu -> toResults()
             is Action.Typed -> onTyped(action.key)
+            Action.Paste -> paste()
             is Action.TapItem -> if (action.column == Column.Games) tapResult(action.index)
             is Action.LongPressItem -> return longPress(action)
             Action.NextSystem, Action.PreviousSystem, Action.JumpLetterNext, Action.JumpLetterPrevious,
@@ -331,7 +336,7 @@ internal class SearchState(
             is Action.TapItem -> if (action.column == Column.Games) return tap(action.index)
             is Action.LongPressItem -> return longPress(action)
             is Action.Typed, Action.NextSystem, Action.PreviousSystem, Action.JumpLetterNext, Action.JumpLetterPrevious,
-            Action.ToggleView, Action.OpenSettings,
+            Action.ToggleView, Action.OpenSettings, Action.Paste,
             -> Unit
         }
         return null
@@ -359,6 +364,12 @@ internal class SearchState(
     }
 
     private fun insert(text: String) = edit { it.insert(text) }
+
+    /** The clipboard's text at the caret, on one line ([pastable]); nothing when it holds none. */
+    fun paste() {
+        val clip = PasteBoard.text() ?: return
+        insert(pastable(clip, room = Int.MAX_VALUE))
+    }
 
     private fun deleteBeforeCaret() = edit { it.deleteBefore() }
 
@@ -424,7 +435,7 @@ internal class SearchState(
             // Systems, letters, view and Settings belong to the strip, which waits underneath; the
             // router sends no erase or typed key with Android's keyboard (textEntry stays None).
             Action.NextSystem, Action.PreviousSystem, Action.JumpLetterNext, Action.JumpLetterPrevious,
-            Action.ToggleView, Action.OpenSettings, is Action.Erase, is Action.Typed,
+            Action.ToggleView, Action.OpenSettings, is Action.Erase, is Action.Typed, Action.Paste,
             -> Unit
         }
         if (isOpen && cursor != (row to inField)) feel.report(Outcome.Moved)

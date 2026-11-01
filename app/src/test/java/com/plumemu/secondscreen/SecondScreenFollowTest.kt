@@ -58,20 +58,20 @@ class SecondScreenFollowTest {
     @Test
     fun aGameInItsSystem() {
         assertEquals(
-            SecondScreenContent.Game("Super Metroid", "Super Nintendo", "USA", isFavorite = true, gameId = 1, isPlayKnown = false),
+            SecondScreenContent.Game("Super Metroid", "Super Nintendo", "USA", isFavorite = true, gameId = 1, isPlayKnown = false, hasNoPicture = true),
             derive(at(3, Column.Games, 0)),
         )
     }
 
     @Test
     fun aGameWithNoRegionAndNoDetails() {
-        assertEquals(SecondScreenContent.Game("Zelda", "Super Nintendo", region = null, gameId = 2, isPlayKnown = false), derive(at(3, Column.Games, 1)))
+        assertEquals(SecondScreenContent.Game("Zelda", "Super Nintendo", region = null, gameId = 2, isPlayKnown = false, hasNoPicture = true), derive(at(3, Column.Games, 1)))
     }
 
     @Test
     fun aGameWhoseIdIsNotTheDatabasesHasNothingToRead() {
         val fake = HomeContent.of(emptyList(), emptyList(), emptyList(), listOf(SystemGames("gb", "Game Boy", listOf(GameRowModel("gb-1", "Tetris", "")))))
-        assertEquals(SecondScreenContent.Game("Tetris", "Game Boy", gameId = null, isPlayKnown = false), derive(at(3, Column.Games, 0), on = fake))
+        assertEquals(SecondScreenContent.Game("Tetris", "Game Boy", gameId = null, isPlayKnown = false, hasNoPicture = true), derive(at(3, Column.Games, 0), on = fake))
     }
 
     @Test
@@ -120,8 +120,8 @@ class SecondScreenFollowTest {
 
     @Test
     fun appsAndAnApp() {
-        assertEquals(SecondScreenContent.Apps(1), derive(at(2)))
-        assertEquals(SecondScreenContent.App("Files"), derive(at(2, Column.Games, 0)))
+        assertEquals(SecondScreenContent.Apps(1, listOf(AppIconRef("org.app/.Main", "Files"))), derive(at(2)))
+        assertEquals(SecondScreenContent.App("Files", "org.app/.Main"), derive(at(2, Column.Games, 0)))
     }
 
     /** Apps' grid of icons: the focused app's card is the list's, never a game's cover. */
@@ -129,8 +129,8 @@ class SecondScreenFollowTest {
     fun anAppInAppsGridShowsTheSameCardAsInItsList() {
         val apps = content.entries[2]
         assertEquals("Apps is a grid without box art too", true, content.showsGrid(apps, setOf(apps.id)))
-        assertEquals(SecondScreenContent.App("Files"), derive(at(2, Column.Games, 0).copy(isCoverOnTopScreen = true)))
-        assertEquals(SecondScreenContent.Apps(1), derive(at(2).copy(isCoverOnTopScreen = true)))
+        assertEquals(SecondScreenContent.App("Files", "org.app/.Main"), derive(at(2, Column.Games, 0).copy(isCoverOnTopScreen = true)))
+        assertEquals(SecondScreenContent.Apps(1, listOf(AppIconRef("org.app/.Main", "Files"))), derive(at(2).copy(isCoverOnTopScreen = true)))
     }
 
     @Test
@@ -142,7 +142,7 @@ class SecondScreenFollowTest {
     @Test
     fun searchWithAResultFocusedShowsTheGame() {
         val look = at(3).copy(isSearchOpen = true, searchHit = SearchHit(sonic, "md"))
-        assertEquals(SecondScreenContent.Game("Sonic", "Mega Drive", "EUR", gameId = 3, isPlayKnown = false), derive(look))
+        assertEquals(SecondScreenContent.Game("Sonic", "Mega Drive", "EUR", gameId = 3, isPlayKnown = false, hasNoPicture = true), derive(look))
     }
 
     @Test

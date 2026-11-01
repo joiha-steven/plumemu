@@ -101,7 +101,7 @@ internal fun rememberHintPress(keyCap: String): HintPress {
                 } else {
                     val visibleMs = withFrameMillis { it } - pressedAt
                     if (visibleMs < PlumMotion.PRESS_MIN_VISIBLE_MS) delay(PlumMotion.PRESS_MIN_VISIBLE_MS - visibleMs)
-                    press.progress.animateTo(0f, tween(PlumMotion.PRESS_OUT_MS, easing = PlumMotion.EaseOut))
+                    press.progress.animateTo(0f, tween(PlumMotion.KEY_PRESS_OUT_MS, easing = PlumMotion.EaseOut))
                 }
             }
     }

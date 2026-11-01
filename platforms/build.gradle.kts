@@ -20,6 +20,7 @@ dependencies {
 // The tests read the shipped file straight from disk, so Gradle must rerun them when it changes.
 tasks.withType<Test>().configureEach {
     inputs.file("src/main/assets/platforms.json").withPropertyName("shippedPlatformsJson")
+    inputs.file("src/main/assets/platforms-version.json").withPropertyName("shippedPlatformsVersion")
     inputs.file("src/main/AndroidManifest.xml").withPropertyName("generatedQueriesManifest")
     inputs.dir("../tools/platforms").withPropertyName("converterAndSources")
 }

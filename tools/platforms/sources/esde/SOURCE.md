@@ -2,8 +2,8 @@
 
 - Project: ES-DE Frontend, https://gitlab.com/es-de/emulationstation-de
 - Copied: `resources/systems/android/es_systems.xml` and `es_find_rules.xml`, plus the repository `LICENSE`
-- Commit: a529a9d38c0af09b6fd7e38d10c8076cb0a21050 (2026-10-10)
-- Fetched: 2026-10-21 with a sparse `git clone --depth 1`
+- Commit: ef267ae693caeee89ca8ca888a38e9eab9bce90a (2026-10-29)
+- Fetched: 2026-11-01 file by file from the GitLab raw URLs at that commit
 - Licence: MIT, Copyright (c) 2014 Alec Lofquist, 2020-2024 Leon Styhre, 2024-2026 Northwestern Software AB; text in `LICENSE`
 
 Build-time input of `tools/platforms/convert.py` only. Never shipped in the APK and never read on a device.

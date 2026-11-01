@@ -23,7 +23,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Settings › Appearance › Grid size on screen: its label, its value and its explanation, and no row without box art. */
+/** Settings › Home screen › Grid size on screen: its label, its value and its explanation, and no row without box art. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
 class SettingsGridSizeRowTest {
@@ -36,7 +36,7 @@ class SettingsGridSizeRowTest {
 
     private fun text(id: Int) = context.getString(id)
 
-    private fun value(id: Int) = context.getString(R.string.settings_value_choice, text(id))
+    private fun value(id: Int) = text(id)
 
     /** Settings › Appearance with [option] focused, [account] and [stored] settings. */
     private fun show(
@@ -45,12 +45,12 @@ class SettingsGridSizeRowTest {
         stored: PlumSettings = PlumSettings(flags = SetupFlags(setupCompleted = true)),
     ) {
         val content = SettingsContent(account = account)
-        val rows = SettingsSection.Appearance.rowsIn(content)
+        val rows = SettingsSection.HomeScreen.rowsIn(content)
         val focus =
             SettingsFocus(
                 column = SettingsColumn.Options,
-                section = SettingsSection.Appearance,
-                rememberedOption = mapOf(SettingsSection.Appearance to rows.indexOf(option).coerceAtLeast(0)),
+                section = SettingsSection.HomeScreen,
+                rememberedOption = mapOf(SettingsSection.HomeScreen to rows.indexOf(option).coerceAtLeast(0)),
             )
         compose.setContent { PlumTheme { SettingsAt(focus, stored, content) } }
     }
@@ -74,9 +74,8 @@ class SettingsGridSizeRowTest {
     }
 
     @Test
-    fun withoutAnAccountThereIsNoGridAndNoRow() {
-        show(AccountStatus.SignedOut, SettingsOption.TextSize)
-        compose.onAllNodesWithText(text(R.string.settings_text_size))[0].assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.settings_grid_size)).assertDoesNotExist()
+    fun withoutAnAccountTheRowIsThereToo() {
+        show(AccountStatus.SignedOut, SettingsOption.GridSize)
+        compose.onAllNodesWithText(text(R.string.settings_grid_size))[0].assertIsDisplayed()
     }
 }

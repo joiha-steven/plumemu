@@ -10,6 +10,7 @@ import com.plumemu.game.TypingOutcome
 import com.plumemu.game.TypingState
 import com.plumemu.game.ownKeyboardOutcome
 import com.plumemu.keyboard.KeyboardChoice
+import com.plumemu.telemetry.ProblemReports
 
 /**
  * The report form's two fields as Plumemu's keyboard types into them, so they get the game
@@ -31,6 +32,8 @@ internal class ReportTyping(
     override val fieldText: String get() = if (form.focus == ReportItem.Email) form.email else form.text
 
     override fun replaceText(text: String) = if (form.focus == ReportItem.Email) form.onEmailChange(text) else form.onTextChange(text)
+
+    override val maxLength: Int get() = if (form.focus == ReportItem.Email) ProblemReports.MAX_EMAIL_CHARS + 1 else ProblemReports.MAX_TEXT_CHARS
 
     override val fieldKeys: FieldKeys get() = form.keysOf(form.focus)
 

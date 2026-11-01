@@ -4,13 +4,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import com.plumemu.account.AccountStatus
+import com.plumemu.account.RaAccountStatus
 import com.plumemu.coredata.backup.BackupKind
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
+import com.plumemu.graph.BackupState
+import com.plumemu.graph.RestoreState
 import com.plumemu.graph.WayBackSet
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
@@ -19,6 +23,7 @@ import com.plumemu.secondscreen.SecondScreen
 import com.plumemu.update.CheckFailure
 import com.plumemu.update.CheckOutcome
 import com.plumemu.update.LastCheck
+import com.plumemu.update.UpdateStep
 import com.plumemu.update.UpdateView
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -46,11 +51,11 @@ class SettingsRowWordsTest {
     private val settings = PlumSettings()
 
     /** The value text of each of [options] with the default content, in one composition. */
-    private fun valuesOf(options: List<SettingsOption>): Map<SettingsOption, String> {
-        var values = emptyMap<SettingsOption, String>()
+    private fun valuesOf(options: List<SettingsOption>): Map<SettingsOption, OptionValue> {
+        var values = emptyMap<SettingsOption, OptionValue>()
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite) {
-                values = options.associateWith { (optionValue(it, settings, "0.0.3-beta") as? OptionValue.Text)?.text ?: "(not text)" }
+                values = options.associateWith { optionValue(it, settings, "0.0.3-beta") }
             }
         }
         compose.waitForIdle()
@@ -67,7 +72,7 @@ class SettingsRowWordsTest {
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite) {
                 label = optionLabel(option, content, 0)
-                value = (optionValue(option, settings, "0.0.3-beta", content) as? OptionValue.Text)?.text ?: "(not text)"
+                value = optionValue(option, settings, "0.0.3-beta", content).words ?: "(not text)"
             }
         }
         compose.waitForIdle()
@@ -79,7 +84,7 @@ class SettingsRowWordsTest {
     fun cyclingValuesAndPanelValuesCarryDifferentMarks() {
         val cycling = listOf(SettingsOption.Font, SettingsOption.TextSize, SettingsOption.SortGames, SettingsOption.Keyboard, SettingsOption.SwitchSystemWith)
         for ((option, value) in valuesOf(cycling)) {
-            assertEquals(option.name + ": " + value, true, value.startsWith("‹ ") && value.endsWith(" ›"))
+            assertEquals(option.name + ": " + value, true, value is OptionValue.Choice)
         }
     }
 
@@ -88,18 +93,17 @@ class SettingsRowWordsTest {
         val opening =
             listOf(
                 SettingsOption.RomFolders, SettingsOption.Systems, SettingsOption.Backup, SettingsOption.Restore, SettingsOption.ResetAll,
-                SettingsOption.ResetLibrary, SettingsOption.Licenses, SettingsOption.ReportProblem, SettingsOption.ScraperAccount,
+                SettingsOption.ResetLibrary, SettingsOption.Licenses, SettingsOption.ReportProblem, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount,
             )
         for ((option, value) in valuesOf(opening)) {
-            assertEquals(option.name + ": " + value, true, value.endsWith("\u00BB"))
-            assertEquals(option.name + " has no cycling arrows", false, value.contains("‹") || value.contains("›"))
+            assertEquals(option.name + ": " + value, true, value is OptionValue.Opens)
         }
     }
 
     @Test
     fun readOnlyRowsHaveNoMark() {
         for ((option, value) in valuesOf(listOf(SettingsOption.Version, SettingsOption.Privacy, SettingsOption.ScraperStatus))) {
-            assertEquals(option.name + ": " + value, false, value.contains("»") || value.contains("›"))
+            assertEquals(option.name + ": " + value, true, value is OptionValue.Text)
         }
     }
 
@@ -109,25 +113,43 @@ class SettingsRowWordsTest {
             PlumTheme(PlumThemeSettings.Graphite) { OptionRow(SettingsOption.Accent, optionValue(SettingsOption.Accent, settings, "0.0.3-beta"), OptionLook.Normal) }
         }
         compose.waitForIdle()
-        compose.onNode(hasText("\u00A0\u00BB", substring = true)).assertExists()
+        compose.onNodeWithTag(SettingsTags.chevronRight(SettingsTags.value(SettingsOption.Accent)), useUnmergedTree = true).assertExists()
     }
 
     @Test
     fun theScreenScraperRowKeepsItsNameAndSaysSignInWhileSignedOut() {
-        assertEquals("ScreenScraper" to "Sign in\u00A0»", rowOf(SettingsOption.ScraperAccount, SettingsContent(account = AccountStatus.SignedOut)))
+        assertEquals("ScreenScraper" to "Sign in", rowOf(SettingsOption.ScraperAccount, SettingsContent(account = AccountStatus.SignedOut)))
+    }
+
+    @Test
+    fun theRetroAchievementsRowKeepsItsNameAndSaysSignInWhileSignedOut() {
+        assertEquals("RetroAchievements" to "Sign in", rowOf(SettingsOption.RetroAchievementsAccount, SettingsContent()))
+    }
+
+    @Test
+    fun theRetroAchievementsRowSaysTheUserNameSignedIn() {
+        assertEquals("RetroAchievements" to "Signed in as hung", rowOf(SettingsOption.RetroAchievementsAccount, SettingsContent(raAccount = RaAccountStatus.SignedIn("hung", 1234))))
+    }
+
+    @Test
+    fun theRetroAchievementsRowSaysSignInAgainAfterARefusedKey() {
+        assertEquals(
+            "RetroAchievements" to "Sign in again",
+            rowOf(SettingsOption.RetroAchievementsAccount, SettingsContent(raAccount = RaAccountStatus.SignedIn("hung", 1234, isKeyRefused = true))),
+        )
     }
 
     @Test
     fun theScreenScraperRowKeepsItsNameSignedIn() {
         val (label, value) = rowOf(SettingsOption.ScraperAccount, SettingsContent(account = AccountStatus.SignedIn("plumtester")))
         assertEquals("ScreenScraper", label)
-        assertEquals("nothing short to say: the name", "plumtester\u00A0»", value)
+        assertEquals("nothing short to say: the name", "Signed in as plumtester", value)
     }
 
     @Test
     fun undoRestoreSaysItKeepsACopyAndItsSize() {
         val content = SettingsContent(wayBack = WayBackSet(BackupKind.Everything, restoredAtMillis = 0L, bytes = 120_000_000L))
-        assertEquals("Undo restore" to "Copy · 120 MB\u00A0»", rowOf(SettingsOption.UndoRestore, content))
+        assertEquals("Undo restore" to "Copy · 120 MB", rowOf(SettingsOption.UndoRestore, content))
     }
 
     @Test
@@ -172,5 +194,68 @@ class SettingsRowWordsTest {
         content = SettingsContent(secondScreen = SecondScreen(2, "Screen-2", ScreenKind.BuiltIn))
         compose.waitForIdle()
         compose.onNodeWithText("The battery level at the top right of the screen. $alsoThere").assertExists()
+    }
+
+    private fun valueOf(
+        option: SettingsOption,
+        content: SettingsContent,
+    ): OptionValue {
+        var value: OptionValue = OptionValue.Text("")
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { value = optionValue(option, settings, "0.0.3-beta", content) } }
+        compose.waitForIdle()
+        return value
+    }
+
+    /** A sign-in state says what it means: who is signed in, with a check; the rest (signed out, refused) say what to do, with none. */
+    @Test
+    fun aSignedInAccountSaysWhoWithACheck() {
+        assertEquals(OptionValue.Opens("Signed in as plumtester", isSignedIn = true), valueOf(SettingsOption.ScraperAccount, SettingsContent(account = AccountStatus.SignedIn("plumtester"))))
+    }
+
+    @Test
+    fun aSignedInRetroAchievementsAccountSaysWhoWithACheck() {
+        assertEquals(OptionValue.Opens("Signed in as hung", isSignedIn = true), valueOf(SettingsOption.RetroAchievementsAccount, SettingsContent(raAccount = RaAccountStatus.SignedIn("hung", 1234))))
+    }
+
+    @Test
+    fun aSignedInAccountWithNoNameSaysSignedIn() {
+        assertEquals(OptionValue.Opens("Signed in", isSignedIn = true), valueOf(SettingsOption.ScraperAccount, SettingsContent(account = AccountStatus.SignedIn(""))))
+    }
+
+    @Test
+    fun aRetroAchievementsAccountWithNoNameSaysSignedIn() {
+        assertEquals(OptionValue.Opens("Signed in", isSignedIn = true), valueOf(SettingsOption.RetroAchievementsAccount, SettingsContent(raAccount = RaAccountStatus.SignedIn("  ", 0))))
+    }
+
+    @Test
+    fun aSignedOutAccountHasNoCheck() {
+        assertEquals(OptionValue.Opens("Sign in"), valueOf(SettingsOption.ScraperAccount, SettingsContent(account = AccountStatus.SignedOut)))
+    }
+
+    @Test
+    fun aRefusedAccountHasNoCheck() {
+        assertEquals(OptionValue.Opens("Sign in again"), valueOf(SettingsOption.ScraperAccount, SettingsContent(account = AccountStatus.SignedIn("plumtester", isRefused = true))))
+    }
+
+    /** A word that says what runs ("Backing up…") stands alone: the chevron is for rows that wait to be opened. */
+    @Test
+    fun aRunningBackupRestoreUndoOrUpdateShowsItsWordWithoutTheOpeningMark() {
+        val running =
+            mapOf(
+                SettingsOption.Backup to SettingsContent(backup = BackupState.Running(BackupKind.Everything)),
+                SettingsOption.Restore to SettingsContent(restore = RestoreState.Reading()),
+                SettingsOption.UndoRestore to SettingsContent(restore = RestoreState.Replacing(isUndo = true, withLibrary = false)),
+                SettingsOption.UpdateAvailable to SettingsContent(update = UpdateView(step = UpdateStep.Downloading(1, 2))),
+            )
+        var values = emptyMap<SettingsOption, OptionValue>()
+        compose.setContent {
+            PlumTheme(PlumThemeSettings.Graphite) {
+                values = running.mapValues { (option, content) -> optionValue(option, settings, "0.0.3-beta", content) }
+            }
+        }
+        compose.waitForIdle()
+        for ((option, value) in values) {
+            assertEquals(option.name + ": " + value, true, value is OptionValue.Text && value.words.orEmpty().isNotEmpty())
+        }
     }
 }

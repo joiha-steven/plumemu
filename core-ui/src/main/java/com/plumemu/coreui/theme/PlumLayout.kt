@@ -54,7 +54,7 @@ enum class CoverClass {
 }
 
 /**
- * The grid's three sizes (Settings › Appearance › Grid size), one for every
+ * The grid's three sizes (Settings › Home screen › Grid size), one for every
  * system; each class of cover takes its own columns from it ([PlumLayout.gridColumns]). [Medium] is
  * the default (Small was a little small). The board's
  * landscape grid is [Large], its portrait grid [Medium].
@@ -105,7 +105,7 @@ data class PlumLayout(
     val peek: Dp = PlumDimens.peekWidth,
     /** [TextSize.heightScale] of the text size in use: every box that holds a line of text grows by it. */
     val textScale: Float = 1f,
-    /** Settings › Appearance › Grid size, one for every system: picks the grid's cells. */
+    /** Settings › Home screen › Grid size, one for every system: picks the grid's cells. */
     val gridSize: GridSize = GridSize.Default,
 ) {
     val widthClass: WidthClass = WidthClass.of(width)

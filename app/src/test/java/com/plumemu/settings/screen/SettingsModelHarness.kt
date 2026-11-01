@@ -1,6 +1,8 @@
 package com.plumemu.settings.screen
 
+import com.plumemu.account.FakeRaAccounts
 import com.plumemu.account.FakeScraperAccounts
+import com.plumemu.account.RaAccounts
 import com.plumemu.account.ScraperAccounts
 import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.ColorSetting
@@ -42,6 +44,10 @@ internal abstract class SettingsModelHarness {
         /** The ScreenScraper account the Library rows show and sign in to. */
         var accountsFake = FakeScraperAccounts()
         override val accounts: ScraperAccounts get() = accountsFake
+
+        /** The RetroAchievements account the Accounts section shows and signs in to. */
+        var raAccountsFake = FakeRaAccounts()
+        override val raAccounts: RaAccounts get() = raAccountsFake
 
         var settings: PlumSettings
             get() {
@@ -172,6 +178,15 @@ internal abstract class SettingsModelHarness {
         override fun openHomeSettings(): Boolean {
             homeOpened++
             return canOpenHome
+        }
+
+        /** Pages asked to open in the browser, and whether the device has one. */
+        val webPages = mutableListOf<String>()
+        var hasBrowser = true
+
+        override fun openWebPage(url: String): Boolean {
+            webPages += url
+            return hasBrowser
         }
 
         /** About › Report a problem: each report asked for, and the answers held back until a test gives them. */
@@ -370,7 +385,8 @@ internal abstract class SettingsModelHarness {
 
     protected fun openSection(section: SettingsSection) {
         // Bounded: a move that does nothing (a layout change) fails here instead of looping forever.
-        repeat(SettingsSection.entries.size) { if (model.focus.section.ordinal < section.ordinal) move(Direction.Down) }
+        val shown = SettingsSection.shownIn(model.content)
+        repeat(shown.size) { if (shown.indexOf(model.focus.section) < shown.indexOf(section)) move(Direction.Down) }
         assertEquals("the sections column did not reach $section", section, model.focus.section)
         press(Action.Enter)
         assertEquals(SettingsColumn.Options, model.focus.column)

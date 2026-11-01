@@ -27,9 +27,9 @@ internal class SettingsBackupTest : SettingsModelHarness() {
     }
 
     @Test
-    fun theRowSitsAfterUsageStatisticsAndBeforeTheResets() {
+    fun theRowSitsAfterAnimationsAndBeforeTheResets() {
         val advanced = SettingsSection.Advanced.options
-        assertEquals(advanced.indexOf(SettingsOption.UsageStatistics) + 1, advanced.indexOf(SettingsOption.Backup))
+        assertEquals(advanced.indexOf(SettingsOption.Animations) + 1, advanced.indexOf(SettingsOption.Backup))
         // Restore… comes right after Back up…, then the resets.
         assertEquals(advanced.indexOf(SettingsOption.Backup) + 1, advanced.indexOf(SettingsOption.Restore))
         assertEquals(advanced.indexOf(SettingsOption.ResetAll) - 1, advanced.indexOf(SettingsOption.Restore))

@@ -39,6 +39,9 @@
     <string name="home_hint_add_folder">フォルダを追加</string>
     <!-- Hint bar label beside START: opens Settings. -->
     <string name="home_hint_settings">設定</string>
+    <string name="home_hint_update">アップデート</string>
+    <string name="home_update_pill">アップデート %1$s</string>
+    <string name="home_whatsnew_title">%1$s の新機能</string>
     <!-- Hint bar label: a verb, start the game. -->
     <string name="home_hint_play">プレイ</string>
     <!-- Hint bar label: a verb, open the focused entry or app. -->
@@ -93,6 +96,7 @@
     <string name="keyboard_shift">シフト</string>
     <string name="keyboard_delete">削除</string>
     <string name="keyboard_hide">キーボードを閉じる</string>
+    <string name="keyboard_paste">貼り付け</string>
 
     <!-- Main screen, details column (only with box art). %1$s and %2$s are two facts joined:
          a year and a publisher ("1994 · Nintendo"), or a genre and a player count. The games list's
@@ -203,7 +207,7 @@
         <item quantity="other">ほか%1$s機種</item>
     </plurals>
     <string name="setup_stats_title">匿名の利用統計を送信</string>
-    <!-- The short form of settings_usage_statistics_body (Settings › Advanced › Send usage statistics): the whole text does not fit the Ready step at 768 x 432 (TextSizeScreens*Test). -->
+    <!-- The short form of settings_usage_statistics_body (Settings › About › Send usage statistics): the whole text does not fit the Ready step at 768 x 432 (TextSizeScreens*Test). -->
     <string name="setup_stats_body">匿名の利用状況とクラッシュレポートです。ゲーム、検索語、アカウントは送りません。オフにすると、オフにしたことだけを1回送り、以後は何も送りません。</string>
     <string name="setup_one_hand_title">右を2回押してプレイ</string>
     <string name="setup_one_hand_body">上下でゲームを選びます。Aボタンも使えます。「設定 › 操作」で変更できます。</string>
@@ -318,7 +322,7 @@
     <string name="game_fix_box_art_waiting">まだ保存中です。バックグラウンドで進んでいるパッケージ画像のダウンロードが先になることがあり、1分ほどかかる場合があります。</string>
     <string name="game_fix_box_art_daily_limit">ScreenScraperの1日の上限に達しました。%1$s以降にもう一度お試しください。</string>
     <string name="game_fix_box_art_server_closed">ScreenScraperは現在停止中です。%1$s以降にもう一度お試しください。</string>
-    <string name="game_fix_box_art_sign_in_again">ScreenScraperでパスワードが認証されませんでした。「設定 › ライブラリ › ScreenScraper」でもう一度ログインしてください。</string>
+    <string name="game_fix_box_art_sign_in_again">ScreenScraperでパスワードが認証されませんでした。「設定 › アカウント › ScreenScraper」でもう一度ログインしてください。</string>
     <string name="game_fix_box_art_offline">接続されていません。Wi-Fiを確認して、もう一度お試しください。</string>
     <string name="game_fix_box_art_no_wifi">Wi-Fiに接続されていません。パッケージ画像はWi-Fi接続時にだけ検索します。</string>
     <string name="game_fix_box_art_server_error">ScreenScraperでエラーが発生しました（コード%1$s）。しばらくしてからもう一度お試しください。</string>
@@ -453,8 +457,8 @@
     <string name="game_app_kind_later_body">Plumemu がインストール済みアプリを次に読み込んだときに反映されます。</string>
     <string name="game_rename_box_art_title">名前は保存しました（パッケージ画像は未検索）</string>
     <string name="game_rename_box_art_no_wifi">Wi-Fiに接続されていません。</string>
-    <string name="game_rename_box_art_sign_in">「設定 › ライブラリ › ScreenScraper」でScreenScraperにログインしてください。</string>
-    <string name="game_rename_box_art_paused">パッケージ画像の取得は一時停止中です。「設定 › ライブラリ › ScreenScraper」で再開してください。</string>
+    <string name="game_rename_box_art_sign_in">「設定 › アカウント › ScreenScraper」でScreenScraperにログインしてください。</string>
+    <string name="game_rename_box_art_paused">パッケージ画像の取得は一時停止中です。「設定 › アカウント › ScreenScraper」で再開してください。</string>
     <string name="game_rename_box_art_daily_limit">ScreenScraperの1日の上限に達しました。%1$s以降にもう一度お試しください。</string>
     <string name="game_rename_box_art_server_closed">ScreenScraperは%1$sまで停止中です。</string>
     <string name="game_error_internal_title">ゲームを起動できませんでした</string>
@@ -501,6 +505,7 @@
     <string name="settings_section_advanced">詳細設定</string>
     <string name="settings_section_statistics">プレイ記録</string>
     <string name="settings_section_about">情報</string>
+    <string name="settings_section_second_screen">サブ画面</string>
     <string name="settings_hint_select">決定</string>
     <string name="settings_hint_close">閉じる</string>
     <!-- Hint bar label beside Left/Right: step the value to the previous or next choice. -->
@@ -515,9 +520,7 @@
     <string name="settings_hint_choose">選択</string>
     <!-- Narrow screens: opens the focused option's explanation as a further stop (the right button). -->
     <string name="settings_hint_more">詳細</string>
-    <!-- Option values: "‹ Light ›" steps left and right; "Graphite »" opens a panel (design/rules.md › Settings: the double mark, a no-break space before it, is never the single › of the Right key). -->
-    <string name="settings_value_choice">‹ %1$s ›</string>
-    <string name="settings_value_opens">%1$s »</string>
+    <!-- Option values: words only; the chevrons and check beside them are drawn (SettingsValueIcons.kt). -->
     <string name="settings_switch_on">オン</string>
     <string name="settings_switch_off">オフ</string>
 
@@ -631,6 +634,7 @@
     <string name="settings_hint_hide">非表示</string>
     <!-- Hint bar label: a verb, show the focused system again. -->
     <string name="settings_hint_show">表示</string>
+    <string name="settings_hint_go_to">移動</string>
     <!-- %1$s is the number of hidden games, already formatted for the locale. -->
     <string name="settings_hidden_games">非表示のゲーム（%1$s）</string>
     <string name="settings_hidden_games_title">非表示のゲーム</string>
@@ -644,8 +648,8 @@
     <string name="settings_name_fix_failed">その名前を保存できませんでした。何も変更されていません。</string>
     <string name="settings_name_fix_game_gone">そのゲームはライブラリにありません。</string>
     <string name="settings_rename_box_art_no_wifi">名前は保存しましたが、パッケージ画像は検索していません。Wi-Fiに接続されていません。</string>
-    <string name="settings_rename_box_art_sign_in">名前は保存しましたが、パッケージ画像は検索していません。「設定 › ライブラリ › ScreenScraper」でScreenScraperにログインしてください。</string>
-    <string name="settings_rename_box_art_paused">名前は保存しましたが、パッケージ画像は検索していません。パッケージ画像の取得は一時停止中です。「設定 › ライブラリ › ScreenScraper」で再開してください。</string>
+    <string name="settings_rename_box_art_sign_in">名前は保存しましたが、パッケージ画像は検索していません。「設定 › アカウント › ScreenScraper」でScreenScraperにログインしてください。</string>
+    <string name="settings_rename_box_art_paused">名前は保存しましたが、パッケージ画像は検索していません。パッケージ画像の取得は一時停止中です。「設定 › アカウント › ScreenScraper」で再開してください。</string>
     <string name="settings_rename_box_art_daily_limit">名前は保存しましたが、パッケージ画像は検索していません。ScreenScraperの1日の上限に達しました。しばらくしてからもう一度お試しください。</string>
     <string name="settings_rename_box_art_server_closed">名前は保存しましたが、パッケージ画像は検索していません。ScreenScraperは現在停止中です。</string>
     <string name="settings_titles_unreadable">%1$s の名前リストを読み込めませんでした。あとでもう一度お試しください。</string>
@@ -688,6 +692,8 @@
     <string name="settings_show_apps_body">端末のすべてのAndroidアプリを、お気に入りのすぐ下の「アプリ」に表示します。オフにすると「アプリ」は表示されません。</string>
     <string name="settings_clock">時計を表示</string>
     <string name="settings_clock_body">画面の右上に時刻を表示します。</string>
+    <string name="settings_edge_fade">リストの端をぼかす</string>
+    <string name="settings_edge_fade_body">ホーム画面のリストとグリッドは、まだ続きがあるとき上下の端がぼけて消えます。オフにすると、端はまっすぐ切れます。</string>
     <!-- The band over a system's games list ("Nintendo · Home console · 1990–2003". -->
     <string name="system_kind_console">据え置き機</string>
     <string name="system_kind_handheld">携帯機</string>
@@ -787,20 +793,24 @@
     <string name="second_screen_charging">充電中 · %1$s</string>
     <!-- The in-game card's battery part. The time left is drawn in two sizes: the numbers
          (the placeholders of the durations) large, every other character small. A duration fills %1$s of
-         the sentences below: "45 min left", "4 h 30 min left", "1 h 03 to full", "About 45 min left".
+         the sentences below: "45 min left", "4 h 30 min left", "1 h 3 min to full", "About 45 min left".
          The numbers are formatted for the locale; keep each placeholder exactly once. -->
     <string name="in_game_battery_duration_minutes">%1$s分</string>
     <string name="in_game_battery_duration_hours">%1$s時間</string>
     <string name="in_game_battery_duration_hours_minutes">%1$s時間%2$s分</string>
-    <!-- Android's exact time to full: hours, then the minutes as two digits ("1 h 03"). -->
-    <string name="in_game_battery_duration_clock">%1$s時間%2$s分</string>
     <string name="in_game_battery_left">残り%1$s</string>
     <string name="in_game_battery_left_about">残り約%1$s</string>
     <string name="in_game_battery_to_full">満充電まで%1$s</string>
     <string name="in_game_battery_to_full_about">満充電まで約%1$s</string>
     <!-- %1$s is a time of day as Android formats it: "22:35", "10:35 PM". -->
-    <string name="in_game_battery_empty_at">%1$sに残量ゼロ</string>
     <string name="in_game_battery_full_at">%1$sに満充電</string>
+    <string name="in_game_battery_empty_at_about">%1$s ごろ残量ゼロ</string>
+    <string name="in_game_battery_full_at_about">%1$s ごろ満充電</string>
+    <string name="in_game_battery_started">開始 %1$s</string>
+    <string name="in_game_battery_empty_label">残量ゼロ %1$s</string>
+    <string name="in_game_battery_full_label">満充電 %1$s</string>
+    <string name="in_game_battery_played">プレイ %1$s</string>
+    <string name="in_game_battery_used">使用 %1$s</string>
     <!-- The chart's key. %1$s is a percentage: "48%". -->
     <string name="in_game_battery_pace">1時間あたり%1$s</string>
     <string name="in_game_battery_charging_pace">1時間あたり+%1$s</string>
@@ -809,7 +819,7 @@
     <!-- %1$s is the time of day charging was first seen. -->
     <string name="in_game_battery_charging_since">%1$sから</string>
     <string name="in_game_battery_measuring">バッテリーの消費を測定しています…</string>
-    <!-- Shown once for a minute the first time the in-game card shows; also ends Settings › Home screen › In game's text. -->
+    <!-- Shown once for a minute the first time the in-game card shows; also ends Settings › Second screen › In game's text. -->
     <string name="in_game_drift_note">画面保護のため、1分ごとに少しずつ動きます</string>
     <!-- The picking line of a game measured before: "2 h on this charge · 30% an hour"; charging: the pace only. %1$s is a duration or a percentage. The pace's spaces do not break, so "an hour" never wraps alone. -->
     <string name="battery_line_on_charge">今の残量で%1$s</string>
@@ -824,7 +834,7 @@
     <!-- Read out for the battery glyph; %1$s is the level ("62%"). -->
     <string name="battery_line_level">バッテリー残量%1$s</string>
     <string name="second_screen_setup_question">選んでいるゲームをここに表示できます。</string>
-    <string name="settings_second_screen">サブ画面</string>
+    <string name="settings_second_screen">サブ画面を使う</string>
     <string name="settings_second_screen_body">選んでいるゲームを表示します。プレイには必要ありません。</string>
     <string name="settings_second_screen_in_game">プレイ中</string>
     <string name="settings_second_screen_in_game_body">ゲーム中にサブ画面に表示する内容です。2画面を使うエミュレーターは、自動でサブ画面を使います。画面保護のため、表示は1分ごとに少しずつ動きます。</string>
@@ -950,7 +960,7 @@
     <string name="settings_text_size_body">Plumemuのすべての文字の大きさを変えます。Android本体のフォントサイズも上乗せされます。</string>
     <string name="settings_text_weight_body">Plumemuのすべての文字の太さを変えます。</string>
     <string name="settings_left_edge_body">ゲーム一覧を開いているとき、左端の細い帯に表示するもの。機種ごとのゲーム数、機種ごとの短いコード、または今の一覧の頭文字。</string>
-    <string name="settings_grid_size_body">グリッド表示でのパッケージ画像の大きさです。すべての機種と「最近遊んだ」「お気に入り」に適用されます。「小」は一度に最も多く、「大」は最も少なく表示します。</string>
+    <string name="settings_grid_size_body">グリッド表示でのカバーの大きさです。すべての機種と「最近遊んだ」「お気に入り」に適用されます。「小」は一度に最も多く、「大」は最も少なく表示します。</string>
     <!-- Sample lines in the colour and font panels (the board's). -->
 
     <!-- Advanced (includes the confirm-button option) -->
@@ -1102,7 +1112,6 @@
 
     <!-- About -->
     <!-- Settings › Statistics: play statistics kept on this device, not the Send usage statistics switch of Advanced. -->
-    <string name="settings_statistics_body">この端末に記録されたプレイ記録です。プレイ時間、よく遊んだゲームと機種、ライブラリのうちパッケージ画像があるゲームの数を表示します。Plumemuがすでに保存している情報から集計していて、どこにも送信しません。</string>
     <string name="settings_statistics_total">総プレイ時間</string>
     <!-- Second screen's statistics card: the total's label line with this week's play time; %1$s is a play time such as "2 h 10 min". The card drops the part after the dot when the line does not fit. -->
     <string name="second_screen_total_week">総プレイ時間 · 今週%1$s</string>
@@ -1110,37 +1119,47 @@
     <string name="second_screen_total_week_none">総プレイ時間 · 今週はなし</string>
     <!-- The same line when this week's play time is under a minute. -->
     <string name="second_screen_total_week_under_a_minute">総プレイ時間 · 今週は1分未満</string>
-    <!-- Settings › Statistics' row for this week's play time. -->
+    <!-- Settings › Statistics' tile for this week's play time. -->
     <string name="settings_statistics_this_week">今週</string>
-    <!-- That row's value when sessions exist but none fall in this week. -->
-    <string name="settings_statistics_this_week_none">まだなし</string>
     <!-- A play time under one minute, where "0 min" would read as nothing. -->
     <string name="settings_statistics_under_a_minute">1分未満</string>
-    <!-- Small heading over the three most-played games in Settings › Statistics. -->
+    <!-- Settings › Statistics: small headings over the five most-played games and the five most-played systems. -->
     <string name="settings_statistics_most_played">よく遊んだゲーム</string>
-    <!-- Side panel of a most-played game in Settings › Statistics: the label of its figures and the line that says A starts it ("A to play"; %1$s is the confirm button's letter). -->
-    <string name="settings_statistics_times_played">プレイ回数</string>
-    <string name="settings_statistics_play_hint">%1$sでプレイ</string>
+    <string name="settings_statistics_systems">システム</string>
+    <!-- Settings › Statistics' tile: the share of games that have box art, as a percentage. -->
+    <string name="settings_statistics_with_box_art">パッケージ画像あり</string>
+    <!-- Settings › Statistics' last line: these figures stay on the device, unlike Advanced › Send usage statistics. -->
+    <string name="settings_statistics_kept_here">この携帯機にだけ保存されます</string>
+    <!-- Statistics, under the total play time. %1$s is a number already formatted for the locale. -->
+    <plurals name="settings_statistics_across_games">
+        <item quantity="other">%1$s本のゲームで</item>
+    </plurals>
+    <!-- Statistics, under a system's name. %1$s is a percentage already formatted for the locale ("85%"). -->
+    <string name="settings_statistics_share_of_play">プレイ時間の%1$s</string>
+    <!-- Settings › Statistics when nothing was played yet: the one line in place of the figures. -->
+    <string name="settings_statistics_play_invite">ゲームを遊ぶと、ここにプレイ時間が表示されます</string>
     <string name="settings_statistics_top_system">最も遊んだ機種</string>
     <string name="settings_statistics_played">遊んだゲーム</string>
     <string name="settings_statistics_box_art">パッケージ画像のあるゲーム</string>
     <!-- "38 of 412": games played, or games with box art, out of the games in the library; numbers formatted for the locale. -->
     <string name="settings_statistics_count_of">%1$s/%2$s</string>
     <string name="settings_statistics_nothing_played">まだプレイ記録がありません</string>
-    <string name="settings_statistics_nothing_played_detail">最初のゲームを遊ぶと、ここにプレイ時間が表示されます。</string>
     <string name="settings_statistics_no_games">ライブラリにまだゲームがありません</string>
     <string name="settings_statistics_unreadable">プレイ記録を読み込めませんでした</string>
     <string name="settings_statistics_unreadable_detail">設定を開き直すと、もう一度読み込みます。</string>
     <string name="settings_version">バージョン</string>
     <string name="settings_version_line">バージョン%1$s</string>
-    <!-- Settings › Advanced › Language (docs/conventions/translation.md › Choosing a language). -->
+    <string name="settings_platform_data">プラットフォームデータ</string>
+    <string name="settings_platform_data_value">バージョン %1$d · %2$s</string>
+    <string name="settings_platform_data_body">Plumemuが知っている機種とエミュレーターの一覧です。アプリに同梱されています。Plumemuがアップデートを確認するときに、同じサーバーから新しい一覧もダウンロードし、次回の起動から使います。</string>
+    <!-- Settings › Appearance › Language (docs/conventions/translation.md › Choosing a language). -->
     <string name="settings_language">言語</string>
     <!-- The first choice: follow the language Android is set to. -->
     <string name="settings_language_system">システムのデフォルト</string>
     <string name="settings_language_body">Plumemuの画面の言語です。Aを押して選びます。各言語はその言語自身の名前で表示されます。「システムのデフォルト」ではAndroidの言語に従います。ゲームのタイトルと機種名は変わりません。</string>
     <!-- The name of THIS FILE'S language, written in that language: Spanish writes its name in Spanish,
          Japanese in Japanese (the list is in docs/conventions/translation.md › Languages). It is how the
-         language is listed in Settings › Advanced › Language, whatever language the screen is in. Not a
+         language is listed in Settings › Appearance › Language, whatever language the screen is in. Not a
          translation of the word "English". -->
     <string name="language_name">日本語</string>
     <string name="settings_about_body">レトロゲーム携帯機のための、軽量なランチャーです。アカウントは必要ありません。</string>
@@ -1171,7 +1190,7 @@
     <string name="report_error_refused">サーバーがこの報告を受け付けませんでした。メールアドレスを確認してください。入力した内容は残っているので、もう一度送信できます。</string>
     <string name="report_error_unavailable">このビルドでは報告を送信できません。「ログをエクスポート」を使って、ファイルを直接送ってください。</string>
     <string name="report_error_not_saved">報告をこの端末に保存できませんでした。</string>
-    <string name="settings_privacy_body">ライブラリ、設定、プレイ時間は、この端末のPlumemu専用の保存領域に保存され、送信されることはありません。オンにした場合のみ（設定 › 詳細設定 › 利用統計を送信）、Plumemuは、匿名の利用状況とクラッシュレポートを開発者に送信します。内容は、国、端末のモデル、Androidとアプリのバージョン、使っている画面と設定、機種ごとのプレイ時間です。ゲームのタイトル、検索語、ScreenScraperのアカウントは送りません。クラッシュレポートにはファイルパスが含まれることがあります。オフにすると、オフにしたことだけを匿名で1回送り、以後は何も送りません。問題の報告は「問題を報告」で「送信」を押したときだけ送られ、添付を選んだログ（ファイルパスを含む）が含まれることがあります。送信された情報は、期限を設けずに保管されます。Plumemuは1日1回、Wi-Fi接続時にplumemu-app.stevensdesk.comへ新しいバージョンがあるかを問い合わせます。このサーバーをホストしているCloudflareには、IPアドレスが見えます。この確認は、上の「アップデートを毎日確認」でオフにできます。ScreenScraperのアカウントを使っている場合、Plumemuはパッケージ画像を探すため、各ゲームのファイル名、サイズ、チェックサムを、それで見つからなければタイトルもScreenScraperに送ります。</string>
+    <string name="settings_privacy_body">ライブラリ、設定、プレイ時間は、この端末のPlumemu専用の保存領域に保存され、送信されることはありません。オンにした場合のみ（設定 › 情報 › 利用統計を送信）、Plumemuは、匿名の利用状況とクラッシュレポートを開発者に送信します。内容は、国、端末のモデル、Androidとアプリのバージョン、使っている画面と設定、機種ごとのプレイ時間です。ゲームのタイトル、検索語、ScreenScraperのアカウントは送りません。クラッシュレポートにはファイルパスが含まれることがあります。オフにすると、オフにしたことだけを匿名で1回送り、以後は何も送りません。問題の報告は「問題を報告」で「送信」を押したときだけ送られ、添付を選んだログ（ファイルパスを含む）が含まれることがあります。送信された情報は、期限を設けずに保管されます。Plumemuは1日1回、Wi-Fi接続時にplumemu-app.stevensdesk.comへ新しいバージョンがあるかを問い合わせます。このサーバーをホストしているCloudflareには、IPアドレスが見えます。この確認は、上の「アップデートを毎日確認」でオフにできます。この毎日の確認では、同じサーバーから最新のプラットフォームデータ（機種とエミュレーターの一覧）もダウンロードします。それ以外は何も送信しません。ScreenScraperのアカウントを使っている場合、Plumemuはパッケージ画像を探すため、各ゲームのファイル名、サイズ、チェックサムを、それで見つからなければタイトルもScreenScraperに送ります。RetroAchievementsのアカウントを使っている場合、Plumemuはゲームの情報を開いたとき、プレイしたあと、Wi-Fi接続時の1日1回、ユーザー名、キー、各ゲームのRetroAchievements番号をretroachievements.orgに送ります。バッジ画像はmedia.retroachievements.orgから取得します。キーはこの端末に暗号化して保存し、バックアップやログには入れません。サインアウトすると送信は止まります。</string>
     <!-- Updates -->
     <string name="settings_update_available">アップデートあり</string>
     <string name="settings_update_value_downloading">ダウンロード中…</string>
@@ -1179,7 +1198,7 @@
     <string name="settings_check_updates">アップデートを確認</string>
     <string name="settings_check_updates_body">Plumemuのアップデートサーバーに、新しいバージョンがあるかを今すぐ確認します。モバイルデータ通信中は、ダウンロードの前に確認します。</string>
     <string name="settings_check_updates_daily">アップデートを毎日確認</string>
-    <string name="settings_check_updates_daily_body">1日1回、Wi-Fi接続時にPlumemuに戻ったとき、plumemu-app.stevensdesk.comへ新しいバージョンがあるかを問い合わせます。このサーバーをホストしているCloudflareには、端末のIPアドレスが見えます。それ以外は何も送信しません。アップデートは「アップデート」を選んだときだけインストールされます。</string>
+    <string name="settings_check_updates_daily_body">1日1回、Wi-Fi接続時にPlumemuに戻ったとき、plumemu-app.stevensdesk.comへ新しいバージョンがあるかを問い合わせます。このサーバーをホストしているCloudflareには、端末のIPアドレスが見えます。この確認では、同じサーバーから最新のプラットフォームデータ（機種とエミュレーターの一覧）もダウンロードします。それ以外は何も送信しません。アップデートは「アップデート」を選んだときだけインストールされます。</string>
     <string name="settings_check_updates_checking">確認中…</string>
     <string name="settings_check_updates_value">%1$s · %2$s</string>
     <string name="settings_check_updates_value_up_to_date">最新</string>
@@ -1199,7 +1218,11 @@
     <string name="settings_check_updates_timeout">アップデートサーバーから時間内に応答がありませんでした。しばらくしてからもう一度お試しください。</string>
     <string name="settings_check_updates_http">アップデートサーバーで問題が発生しました。しばらくしてからもう一度お試しください。</string>
     <string name="settings_check_updates_bad_manifest">アップデートサーバーから、Plumemuが読み取れないデータが届きました。しばらくしてからもう一度お試しください。</string>
-    <string name="settings_update_title">Plumemu %1$s</string>
+    <string name="settings_update_title">Plumemu %1$s → %2$s</string>
+    <string name="settings_update_notes_new">新機能</string>
+    <string name="settings_update_notes_improved">改善</string>
+    <string name="settings_update_notes_fixed">修正</string>
+    <string name="settings_update_notes_known">既知の問題</string>
     <string name="settings_update_facts">%1$sリリース · %2$s</string>
     <string name="settings_update_button">アップデート</string>
     <string name="settings_update_download_anyway">モバイルデータでダウンロード</string>
@@ -1227,11 +1250,11 @@
 
     <!-- ScreenScraper account: setup's box art step and Settings › Library. -->
     <string name="setup_box_art_title">ScreenScraperのパッケージ画像</string>
-    <string name="setup_box_art_desc">パッケージ画像とゲーム情報は、screenscraper.frで作る無料の個人アカウントを使ってScreenScraperから取得します。あとから「設定 › ライブラリ › ScreenScraper」でログインすることもできます。</string>
+    <string name="setup_box_art_desc">パッケージ画像とゲーム情報は、screenscraper.frで作る無料の個人アカウントを使ってScreenScraperから取得します。あとから「設定 › アカウント › ScreenScraper」でログインすることもできます。</string>
     <string name="setup_box_art_skip">スキップ</string>
     <!-- The question before the sign-in form. -->
     <string name="setup_box_art_question_title">ScreenScraperからパッケージ画像を取得しますか？</string>
-    <string name="setup_box_art_question_desc">パッケージ画像の取得には、screenscraper.frの無料アカウントを使います。あとから「設定 › ライブラリ › ScreenScraper」で設定することもできます。</string>
+    <string name="setup_box_art_question_desc">パッケージ画像の取得には、screenscraper.frの無料アカウントを使います。あとから「設定 › アカウント › ScreenScraper」で設定することもできます。</string>
     <string name="setup_box_art_use">アカウントを使う</string>
     <string name="setup_box_art_not_now">あとで</string>
     <string name="setup_ready_box_art">パッケージ画像：バックグラウンドでダウンロード中</string>
@@ -1258,15 +1281,16 @@
     <string name="account_error_not_saved">アカウントを保存できませんでした。もう一度お試しください。</string>
     <string name="account_error_not_available">このビルドではパッケージ画像を利用できません。</string>
     <string name="settings_account_title">ScreenScraper</string>
-    <!-- The ScreenScraper row's value while signed out: "Sign in »". -->
+    <!-- The ScreenScraper row's value while signed out: "Sign in" (the chevron is drawn). -->
     <string name="settings_account_value_sign_in">ログイン</string>
+    <string name="settings_account_value_signed_in">ログイン済み</string>
     <string name="settings_account_body">パッケージ画像とゲーム情報は、screenscraper.frで作る無料の個人アカウントを使ってScreenScraperから取得します。パスワードは暗号化して、この端末に保存されます。</string>
     <string name="settings_account_sign_out">ログアウト</string>
     <string name="settings_account_sign_in_again">もう一度ログイン</string>
     <string name="settings_account_sign_out_failed">ログアウトできませんでした。もう一度お試しください。</string>
     <!-- Sign out's confirm: what happens to box art. -->
     <string name="settings_sign_out_confirm_title">ScreenScraperからログアウトしますか？</string>
-    <string name="settings_sign_out_confirm_body">ボックスアートとグリッドが表示されなくなり、ダウンロードも止まります。保存済みの画像はこの端末に残り、再ログインすると表示されます。</string>
+    <string name="settings_sign_out_confirm_body">ボックスアートが表示されなくなり、ダウンロードも止まります。保存済みの画像はこの端末に残り、再ログインすると表示されます。</string>
     <string name="settings_account_not_available">パッケージ画像：このビルドでは利用できません</string>
     <string name="settings_account_not_available_body">このPlumemuはScreenScraperを使わずにビルドされているため、パッケージ画像とゲーム情報は表示されません。それ以外の機能はすべて使えます。</string>
     <string name="settings_account_refused">パスワードが違います：もう一度ログインしてください</string>
@@ -1302,7 +1326,6 @@
     <string name="settings_box_art_short_server_closed">停止中</string>
     <string name="settings_box_art_short_battery">バッテリー低下</string>
     <string name="settings_box_art_short_offline">接続なし</string>
-    <string name="settings_box_art_short_done">完了</string>
     <string name="settings_box_art_download_missing">未取得分をダウンロード</string>
     <string name="settings_box_art_redownload_all">すべて再ダウンロード</string>
     <string name="settings_box_art_redownload">再ダウンロード</string>
@@ -1337,8 +1360,9 @@
         <item quantity="other">%1$s機種のゲームのパッケージ画像を再ダウンロードしますか？自分で選んだものはそのまま残ります。</item>
     </plurals>
     <string name="settings_box_art_region">パッケージ画像の地域</string>
+    <string name="settings_box_art_region_value">パッケージ画像の地域：%1$s</string>
     <string name="settings_box_art_region_body">ゲームの発売地域のパッケージ画像がないときに、どの地域のものを表示するかを選びます。</string>
-    <!-- Region names for box art (Settings › Library › Box art region). -->
+    <!-- Region names for box art (Settings › Accounts › ScreenScraper › Box art region). -->
     <string name="settings_region_usa">北米</string>
     <string name="settings_region_europe">ヨーロッパ</string>
     <string name="settings_region_japan">日本</string>
@@ -1374,6 +1398,29 @@
     <string name="home_notice_unknown_folder">不明なフォルダ：%1$s</string>
     <string name="home_notice_unknown_where">設定 › ライブラリ</string>
 
+    <!-- Settings › Accounts › RetroAchievements -->
+    <string name="settings_section_accounts">アカウント</string>
+    <string name="settings_ra_title">RetroAchievements</string>
+    <string name="settings_ra_value_refused">もう一度サインイン</string>
+    <string name="settings_ra_refused">RetroAchievementsがキーを受け付けませんでした。サイトでリセットされた可能性があります。新しいキーでもう一度サインインしてください。</string>
+    <string name="settings_ra_help_where">実績はあなた自身のアカウントでretroachievements.orgから取得します。Plumemuは進捗を表示するだけで、実績の解除はエミュレーターが行います。</string>
+    <string name="settings_ra_help_key">Web APIキー：retroachievements.orgで「Settings」、「Keys」の順に開き、ここにコピーします。パスワードは入力しないでください。キーはこの端末に暗号化して保存されます。</string>
+    <string name="settings_ra_open_key_page">キーのページを開く</string>
+    <string name="settings_ra_no_browser">retroachievements.org/settingsを開けるブラウザがありません。別の端末で開き、キーをここに入力してください。</string>
+    <string name="settings_ra_privacy">ユーザー名、キー、ゲームのRA番号がretroachievements.orgに送信されます。</string>
+    <string name="account_ra_username_hint">RetroAchievementsのユーザー名</string>
+    <string name="account_ra_key">Web APIキー</string>
+    <string name="account_ra_key_hint">Web APIキー</string>
+    <string name="account_ra_checking">RetroAchievementsでアカウントを確認しています…</string>
+    <string name="account_ra_error_missing">ユーザー名とWeb APIキーを入力してください。</string>
+    <string name="account_ra_error_wrong">RetroAchievementsがそのキーを受け付けませんでした。Settings › KeysからWeb APIキーをもう一度コピーしてください。</string>
+    <string name="account_ra_error_unknown_user">RetroAchievementsにそのユーザー名はありません。</string>
+    <string name="account_ra_error_busy">RetroAchievementsが応答できませんでした。しばらくしてからもう一度お試しください。</string>
+    <string name="account_ra_error_rate_limited">RetroAchievementsからPlumemuに、少し間隔をあけるよう求められました。数分後にもう一度お試しください。</string>
+    <plurals name="settings_ra_signed_in">
+        <item quantity="other">%1$s としてサインイン中 · %2$s ポイント</item>
+    </plurals>
+
     <!-- Variant words: what tells two rows of one title apart (Rev 1, English translation) -->
     <string name="variant_revision">Rev %1$s</string>
     <string name="variant_beta">ベータ版</string>
@@ -1393,4 +1440,26 @@
     <string name="game_info_genre">ジャンル</string>
     <string name="game_info_players">プレイ人数</string>
     <string name="game_info_description">解説</string>
+    <!-- RetroAchievements on Info, the main screen's trophy and the after-game line. -->
+    <string name="achievements_summary">実績 %1$d / %2$d · %3$d%%</string>
+    <string name="achievements_hardcore">ハードコア %1$d / %2$d</string>
+    <string name="achievements_loading">実績: 読み込み中…</string>
+    <string name="achievements_no_set">実績: このゲームにはありません</string>
+    <string name="achievements_cannot_hash">実績: この種類のファイルは確認できません</string>
+    <string name="achievements_matched_by_name">名前で一致</string>
+    <string name="achievements_error_wrong_key">実績: RetroAchievementsがキーを受け付けませんでした。設定で再度サインインしてください。</string>
+    <string name="achievements_error_no_connection">実績: RetroAchievementsに接続できません</string>
+    <string name="achievements_error_busy">実績: RetroAchievementsが応答しません</string>
+    <string name="achievements_error_rate_limited">実績: RetroAchievementsから待つよう求められました。しばらくしてからもう一度お試しください。</string>
+    <string name="achievements_error_bad_answer">実績: RetroAchievementsの応答をPlumemuが読み取れません</string>
+    <string name="achievements_error_unavailable">実績: このゲームのファイルを今は読み取れません</string>
+    <plurals name="achievement_points">
+        <item quantity="other">%1$dポイント</item>
+    </plurals>
+    <string name="achievement_earned">%1$s · 獲得日 %2$s</string>
+    <string name="achievement_earned_hardcore">%1$s · 獲得日 %2$s · ハードコア</string>
+    <plurals name="home_notice_achievements">
+        <item quantity="other">実績 +%1$s</item>
+    </plurals>
+    <string name="achievement_mastered">マスター済み</string>
 </resources>

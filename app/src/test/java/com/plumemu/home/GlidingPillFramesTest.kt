@@ -14,6 +14,9 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.strip.StripState
+import com.plumemu.game.GameRef
+import com.plumemu.game.OpenPanel
+import com.plumemu.game.PanelScreen
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.LocalGlideClock
 import com.plumemu.coreui.theme.PlumMotion
@@ -21,6 +24,7 @@ import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import androidx.compose.runtime.CompositionLocalProvider
 import org.junit.After
+import org.junit.Assume
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -79,11 +83,12 @@ abstract class GlidingPillFramesBase {
         listTag: String,
         focusColumn: Column,
         entry: Int,
+        panel: OpenPanel? = null,
     ) {
         compose.setContent {
             CompositionLocalProvider(LocalGlideClock provides { compose.mainClock.currentTime * 1_000_000L }) {
                 PlumTheme(PlumThemeSettings.Default.copy(animationsOn = animationsOn)) {
-                    HomeAt(content, isMotionOn = animationsOn, onState = { state = it })
+                    HomeAt(content, isMotionOn = animationsOn, onState = { state = it }, panel = panel)
                 }
             }
         }
@@ -98,6 +103,8 @@ abstract class GlidingPillFramesBase {
     }
 
     private var listTag = ""
+
+    protected open val panelLeavesTheListInView = true
 
     private fun listBounds(): Rect = compose.onNodeWithTag(listTag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
 
@@ -288,7 +295,113 @@ abstract class GlidingPillFramesBase {
         assertEquals("compositions per frame after the move's own: $frames", List(frames.size - move - 1) { 0 }, frames.drop(move + 1).map { it.composed })
     }
 
+    /** The mean y of the halo just left of the list (pixels that differ from the empty background beside it), or -1 when there is none. */
+    private fun haloCentreLeftOfList(): Float {
+        val list = listBounds()
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val x = list.left.toInt() - HALO_PROBE_PX
+        val bg = pixels[x - HALO_BG_GAP_PX, list.top.toInt() + 1]
+        val ys = (list.top.toInt() until list.bottom.toInt()).filter { y -> pixels[x, y] != bg }
+        return if (ys.isEmpty()) -1f else ys.average().toFloat()
+    }
+
+    /** The halo reaches past the pill's sides (the pill is as wide as the column) and stays with the pill in every frame of a glide. */
+    @Test
+    fun theGamesHaloIsDrawnOutsideTheListAndMovesWithThePill() {
+        show(FakeHomeContent.board(), true, HomeTags.GAMES, Column.Games, FakeHomeContent.BOARD_SNES_INDEX)
+        val ring = ringColour(rowTop(HomeTags.game(0)))
+        assertTrue("at rest some halo is left of the list", haloCentreLeftOfList() >= 0f)
+        compose.mainClock.autoAdvance = false
+        compose.runOnIdle { state.dispatch(Action.Move(Direction.Down)) }
+        compose.mainClock.autoAdvance = true
+        val gaps = mutableListOf<Float>()
+        compose.mainClock.autoAdvance = false
+        repeat(framesFor(PlumMotion.GLIDE_MS) + 2) {
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+            val top = pillTop(ring)
+            val centre = haloCentreLeftOfList()
+            if (top >= 0 && centre >= 0f) gaps += centre - top
+        }
+        println("halo centre minus pill top per frame: $gaps")
+        assertTrue("measured in several frames: $gaps", gaps.size > 5)
+        assertTrue("the halo never lags or leads the pill by a frame: $gaps", gaps.max() - gaps.min() <= 1f)
+    }
+
+    /** An L2/R2 system switch: in every frame, a halo left of the list belongs to a pill drawn in the list (none is left on the old page). */
+    @Test
+    fun noHaloIsLeftOnTheOldPageWhileTheSystemSwitches() {
+        show(FakeHomeContent.board(), true, HomeTags.GAMES, Column.Games, FakeHomeContent.BOARD_SNES_INDEX)
+        val ring = ringColour(rowTop(HomeTags.game(0)))
+        compose.mainClock.autoAdvance = false
+        compose.runOnIdle { state.dispatch(Action.NextSystem) }
+        var measured = 0
+        repeat(framesFor(PlumMotion.GLIDE_MS) + 2) {
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+            val halo = haloCentreLeftOfList()
+            if (halo >= 0f) {
+                val top = pillTop(ring)
+                assertTrue("a halo with no pill in the list (halo at $halo)", top >= 0)
+                assertTrue("the halo ($halo) is beside the pill ($top), not left on the old page", abs(halo - top) <= listBounds().height / 4)
+            }
+            measured++
+        }
+        assertTrue("frames were measured", measured > 5)
+    }
+
+    /** With the game panel open the row is not focused in the list: no pill and no halo. */
+    @Test
+    fun noListHaloIsDrawnWhileTheGamePanelIsOpen() {
+        // At 576 dp the panel covers the whole screen and its own row's halo is all there is to see.
+        Assume.assumeTrue("the panel leaves the list in view", panelLeavesTheListInView)
+        val panel = OpenPanel(GameRef("1", "Super Metroid"), PanelScreen.AppMenu(canUninstall = false))
+        show(FakeHomeContent.board(), true, HomeTags.GAMES, Column.Games, FakeHomeContent.BOARD_SNES_INDEX, panel)
+        assertEquals("with the panel open there is no halo", -1f, haloCentreLeftOfList(), 0f)
+    }
+
+    /** How many pixels of the column [dx] px outside the list's left or right edge differ from the empty background beside it. */
+    private fun haloPixelsAt(
+        dx: Int,
+        right: Boolean,
+    ): Int {
+        val list = listBounds()
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val x = if (right) list.right.toInt() + dx else list.left.toInt() - dx
+        val gap = if (right) HALO_BG_GAP_PX else -HALO_BG_GAP_PX
+        val bg = pixels[x + gap, list.top.toInt() + 1]
+        return (list.top.toInt() until list.bottom.toInt()).count { y -> pixels[x, y] != bg }
+    }
+
+    /** Halo pixels left and right of the list with the focus [downs] steps below the first row. */
+    private fun haloAtEnds(
+        animationsOn: Boolean,
+        downs: Int,
+    ): List<Int> {
+        show(FakeHomeContent.board(), animationsOn, HomeTags.GAMES, Column.Games, FakeHomeContent.BOARD_SNES_INDEX)
+        repeat(downs) {
+            compose.runOnIdle { state.dispatch(Action.Move(Direction.Down)) }
+            compose.waitForIdle()
+        }
+        return listOf(haloPixelsAt(HALO_PROBE_PX, false), haloPixelsAt(HALO_PROBE_PX, true))
+    }
+
+    /** With animations off the halo still reaches past both sides of the list: the row's own clipped halo is not what shows. */
+    @Test
+    fun withAnimationsOffTheHaloReachesPastBothEndsOfThePillOnTheFirstRow() = assertHaloAtBothEnds(0)
+
+    @Test
+    fun withAnimationsOffTheHaloReachesPastBothEndsOfThePillOnTheLastRow() = assertHaloAtBothEnds(MANY_DOWNS)
+
+    private fun assertHaloAtBothEnds(downs: Int) {
+        val ends = haloAtEnds(false, downs)
+        assertTrue("animations off, $downs downs: halo pixels left and right of the list: $ends", ends.all { it > 0 })
+    }
+
     private companion object {
+        const val MANY_DOWNS = 60
+        const val HALO_PROBE_PX = 3
+        const val HALO_BG_GAP_PX = 60
         const val FRAME_MS = 16
         const val FIRST_FRAME_SHARE = 0.27f
         const val HOLD_REPEAT_FRAMES = 6
@@ -300,4 +413,6 @@ abstract class GlidingPillFramesBase {
 class GlidingPillFramesTest : GlidingPillFramesBase()
 
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w576dp-h432dp-land-xhdpi")
-class GlidingPillFrames576Test : GlidingPillFramesBase()
+class GlidingPillFrames576Test : GlidingPillFramesBase() {
+    override val panelLeavesTheListInView = false
+}

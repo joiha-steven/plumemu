@@ -7,6 +7,7 @@ import com.plumemu.coredata.db.NewAppGame
 import com.plumemu.identify.name.TitleCleaner
 import com.plumemu.launcher.apps.LaunchableApp
 import com.plumemu.launcher.apps.PackagePresence
+import com.plumemu.platforms.PackageVariant
 import com.plumemu.platforms.PlatformCatalog
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -56,6 +57,8 @@ internal class GraphAppGames(
     /** Whether Android still has a package in any state (launcher's `InstalledApps.presenceOf`); null is unknown. */
     private val presence: suspend (packageName: String) -> PackagePresence?,
     private val ownPackage: String,
+    /** Whether an emulator build starts here: its package is installed and its activity resolves (launcher's `EmulatorDetector.isLaunchable`). */
+    private val isLaunchable: suspend (PackageVariant) -> Boolean,
     private val scope: CoroutineScope,
     private val io: CoroutineDispatcher,
     private val log: (String) -> Unit,
@@ -121,7 +124,9 @@ internal class GraphAppGames(
         val apps = guarded("installed apps") { readApps() } ?: return skipped("the installed apps could not be read")
         if (apps.isEmpty()) return skipped("the installed apps read empty")
         val choices = guarded("app kind choices") { dao().choices() } ?: return skipped("the person's choices could not be read")
-        val emulatorPackages = catalog.emulators.flatMapTo(HashSet()) { emulator -> emulator.allPackages.map { it.packageName } }
+        // A package is an emulator only when the emulator's activity resolves in it: Eden and Lemon ship builds as
+        // com.miHoYo.Yuanshen and com.antutu.ABenchMark, and the real Genshin or AnTuTu is an app.
+        val emulatorPackages = emulatorPackagesAmong(catalog, apps.mapTo(HashSet()) { it.packageName })
         val marked =
             appGameSystems(
                 apps = apps.map { InstalledApp(it.packageName, it.label, it.isGame) },
@@ -138,9 +143,11 @@ internal class GraphAppGames(
             }
         val stored = guarded("app game records") { dao().records() } ?: return skipped("the app games could not be read")
         val read = apps.mapTo(HashSet()) { it.packageName }
+        val storedNames = stored.mapTo(HashSet()) { it.packageName }
+        val keptEmulators = emulatorPackagesAmong(catalog, storedNames)
         val keep =
             stored.map { it.packageName }
-                .filter { it !in read && stillMarked(it, choices, emulatorPackages) && stillInstalled(it) }
+                .filter { it !in read && stillMarked(it, choices, keptEmulators) && stillInstalled(it) }
                 .toSet()
         val sync = guarded("app games sync") { dao().sync(rows, clock(), keep) } ?: return skipped("the library could not be written")
         mutableMarked.value = marked
@@ -148,6 +155,17 @@ internal class GraphAppGames(
             log("App games: ${marked.size} listed (${sync.added} added, ${sync.updated} updated, ${sync.removed} removed)")
         }
         return AppGamesSyncOutcome.Synced(sync, marked)
+    }
+
+    /** The packages of [names] that are a launchable build of an emulator of [catalog] (blocking; runs on [io]). */
+    private suspend fun emulatorPackagesAmong(catalog: PlatformCatalog, names: Set<String>): Set<String> {
+        val found = HashSet<String>()
+        for (emulator in catalog.emulators) {
+            for (build in emulator.allPackages) {
+                if (build.packageName in names && build.packageName !in found && isLaunchable(build)) found += build.packageName
+            }
+        }
+        return found
     }
 
     /**

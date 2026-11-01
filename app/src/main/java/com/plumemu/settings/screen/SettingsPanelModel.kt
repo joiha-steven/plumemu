@@ -10,6 +10,7 @@ import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SystemOrderSetting
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
+import com.plumemu.update.ui.NotesScroll
 import com.plumemu.coreui.theme.Rgb
 import com.plumemu.library.scrape.AskAgain
 import com.plumemu.settings.withColors
@@ -37,6 +38,9 @@ internal abstract class SettingsPanelModel(
 
     /** Whether the open licence text can scroll that way; the page sets it (it knows its size). */
     var licenseCanScroll: (down: Boolean) -> Boolean = { true }
+
+    /** The update panel's notes, scrolled by Up and Down past its buttons. */
+    val updateNotes = NotesScroll()
 
     /** A on the hex row: typing starts, with the keyboard Settings › Controls › Keyboard names now. */
     protected fun startEditingHex() {
@@ -75,11 +79,24 @@ internal abstract class SettingsPanelModel(
             if (licenseCanScroll(direction == Direction.Down)) feel.report(Outcome.Moved)
             return
         }
+        if (page == PanelPage.Update) return moveInUpdatePage(direction, settings, geometry)
         if (SettingsCustomColor.isCustomPage(page)) return moveInCustomPage(page, direction)
         val grid = PanelGrid.of(page, geometry, content, focus, settings, custom.palette(page).size, pickableSubfolders(work.subfolders, content).size) ?: return
         val next = grid.move(focus.panelIndex, direction)
         if (next != focus.panelIndex) return focusPanelItem(next)
         if (direction == Direction.Left && (page == PanelPage.ColorSets || ColorPages.kindOf(page) != null)) leaveColourPageToItsRow(page)
+    }
+
+    /** Update panel: Up and Down walk its buttons, then scroll the notes. */
+    private fun moveInUpdatePage(
+        direction: Direction,
+        settings: PlumSettings,
+        geometry: SettingsGeometry,
+    ) {
+        if (direction != Direction.Up && direction != Direction.Down) return
+        val next = PanelGrid.of(PanelPage.Update, geometry, content, focus, settings)?.move(focus.panelIndex, direction) ?: focus.panelIndex
+        if (next != focus.panelIndex) return focusPanelItem(next)
+        if (updateNotes.press(direction == Direction.Down)) feel.report(Outcome.Moved)
     }
 
     /** The "+" page: the swatch grid, then the sliders (Left and Right step the focused one), then the hex row. */
@@ -176,6 +193,7 @@ internal abstract class SettingsPanelModel(
             PanelPage.UnidentifiedGames -> openNameFix(index)
             PanelPage.FixName, PanelPage.ScraperSignIn, PanelPage.ProblemReport -> Unit
             PanelPage.ScraperAccount -> onAccountEnter(accountPageItems(content).getOrNull(index))
+            PanelPage.RaAccount -> enterRaItem(raPageItems(content).getOrNull(index), content, work, { feel.report(Outcome.Activated) }, ::openRaSignIn) { if (focus.page == PanelPage.RaAccount) closePanel() }
             PanelPage.ScraperSystems -> onSystemsEnter(index)
             PanelPage.ScraperConfirm -> onBoxArtConfirmEnter(BoxArtConfirmItem.entries.getOrNull(index))
             PanelPage.ScraperSignOutConfirm -> onSignOutConfirmEnter(SignOutConfirmItem.entries.getOrNull(index))
@@ -267,7 +285,7 @@ internal abstract class SettingsPanelModel(
         closePanel()
     }
 
-    // Library › ScreenScraper's box art.
+    // Accounts › ScreenScraper's box art.
 
     /**
      * The account page's buttons and the picker's rows follow the run and the library (a refusal,
@@ -285,6 +303,7 @@ internal abstract class SettingsPanelModel(
         val at = focus.panelIndex
         val next =
             when (focus.page) {
+                PanelPage.RaAccount -> raIndexAfter(before, after, at)
                 PanelPage.ScraperAccount -> {
                     val now = accountPageItems(after)
                     accountPageItems(before).getOrNull(at)?.let { now.indexOf(it) }?.takeIf { it >= 0 } ?: at.coerceAtMost(now.lastIndex)
@@ -334,6 +353,7 @@ internal abstract class SettingsPanelModel(
                 work.setBoxArtPaused(!isPausedByPerson(content))
                 feel.report(Outcome.Activated)
             }
+            AccountPageItem.BoxArtRegion -> actions.update { withNextBoxArtRegion(it) }.also { feel.report(Outcome.Activated) }
             // Asks first: signing out turns box art off at once.
             AccountPageItem.SignOut -> moveTo(focus.copy(page = PanelPage.ScraperSignOutConfirm, panelIndex = SignOutConfirmItem.Cancel.ordinal))
             null -> closePanel()

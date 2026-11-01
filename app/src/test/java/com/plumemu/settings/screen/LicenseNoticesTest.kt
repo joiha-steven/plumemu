@@ -54,9 +54,24 @@ class LicenseNoticesTest {
     }
 
     @Test
+    fun rcheevosIsListedUnderMitWithItsCopyrightLine() {
+        val notice = LicenseNotices.all.single { it.asset == "licenses/rcheevos-MIT.txt" }
+        assertEquals(com.plumemu.R.string.settings_licence_mit, notice.licence)
+        val text = readLicenseText(context.assets, notice) { }
+        assertTrue((text as LicenseText.Loaded).text.contains("Copyright (c) 2018 RetroAchievements.org"))
+    }
+
+    @Test
     fun theLzmaSdkIsListedAsPublicDomainWithoutAText() {
         val lzma = LicenseNotices.all.single { it.name == com.plumemu.R.string.settings_license_lzma_sdk }
         assertEquals(com.plumemu.R.string.settings_licence_public_domain, lzma.licence)
         assertEquals(LicenseText.NotShipped, readLicenseText(context.assets, lzma) { })
+    }
+
+    @Test
+    fun xzForJavaIsListedUnder0bsdWithoutAText() {
+        val xz = LicenseNotices.all.single { it.name == com.plumemu.R.string.settings_license_xz }
+        assertEquals(com.plumemu.R.string.settings_licence_0bsd, xz.licence)
+        assertEquals(LicenseText.NotShipped, readLicenseText(context.assets, xz) { })
     }
 }

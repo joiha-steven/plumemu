@@ -1506,6 +1506,7 @@
         <command label="PICO-8 (Standalone)">%EMULATOR_PICO-8% %DATA%=%ROMSAF%</command>
         <command label="Fake-08">%EMULATOR_RETROARCH% %EXTRA_CONFIGFILE%=%EXTERNALDATA%/Android/data/%ANDROIDPACKAGE%/files/retroarch.cfg %EXTRA_LIBRETRO%=%INTERNALDATA%/%ANDROIDPACKAGE%/cores/fake08_libretro_android.so %EXTRA_ROM%=%ROM%</command>
         <command label="Retro8">%EMULATOR_RETROARCH% %EXTRA_CONFIGFILE%=%EXTERNALDATA%/Android/data/%ANDROIDPACKAGE%/files/retroarch.cfg %EXTRA_LIBRETRO%=%INTERNALDATA%/%ANDROIDPACKAGE%/cores/retro8_libretro_android.so %EXTRA_ROM%=%ROM%</command>
+        <command label="Pixl8 (Standalone)">%EMULATOR_PIXL8% %ACTION%=android.intent.action.VIEW %DATA%=%ROMSAF%</command>
         <command label="Infinity (Standalone)">%EMULATOR_INFINITY% %ACTION%=android.intent.action.VIEW %DATA%=%ROMPROVIDER%</command>
         <platform>pico8</platform>
         <theme>pico8</theme>

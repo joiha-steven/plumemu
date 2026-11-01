@@ -11,7 +11,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Settings › Appearance › Left edge › System codes: the board's games screen with a code where the count was (Medium and Largest). */
+/** Settings › Home screen › Left edge › System codes: the board's games screen with a code where the count was (Medium and Largest). */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])

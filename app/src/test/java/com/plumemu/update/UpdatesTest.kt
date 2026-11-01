@@ -82,7 +82,6 @@ class UpdatesTest {
             assertEquals(LastCheck(now0, CheckOutcome.Found), store.record.lastCheck)
             assertEquals("0.0.3-alpha", store.record.found?.versionName)
             assertEquals("0.0.3-alpha", updates.view.value.found?.versionName)
-            assertTrue(updates.hasUpdate.value)
         }
 
     @Test
@@ -93,7 +92,6 @@ class UpdatesTest {
             updates.checkNow().join()
             assertTrue("no request of any kind", http.requests.isEmpty())
             assertNull(store.record.lastCheck)
-            assertFalse(updates.hasUpdate.value)
             assertFalse(updates.view.value.isChecking)
         }
 
@@ -158,7 +156,6 @@ class UpdatesTest {
             updates.checkNow().join()
             assertEquals(CheckOutcome.Failed(CheckFailure.Offline), updates.view.value.lastCheck?.outcome)
             assertEquals("0.0.3-alpha", updates.view.value.found?.versionName)
-            assertTrue(updates.hasUpdate.value)
         }
 
     @Test
@@ -218,7 +215,6 @@ class UpdatesTest {
             updates.checkNow().join()
             assertEquals(now0, store.record.lastSuccessAt)
             assertNull(store.record.found)
-            assertFalse(updates.hasUpdate.value)
         }
 
     @Test

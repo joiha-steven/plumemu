@@ -7,7 +7,7 @@
     <string name="home_entry_recent">Recent</string>
     <string name="home_entry_favorites">Favorites</string>
     <string name="home_entry_apps">Apps</string>
-    <!-- The system column's three-letter codes in the peek (Settings > Appearance > Left edge > System codes); letters of the alphabet, not translated. -->
+    <!-- The system column's three-letter codes in the peek (Settings > Home screen > Left edge > System codes); letters of the alphabet, not translated. -->
     <string name="home_code_recent" translatable="false">REC</string>
     <string name="home_code_favorites" translatable="false">FAV</string>
     <string name="home_code_apps" translatable="false">APP</string>
@@ -52,6 +52,7 @@
     <string name="home_key_l1_r1" translatable="false">L1 R1</string>
     <string name="home_key_l2_r2" translatable="false">L2 R2</string>
     <string name="home_key_select" translatable="false">SELECT</string>
+    <string name="home_key_r3" translatable="false">R3</string>
 
     <!-- Main screen, hint bar: what each button does here. Every hint bar label is a verb or a short
          noun beside its key cap; keep it to about 12 characters (docs/conventions/translation.md › Length). -->
@@ -60,6 +61,12 @@
     <string name="home_hint_add_folder">Add folder</string>
     <!-- Hint bar label beside START: opens Settings. -->
     <string name="home_hint_settings">Settings</string>
+    <!-- Hint bar label beside START while an update waits: opens Settings on the update. -->
+    <string name="home_hint_update">Update</string>
+    <!-- The main screen's top bar pill while an update waits; %1$s is the version, for example 0.1.1. -->
+    <string name="home_update_pill">Update %1$s</string>
+    <!-- Title of the card shown once after Plumemu updated itself; %1$s is the version. -->
+    <string name="home_whatsnew_title">What\'s new in %1$s</string>
     <!-- Hint bar label: a verb, start the game. -->
     <string name="home_hint_play">Play</string>
     <!-- Hint bar label: a verb, open the focused entry or app. -->
@@ -115,6 +122,8 @@
     <string name="keyboard_shift">Shift</string>
     <string name="keyboard_delete">Delete</string>
     <string name="keyboard_hide">Hide keyboard</string>
+    <!-- The Paste key (shown while the clipboard holds text) and the hint "R3 Paste" while typing. -->
+    <string name="keyboard_paste">Paste</string>
 
     <!-- Main screen, details column (only with box art). %1$s and %2$s are two facts joined:
          a year and a publisher ("1994 · Nintendo"), or a genre and a player count. The games list's
@@ -131,9 +140,9 @@
         <item quantity="one">%1$s day ago</item>
         <item quantity="other">%1$s days ago</item>
     </plurals>
-    <!-- Play time: %1$s hours and %2$s minutes, numbers formatted for the locale ("4 h 12 min"). -->
-    <string name="home_details_hours_minutes">%1$s h %2$s min</string>
-    <string name="home_details_minutes">%1$s min</string>
+    <!-- Play time: %1$s hours and %2$s minutes, numbers formatted for the locale ("4 h 12 min"). Keep the no-break space (\u00A0) between each number and its unit, so a line breaks only between "4 h" and "12 min". -->
+    <string name="home_details_hours_minutes">%1$s\u00A0h %2$s\u00A0min</string>
+    <string name="home_details_minutes">%1$s\u00A0min</string>
     <!-- ScreenScraper's rating out of 10 beside the genre ("Racing · 8/10", "7.5/10"); %1$s formatted for the locale. -->
     <string name="home_details_rating">%1$s/10</string>
 
@@ -232,7 +241,7 @@
         <item quantity="other">%1$s others</item>
     </plurals>
     <string name="setup_stats_title">Send anonymous usage statistics</string>
-    <!-- The short form of settings_usage_statistics_body (Settings › Advanced › Send usage statistics): the whole text does not fit the Ready step at 768 x 432 (TextSizeScreens*Test). -->
+    <!-- The short form of settings_usage_statistics_body (Settings › About › Send usage statistics): the whole text does not fit the Ready step at 768 x 432 (TextSizeScreens*Test). -->
     <string name="setup_stats_body">Anonymous counts and crash reports. Never games, searches or accounts. Off: one count, then none.</string>
     <string name="setup_one_hand_title">Push right twice to play</string>
     <string name="setup_one_hand_body">Up and down pick a game. A still works. Change it in Settings › Controls.</string>
@@ -348,7 +357,7 @@
     <string name="game_fix_box_art_waiting">Still saving. Box art downloading in the background may go first; this can take a minute.</string>
     <string name="game_fix_box_art_daily_limit">ScreenScraper\'s daily limit has been reached. Try again after %1$s.</string>
     <string name="game_fix_box_art_server_closed">ScreenScraper is closed for now. Try again after %1$s.</string>
-    <string name="game_fix_box_art_sign_in_again">ScreenScraper refused your password. Sign in again in Settings › Library › ScreenScraper.</string>
+    <string name="game_fix_box_art_sign_in_again">ScreenScraper refused your password. Sign in again in Settings › Accounts › ScreenScraper.</string>
     <string name="game_fix_box_art_offline">No connection. Check your Wi-Fi and try again.</string>
     <string name="game_fix_box_art_no_wifi">Not connected to Wi-Fi. Box art is looked up on Wi-Fi only.</string>
     <string name="game_fix_box_art_server_error">ScreenScraper could not answer (code %1$s). Try again later.</string>
@@ -483,8 +492,8 @@
     <string name="game_app_kind_later_body">It will take effect when Plumemu next reads the installed apps.</string>
     <string name="game_rename_box_art_title">Name saved, box art not looked up</string>
     <string name="game_rename_box_art_no_wifi">Not connected to Wi-Fi.</string>
-    <string name="game_rename_box_art_sign_in">Sign in to ScreenScraper in Settings › Library › ScreenScraper.</string>
-    <string name="game_rename_box_art_paused">Box art is paused. Resume it in Settings › Library › ScreenScraper.</string>
+    <string name="game_rename_box_art_sign_in">Sign in to ScreenScraper in Settings › Accounts › ScreenScraper.</string>
+    <string name="game_rename_box_art_paused">Box art is paused. Resume it in Settings › Accounts › ScreenScraper.</string>
     <string name="game_rename_box_art_daily_limit">ScreenScraper\'s daily limit has been reached. Try again after %1$s.</string>
     <string name="game_rename_box_art_server_closed">ScreenScraper is closed until %1$s.</string>
     <string name="game_error_internal_title">The game could not be started</string>
@@ -536,6 +545,7 @@
     <string name="settings_section_advanced">Advanced</string>
     <string name="settings_section_statistics">Statistics</string>
     <string name="settings_section_about">About</string>
+    <string name="settings_section_second_screen">Second screen</string>
     <string name="settings_hint_select">Select</string>
     <string name="settings_hint_close">Close</string>
     <!-- Hint bar label beside Left/Right: step the value to the previous or next choice. -->
@@ -551,10 +561,7 @@
     <!-- Narrow screens: opens the focused option's explanation as a further stop (the right button). -->
     <string name="settings_hint_more">More</string>
     <string name="settings_key_right" translatable="false">›</string>
-    <!-- Option values: "‹ Light ›" steps left and right; "Graphite »" opens a panel (design/rules.md › Settings: the double mark, a no-break space before it, is never the single › of the Right key). -->
-    <string name="settings_value_choice">‹ %1$s ›</string>
-    <string name="settings_value_opens">%1$s&#160;»</string>
-    <string name="settings_value_chevron" translatable="false">»</string>
+    <!-- Option values: words only; the chevrons and check beside them are drawn (SettingsValueIcons.kt). -->
     <string name="settings_switch_on">On</string>
     <string name="settings_switch_off">Off</string>
 
@@ -680,6 +687,8 @@
     <string name="settings_hint_hide">Hide</string>
     <!-- Hint bar label: a verb, show the focused system again. -->
     <string name="settings_hint_show">Show</string>
+    <!-- Hint bar on a most-played game of Settings › Statistics: A closes Settings with the main screen's cursor on that game. -->
+    <string name="settings_hint_go_to">Go to</string>
     <string name="settings_key_up_down" translatable="false">↑↓</string>
     <!-- %1$s is the number of hidden games, already formatted for the locale. -->
     <string name="settings_hidden_games">Hidden games (%1$s)</string>
@@ -694,8 +703,8 @@
     <string name="settings_name_fix_failed">That name could not be saved. Nothing was changed.</string>
     <string name="settings_name_fix_game_gone">That game is no longer in your library.</string>
     <string name="settings_rename_box_art_no_wifi">Name saved, box art not looked up. Not connected to Wi-Fi.</string>
-    <string name="settings_rename_box_art_sign_in">Name saved, box art not looked up. Sign in to ScreenScraper in Settings › Library › ScreenScraper.</string>
-    <string name="settings_rename_box_art_paused">Name saved, box art not looked up. Box art is paused. Resume it in Settings › Library › ScreenScraper.</string>
+    <string name="settings_rename_box_art_sign_in">Name saved, box art not looked up. Sign in to ScreenScraper in Settings › Accounts › ScreenScraper.</string>
+    <string name="settings_rename_box_art_paused">Name saved, box art not looked up. Box art is paused. Resume it in Settings › Accounts › ScreenScraper.</string>
     <string name="settings_rename_box_art_daily_limit">Name saved, box art not looked up. ScreenScraper\'s daily limit has been reached. Try again later.</string>
     <string name="settings_rename_box_art_server_closed">Name saved, box art not looked up. ScreenScraper is closed for now.</string>
     <string name="settings_titles_unreadable">Could not read the name list for %1$s. Try again later.</string>
@@ -743,6 +752,8 @@
     <string name="settings_show_apps_body">Every Android app on the device is listed under “Apps”, right below Favorites. Off: the Apps entry is not shown.</string>
     <string name="settings_clock">Show clock</string>
     <string name="settings_clock_body">The time at the top right of the screen.</string>
+    <string name="settings_edge_fade">Fade list edges</string>
+    <string name="settings_edge_fade_body">Lists and grids on the home screen fade out at the top and bottom where there is more to scroll. Off, they end in a straight line.</string>
     <!-- The band over a system's games list ("Nintendo · Home console · 1990–2003". -->
     <string name="system_kind_console">Home console</string>
     <string name="system_kind_handheld">Handheld</string>
@@ -846,21 +857,28 @@
     <string name="second_screen_charging">Charging · %1$s</string>
     <!-- The in-game card's battery part. The time left is drawn in two sizes: the numbers
          (the placeholders of the durations) large, every other character small. A duration fills %1$s of
-         the sentences below: "45 min left", "4 h 30 min left", "1 h 03 to full", "About 45 min left".
+         the sentences below: "45 min left", "4 h 30 min left", "1 h 3 min to full", "About 45 min left".
          The numbers are formatted for the locale; keep each placeholder exactly once. -->
     <string name="in_game_battery_duration_minutes">%1$s min</string>
     <string name="in_game_battery_duration_hours">%1$s h</string>
     <string name="in_game_battery_duration_hours_minutes">%1$s h %2$s min</string>
-    <!-- Android's exact time to full: hours, then the minutes as two digits ("1 h 03"). -->
-    <string name="in_game_battery_duration_clock">%1$s h %2$s</string>
     <string name="in_game_battery_left">%1$s left</string>
     <string name="in_game_battery_left_about">About %1$s left</string>
     <string name="in_game_battery_to_full">%1$s to full</string>
     <string name="in_game_battery_to_full_about">About %1$s to full</string>
     <!-- %1$s is a time of day as Android formats it: "22:35", "10:35 PM". -->
-    <string name="in_game_battery_empty_at">empty at %1$s</string>
     <string name="in_game_battery_full_at">full at %1$s</string>
-    <!-- The chart's key. %1$s is a percentage: "48%". -->
+    <!-- The same for an estimate (rounded to five minutes). -->
+    <string name="in_game_battery_empty_at_about">empty at about %1$s</string>
+    <string name="in_game_battery_full_at_about">full at about %1$s</string>
+    <!-- Under the chart's ends: when this play started, when the battery comes to empty or full. %1$s is a time of day. -->
+    <string name="in_game_battery_started">Started %1$s</string>
+    <string name="in_game_battery_empty_label">Empty %1$s</string>
+    <string name="in_game_battery_full_label">Full %1$s</string>
+    <!-- The facts row under the chart: "Played 0:44 · Used 6% · 8% an hour · as usual". %1$s is hours and minutes ("0:44"), then a percentage. -->
+    <string name="in_game_battery_played">Played %1$s</string>
+    <string name="in_game_battery_used">Used %1$s</string>
+    <!-- The pace in the facts row. %1$s is a percentage: "48%". -->
     <string name="in_game_battery_pace">%1$s an hour</string>
     <string name="in_game_battery_charging_pace">+%1$s an hour</string>
     <string name="in_game_battery_usual">usually %1$s</string>
@@ -868,7 +886,7 @@
     <!-- %1$s is the time of day charging was first seen. -->
     <string name="in_game_battery_charging_since">since %1$s</string>
     <string name="in_game_battery_measuring">Measuring battery use…</string>
-    <!-- Shown once for a minute the first time the in-game card shows; also ends Settings › Home screen › In game's text. -->
+    <!-- Shown once for a minute the first time the in-game card shows; also ends Settings › Second screen › In game's text. -->
     <string name="in_game_drift_note">Moves a little every minute to protect the screen</string>
     <!-- The picking line of a game measured before: "2 h on this charge · 30% an hour"; charging: the pace only. %1$s is a duration or a percentage. The pace's spaces do not break, so "an hour" never wraps alone. -->
     <!-- "on this charge" means: the time the battery's current charge still allows (time left), not time already played. -->
@@ -884,7 +902,7 @@
     <!-- Read out for the battery glyph; %1$s is the level ("62%"). -->
     <string name="battery_line_level">Battery at %1$s</string>
     <string name="second_screen_setup_question">Plumemu can show the game you are on here.</string>
-    <string name="settings_second_screen">Second screen</string>
+    <string name="settings_second_screen">Use second screen</string>
     <string name="settings_second_screen_body">Shows the game you are on. Nothing there is needed to play.</string>
     <string name="settings_second_screen_in_game">In game</string>
     <string name="settings_second_screen_in_game_body">What the second screen shows while a game runs. Emulators that use two screens take it by themselves. The card moves a little every minute to protect the screen.</string>
@@ -936,6 +954,7 @@
     <string name="settings_accent_mono">Mono</string>
     <string name="settings_accent_by_system">By system</string>
     <string name="settings_accent_by_system_description">By system, each system in its own color</string>
+    <string name="settings_choice_missing" translatable="false">?</string>
     <string name="settings_color_custom">Custom</string>
     <string name="settings_color_add_glyph" translatable="false">+</string>
     <!-- Text color preset: light text (for dark backgrounds). -->
@@ -1015,7 +1034,7 @@
     <string name="settings_text_size_body">Changes all text in Plumemu. Android\'s own font size applies on top.</string>
     <string name="settings_text_weight_body">Changes how heavy all text in Plumemu is drawn.</string>
     <string name="settings_left_edge_body">What the narrow strip at the left edge shows while you are in a games list: how many games each system has, a short code for each system, or the letters of the list you are in.</string>
-    <string name="settings_grid_size_body">How big box art is in the grid view, for every system and for Recent and Favorites. Small shows the most games at once, Large the fewest.</string>
+    <string name="settings_grid_size_body">How big covers are in the grid view, for every system and for Recent and Favorites. Small shows the most games at once, Large the fewest.</string>
     <!-- Sample lines in the colour and font panels (the board's). -->
     <string name="settings_sample_game_1" translatable="false">Mega Man X</string>
     <string name="settings_sample_game_2" translatable="false">Super Metroid</string>
@@ -1024,7 +1043,7 @@
     <string name="settings_sample_year_2" translatable="false">1994</string>
     <string name="settings_sample_year_3" translatable="false">1995</string>
 
-    <!-- Advanced (includes the confirm-button option) -->
+    <!-- Controls (the confirm button, Sounds, Vibration) and Advanced (Animations); Send usage statistics is under About -->
     <string name="settings_confirm_bottom">Confirm with B</string>
     <string name="settings_confirm_bottom_detail">Circle on PlayStation-style pads</string>
     <string name="settings_confirm_bottom_body">Off: A confirms and B goes back. On: B confirms and A goes back (on PlayStation-style pads the cross confirms when off, the circle when on). Hints follow at once.</string>
@@ -1179,8 +1198,7 @@
     <string name="settings_reset">Reset</string>
 
     <!-- About -->
-    <!-- Settings › Statistics: play statistics kept on this device, not the Send usage statistics switch of Advanced. -->
-    <string name="settings_statistics_body">Play statistics kept on this device: play time, your most-played games and systems, and how much of your library has box art. They are worked out from what Plumemu already stores and are never sent anywhere.</string>
+    <!-- Settings › Statistics: play statistics kept on this device, not the Send usage statistics switch of About. -->
     <string name="settings_statistics_total">Total play time</string>
     <!-- Second screen's statistics card: the total's label line with this week's play time; %1$s is a play time such as "2 h 10 min". The card drops the part after the dot when the line does not fit. -->
     <string name="second_screen_total_week">Total play time · %1$s this week</string>
@@ -1188,37 +1206,48 @@
     <string name="second_screen_total_week_none">Total play time · none this week</string>
     <!-- The same line when this week's play time is under a minute. -->
     <string name="second_screen_total_week_under_a_minute">Total play time · less than a minute this week</string>
-    <!-- Settings › Statistics' row for this week's play time. -->
+    <!-- Settings › Statistics' tile for this week's play time. -->
     <string name="settings_statistics_this_week">This week</string>
-    <!-- That row's value when sessions exist but none fall in this week. -->
-    <string name="settings_statistics_this_week_none">None yet</string>
     <!-- A play time under one minute, where "0 min" would read as nothing. -->
     <string name="settings_statistics_under_a_minute">Less than a minute</string>
-    <!-- Small heading over the three most-played games in Settings › Statistics. -->
+    <!-- Settings › Statistics: small headings over the five most-played games and the five most-played systems. -->
     <string name="settings_statistics_most_played">Most played</string>
-    <!-- Side panel of a most-played game in Settings › Statistics: the label of its figures and the line that says A starts it ("A to play"; %1$s is the confirm button's letter). -->
-    <string name="settings_statistics_times_played">Times played</string>
-    <string name="settings_statistics_play_hint">%1$s to play</string>
+    <string name="settings_statistics_systems">Systems</string>
+    <!-- Settings › Statistics' tile: the share of games that have box art, as a percentage. -->
+    <string name="settings_statistics_with_box_art">With box art</string>
+    <!-- Settings › Statistics' last line: these figures stay on the device, unlike Advanced › Send usage statistics. -->
+    <string name="settings_statistics_kept_here">Kept on this handheld only</string>
+    <!-- Statistics, under the total play time. %1$s is a number already formatted for the locale. -->
+    <plurals name="settings_statistics_across_games">
+        <item quantity="one">across %1$s game</item>
+        <item quantity="other">across %1$s games</item>
+    </plurals>
+    <!-- Statistics, under a system's name. %1$s is a percentage already formatted for the locale ("85%"). -->
+    <string name="settings_statistics_share_of_play">%1$s of play time</string>
+    <!-- Settings › Statistics when nothing was played yet: the one line in place of the figures. -->
+    <string name="settings_statistics_play_invite">Play a game and your time shows here</string>
     <string name="settings_statistics_top_system">Most-played system</string>
     <string name="settings_statistics_played">Games played</string>
     <string name="settings_statistics_box_art">Games with box art</string>
     <!-- "38 of 412": games played, or games with box art, out of the games in the library; numbers formatted for the locale. -->
     <string name="settings_statistics_count_of">%1$s of %2$s</string>
     <string name="settings_statistics_nothing_played">Nothing played yet</string>
-    <string name="settings_statistics_nothing_played_detail">Play time shows here after your first game.</string>
     <string name="settings_statistics_no_games">No games in the library yet</string>
     <string name="settings_statistics_unreadable">Play statistics could not be read</string>
     <string name="settings_statistics_unreadable_detail">Close and reopen Settings to try again.</string>
     <string name="settings_version">Version</string>
     <string name="settings_version_line">Version %1$s</string>
-    <!-- Settings › Advanced › Language (docs/conventions/translation.md › Choosing a language). -->
+    <string name="settings_platform_data">Platform data</string>
+    <string name="settings_platform_data_value">Version %1$d · %2$s</string>
+    <string name="settings_platform_data_body">The list of systems and emulators Plumemu knows. It comes with the app. When Plumemu checks for updates it also downloads a newer list from the same place, and uses it the next time it starts.</string>
+    <!-- Settings › Appearance › Language (docs/conventions/translation.md › Choosing a language). -->
     <string name="settings_language">Language</string>
     <!-- The first choice: follow the language Android is set to. -->
     <string name="settings_language_system">System default</string>
     <string name="settings_language_body">The language of Plumemu\'s screens. Press A to pick one; each is listed in its own name. System default follows Android\'s language. Game titles and system names stay as they are.</string>
     <!-- The name of THIS FILE'S language, written in that language: Spanish writes its name in Spanish,
          Japanese in Japanese (the list is in docs/conventions/translation.md › Languages). It is how the
-         language is listed in Settings › Advanced › Language, whatever language the screen is in. Not a
+         language is listed in Settings › Appearance › Language, whatever language the screen is in. Not a
          translation of the word "English". -->
     <string name="language_name">English</string>
     <string name="settings_about_body">A light launcher for retro handhelds. No account needed.</string>
@@ -1249,7 +1278,7 @@
     <string name="report_error_refused">The server did not accept this report. Check the email address. Your words are kept, so you can try again.</string>
     <string name="report_error_unavailable">This build cannot send reports. Use Export logs and send the file yourself.</string>
     <string name="report_error_not_saved">The report could not be saved on this device.</string>
-    <string name="settings_privacy_body">Your library, settings and play time stay in Plumemu\'s own storage on this device, and are never sent. Only if you switch it on (Settings \u203A Advanced \u203A Send usage statistics), Plumemu sends anonymous usage counts and crash reports to the developer: country, device model, Android and app versions, which screens and settings you use, how long you play by system. Never game titles, search words or your ScreenScraper account. Crash reports may contain file paths. Switching it off sends one anonymous \u201Cswitched off\u201D count, then nothing. Problem reports are sent only when you press Send in Report a problem, and may contain the log you choose to attach, with file paths. What is sent is kept with no time limit. Once a day on Wi-Fi Plumemu asks plumemu-app.stevensdesk.com whether there is a newer version; Cloudflare, which hosts it, sees your IP address. Switch it off with Check for updates daily, above. With a ScreenScraper account, Plumemu sends ScreenScraper each game\'s file name, size and checksums, and its title when those find nothing, to find box art.</string>
+    <string name="settings_privacy_body">Your library, settings and play time stay in Plumemu\'s own storage on this device, and are never sent. Only if you switch it on (Settings \u203A About \u203A Send usage statistics), Plumemu sends anonymous usage counts and crash reports to the developer: country, device model, Android and app versions, which screens and settings you use, how long you play by system. Never game titles, search words or your ScreenScraper account. Crash reports may contain file paths. Switching it off sends one anonymous \u201Cswitched off\u201D count, then nothing. Problem reports are sent only when you press Send in Report a problem, and may contain the log you choose to attach, with file paths. What is sent is kept with no time limit. Once a day on Wi-Fi Plumemu asks plumemu-app.stevensdesk.com whether there is a newer version; Cloudflare, which hosts it, sees your IP address. Switch it off with Check for updates daily, above. The same daily check also downloads updated platform data (the list of systems and emulators) from the same host; nothing extra is sent. With a ScreenScraper account, Plumemu sends ScreenScraper each game\'s file name, size and checksums, and its title when those find nothing, to find box art. With a RetroAchievements account, Plumemu sends retroachievements.org your user name, your key and each game\'s RetroAchievements number, when you open a game\'s Info, after you play, and once a day on Wi-Fi; badge pictures come from media.retroachievements.org. The key is stored encrypted on this device, never in a backup or a log. Signing out stops it.</string>
     <!-- Updates -->
     <string name="settings_update_available">Update available</string>
     <string name="settings_update_value_downloading">Downloading…</string>
@@ -1257,7 +1286,7 @@
     <string name="settings_check_updates">Check for updates</string>
     <string name="settings_check_updates_body">Asks Plumemu\'s update server now whether there is a newer Plumemu. On mobile data Plumemu asks before downloading an update.</string>
     <string name="settings_check_updates_daily">Check for updates daily</string>
-    <string name="settings_check_updates_daily_body">Once a day on Wi-Fi, when you come back to Plumemu, it asks plumemu-app.stevensdesk.com whether there is a newer version. Cloudflare, which hosts it, sees your device\'s IP address. Nothing else is sent. An update installs only when you choose Update.</string>
+    <string name="settings_check_updates_daily_body">Once a day on Wi-Fi, when you come back to Plumemu, it asks plumemu-app.stevensdesk.com whether there is a newer version. Cloudflare, which hosts it, sees your device\'s IP address. The same check also downloads updated platform data (the list of systems and emulators) from the same host. Nothing else is sent. An update installs only when you choose Update.</string>
     <string name="settings_check_updates_checking">Checking…</string>
     <string name="settings_check_updates_value">%1$s · %2$s</string>
     <string name="settings_check_updates_value_up_to_date">Up to date</string>
@@ -1277,7 +1306,11 @@
     <string name="settings_check_updates_timeout">The update server did not answer in time. Try again later.</string>
     <string name="settings_check_updates_http">The update server had a problem. Try again later.</string>
     <string name="settings_check_updates_bad_manifest">The update server sent something Plumemu cannot read. Try again later.</string>
-    <string name="settings_update_title">Plumemu %1$s</string>
+    <string name="settings_update_title">Plumemu %1$s → %2$s</string>
+    <string name="settings_update_notes_new">New</string>
+    <string name="settings_update_notes_improved">Improved</string>
+    <string name="settings_update_notes_fixed">Fixed</string>
+    <string name="settings_update_notes_known">Known issues</string>
     <string name="settings_update_facts">Released %1$s · %2$s</string>
     <string name="settings_update_button">Update</string>
     <string name="settings_update_download_anyway">Download on mobile data</string>
@@ -1317,20 +1350,23 @@
     <string name="settings_license_mame_lists" translatable="false">MAME software lists (name packs)</string>
     <string name="settings_license_titledb" translatable="false">titledb Switch titles (name packs)</string>
     <string name="settings_license_lzma_sdk" translatable="false">LZMA SDK (Igor Pavlov), in the name reader</string>
+    <string name="settings_license_rcheevos" translatable="false">rcheevos file-hash rules (RetroAchievements)</string>
+    <string name="settings_license_xz" translatable="false">XZ for Java (Lasse Collin), in the achievements hasher</string>
     <string name="settings_licence_ofl" translatable="false">SIL Open Font License 1.1</string>
     <string name="settings_licence_mit" translatable="false">MIT License</string>
     <string name="settings_licence_apache" translatable="false">Apache License 2.0</string>
     <string name="settings_licence_bsd3" translatable="false">BSD 3-Clause License</string>
     <string name="settings_licence_cc0" translatable="false">CC0 1.0 Universal</string>
     <string name="settings_licence_public_domain" translatable="false">Public domain</string>
+    <string name="settings_licence_0bsd" translatable="false">BSD Zero Clause License</string>
 
     <!-- ScreenScraper account: setup's box art step and Settings › Library. -->
     <string name="setup_box_art_title">Box art from ScreenScraper</string>
-    <string name="setup_box_art_desc">Box art and game info come from ScreenScraper, with your own free account from screenscraper.fr. You can also sign in later in Settings › Library › ScreenScraper.</string>
+    <string name="setup_box_art_desc">Box art and game info come from ScreenScraper, with your own free account from screenscraper.fr. You can also sign in later in Settings › Accounts › ScreenScraper.</string>
     <string name="setup_box_art_skip">Skip</string>
     <!-- The question before the sign-in form. -->
     <string name="setup_box_art_question_title">Box art from ScreenScraper?</string>
-    <string name="setup_box_art_question_desc">Box art comes from a free account at screenscraper.fr. You can set it up later in Settings › Library › ScreenScraper.</string>
+    <string name="setup_box_art_question_desc">Box art comes from a free account at screenscraper.fr. You can set it up later in Settings › Accounts › ScreenScraper.</string>
     <string name="setup_box_art_use">Use my account</string>
     <string name="setup_box_art_not_now">Not now</string>
     <string name="setup_ready_box_art">Box art: downloading in the background</string>
@@ -1357,15 +1393,16 @@
     <string name="account_error_not_saved">Plumemu could not store your account. Try again.</string>
     <string name="account_error_not_available">Box art is not available in this build.</string>
     <string name="settings_account_title">ScreenScraper</string>
-    <!-- The ScreenScraper row's value while signed out: "Sign in »". -->
+    <!-- The ScreenScraper row's value while signed out: "Sign in" (the chevron is drawn). -->
     <string name="settings_account_value_sign_in">Sign in</string>
+    <string name="settings_account_value_signed_in">Signed in</string>
     <string name="settings_account_body">Box art and game info come from ScreenScraper, with your own free account from screenscraper.fr. Your password is stored encrypted on this device.</string>
     <string name="settings_account_sign_out">Sign out</string>
     <string name="settings_account_sign_in_again">Sign in again</string>
     <string name="settings_account_sign_out_failed">Plumemu could not sign out. Try again.</string>
     <!-- Sign out's confirm: what happens to box art. -->
     <string name="settings_sign_out_confirm_title">Sign out of ScreenScraper?</string>
-    <string name="settings_sign_out_confirm_body">Box art and the grid stop showing, and downloads stop. Pictures already saved stay on this device and come back when you sign in again.</string>
+    <string name="settings_sign_out_confirm_body">Box art stops showing and downloads stop. Pictures already saved stay on this device and come back when you sign in again.</string>
     <string name="settings_account_not_available">Box art: not available in this build</string>
     <string name="settings_account_not_available_body">This build of Plumemu was made without access to ScreenScraper, so it shows no box art or game info. Everything else works.</string>
     <string name="settings_account_refused">Wrong password: sign in again</string>
@@ -1402,7 +1439,6 @@
     <string name="settings_box_art_short_server_closed">Closed for now</string>
     <string name="settings_box_art_short_battery">Battery low</string>
     <string name="settings_box_art_short_offline">No connection</string>
-    <string name="settings_box_art_short_done">Done</string>
     <string name="settings_box_art_download_missing">Download missing</string>
     <string name="settings_box_art_redownload_all">Re-download all</string>
     <string name="settings_box_art_redownload">Re-download</string>
@@ -1442,8 +1478,10 @@
     </plurals>
     <string name="settings_check_mark" translatable="false">✓</string>
     <string name="settings_box_art_region">Box art region</string>
+    <!-- The ScreenScraper panel's button for the box art region: "Box art region: USA"; A goes to the next region. -->
+    <string name="settings_box_art_region_value">Box art region: %1$s</string>
     <string name="settings_box_art_region_body">Which region\'s box art to show when a game has none for its own region.</string>
-    <!-- Region names for box art (Settings › Library › Box art region). -->
+    <!-- Region names for box art (Settings › Accounts › ScreenScraper, its Box art region button). -->
     <string name="settings_region_usa">USA</string>
     <string name="settings_region_europe">Europe</string>
     <string name="settings_region_japan">Japan</string>
@@ -1482,6 +1520,31 @@
     <string name="home_notice_unknown_folder">Unknown folder: %1$s</string>
     <string name="home_notice_unknown_where">Settings › Library</string>
 
+    <!-- Settings › Accounts › RetroAchievements -->
+    <string name="settings_section_accounts">Accounts</string>
+    <string name="settings_ra_title">RetroAchievements</string>
+    <string name="settings_ra_value_refused">Sign in again</string>
+    <string name="settings_ra_refused">RetroAchievements did not accept your key. It may have been reset on the site. Sign in again with the new key.</string>
+    <string name="settings_ra_help_where">Achievements come from retroachievements.org with your own account. Plumemu only shows your progress; your emulator unlocks them.</string>
+    <string name="settings_ra_help_key">Your Web API key: on retroachievements.org open Settings, then Keys, and copy it here. Never your password. It is stored encrypted on this device.</string>
+    <!-- Settings > Accounts > RetroAchievements sign-in form: the button under Sign in / Cancel that opens the site's key page in the browser, and the line shown when no browser could open it. -->
+    <string name="settings_ra_open_key_page">Open the key page</string>
+    <string name="settings_ra_no_browser">No browser could open retroachievements.org/settings. Open it on another device and type the key here.</string>
+    <string name="settings_ra_privacy">Your user name, your key and the game\'s RA number go to retroachievements.org.</string>
+    <string name="account_ra_username_hint">RetroAchievements user name</string>
+    <string name="account_ra_key">Web API key</string>
+    <string name="account_ra_key_hint">Web API key</string>
+    <string name="account_ra_checking">Checking your account with RetroAchievements…</string>
+    <string name="account_ra_error_missing">Enter your user name and Web API key.</string>
+    <string name="account_ra_error_wrong">RetroAchievements did not accept that key. Copy the Web API key again from Settings › Keys.</string>
+    <string name="account_ra_error_unknown_user">RetroAchievements does not know that user name.</string>
+    <string name="account_ra_error_busy">RetroAchievements could not answer. Try again later.</string>
+    <string name="account_ra_error_rate_limited">RetroAchievements asked Plumemu to slow down. Try again in a few minutes.</string>
+    <plurals name="settings_ra_signed_in">
+        <item quantity="one">Signed in as %1$s · %2$s point</item>
+        <item quantity="other">Signed in as %1$s · %2$s points</item>
+    </plurals>
+
     <!-- Variant words: what tells two rows of one title apart (Rev 1, English translation) -->
     <string name="variant_revision">Rev %1$s</string>
     <string name="variant_beta">Beta</string>
@@ -1501,4 +1564,28 @@
     <string name="game_info_genre">Genre</string>
     <string name="game_info_players">Players</string>
     <string name="game_info_description">Description</string>
+    <!-- RetroAchievements on Info, the main screen's trophy and the after-game line. -->
+    <string name="achievements_summary">Achievements %1$d of %2$d · %3$d%%</string>
+    <string name="achievements_hardcore">Hardcore %1$d of %2$d</string>
+    <string name="achievements_loading">Achievements: loading…</string>
+    <string name="achievements_no_set">Achievements: none for this game</string>
+    <string name="achievements_cannot_hash">Achievements: this file type cannot be checked</string>
+    <string name="achievements_matched_by_name">Matched by name</string>
+    <string name="achievements_error_wrong_key">Achievements: RetroAchievements did not accept your key. Sign in again in Settings.</string>
+    <string name="achievements_error_no_connection">Achievements: no connection to RetroAchievements</string>
+    <string name="achievements_error_busy">Achievements: RetroAchievements is not answering</string>
+    <string name="achievements_error_rate_limited">Achievements: RetroAchievements asked to wait. Try again later.</string>
+    <string name="achievements_error_bad_answer">Achievements: RetroAchievements sent an answer Plumemu cannot read</string>
+    <string name="achievements_error_unavailable">Achievements: the file of this game cannot be read right now</string>
+    <plurals name="achievement_points">
+        <item quantity="one">%1$d point</item>
+        <item quantity="other">%1$d points</item>
+    </plurals>
+    <string name="achievement_earned">%1$s · %2$s</string>
+    <string name="achievement_earned_hardcore">%1$s · %2$s · Hardcore</string>
+    <plurals name="home_notice_achievements">
+        <item quantity="one">+%1$s achievement</item>
+        <item quantity="other">+%1$s achievements</item>
+    </plurals>
+    <string name="achievement_mastered">Mastered</string>
 </resources>

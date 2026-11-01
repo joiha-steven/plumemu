@@ -25,7 +25,6 @@ import com.plumemu.game.EmulatorItem
 import com.plumemu.game.EmulatorToStart
 import com.plumemu.game.Epsxe
 import com.plumemu.game.BOX_ART_NONE_KEY
-import com.plumemu.game.BOX_ART_SEARCH_KEY
 import com.plumemu.game.BoxArtHit
 import com.plumemu.game.BoxArtProblem
 import com.plumemu.game.BoxArtSearchOutcome
@@ -68,7 +67,6 @@ import com.plumemu.home.search.SearchTags
 import com.plumemu.launcher.EmulatorOffer
 import com.plumemu.launcher.FileProblem
 import com.plumemu.launcher.LaunchOutcome
-import com.plumemu.launcher.choice.ChoiceSource
 import com.plumemu.settings.screen.PanelPage
 import com.plumemu.settings.screen.SettingsAt
 import com.plumemu.settings.screen.SettingsColumn
@@ -90,6 +88,7 @@ import com.plumemu.settings.screen.AccountShotContent
 import com.plumemu.settings.screen.BoxArtConfirmItem
 import com.plumemu.settings.screen.BoxArtShots
 import com.plumemu.settings.screen.SettingsContent
+import com.plumemu.settings.screen.AccountPageItem
 import com.plumemu.settings.screen.accountPageItems
 import com.plumemu.settings.screen.SignInFormAt
 import com.plumemu.setup.HomeRolePromptAt
@@ -499,10 +498,11 @@ abstract class TextSizeScreensBase(
         account: AccountStatus,
         option: SettingsOption,
         page: PanelPage? = null,
+        panelIndex: Int = 0,
         focusedTag: String = SettingsTags.option(option),
     ) = check(name, Spec(scrollTags = settingsLists + SettingsTags.ACCOUNT_PANEL, focused = tagged(focusedTag))) {
         val content = AccountShotContent.of(account)
-        SettingsAt(AccountShotContent.focusOn(content, option, page), content = content)
+        SettingsAt(AccountShotContent.focusOn(content, option, page).copy(panelIndex = panelIndex), content = content)
     }
 
     @Test
@@ -519,7 +519,7 @@ abstract class TextSizeScreensBase(
     fun settingsAccountNotAvailable() = accountRows("settings_account_not_available", AccountStatus.NotInThisBuild, SettingsOption.ScraperStatus)
 
     @Test
-    fun settingsBoxArtRegion() = accountRows("settings_box_art_region", AccountStatus.SignedIn("plumtester"), SettingsOption.BoxArtRegion)
+    fun settingsBoxArtRegion() = accountPageItems(AccountShotContent.of(BoxArtShots.SIGNED_IN)).indexOf(AccountPageItem.BoxArtRegion).let { accountRows("settings_box_art_region", BoxArtShots.SIGNED_IN, SettingsOption.ScraperAccount, PanelPage.ScraperAccount, it, SettingsTags.panelItem(it)) }
 
     @Test
     fun settingsAccountSignOutPanel() =

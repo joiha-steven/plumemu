@@ -102,7 +102,7 @@ internal fun undoPanelItems(
 internal fun restoreRowValue(state: RestoreState): String {
     val word =
         when (state) {
-            RestoreState.Idle -> return stringResource(R.string.settings_value_chevron)
+            RestoreState.Idle -> return ""
             is RestoreState.Reading -> return stringResource(R.string.settings_restore_reading)
             is RestoreState.Replacing -> return stringResource(if (state.isUndo) R.string.settings_undo_running else R.string.settings_restore_running)
             is RestoreState.Confirm -> R.string.settings_restore_value_ready
@@ -111,7 +111,7 @@ internal fun restoreRowValue(state: RestoreState): String {
             is RestoreState.Failed -> R.string.settings_restore_value_failed
             is RestoreState.Interrupted -> R.string.settings_restore_value_interrupted
         }
-    return stringResource(R.string.settings_value_opens, stringResource(word))
+    return stringResource(word)
 }
 
 /** The Undo row's value: the space the way-back set keeps ("Copy · 412 MB ›"), or "Undoing…". */
@@ -119,8 +119,8 @@ internal fun restoreRowValue(state: RestoreState): String {
 internal fun undoRowValue(content: SettingsContent): String {
     val state = content.restore
     if (state is RestoreState.Replacing && state.isUndo) return stringResource(R.string.settings_undo_running)
-    val bytes = content.wayBack?.bytes ?: return stringResource(R.string.settings_value_chevron)
-    return stringResource(R.string.settings_value_opens, stringResource(R.string.settings_undo_value_kept, Formatter.formatShortFileSize(LocalContext.current, bytes)))
+    val bytes = content.wayBack?.bytes ?: return ""
+    return stringResource(R.string.settings_undo_value_kept, Formatter.formatShortFileSize(LocalContext.current, bytes))
 }
 
 /** A date as the person's language writes it ("23 Oct 2026", "Oct 23, 2026"). */

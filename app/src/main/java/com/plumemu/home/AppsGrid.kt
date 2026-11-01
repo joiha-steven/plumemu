@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -64,6 +65,7 @@ import com.plumemu.coreui.components.rememberConfirmPressScale
 import com.plumemu.coreui.components.CoverGlowColor
 import com.plumemu.coreui.components.rememberCoverShadow
 import com.plumemu.coreui.components.rememberTouchPressScale
+import com.plumemu.coreui.components.listEdgeFadeMask
 import com.plumemu.coreui.theme.CoverClass
 import com.plumemu.coreui.theme.ListGlide
 import com.plumemu.coreui.theme.PlumDimens
@@ -162,11 +164,13 @@ internal fun AppsGrid(
         val glowColors = remember(entry.id, icons) { CoverGlowColors(icons.glowDispatcher) }
         val travel = rememberFocusTravel()
         val ring = appsFocusRing(state, entry, gridState, glide, lift, panelOpen, touch, confirmScale, shadow, glowColors, motionOn, travel)
+        // Under the ring: the focused cover is drawn over the mask (it never stands in a fade), the rows cut at an edge fade.
+        val fades = remember(gridState, glide, state, entry.id) { GridEdgeFades(gridState, glide) { state.focus.rowOf(entry.id) } }
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
             state = gridState,
             flingBehavior = rememberRowSnapFling(gridState),
-            modifier = modifier.padding(top = PlumDimens.gridTopGap - PlumDimens.barGap).fadingIn(fade).then(ring).testTag(HomeTags.GRID).then(glide.modifier),
+            modifier = modifier.padding(top = PlumDimens.gridTopGap - PlumDimens.barGap).fadingIn(fade).then(ring).listEdgeFadeMask(fades, PlumTheme.edgeFadeOn).testTag(HomeTags.GRID).then(glide.modifier),
             contentPadding = PaddingValues(top = glide.extra, bottom = glide.extra + rememberGridLeftover(gridState, layout.gridStripHeight, rowHeight, gap, fit), end = PlumDimens.gridPadding * 2),
             horizontalArrangement = Arrangement.spacedBy(gap),
             verticalArrangement = Arrangement.spacedBy(gap),
@@ -267,7 +271,7 @@ private fun appsFocusRing(
                     }
                     if (slot.isFocused) {
                         if (sweep.progress.isRunning) drawSweep(tile, corner.toPx(), sweep.progress.value)
-                        drawGridFocusRing(tile.topLeft + ringShift, tile.size, corner, colors.accent, colors.bg)
+                        drawGridFocusRing(tile.topLeft + ringShift, tile.size, corner, colors.accent, colors.bg, colors.focusGlow)
                     }
                 }
             }
@@ -284,7 +288,7 @@ private fun appsFocusRing(
 }
 
 /** What a tile shows for its icon: nothing while it loads, the picture, or the stand-in when there is none. */
-private sealed interface TileIcon {
+internal sealed interface TileIcon {
     data object Loading : TileIcon
 
     data class Picture(val image: ImageBitmap) : TileIcon
@@ -293,32 +297,46 @@ private sealed interface TileIcon {
 }
 
 /**
+ * What [key]'s icon is now: taken from memory while composing when it is there, else loaded once (keyed by the key, the size
+ * and the icons' [generation], never by the focus). Restarted when any changes: what memory holds is shown at once;
+ * otherwise the old icon stays until the new answer comes. A failed or empty answer is [TileIcon.Missing] (the stand-in).
+ */
+@Composable
+internal fun rememberTileIcon(
+    key: String,
+    iconPx: Int,
+    icons: HomeAppIcons,
+    generation: Int,
+): TileIcon {
+    val first = remember(key, iconPx, icons, generation) { icons.cached(key, iconPx)?.let { TileIcon.Picture(it) } ?: TileIcon.Loading }
+    val icon by produceState(first, key, iconPx, icons, generation) {
+        if (first is TileIcon.Picture || value is TileIcon.Loading) value = first
+        if (first is TileIcon.Loading) value = icons.loadOrNull(key, iconPx)?.let { TileIcon.Picture(it) } ?: TileIcon.Missing
+    }
+    return icon
+}
+
+/**
  * One app: its icon (square, centred) and its name centred under it, at most two lines and "…" after.
  * The icon is taken from memory while composing when it is there, else loaded once per tile (keyed by the
  * row, the size and the icons' generation, never by the focus).
  */
 @Composable
-private fun AppTile(
+internal fun AppTile(
     row: GameRowModel,
     icons: HomeAppIcons,
     generation: Int,
     iconPx: Int,
     height: Dp,
     nameStyle: TextStyle,
-    glowColors: CoverGlowColors,
+    glowColors: CoverGlowColors?,
     isFocused: () -> Boolean,
     modifier: Modifier,
 ) {
     val colors = PlumTheme.colors
-    val first = remember(row.id, iconPx, icons, generation) { icons.cached(row.id, iconPx)?.let { TileIcon.Picture(it) } ?: TileIcon.Loading }
-    val icon by produceState(first, row.id, iconPx, icons, generation) {
-        // Restarted when the row, the size, the source or the generation (a package change) changes: what
-        // memory holds is shown at once; otherwise the old icon stays until the new answer comes.
-        if (first is TileIcon.Picture || value is TileIcon.Loading) value = first
-        if (first is TileIcon.Loading) value = icons.load(row.id, iconPx)?.let { TileIcon.Picture(it) } ?: TileIcon.Missing
-    }
+    val icon = rememberTileIcon(row.iconKey, iconPx, icons, generation)
     // The glow's colour is the icon's average, found once per icon that lands.
-    (icon as? TileIcon.Picture)?.let { shown -> LaunchedEffect(row.id, shown) { glowColors.learn(row.id, shown.image, replace = true) } }
+    (icon as? TileIcon.Picture)?.let { shown -> if (glowColors != null) LaunchedEffect(row.id, shown) { glowColors.learn(row.id, shown.image, replace = true) } }
     Column(
         modifier = modifier.height(height).padding(vertical = PlumDimens.appsGridTilePadding),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -365,7 +383,7 @@ private fun AppName(
  * still told apart. One letter, not two: two would read as initials of a multi-word name and crowd the circle.
  */
 @Composable
-private fun AppIconStandIn(
+internal fun AppIconStandIn(
     title: String,
     modifier: Modifier,
 ) {

@@ -1,6 +1,7 @@
 package com.plumemu.coreui.components
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,12 +19,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.LastBaseline
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -90,6 +97,9 @@ fun GameRowLook.composedAs(): GameRowLook =
  * A [subtitle] ("· Rev 1": what tells this row from another of the same title) follows the title in the
  * trailing text's style, inside the same line, so a narrow row cuts it before the title.
  *
+ * A mastered game ([masteredLabel] is its spoken name, null otherwise) has a small trophy after the title
+ * (and the star), in `meta`, [PlumDimens.masteredMarkSize] square; like the star, a long title is cut before it.
+ *
  * [look] sets the fill, the dot, the weights and the trailing text. The title's colour is read
  * while drawing from [drawnLook] (by default [look]); a caller that passes one gives
  * [look] as its [composedAs], so a change of colour alone redraws the title and recomposes nothing.
@@ -103,6 +113,7 @@ fun GameRow(
     isFavorite: Boolean = false,
     drawnLook: (() -> GameRowLook)? = null,
     subtitle: String = "",
+    masteredLabel: String? = null,
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
@@ -165,6 +176,7 @@ fun GameRow(
                         )
                     }
                     FavoriteMark(isFavorite)
+                    if (masteredLabel != null) MasteredMark(masteredLabel)
                 }
                 if (trailing.isNotEmpty()) {
                     Spacer(Modifier.width(PlumDimens.rowTrailingGap))
@@ -246,6 +258,48 @@ private fun FavoriteMark(isFavorite: Boolean) {
             },
     )
 }
+
+/** The trophy of a mastered game (docs/design/rules.md › "Mastered mark"): drawn, so it needs no glyph the fonts may lack. */
+@Composable
+private fun MasteredMark(label: String) {
+    val color = PlumTheme.colors.meta
+    Spacer(Modifier.width(PlumDimens.favoriteMarkGap))
+    Canvas(
+        Modifier
+            .size(PlumDimens.masteredMarkSize)
+            .testTag(MASTERED_MARK_TAG)
+            .semantics { contentDescription = label },
+    ) {
+        val unit = size.width
+        val bowl =
+            Path().apply {
+                moveTo(unit * 0.22f, unit * 0.06f)
+                lineTo(unit * 0.78f, unit * 0.06f)
+                lineTo(unit * 0.78f, unit * 0.38f)
+                quadraticBezierTo(unit * 0.78f, unit * 0.64f, unit * 0.5f, unit * 0.66f)
+                quadraticBezierTo(unit * 0.22f, unit * 0.64f, unit * 0.22f, unit * 0.38f)
+                close()
+            }
+        drawPath(bowl, color)
+        val handles =
+            Path().apply {
+                moveTo(unit * 0.22f, unit * 0.14f)
+                lineTo(unit * 0.07f, unit * 0.14f)
+                lineTo(unit * 0.07f, unit * 0.30f)
+                lineTo(unit * 0.24f, unit * 0.42f)
+                moveTo(unit * 0.78f, unit * 0.14f)
+                lineTo(unit * 0.93f, unit * 0.14f)
+                lineTo(unit * 0.93f, unit * 0.30f)
+                lineTo(unit * 0.76f, unit * 0.42f)
+            }
+        drawPath(handles, color, style = Stroke(width = unit * 0.09f))
+        drawRect(color, Offset(unit * 0.44f, unit * 0.62f), Size(unit * 0.12f, unit * 0.2f))
+        drawRect(color, Offset(unit * 0.28f, unit * 0.8f), Size(unit * 0.44f, unit * 0.14f))
+    }
+}
+
+/** The trophy of a mastered game's row. */
+const val MASTERED_MARK_TAG = "mastered_mark"
 
 /** A plain holder: written during composition, never read to recompose anything. */
 private class SeenFlag(var value: Boolean)
@@ -341,7 +395,7 @@ private fun BleedingSystemRow(
                 Spacer(Modifier.width(PlumDimens.hintKeyGap))
                 Box(Modifier.fadedBy(nameAlpha).size(PlumDimens.hintDot).drawBehind { drawCircle(colors.accent) }.testTag(SystemRowTags.NEW_DOT))
             }
-            // Faded with the names only while the letter rail takes the peek (Settings › Appearance › Left edge).
+            // Faded with the names only while the letter rail takes the peek (Settings › Home screen › Left edge).
             SystemCount(count, look, nameAlpha, fadeCount)
         }
     }

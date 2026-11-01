@@ -5,6 +5,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -35,7 +36,8 @@ import com.plumemu.coreui.theme.PlumTheme
  * ease-out, or at once with motion off; once down it leaves the composition, and while
  * up nothing runs. The tray's key argument says what it belongs to (Search, a panel's field): a new one starts
  * a new slide. Taps on its keys go to [onEvent]; a tap anywhere else on the tray stops there, never
- * reaching what is underneath. Search and the game panel's fields both use it.
+ * reaching what is underneath. Search and the game panel's fields both use it. The keys get a paste key
+ * while the clipboard holds text ([PasteBoard.hasText]).
  */
 @Composable
 internal fun KeyboardTray(
@@ -61,7 +63,11 @@ internal fun KeyboardTray(
             shift = stringResource(R.string.keyboard_shift),
             delete = stringResource(R.string.keyboard_delete),
             hide = stringResource(R.string.keyboard_hide),
+            paste = stringResource(R.string.keyboard_paste),
         )
+    // The paste key while the clipboard holds text (its description only: nothing is read until a paste).
+    val canPaste = PasteBoard.hasText
+    SideEffect { keys.showPaste(canPaste) }
     Layout(
         content = {
             PlumKeyboard(

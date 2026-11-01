@@ -18,7 +18,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDisplayManager
 import java.util.Locale
 
-/** Settings › Advanced › Language applied on every API level (AppLocale, LanguageSync; translation.md › Choosing a language). */
+/** Settings › Appearance › Language applied on every API level (AppLocale, LanguageSync; translation.md › Choosing a language). */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [28])
 class AppLocaleTest {

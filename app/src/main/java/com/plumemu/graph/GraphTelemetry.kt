@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
- * Keeps the telemetry module's switch equal to the stored one (`advanced.usageStatistics`) for the life of the process. Settings › Advanced › Send usage statistics writes the store
+ * Keeps the telemetry module's switch equal to the stored one (`advanced.usageStatistics`) for the life of the process. Settings › About › Send usage statistics writes the store
  * only, so its moves arrive here with the place `settings`; so do a reset or a restored backup,
  * which also happen in Settings. Setup's Ready step tells the module itself first
  * (GraphSetupSource.setUsageStatistics), so its place is `setup` and this finds nothing to do.

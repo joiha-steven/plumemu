@@ -42,8 +42,10 @@ Buttons and touch are equals. Every handheld has both.
   keyboard until they move to Plumemu's keyboard; the screen must stay usable with it open.
   Keyboard rules for **every** field that uses Android's keyboard:
   1. No field opens the keyboard by itself. The cursor can rest on a field with the keyboard
-     down; A or a tap on it opens the keyboard. Only entering Search opens it (that is the "I want to type");
-     coming back to Search's field from its results opens nothing.
+     down; A or a tap on it opens the keyboard. Only entering Search and opening a sign-in step open it
+     (that is the "I want to type"): the sign-in form (ScreenScraper and RetroAchievements, setup and
+     Settings) opens on its first empty field, the name, else the password or key, with the keyboard up
+     (`SignInForm.startTyping`). Coming back to Search's field from its results opens nothing.
   2. Moving the cursor off the field puts the keyboard away. The system's Back also closes it (the
      app hears nothing) and the cursor stays on the field's row; A there brings it back (a counter
      of asks, not a flag, drives the show: `KeyboardAsk.asks`, `SignInForm.keyboardAsks`).
@@ -69,7 +71,7 @@ mode, which would put confirm on the button printed B.
   Back and Escape always go back.
 - On a PlayStation-style pad Android sends the cross as `BUTTON_A` and the circle as `BUTTON_B`,
   so the cross confirms by default.
-- Settings › Advanced › "Confirm with B" (circle on PlayStation-style pads) is for people who
+- Settings › Controls › "Confirm with B" (circle on PlayStation-style pads) is for people who
   prefer it. When on, B confirms and A goes back, and the hints follow. It is stored as
   `controls.confirm_button` (`Right` default, `Bottom` when B confirms); X and Y never swap.
 - Hints name buttons by their printed letters: "A" for confirm and "B" for back by default,

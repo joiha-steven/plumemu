@@ -78,13 +78,15 @@ class LibraryHomeContent(
      * Favorites and Search like every other.
      */
     private val extraAbbrs: Map<String, String> = emptyMap(),
-    /** Settings › Appearance › Left edge: what the home screen's peek shows; null (not picked) is Game counts. */
+    /** Settings › Home screen › Left edge: what the home screen's peek shows; null (not picked) is Game counts. */
     private val leftEdge: Flow<LeftEdgeSetting?> = flowOf(null),
     /**
      * Installed apps listed as games, package to system (`AppGraph.appGames.marked`): the Apps entry
      * leaves them out. Null (before the first sync) leaves nothing out.
      */
     private val appGames: Flow<Map<String, String>?> = flowOf(null),
+    /** Game id to package of the app games (`AppGameDao.observePackages`): their rows carry the package (`GameRowModel.appPackage`). */
+    private val appPackages: Flow<Map<Long, String>> = flowOf(emptyMap()),
     /** Settings' Recent size: how many games Recent keeps; a change queries Recent again. */
     private val recentSize: Flow<RecentSizeSetting> = flowOf(RecentSizeSetting.Twenty),
 ) {
@@ -97,8 +99,8 @@ class LibraryHomeContent(
                         recent(names),
                         favorites(names, order),
                         appRows(),
-                        combine(showApps.distinctUntilChanged(), hasBoxArt.distinctUntilChanged(), leftEdge.map { it ?: LeftEdgeSetting.Default }.distinctUntilChanged(), ::Triple),
-                    ) { (systems, hidden), recent, favorites, apps, (show, art, edge) -> assemble(systems, hidden, recent, favorites, apps, show, art, order, edge) }
+                        combine(showApps.distinctUntilChanged(), hasBoxArt.distinctUntilChanged(), leftEdge.map { it ?: LeftEdgeSetting.Default }.distinctUntilChanged(), appPackages.distinctUntilChanged()) { show, art, edge, packages -> HomeFlags(show, art, edge, packages) },
+                    ) { (systems, hidden), recent, favorites, apps, flags -> assemble(systems, hidden, recent, favorites, apps, flags.showApps, flags.hasBoxArt, order, flags.edge, flags.packages) }
                 }
             }
             .flowOn(mapping)
@@ -129,12 +131,13 @@ class LibraryHomeContent(
         hasBoxArt: Boolean,
         order: SortGamesSetting,
         edge: LeftEdgeSetting,
+        packages: Map<Long, String>,
     ): HomeContent =
         HomeContent.of(
-            recent = recent,
-            favorites = favorites,
+            recent = withPackages(recent, packages),
+            favorites = withPackages(favorites, packages),
             apps = apps,
-            systems = systems,
+            systems = if (packages.isEmpty()) systems else systems.map { it.copy(games = withPackages(it.games, packages)) },
             hasBoxArt = hasBoxArt,
             showApps = showApps,
             hiddenSystems = hiddenSystems,
@@ -158,7 +161,7 @@ class LibraryHomeContent(
         }
 
     /**
-     * [coverRatios] while box art is set up (without it there is no grid, so nothing is read). A
+     * [coverRatios] while box art is set up (without it nothing is measured and each system keeps its platform data's shape, [SystemCoverShapes]). A
      * failure logs its class and puts the platform data's shapes back, and the covers are observed
      * again [coverRetryMillis] later for as long as the content is collected: the screen never
      * fails for it, and one bad read does not lose the person's shapes for the session.
@@ -242,6 +245,13 @@ class LibraryHomeContent(
         /** The short name of [id] ("SNES"); empty when neither the platform data nor [extraAbbrs] knows the system. */
         fun abbrOf(id: String): String = systems[id]?.abbr ?: extraAbbrs[id].orEmpty()
     }
+
+    /** What the content flow reads besides the lists. */
+    private data class HomeFlags(val showApps: Boolean, val hasBoxArt: Boolean, val edge: LeftEdgeSetting, val packages: Map<Long, String>)
+
+    /** The rows of app games carry their package, so the screens draw their icon; the rest are as they were. */
+    private fun withPackages(rows: List<GameRowModel>, packages: Map<Long, String>): List<GameRowModel> =
+        if (packages.isEmpty()) rows else rows.map { row -> row.id.toLongOrNull()?.let(packages::get)?.let { row.copy(appPackage = it) } ?: row }
 
     companion object {
         private const val TAG = "PlumHome"

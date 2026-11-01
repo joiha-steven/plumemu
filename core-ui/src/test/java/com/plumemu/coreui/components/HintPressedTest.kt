@@ -35,7 +35,7 @@ import kotlin.math.abs
 /**
  * A hint's key cap looks pressed while its button is held and while a finger is down on it
  * (design/rules.md › Shapes and motion › Pressed): the cap fills with the text colour, its letter takes
- * the background colour, and the cap dips to 0.92. Read from the drawn pixels, with the test clock.
+ * the background colour, and the face goes down into its edge (`KeyPressFramesTest` measures that move). Read from the drawn pixels, with the test clock.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -84,13 +84,11 @@ class HintPressedTest {
     @Test
     fun theCapFillsWithTheTextColourWhileItsButtonIsHeldAndLetsGo() {
         show("A")
-        assertFalse("at rest the cap is a ring", isFilled())
+        assertFalse("at rest the cap has its key face", isFilled())
         compose.mainClock.autoAdvance = false
         hold("A")
         compose.mainClock.advanceTimeBy(PlumMotion.PRESS_IN_MS + 40L)
         assertTrue("pressed: filled with the text colour", isFilled())
-        // The cap is smaller than its box: its edge column is no longer ring.
-        assertFalse("pressed: dipped, the box edge is empty", pixel(0f).near(colors.text))
         hold()
         compose.mainClock.advanceTimeBy(PlumMotion.PRESS_OUT_MS + 200L)
         assertFalse("released: back to the ring", isFilled())
@@ -154,7 +152,7 @@ class HintPressedTest {
     }
 
     @Test
-    fun withAnimationsOffTheFillChangesButTheCapDoesNotShrink() {
+    fun withAnimationsOffThePressShowsAtOnce() {
         val resolver = RuntimeEnvironment.getApplication().contentResolver
         Settings.Global.putFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 0f)
         show("A")
@@ -162,7 +160,7 @@ class HintPressedTest {
         hold("A")
         compose.mainClock.advanceTimeBy(100)
         assertTrue("filled", isFilled())
-        assertTrue("not dipped: the box edge is the cap's ring", pixel(0f).near(colors.text) || pixel(0.02f).near(colors.text))
+        assertTrue("the face is filled", pixel(0.08f).near(colors.text))
     }
 
     private companion object {

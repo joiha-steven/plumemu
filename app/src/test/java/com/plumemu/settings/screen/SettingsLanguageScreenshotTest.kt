@@ -7,7 +7,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Advanced's new rows (Sounds' three steps, Vibration, Language) and the language list, in the reference sizes and looks. */
+/** Sounds' three steps, Vibration (both in Controls), Language (in Appearance) and the language list, in the reference sizes and looks. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])

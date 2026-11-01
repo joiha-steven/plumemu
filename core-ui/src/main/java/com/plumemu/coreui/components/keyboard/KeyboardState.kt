@@ -31,6 +31,7 @@ class KeyboardState(
     val page: KeyboardPage by derivedStateOf { model.page }
     val shift: ShiftMode by derivedStateOf { model.shift }
     val focus: KeyId by derivedStateOf { model.focus }
+    val hasPaste: Boolean by derivedStateOf { model.hasPaste }
 
     /** Moves the focus; see [KeyboardModel.move]. On [KeyboardMove.LeftAbove] or [KeyboardMove.LeftBelow] the caller decides. */
     fun move(
@@ -54,6 +55,11 @@ class KeyboardState(
 
     fun togglePage() {
         model = model.togglePage()
+    }
+
+    /** Shows or hides the paste key ([KeyboardModel.withPaste]); nothing changes when it is already so. */
+    fun showPaste(shown: Boolean) {
+        if (shown != model.hasPaste) model = model.withPaste(shown)
     }
 
     /** Whether [key] has the focus, as a state of its own: it changes only when that answer does. */

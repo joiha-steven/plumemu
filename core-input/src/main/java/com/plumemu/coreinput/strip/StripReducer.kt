@@ -101,9 +101,8 @@ internal object StripReducer {
                 } else {
                     Reduction(current, listOf(StripIntent.OpenGameMenu(entry.id, current.row)))
                 }
-            // Grids need box art, except an entry whose grid does not (Apps' icons).
-            Action.ToggleView ->
-                Reduction(current, if (content.hasBoxArt || entry.hasGridWithoutArt) listOf(StripIntent.ToggleView(entry.id)) else emptyList())
+            // Every entry may have a grid, with or without box art; the screen decides (HomeContent.hasGridFor, an empty entry).
+            Action.ToggleView -> Reduction(current, listOf(StripIntent.ToggleView(entry.id)))
             Action.OpenSettings -> Reduction(current, listOf(StripIntent.OpenSettings))
             Action.ToggleFavorite ->
                 if (current.column == Column.Systems || entry.itemCount == 0) {
@@ -115,7 +114,7 @@ internal object StripReducer {
             is Action.TapItem -> ctx.tap(current, entry, action)
             is Action.LongPressItem -> ctx.longPress(current, action)
             // Only a screen that takes text gets these (InputRouter.textEntry); the strip never does.
-            is Action.Erase, is Action.Typed -> Reduction(current)
+            is Action.Erase, is Action.Typed, Action.Paste -> Reduction(current)
         }
     }
 
@@ -145,22 +144,24 @@ internal object StripReducer {
     }
 
     /**
-     * The focus on game 0 of system [systemId] (the games column; the systems column when that
-     * system has no games). The other systems keep their remembered rows. Unchanged when
-     * [systemId] is not in [content].
+     * The focus on game [itemId] of system [systemId], or game 0 when [itemId] is null or not in
+     * that system (the games column; the systems column when that system has no games). The other
+     * systems keep their remembered rows. Unchanged when [systemId] is not in [content].
      */
     fun landOn(
         focus: StripFocus,
         systemId: String,
         content: StripContent,
         isNarrow: Boolean,
+        itemId: String? = null,
     ): StripFocus {
         val hasDetailsStop = isNarrow && content.hasBoxArt
         val index = content.systems.indexOfFirst { it.id == systemId }
         if (index < 0) return focus.reconciled(content, hasDetailsStop)
         val entry = content.systems[index]
         val column = if (entry.itemCount > 0) Column.Games else Column.Systems
-        return focus.copy(column = column, systemIndex = index, systemId = entry.id).withRow(entry, 0).reconciled(content, hasDetailsStop)
+        val row = itemId?.let(entry.itemIds::indexOf)?.takeIf { it >= 0 } ?: 0
+        return focus.copy(column = column, systemIndex = index, systemId = entry.id).withRow(entry, row).reconciled(content, hasDetailsStop)
     }
 
     private class Ctx(

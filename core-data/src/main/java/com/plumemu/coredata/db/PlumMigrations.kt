@@ -251,10 +251,37 @@ object PlumMigrations {
         }
     }
 
+    /**
+     * Version 14 (RetroAchievements). Adds two empty tables: `ra_match` (each library game's
+     * RetroAchievements game and the hash read to find it) and `ra_progress` (the signed-in
+     * person's progress per RetroAchievements game), with `ra_match`'s index on `ra_game_id`. No
+     * existing table or value changes, so every game, mark and play time stays. Tables and the index
+     * already there are left alone, so it runs again on a file it already migrated. Going back means
+     * a build with schema 14 or later (no 14 to 13).
+     */
+    val MIGRATION_13_14: Migration = object : Migration(13, 14) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `ra_match` (`game_id` INTEGER NOT NULL, `status` TEXT NOT NULL, " +
+                    "`ra_game_id` INTEGER, `md5` TEXT, `cannot_hash_reason` TEXT, `file_key` TEXT NOT NULL, " +
+                    "`size_bytes` INTEGER NOT NULL, `modified_at` INTEGER NOT NULL, `checked_at` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`game_id`), " +
+                    "FOREIGN KEY(`game_id`) REFERENCES `game`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ra_match_ra_game_id` ON `ra_match` (`ra_game_id`)")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `ra_progress` (`ra_game_id` INTEGER NOT NULL, " +
+                    "`achievements_total` INTEGER NOT NULL, `awarded_softcore` INTEGER NOT NULL, " +
+                    "`awarded_hardcore` INTEGER NOT NULL, `highest_award` TEXT, `updated_at` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`ra_game_id`))",
+            )
+        }
+    }
+
     val ALL: Array<Migration> =
         arrayOf(
             MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-            MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
+            MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14,
         )
 
     private val SESSION_BATTERY_COLUMNS_V8 = listOf("battery_seconds", "charge_start_uah", "charge_end_uah", "battery_draw_ua")

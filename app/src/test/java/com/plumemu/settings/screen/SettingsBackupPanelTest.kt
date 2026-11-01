@@ -141,7 +141,7 @@ class SettingsBackupPanelTest {
 
     @Test
     fun theRowSaysHowTheLastBackupEndedUntilItIsSeen() {
-        val opens = { word: Int -> context.getString(R.string.settings_value_opens, context.getString(word)) }
+        val opens = { word: Int -> context.getString(word) }
         show(BackupState.Failed(deleted = false))
         compose.onNodeWithText(opens(R.string.settings_backup_value_failed)).assertIsDisplayed()
     }

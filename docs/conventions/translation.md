@@ -74,7 +74,7 @@ below, and keep to it.
 | accent | The colour of the focus mark and highlights (Settings › Appearance › Accent color). |
 | text size | Settings › Appearance › Text size: Small, Medium, Large, Larger, Largest. |
 | text weight | Settings › Appearance › Text weight: Thin, Medium, Bold (how heavy the letters are drawn). |
-| left edge | Settings › Appearance › Left edge: Game counts, System codes, Letters (what the narrow strip at the screen's left edge shows in a games list). |
+| left edge | Settings › Home screen › Left edge: Game counts, System codes, Letters (what the narrow strip at the screen's left edge shows in a games list). |
 | second screen | The bottom screen of a two-screen device (AYN Thor). |
 | home screen | Android's home screen; "Plumemu as the home screen" means the home app. |
 | shortcut | A pinned Android shortcut to a game (Steam games). |
@@ -149,7 +149,7 @@ Mono 0.0.2, every weight):
 
 ## Choosing a language
 
-Settings › Advanced › Language lists "System default" and each shipped language in its own name (the
+Settings › Appearance › Language lists "System default" and each shipped language in its own name (the
 `language_name` string of its folder): English, Espa&#241;ol, Fran&#231;ais, Ti&#7871;ng Vi&#7879;t,
 &#31616;&#20307;&#20013;&#25991;, &#32321;&#39636;&#20013;&#25991;, &#54620;&#44397;&#50612;,
 &#26085;&#26412;&#35486;. System default follows Android's language; a language Plumemu does not

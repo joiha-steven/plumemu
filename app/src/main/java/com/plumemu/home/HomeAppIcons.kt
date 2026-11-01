@@ -2,13 +2,15 @@ package com.plumemu.home
 
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.ImageBitmap
+import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * The Apps grid's icons by row id (`AppsGrid.kt`). The library's is `GraphAppIcons`, over the
+ * The Apps grid's icons by key: the Apps row's id, or an app game's package ([GameRowModel.iconKey]). The library's is `GraphAppIcons`, over the
  * launcher's `AppIcons` (Android's launcher icons, an LRU cache by bytes); `MainScreen` provides it as
  * [LocalHomeAppIcons]. A tile asks [cached] while it composes (a tile scrolled back in draws its icon in
  * its first frame) and [load]s only what is not in memory.
@@ -53,3 +55,17 @@ internal interface HomeAppIcons {
 
 /** The Apps grid's icons ([HomeAppIcons.None] outside the main screen). */
 internal val LocalHomeAppIcons = staticCompositionLocalOf<HomeAppIcons> { HomeAppIcons.None }
+
+/** [HomeAppIcons.load] that never throws: a failed lookup is logged (class only) and answers null, so the caller keeps its stand-in. */
+internal suspend fun HomeAppIcons.loadOrNull(
+    key: String,
+    sizePx: Int,
+): ImageBitmap? =
+    try {
+        load(key, sizePx)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w("PlumAppIcons", "App icon could not be loaded (${e.javaClass.simpleName})")
+        null
+    }

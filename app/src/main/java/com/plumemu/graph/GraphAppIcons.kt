@@ -10,7 +10,7 @@ import com.plumemu.launcher.apps.LaunchableApp
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * [HomeAppIcons] on the app's graph: a row is looked up in the app list the graph holds (the one the
+ * [HomeAppIcons] on the app's graph: a key (a row id, or an app game's package) is looked up in the app list the graph holds (the one the
  * Apps entry was drawn from, as `GraphAppActions` does) and its icon asked of the launcher's [AppIcons]
  * (an I/O thread, the LRU cache). A row the list no longer has gets no icon (the tile's stand-in).
  */
@@ -23,14 +23,23 @@ internal class GraphAppIcons(
     /** The launcher's: raised by every `invalidate` (`AppGraph.packageChanges`). */
     override val generation: StateFlow<Int> get() = icons.generation
 
-    /** The last list read and its apps by row id, built once per list (a screen of tiles asks for each). */
+    /**
+     * The last list read and its apps by key, built once per list (a screen of tiles asks for each): the Apps entry's
+     * row id (`package/activity`) and, for an app game's row, the package (the first launcher of it).
+     */
     @Volatile
     private var index: Pair<List<LaunchableApp>, Map<String, LaunchableApp>>? = null
 
-    private fun appOf(rowId: String): LaunchableApp? {
+    private fun appOf(key: String): LaunchableApp? {
         val list = listed()
-        val known = index?.takeIf { it.first === list } ?: (list to list.associateBy(LibraryHomeContent::appRowId)).also { index = it }
-        return known.second[rowId]
+        val known = index?.takeIf { it.first === list } ?: (list to keysOf(list)).also { index = it }
+        return known.second[key]
+    }
+
+    private fun keysOf(list: List<LaunchableApp>): Map<String, LaunchableApp> {
+        val byPackage = HashMap<String, LaunchableApp>()
+        for (app in list) if (app.packageName !in byPackage) byPackage[app.packageName] = app
+        return byPackage + list.associateBy(LibraryHomeContent::appRowId)
     }
 
     override fun cached(

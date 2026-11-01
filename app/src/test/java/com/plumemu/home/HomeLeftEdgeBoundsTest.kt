@@ -25,7 +25,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings › Appearance › Left edge: what the 48 dp peek shows while a games list is focused.
+ * Settings › Home screen › Left edge: what the 48 dp peek shows while a games list is focused.
  * System codes sit where the counts sit (so the column lines up with the names when it opens), whole at Largest,
  * and only Letters draws the rail.
  */

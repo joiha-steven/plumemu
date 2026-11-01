@@ -59,6 +59,16 @@ class AppGameDaoTest {
     }
 
     @Test
+    fun observePackagesMapsEveryAppGameToItsPackageAndFollowsASync() = runTest {
+        db.appGameDao().sync(listOf(app("com.a.genshin", "Genshin")), now = 5)
+        val first = db.appGameDao().observePackages().first()
+        assertEquals(mapOf(gameIdOf("com.a.genshin") to "com.a.genshin"), first)
+        assertFalse("a file game has no package", first.containsKey(scannedId))
+        db.appGameDao().sync(emptyList(), now = 6)
+        assertEquals(emptyMap<Long, String>(), db.appGameDao().observePackages().first())
+    }
+
+    @Test
     fun syncAgainUpdatesTitleAndSystemAndKeepsFavouritePlayTimeAndHidden() = runTest {
         db.appGameDao().sync(listOf(app("com.a.soh", "SoH")), now = 5)
         val id = gameIdOf("com.a.soh")

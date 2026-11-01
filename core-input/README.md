@@ -43,13 +43,14 @@ buttons after the confirm setting (below).
 | `JumpLetterNext` / `JumpLetterPrevious` | R2 / L2 (key or trigger axis) | A hint; the letter rail may follow after v0.1 | Asks the screen for the next / previous first letter | — |
 | `Play` | A on a game (arrives as `Enter`) | Tap the focused game again; "A Play" hint | Play | — |
 | `Menu` | START | Long press a game (`LongPressItem`) | Game menu; on the system column: Settings | — |
-| `ToggleView` | SELECT | "SELECT" hint | List or grid for the system, Recent or Favorites (only with box art), or for Apps (always: its icons need no box art) | — |
+| `ToggleView` | SELECT | "SELECT" hint | List or grid for the system, Recent or Favorites (with or without box art; the screen ignores it for an entry without games) | — |
 | `OpenSettings` | START on the system column (arrives as `Menu`) | "START Settings" hint, or a long press on the system column | Settings | — |
 | `ToggleFavorite` | Y (the button printed Y, whichever confirms) | "Y Favorite" / "Y Unfavorite" hint | On a game (games column or details stop): add it to Favorites or take it out; nothing on the system column or on Apps (no hint there) | — |
 | `Search` | X (the button printed X, whichever confirms) | "X Search" hint | Opens search; the strip's focus waits for it to close | — |
 | `TapItem(column, index)` | — | Tap a row, cover or column item | Focus it; tapped again: act (open, play) | Same |
 | `LongPressItem(column, index)` | — | Long press | On a game: focus it and open its menu; on the system column: Settings (works with the hint bar hidden) | — |
 | `Erase(isRepeat)` | B (after the confirm setting) while a screen's own keyboard is up (`TextEntry.Keyboard`); held, it repeats like a move | "B Delete" hint | Search: delete before the caret; a fresh one on an empty query closes Search | — |
+| `Paste` | R3 (the right stick pressed in) only while a screen's own keyboard is up (`TextEntry.Keyboard`); taken but no action otherwise | "R3 Paste" hint (shown while the clipboard holds text) | Search and every field: insert the clipboard's text at the caret | Same |
 | `Typed(key)` | A hardware keyboard while a screen takes text (`TextEntry.Field` or `Keyboard`): `TypedKey.Text`, `Backspace`, `ForwardDelete`, `CaretLeft` / `CaretRight` (arrows, alphabetic keyboards only), `Enter` | — | Search: edit the query; Enter goes to the results | — |
 
 X and Y never swap: only A and B follow the confirm setting. Volume, Home, Power and
@@ -77,7 +78,7 @@ system's own menus confirm with the south button. This module resolves a layout 
 Back/Escape and D-pad centre/Enter ignore both settings.
 
 The person sees one option, not two: the button printed "A" confirms, and
-Settings › Advanced › "Confirm with B" swaps confirm and back. Measured on the
+Settings › Controls › "Confirm with B" swaps confirm and back. Measured on the
 AYN Thor: it sends keys by letter (the button printed A sends `BUTTON_A`), so the app always uses
 the Xbox layout (Android's key names read as the printed letters): off (default) → Xbox, swap off
 (`BUTTON_A` confirms, `BUTTON_B` goes back, `BUTTON_X` searches, `BUTTON_Y` toggles favorite); on →

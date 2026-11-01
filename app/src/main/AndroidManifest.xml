@@ -17,7 +17,7 @@
     <!-- Uninstall from Apps: the app menu's Uninstall starts Android's own confirmation
          (ACTION_DELETE), which from Android 9 needs this normal permission. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
-    <!-- Haptics: a light tick on each cursor move and a click on confirm, Settings > Advanced > Vibration.
+    <!-- Haptics: a light tick on each cursor move and a click on confirm, Settings > Controls > Vibration.
          A normal permission: Android asks nobody. -->
     <uses-permission android:name="android.permission.VIBRATE" />
 

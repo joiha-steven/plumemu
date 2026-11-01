@@ -2,7 +2,11 @@
 # Self-test of the guards: each guard must catch its bad fixture and pass its good one.
 # Static fixtures are in fixtures/; the ones that would themselves break a repository rule
 # (non-English letters, key-like strings, very long files) are generated into a temp folder.
-# Usage: scripts/guards/tests/run.sh [-v]   (-v prints each guard's output)
+# Usage: scripts/guards/tests/run.sh [-v] [--changed-only]
+#   -v              prints each guard's output
+#   --changed-only  (verify.sh --quick) runs the release-script tests (publish-source, deploy-web;
+#                   about 26 s of the run) only when a file they exercise differs from origin/main,
+#                   in the working tree or untracked; the full gate and CI run them always
 set -uo pipefail
 # Git hooks export GIT_DIR (and friends) pointing at the real repository. Without this,
 # the throwaway repositories below would `git init`/`git add` into the real one; that once
@@ -13,7 +17,14 @@ TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GUARDS="$(cd "$TESTS_DIR/.." && pwd)"
 FIXTURES="$TESTS_DIR/fixtures"
 VERBOSE=0
-[[ "${1:-}" == "-v" ]] && VERBOSE=1
+CHANGED_ONLY=0
+for arg in "$@"; do
+  case "$arg" in
+    -v) VERBOSE=1 ;;
+    --changed-only) CHANGED_ONLY=1 ;;
+    *) echo "run.sh: unknown option $arg" >&2; exit 2 ;;
+  esac
+done
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/plumemu-guard-tests.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
@@ -26,6 +37,28 @@ ok() { checks=$((checks + 1)); printf 'ok    %s\n' "$1"; }
 bad() { checks=$((checks + 1)); failures=$((failures + 1)); printf 'FAIL  %s\n' "$1"; sed 's/^/        /' "$OUT"; }
 # skip LABEL REASON: a check whose input is absent (a private file missing from a public clone).
 skip() { printf 'SKIP  %s: %s\n' "$1" "$2"; }
+# changed_files: root-relative paths that differ from origin/main (committed, staged, unstaged)
+# plus untracked ones. PLUMEMU_CHANGED_FILES (a file of paths) replaces it in the self-test below.
+# Returns 1 when it cannot tell (no git, no origin/main): the caller then runs the tests.
+changed_files() {
+  if [[ -n "${PLUMEMU_CHANGED_FILES:-}" ]]; then cat "$PLUMEMU_CHANGED_FILES"; return; fi
+  local root
+  root="$(git -C "$GUARDS" rev-parse --show-toplevel 2>/dev/null)" || return 1
+  git -C "$root" rev-parse --verify -q origin/main >/dev/null || return 1
+  git -C "$root" diff --name-only origin/main || return 1
+  git -C "$root" ls-files --others --exclude-standard
+}
+# release_tests_due REGEX: 0 when the tests must run: not --changed-only, a changed path matches
+# REGEX, or the change cannot be determined. Otherwise 1, with $DUE_WHY for the SKIP line.
+DUE_WHY=""
+release_tests_due() {
+  [[ $CHANGED_ONLY == 0 ]] && return 0
+  local list
+  list="$(changed_files)" || return 0
+  if printf '%s\n' "$list" | grep -Eq "$1"; then return 0; fi
+  DUE_WHY="nothing it tests changed against origin/main (quick gate; the full gate and CI run it)"
+  return 1
+}
 show() { [[ $VERBOSE == 1 ]] && sed 's/^/        /' "$OUT"; return 0; }
 
 # run DIR GUARD ARGS...: runs a guard from inside DIR, output in $OUT, sets $rc.
@@ -132,6 +165,44 @@ write("length/good/src/main/java/Medium.kt",
       "interface Source {\n    fun count(): Int\n}\n" + function("small", 10)
       + "".join(f"val v{i} = {i}\n" for i in range(440)))
 write("length/good/src/test/java/LongTest.kt", function("tableOfCases", 120))
+# changelog-format: one good CHANGELOG, then one folder per broken rule. The line each bad one
+# must be reported at is checked by expect_at below.
+GOOD_TOP = ("# Changelog\n\n"
+            "## Unreleased\n\n"
+            "## 0.1.1 (2026-11-04, tag `v0.1.1`)\n\n"
+            "A smaller release with two fixes. Thanks to everyone who wrote in!\n\n"
+            "### New\n"
+            "- Settings › Library can hide a system.\n"
+            "### Improved\n\n"
+            "- Lists scroll more evenly on 4:3 screens, e.g. on the Nova.\n"
+            "### Fixed\n"
+            "- A game name with a_b in it keeps its underscore.\n"
+            "### Known issues\n"
+            "- Some covers belong to another game.\n"
+            "### Not in this version\n"
+            "- Cloud saves.\n\n")
+HISTORY = ("## 0.1.0 (2026-10-31, tag `v0.1.0`)\n\n"
+           "### What's new\n\n"
+           "- **Old style:** wrapped and bold, issue #2,\n  continued. Still history.\n\n"
+           "## Unreleased\n\n### 2026-10-21\n\n- Pre-alpha history.\n")
+write("changelog/good/CHANGELOG.md", GOOD_TOP + HISTORY)
+def bad(name, section):
+    write(f"changelog/{name}/CHANGELOG.md",
+          "# Changelog\n\n## 0.2.0 (2026-11-10, tag `v0.2.0`)\n\n" + section + "\n" + HISTORY)
+# Line 5 is the first line after the blank under the version heading.
+bad("order", "### Fixed\n- One fix.\n### New\n- One feature.\n")                    # 7
+bad("unknown", "### New\n- One feature.\n### What's new\n- Another.\n")             # 7
+bad("long", "### Fixed\n- " + "x" * 141 + "\n")                                      # 6
+bad("markdown", "### New\n- One feature.\n- A **bold** claim.\n")                   # 7
+bad("many", "### New\n" + "".join(f"- Feature {i}.\n" for i in range(9)))           # 14
+bad("total", "".join(f"### {h}\n" + "".join(f"- {h} {i}.\n" for i in range(7))
+                     for h in ("New", "Improved", "Fixed")))                         # 28
+bad("issue", "### Fixed\n- The crash in issue #12 is gone.\n")                      # 6
+bad("sentences", "### Fixed\n- The crash is gone. It came from the scan.\n")        # 6
+bad("wrapped", "### Fixed\n- The crash is gone,\n  after a long scan.\n")           # 7
+bad("empty", "### New\n### Fixed\n- One fix.\n")                                     # 5
+bad("onlyknown", "### Known issues\n- One issue.\n")                                 # 3
+bad("heading", "### New\n- One.\n\n## Next things\n\n- x\n")                         # 8
 PY
 
 # public-boundary: a repository with a list and files; the guard reads the list from the folder.
@@ -197,6 +268,22 @@ else bad "code-length warns on a 65-line function (got $(warnings) warnings)"; f
 expect_pass   "code-length passes a 450-line file and long test functions" "$TMP/length/good" code-length .
 if [[ "$(warnings)" == 1 ]]; then ok "code-length warns on a 450-line file"
 else bad "code-length warns on a 450-line file (got $(warnings) warnings)"; fi
+
+# expect_at label path:line dir guard args...: exactly one violation, reported at path:line.
+expect_at() {
+  local label="$1" where="$2"
+  shift 2
+  run "$@"
+  if [[ $rc == 1 && "$(violations)" == 1 ]] && grep -q "^$where: " "$OUT"; then ok "$label ($where)"
+  else bad "$label (expected exit 1 with one violation at $where, got exit $rc with $(violations))"; fi
+}
+expect_pass   "changelog-format passes a good section and skips 0.1.0 and older" "$TMP/changelog/good" changelog-format .
+for case in order:7 unknown:7 long:6 markdown:7 many:14 total:28 issue:6 sentences:6 wrapped:7 \
+            empty:5 onlyknown:3 heading:8; do
+  name="${case%%:*}"
+  expect_at "changelog-format catches $name" "CHANGELOG.md:${case##*:}" "$TMP/changelog/$name" \
+    changelog-format CHANGELOG.md
+done
 
 expect_count  "secrets catches key files and key-like strings" 8 "$TMP/secrets/bad" secrets .
 expect_pass   "secrets passes ordinary settings text" "$TMP/secrets/good" secrets .
@@ -443,15 +530,50 @@ else
   else bad "session-start outside a git checkout (exit $rc)"; fi
 fi
 
+# What each release-script test exercises (it copies exactly these into its throwaway repository).
+PUBLISH_SOURCE_FILES='^scripts/(publish-source\.py|tests/test_publish_source\.py|guards/(public-boundary|secrets|guardlib)\.py|public/)'
+DEPLOY_WEB_FILES='^scripts/(deploy-web\.sh|tests/test_deploy_web\.sh)$'
+
+# --changed-only selection: a changed path wakes only the test that exercises it.
+printf 'app/Main.kt\nscripts/README.md\n' >"$TMP/changed-none.txt"
+printf 'scripts/guards/secrets.py\n' >"$TMP/changed-pub.txt"
+printf 'scripts/deploy-web.sh\n' >"$TMP/changed-web.txt"
+printf 'scripts/public/scripts-README.md\n' >"$TMP/changed-pubdir.txt"
+selection() { # file mode regex -> "run" or "skip"
+  if PLUMEMU_CHANGED_FILES="$1" CHANGED_ONLY="$2" release_tests_due "$3"; then echo run; else echo skip; fi
+}
+sel="$(selection "$TMP/changed-none.txt" 1 "$PUBLISH_SOURCE_FILES")/$(selection "$TMP/changed-none.txt" 1 "$DEPLOY_WEB_FILES")"
+sel="$sel $(selection "$TMP/changed-pub.txt" 1 "$PUBLISH_SOURCE_FILES")/$(selection "$TMP/changed-pub.txt" 1 "$DEPLOY_WEB_FILES")"
+sel="$sel $(selection "$TMP/changed-web.txt" 1 "$PUBLISH_SOURCE_FILES")/$(selection "$TMP/changed-web.txt" 1 "$DEPLOY_WEB_FILES")"
+sel="$sel $(selection "$TMP/changed-pubdir.txt" 1 "$PUBLISH_SOURCE_FILES")/$(selection "$TMP/changed-none.txt" 0 "$DEPLOY_WEB_FILES")"
+echo "$sel" >"$OUT"
+if [[ "$sel" == "skip/skip run/skip skip/run run/run" ]]; then ok "release tests selected by changed files only (--changed-only)"
+else bad "release tests selected by changed files only (--changed-only): $sel"; fi
+
 # publish-source: the copy into the public repository (a private script; absent from the copy).
 if [[ ! -f "$GUARDS/../tests/test_publish_source.py" ]]; then
   skip "publish-source tests" "scripts/tests/test_publish_source.py is not in this checkout"
+elif ! release_tests_due "$PUBLISH_SOURCE_FILES"; then
+  skip "publish-source tests" "$DUE_WHY"
 else
   python3 -I "$GUARDS/../tests/test_publish_source.py" >"$OUT" 2>&1
   rc=$?
   show
   if [[ $rc == 0 ]]; then ok "publish-source tests ($(grep -Eo '^Ran [0-9]+' "$OUT" | grep -Eo '[0-9]+') tests)"
   else bad "publish-source tests (exit $rc)"; fi
+fi
+
+# deploy-web: the website deploy's pure parts (a private script; absent from the copy).
+if [[ ! -f "$GUARDS/../tests/test_deploy_web.sh" ]]; then
+  skip "deploy-web tests" "scripts/tests/test_deploy_web.sh is not in this checkout"
+elif ! release_tests_due "$DEPLOY_WEB_FILES"; then
+  skip "deploy-web tests" "$DUE_WHY"
+else
+  bash "$GUARDS/../tests/test_deploy_web.sh" >"$OUT" 2>&1
+  rc=$?
+  show
+  if [[ $rc == 0 ]]; then ok "deploy-web tests ($(grep -Eo 'PASS \([0-9]+' "$OUT" | grep -Eo '[0-9]+') checks)"
+  else bad "deploy-web tests (exit $rc)"; fi
 fi
 
 if [[ $failures == 0 ]]; then

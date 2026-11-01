@@ -69,8 +69,8 @@ abstract class SettingsSystemsAlignBase {
 
     protected fun theValuesEndWithTheOthers(label: String) {
         eachSize(label, SettingsOption.RomFolders, enter = false) { at, problems ->
-            val folders = compose.onNode(hasText("2 folders\u00A0»") and hasAnyAncestor(hasTestTag(SettingsTags.option(SettingsOption.RomFolders))), useUnmergedTree = true).getUnclippedBoundsInRoot()
-            for ((option, text) in listOf(SettingsOption.SystemOrder to "‹ A–Z ›", SettingsOption.Systems to "6 of 8 shown\u00A0»")) {
+            val folders = compose.onNode(hasText("2 folders") and hasAnyAncestor(hasTestTag(SettingsTags.option(SettingsOption.RomFolders))), useUnmergedTree = true).getUnclippedBoundsInRoot()
+            for ((option, text) in listOf(SettingsOption.SystemOrder to "A–Z", SettingsOption.Systems to "6 of 8 shown")) {
                 val value = compose.onNode(hasText(text) and hasAnyAncestor(hasTestTag(SettingsTags.option(option))), useUnmergedTree = true).getUnclippedBoundsInRoot()
                 if (!near(value.right.value, folders.right.value)) problems += "$at: $option's value ends at ${value.right}, ROM folders' at ${folders.right}"
             }

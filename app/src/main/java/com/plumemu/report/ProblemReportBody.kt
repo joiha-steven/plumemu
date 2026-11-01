@@ -47,10 +47,12 @@ import com.plumemu.R
 import com.plumemu.coreinput.Action
 import com.plumemu.coreui.components.FieldRow
 import com.plumemu.coreui.components.FieldRowFrame
+import com.plumemu.coreui.components.sunkenFieldInRow
 import com.plumemu.coreui.components.OptionRow
 import com.plumemu.coreui.components.OptionRowLook
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.game.paste
 import com.plumemu.home.search.hideSystemBars
 import com.plumemu.keyboard.CaretLine
 import com.plumemu.setup.SetupButton
@@ -266,9 +268,10 @@ private fun OwnKeyboardField(
             placeholder = "",
             style = style,
             onTapAt = onTapAt,
-            modifier = Modifier.weight(1f).fillMaxHeight(),
+            modifier = Modifier.weight(1f).fillMaxHeight().sunkenFieldInRow(),
             textTag = ReportTags.typedText(item),
             placeholderTag = ReportTags.placeholder(item),
+            onPaste = form.typing?.let { typing -> { typing.paste() } },
         )
     }
 }

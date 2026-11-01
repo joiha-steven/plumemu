@@ -42,13 +42,15 @@ data class PlumThemeSettings(
     /** Settings › Appearance › Text weight: how heavy every text role is drawn. */
     val textWeight: TextWeight = TextWeight.Default,
     val animationsOn: Boolean = true,
-    /** Settings › Appearance › Grid size: [PlumLayout.gridSize]. */
+    /** Settings › Home screen › Grid size: [PlumLayout.gridSize]. */
     val gridSize: GridSize = GridSize.Default,
     /**
      * The ready-made set whose A/B/X/Y glyph colours are in use: the one the person last picked,
      * whatever the three colours are now. Null: the usual ringed glyphs.
      */
     val buttonSet: ColorSet? = null,
+    /** Settings › Appearance › Fade list edges: [PlumTheme.edgeFadeOn]. */
+    val edgeFadeOn: Boolean = true,
 ) {
     /** The text and accent that are drawn: the stored ones settled by [Readability], never written back. */
     private val drawn: Readability.Settled by lazy(LazyThreadSafetyMode.NONE) {
@@ -92,6 +94,7 @@ internal val LocalPlumLayout = staticCompositionLocalOf { PlumLayout(width = Wid
 private val LocalPlumMotion = staticCompositionLocalOf { PlumMotionState(isOn = true) }
 private val LocalPlumDimens = staticCompositionLocalOf { PlumDimens }
 private val LocalPlumButtons = staticCompositionLocalOf<ButtonColors?> { null }
+private val LocalPlumEdgeFade = staticCompositionLocalOf { true }
 
 /**
  * Provides colours, type, dimensions, layout and motion to [content]. Built on Compose
@@ -175,6 +178,7 @@ fun PlumTheme(
         LocalPlumMotion provides motion,
         LocalPlumDimens provides PlumDimens,
         LocalPlumButtons provides buttons,
+        LocalPlumEdgeFade provides settings.edgeFadeOn,
         content = content,
     )
 }
@@ -224,6 +228,11 @@ object PlumTheme {
     val buttons: ButtonColors?
         @Composable @ReadOnlyComposable
         get() = LocalPlumButtons.current
+
+    /** Whether scrolling lists fade out at an edge they continue past ([com.plumemu.coreui.components.listEdgeFadeMask]); off, they end flat. */
+    val edgeFadeOn: Boolean
+        @Composable @ReadOnlyComposable
+        get() = LocalPlumEdgeFade.current
 }
 
 /**

@@ -17,12 +17,24 @@ internal object StatisticsShots {
             hasSessions = true,
             topGames =
                 listOf(
-                    TopGame(1, "Super Metroid", "Super Nintendo", 12 * 3_600L + 5 * 60, ArtPicture(METROID_COVER, 560, 400), timesPlayed = 41, lastPlayedDaysAgo = 0),
-                    TopGame(2, "The Legend of Zelda: A Link to the Past", "Super Nintendo", 7 * 3_600L + 40 * 60, ArtPicture(ZELDA_COVER, 560, 400), timesPlayed = 17, lastPlayedDaysAgo = 3),
-                    // No saved box front: the stand-in tile. Plays logged before sessions were kept: no times played, no day (left out of the panel).
-                    TopGame(3, "Metroid Fusion", "Game Boy Advance", 55 * 60L),
+                    TopGame(1, "Super Metroid", "Super Nintendo", "snes", 12 * 3_600L + 5 * 60, ArtPicture(METROID_COVER, 560, 400)),
+                    TopGame(2, "The Legend of Zelda: A Link to the Past", "Super Nintendo", "snes", 7 * 3_600L + 40 * 60, ArtPicture(ZELDA_COVER, 560, 400)),
+                    // No saved box front: the poster cover.
+                    TopGame(3, "Metroid Fusion", "Game Boy Advance", "gba", 55 * 60L),
+                    TopGame(4, "Sonic the Hedgehog 2", "Mega Drive", "md", 48 * 60L),
+                    TopGame(5, "Pokemon Emerald", "Game Boy Advance", "gba", 41 * 60L),
                 ),
-            topSystem = TopSystem("snes", "Super Nintendo", 19 * 3_600L + 45 * 60),
+            topSystems =
+                listOf(
+                    TopSystem("snes", "Super Nintendo", 19 * 3_600L + 45 * 60),
+                    TopSystem("gba", "Game Boy Advance", 96 * 60L),
+                    TopSystem("md", "Mega Drive", 48 * 60L),
+                    TopSystem("psx", "PlayStation", 22 * 60L),
+                    TopSystem("nes", "Nintendo Entertainment System", 9 * 60L),
+                ),
+            // Sunday first, today = Wednesday (index 3): a varied week that adds up to thisWeekSeconds.
+            weekDaySeconds = listOf(25 * 60L, 0L, 55 * 60L, 50 * 60L, 0L, 0L, 0L),
+            todayIndex = 3,
             playedGames = 38,
             libraryGames = 412,
             gamesWithBoxArt = 301,

@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.plumemu.account.SignInForm
+import com.plumemu.account.SignInKind
 import com.plumemu.report.ProblemReportForm
 import com.plumemu.report.ReportStep
 import com.plumemu.coredata.backup.BackupKind
@@ -220,10 +221,24 @@ internal class SettingsWork(
         password: String,
         onSignedIn: () -> Unit,
     ) {
-        actions.accounts.signIn(username, password) { result ->
+        val onDone = { result: SignInResult ->
             form.showResult(result)
             if (result is SignInResult.SignedIn) onSignedIn()
         }
+        if (form.kind == SignInKind.RetroAchievements) actions.raAccounts.signIn(username, password, onDone) else actions.accounts.signIn(username, password, onDone)
+    }
+
+    /** The form's "Open the key page": the browser, or the form's own line when none could open [url]. */
+    fun openWebPage(
+        form: SignInForm,
+        url: String,
+    ) {
+        if (!actions.openWebPage(url)) form.showNoBrowser()
+    }
+
+    /** RetroAchievements' Sign out: the name and the key go; a failure is said under the row. */
+    fun signOutRa(onSignedOut: () -> Unit) {
+        actions.raAccounts.signOut { done -> if (done) onSignedOut() else notice = SettingsOption.RetroAchievementsAccount to SettingsNotice.SignOutFailed }
     }
 
     /**

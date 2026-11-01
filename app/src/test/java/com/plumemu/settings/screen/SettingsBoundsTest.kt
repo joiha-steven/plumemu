@@ -46,14 +46,16 @@ class SettingsBoundsTest {
         compose.onNodeWithTag(SettingsTags.OPTIONS).assertLeftPositionInRootIsEqualTo(24.dp).assertWidthIsEqualTo(448.dp)
         compose.onNodeWithTag(SettingsTags.PANEL).assertLeftPositionInRootIsEqualTo(496.dp).assertWidthIsEqualTo(248.dp)
         compose.onNodeWithTag(SettingsTags.option(SettingsOption.Background)).assertHeightIsEqualTo(40.dp)
-        // Colors is the first row, Background the second.
+        // Colors, Background and Text color under Language.
         val first = compose.onNodeWithTag(SettingsTags.option(SettingsOption.Colors)).getBoundsInRoot()
         val second = compose.onNodeWithTag(SettingsTags.option(SettingsOption.Background)).getBoundsInRoot()
         val third = compose.onNodeWithTag(SettingsTags.option(SettingsOption.TextColor)).getBoundsInRoot()
         assertEquals("rows 42 apart (40 + 2)", 42f, (second.top - first.top).value, 0.01f)
         assertEquals("rows 42 apart (40 + 2)", 42f, (third.top - second.top).value, 0.01f)
-        // Top 14 + bar 18 + gap 10.
-        assertEquals(42f, first.top.value, 0.01f)
+        // Language is the first row, above Colors: top 14 + bar 18 + gap 10.
+        val language = compose.onNodeWithTag(SettingsTags.option(SettingsOption.Language)).getBoundsInRoot()
+        assertEquals(42f, language.top.value, 0.01f)
+        assertEquals("rows 42 apart (40 + 2)", 42f, (first.top - language.top).value, 0.01f)
     }
 
     @Test

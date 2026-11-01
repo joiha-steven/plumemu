@@ -16,6 +16,8 @@ import com.plumemu.coreui.components.keyboard.KeyboardState
 import com.plumemu.coreui.components.keyboard.ShiftMode
 import com.plumemu.keyboard.CaretText
 import com.plumemu.keyboard.KeyboardChoice
+import com.plumemu.keyboard.PasteBoard
+import com.plumemu.keyboard.pastable
 
 /**
  * A field's part of Plumemu's keyboard: where typing goes in the
@@ -93,6 +95,7 @@ internal fun TypingState.ownKeyboardOutcome(action: Action): TypingOutcome? {
         // The system's Back, Escape or the gesture put the tray away; the cursor stays on the field.
         Action.Back -> keyboard.stop()
         Action.Search -> edit { it.insert(" ") }
+        Action.Paste -> paste()
         Action.ToggleFavorite -> fieldKeys.keys.togglePage()
         Action.ToggleView -> fieldKeys.keys.toggleShift()
         Action.Menu -> return keyboardActionKey()
@@ -116,6 +119,7 @@ internal fun TypingState.onKeyboardEvent(event: KeyboardEvent): TypingOutcome {
         KeyboardEvent.Delete -> edit { it.deleteBefore() }
         KeyboardEvent.Action -> return keyboardActionKey()
         KeyboardEvent.Hide -> keyboard.stop()
+        KeyboardEvent.Paste -> paste()
     }
     return TypingOutcome.Handled
 }
@@ -131,6 +135,12 @@ private fun TypingState.typed(key: TypedKey): TypingOutcome {
     val next = CaretText(fieldText, fieldKeys.caret).typed(key) ?: return keyboardActionKey()
     applyEdit(next)
     return TypingOutcome.Handled
+}
+
+/** The clipboard's text at the caret, on one line and only as much as fits ([pastable]); nothing when it holds none. */
+internal fun TypingState.paste() {
+    val clip = PasteBoard.text() ?: return
+    edit { it.insert(pastable(clip, room = maxLength - fieldText.length)) }
 }
 
 private fun TypingState.edit(change: (CaretText) -> CaretText) = applyEdit(change(CaretText(fieldText, fieldKeys.caret)))

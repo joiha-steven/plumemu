@@ -6,6 +6,8 @@ import androidx.compose.runtime.remember
 import com.plumemu.account.AccountStatus
 import com.plumemu.account.SignInForm
 import com.plumemu.account.SignInTypingShots
+import com.plumemu.keyboard.KeyboardChoice
+import com.plumemu.account.SignInKind
 import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.settings.toThemeSettings
@@ -158,6 +160,21 @@ internal fun SignInTypingSettings(state: SignInTypingShots.State) {
             SettingsModel(NoActions, focus).also {
                 it.content = content
                 it.signIn.open(SignInTypingShots.form(state, stacked = true))
+            }
+        }
+    ShownSettings(settingsForShot(), model)
+}
+
+/** Accounts › RetroAchievements just opened: the empty form typing in the user name, the tray up (as [SettingsNavigation] opens it). */
+@Composable
+internal fun RaSignInOpenedSettings() {
+    val content = AccountShotContent.of(AccountStatus.SignedOut)
+    val focus = AccountShotContent.focusOn(content, SettingsOption.RetroAchievementsAccount, PanelPage.ScraperSignIn)
+    val model =
+        remember {
+            SettingsModel(NoActions, focus).also {
+                it.content = content
+                it.signIn.open(SettingsSignIn.newForm(keyboard = KeyboardChoice.Plumemu, kind = SignInKind.RetroAchievements)).startTyping()
             }
         }
     ShownSettings(settingsForShot(), model)

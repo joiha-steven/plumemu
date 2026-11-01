@@ -586,7 +586,7 @@ internal class SettingsCustomColor(
         fun isCustomPage(page: PanelPage?): Boolean = page == PanelPage.BackgroundCustom || page == PanelPage.AccentCustom || page == PanelPage.TextCustom
 
         /** "#" and six digits. */
-        private const val HEX_TEXT_MAX = 7
+        const val HEX_TEXT_MAX = 7
         private const val RGB_MASK = 0xFFFFFF
     }
 }

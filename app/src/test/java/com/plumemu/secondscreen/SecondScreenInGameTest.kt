@@ -239,12 +239,12 @@ class SecondScreenInGameTest : SecondScreenHostTestBase() {
         feed.offer(SecondScreenContent.Statistics(SecondScreenStatisticsSamples.withCovers))
         idle(SETTLED_MS)
         pixelsOf(host.shownWindow!!)
-        assertTrue("the statistics card in the window: ${textsOf(host.shownWindow!!)}", "23 h 10 min" in textsOf(host.shownWindow!!))
+        assertTrue("the statistics card in the window: ${textsOf(host.shownWindow!!)}", "23\u00A0h 10\u00A0min" in textsOf(host.shownWindow!!))
         startAGame()
         assertEquals(WindowMode.InGameClock, host.shownMode)
         val texts = textsOf(host.shownWindow!!)
         assertTrue("the clock card: $texts", formatClock(activity, now) in texts)
-        assertTrue("no statistics in game: $texts", texts.none { "23 h 10 min" in it || "Statistics" in it })
+        assertTrue("no statistics in game: $texts", texts.none { "23\u00A0h 10\u00A0min" in it || "Statistics" in it })
     }
 
     @Test

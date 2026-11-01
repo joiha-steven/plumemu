@@ -65,6 +65,12 @@ internal val SYSTEM_LONG_NAME_ABOUT = SYSTEM_LONG_NAME.copy(info = SYSTEM_LONG_N
 /** Recent, Favorites: no badge, no facts line. */
 internal val SYSTEM_RECENT = SecondScreenContent.System("Recent", 14, "Super Metroid", 1)
 
+/** The key the shots' fake icons have no icon for: its card shows the letter stand-in. */
+internal const val APP_WITHOUT_ICON_KEY = "com.example.noicon/.Main"
+
+/** The Apps entry: 128 apps, the first 120 carried as icons; the card draws as many as fit. */
+internal val APPS_WITH_ICONS = SecondScreenContent.Apps(128, (0 until MAX_APP_ICONS).map { AppIconRef(if (it == 2) APP_WITHOUT_ICON_KEY else "com.example.app$it/.Main", "App $it") })
+
 /** Every content kind with the name its shot has. */
 internal val ALL_SAMPLES: List<Pair<String, SecondScreenContent>> =
     listOf(
@@ -80,8 +86,9 @@ internal val ALL_SAMPLES: List<Pair<String, SecondScreenContent>> =
         "system_about_snes" to SYSTEM_ABOUT_SNES,
         "system_about_arcade" to SYSTEM_ABOUT_ARCADE,
         "system_recent" to SYSTEM_RECENT,
-        "apps" to SecondScreenContent.Apps(128),
-        "app" to SecondScreenContent.App("RetroArch"),
+        "apps" to APPS_WITH_ICONS,
+        "app" to SecondScreenContent.App("RetroArch", "com.retroarch/.Main"),
+        "app_no_icon" to SecondScreenContent.App("Notes", APP_WITHOUT_ICON_KEY),
         "calm" to SecondScreenContent.Calm,
         "setup_question" to SecondScreenContent.SetupQuestion,
     )

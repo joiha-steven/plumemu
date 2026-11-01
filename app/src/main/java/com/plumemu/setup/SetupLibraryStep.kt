@@ -97,7 +97,7 @@ internal fun ColumnScope.LibraryStepContent(
             isFocusable = true,
             modifier = Modifier.setupControl(state, SetupControl.UsageStatistics, onAction),
         ) {
-            SetupSwitch(state.usageStatistics, stringResource(if (state.usageStatistics) R.string.setup_stats_on else R.string.setup_stats_off))
+            SetupSwitch(state.usageStatistics, stringResource(if (state.usageStatistics) R.string.setup_stats_on else R.string.setup_stats_off), isFocused = state.focus == SetupControl.UsageStatistics)
         }
     }
     SetupInfoRow(
@@ -107,7 +107,7 @@ internal fun ColumnScope.LibraryStepContent(
         isFocusable = true,
         modifier = Modifier.setupControl(state, SetupControl.PushRightToPlay, onAction),
     ) {
-        SetupSwitch(state.pushRightToPlay, stringResource(if (state.pushRightToPlay) R.string.setup_stats_on else R.string.setup_stats_off))
+        SetupSwitch(state.pushRightToPlay, stringResource(if (state.pushRightToPlay) R.string.setup_stats_on else R.string.setup_stats_off), isFocused = state.focus == SetupControl.PushRightToPlay)
     }
     Box(Modifier.padding(top = PlumDimens.setupButtonSpacer)) {
         SetupButton(

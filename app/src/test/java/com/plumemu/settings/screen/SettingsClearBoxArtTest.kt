@@ -10,7 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Library › ScreenScraper › Clear box art… (audit item 21): it asks first with Cancel focused, Cancel
+ * Accounts › ScreenScraper › Clear box art… (audit item 21): it asks first with Cancel focused, Cancel
  * or Back keeps the pictures, the confirm clears them, a failure is said; gamepad and touch.
  */
 internal class SettingsClearBoxArtTest : SettingsModelHarness() {
@@ -21,7 +21,7 @@ internal class SettingsClearBoxArtTest : SettingsModelHarness() {
                 boxArt = ScrapeStatus.Idle(ScrapeCounts(300, 2_054, 0)),
                 boxArtBytes = 312L * 1_000_000,
             )
-        openSection(SettingsSection.Library)
+        openSection(SettingsSection.Accounts)
         focusOption(SettingsOption.ScraperAccount)
         press(Action.Enter)
         assertEquals(PanelPage.ScraperAccount, model.focus.page)

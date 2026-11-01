@@ -63,7 +63,14 @@ class SettingsAccountScreenshotTest {
 
     @Test fun notAvailable() = shot("settings_account_not_available", AccountStatus.NotInThisBuild, SettingsOption.ScraperStatus)
 
-    @Test fun region() = shot("settings_box_art_region", AccountStatus.SignedIn("plumtester"), SettingsOption.BoxArtRegion)
+    /** The region is an item of the ScreenScraper panel: the panel open with it focused. */
+    @Test
+    fun region() =
+        ReferenceShots.capture("settings_box_art_region") {
+            val content = AccountShotContent.of(AccountStatus.SignedIn("plumtester"))
+            val item = accountPageItems(content).indexOf(AccountPageItem.BoxArtRegion)
+            SettingsAt(AccountShotContent.focusOn(content, SettingsOption.ScraperAccount, PanelPage.ScraperAccount).copy(panelIndex = item), settingsForShot(), content)
+        }
 
     @Test fun formEmpty() = formShot("settings_sign_in_empty", AccountShots.State.Empty)
 
@@ -89,11 +96,12 @@ internal object AccountShotContent {
         option: SettingsOption,
         page: PanelPage? = null,
     ): SettingsFocus {
-        val row = SettingsSection.Library.rowsIn(content).indexOf(option)
+        val section = SettingsSection.Accounts
+        val row = section.rowsIn(content).indexOf(option)
         return SettingsFocus(
             column = if (page == null) SettingsColumn.Options else SettingsColumn.Panel,
-            section = SettingsSection.Library,
-            rememberedOption = mapOf(SettingsSection.Library to row),
+            section = section,
+            rememberedOption = mapOf(section to row),
             page = page,
         )
     }

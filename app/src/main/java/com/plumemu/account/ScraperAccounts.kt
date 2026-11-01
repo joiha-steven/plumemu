@@ -61,7 +61,25 @@ internal sealed interface SignInResult {
 
     /** This build has no developer credentials. */
     data object NotAvailable : SignInResult
+
+    /** RetroAchievements did not accept the Web API key (wrong, or reset on the site). */
+    data object RaWrongKey : SignInResult
+
+    /** RetroAchievements knows no such user name. */
+    data object RaUnknownUser : SignInResult
+
+    /** RetroAchievements failed to answer (a server error or an unreadable answer). */
+    data object RaBusy : SignInResult
+
+    /** RetroAchievements asked Plumemu to slow down. */
+    data object RaRateLimited : SignInResult
+
+    /** No browser could open the key page (not an answer from a site; set by the form itself). */
+    data object NoBrowser : SignInResult
 }
+
+/** Which site a sign-in form is for: it names the fields and the messages. */
+internal enum class SignInKind { ScreenScraper, RetroAchievements }
 
 /** The one mapping from the scraper's answer to what the person is told. */
 internal fun signInResultOf(

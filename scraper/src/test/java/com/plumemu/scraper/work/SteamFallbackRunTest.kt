@@ -115,7 +115,8 @@ internal class SteamFallbackRunTest : WorkerTestBase() {
     @Test fun `Steam down is logged and the game is left for the next run, not given up and not stored as no-match`() = runTest {
         steamGame()
         steamAnswer = { MockResponse.Builder().code(200).body("x").onResponseBody(SocketEffect.CloseSocket()).build() }
-        host(virtualClock(start), sizes = grid)
+        // The body never completes, so the client waits out its read timeout in real time: keep it short.
+        host(virtualClock(start), sizes = grid, readTimeoutMillis = 300)
 
         assertEquals(ListenableWorker.Result.success(), runWorker())
 

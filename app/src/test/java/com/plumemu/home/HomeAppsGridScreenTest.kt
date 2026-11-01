@@ -16,6 +16,7 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.CoverClass
 import com.plumemu.coreui.theme.GridSize
 import com.plumemu.coreui.theme.PlumLayout
 import com.plumemu.coreui.theme.PlumTheme
@@ -280,22 +281,22 @@ class HomeAppsGridScreenTest {
         assertEquals("still Apps' grid", 1, count(HomeTags.GRID))
     }
 
-    /** Signed out with Recent and Apps stored as grids: only Apps is one; Recent offers no SELECT and a press writes nothing. */
+    /** Signed out with Recent and Apps stored as grids: both are (the grid needs no box art); SELECT on Recent writes its switch back to a list. */
     @Test
-    fun signedOutAStoredRecentStaysAListBesideAppsGrid() {
+    fun signedOutAStoredRecentIsAGridBesideAppsGrid() {
         stored = setOf(HomeContent.RECENT_ID, HomeContent.APPS_ID)
         val content = appsGridLibrary(hasBoxArt = false)
         show(content)
         assertTrue("Recent has games", content.entries[0].rows.isNotEmpty())
         val strip = content.stripWith(stored, checkNotNull(layout))
-        assertEquals("Recent: one column", 1, strip.systems[0].gridColumns)
+        assertEquals("Recent: the square class's columns", checkNotNull(layout).gridColumns(CoverClass.Square), strip.systems[0].gridColumns)
         assertEquals("Apps: its grid's columns", appsGridColumns(checkNotNull(layout)), strip.systems[APPS_ENTRY].gridColumns)
-        assertEquals(false, content.showsGrid(content.entries[0], stored))
+        assertEquals(true, content.showsGrid(content.entries[0], stored))
         send(Action.Enter) // Recent's games
-        assertEquals("Recent is a list", 0, count(HomeTags.GRID))
-        assertEquals("no Grid view hint on Recent", false, hasText("Grid view"))
+        assertEquals("Recent is a grid", 1, count(HomeTags.GRID))
+        assertEquals("the List view hint on Recent", true, hasText("List view"))
         send(Action.ToggleView)
-        assertEquals("SELECT on Recent writes nothing", emptyList<Pair<String, Boolean>>(), writes.toList())
+        assertEquals("SELECT on Recent writes its switch to a list", listOf(HomeContent.RECENT_ID to false), writes.toList())
         assertEquals(0, count(HomeTags.GRID))
         send(Action.Back, Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Enter)
         assertEquals("Apps is the stored grid", 1, count(HomeTags.GRID))

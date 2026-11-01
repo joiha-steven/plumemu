@@ -5,7 +5,9 @@ import androidx.annotation.StringRes
 import com.plumemu.telemetry.ReportResult
 import androidx.compose.runtime.Immutable
 import com.plumemu.R
+import com.plumemu.platforms.PlatformDataVersion
 import com.plumemu.account.AccountStatus
+import com.plumemu.account.RaAccountStatus
 import com.plumemu.content.OrderFacts
 import com.plumemu.coredata.settings.SecondScreenSettings
 import com.plumemu.graph.BackupState
@@ -62,6 +64,8 @@ internal data class SettingsContent(
     val isSecondScreenOn: Boolean = false,
     /** The ScreenScraper account: its row, its status line and the box art region are listed from it. */
     val account: AccountStatus = AccountStatus.NotInThisBuild,
+    /** The RetroAchievements account (Accounts › RetroAchievements): its row's value and its panel. */
+    val raAccount: RaAccountStatus = RaAccountStatus.SignedOut,
     /** The box-art run (`AppGraph.scrapeStatus`): the account row's value and its panel's status line. */
     val boxArt: ScrapeStatus = ScrapeStatus.NotInThisBuild,
     /** What the account may do, from ScreenScraper's latest answer; null while unknown or signed out. */
@@ -82,6 +86,8 @@ internal data class SettingsContent(
     val hasUpdates: Boolean = BuildFeatures.hasUpdates,
     /** About's updates (`AppGraph.updates`): the last check, what it found, and an update under way. */
     val update: UpdateView = UpdateView(),
+    /** The platform data in use (`withPlatformData`): About's "Platform data" row; null until read, and then no row. */
+    val platformData: PlatformDataVersion? = null,
     /** Advanced › Restore… (`AppGraph.restore`): reading, the confirm, replacing, or how the last one ended. */
     val restore: RestoreState = RestoreState.Idle,
     /** The way back the last restore kept; Undo last restore is listed only while it exists. */
@@ -107,8 +113,6 @@ internal data class SettingsContent(
     /** Statistics' figures, read once when Settings opens ([rememberStatistics]); no rows until they arrive. */
     val statistics: StatisticsState = StatisticsState.NotRead,
 ) {
-    /** Statistics' rows, in order; worked out once per content. */
-    val statisticRows: List<StatisticRow> by lazy(LazyThreadSafetyMode.NONE) { statisticRowsOf(statistics) }
 
     /** False for a row that needs a statistics server or an update manifest this build does not have. */
     fun isInThisBuild(option: SettingsOption): Boolean =

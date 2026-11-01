@@ -34,7 +34,12 @@ class GraphAppIconsTest {
         object : AppIcons {
             val asked = mutableListOf<LaunchableApp>()
             val held = HashMap<LaunchableApp, Bitmap>()
-            override val generation: StateFlow<Int> = MutableStateFlow(3)
+            val changes = MutableStateFlow(3)
+            override val generation: StateFlow<Int> = changes
+
+            override fun invalidate(packageName: String?) {
+                changes.value++
+            }
 
             override suspend fun load(
                 app: LaunchableApp,
@@ -48,8 +53,6 @@ class GraphAppIconsTest {
                 app: LaunchableApp,
                 sizePx: Int,
             ): AppIcon.Picture? = held[app]?.let { AppIcon.Picture(it) }
-
-            override fun invalidate(packageName: String?) = Unit
         }
 
     private val icons = GraphAppIcons(listed = { listed }, icons = launcher)
@@ -73,6 +76,27 @@ class GraphAppIconsTest {
         assertNull("alpha left the list", icons.load(alphaRow, 48))
         assertNull("nor from memory", icons.cached(alphaRow, 48))
         assertEquals("the launcher was asked only for listed apps", listOf(alpha, beta), launcher.asked)
+    }
+
+    @Test
+    fun anAppGamesPackageFindsTheFirstLauncherOfThatPackage() = runTest {
+        assertNotNull(icons.load("com.example.alpha", 48))
+        assertEquals("the first launcher of the package", listOf(alpha), launcher.asked)
+        assertNotNull(icons.cached("com.example.alpha", 48))
+        assertNull("a package that is not installed gets no icon", icons.load("com.example.gone", 48))
+    }
+
+    /** Cold start: the app game rows are drawn before the list is read; the read must make the tiles ask again. */
+    @Test
+    fun anEmptyListFilledLaterRaisesTheGenerationAndThenTheIconIsFound() = runTest {
+        val list = MutableStateFlow<List<LaunchableApp>>(emptyList())
+        val cold = GraphAppIcons(listed = { list.value }, icons = launcher)
+        val reads = AppListReads(list, onChanged = { launcher.invalidate() }) { listOf(alpha) }
+        assertNull("nothing listed yet: the tile would show a letter", cold.load("com.example.alpha", 48))
+        val before = cold.generation.value
+        reads.refresh()
+        assertEquals("the tiles are told to ask again", before + 1, cold.generation.value)
+        assertNotNull(cold.load("com.example.alpha", 48))
     }
 
     @Test

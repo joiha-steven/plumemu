@@ -10,6 +10,7 @@ import com.plumemu.R
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.strip.StripFocus
 import com.plumemu.coreinput.strip.StripState
+import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.game.GameMenuController
 import com.plumemu.home.EntryKind
 import com.plumemu.home.GameRowModel
@@ -102,7 +103,7 @@ internal fun secondScreenContentOf(
     val entry = content.entries.getOrNull(look.focus.systemIndex) ?: return SecondScreenContent.Calm
     if (look.focus.column == Column.Systems) return entryCard(entry, names)
     val row = entry.rows.getOrNull(look.focus.rowOf(entry.id)) ?: return entryCard(entry, names)
-    return if (entry.kind == EntryKind.Apps) SecondScreenContent.App(row.title) else gameCard(row, systems, content.hasBoxArt, isCoverOnTop)
+    return if (entry.kind == EntryKind.Apps) SecondScreenContent.App(row.title, row.iconKey) else gameCard(row, systems, content.hasBoxArt, isCoverOnTop)
 }
 
 private fun gameCard(
@@ -122,7 +123,13 @@ private fun gameCard(
         scrapeKey = if (hasBoxArt) row.scrapeKey else null,
         // As the top screen: its details column exists only with box art (nothing is only on the second screen).
         details = if (hasBoxArt) row.details else null,
-        isCoverOnTopScreen = hasBoxArt && isCoverOnTop,
+        // Signed out too: the top screen's grid shows a poster cover, which the card then leaves out.
+        isCoverOnTopScreen = isCoverOnTop,
+        // A row with no scrape key has no slot to wait for: the grid shows its poster, so the card does.
+        hasNoPicture = !hasBoxArt || row.scrapeKey == null,
+        systemShort = row.systemAbbr,
+        coverAspect = (systems.systemOf(row.id)?.coverShape ?: CoverShape.Landscape).widthOverHeight,
+        appPackage = row.appPackage,
     )
 
 /** A system, Recent, Favorites or Apps under the cursor in the system column. */
@@ -130,7 +137,7 @@ private fun entryCard(
     entry: HomeEntry,
     names: EntryNames,
 ): SecondScreenContent {
-    if (entry.kind == EntryKind.Apps) return SecondScreenContent.Apps(entry.shownCount)
+    if (entry.kind == EntryKind.Apps) return SecondScreenContent.Apps(entry.shownCount, entry.rows.take(MAX_APP_ICONS).map { AppIconRef(it.iconKey, it.title) })
     // The last game is read after the settle (SecondScreenPlayFacts); an empty list has none to read.
     val lastPlayFrom =
         when {

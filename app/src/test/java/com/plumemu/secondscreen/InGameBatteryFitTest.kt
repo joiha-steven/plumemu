@@ -36,8 +36,8 @@ import org.robolectric.annotation.GraphicsMode
  * The battery part measured: at both corners of the drift (-4, -12 and +4, +12 dp),
  * at all six text sizes in Plum Sans and in every font at Largest, in 24 and 12 hours, with the
  * widest words: nothing nearer than 20 dp to an edge, no text cut, the parts in order without
- * overlapping, the hour labels apart, and the chart at least its minimum height, the key giving
- * way where it must (printed, and pinned: only where measured).
+ * overlapping, the chart's labels apart, and the chart at least its minimum height, the parts giving
+ * way where they must (printed, and pinned: only where measured).
  */
 abstract class InGameBatteryFitBase(
     private val size: SecondSize,
@@ -116,7 +116,7 @@ abstract class InGameBatteryFitBase(
         val tags =
             listOf(
                 InGameTags.BLOCK, InGameBatteryTags.TIME_LEFT, InGameBatteryTags.ENDS_AT, InGameBatteryTags.CHART,
-                InGameBatteryTags.LABELS, InGameBatteryTags.KEY, InGameBatteryTags.NOTE,
+                InGameBatteryTags.LABELS, InGameBatteryTags.FACTS, InGameBatteryTags.RING, InGameBatteryTags.NOTE,
             )
         for (tag in tags) {
             val box = placed(tag) ?: continue
@@ -126,7 +126,10 @@ abstract class InGameBatteryFitBase(
         assertNoTextCut(what)
         val figures = s.part?.figures
         val block = placed(InGameTags.BLOCK)!!
+        val clockLevel = placed(InGameTags.BATTERY)
+        if (s.wifi && s.reading != null) assertTrue("$what: the Wi-Fi glyph under the clock", placed(InGameTags.WIFI) != null)
         if (figures == null) {
+            if (s.reading != null) assertTrue("$what: the clock card alone keeps its level", clockLevel != null)
             val note = placed(InGameBatteryTags.NOTE)
             if (s.part?.note != null) assertTrue("$what: the note under the clock card", note != null && note.top >= block.bottom)
             return
@@ -137,22 +140,42 @@ abstract class InGameBatteryFitBase(
         val labels = placed(InGameBatteryTags.LABELS)
         val ends = placed(InGameBatteryTags.ENDS_AT)
         assertTrue("$what: the time left under the clock card", head.top >= block.bottom)
+        val ring = placed(InGameBatteryTags.RING)
+        assertEquals("$what: the level shows once, in the ring or under the clock", ring == null, clockLevel != null)
+        if (ring == null) {
+            gaveWay += "$case: ring"
+        } else {
+            assertTrue("$what: the ring under the clock card", ring.top >= block.bottom)
+            assertTrue("$what: the ring left of the time left", ring.right <= head.left)
+            assertTrue("$what: the chart under the ring", chart.top >= ring.bottom)
+        }
         if (ends != null) {
-            assertTrue("$what: 'empty at' beside or under the time left", ends.left >= head.right || ends.top >= head.bottom)
+            assertTrue("$what: 'empty at' under the time left", ends.top >= head.bottom - 0.5f && ends.left == head.left)
             assertTrue("$what: the chart under 'empty at'", chart.top >= ends.bottom)
         } else {
             gaveWay += "$case: empty at"
         }
         assertTrue("$what: the chart under the time left", chart.top >= head.bottom)
-        val bottom = placed(if (figures.driftNote) InGameBatteryTags.NOTE else InGameBatteryTags.KEY)
-        if (bottom == null) gaveWay += "$case: key"
+        val facts = placed(InGameBatteryTags.FACTS)
+        val note = if (figures.driftNote) placed(InGameBatteryTags.NOTE) else null
+        if (figures.driftNote && note == null) gaveWay += "$case: note"
         if (labels == null) {
             gaveWay += "$case: labels"
         } else {
             assertTrue("$what: the labels under the chart", labels.top >= chart.bottom)
-            if (bottom != null) assertTrue("$what: the key under the labels", bottom.top >= labels.bottom)
-            assertLabelsApart(what)
+            if (facts != null) assertTrue("$what: the facts under the labels", facts.top >= labels.bottom)
+            assertLabelsApart(what, case)
         }
+        if (figures.driftNote) {
+            assertEquals("$what: the drift note in the facts' place", null, facts)
+        } else if (facts == null) {
+            gaveWay += "$case: facts"
+        } else {
+            assertTrue("$what: the facts under the chart", facts.top >= chart.bottom)
+            assertEquals("$what: the facts centred", (window.left + window.right) / 2, (facts.left + facts.right) / 2 - shiftPx(), 1.5f)
+            if (note != null) assertTrue("$what: the note under the facts", note.top >= facts.bottom)
+        }
+        if (labels != null && note != null) assertTrue("$what: the note under the labels", note.top >= labels.bottom)
         val chartDp = chart.height / density
         // Under its minimum only once everything else has given way.
         if (labels != null) assertTrue("$what: chart $chartDp dp under ${dimens.chartMinHeight}", chartDp >= dimens.chartMinHeight.value - 0.5f)
@@ -186,15 +209,18 @@ abstract class InGameBatteryFitBase(
         visit(compose.onRoot(useUnmergedTree = true).fetchSemanticsNode())
     }
 
-    /** Where the two middle hour labels gave way. */
-    private val labelsThinned = mutableListOf<String>()
+    /** The frame's sideways shift, in px. */
+    private fun shiftPx() = shift.x.value * density
 
-    /** The hour labels shown do not touch: left to right, at least 8 dp apart; four, or the first and last. */
-    private fun assertLabelsApart(what: String) {
+    /** "Started" and "Empty" (or "Full"), left to right, at least 8 dp apart; where they do not fit, "Started" gave way. */
+    private fun assertLabelsApart(
+        what: String,
+        case: String,
+    ) {
         val node = compose.onAllNodesWithTag(InGameBatteryTags.LABELS, useUnmergedTree = true).fetchSemanticsNodes().first()
         val texts = node.children.filter { it.layoutInfo.isPlaced }.map { it.boundsInRoot }.sortedBy { it.left }
-        assertTrue("$what: ${texts.size} labels", texts.size == 4 || texts.size == 2)
-        if (texts.size == 2) labelsThinned += what.substringBefore(" at ")
+        assertTrue("$what: ${texts.size} labels", texts.size in 1..2)
+        if (texts.size == 1) gaveWay += "$case: start label"
         for ((a, b) in texts.zipWithNext()) assertTrue("$what: labels $a and $b", b.left - a.right >= InGameDimens.labelGap.value * density - 0.5f)
     }
 
@@ -202,10 +228,9 @@ abstract class InGameBatteryFitBase(
     fun everyTextSizeInPlumSans() {
         for (textSize in TextSize.entries) checkAll(textSize, PlumFont.Sans)
         report("Plum Sans")
-        assertTrue("the middle labels only give way in 12 hours", labelsThinned.all { " 12 " in it })
         val upToLarge = listOf(TextSize.Small, TextSize.Medium, TextSize.Large).map { " $it " }
         assertEquals("nothing gives way up to Large", emptyList<String>(), gaveWay.filter { case -> upToLarge.any { it in case } })
-        assertEquals("the hour labels never give way in Plum Sans", emptyList<String>(), gaveWay.filter { it.endsWith(": labels") })
+        assertEquals("the chart's labels never give way in Plum Sans", emptyList<String>(), gaveWay.filter { it.endsWith(": labels") })
     }
 
     @Test
@@ -216,10 +241,10 @@ abstract class InGameBatteryFitBase(
     }
 
     private fun report(label: String) {
-        println("In-game battery part ${size.name}, $label: smallest chart $minChart dp; gave way: ${gaveWay.distinct()}; middle labels gave way: ${labelsThinned.distinct()}")
+        println("In-game battery part ${size.name}, $label: smallest chart $minChart dp; gave way: ${gaveWay.distinct()}")
     }
 
-    /** The parts that give way somewhere at Largest in some font ("empty at", "key", "labels"), measured. */
+    /** The parts that give way somewhere at Largest in some font ("ring", "empty at", "note", "labels", "start label", "facts"), measured. */
     protected abstract val expectedAtLargest: Set<String>
 
     private companion object {
@@ -232,12 +257,13 @@ abstract class InGameBatteryFitBase(
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class InGameBatteryRoomyFitTest : InGameBatteryFitBase(SecondSize.Roomy) {
-    override val expectedAtLargest: Set<String> = sortedSetOf("empty at", "key")
+    override val expectedAtLargest: Set<String> = sortedSetOf("empty at", "note", "ring")
 }
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class InGameBatteryCompactFitTest : InGameBatteryFitBase(SecondSize.Compact) {
-    override val expectedAtLargest: Set<String> = sortedSetOf("empty at", "key")
+    // The labels only in Plum Serif, whose lines are the tallest.
+    override val expectedAtLargest: Set<String> = sortedSetOf("empty at", "facts", "note")
 }

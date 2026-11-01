@@ -4,41 +4,39 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
+import com.plumemu.coreui.theme.FocusHalo
 import com.plumemu.coreui.theme.PlumDimens
-import kotlin.math.exp
 
 /**
  * The focus ring of a cover, swatch or button (docs/design/rules.md › Focus and current): a
  * 2.5 dp [ring] stroke 3 dp outside the item at [topLeft] of [itemSize] (px), following its
- * [corner], over a very soft [glow] (the board's `box-shadow: 0 0 12px 1px accent·25 %`).
+ * [corner], inside the soft focus [halo] ([drawFocusHalo]; transparent on a light theme).
  *
  * Drawn only, never laid out, so a focus move costs no measure or layout, and drawn
  * only outside the item, so a parent can draw it over the item's neighbours after they are drawn
  * (the home grid does: a ring drawn by the item would be cut by the grid's clip). It reaches
  * [PlumDimens.focusRingOutset] past the item; leave that unclipped.
  *
- * The glow is a stack of strokes fading out like a Gaussian blur rather than a blur mask filter:
- * hardware-accelerated canvases ignore mask filters before Android 9, and the stack draws the
- * same on every Android version and in screenshot tests.
  */
 fun DrawScope.drawFocusRing(
     topLeft: Offset,
     itemSize: Size,
     corner: Dp,
     ring: Color,
-    glow: Color,
+    halo: Color,
 ) {
-    drawGlow(topLeft, itemSize, corner, glow)
+    drawFocusHalo(topLeft, itemSize, corner.toPx(), PlumDimens.focusRingOutset.toPx(), halo)
     drawRing(topLeft, itemSize, corner, ring)
 }
 
 /**
  * The focus ring of a grid item: hugging the item's own shape, a [PlumDimens.focusRingGap] wide band of the
- * screen's [gap] colour just outside it, then the [ring] ([PlumDimens.focusRingWidth], the accent). No soft glow of the accent: the
- * grid's glow is the item's own colour, drawn under the item by the caller. Colours are passed as values, so a caller reads them
+ * screen's [gap] colour just outside it, then the [ring] ([PlumDimens.focusRingWidth], the accent), then the focus [halo] outside the ring (never over the item). The
+ * glow under the item is its own colour, drawn by the caller. Colours are passed as values, so a caller reads them
  * (States) inside its draw block and nothing recomposes when one changes. Reaches [PlumDimens.focusRingOutset] past the item.
  */
 fun DrawScope.drawGridFocusRing(
@@ -47,7 +45,9 @@ fun DrawScope.drawGridFocusRing(
     corner: Dp,
     ring: Color,
     gap: Color,
+    halo: Color = Color.Transparent,
 ) {
+    drawFocusHalo(topLeft, itemSize, corner.toPx(), PlumDimens.focusRingOutset.toPx(), halo)
     val gapWidth = PlumDimens.focusRingGap.toPx()
     drawOutline(topLeft, itemSize, gapWidth / 2, corner.toPx(), gap, gapWidth)
     drawRing(topLeft, itemSize, corner, ring)
@@ -63,22 +63,37 @@ private fun DrawScope.drawRing(
     drawOutline(topLeft, itemSize, PlumDimens.focusRingGap.toPx() + width / 2, corner.toPx(), ring, width)
 }
 
-private fun DrawScope.drawGlow(
+/**
+ * The focus halo (docs/design/rules.md > Focus and current): [PlumDimens.focusHaloReach] of soft accent fading to nothing, drawn as
+ * [PlumDimens.FOCUS_HALO_STEPS] bands (strokes) that start [start] px outside the rounded rectangle at [topLeft] of [itemSize] and
+ * follow its [corner] (px). [halo] carries the colour and its peak alpha (`PlumComposeColors.focusGlow`); a transparent one (a
+ * light theme) draws nothing. Only strokes outside the shape, so it never covers the item; no blur and no layout. A mask-filter
+ * blur is ignored by hardware canvases before Android 9, and the bands draw the same on every version and in screenshot tests.
+ */
+fun DrawScope.drawFocusHalo(
     topLeft: Offset,
     itemSize: Size,
-    corner: Dp,
-    glow: Color,
+    corner: Float,
+    start: Float,
+    halo: Color,
 ) {
-    val spread = PlumDimens.focusGlowSpread.toPx()
-    // CSS blur radius 12 is a Gaussian with sigma 6; it fades out by about two sigmas.
-    val sigma = PlumDimens.focusGlowBlur.toPx() / 2
-    val step = 2 * sigma / GLOW_LAYERS
-    for (i in 0 until GLOW_LAYERS) {
-        val distance = (i + 0.5f) * step
-        // Share of the shadow left at this distance past its edge: the normal tail at d / sigma, logistic form.
-        val share = 1f / (1f + exp(LOGISTIC_SCALE * distance / sigma))
-        drawOutline(topLeft, itemSize, spread + distance, corner.toPx(), glow.copy(alpha = glow.alpha * share), step)
+    if (halo.alpha <= 0f) return
+    val steps = PlumDimens.FOCUS_HALO_STEPS
+    val band = PlumDimens.focusHaloReach.toPx() / steps
+    for (i in 0 until steps) {
+        val inflate = start + (i + 0.5f) * band
+        drawOutline(topLeft, itemSize, inflate, corner, halo.copy(alpha = FocusHalo.bandAlpha(halo.alpha, i, steps)), band)
     }
+}
+
+/** [drawFocusHalo] hugging a focus pill's [outline] (a rounded rectangle; another outline gets none), starting at its edge. */
+internal fun DrawScope.drawHaloOutside(
+    outline: Outline,
+    halo: Color,
+) {
+    if (outline !is Outline.Rounded) return
+    val box = outline.roundRect
+    drawFocusHalo(Offset(box.left, box.top), Size(box.width, box.height), box.topLeftCornerRadius.x, 0f, halo)
 }
 
 /** A rounded-rectangle stroke centred [inflate] px outside the item at [topLeft] of [itemSize]. */
@@ -98,8 +113,3 @@ private fun DrawScope.drawOutline(
         style = Stroke(width = width),
     )
 }
-
-private const val GLOW_LAYERS = 6
-
-/** The logistic curve that tracks the normal distribution's tail (1.702, Bowling et al.). */
-private const val LOGISTIC_SCALE = 1.702f

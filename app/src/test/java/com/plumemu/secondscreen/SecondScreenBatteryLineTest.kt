@@ -230,8 +230,8 @@ abstract class SecondScreenBatteryLineBase(
     fun theTimeIsTheChargeOverThePaceAndAboutOnlyWhereRoundingHidesMinutes() {
         val expected =
             listOf(
-                2.0 to "About 5 min", 5.0 to "5 min", 45.0 to "45 min", 47.0 to "About 45 min", 60.0 to "1 h", 62.0 to "About 1 h",
-                75.0 to "1 h 15 min", 100.0 to "About 1 h 45 min",
+                2.0 to "About 5\u00A0min", 5.0 to "5\u00A0min", 45.0 to "45\u00A0min", 47.0 to "About 45\u00A0min", 60.0 to "1 h", 62.0 to "About 1 h",
+                75.0 to "1\u00A0h 15\u00A0min", 100.0 to "About 1\u00A0h 45\u00A0min",
             )
         for ((minutes, words) in expected) {
             show(DETAILS_GAME.copy(batteryPace = BatteryPace(minutes, 60.0)))
@@ -242,7 +242,7 @@ abstract class SecondScreenBatteryLineBase(
     @Test
     fun aPaceUnderOnePercentIsSaidSoWithTheTimeOfTheRealPace() {
         show(DETAILS_GAME.copy(batteryPace = BatteryPace(100 / 0.32 * 60, 0.32)))
-        assertEquals("312 h 30 min on this charge · under\u00A01%\u00A0an\u00A0hour", textOf(compose.onNodeWithTag(PickingBatteryTags.TEXT).fetchSemanticsNode()))
+        assertEquals("312\u00A0h 30\u00A0min on this charge · under\u00A01%\u00A0an\u00A0hour", textOf(compose.onNodeWithTag(PickingBatteryTags.TEXT).fetchSemanticsNode()))
         battery(level = 100, isCharging = true)
         show(SecondScreenContent.Calm)
         show(DETAILS_GAME.copy(batteryPace = BatteryPace(100 / 0.32 * 60, 0.32)))
@@ -271,7 +271,7 @@ abstract class SecondScreenBatteryLineBase(
         battery(level = 83, isCharging = false)
         show(DETAILS_GAME.copy(art = LANDSCAPE_FRONT, batteryPace = BATTERY_LINE_SAMPLES[1].pace), largestSerif)
         val text = compose.onNodeWithTag(PickingBatteryTags.TEXT).fetchSemanticsNode()
-        assertEquals("$size", "About 2 h 45 min · 30%\u00A0an\u00A0hour", textOf(text))
+        assertEquals("$size", "About 2\u00A0h 45\u00A0min · 30%\u00A0an\u00A0hour", textOf(text))
         assertEquals("$size: whole", null, batteryLineCut(text))
         assertLineBelowThePlayedLine("$size Largest Serif, art")
     }

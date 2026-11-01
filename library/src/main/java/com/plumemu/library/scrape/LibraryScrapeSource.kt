@@ -48,7 +48,7 @@ import java.util.Locale
  *   included; [deliver] with [ScrapePass.Support] stores them again with it.
  *
  * @param currentSystemId the system the person is viewing, or null.
- * @param preferredRegion Settings › Library › Box art region, a ScreenScraper code ("us").
+ * @param preferredRegion Settings › Accounts › ScreenScraper › Box art region, a ScreenScraper code ("us").
  * @param documentUri the document URI of a file, the request's `rom.key`.
  */
 class LibraryScrapeSource(

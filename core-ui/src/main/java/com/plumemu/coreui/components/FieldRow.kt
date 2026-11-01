@@ -37,14 +37,13 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 
 /**
- * A one-line text field drawn as an [OptionRow] (40 high, Settings option type): focused, it has
- * the focus pill and the caret; otherwise it is a plain row, so a list under it
- * keeps the one focus language (never two filled rows). [placeholder] shows while [value] is
- * empty; [visualTransformation] masks a password; [label] names the field before its text;
- * [keyboardHint], when set, keeps the Android keyboard beside the screen and names the field in it
+ * A one-line text field in a 40 high Settings row: the text sits in a sunken pill ([sunkenField]) and the row takes the
+ * focus pill with the caret when focused; a list under it keeps the one focus language (never two filled rows).
+ * [placeholder] shows while [value] is empty; [visualTransformation] masks a password; [label] names the field before
+ * its text; [keyboardHint], when set, keeps the Android keyboard beside the screen and names the field in it
  * (see [InlineKeyboard]). The caller owns the keyboard and focus through
  * [fieldModifier] (a `FocusRequester`, `focusProperties`) and passes taps in through [modifier],
- * as for every core-ui component.
+ * as for every core-ui component. A field typed with Plumemu's own keyboard wears the same pill (`sunkenFieldInRow`).
  */
 @Composable
 fun FieldRow(
@@ -87,7 +86,7 @@ fun FieldRow(
                 keyboardOptions = keyboardOptions,
                 keyboardActions = keyboardActions,
                 visualTransformation = visualTransformation,
-                modifier = fieldModifier.weight(1f),
+                modifier = fieldModifier.weight(1f).sunkenField(),
                 decorationBox = { inner ->
                     Box(contentAlignment = Alignment.CenterStart) {
                         if (value.isEmpty() && placeholder.isNotEmpty()) {

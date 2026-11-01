@@ -16,7 +16,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings › Library › ScreenScraper's box art: the account
+ * Settings › Accounts › ScreenScraper's box art: the account
  * row's short forms, the panel in every state, the Re-download confirm and the systems picker.
  */
 @RunWith(RobolectricTestRunner::class)

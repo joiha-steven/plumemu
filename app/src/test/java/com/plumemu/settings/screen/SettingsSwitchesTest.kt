@@ -7,13 +7,14 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * The switches of Library, Controls and Home screen write their own key, computed from
+ * The switches of Library, Appearance, Controls and Home screen write their own key, computed from
  * the stored value inside the write, by A and by a tap; Use as home screen asks Android.
  */
 internal class SettingsSwitchesTest : SettingsModelHarness() {
     private val switches: Map<SettingsOption, (PlumSettings) -> Boolean> =
         mapOf(
             SettingsOption.ScanOnStartup to { s -> s.library.scanOnStartup },
+            SettingsOption.EdgeFade to { s -> s.appearance.edgeFade },
             SettingsOption.HoldToScrollFaster to { s -> s.controls.holdToScrollFaster },
             SettingsOption.PushRightToPlay to { s -> s.controls.pushRightToPlay },
             SettingsOption.ShowButtonHints to { s -> s.controls.showButtonHints },

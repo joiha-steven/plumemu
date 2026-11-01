@@ -42,6 +42,7 @@ internal val EXPECTED_A: List<ExpectedSystem> = listOf(
             flags = setOf(),
             extras = emptyMap(),
         )
+        omnidroid("nes", 16)
         retroArch("mesen2_libretro_android.so")
         retroArch("nestopia_libretro_android.so")
         retroArch("fceumm_libretro_android.so")
@@ -76,6 +77,7 @@ internal val EXPECTED_A: List<ExpectedSystem> = listOf(
             flags = setOf(),
             extras = emptyMap(),
         )
+        omnidroid("snes", 22)
         retroArch("snes9x2010_libretro_android.so")
         retroArch("snes9x2005_plus_libretro_android.so")
         retroArch("bsnes_libretro_android.so")
@@ -174,6 +176,7 @@ internal val EXPECTED_A: List<ExpectedSystem> = listOf(
             flags = setOf(),
             extras = emptyMap(),
         )
+        omnidroid("gb", 7)
         retroArch("sameboy_libretro_android.so")
         retroArch("gearboy_libretro_android.so")
         retroArch("tgbdual_libretro_android.so")
@@ -263,6 +266,7 @@ internal val EXPECTED_A: List<ExpectedSystem> = listOf(
             flags = setOf(),
             extras = emptyMap(),
         )
+        omnidroid("gbc", 9)
         retroArch("sameboy_libretro_android.so")
         retroArch("gearboy_libretro_android.so")
         retroArch("tgbdual_libretro_android.so")
@@ -366,6 +370,7 @@ internal val EXPECTED_A: List<ExpectedSystem> = listOf(
             flags = setOf(),
             extras = emptyMap(),
         )
+        omnidroid("gba", 8)
         retroArch("vbam_libretro_android.so")
         retroArch("vba_next_libretro_android.so")
         retroArch("gpsp_libretro_android.so")

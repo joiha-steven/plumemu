@@ -84,7 +84,7 @@ class LayoutCThorTopScreenshotTest {
     }
 }
 
-/** The bottom screen's details card with and without the box front, Black and Paper. */
+/** The bottom screen's details card with the box front, without it, and with the game's poster cover (signed out: no description), Black and Paper. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w538dp-h468dp-land-369dpi")
@@ -102,7 +102,7 @@ class LayoutCThorBottomScreenshotTest {
     @Test
     fun theDetailsCard() {
         compose.setContent { PlumTheme(settings) { SecondScreenCard(content, images = covers) } }
-        val cases = listOf("art" to DETAILS_GAME.copy(art = LANDSCAPE_FRONT), "no_art" to DETAILS_GAME)
+        val cases = listOf("art" to DETAILS_GAME.copy(art = LANDSCAPE_FRONT), "no_art" to DETAILS_GAME, "poster" to POSTER_GAME)
         val mismatches = mutableListOf<String>()
         for ((look, base) in listOf("black" to MediumText.Default, "paper" to MediumText.Paper)) {
             for ((label, card) in cases) {

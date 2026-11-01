@@ -7,20 +7,19 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** Advanced › Language: a list opened with A, never stepped. */
+/** Appearance › Language: a list opened with A, never stepped. */
 internal class SettingsLanguageTest : SettingsModelHarness() {
     private fun onLanguageRow() {
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.Language)
     }
 
     private fun picked() = actions.settings.appearance.language
 
     @Test
-    fun languageLivesInAdvancedAfterVibrationAndIsNoLongerInAbout() {
-        val advanced = SettingsSection.Advanced.options
-        assertEquals(advanced.indexOf(SettingsOption.Vibration) + 1, advanced.indexOf(SettingsOption.Language))
-        assertEquals(false, SettingsSection.About.options.contains(SettingsOption.Language))
+    fun languageIsTheFirstAppearanceRowAndNoLongerInAdvanced() {
+        assertEquals(0, SettingsSection.Appearance.options.indexOf(SettingsOption.Language))
+        assertEquals(false, SettingsSection.Advanced.options.contains(SettingsOption.Language))
         assertEquals("a row that opens a list, not a ‹ › choice", OptionKind.Opens, SettingsOption.Language.kind)
     }
 

@@ -145,6 +145,9 @@ internal class SecondScreenFeed(
                     playTimeMinutes = previous.playTimeMinutes,
                     emulator = previous.emulator,
                     fileName = previous.fileName,
+                    // Re-offered (a star toggled): the lines the facts bring must not vanish and come back.
+                    batteryPace = previous.batteryPace,
+                    achievements = previous.achievements,
                     // Only the cover of the same result: another key (signed out and in again) never inherits it.
                     art = art ?: previous.art.takeIf { scrapeKey != null && scrapeKey == previous.scrapeKey },
                     details = details ?: previous.details.takeIf { scrapeKey != null && scrapeKey == previous.scrapeKey },

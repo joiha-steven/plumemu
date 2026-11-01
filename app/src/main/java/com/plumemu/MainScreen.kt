@@ -21,7 +21,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.State
@@ -37,9 +40,10 @@ import com.plumemu.settings.screen.FadeIn
 import com.plumemu.settings.screen.SettingsHost
 import com.plumemu.settings.screen.SettingsScreen
 import com.plumemu.settings.screen.SettingsStatus
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.withStarted
 import androidx.lifecycle.repeatOnLifecycle
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.hint
@@ -57,10 +61,15 @@ import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.home.HomeBars
 import com.plumemu.home.HomeCallbacks
+import com.plumemu.home.HomeLandingTarget
+import com.plumemu.home.HomeLandingTargetSaver
 import com.plumemu.home.LocalHomeAppIcons
 import com.plumemu.home.LocalHomePlayFacts
 import com.plumemu.battery.LocalBatteryPaceNow
+import com.plumemu.home.LocalHomeAchievements
 import com.plumemu.home.LocalHomeNotices
+import com.plumemu.home.LocalMasteredGames
+import com.plumemu.game.LocalBadgeImages
 import com.plumemu.home.LocalUpdateFound
 import com.plumemu.settings.screen.SettingsContent
 import com.plumemu.home.HomeScreen
@@ -73,8 +82,9 @@ import com.plumemu.settings.screen.StatisticsState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import com.plumemu.home.ProvideHomeArt
+import com.plumemu.home.WhatsNewCard
+import com.plumemu.home.WhatsNewState
 import com.plumemu.settings.ButtonLetters
-import com.plumemu.game.GameActions
 import com.plumemu.settings.LocalButtonLetters
 import com.plumemu.settings.LocalShoulderKeys
 import com.plumemu.settings.ShoulderKeys
@@ -90,6 +100,7 @@ import com.plumemu.telemetry.ScreenId
 import com.plumemu.usage.TrackScreen
 import com.plumemu.sound.LocalUiSounds
 import com.plumemu.sound.UiSounds
+import com.plumemu.keyboard.ClosePasteMenuOnActions
 
 /** What the Activity hands the main screen for first-run setup and the home screen question. */
 internal class SetupHost(
@@ -109,6 +120,8 @@ internal class SetupHost(
  * could not be read, with Try again and Settings. With no
  * [setup] (benchmark builds) the main screen always shows. [secondScreen] is told what the second
  * screen shows (the cursor's game or system, the calm mark under Settings), read in effects only.
+ * [landOnStart] is a test hook: MainActivity never passes it (the app lands on a game when Statistics'
+ * most-played row calls `showOnHome`); a test passes it to open the home screen already on that game.
  */
 @Composable
 internal fun MainScreen(
@@ -124,6 +137,7 @@ internal fun MainScreen(
     homePresses: HomePresses? = null,
     viewedSystem: ViewedSystem? = null,
     waitingAppearance: CachedAppearance? = null,
+    landOnStart: HomeLandingTarget? = null,
 ) {
     // One timer for the whole wait, settings and library alike: the line never goes off and on again between them.
     val openingTextDue = rememberOpeningTextDue()
@@ -142,7 +156,7 @@ internal fun MainScreen(
     SideEffect { sounds.follow(settings.advanced) }
     SettingsTheme(settings, viewedSystem, preview) {
         CompositionLocalProvider(LocalButtonLetters provides letters, LocalShoulderKeys provides shoulders, LocalConfirmCap provides stringResource(letters.confirm), LocalUiSounds provides sounds) {
-            MainContent(settings, state, input, callbacks, onRetry, setup, settingsHost, letters, secondScreen, homePresses, isOpeningTextDue)
+            MainContent(settings, state, input, callbacks, onRetry, setup, settingsHost, letters, secondScreen, homePresses, isOpeningTextDue, landOnStart)
         }
     }
 }
@@ -178,9 +192,11 @@ private fun MainContent(
     secondScreen: SecondScreenFeed?,
     homePresses: HomePresses?,
     isOpeningTextDue: () -> Boolean,
+    landOnStart: HomeLandingTarget?,
 ) {
     // Set while setup shows: the main screen that follows lands on Recent or the first system.
     val hasShownSetup = remember { BooleanArray(1) }
+    ClosePasteMenuOnActions(input)
     // Laid out for the full screen: the system bars are hidden (the top bar has its own clock
     // and battery). Only a display cutout, where a device has one, is kept clear.
     Box(Modifier.fillMaxSize().background(PlumTheme.colors.bg).windowInsetsPadding(WindowInsets.displayCutout)) {
@@ -192,10 +208,10 @@ private fun MainContent(
             return@Box
         }
         when (state) {
-            is HomeState.Ready -> HomeWithSettings(state, settings, input, callbacks, letters, setup?.homeRole, settingsHost, secondScreen, homePresses, landsOnStart = hasShownSetup[0])
+            is HomeState.Ready -> HomeWithSettings(state, settings, input, callbacks, letters, setup?.homeRole, settingsHost, secondScreen, homePresses, landsOnStart = hasShownSetup[0], startTarget = landOnStart)
             HomeState.Failed -> {
                 TrackError(ScreenId.Home, LibraryReadError.LibraryUnreadable)
-                LibraryErrorWithSettings(settings, input, letters, onRetry, settingsHost, secondScreen, callbacks.games, homePresses)
+                LibraryErrorWithSettings(settings, input, letters, onRetry, settingsHost, secondScreen, homePresses)
             }
             null -> {
                 ShowOnSecondScreen(secondScreen, SecondScreenContent.Calm)
@@ -223,22 +239,37 @@ private fun HomeWithSettings(
     secondScreen: SecondScreenFeed?,
     homePresses: HomePresses?,
     landsOnStart: Boolean,
+    startTarget: HomeLandingTarget? = null,
 ) {
     var isSettingsOpen by rememberSaveable { mutableStateOf(false) }
+    // START or the pill while an update waits: Settings opens on About › Update available instead of its start page.
+    var opensOnUpdate by rememberSaveable { mutableStateOf(false) }
     // Counts the times the main screen must return to its landing point (HomeScreen compares it
     // with the count it last obeyed, kept in its own saved state). Setup's end is the first one.
-    var landingRequest by rememberSaveable { mutableIntStateOf(if (landsOnStart) 1 else 0) }
+    var landingRequest by rememberSaveable { mutableIntStateOf(if (landsOnStart || startTarget != null) 1 else 0) }
+    // The game the landing asks for (Statistics' most-played rows); null is the usual landing (Recent).
+    var landingTarget by rememberSaveable(stateSaver = HomeLandingTargetSaver) { mutableStateOf(startTarget) }
     // Home pressed while Plumemu is in front: close Settings (the main screen then fades in) and
     // ask the main screen to land. Search, the game panel and dialogs are closed by HomeScreen.
     if (homePresses != null) {
         LaunchedEffect(homePresses) {
             homePresses.presses.collect {
                 isSettingsOpen = false
+                landingTarget = null
                 landingRequest++
             }
         }
     }
-    val homeCallbacks = remember(callbacks, settingsHost) { if (settingsHost == null) callbacks else callbacks.copy(onSettings = { isSettingsOpen = true }) }
+    // Statistics' most-played row: close Settings and land on that game.
+    val showOnHome: (String, Long) -> Unit =
+        remember {
+            { systemId, gameId ->
+                landingTarget = HomeLandingTarget(systemId, gameId.toString())
+                isSettingsOpen = false
+                landingRequest++
+            }
+        }
+    val homeCallbacks = remember(callbacks, settingsHost) { if (settingsHost == null) callbacks else callbacks.copy(onSettings = { opensOnUpdate = callbacks.updateFound.value != null; isSettingsOpen = true }) }
     val showsSettings = isSettingsOpen && settingsHost != null
     // Settings covers the whole screen: composing the main screen under it re-ran its layout on
     // every colour Settings previews (19% janky frames walking the palette on the Android 6
@@ -252,11 +283,11 @@ private fun HomeWithSettings(
         homeState.SaveableStateProvider(HOME_STATE_KEY) {
             // The same call either way: a different branch would give the main screen's
             // rememberSaveable state a different key, and Back would find none (focus on Recent).
-            FadeIn(Unit, isFading = hasOpenedSettings[0]) { HomeWithRolePrompt(state, settings, input, homeCallbacks, letters, homeRole, secondScreen, landingRequest) }
+            FadeIn(Unit, isFading = hasOpenedSettings[0]) { HomeWithRolePrompt(state, settings, input, homeCallbacks, letters, homeRole, secondScreen, landingRequest, landingTarget) }
         }
     }
     if (showsSettings && settingsHost != null) {
-        SettingsOverHome(settingsHost, settings, input, secondScreen, homeCallbacks.games) { isSettingsOpen = false }
+        SettingsOverHome(settingsHost, settings, input, secondScreen, opensOnUpdate, showOnHome) { isSettingsOpen = false }
     }
 }
 
@@ -267,7 +298,8 @@ private fun SettingsOverHome(
     settings: PlumSettings,
     input: InputRouter,
     secondScreen: SecondScreenFeed?,
-    games: GameActions,
+    opensOnUpdate: Boolean = false,
+    showOnHome: (systemId: String, gameId: Long) -> Unit = { _, _ -> },
     close: () -> Unit,
 ) {
     // The second screen shows the figures Settings reads for its Statistics page: handed over
@@ -296,7 +328,8 @@ private fun SettingsOverHome(
                 status = SettingsStatus(libraryReset, saveFailed, folderAdd),
                 content = content.copy(isHomeApp = isHomeApp),
                 onStatistics = onStatistics,
-                games = games,
+                opensOnUpdate = opensOnUpdate,
+                showOnHome = showOnHome,
             )
         }
     }
@@ -319,6 +352,7 @@ private fun HomeWithRolePrompt(
     homeRole: HomeRoleActions?,
     secondScreen: SecondScreenFeed?,
     landingRequest: Int,
+    landingTarget: HomeLandingTarget?,
 ) {
     val needsAsking = homeRole != null && !settings.flags.homeRoleAsked
     // Asked once per composition, not per frame: a binder call to PackageManager or RoleManager.
@@ -328,10 +362,40 @@ private fun HomeWithRolePrompt(
     val showsPrompt = prompt != null && !prompt.isClosed && !isHomeAlready && (needsAsking || prompt.showsUnavailable)
     val scope = rememberCoroutineScope()
     val quiet = remember { InputRouter(scope, onDebug = {}) }
+    // "What's new" after an update: waits for a quiet main screen (no game panel, no search, not over the home-app question), then once.
+    val isHomeIdle = remember { mutableStateOf(false) }
+    val whatsNew by callbacks.whatsNew.collectAsState()
+    var card by remember { mutableStateOf<WhatsNewState?>(null) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val currentOnShown by rememberUpdatedState(callbacks.onWhatsNewShown)
+    // The last version whose card was closed here, so the card does not reopen while the record is still being saved.
+    var closedCode by rememberSaveable { mutableStateOf(0L) }
+    LaunchedEffect(whatsNew?.versionCode, isHomeIdle.value, showsPrompt) {
+        val release = whatsNew ?: return@LaunchedEffect
+        if (card != null || !isHomeIdle.value || showsPrompt || release.versionCode == closedCode) return@LaunchedEffect
+        // Waits for the front instead of skipping: the notes can arrive before the activity is started.
+        lifecycle.withStarted { }
+        card = WhatsNewState(release)
+    }
+    val openCard = card?.takeIf { !it.isClosed }
+    LaunchedEffect(card) {
+        val shown = card ?: return@LaunchedEffect
+        snapshotFlow { shown.isClosed }.first { it }
+        // Counted as shown when it closes: an activity re-created with the card open (language, dark mode) or a crash
+        // mid-show brings it back, because the notes are kept until then.
+        closedCode = shown.release.versionCode
+        currentOnShown(shown.release.versionCode)
+        if (card === shown) card = null
+    }
     val home = settings.homeScreen
     val bars = HomeBars(showHints = settings.controls.showButtonHints, showClock = home.showClock, showBattery = home.showBattery, pushRightToPlay = settings.controls.pushRightToPlay, showSystemInfo = home.isSystemInfoShown)
+    // The trophy on mastered games' rows: empty (and nothing asked) while signed out, collected only while this screen shows.
+    val mastered by callbacks.achievements.mastered.collectAsStateWithLifecycle(emptySet())
     ProvideHomeArt(callbacks.art, state.content.hasBoxArt) {
         CompositionLocalProvider(
+            LocalHomeAchievements provides callbacks.achievements,
+            LocalMasteredGames provides mastered,
+            LocalBadgeImages provides callbacks.achievements.badges,
             LocalHomePlayFacts provides callbacks.playFacts,
             LocalBatteryPaceNow provides callbacks.batteryPaceNow,
             LocalUpdateFound provides callbacks.updateFound,
@@ -340,17 +404,20 @@ private fun HomeWithRolePrompt(
         ) {
             HomeScreen(
                 state.content,
-                if (showsPrompt) quiet else input,
+                if (showsPrompt || openCard != null) quiet else input,
                 callbacks,
                 bars = bars,
                 secondScreen = secondScreen,
                 landingRequest = landingRequest,
+                landingTarget = landingTarget,
                 keyboard = settings.controls.toKeyboardChoice(),
                 gridSystems = settings.appearance.gridSystems,
+                onIdle = { isHomeIdle.value = it },
             )
         }
     }
     if (showsPrompt && prompt != null) HomeRolePrompt(prompt, input, letters)
+    if (openCard != null) WhatsNewCard(openCard, input, letters)
 }
 
 /**
@@ -369,7 +436,6 @@ private fun LibraryErrorWithSettings(
     onRetry: () -> Unit,
     settingsHost: SettingsHost?,
     secondScreen: SecondScreenFeed?,
-    games: GameActions,
     homePresses: HomePresses?,
 ) {
     var isSettingsOpen by rememberSaveable { mutableStateOf(false) }
@@ -387,7 +453,7 @@ private fun LibraryErrorWithSettings(
         LaunchedEffect(homePresses) { homePresses.presses.collect { closeSettings() } }
     }
     if (isSettingsOpen && settingsHost != null) {
-        SettingsOverHome(settingsHost, settings, input, secondScreen, games, closeSettings)
+        SettingsOverHome(settingsHost, settings, input, secondScreen, close = closeSettings)
     } else {
         ShowOnSecondScreen(secondScreen, SecondScreenContent.Calm)
         LibraryError(input, letters, onRetry, onSettings = if (settingsHost != null) ({ isSettingsOpen = true }) else null)

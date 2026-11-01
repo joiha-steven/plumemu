@@ -99,6 +99,8 @@ class SettingsStatusTest {
         compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed()
         press(Action.Move(Direction.Down)) // Check for updates daily: A flips it
         compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed()
+        press(Action.Move(Direction.Down)) // Send usage statistics: A flips it
+        compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed()
         press(Action.Move(Direction.Down)) // Open-source licenses: A opens the list
         compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed()
         press(Action.Move(Direction.Down)) // Privacy

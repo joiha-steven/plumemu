@@ -1,6 +1,7 @@
 package com.plumemu.readme
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.asImageBitmap
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.ColorSetting
@@ -25,6 +26,19 @@ import com.plumemu.home.gridActions
 import com.plumemu.home.rememberSource
 import com.plumemu.home.typingFor
 import com.plumemu.home.withSystemInfo
+import com.plumemu.home.LocalMasteredGames
+import com.plumemu.game.AchievementsSamples
+import com.plumemu.game.BadgeImages
+import com.plumemu.game.GameRef
+import com.plumemu.game.LocalBadgeImages
+import com.plumemu.game.OpenPanel
+import com.plumemu.game.PanelScreen
+import com.plumemu.graph.AchievementLine
+import com.plumemu.graph.AchievementsState
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import com.plumemu.secondscreen.GAME_WITH_STAR
 import com.plumemu.secondscreen.InGameBatterySamples
 import com.plumemu.secondscreen.InGameCard
@@ -149,6 +163,61 @@ class ReadmeMediaShots {
     fun heroSearch() =
         shoot("hero-search", stored(ColorSet.Super)) { HomeAt(library, metroidFocused, search = typingFor("super", library)) }
 
+    /** Info's RetroAchievements section beside a list with trophies; made-up achievements, drawn badges. */
+    @Test
+    fun achievements() {
+        val ids = library.withEntries(library.entries.map { e -> if (e.id == "snes") e.copy(rows = e.rows.mapIndexed { i, r -> r.copy(id = (AchievementsSamples.FIRST_ID + i).toString()) }) else e })
+        val snes = ids.entries.first { it.id == "snes" }.rows
+        val mastered = listOf("Super Mario World", "Super Castlevania IV").mapNotNull { t -> snes.firstOrNull { it.title == t }?.id?.toLong() }.toSet()
+        val at = "2026-10-3"
+        fun line(id: Int, title: String, text: String, points: Int, earned: Boolean) =
+            AchievementLine(id, title, text, points, "badge:$id", "badge:$id", if (earned) "${at}0 12:00:00" else null, null)
+        val lines =
+            listOf(
+                line(1, "Morph Ball", "Find the Morph Ball", 5, true),
+                line(2, "Bombs Away", "Find the Bombs and use them on the first wall", 10, true),
+                line(3, "Ice Beam", "Find the Ice Beam", 10, true),
+                line(4, "High Jump", "Find the High Jump Boots", 10, false),
+                line(5, "Speed Booster", "Find the Speed Booster and break the block", 25, false),
+                line(6, "Plasma Beam", "Defeat the guardian of the deep caves", 25, false),
+            )
+        val state = AchievementsState.Ready("Super Metroid", lines.size, 3, 0, lines)
+        val badges =
+            object : BadgeImages {
+                override fun cached(url: String, sizePx: Int) = draw(url, sizePx)
+
+                override suspend fun load(url: String, sizePx: Int) = draw(url, sizePx)
+
+                private fun draw(url: String, size: Int): androidx.compose.ui.graphics.ImageBitmap {
+                    val n = url.substringAfter(':').toInt()
+                    val tops = intArrayOf(0xFFFF8A65.toInt(), 0xFF4FC3F7.toInt(), 0xFF81C784.toInt(), 0xFFBA68C8.toInt(), 0xFFFFD54F.toInt())
+                    val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+                    val c = android.graphics.Canvas(bmp)
+                    val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                    p.color = tops[(n - 1) % tops.size]
+                    c.drawRoundRect(0f, 0f, size.toFloat(), size.toFloat(), size * 0.2f, size * 0.2f, p)
+                    p.color = 0x55FFFFFF
+                    c.drawCircle(size / 2f, size / 2f, size * 0.3f, p)
+                    p.color = 0xFFFFFFFF.toInt()
+                    c.drawCircle(size / 2f, size / 2f, size * 0.12f, p)
+                    return bmp.asImageBitmap()
+                }
+            }
+        shoot("achievements", stored(ColorSet.Charcoal)) {
+            val screen = remember { PanelScreen.Info(AchievementsSamples.facts(state).copy(folderName = "ROMs/snes", emulator = com.plumemu.game.EmulatorToStart("Snes9x", isInstalled = true), sizeBytes = 3L * 1024 * 1024, lastPlayedAt = System.currentTimeMillis() - 86_400_000L)) }
+            val panel = remember(screen) { OpenPanel(GameRef(snes.first { it.title == "Super Metroid" }.id, "Super Metroid"), screen) }
+            CompositionLocalProvider(LocalMasteredGames provides mastered, LocalBadgeImages provides badges) {
+                ProvideGridSize(GridSize.Medium) {
+                    ProvideHomeArt(rememberSource { posterCoverSource(ids) }, ids.hasBoxArt) { HomeAt(ids, metroidFocused, panel = panel) }
+                }
+            }
+            LaunchedEffect(screen) {
+                repeat(2) { withFrameNanos { } }
+                repeat(READMEDOWNS) { if (screen.scroll.press(isDown = true)) withFrameNanos { } }
+            }
+        }
+    }
+
     @Test
     fun sets() {
         for (set in ColorSet.entries) shoot("sets-${set.name.lowercase()}", stored(set)) { HomeOf(metroidFocused) }
@@ -245,4 +314,8 @@ class ReadmeMediaShots {
         shoot("system-card", stored(ColorSet.Plumemu), 538, 468) {
             SecondScreenCard(SYSTEM_WITH_LAST, images = SecondScreenStatisticsSamples.covers())
         }
+
+    private companion object {
+        const val READMEDOWNS = 2
+    }
 }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -15,6 +16,7 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -161,6 +163,42 @@ class WideDetailsLayoutTest {
         val title = bounds(HomeTags.DETAILS_TITLE)
         assertTrue("the cover gave up height: ${cover.height}", cover.height < PlumDimens.detailsCoverHeightWide.value - 0.5f)
         assertEquals("in the move's frame the title a gap under the cover", cover.bottom + PlumDimens.detailsBlockGapWide.value, title.top, 0.5f)
+    }
+
+    /**
+     * The text-only column without box art (signed out) at Largest in Serif, a two-line title: the text comes first, so the
+     * facts are whole inside the column, and the poster above shows only when at least [PlumDimens.posterMinHeight] is left
+     * (else it is left out and the title starts at the column's top).
+     */
+    @Test
+    fun atLargestSerifTheTextOnlyColumnKeepsItsTextAndDropsAPosterThatIsTooSmall() {
+        val metroid = LibraryLikeContent.idAt(LibraryLikeContent.SUPER_METROID).toString()
+        val library = LibraryLikeContent.of()
+        val renamed = library.withEntries(library.entries.map { e -> e.copy(rows = e.rows.map { if (it.id == metroid) it.copy(title = TWO_LINE_TITLE) else it }) })
+        compose.setContent {
+            PlumTheme(PlumThemeSettings.Default.copy(textSize = TextSize.Largest, font = PlumFont.Serif)) {
+                CompositionLocalProvider(LocalHomePlayFacts provides FakePlayFacts()) {
+                    HomeAt(renamed, LibraryLikeContent.gamesFocused(LibraryLikeContent.SUPER_METROID))
+                }
+            }
+        }
+        compose.waitForIdle()
+        val column = bounds(HomeTags.DETAILS)
+        val title = bounds(HomeTags.DETAILS_TITLE)
+        val facts = bounds(HomeTags.DETAILS_FACTS)
+        assertTrue("the facts whole in the column (bottom ${facts.bottom} of ${column.bottom})", facts.bottom <= column.bottom + 0.5f)
+        val texts = textsUnder(compose.onNodeWithTag(HomeTags.DETAILS, useUnmergedTree = true).fetchSemanticsNode())
+        assertTrue("no text cut at the column's bottom", texts.filter { it.second.height > 0f }.all { it.second.bottom <= column.bottom + 0.5f })
+        val posters = compose.onAllNodesWithTag(HomeTags.POSTER_COVER, useUnmergedTree = true).fetchSemanticsNodes().size
+        if (posters == 0) {
+            assertEquals("no poster: the title at the column's top", column.top, title.top, 0.5f)
+        } else {
+            val cover = bounds(HomeTags.DETAILS_COVER)
+            assertTrue("a poster that stays is at least the minimum: ${cover.height}", cover.height >= PlumDimens.posterMinHeight.value - 0.5f)
+            assertEquals("the title a gap under the poster", cover.bottom + PlumDimens.detailsBlockGapWide.value, title.top, 0.5f)
+            val drawn = texts.filter { (_, box) -> box.height > 0f && box.width > 0f && box.overlaps(cover) }
+            assertEquals("texts drawn over the poster", emptyList<Pair<String, Rect>>(), drawn)
+        }
     }
 
     /** Every text under [node] with where it is drawn (dp, clipped by its parents). */

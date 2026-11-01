@@ -17,6 +17,7 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.PlumThemeSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -51,10 +52,11 @@ class AppsGridLiftTest {
     private fun open(
         focus: Int,
         animationsOn: Boolean = true,
+        theme: PlumThemeSettings = MediumText.Default,
     ) {
         compose.mainClock.autoAdvance = false
         compose.setContent {
-            PlumTheme(MediumText.Default.copy(animationsOn = animationsOn)) {
+            PlumTheme(theme.copy(animationsOn = animationsOn)) {
                 accent = PlumTheme.colors.accent
                 background = PlumTheme.colors.bg
                 AppsGridBoard(focused = focus, onState = { state = it })
@@ -211,6 +213,32 @@ class AppsGridLiftTest {
         assertTrue("no glow under another tile (was $level)", level <= 1)
     }
 
+    /** How far (0..255, the largest channel) the pixel at the focused tile's left, just outside its ring, is from the background. */
+    private fun haloBesideFocusedTile(): Int {
+        val tile = grown(resting(8), PlumDimens.FOCUSED_ICON_SCALE)
+        val x = tile.left - (PlumDimens.focusRingOutset.value + HALO_PROBE_DP) * compose.density.density
+        val p = compose.onRoot().captureToImage().toPixelMap()[x.roundToInt(), tile.center.y.roundToInt()]
+        return (maxOf(abs(p.red - background.red), abs(p.green - background.green), abs(p.blue - background.blue)) * 255f).roundToInt()
+    }
+
+    @Test
+    fun theFocusedTileHasTheFocusHaloOnGraphite() {
+        open(focus = 8, theme = MediumText.Graphite)
+        compose.mainClock.advanceTimeBy(1000)
+        val halo = haloBesideFocusedTile()
+        // The tile's own glow gives about 20 here; the halo adds about 35 more.
+        assertTrue("beside the ring the focused tile has a halo (was $halo)", halo >= 40)
+    }
+
+    @Test
+    fun theFocusedTileHasNoHaloOnPaper() {
+        open(focus = 8, theme = MediumText.Paper)
+        compose.mainClock.advanceTimeBy(1000)
+        val halo = haloBesideFocusedTile()
+        // Only the tile's own glow reaches here (about 5), no halo.
+        assertTrue("beside the ring the focused tile has no halo (was $halo)", halo <= 10)
+    }
+
     @Test
     fun theGlowIsWholeAtOnceWithAnimationsOff() {
         open(focus = 8, animationsOn = false)
@@ -241,5 +269,6 @@ class AppsGridLiftTest {
 
     private companion object {
         const val IDLE_MS = 5_000L
+        const val HALO_PROBE_DP = 3f
     }
 }

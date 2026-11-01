@@ -83,7 +83,7 @@ class TelemetryEventTest {
     @Test
     fun theSettingsSectionsAreScreensOfTheirOwn() {
         assertEquals(
-            listOf("library", "appearance", "emulators", "controls", "home_screen", "statistics", "advanced", "about"),
+            listOf("library", "appearance", "emulators", "controls", "home_screen", "second_screen", "statistics", "accounts", "advanced", "about"),
             ScreenId.entries.map { it.wire }.filter { it.startsWith("settings_") }.map { it.removePrefix("settings_") },
         )
     }

@@ -36,8 +36,15 @@ internal data class PlayStatistics(
     val hasSessions: Boolean = false,
     /** The listed games played longest, longest first (at most [TOP_GAMES]). */
     val topGames: List<TopGame> = emptyList(),
-    /** The system whose listed games were played longest; null when none was. */
-    val topSystem: TopSystem? = null,
+    /** The listed systems by play time, longest first, ties by id (at most [TOP_SYSTEMS]). */
+    val topSystems: List<TopSystem> = emptyList(),
+    /**
+     * Seconds played on each of the 7 days of the current week, from the week's first day, each day
+     * clipped to its own midnights and today at "now"; days after today are 0. Empty without sessions.
+     */
+    val weekDaySeconds: List<Long> = emptyList(),
+    /** Which of the 7 days "now" falls in (0 is the first day); 0 without sessions. */
+    val todayIndex: Int = 0,
     /** Listed games played (a minute or more over their copies). */
     val playedGames: Int = 0,
     /** Listed games: what the main screen's lists show. */
@@ -52,8 +59,15 @@ internal data class PlayStatistics(
      */
     val hasBoxArt: Boolean = false,
 ) {
+    /** The system played longest; null when none was. */
+    val topSystem: TopSystem? get() = topSystems.firstOrNull()
+
     companion object {
-        const val TOP_GAMES = 3
+        const val TOP_GAMES = 5
+        const val TOP_SYSTEMS = 5
+
+        /** The second screen's card keeps its three games (and one system). */
+        const val SECOND_SCREEN_TOP_GAMES = 3
     }
 }
 
@@ -63,12 +77,9 @@ internal data class TopGame(
     val id: Long,
     val title: String,
     val systemName: String,
+    val systemId: String,
     val seconds: Long,
     val cover: ArtPicture? = null,
-    /** Recorded plays of the game (`play_session`, kept 400 days, from schema 5 on); 0 when none is stored: the panel leaves the line out. */
-    val timesPlayed: Int = 0,
-    /** Calendar days since it was last played (0 today); null when not stored. */
-    val lastPlayedDaysAgo: Int? = null,
 )
 
 /** The most-played system, by the name the main screen shows. */
@@ -91,7 +102,7 @@ internal sealed interface StatisticsState {
     data class Read(val statistics: PlayStatistics) : StatisticsState
 }
 
-/** One row of Statistics, in the order shown. */
+/** One line of the second screen's statistics card, in the order shown. */
 @Immutable
 internal sealed interface StatisticRow {
     data class Total(val seconds: Long) : StatisticRow
@@ -113,27 +124,24 @@ internal sealed interface StatisticRow {
     data object NoGames : StatisticRow
 
     data object Unreadable : StatisticRow
-
-    /** The app's version and build, as About shows it. */
-    data object Version : StatisticRow
 }
 
 /**
  * The rows for [state]: none until the figures arrive; the play figures, or one calm line when
- * nothing was played; the library lines (one line when the library is empty); the version last.
+ * nothing was played; the library lines (one line when the library is empty).
  */
 internal fun statisticRowsOf(state: StatisticsState): List<StatisticRow> =
     when (state) {
         StatisticsState.NotRead -> emptyList()
-        StatisticsState.Failed -> listOf(StatisticRow.Unreadable, StatisticRow.Version)
+        StatisticsState.Failed -> listOf(StatisticRow.Unreadable)
         is StatisticsState.Read ->
             buildList {
                 val figures = state.statistics
                 if (figures.hasPlayed) {
                     add(StatisticRow.Total(figures.totalSeconds))
                     if (figures.hasSessions) add(StatisticRow.ThisWeek(figures.thisWeekSeconds))
-                    figures.topGames.forEachIndexed { at, game -> add(StatisticRow.Game(at + 1, game, figures.hasBoxArt)) }
-                    figures.topSystem?.let { add(StatisticRow.System(it)) }
+                    figures.topGames.take(PlayStatistics.SECOND_SCREEN_TOP_GAMES).forEachIndexed { at, game -> add(StatisticRow.Game(at + 1, game, figures.hasBoxArt)) }
+                    figures.topSystems.firstOrNull()?.let { add(StatisticRow.System(it)) }
                 } else {
                     add(StatisticRow.NothingPlayed)
                 }
@@ -144,7 +152,6 @@ internal fun statisticRowsOf(state: StatisticsState): List<StatisticRow> =
                     // Only shortcut games (never asked for box art): "0 of 0" would say nothing.
                     if (figures.hasBoxArt && figures.boxArtGames > 0) add(StatisticRow.BoxArt(figures.gamesWithBoxArt, figures.boxArtGames))
                 }
-                add(StatisticRow.Version)
             }
     }
 

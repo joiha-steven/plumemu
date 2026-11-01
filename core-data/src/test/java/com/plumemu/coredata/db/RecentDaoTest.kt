@@ -47,7 +47,6 @@ class RecentDaoTest {
         listOf(
             ids.map { play.play(it)?.let { p -> p.lastPlayedAt to p.totalSeconds } },
             ids.map { play.sessions(it) },
-            ids.map { play.sessionCount(listOf(it)) },
             play.totalSeconds(),
             play.secondsPlayedBetween(0, Long.MAX_VALUE),
             play.playedCopies(),

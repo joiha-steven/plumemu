@@ -276,6 +276,23 @@ class SecondScreenFeedTest {
         }
 
     @Test
+    fun aGameOfferedAgainKeepsItsPaceAndAchievementsUntilTheNewAnswer() =
+        runTest {
+            val pace = com.plumemu.battery.BatteryPace(120.0, 30.0)
+            val ra = com.plumemu.graph.AchievementCount(12, 45)
+            val feed = feed { (it as SecondScreenContent.Game).copy(isPlayKnown = true, lastPlayedDaysAgo = 0, playTimeMinutes = 5, batteryPace = pace, achievements = ra) }
+            feed.offer(game(1))
+            after(SETTLE_MS)
+            val seen = mutableListOf<SecondScreenContent>()
+            val watching = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { feed.content.collect { seen += it } }
+            // A star toggled: the same game is offered again, and shown with what it had until the read answers.
+            feed.offer(game(1).copy(isFavorite = true))
+            after(SETTLE_MS)
+            watching.cancel()
+            assertTrue("never shown without its pace and achievements: $seen", seen.all { (it as SecondScreenContent.Game).let { g -> g.batteryPace == pace && g.achievements == ra } })
+        }
+
+    @Test
     fun aListWithAnotherCountKeepsItsLastGameUntilTheNewAnswer() =
         runTest {
             val favorites = SecondScreenContent.System("Favorites", 3, lastPlayFrom = LastPlayLookup.AmongFavorites)

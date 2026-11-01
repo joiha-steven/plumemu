@@ -1,5 +1,6 @@
 package com.plumemu.home
 
+import com.plumemu.keyboard.PasteBoard
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.runtime.collectAsState
@@ -52,7 +53,11 @@ internal fun HomeTopBar(
     battery: () -> String?,
     wifi: () -> Boolean = { false },
     charging: () -> Boolean = { false },
+    /** A tap on the update pill: Settings, on the update. */
+    onSettings: () -> Unit = {},
 ) {
+    // The pill is read here, not by the screen: an update found recomposes this bar only.
+    val updateName by LocalUpdateFound.current.collectAsState()
     // Only what the bar shows: a row move changes the focus but neither of these.
     val column by remember(state) { derivedStateOf { state.focus.column } }
     val systemIndex by remember(state) { derivedStateOf { state.focus.systemIndex } }
@@ -68,8 +73,12 @@ internal fun HomeTopBar(
         }
     val shown = rememberShownNotice()
     val notice = shown.notice
-    val noticeLead = notice?.let { noticeLead(it, numbers) }
-    val noticeTail = notice?.let { noticeTail(it, content, numbers) }
+    // After a game: "+3 achievements · Super Metroid", a few seconds, in the notice's place (it wins while it shows).
+    val afterGame = rememberShownAchievements()
+    val unlocked = afterGame.line
+    val unlockedLead = unlocked?.let { pluralStringResource(R.plurals.home_notice_achievements, it.count, numbers.format(it.count)) }
+    val noticeLead = unlockedLead ?: notice?.let { noticeLead(it, numbers) }
+    val noticeTail = if (unlocked != null) unlocked.gameTitle else notice?.let { noticeTail(it, content, numbers) }
     TopBar(
         place =
             if (noticeLead != null) {
@@ -85,7 +94,9 @@ internal fun HomeTopBar(
         charging = charging,
         chargingDescription = stringResource(R.string.battery_charging),
         modifier = Modifier.testTag(HomeTags.TOP_BAR),
-        placeAlpha = shown.alpha,
+        placeAlpha = if (unlocked != null) afterGame.alpha else shown.alpha,
+        pill = updateName?.let { stringResource(R.string.home_update_pill, it) },
+        onPill = onSettings,
     )
 }
 
@@ -114,8 +125,11 @@ internal fun entryCode(entry: HomeEntry): String =
 
 private const val CODE_LENGTH = 3
 
-/** True while an update was found (`HomeCallbacks.updateFound`, provided by `MainScreen`): START Settings gets a dot. */
-internal val LocalUpdateFound = staticCompositionLocalOf<StateFlow<Boolean>> { MutableStateFlow(false) }
+/**
+ * The version name of the update found, null while none waits (`HomeCallbacks.updateFound`, provided by `MainScreen`): the
+ * top bar shows the "Update 0.1.1" pill and START's hint reads "Update", both opening Settings on the update.
+ */
+internal val LocalUpdateFound = staticCompositionLocalOf<StateFlow<String?>> { MutableStateFlow(null) }
 
 /** One hint: its key cap, its label and the action a tap sends (the same as the button). */
 @Immutable
@@ -125,15 +139,13 @@ internal data class HintSpec(
     val action: Action,
     /** A tap cycles the grid size (Small, Medium, Large, Small) instead of sending [action]; the keys stop at the ends. */
     val cyclesGridSize: Boolean = false,
-    /** The accent dot after the label: an update was found (START Settings only). */
-    val hasDot: Boolean = false,
     /** What a tap sends. It differs from [action] only for "Switch system" under Switch system with L1 / R1, where [action] stays L2 / R2's name so the hints keep their order and test tags. */
     val tapAction: Action = action,
 )
 
 /**
  * The hints for where the focus is (the board's RP5-1, RP5-2, RP5-3 and Nova-3). SELECT shows for an
- * entry that can be a grid ([HomeContent.hasGridFor]): a system, Recent and Favorites with box art, Apps always. "A Select" only where there is something to open
+ * entry that can be a grid ([HomeContent.hasGridFor]): a system, Recent, Favorites and Apps, with or without box art. "A Select" only where there is something to open
  * (an empty Recent has nothing), "L1 R1" only when there is another list to switch to (with no
  * games only Apps), "X Search" only when there are games to find, "Y Favorite" (or "Y Unfavorite"
  * for a favorite, [focusedIsFavorite]) only on a game. A grid shows A, B and "SELECT List view"
@@ -151,11 +163,12 @@ internal fun hintsFor(
     focusedIsFavorite: Boolean = false,
     pushRightPlays: Boolean = false,
     pushRightArmed: Boolean = false,
-    settingsDot: Boolean = false,
+    updateWaiting: Boolean = false,
     shoulders: ShoulderKeys = ShoulderKeys.Default,
     hasDetailsStop: Boolean = false,
 ): List<HintSpec> {
-    val settings = HintSpec(R.string.home_key_start, R.string.home_hint_settings, Action.OpenSettings, hasDot = settingsDot)
+    // While an update waits START opens Settings on it, so the hint says what it is for.
+    val settings = HintSpec(R.string.home_key_start, if (updateWaiting) R.string.home_hint_update else R.string.home_hint_settings, Action.OpenSettings)
     val hasItems = (entry?.count ?: 0) > 0
     val isApps = entry?.kind == EntryKind.Apps
     val play = HintSpec(letters.confirm, if (isApps) R.string.home_hint_open else R.string.home_hint_play, Action.Play)
@@ -178,7 +191,7 @@ internal fun hintsFor(
         // Narrow with box art and Push right to play: Right at the stop arms, so the hint is here too.
         column == Column.Details -> listOfNotNull(play, pushRight.takeIf { !showsGrid }, back, favorite, HintSpec(R.string.home_key_start, R.string.home_hint_menu, Action.Menu))
         // Apps' grid has one fixed size and L1 R1 do nothing there: no L1 R1 hint.
-        showsGrid && isApps ->
+        showsGrid && (isApps || entry?.isAppGamesGrid == true) ->
             listOfNotNull(
                 play,
                 back,
@@ -283,10 +296,12 @@ internal fun searchHints(
 internal fun searchTypingHints(
     onLetters: Boolean,
     letters: ButtonLetters = ButtonLetters.Default,
-): List<HintSpec> = typingHints(onLetters, R.string.home_hint_search, hasShift = false, letters)
+    canPaste: Boolean = false,
+): List<HintSpec> = typingHints(onLetters, R.string.home_hint_search, hasShift = false, letters, canPaste)
 
 /**
  * Any field while Plumemu's keyboard is up: "A Type", "B Delete", "X Space", "START <[actionWord]>",
+ * "R3 Paste" while the clipboard holds text ([canPaste]; every other button is taken while typing),
  * "Y 123" / "Y ABC", "SELECT Shift" when the keys have shift ([hasShift]: not Search) and "L1 R1 Cursor".
  * Short of room they give way in [TYPING_HINT_DROP_ORDER]: L1 R1, SELECT, Y.
  */
@@ -295,12 +310,14 @@ internal fun typingHints(
     @StringRes actionWord: Int,
     hasShift: Boolean,
     letters: ButtonLetters = ButtonLetters.Default,
+    canPaste: Boolean = false,
 ): List<HintSpec> =
     listOfNotNull(
         HintSpec(letters.confirm, R.string.account_hint_type, Action.Enter),
         HintSpec(letters.back, R.string.home_hint_delete, Action.Erase()),
         HintSpec(letters.search, R.string.home_hint_space, Action.Search),
         HintSpec(R.string.home_key_start, actionWord, Action.Menu),
+        if (canPaste) HintSpec(R.string.home_key_r3, R.string.keyboard_paste, Action.Paste) else null,
         HintSpec(letters.favorite, if (onLetters) R.string.home_hint_symbols else R.string.home_hint_letters, Action.ToggleFavorite),
         if (hasShift) HintSpec(R.string.home_key_select, R.string.home_hint_shift, Action.ToggleView) else null,
         HintSpec(R.string.home_key_l1_r1, R.string.home_hint_cursor, Action.NextSystem),
@@ -359,7 +376,7 @@ internal fun HomeHints(
     pushRightToPlay: Boolean = false,
 ) {
     // Read here only: an update found recomposes the bar, not the screen.
-    val dot by LocalUpdateFound.current.collectAsState()
+    val updateWaiting = LocalUpdateFound.current.collectAsState().value != null
     // Only what the hints depend on, so a row move does not recompose the bar.
     val column by remember(state) { derivedStateOf { state.focus.column } }
     val systemIndex by remember(state) { derivedStateOf { state.focus.systemIndex } }
@@ -374,14 +391,15 @@ internal fun HomeHints(
     val shoulders = LocalShoulderKeys.current
     val openSearch = search?.takeIf { it.isOpen && panel == null }
     val isTyping = openSearch?.let { it.inField && it.isTrayUp } == true
+    val canPaste = PasteBoard.hasText
     val searchHintsShown = openSearch?.let { open ->
         val inField = open.inField
         val onFavorite = !inField && open.results.getOrNull(open.row)?.row?.isFavorite == true
         val onLetters = isTyping && open.keys.page == KeyboardPage.Letters
         val xTypes = open.usesOwnKeyboard
         val searchArmed = open.isPushRightArmed
-        remember(inField, isTyping, onLetters, onFavorite, letters, xTypes, pushRightToPlay, searchArmed) {
-            if (isTyping) searchTypingHints(onLetters, letters) else searchHints(inField, onFavorite, letters, xTypes, pushRightToPlay, searchArmed)
+        remember(inField, isTyping, onLetters, onFavorite, letters, xTypes, pushRightToPlay, searchArmed, canPaste) {
+            if (isTyping) searchTypingHints(onLetters, letters, canPaste) else searchHints(inField, onFavorite, letters, xTypes, pushRightToPlay, searchArmed)
         }
     }
     // A panel with a text field changes what A does without a new panel: read its state here.
@@ -393,13 +411,13 @@ internal fun HomeHints(
         val chooseLabel = panelChooseLabel(open)
         val onLetters = isPanelTrayUp && typingScreen?.typing?.fieldKeys?.keys?.page == KeyboardPage.Letters
         val actionWord = typingScreen?.let(::typingActionWord) ?: R.string.home_hint_search
-        remember(open, canChoose, onField, chooseLabel, letters, isPanelTrayUp, onLetters, actionWord) {
-            if (isPanelTrayUp) typingHints(onLetters, actionWord, hasShift = true, letters) else panelHints(open, letters)
+        remember(open, canChoose, onField, chooseLabel, letters, isPanelTrayUp, onLetters, actionWord, canPaste) {
+            if (isPanelTrayUp) typingHints(onLetters, actionWord, hasShift = true, letters, canPaste) else panelHints(open, letters)
         }
     }
     val hints =
-        searchHintsShown ?: typingHints ?: remember(content, column, entry, showsGrid, letters, shoulders, panel, focusedIsFavorite, pushRightToPlay, stripArmed, dot, hasDetailsStop) {
-            panel?.let { panelHints(it, letters) } ?: hintsFor(content, column, entry, showsGrid, letters, focusedIsFavorite, pushRightToPlay, stripArmed, dot, shoulders, hasDetailsStop)
+        searchHintsShown ?: typingHints ?: remember(content, column, entry, showsGrid, letters, shoulders, panel, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, hasDetailsStop) {
+            panel?.let { panelHints(it, letters) } ?: hintsFor(content, column, entry, showsGrid, letters, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, shoulders, hasDetailsStop)
         }
     val drops = if (isTyping || isPanelTrayUp) TYPING_HINT_DROP_ORDER else HINT_DROP_ORDER
     val dropOrder = remember(hints, drops) { drops.flatMap { action -> hints.indices.filter { hints[it].action == action } } }
@@ -443,7 +461,6 @@ private fun HintView(
         keyCap = stringResource(spec.key),
         label = stringResource(spec.label),
         modifier = tap.testTag(HomeTags.hint(spec.action)),
-        hasDot = spec.hasDot,
     )
 }
 
@@ -547,11 +564,19 @@ internal object HomeTags {
     /** A decoded box-art picture (grid or details), drawn over its placeholder. */
     const val COVER_PICTURE = "home_cover_picture"
 
+    /** A game's poster cover (no picture to show: signed out, ScreenScraper has none, or its file cannot be read): grid cell, details column and second screen alike. */
+    const val POSTER_COVER = "home_poster_cover"
+
     /** In a Recent or Favorites grid, a game's placeholder in its own system's shape inside the cell (no box art). */
     const val COVER_OWN_SHAPE = "home_cover_own_shape"
 
     /** In the Apps grid: an app's icon, the stand-in square of an app without one, and the name under either. */
     const val APP_ICON = "home_app_icon"
+
+    /** An app game's icon in the details column or on the second screen's card (not the grid tile's, [APP_ICON]). */
+    const val APP_GAME_ICON = "home_app_game_icon"
+    /** An app game's cover card in a mixed grid while its icon is not there yet (with the icon it carries [APP_ICON]). */
+    const val APP_GAME_CARD = "home_app_game_card"
     const val APP_ICON_STAND_IN = "home_app_icon_stand_in"
     const val APP_NAME = "home_app_name"
 

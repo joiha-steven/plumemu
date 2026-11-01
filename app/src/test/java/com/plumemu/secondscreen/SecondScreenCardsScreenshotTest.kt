@@ -1,6 +1,7 @@
 package com.plumemu.secondscreen
 
 import com.plumemu.coreui.testing.MediumText
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -11,6 +12,8 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
+import com.plumemu.home.FakeAppIcons
+import com.plumemu.home.LocalHomeAppIcons
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
 import org.junit.Assert.fail
@@ -43,7 +46,7 @@ abstract class SecondScreenCardsScreenshotBase(
     fun hostTheCard() {
         // xhdpi like the other screenshot tests: twice the dp.
         RuntimeEnvironment.setQualifiers("w${size.widthDp}dp-h${size.heightDp}dp-land-xhdpi")
-        compose.setContent { PlumTheme(settings) { SecondScreenCard(content) } }
+        compose.setContent { PlumTheme(settings) { CompositionLocalProvider(LocalHomeAppIcons provides FakeAppIcons(missing = setOf(APP_WITHOUT_ICON_KEY))) { SecondScreenCard(content) } } }
     }
 
     @Test

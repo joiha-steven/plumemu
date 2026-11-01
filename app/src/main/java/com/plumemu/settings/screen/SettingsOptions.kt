@@ -18,7 +18,6 @@ import com.plumemu.coredata.settings.GridSizeSetting
 import com.plumemu.coredata.settings.LeftEdgeSetting
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coredata.settings.TextWeightSetting
-import com.plumemu.account.AccountStatus
 import com.plumemu.coreui.theme.Rgb
 import com.plumemu.secondscreen.SecondScreen
 import com.plumemu.secondscreen.isSecondScreenOn
@@ -35,7 +34,8 @@ import com.plumemu.settings.withColors
 
 /**
  * A section of the left column, in SPEC order. Sound has nothing that works and is not listed.
- * [options] are the fixed rows; Emulators adds one row per system before them ([rowsIn]).
+ * [options] are the fixed rows; Emulators adds one row per system before them ([rowsIn]). Second
+ * screen is listed only on a device with one ([shownIn]).
  */
 internal enum class SettingsSection(
     @StringRes val title: Int,
@@ -47,25 +47,36 @@ internal enum class SettingsSection(
     ),
     Appearance(
         R.string.settings_section_appearance,
-        listOf(SettingsOption.Colors, SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent, SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight, SettingsOption.LeftEdge),
+        listOf(SettingsOption.Language, SettingsOption.Colors, SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent, SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight, SettingsOption.EdgeFade),
     ),
-    Emulators(R.string.settings_section_emulators, listOf(SettingsOption.DetectEmulators)),
-    Controls(R.string.settings_section_controls, listOf(SettingsOption.HoldToScrollFaster, SettingsOption.PushRightToPlay, SettingsOption.ShowButtonHints, SettingsOption.SwitchSystemWith, SettingsOption.Keyboard)),
     HomeScreen(
         R.string.settings_section_home_screen,
-        listOf(SettingsOption.UseAsHome, SettingsOption.ShowApps, SettingsOption.ShowClock, SettingsOption.ShowBattery, SettingsOption.SystemInfo),
+        listOf(SettingsOption.UseAsHome, SettingsOption.ShowApps, SettingsOption.ShowClock, SettingsOption.ShowBattery, SettingsOption.SystemInfo, SettingsOption.LeftEdge, SettingsOption.GridSize),
     ),
-    /** Read-only figures from the play history, the library and the stored box art ([statisticRowsOf]). */
+    /** Listed only while there is a second screen; In game only while it is in use (Settings has no dimmed rows). */
+    SecondScreen(R.string.settings_section_second_screen, listOf(SettingsOption.SecondScreen)),
+    Emulators(R.string.settings_section_emulators, listOf(SettingsOption.DetectEmulators)),
+    Controls(
+        R.string.settings_section_controls,
+        listOf(
+            SettingsOption.ConfirmBottom,
+            SettingsOption.SwitchSystemWith,
+            SettingsOption.HoldToScrollFaster,
+            SettingsOption.PushRightToPlay,
+            SettingsOption.ShowButtonHints,
+            SettingsOption.Keyboard,
+            SettingsOption.Sounds,
+            SettingsOption.Vibration,
+        ),
+    ),
+    /** Read-only figures from the play history, the library and the stored box art, on one page ([StatisticsPage]). */
     Statistics(R.string.settings_section_statistics, emptyList()),
+    /** ScreenScraper (box art, with its region inside its panel) and RetroAchievements: the person's accounts with outside services ([accountRowsIn]). */
+    Accounts(R.string.settings_section_accounts, listOf(SettingsOption.RetroAchievementsAccount)),
     Advanced(
         R.string.settings_section_advanced,
         listOf(
-            SettingsOption.ConfirmBottom,
             SettingsOption.Animations,
-            SettingsOption.Sounds,
-            SettingsOption.Vibration,
-            SettingsOption.Language,
-            SettingsOption.UsageStatistics,
             SettingsOption.Backup,
             SettingsOption.Restore,
             SettingsOption.ResetAll,
@@ -75,17 +86,24 @@ internal enum class SettingsSection(
     ),
     About(
         R.string.settings_section_about,
-        listOf(SettingsOption.Version, SettingsOption.CheckForUpdates, SettingsOption.CheckUpdatesDaily, SettingsOption.Licenses, SettingsOption.Privacy, SettingsOption.ReportProblem),
+        listOf(
+            SettingsOption.Version,
+            SettingsOption.CheckForUpdates,
+            SettingsOption.CheckUpdatesDaily,
+            SettingsOption.UsageStatistics,
+            SettingsOption.Licenses,
+            SettingsOption.Privacy,
+            SettingsOption.ReportProblem,
+        ),
     ),
     ;
 
     /**
      * The rows shown for [content]: in Emulators one [SettingsOption.SystemEmulator] per system with
-     * games first; in Library Systems after System order (only while a system has games), the ScreenScraper rows ([accountRowsIn]), one
+     * games first; in Library Systems after System order (only while a system has games), one
      * [SettingsOption.UnknownFolder] per folder of [SettingsContent.unknownFolders], then "Unidentified games (n)"
-     * and "Hidden games (n)", each only while it has games, then Recent size and Clear Recent… last; in Appearance Grid size last, only while signed in to ScreenScraper (the grid
-     * needs box art); in Home screen Second screen last, only while there is a second screen, and In
-     * game after it only while the switch is on (Settings has no dimmed rows). A build from source has
+     * and "Hidden games (n)", each only while it has games, then Recent size and Clear Recent… last; in Second screen In
+     * game after the switch only while it is on (Settings has no dimmed rows); nothing in a section that is not [shownIn]. A build from source has
      * no statistics server and no update manifest: none of the rows that need them is listed
      * ([SettingsContent.isInThisBuild]).
      */
@@ -94,9 +112,11 @@ internal enum class SettingsSection(
     private fun listedIn(content: SettingsContent): List<SettingsOption> =
         when {
             this == Emulators -> List(content.systems.size) { SettingsOption.SystemEmulator } + options
-            this == Statistics -> List(content.statisticRows.size) { SettingsOption.Statistic }
+            this == Statistics -> List(statisticStopsOf(content.statistics)) { SettingsOption.Statistic }
+            // ScreenScraper (its status line only in a build without credentials), then RetroAchievements.
+            this == Accounts -> accountRowsIn(content) + options
             this == Library ->
-                options + listOfNotNull(SettingsOption.Systems.takeIf { content.librarySystems.isNotEmpty() }) + accountRowsIn(content) +
+                options + listOfNotNull(SettingsOption.Systems.takeIf { content.librarySystems.isNotEmpty() }) +
                     List(content.unknownFolders.size) { SettingsOption.UnknownFolder } +
                     listOfNotNull(
                         SettingsOption.UnidentifiedGames.takeIf { content.unidentifiedGames.isNotEmpty() },
@@ -104,16 +124,31 @@ internal enum class SettingsSection(
                     ) +
                     // Recent last, after every row that shows only sometimes.
                     listOf(SettingsOption.RecentSize, SettingsOption.ClearRecent)
-            // The grid exists only with box art, which needs the signed-in account (HomeContent.hasBoxArt).
-            this == Appearance && content.account is AccountStatus.SignedIn -> options + SettingsOption.GridSize
             // Undo last restore right after Restore…, only while the way-back set exists.
             this == Advanced && content.wayBack != null -> options.flatMap { if (it == SettingsOption.Restore) listOf(it, SettingsOption.UndoRestore) else listOf(it) }
-            // "Update available" right under Version, only while a check found one.
-            this == About && content.update.found != null -> options.flatMap { if (it == SettingsOption.Version) listOf(it, SettingsOption.UpdateAvailable) else listOf(it) }
-            this == HomeScreen && content.secondScreen != null ->
-                options + listOfNotNull(SettingsOption.SecondScreen, SettingsOption.SecondScreenInGame.takeIf { content.isSecondScreenOn })
+            // "Platform data" right under Version, once the data's version is known.
+            // "Update available" under them (or under Version), only while a check found one.
+            this == About && (content.update.found != null || content.platformData != null) ->
+                options.flatMap {
+                    when {
+                        it != SettingsOption.Version -> listOf(it)
+                        else ->
+                            listOfNotNull(
+                                it,
+                                SettingsOption.PlatformData.takeIf { content.platformData != null },
+                                SettingsOption.UpdateAvailable.takeIf { content.update.found != null },
+                            )
+                    }
+                }
+            this == SettingsSection.SecondScreen ->
+                if (content.secondScreen == null) emptyList() else options + listOfNotNull(SettingsOption.SecondScreenInGame.takeIf { content.isSecondScreenOn })
             else -> options
         }
+
+    companion object {
+        /** The sections of the left column for [content], in order: Second screen only on a device that has one. */
+        fun shownIn(content: SettingsContent): List<SettingsSection> = entries.filter { it != SettingsSection.SecondScreen || content.secondScreen != null }
+    }
 }
 
 /** How an option reacts to A, a tap and left / right. */
@@ -161,6 +196,9 @@ internal enum class SettingsOption(
     /** ‹ Game counts › / ‹ System codes › / ‹ Letters ›: what the home screen's peek shows while a games list is focused; not picked is Game counts. */
     LeftEdge(R.string.settings_left_edge, OptionKind.Choice),
 
+    /** On (the default): the home screen's lists and grids fade out at an edge they continue past; off, they end flat. */
+    EdgeFade(R.string.settings_edge_fade, OptionKind.Switch),
+
     /** ‹ Small › / ‹ Medium › / ‹ Large ›: the main screen's grid, listed only while it has box art (the grid exists only then). */
     GridSize(R.string.settings_grid_size, OptionKind.Choice),
     ConfirmBottom(R.string.settings_confirm_bottom, OptionKind.Switch),
@@ -185,6 +223,9 @@ internal enum class SettingsOption(
     /** Shares the app's log file with Android's share sheet. */
     ExportLogs(R.string.settings_export_logs, OptionKind.Action),
     Version(R.string.settings_version, OptionKind.Info),
+
+    /** About › Platform data: the version of the systems and emulators list in use; listed once it is known. */
+    PlatformData(R.string.settings_platform_data, OptionKind.Info),
 
     /** Listed under Version while a check found a newer release; its panel has the notes and Update. */
     UpdateAvailable(R.string.settings_update_available, OptionKind.Opens),
@@ -266,10 +307,16 @@ internal enum class SettingsOption(
     /** "Box art: not available in this build" ([boxArtLineOf] is its label); the only row in a build without credentials. */
     ScraperStatus(R.string.settings_account_title, OptionKind.Info),
 
-    /** Whose box to show when the game's own region has none; listed only in a build that fetches box art. */
+    /**
+     * "RetroAchievements", signed in or out (the label stays put): its value is "Sign in »" while signed
+     * out, else the name; its panel signs in, or shows who is signed in and Sign out.
+     */
+    RetroAchievementsAccount(R.string.settings_ra_title, OptionKind.Opens),
+
+    /** Whose box to show when the game's own region has none. Never a row: an item of the ScreenScraper panel ([AccountPageItem.BoxArtRegion]) steps through its choices. */
     BoxArtRegion(R.string.settings_box_art_region, OptionKind.Choice),
 
-    /** One figure of Statistics; the row's index is its [StatisticRow] in [SettingsContent.statisticRows]. */
+    /** A cursor stop of Statistics: a most-played game by its place, or the page itself ([statisticStopsOf]). */
     Statistic(R.string.settings_section_statistics, OptionKind.Info),
 }
 
@@ -309,7 +356,7 @@ internal enum class PanelPage {
     /** Cancel and Reset, for Reset all settings and Reset library. */
     Confirm,
 
-    /** Advanced › Language: System default, then each language in its own name; A applies ([languagePanelIndex], [languagePanelTag]). */
+    /** Appearance › Language: System default, then each language in its own name; A applies ([languagePanelIndex], [languagePanelTag]). */
     Language,
 
     /** Advanced › Back up…: Settings and Everything, or Cancel while a backup runs ([backupPanelItems]). */
@@ -355,19 +402,22 @@ internal enum class PanelPage {
     /** Fix name… for one unidentified game ([SettingsNameFix.open]); its field takes the actions. */
     FixName,
 
-    /** Library › ScreenScraper while signed out: the sign-in form ([SettingsSignIn.form]); it takes the actions. */
+    /** Accounts › ScreenScraper while signed out: the sign-in form ([SettingsSignIn.form]); it takes the actions. */
     ScraperSignIn,
 
     /** About › Report a problem: the form ([SettingsProblemReport.form]); it takes the actions. */
     ProblemReport,
 
     /**
-     * Library › ScreenScraper: Sign in again and Sign out after a refusal; otherwise the box art
+     * Accounts › ScreenScraper: Sign in again and Sign out after a refusal; otherwise the box art
      * actions ([accountPageItems]) and Sign out.
      */
     ScraperAccount,
 
-    /** Library › ScreenScraper › Choose systems…: each system (A checks it), then the two actions ([SettingsFocus.chosenSystems]). */
+    /** Accounts › RetroAchievements while signed in: who is signed in, Sign in again (after a refusal) and Sign out ([raPageItems]). */
+    RaAccount,
+
+    /** Accounts › ScreenScraper › Choose systems…: each system (A checks it), then the two actions ([SettingsFocus.chosenSystems]). */
     ScraperSystems,
 
     /** Re-download's confirm: Re-download, then Cancel (focused first); about [SettingsFocus.redownloadSystems]. */
@@ -467,6 +517,7 @@ internal fun SettingsOption.switchValue(settings: PlumSettings): Boolean =
     when (this) {
         SettingsOption.ConfirmBottom -> settings.controls.confirmButton == ConfirmButtonSetting.Bottom
         SettingsOption.Animations -> settings.advanced.animations
+        SettingsOption.EdgeFade -> settings.appearance.edgeFade
         SettingsOption.Vibration -> settings.advanced.vibration
         SettingsOption.UsageStatistics -> settings.advanced.usageStatistics
         SettingsOption.CheckUpdatesDaily -> settings.updates.checkDaily
@@ -489,6 +540,7 @@ internal fun SettingsOption.toggled(settings: PlumSettings): PlumSettings =
             settings.copy(controls = settings.controls.copy(confirmButton = next))
         }
         SettingsOption.Animations -> settings.copy(advanced = settings.advanced.copy(animations = !settings.advanced.animations))
+        SettingsOption.EdgeFade -> settings.withAppearance { it.copy(edgeFade = !it.edgeFade) }
         SettingsOption.Vibration -> settings.copy(advanced = settings.advanced.copy(vibration = !settings.advanced.vibration))
         SettingsOption.UsageStatistics -> settings.copy(advanced = settings.advanced.copy(usageStatistics = !settings.advanced.usageStatistics))
         SettingsOption.CheckUpdatesDaily -> settings.copy(updates = settings.updates.copy(checkDaily = !settings.updates.checkDaily))

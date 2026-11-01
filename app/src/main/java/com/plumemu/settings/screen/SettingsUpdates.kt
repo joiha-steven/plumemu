@@ -3,30 +3,34 @@ package com.plumemu.settings.screen
 import android.text.format.DateUtils
 import android.text.format.Formatter
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import com.plumemu.platforms.PlatformDataVersion
 import com.plumemu.settings.versionLine
 import com.plumemu.R
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.setup.SetupButton
+import com.plumemu.setup.SetupProgressBar
 import com.plumemu.setup.bringIntoViewWhen
 import com.plumemu.update.CheckFailure
 import com.plumemu.update.CheckOutcome
 import com.plumemu.update.UpdateFailure
+import com.plumemu.update.UpdateManifest
 import com.plumemu.update.UpdateStep
 import com.plumemu.update.UpdateView
+import com.plumemu.update.ui.ReleaseNotesTags
+import com.plumemu.update.ui.ScrollingReleaseNotes
 import java.text.DateFormat
 import java.text.ParsePosition
 import java.text.SimpleDateFormat
@@ -120,9 +124,9 @@ internal fun updateRowValue(view: UpdateView): String {
     val name = view.found?.let { versionLine(it.versionName, it.versionCode) }.orEmpty()
     return when (view.step) {
         is UpdateStep.Downloading, UpdateStep.Verifying -> stringResource(R.string.settings_update_value_downloading)
-        is UpdateStep.Installing -> if (view.step.askedPerson) stringResource(R.string.settings_value_opens, name) else stringResource(R.string.settings_update_value_installing)
+        is UpdateStep.Installing -> if (view.step.askedPerson) name else stringResource(R.string.settings_update_value_installing)
         UpdateStep.ReadyToInstall -> stringResource(R.string.settings_update_value_installing)
-        else -> stringResource(R.string.settings_value_opens, name)
+        else -> name
     }
 }
 
@@ -145,6 +149,10 @@ internal fun checkRowValue(view: UpdateView): String {
 /** A time today ("10:15 AM"), else a date ("Oct 22, 2026"), in the device's formats. */
 @Composable
 private fun checkTime(at: Long): String = DateUtils.formatSameDayTime(at, System.currentTimeMillis(), DateFormat.MEDIUM, DateFormat.SHORT).toString()
+
+/** "Version 6 · Nov 1, 2026": the platform data's number and its date in the device's format. */
+@Composable
+internal fun platformDataRowValue(version: PlatformDataVersion): String = stringResource(R.string.settings_platform_data_value, version.dataVersion, releaseDateText(version.date))
 
 /**
  * The manifest's release day ("YYYY-MM-DD", perhaps with a time after it) written as [checkTime]
@@ -231,29 +239,38 @@ internal fun CheckUpdatesPanel(model: SettingsModel) {
 }
 
 /**
- * Update available's panel: the version, its date and size, the notes, the status line, then the
- * buttons (stacked, as wide as the widest, like Back up…'s). It scrolls when the text is large,
- * keeping the focused button in view.
+ * Update available's panel: "Plumemu installed → offered", the date and size, the notes (grouped
+ * under New, Improved, Fixed and Known issues when the manifest has them, else bullets), the status
+ * line (with a bar while downloading), then the buttons (stacked, as wide as the widest, like Back
+ * up…'s). Only the notes scroll, by touch or by Up and Down past the first and last button
+ * ([SettingsPanelModel.updateNotes]), so the buttons stay in view.
  */
 @Composable
 internal fun UpdatePanel(
     model: SettingsModel,
     touch: SettingsTouch,
+    installedLine: String,
 ) {
     val view = model.content.update
     val found = view.found ?: return
     val context = LocalContext.current
     val inPanel = model.focus.column == SettingsColumn.Panel && model.focus.page == PanelPage.Update
     Column(
-        Modifier.fillMaxHeight().verticalScroll(rememberScrollState()).testTag(SettingsTags.UPDATE_PANEL),
+        Modifier.fillMaxHeight().testTag(SettingsTags.UPDATE_PANEL),
         verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap),
     ) {
-        PanelTitle(stringResource(R.string.settings_update_title, versionLine(found.versionName, found.versionCode)))
+        val (from, to) = titleVersions(installedLine, found)
+        PanelTitle(stringResource(R.string.settings_update_title, from, to))
         PanelFact(stringResource(R.string.settings_update_facts, releaseDateText(found.released), Formatter.formatShortFileSize(context, found.size)))
-        // No bullets: each note is a paragraph of its own, the panel's gap apart.
-        for (note in found.notes) PanelBody(note)
+        UpdateNotes(found, model, Modifier.weight(1f, fill = false))
+        val step = view.step
         updateStepText(view)?.let { line ->
-            BasicText(line, style = PlumTheme.type.panelBody.copy(color = PlumTheme.colors.text), modifier = Modifier.onRowTextLine().testTag(SettingsPanelTags.STATUS))
+            Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.titleLineGap)) {
+                if (step is UpdateStep.Downloading) {
+                    SetupProgressBar(if (step.total > 0) step.done.toFloat() / step.total else 0f, Modifier.onRowTextLine().testTag(SettingsTags.UPDATE_PROGRESS))
+                }
+                BasicText(line, style = PlumTheme.type.panelBody.copy(color = PlumTheme.colors.text), modifier = Modifier.onRowTextLine().testTag(SettingsPanelTags.STATUS))
+            }
         }
         val items = updatePanelItems(view)
         if (items.isNotEmpty()) {
@@ -275,6 +292,31 @@ internal fun UpdatePanel(
         }
     }
 }
+
+/**
+ * The title's two versions: names only ("0.1.0 → 0.1.1"); when both names read the same (a test build
+ * of the same name) the build numbers too ("0.1.1 (412) → 0.1.1 (950)"). [installedLine] is Version's "name (build)".
+ */
+internal fun titleVersions(
+    installedLine: String,
+    found: UpdateManifest,
+): Pair<String, String> {
+    val installedName = installedLine.substringBeforeLast(" (")
+    return if (installedName == found.versionName) installedLine to versionLine(found.versionName, found.versionCode) else installedName to found.versionName
+}
+
+/** The release notes: grouped under small headings, or (an old manifest) bullets alone; the shared [ScrollingReleaseNotes]. */
+@Composable
+private fun UpdateNotes(
+    found: UpdateManifest,
+    model: SettingsModel,
+    modifier: Modifier,
+) {
+    ScrollingReleaseNotes(found, model.updateNotes, UPDATE_NOTES_TAGS, modifier, Modifier.onRowTextLine())
+}
+
+private val UPDATE_NOTES_TAGS =
+    ReleaseNotesTags(SettingsTags.UPDATE_NOTES, SettingsTags.UPDATE_HEADING, SettingsTags.UPDATE_NOTE, SettingsTags.UPDATE_DOT)
 
 private fun updateItemText(item: UpdatePanelItem): Int =
     when (item) {

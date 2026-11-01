@@ -167,7 +167,7 @@ data class GameSystem(
     val abbr: String = "",
     /**
      * Three characters at most ("SNS", "PS1", "MD"): the home screen's left edge shows it in place of the game count
-     * (Settings › Appearance › Left edge › System codes). A hand-made file without one gets the short name's first three letters.
+     * (Settings › Home screen › Left edge › System codes). A hand-made file without one gets the short name's first three letters.
      */
     val code: String = "",
     /**

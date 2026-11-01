@@ -202,7 +202,7 @@ internal class GraphScrapes(
             withContext(main) { onDone(stored) }
         }
 
-    /** What Settings › Library › ScreenScraper calls: [askAgain], [setPaused] and Clear box art. */
+    /** What Settings › Accounts › ScreenScraper calls: [askAgain], [setPaused] and Clear box art. */
     val settingsActions: SettingsBoxArtActions =
         object : SettingsBoxArtActions {
             override fun askAgain(
@@ -245,7 +245,7 @@ internal class GraphScrapes(
     val statusWithLimits: Flow<Pair<ScrapeStatus, AccountLimits?>> get() = combine(status, accountLimits) { status, limits -> status to limits }
 
     /**
-     * The account's limits for Settings › Library › ScreenScraper: empty while
+     * The account's limits for Settings › Accounts › ScreenScraper: empty while
      * signed out or refused, else the scraper's latest ([Scraper.accountLimits]), kept in memory
      * only. Built on collection: when Settings looks and no answer has given limits yet in this
      * process, [askLimitsOnce] asks `ssuserInfos.php` once.

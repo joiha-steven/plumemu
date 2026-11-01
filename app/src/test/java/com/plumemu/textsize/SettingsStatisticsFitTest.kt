@@ -4,24 +4,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeUp
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
 import com.plumemu.home.appComposeRule
+import com.plumemu.home.assertNoTextCut
 import com.plumemu.home.rulesAround
+import com.plumemu.settings.screen.FADE_BOTTOM_SUFFIX
+import com.plumemu.settings.screen.FADE_TOP_SUFFIX
+import com.plumemu.settings.screen.PlayStatistics
 import com.plumemu.settings.screen.SettingsAt
+import com.plumemu.settings.screen.SettingsColumn
 import com.plumemu.settings.screen.SettingsContent
+import com.plumemu.settings.screen.SettingsFocus
+import com.plumemu.settings.screen.SettingsSection
 import com.plumemu.settings.screen.SettingsTags
+import com.plumemu.settings.screen.StatisticTile
 import com.plumemu.settings.screen.StatisticsShots
 import com.plumemu.settings.screen.StatisticsState
-import com.plumemu.settings.screen.statisticRowsOf
+import com.plumemu.settings.screen.StatisticsTags
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -31,12 +37,15 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings › Statistics at every text size, the way `TextSizeScreensTest` checks the other
- * Settings sections (kept apart: that file is at the length limit): at the six sizes in Plum Sans
- * and at Large and Largest in Serif and Mono, no text is ellipsized, clipped, too short or on top
- * of another, and the focused row is fully on screen: the first game (cover, two-line title), the
- * version at the end of the list, the calm line of a library never played, and the failed read.
+ * Settings › Statistics' page at every text size, the way `TextSizeScreensTest` checks the other Settings sections (kept
+ * apart: that file is at the length limit): at the six sizes in Plum Sans and at Large and Largest in Serif and Mono, no
+ * text is ellipsized, clipped sideways, too short or on top of another (the page scrolls, so a line may be cut at its top
+ * or bottom edge only), the focused game is whole and clear of the hint bar, and every tile's figure is whole.
  */
+private const val PEEK_BELOW_DP = 640
+
+private const val LONG_TITLE = "The Legend of Zelda: The Adventures of a Link to the Past and Other Very Long Stories Told Twice"
+
 abstract class SettingsStatisticsFitBase(
     private val widthDp: Int,
     private val heightDp: Int,
@@ -46,10 +55,15 @@ abstract class SettingsStatisticsFitBase(
     @get:Rule
     val rules = rulesAround(compose)
 
+    /** A game's title and a system's name keep to one line and end in an ellipsis when they do not fit (rows of one height); nothing else may. */
+    private val names = (StatisticsShots.played.topGames.map { it.title } + StatisticsShots.played.topSystems.map { it.name } + LONG_TITLE).map { "'$it'" }
+    private val nameCut = { problem: String -> names.any { "$it is ellipsized" in problem || "$it is wider than its node" in problem } }
+
     private fun check(
         name: String,
-        focusedIndex: Int,
         ignoring: (String) -> Boolean = { false },
+        peeks: Boolean = false,
+        extra: (SemanticsNode, String, TextSize, PlumFont) -> List<String> = { _, _, _, _ -> emptyList() },
         screen: @Composable () -> Unit,
     ) {
         var size by mutableStateOf(TextSize.Largest)
@@ -65,125 +79,124 @@ abstract class SettingsStatisticsFitBase(
             compose.waitForIdle()
             val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
             val label = "$name at ${each.name} ${eachFont.name} on ${widthDp}x$heightDp"
-            textProblems(root, FitAllowance(setOf(SettingsTags.OPTION_LIST, SettingsTags.SECTIONS), isLargest = each == TextSize.Largest)).filterNot(ignoring).mapTo(failures) { "$label: $it" }
-            val focused = findTagged(root, SettingsTags.statistic(focusedIndex))
-            if (focused == null) failures += "$label: the focused row is not drawn" else notFullyShown(focused, root)?.let { failures += "$label: the focused row $it" }
+            val allow = FitAllowance(setOf(StatisticsTags.PAGE, SettingsTags.SECTIONS), isLargest = each == TextSize.Largest, stripTags = if (peeks) setOf(StatisticsTags.PAGE) else emptySet())
+            textProblems(root, allow).map { "$label: $it" }.filterNot(ignoring).mapTo(failures) { it }
+            extra(root, label, each, eachFont).mapTo(failures) { it }
         }
         assertTrue(failures.size.toString() + " problems:\n" + failures.take(40).joinToString("\n"), failures.isEmpty())
     }
 
-    @Test
-    fun theFirstGame() =
-        check("statistics_game", 1) {
-            StatisticsShots.WithCovers { SettingsAt(StatisticsShots.focusAt(1), content = StatisticsShots.contentOf(StatisticsShots.played)) }
+    /** Every tile that is drawn has its figure whole (no text cut by its width) and inside its tile. */
+    private fun figuresWhole(
+        root: SemanticsNode,
+        label: String,
+        textSize: TextSize,
+        font: PlumFont,
+        strict: Boolean,
+    ): List<String> {
+        val problems = mutableListOf<String>()
+        var seen = 0
+        for (tile in StatisticTile.entries) {
+            val box = findTagged(root, StatisticsTags.tile(tile)) ?: continue
+            val figure = findTagged(root, StatisticsTags.figure(tile))
+            if (figure == null) {
+                problems += "$label: the ${tile.name} tile has no figure"
+                continue
+            }
+            // A figure scrolled out of the window (the page follows the cursor) has nothing to check.
+            if (figure.boundsInRoot.width <= 0f) continue
+            // Up to Large in Plum Sans a figure is one line; at the larger sizes it may take its second line (maxLines = 2), whole and not ellipsized.
+            if (strict && font == PlumFont.Sans && textSize <= TextSize.Large) runCatching { assertNoTextCut(figure, "$label: ${tile.name} figure") }.exceptionOrNull()?.let { problems += it.message.orEmpty() }
+            if (figure.size.width > box.size.width) problems += "$label: the ${tile.name} figure is wider than its tile (${figure.size.width} > ${box.size.width} px)"
+            seen++
         }
-
-    /** The game panel beside a most-played game (cover, title, system, facts, "A to play"): whole at every size and font. */
-    @Test
-    fun theGamePanelWithArt() =
-        check("statistics_panel_art", 2) {
-            StatisticsShots.WithCovers { SettingsAt(StatisticsShots.focusAt(2), content = StatisticsShots.contentOf(StatisticsShots.played)) }
-        }
-
-    /** A game with no saved box front and no stored play log: the stand-in tile and only the play time. */
-    @Test
-    fun theGamePanelWithoutArtOrPlayLog() =
-        check("statistics_panel_no_art", 4) {
-            StatisticsShots.WithCovers { SettingsAt(StatisticsShots.focusAt(4), content = StatisticsShots.contentOf(StatisticsShots.played)) }
-        }
-
-    @Test
-    fun theGamePanelWithAVeryLongTitle() {
-        val long = "The Legend of Zelda: The Adventures of a Link to the Past and Other Very Long Stories Told Twice"
-        val figures = StatisticsShots.played.copy(topGames = StatisticsShots.played.topGames.map { it.copy(title = long) })
-        // A 96-letter title ends in "…" (the row after three lines, the panel after two); anything else wrong still fails.
-        check("statistics_panel_long_title", 2, ignoring = { it.endsWith("is ellipsized") }) { StatisticsShots.WithCovers { SettingsAt(StatisticsShots.focusAt(2), content = StatisticsShots.contentOf(figures)) } }
+        if (seen == 0) problems += "$label: no tile drawn"
+        return problems
     }
 
-    @Test
-    fun theVersionAtTheEnd() {
-        val last = statisticRowsOf(StatisticsState.Read(StatisticsShots.played)).lastIndex
-        check("statistics_version", last) {
-            StatisticsShots.WithCovers { SettingsAt(StatisticsShots.focusAt(last), content = StatisticsShots.contentOf(StatisticsShots.played)) }
-        }
-    }
-
-    /**
-     * At Largest the page scrolled to its end ends above the hint bar: the last row is whole and its
-     * bottom is above the bar's top (the bar's first key, B Back, stands for the bar), in the three
-     * fonts. Before the fix the last row was half under the bar.
-     */
-    @Test
-    fun theLastRowClearsTheHintBar() {
-        val last = statisticRowsOf(StatisticsState.Read(StatisticsShots.played)).lastIndex
-        var font by mutableStateOf(PlumFont.Sans)
-        compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest, font = font)) {
-                StatisticsShots.WithCovers { SettingsAt(StatisticsShots.focusAt(last), content = StatisticsShots.contentOf(StatisticsShots.played)) }
-            }
-        }
-        val failures = mutableListOf<String>()
-        for (each in listOf(PlumFont.Sans, PlumFont.Serif, PlumFont.Mono)) {
-            font = each
-            compose.waitForIdle()
-            val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
-            val row = findTagged(root, SettingsTags.statistic(last))
-            val hint = findTagged(root, SettingsTags.HINT_BACK)
-            if (row == null || hint == null) {
-                failures += "${each.name}: row or hint bar not drawn"
-            } else if (row.boundsInRoot.bottom > hint.boundsInRoot.top + 0.5f) {
-                failures += "${each.name}: the last row ends at ${row.boundsInRoot.bottom}, the hint bar starts at ${hint.boundsInRoot.top} on ${widthDp}x$heightDp"
-            }
-        }
-        assertTrue(failures.joinToString("\n"), failures.isEmpty())
-    }
-
-    /** The same when a finger scrolled the page to its end with the cursor still on the first row. */
-    @Test
-    fun scrolledToTheEndTheLastRowClearsTheHintBar() {
-        val last = statisticRowsOf(StatisticsState.Read(StatisticsShots.played)).lastIndex
-        compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) {
-                StatisticsShots.WithCovers { SettingsAt(StatisticsShots.focusAt(0), content = StatisticsShots.contentOf(StatisticsShots.played)) }
-            }
-        }
-        repeat(6) { compose.onNodeWithTag(SettingsTags.OPTION_LIST).performTouchInput { swipeUp() } }
-        compose.waitForIdle()
-        val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
-        val row = findTagged(root, SettingsTags.statistic(last))
-        val hint = findTagged(root, SettingsTags.HINT_BACK)
-        assertTrue("row or hint bar not drawn", row != null && hint != null)
-        assertTrue(
-            "the last row ends at ${row!!.boundsInRoot.bottom}, the hint bar starts at ${hint!!.boundsInRoot.top} on ${widthDp}x$heightDp",
-            row.boundsInRoot.bottom <= hint.boundsInRoot.top + 0.5f,
+    /** The focused game [index] is clear of the page's edge fades (a row under a fade reads as cut), at every size. */
+    private fun clearOfFades(
+        root: SemanticsNode,
+        label: String,
+        index: Int,
+    ): List<String> {
+        val game = findTagged(root, StatisticsTags.game(index)) ?: return listOf("$label: game $index is not drawn")
+        val bottom = findTagged(root, StatisticsTags.PAGE + FADE_BOTTOM_SUFFIX)
+        val top = findTagged(root, StatisticsTags.PAGE + FADE_TOP_SUFFIX)
+        return listOfNotNull(
+            bottom?.takeIf { game.boundsInRoot.bottom > it.boundsInRoot.top + 0.5f }?.let { "$label: game $index ends at ${game.boundsInRoot.bottom}, under the bottom fade from ${it.boundsInRoot.top}" },
+            top?.takeIf { game.boundsInRoot.top < it.boundsInRoot.bottom - 0.5f }?.let { "$label: game $index starts at ${game.boundsInRoot.top}, under the top fade to ${it.boundsInRoot.bottom}" },
         )
     }
 
-    /** A five-digit hour total is one line, inside the column and whole (or cut with an ellipsis, never clipped). */
+    private fun figures(strict: Boolean = true): (SemanticsNode, String, TextSize, PlumFont) -> List<String> = { root, label, size, font -> figuresWhole(root, label, size, font, strict) }
+
+    private fun played(
+        focusAt: Int,
+        figures: PlayStatistics = StatisticsShots.played,
+    ): @Composable () -> Unit = { StatisticsShots.WithCovers { SettingsAt(StatisticsShots.focusAt(focusAt), content = StatisticsShots.contentOf(figures)) } }
+
     @Test
-    fun aHugeTotalStaysInItsRow() {
-        val figures = StatisticsShots.played.copy(totalSeconds = 12_345 * 3_600L + 59 * 60)
-        compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) {
-                StatisticsShots.WithCovers { SettingsAt(StatisticsShots.focusAt(0), content = StatisticsShots.contentOf(figures)) }
-            }
-        }
-        compose.waitForIdle()
-        val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
-        val figure = findTagged(root, SettingsTags.statisticValue(0))
-        val row = findTagged(root, SettingsTags.statistic(0))
-        assertTrue("the total is not drawn", figure != null && row != null)
-        assertTrue("the total is cut by the screen: ${notFullyShown(figure!!, root)}", notFullyShown(figure, root) == null)
-        assertTrue("the total pokes out of its row (${figure.boundsInRoot} in ${row!!.boundsInRoot})", figure.boundsInRoot.right <= row.boundsInRoot.right + 0.5f)
+    fun theFirstGameAndTheTiles() =
+        check(
+            "statistics_first_game",
+            ignoring = nameCut,
+            extra = { root, label, size, font -> figures()(root, label, size, font) + clearOfFades(root, label, 0) },
+            screen = played(0),
+        )
+
+    /** The cursor on the last game: the page has followed it, it is whole and its bottom is above the hint bar. */
+    @Test
+    fun theLastGameIsWholeAndClearsTheHintBar() =
+        check(
+            "statistics_last_game",
+            ignoring = nameCut,
+            extra = { root, label, _, _ ->
+                val game = findTagged(root, StatisticsTags.game(4))
+                val hint = findTagged(root, SettingsTags.HINT_BACK)
+                when {
+                    game == null || hint == null -> listOf("$label: the last game or the hint bar is not drawn")
+                    notFullyShown(game, root) != null -> listOf("$label: the last game ${notFullyShown(game, root)}")
+                    game.boundsInRoot.bottom > hint.boundsInRoot.top + 0.5f -> listOf("$label: the last game ends at ${game.boundsInRoot.bottom}, the hint bar starts at ${hint.boundsInRoot.top}")
+                    else -> clearOfFades(root, label, 4)
+                }
+            },
+            screen = played(4),
+        )
+
+    @Test
+    fun aVeryLongTitleEndsInAnEllipsisOnItsLine() {
+        val figures = StatisticsShots.played.copy(topGames = StatisticsShots.played.topGames.map { it.copy(title = LONG_TITLE) })
+        // A 96-letter title ends in "..." on its one line; anything else wrong still fails.
+        check("statistics_long_title", ignoring = nameCut, screen = played(1, figures))
     }
 
-    /** The failed read: a two-line label and a two-line line under it at the largest sizes. */
+    /** A five-digit hour total wraps to its second line even at Medium in a four-tile row: whole and inside its tile at every size. */
     @Test
-    fun unreadable() = check("statistics_unreadable", 0) { SettingsAt(StatisticsShots.focusAt(0), content = SettingsContent(statistics = StatisticsState.Failed)) }
+    fun aHugeTotalStaysInItsTile() {
+        val figures = StatisticsShots.played.copy(totalSeconds = 12_345 * 3_600L + 59 * 60)
+        check("statistics_huge_total", ignoring = nameCut, extra = figures(strict = false), screen = played(0, figures))
+    }
 
     @Test
     fun nothingPlayed() =
-        check("statistics_empty", 0) { SettingsAt(StatisticsShots.focusAt(0), content = StatisticsShots.contentOf(StatisticsShots.nothingPlayed)) }
+        check("statistics_empty", extra = figures()) { SettingsAt(StatisticsShots.focusAt(0), content = StatisticsShots.contentOf(StatisticsShots.nothingPlayed)) }
+
+    @Test
+    fun anEmptyLibrary() = check("statistics_no_games") { SettingsAt(StatisticsShots.focusAt(0), content = StatisticsShots.contentOf(PlayStatistics())) }
+
+    @Test
+    fun unreadable() = check("statistics_unreadable") { SettingsAt(StatisticsShots.focusAt(0), content = SettingsContent(statistics = StatisticsState.Failed)) }
+
+    /** The sections column focused: only the tiles, two to a row, and their figures whole. */
+    @Test
+    fun thePreview() =
+        // Narrow screens only peek at the preview: the strip runs out of the right edge (as every section's options do).
+        check("statistics_preview", peeks = widthDp < PEEK_BELOW_DP, extra = if (widthDp < PEEK_BELOW_DP) { _, _, _, _ -> emptyList() } else figures()) {
+            StatisticsShots.WithCovers {
+                SettingsAt(SettingsFocus(column = SettingsColumn.Sections, section = SettingsSection.Statistics), content = StatisticsShots.contentOf(StatisticsShots.played))
+            }
+        }
 }
 
 @RunWith(RobolectricTestRunner::class)

@@ -7,35 +7,59 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import com.plumemu.R
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 
 /**
- * The details column without box art: wide screens only, with no
- * second-screen window, in the same 248 slot beside the list. Text only, top aligned where the
- * cover box starts with box art: the title, "Super Nintendo · USA", then the facts table as with box
- * art ([DetailsFacts]). No cover, no synopsis, no year, publisher or genre (none without ScreenScraper).
+ * The details column without box art: wide screens only, with no second-screen window, in the same 248 slot beside the
+ * list. As with box art ([WideDetailsLayout]): the game's poster cover where the cover box stands, fitted to its system's
+ * shape, then the title, "Super Nintendo · USA", then the facts table as with box art ([DetailsFacts]). No synopsis, year,
+ * publisher or genre (none without ScreenScraper). With the systems focused ([textHidden]) the cover shows alone. The text comes first: at the larger text sizes the poster shrinks
+ * to the height the text leaves and, under [PlumDimens.posterMinHeight], is left out ([WideDetailsLayout] `minCover`).
  */
 @Composable
 internal fun TextDetails(
     content: HomeContent,
     entry: HomeEntry,
     game: GameRowModel,
+    textHidden: Boolean,
     modifier: Modifier,
 ) {
     val system = rememberSystemName(content, entry, game)
     val play = rememberShownPlay(game, content)
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(PlumDimens.detailsBlockGapWide)) {
-        Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.titleLineGap)) {
-            DetailsTitle(game.title)
-            SystemLine(system?.let { systemAndRegion(it, game.region) })
-        }
-        DetailsFacts(play, PlumTheme.type.smallFact)
-    }
+    val poster = entry.posterOf(game)
+    WideDetailsLayout(
+        cover = {
+            DetailsCover(
+                ArtSlot.Absent,
+                DpSize(PlumDimens.detailsColumnWidth, PlumDimens.detailsCoverHeightWide),
+                Alignment.BottomStart,
+                isBoxFitted = false,
+                shrinksToFit = true,
+                poster = poster,
+                posterAspect = entry.shapeOf(game).widthOverHeight,
+                appPackage = game.appPackage,
+            )
+        },
+        titleBlock = {
+            if (!textHidden) {
+                Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.titleLineGap)) {
+                    DetailsTitle(game.title)
+                    SystemLine(system?.let { systemAndRegion(it, game.region) })
+                }
+            }
+        },
+        rest = { if (!textHidden) DetailsFacts(play, PlumTheme.type.smallFact) },
+        modifier = modifier,
+        minCover = PlumDimens.posterMinHeight,
+    )
 }
 
 /**

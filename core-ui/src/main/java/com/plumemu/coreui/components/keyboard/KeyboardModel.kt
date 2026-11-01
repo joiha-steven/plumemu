@@ -47,6 +47,9 @@ sealed interface KeyboardEvent {
 
     /** The hide key: the caller puts the keyboard away. */
     data object Hide : KeyboardEvent
+
+    /** The paste key: the caller reads the clipboard and inserts it (the keyboard never sees what it holds). */
+    data object Paste : KeyboardEvent
 }
 
 /** A direction on the keyboard (core-ui does not know core-input's actions; the caller maps them). */
@@ -75,7 +78,8 @@ enum class KeyboardMove {
  * The keyboard at one moment. [anchor] is the column centre a run of Up and Down presses aims
  * at (the key's centre where the run started), so Up then Down comes back to the same key; any
  * other move, a tap or a page change clears it. [cameFrom] is the key the last Up or Down left, so that
- * the opposite move picks it again when it is one of two as near.
+ * the opposite move picks it again when it is one of two as near. [hasPaste]: the bottom row has the paste
+ * key (the clipboard holds text; [withPaste]).
  */
 @Immutable
 data class KeyboardModel(
@@ -85,8 +89,9 @@ data class KeyboardModel(
     val shift: ShiftMode = ShiftMode.Off,
     val anchor: Float? = null,
     val cameFrom: KeyId? = null,
+    val hasPaste: Boolean = false,
 ) {
-    val rows: List<List<KeySlot>> get() = KeyboardLayout.rows(page, hasShift)
+    val rows: List<List<KeySlot>> get() = KeyboardLayout.rows(page, hasShift, hasPaste)
 
     val focusedSlot: KeySlot get() = rows[focus.row][focus.index]
 
@@ -119,7 +124,26 @@ data class KeyboardModel(
             KeyboardKey.Space -> this to KeyboardEvent.Space
             KeyboardKey.Action -> this to KeyboardEvent.Action
             KeyboardKey.Hide -> this to KeyboardEvent.Hide
+            KeyboardKey.Paste -> this to KeyboardEvent.Paste
         }
+
+    /**
+     * The paste key shown or not. A focus on the bottom row stays on the key at the same place (the
+     * paste key's own place gives way to the space key), so the cursor never jumps rows when the clipboard changes.
+     */
+    fun withPaste(shown: Boolean): KeyboardModel {
+        if (shown == hasPaste) return this
+        val next = copy(hasPaste = shown)
+        if (focus.row != rows.lastIndex) return next
+        val row = next.rows[focus.row]
+        val index =
+            if (focusedSlot.key == KeyboardKey.Paste) {
+                row.indexOfFirst { it.key == KeyboardKey.Space }
+            } else {
+                row.indexOfFirst { it.key == focusedSlot.key }
+            }
+        return next.copy(focus = KeyId(focus.row, index), anchor = null, cameFrom = null)
+    }
 
     /** A tap: focus [key] and press it at once (one tap types). */
     fun tap(key: KeyId): Pair<KeyboardModel, KeyboardEvent?> = focusOn(key).press()

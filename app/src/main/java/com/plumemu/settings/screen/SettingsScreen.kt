@@ -24,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -61,11 +62,6 @@ import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumLayout
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.WidthClass
-import com.plumemu.game.GameActions
-import com.plumemu.game.GamePanelOverlay
-import com.plumemu.game.OpenPanel
-import com.plumemu.game.rememberGameMenuController
-import com.plumemu.telemetry.LaunchFrom
 import com.plumemu.home.rememberBatteryCharging
 import com.plumemu.home.rememberBatteryReading
 import com.plumemu.home.rememberBatteryText
@@ -92,14 +88,15 @@ internal fun SettingsScreen(
     content: SettingsContent = SettingsContent(),
     /** Told each new state of Statistics' figures (the second screen's card); no second read. */
     onStatistics: (StatisticsState) -> Unit = {},
-    /** Plays a most-played game from Statistics (A or a tap on its row); its failures show as the main screen's do. */
-    games: GameActions = GameActions.None,
+    /** Opens on About › Update available's panel (the main screen's pill or START while an update waits), once, when that row exists. */
+    opensOnUpdate: Boolean = false,
+    /** Closes Settings and puts the main screen's cursor on a game in its system's list (Statistics' most-played rows). */
+    showOnHome: (systemId: String, gameId: Long) -> Unit = { _, _ -> },
 ) {
     val model = remember(actions) { SettingsModel(actions) }
-    val menu = rememberGameMenuController(games)
-    SideEffect { model.playGame = { menu.play(it, LaunchFrom.Statistics) } }
+    SideEffect { model.showOnHome = showOnHome }
     val sounds = LocalUiSounds.current
-    HearFeel(model.feel, menu.feel)
+    HearFeel(model.feel)
     TrackSettingsSection(model)
     DisposableEffect(model) { onDispose { model.onDispose() } }
     // Statistics' figures are read once per opening, after the first frame; content given with them (tests) keeps its own.
@@ -112,11 +109,16 @@ internal fun SettingsScreen(
     val currentSettings by rememberUpdatedState(settings)
     val currentGeometry by rememberUpdatedState(geometry)
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(router, model, menu, lifecycle) {
+    // Once: the content arrives after the first frame, and the panel must not reopen after the person left it.
+    var hasOpenedUpdate by rememberSaveable { mutableStateOf(false) }
+    val hasUpdateRow = content.update.found != null
+    LaunchedEffect(opensOnUpdate, hasUpdateRow) {
+        if (opensOnUpdate && hasUpdateRow && !hasOpenedUpdate) hasOpenedUpdate = model.openUpdate(currentSettings, currentGeometry)
+    }
+    LaunchedEffect(router, model, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             router.actions.collect {
-                // A launch message (file gone, no emulator…) is the game menu's panel: while it is open it takes every action.
-                if (!menu.onAction(it)) model.onAction(it, currentSettings, currentGeometry)
+                model.onAction(it, currentSettings, currentGeometry)
                 // At once, not a frame later: a B pressed just after the tray went down must go back, not erase.
                 router.textEntry = model.textEntry
             }
@@ -152,7 +154,7 @@ internal fun SettingsScreen(
     val wifi = if (settings.homeScreen.showBattery) rememberWifiConnected() else null
     SettingsLayout(
         settings, model, touch, versionName, { clock?.value }, { battery?.value }, modifier, status, { wifi?.value == true },
-        message = menu.panel, onMessageAction = router::send, charging = { charging?.value == true },
+        charging = { charging?.value == true },
     )
 }
 
@@ -239,9 +241,6 @@ internal fun SettingsLayout(
     modifier: Modifier = Modifier,
     status: SettingsStatus = SettingsStatus(),
     wifi: () -> Boolean = { false },
-    /** The game menu's panel while a launch message shows (Statistics' Play), drawn over the strip. */
-    message: OpenPanel? = null,
-    onMessageAction: (Action) -> Unit = {},
     /** Whether the charging bolt stands before the battery percentage; read only by the bolt. */
     charging: () -> Boolean = { false },
 ) = CompositionLocalProvider(LocalSettingsStatus provides status) {
@@ -262,7 +261,6 @@ internal fun SettingsLayout(
             SettingsStrip(settings, model, touch, versionName, Modifier.fillMaxSize())
             // Plumemu's keyboard for the focused page's field, down to the screen's bottom; the hint bar is drawn on it.
             SettingsKeyboardTray(model, belowContent = settingsTrayBelowStrip())
-            GamePanelOverlay(message, onMessageAction)
         }
         SettingsHints(settings, model, touch.onHint)
     }
@@ -284,6 +282,7 @@ private fun SettingsTopBar(
             // The account rows' labels carry a name or a whole sentence, an unknown folder's its own name: the crumb names the place only.
             when (it) {
                 SettingsOption.ScraperAccount, SettingsOption.ScraperStatus -> stringResource(R.string.settings_account_title)
+                SettingsOption.RetroAchievementsAccount -> stringResource(R.string.settings_ra_title)
                 SettingsOption.UnknownFolder -> stringResource(R.string.settings_unknown_folder_title)
                 else -> optionLabel(it, model.content, model.optionIndex)
             }
@@ -361,19 +360,21 @@ private fun SectionsColumn(
     model: SettingsModel,
     touch: SettingsTouch,
 ) {
-    // Scrolls to the focused section: at the larger text sizes the seven rows do not all fit the strip.
+    // Scrolls to the focused section: at the larger text sizes the rows do not all fit the strip.
+    // Second screen comes and goes with the screen; nothing else about the content recomposes the column.
+    val sections by remember(model) { derivedStateOf { SettingsSection.shownIn(model.content) } }
     KeepFocusedColumn(
-        { model.focus.section.ordinal },
-        SettingsSection.entries.size,
+        { sections.indexOf(model.focus.section) },
+        sections.size,
         0.dp,
         Modifier.width(PlumDimens.stripMarginSide + PlumDimens.settingsSectionsWidth).fillMaxHeight().testTag(SettingsTags.SECTIONS),
         fadeTag = SettingsTags.SECTIONS,
         // Only while the sections have the focus: a Current section (focus in the options) keeps its own quiet look.
-        pillIndex = { if (model.focus.column == SettingsColumn.Sections) model.focus.section.ordinal else -1 },
+        pillIndex = { if (model.focus.column == SettingsColumn.Sections) sections.indexOf(model.focus.section) else -1 },
         // The rows draw their pill from [PlumDimens.gameRowPadding] before the label (SystemRow's bleedStart); the gliding one does the same.
         pillShape = remember { InsetFocusPillShape((PlumDimens.stripMarginSide - PlumDimens.gameRowPadding).coerceAtLeast(0.dp)) },
     ) { place ->
-        for (section in SettingsSection.entries) SectionRow(section, model, touch, place(section.ordinal))
+        sections.forEachIndexed { index, section -> SectionRow(section, model, touch, place(index)) }
     }
 }
 
@@ -420,7 +421,17 @@ private fun OptionsColumn(
     val isPreview by remember(model) { derivedStateOf { model.focus.column == SettingsColumn.Sections } }
     val content = model.content
     Column(
-        modifier = Modifier.width(if (isPreview) layout.settingsOptionsPreviewWidth else layout.settingsOptionsWidth).fillMaxHeight().testTag(SettingsTags.OPTIONS),
+        modifier =
+            Modifier
+                .width(
+                    when {
+                        isPreview -> layout.settingsOptionsPreviewWidth
+                        // Statistics has no side panel: once entered, its page takes the panel's room too.
+                        section == SettingsSection.Statistics -> statisticsPageWidth(layout)
+                        else -> layout.settingsOptionsWidth
+                    },
+                ).fillMaxHeight()
+                .testTag(SettingsTags.OPTIONS),
         verticalArrangement = Arrangement.spacedBy(PlumDimens.listRowGap),
     ) {
         val options = section.rowsIn(content)
@@ -444,37 +455,39 @@ private fun OptionsColumn(
                 modifier = Modifier.padding(horizontal = PlumDimens.gameRowPadding).testTag(SettingsTags.SAVE_FAILED),
             )
         }
+        if (section == SettingsSection.Statistics) {
+            StatisticsPage(model, touch, isPreview, Modifier.fillMaxWidth().weight(1f))
+            return@Column
+        }
         // Keyed by section: the column's scroll and measured rows belong to one section's rows. Kept across a
         // section change, the old spans stood for the new rows and the remembered row was left out of view.
+        // The weight is on a box around the column: the column's edge fades share a box with it ([KeepFocusedColumn]).
         key(section) {
-            KeepFocusedColumn(
-                { model.optionIndex },
-                options.size,
-                PlumDimens.listRowGap,
-                Modifier.weight(1f, fill = false).testTag(SettingsTags.OPTION_LIST),
-                // Only while the options have the focus: with a panel focused the option row is Current, not focused.
-                pillIndex = { if (model.focus.column == SettingsColumn.Options) model.optionIndex else -1 },
-            ) { place ->
-                // Statistics: one text line for every row, so the cover slot is kept in rows without a cover.
-                val pageHasCovers = content.statisticRows.any { it is StatisticRow.Game && it.showsCover }
-                options.forEachIndexed { index, option ->
-                    val isSystem = option == SettingsOption.SystemEmulator
-                    val unknown = if (option == SettingsOption.UnknownFolder) content.unknownFolderAtRow(index) else null
-                    val statistic = if (option == SettingsOption.Statistic) content.statisticRows.getOrNull(index) else null
-                    if (statistic is StatisticRow.Game && statistic.rank == 1) StatisticGroupHeading(stringResource(R.string.settings_statistics_most_played), pageHasCovers)
-                    OptionRowAt(
-                        model = model,
-                        index = index,
-                        option = option,
-                        value = optionValue(option, settings, versionName, content, index, model.work.isDetecting(content)),
-                        label = optionLabel(option, content, index),
-                        touch = touch,
-                        place = place(index),
-                        isSystem = isSystem,
-                        unknown = unknown,
-                        statistic = statistic,
-                        pageHasCovers = pageHasCovers,
-                    )
+            Box(Modifier.weight(1f, fill = false)) {
+                KeepFocusedColumn(
+                    { model.optionIndex },
+                    options.size,
+                    PlumDimens.listRowGap,
+                    Modifier.testTag(SettingsTags.OPTION_LIST),
+                    fadeTag = SettingsTags.OPTION_LIST,
+                    // Only while the options have the focus: with a panel focused the option row is Current, not focused.
+                    pillIndex = { if (model.focus.column == SettingsColumn.Options) model.optionIndex else -1 },
+                ) { place ->
+                    options.forEachIndexed { index, option ->
+                        val isSystem = option == SettingsOption.SystemEmulator
+                        val unknown = if (option == SettingsOption.UnknownFolder) content.unknownFolderAtRow(index) else null
+                        OptionRowAt(
+                            model = model,
+                            index = index,
+                            option = option,
+                            value = optionValue(option, settings, versionName, content, index, model.work.isDetecting(content)),
+                            label = optionLabel(option, content, index),
+                            touch = touch,
+                            place = place(index),
+                            isSystem = isSystem,
+                            unknown = unknown,
+                        )
+                    }
                 }
             }
         }
@@ -493,8 +506,6 @@ private fun OptionRowAt(
     place: Modifier,
     isSystem: Boolean,
     unknown: SettingsFolderRow? = null,
-    statistic: StatisticRow? = null,
-    pageHasCovers: Boolean = false,
 ) {
     SideEffect { SettingsRecomposeProbe.optionRows++ }
     val look by remember(model, index) {
@@ -514,17 +525,12 @@ private fun OptionRowAt(
         look = look,
         modifier = place.tapTarget { touch.onOption(index) },
         // A read-only row's value is no button (TalkBack would announce one that does nothing): a tap on it reaches the row's own target, which focuses.
-        valueModifier = if (option.kind == OptionKind.Info && statistic !is StatisticRow.Game) Modifier else Modifier.tapTarget { touch.onValue(index) },
+        valueModifier = if (option.kind == OptionKind.Info) Modifier else Modifier.tapTarget { touch.onValue(index) },
         label = label,
-        tag = if (unknown != null) SettingsTags.unknownFolder(unknown.key) else if (isSystem) SettingsTags.system(index) else if (statistic != null) SettingsTags.statistic(index) else SettingsTags.option(option),
-        valueTag = if (unknown != null) SettingsTags.unknownFolderValue(unknown.key) else if (isSystem) SettingsTags.systemValue(index) else if (statistic != null) SettingsTags.statisticValue(index) else SettingsTags.value(option),
-        detail = statisticDetail(statistic),
-        leading = (statistic as? StatisticRow.Game)?.takeIf { it.showsCover }?.let { game -> { StatisticCover(game.game.cover, index) } },
-        labelLines = if (statistic is StatisticRow.Game || unknown != null) GAME_TITLE_LINES else 2,
-        keepsLeadingRoom = statistic != null && pageHasCovers,
-        verticalPadding = if (statistic != null) PlumDimens.factsRowGap else if (option == SettingsOption.ConfirmBottom) PlumDimens.settingsTwoLineRowPadding else 0.dp,
-        headline = if (statistic is StatisticRow.Total) value.let { (it as? OptionValue.Text)?.text } else null,
-        textTag = if (statistic != null) SettingsTags.statisticText(index) else null,
+        tag = if (unknown != null) SettingsTags.unknownFolder(unknown.key) else if (isSystem) SettingsTags.system(index) else SettingsTags.option(option),
+        valueTag = if (unknown != null) SettingsTags.unknownFolderValue(unknown.key) else if (isSystem) SettingsTags.systemValue(index) else SettingsTags.value(option),
+        labelLines = if (unknown != null) GAME_TITLE_LINES else 2,
+        verticalPadding = if (option == SettingsOption.ConfirmBottom) PlumDimens.settingsTwoLineRowPadding else 0.dp,
     )
 }
 

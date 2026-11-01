@@ -75,10 +75,10 @@ abstract class SettingsBoxArtAlignBase {
     protected fun theRowsValueEndsWithTheOthers(label: String) {
         val content = BoxArtShots.content(BoxArtShots.SIGNED_IN, BoxArtShots.running)
         // The sections column focused: no row has the fill, every value is drawn alike.
-        eachSize(label, SettingsFocus(column = SettingsColumn.Sections, section = SettingsSection.Library), content) { at, problems ->
-            val value = textBounds("340\u00A0of\u00A02,054\u00A0»", hasTestTag(SettingsTags.option(SettingsOption.ScraperAccount)))
-            val folders = textBounds("2 folders\u00A0»", hasTestTag(SettingsTags.option(SettingsOption.RomFolders)))
-            if (!near(value.right.value, folders.right.value)) problems += "$at: the account's value ends at ${value.right}, ROM folders' at ${folders.right}"
+        eachSize(label, SettingsFocus(column = SettingsColumn.Sections, section = SettingsSection.Accounts), content) { at, problems ->
+            val value = textBounds("340\u00A0of\u00A02,054", hasTestTag(SettingsTags.option(SettingsOption.ScraperAccount)))
+            val retro = textBounds("Sign in", hasTestTag(SettingsTags.option(SettingsOption.RetroAchievementsAccount)))
+            if (!near(value.right.value, retro.right.value)) problems += "$at: the account's value ends at ${value.right}, RetroAchievements' at ${retro.right}"
         }
     }
 

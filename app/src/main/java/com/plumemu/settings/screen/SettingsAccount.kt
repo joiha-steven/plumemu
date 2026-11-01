@@ -28,9 +28,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import com.plumemu.R
+import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.account.AccountStatus
 import com.plumemu.account.SignInBody
 import com.plumemu.account.SignInForm
+import com.plumemu.account.SignInKind
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.keyboard.KeyboardChoice
@@ -40,39 +42,51 @@ import com.plumemu.setup.bringIntoViewWhen
 import kotlin.math.roundToInt
 
 /*
- * Settings › Library's ScreenScraper rows: the account row and its
+ * Settings › Accounts' ScreenScraper rows: the account row and its
  * panel (the sign-in form shared with setup, or the signed-in page: the status line and the box
- * art actions), and the box art region (a plain ‹ › choice in SettingsOptions.kt). The status
+ * art actions, the box art region among them). The status
  * words, the systems picker and the confirm are in SettingsBoxArt.kt.
  */
 
 /**
- * Library's ScreenScraper rows: without developer credentials only the status line ("Not
- * available in this build"); otherwise the account row (its value says how box art is going)
- * and the box art region.
+ * Accounts' ScreenScraper row: without developer credentials only the status line ("Not
+ * available in this build"); otherwise the account row (its value says how box art is going).
  */
 internal fun accountRowsIn(content: SettingsContent): List<SettingsOption> =
     when (content.account) {
         AccountStatus.NotInThisBuild -> listOf(SettingsOption.ScraperStatus)
-        AccountStatus.SignedOut, is AccountStatus.SignedIn -> listOf(SettingsOption.ScraperAccount, SettingsOption.BoxArtRegion)
+        AccountStatus.SignedOut, is AccountStatus.SignedIn -> listOf(SettingsOption.ScraperAccount)
     }
 
 /** ScreenScraper refused the stored password: Settings offers to sign in again. */
 internal fun isRefused(account: AccountStatus): Boolean = (account as? AccountStatus.SignedIn)?.isRefused == true
 
+/** An account row's value while signed in and nothing needs saying: "Signed in as <name>" with a check; "Signed in" when the name is missing. */
+@Composable
+internal fun signedInValue(name: String): OptionValue.Opens =
+    OptionValue.Opens(
+        if (name.isBlank()) stringResource(R.string.settings_account_value_signed_in) else stringResource(R.string.account_signed_in_as, name),
+        isSignedIn = true,
+    )
+
 /** What the signed-in page offers, top to bottom. */
-internal enum class AccountPageItem { SignInAgain, DownloadMissing, RedownloadAll, ChooseSystems, ClearBoxArt, PauseOrResume, SignOut }
+internal enum class AccountPageItem { SignInAgain, DownloadMissing, RedownloadAll, ChooseSystems, ClearBoxArt, PauseOrResume, BoxArtRegion, SignOut }
+
+/** [stored] with the next box art region, wrapping: the panel's region button. Read inside the write, like every choice. */
+internal fun withNextBoxArtRegion(stored: PlumSettings): PlumSettings =
+    SettingsOption.BoxArtRegion.let { it.withChoice(stored, (stored.library.boxArtRegion.ordinal + 1) % it.choiceCount(stored)) }
 
 /**
  * After a refusal: Sign in again and Sign out. An empty library: Clear box art (pictures may be
- * left of games that are gone), Resume while paused, and Sign out. Otherwise Download missing
+ * left of games that are gone), Resume while paused, Box art region and Sign out. Otherwise Download missing
  * (focused first), Re-download all, Choose systems… (with games in more than one system), Clear
- * box art…, Pause or Resume, Sign out.
+ * box art…, Pause or Resume, Box art region (A steps to the next region, wrapping), Sign out.
  */
 internal fun accountPageItems(content: SettingsContent): List<AccountPageItem> =
     when {
         isRefused(content.account) -> listOf(AccountPageItem.SignInAgain, AccountPageItem.SignOut)
-        isLibraryEmpty(content) -> listOfNotNull(AccountPageItem.ClearBoxArt, AccountPageItem.PauseOrResume.takeIf { isPausedByPerson(content) }, AccountPageItem.SignOut)
+        isLibraryEmpty(content) ->
+            listOfNotNull(AccountPageItem.ClearBoxArt, AccountPageItem.PauseOrResume.takeIf { isPausedByPerson(content) }, AccountPageItem.BoxArtRegion, AccountPageItem.SignOut)
         else ->
             listOfNotNull(
                 AccountPageItem.DownloadMissing,
@@ -80,6 +94,7 @@ internal fun accountPageItems(content: SettingsContent): List<AccountPageItem> =
                 AccountPageItem.ChooseSystems.takeIf { content.systems.size > 1 },
                 AccountPageItem.ClearBoxArt,
                 AccountPageItem.PauseOrResume,
+                AccountPageItem.BoxArtRegion,
                 AccountPageItem.SignOut,
             )
     }
@@ -101,7 +116,8 @@ internal class SettingsSignIn {
         fun newForm(
             username: String = "",
             keyboard: KeyboardChoice,
-        ): SignInForm = SignInForm(initialUsername = username, stackedButtons = true, keyboardKind = keyboard)
+            kind: SignInKind = SignInKind.ScreenScraper,
+        ): SignInForm = SignInForm(initialUsername = username, stackedButtons = true, keyboardKind = keyboard, kind = kind)
     }
 
     fun close() {
@@ -115,13 +131,14 @@ internal class SettingsSignIn {
  */
 @Composable
 internal fun ScraperAccountPanel(
+    settings: PlumSettings,
     model: SettingsModel,
     touch: SettingsTouch,
 ) {
     val form = model.signIn.form
     val page = model.focus.page
-    if (form != null && page == PanelPage.ScraperSignIn) {
-        SignInPage(form, touch)
+    if (form != null && form.kind == SignInKind.ScreenScraper && page == PanelPage.ScraperSignIn) {
+        SignInPage(stringResource(R.string.settings_account_title), form, touch)
         return
     }
     if (page == PanelPage.ScraperSystems) return BoxArtSystemsPage(model, touch)
@@ -155,7 +172,12 @@ internal fun ScraperAccountPanel(
                 accountPageItems(content).forEachIndexed { index, item ->
                     val focused = inPanel && model.focus.panelIndex == index
                     SetupButton(
-                        text = stringResource(accountPageItemText(item, isPausedByPerson(content))),
+                        text =
+                            if (item == AccountPageItem.BoxArtRegion) {
+                                stringResource(R.string.settings_box_art_region_value, stringResource(choiceName(SettingsOption.BoxArtRegion, settings.library.boxArtRegion.ordinal)))
+                            } else {
+                                stringResource(accountPageItemText(item, isPausedByPerson(content)))
+                            },
                         isPrimary = item == AccountPageItem.SignInAgain || item == AccountPageItem.DownloadMissing,
                         isFocused = focused,
                         maxLines = 2,
@@ -180,6 +202,7 @@ private fun accountPageItemText(
         AccountPageItem.ChooseSystems -> R.string.settings_box_art_choose_systems
         AccountPageItem.ClearBoxArt -> R.string.settings_box_art_clear
         AccountPageItem.PauseOrResume -> if (isPaused) R.string.settings_box_art_resume else R.string.settings_box_art_pause
+        AccountPageItem.BoxArtRegion -> R.string.settings_box_art_region
         AccountPageItem.SignOut -> R.string.settings_account_sign_out
     }
 
@@ -189,9 +212,11 @@ private fun accountPageItemText(
  * focused field shows with the line under it.
  */
 @Composable
-private fun SignInPage(
+internal fun SignInPage(
+    title: String,
     form: SignInForm,
     touch: SettingsTouch,
+    below: @Composable () -> Unit = {},
 ) {
     val covers = settingsKeyboardCovers()
     // Setup's gap, the same with the keyboard tray up or down so the form never jumps when it opens: over the
@@ -199,8 +224,8 @@ private fun SignInPage(
     // 10 left once Sign in's label went from 15 to 16.
     val gap = PlumDimens.setupContentGap
     AccountPanelScroll(gap, Modifier.aboveTray({ form.isTrayUp }, covers)) {
-        PanelTitle(stringResource(R.string.settings_account_title))
-        SignInBody(form, R.string.settings_cancel, onTap = touch.onPanelItem, onAction = touch.onHint, gap = gap)
+        PanelTitle(title)
+        SignInBody(form, R.string.settings_cancel, onTap = touch.onPanelItem, onAction = touch.onHint, gap = gap, below = below)
     }
 }
 

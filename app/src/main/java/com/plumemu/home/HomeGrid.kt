@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -58,6 +59,7 @@ import com.plumemu.coreui.components.rememberConfirmPressScale
 import com.plumemu.coreui.components.rememberTouchPressScale
 import com.plumemu.coreui.components.FocusTravel
 import com.plumemu.coreui.components.rememberFocusTravel
+import com.plumemu.coreui.components.listEdgeFadeMask
 import com.plumemu.coreui.theme.CoverClass
 import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.coreui.theme.ListGlide
@@ -93,7 +95,7 @@ internal fun GamesGrid(
     val panelOpen = rememberUpdatedState(isPanelOpen)
     val entry = content.entries.getOrNull(entryIndex) ?: return
     // Apps' grid is of icons at one fixed size, without box art.
-    if (entry.kind == EntryKind.Apps) {
+    if (entry.kind == EntryKind.Apps || entry.isAppGamesGrid) {
         AppsGrid(entry, state, onAction, panelOpen, modifier)
         return
     }
@@ -134,11 +136,13 @@ internal fun GamesGrid(
         val ring = focusRing(state, entry, gridState, glide, lift, panelOpen, cell, touch, shadow, motionOn, travel)
         val fitter = LocalTileTitleFit.current ?: TileTitleFit(rememberTextMeasurer(cacheSize = 64))
         CompositionLocalProvider(LocalTileTitleFit provides fitter) {
+        // Under the ring: the focused cover is drawn over the mask (it never stands in a fade), the rows cut at an edge fade.
+        val fades = remember(gridState, glide, state, entry.id) { GridEdgeFades(gridState, glide) { state.focus.rowOf(entry.id) } }
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
             state = gridState,
             flingBehavior = rememberRowSnapFling(gridState),
-            modifier = modifier.padding(top = PlumDimens.gridTopGap - PlumDimens.barGap).fadingIn(fade).then(ring).testTag(HomeTags.GRID).then(glide.modifier),
+            modifier = modifier.padding(top = PlumDimens.gridTopGap - PlumDimens.barGap).fadingIn(fade).then(ring).listEdgeFadeMask(fades, PlumTheme.edgeFadeOn).testTag(HomeTags.GRID).then(glide.modifier),
             contentPadding = PaddingValues(top = glide.extra, bottom = glide.extra + rememberGridLeftover(gridState, layout.gridStripHeight, rowHeight, rowGap, fit), end = PlumDimens.gridPadding * 2),
             horizontalArrangement = Arrangement.spacedBy(gap),
             verticalArrangement = Arrangement.spacedBy(rowGap),
@@ -170,7 +174,7 @@ internal fun GamesGrid(
                     }
                 // A game taken out of Favorites stays in the held grid until the person leaves it: dimmed, where the list drops the star.
                 val dimmed = entry.kind == EntryKind.Favorites && !row.isFavorite
-                GridCover(row, art.slot(row.scrapeKey), entry.shapeOf(row), cell, titleStyle, tap, focused, shadow, fitsShape = entry.kind.mixesSystems, dimmed = dimmed)
+                GridCover(row, art.slot(row.scrapeKey), entry.shapeOf(row), entry.posterOf(row), cell, titleStyle, tap, focused, shadow, fitsShape = entry.kind.mixesSystems, dimmed = dimmed)
             }
         }
         }
@@ -208,6 +212,8 @@ private fun focusRing(
         if (focus.column == Column.Games && !panelOpen.value) focus.rowOf(entry.id) else null
     }
     val sweep = remember { FocusSweep() }
+    val posterGlow = remember { PosterGlowMemo() }
+    val appGlow = LocalHomeAppIcons.current.appGlowColors()
     FollowFocusLift(state, entry.id, panelOpen, lift, sweep, motionOn, travel)
     return Modifier.drawWithContent {
         drawContent()
@@ -233,7 +239,13 @@ private fun focusRing(
             val cover = focusedCoverRect(cellRect, aspect, scale, lift)
             val ringCorner = coverCorner(rowShape) * scale
             val drawCover = slot.recordedIndex == index && slot.recordedEntryId == entry.id
-            val glowColor = picture?.let { art.glowColors[it] } ?: CoverGlowColor.lifted(colors.sel)
+            val glowColor =
+                picture?.let { art.glowColors[it] }
+                    // The poster's colour only where the cell draws the poster (no picture to show); a tile still waiting or decoding keeps the selection's.
+                    ?: if (row?.appPackage != null) {
+                        // An app game's card is a gradient of its icon's colour: the halo is that colour, the selection's until known.
+                        appGlow[row.iconKey] ?: CoverGlowColor.lifted(colors.sel)
+                    } else if (row != null && picture == null && art.slot(row.scrapeKey) !is ArtSlot.Unknown) posterGlow.of(row.title) else CoverGlowColor.lifted(colors.sel)
             val pressed = if (slot.isFocused) minOf(pressScale(), touch.scaleOf(index)) else 1f
             // The ring travels from the cell it left (rules.md > Focus and current); the cover itself grows in place.
             val ringShift =
@@ -254,14 +266,14 @@ private fun focusRing(
                     if (drawCover) {
                         with(shadow) {
                             draw(cover, ringCorner.toPx(), isLifted = true, strength = grow)
-                            // In the cover's own colour (its picture's average, the tile's `sel` for a placeholder), in step with the lift.
+                            // In the cover's own colour (its picture's average, the poster's middle colour, the tile's `sel` for a placeholder), in step with the lift.
                             drawGlow(cover, ringCorner.toPx(), glowColor, grow)
                         }
                         drawFocusedCover(slot.layer, resting, cover, ringCorner, colors.bg, scale, lift)
                     }
                     if (slot.isFocused) {
                         if (sweep.progress.isRunning) drawSweep(cover, ringCorner.toPx(), sweep.progress.value)
-                        drawGridFocusRing(cover.topLeft + ringShift, cover.size, ringCorner, colors.accent, colors.bg)
+                        drawGridFocusRing(cover.topLeft + ringShift, cover.size, ringCorner, colors.accent, colors.bg, colors.focusGlow)
                     }
                 }
             }
@@ -291,6 +303,7 @@ private fun GridCover(
     row: GameRowModel,
     slot: ArtSlot,
     shape: CoverShape,
+    posterSpec: PosterSpec,
     cell: DpSize,
     titleStyle: TextStyle,
     modifier: Modifier,
@@ -305,8 +318,14 @@ private fun GridCover(
     val density = LocalDensity.current
     val picture = (slot as? ArtSlot.Found)?.art?.gridPicture(cell, density)
     val ownShape = picture == null && fitsShape
+    // An app game in a grid with files is a card like its neighbours: its icon on a gradient of the icon's colour (AppGameCover.kt);
+    // with no icon it is the poster, as a file game with no box art.
+    val appIcon = rememberAppGameIcon(row, if (ownShape) fitInside(shape.widthOverHeight, cell) else cell)
     @Composable
     fun Cover(size: DpSize, coverModifier: Modifier) =
+        if (appIcon != null && appIcon != TileIcon.Missing) {
+            AppGameCover(posterSpec, row.iconKey, appIcon, size, coverCorner(shape), shadow, if (dimmed) PlumDimens.UNFAVORITED_COVER_ALPHA else 1f, coverModifier, look)
+        } else {
         CoverArt(
             title = row.title,
             picture = picture,
@@ -321,7 +340,10 @@ private fun GridCover(
             hasEdge = true,
             shadow = shadow,
             shadowAlpha = if (dimmed) PlumDimens.UNFAVORITED_COVER_ALPHA else 1f,
+            // Not while the result is still being read: the plain tile stands until it is known there is no picture.
+            poster = if (slot is ArtSlot.Unknown && appIcon == null) null else posterSpec,
         )
+        }
     if (ownShape) {
         Box(modifier.size(cell), contentAlignment = Alignment.BottomCenter) { Cover(fitInside(shape.widthOverHeight, cell), Modifier.testTag(HomeTags.COVER_OWN_SHAPE)) }
     } else {
@@ -550,3 +572,23 @@ private fun LazyGridState.keepVisible(
     }
 }
 
+/**
+ * The poster glows of the last two titles asked for: during a lift the ring draws the cover being left and the
+ * focused one every frame, and the palette lookup allocates, so one remembered title would miss on both.
+ */
+private class PosterGlowMemo {
+    private var newerTitle: String? = null
+    private var newerColor = Color.Unspecified
+    private var olderTitle: String? = null
+    private var olderColor = Color.Unspecified
+
+    fun of(title: String): Color {
+        if (title == newerTitle) return newerColor
+        if (title == olderTitle) return olderColor
+        olderTitle = newerTitle
+        olderColor = newerColor
+        newerTitle = title
+        newerColor = posterGlowColor(title)
+        return newerColor
+    }
+}

@@ -161,10 +161,14 @@ class StripState internal constructor(
     fun focusRow(index: Int) = moveFocus(StripReducer.focusRow(focus, index, content, isNarrow))
 
     /**
-     * Focus game 0 of system [systemId] in the games column (the Home button's landing, the
-     * setup's end): the strip slides there with the usual spec, or jumps when motion is off.
+     * Focus game [itemId] (game 0 when null or not there) of system [systemId] in the games column
+     * (the Home button's landing, the setup's end, a Statistics game): the strip slides there with
+     * the usual spec, or jumps when motion is off.
      */
-    fun landOn(systemId: String) = moveFocus(StripReducer.landOn(focus, systemId, content, isNarrow))
+    fun landOn(
+        systemId: String,
+        itemId: String? = null,
+    ) = moveFocus(StripReducer.landOn(focus, systemId, content, isNarrow, itemId))
 
     internal fun stopOffsetPx(column: Column): Float = with(density) { geometry.offsetOf(column).toPx() }
 

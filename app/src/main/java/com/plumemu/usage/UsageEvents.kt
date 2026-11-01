@@ -39,10 +39,12 @@ import com.plumemu.update.CheckOutcome
 internal fun screenIdOf(section: SettingsSection): ScreenId =
     when (section) {
         SettingsSection.Library -> ScreenId.SettingsLibrary
+        SettingsSection.Accounts -> ScreenId.SettingsAccounts
         SettingsSection.Appearance -> ScreenId.SettingsAppearance
         SettingsSection.Emulators -> ScreenId.SettingsEmulators
         SettingsSection.Controls -> ScreenId.SettingsControls
         SettingsSection.HomeScreen -> ScreenId.SettingsHomeScreen
+        SettingsSection.SecondScreen -> ScreenId.SettingsSecondScreen
         SettingsSection.Statistics -> ScreenId.SettingsStatistics
         SettingsSection.Advanced -> ScreenId.SettingsAdvanced
         SettingsSection.About -> ScreenId.SettingsAbout
@@ -144,6 +146,7 @@ internal fun settingChanges(
         choice(SettingsOption.TextWeight, a.textWeight ?: TextWeightSetting.Default, b.textWeight ?: TextWeightSetting.Default)
         choice(SettingsOption.LeftEdge, a.leftEdge ?: LeftEdgeSetting.Default, b.leftEdge ?: LeftEdgeSetting.Default)
         choice(SettingsOption.GridSize, a.gridSize, b.gridSize)
+        switch(SettingsOption.EdgeFade, a.edgeFade, b.edgeFade)
         val c = before.controls
         val d = after.controls
         switch(SettingsOption.ConfirmBottom, c.confirmButton == ConfirmButtonSetting.Bottom, d.confirmButton == ConfirmButtonSetting.Bottom)

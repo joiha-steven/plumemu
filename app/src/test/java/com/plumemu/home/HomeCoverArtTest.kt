@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
@@ -218,11 +219,12 @@ class HomeCoverArtTest {
 
     @Test
     @Config(qualifiers = WIDE)
-    fun aGameWithoutArtShowsItsTitleInThePlaceholder() {
+    fun aGameWithoutArtWearsItsPosterInsideItsCell() {
         show { CoverGridBoard(rememberSource { coverArtSource(noArt = setOf("EarthBound")) }) }
-        val title = compose.onNodeWithText("EarthBound", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val poster = compose.onNode(hasContentDescription("EarthBound") and hasTestTag(HomeTags.cover(2)), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue("it is a poster cover", compose.onAllNodes(hasTestTag(HomeTags.POSTER_COVER) and hasAnyAncestor(hasTestTag(HomeTags.cover(2))), useUnmergedTree = true).fetchSemanticsNodes().size == 1)
         val cell = bounds(HomeTags.cover(2))
-        assertTrue("the title inside its placeholder", title.left >= cell.left && title.right <= cell.right && title.top >= cell.top)
+        assertTrue("the poster inside its cell", poster.left >= cell.left && poster.right <= cell.right && poster.top >= cell.top && poster.bottom <= cell.bottom)
     }
 
     @Test

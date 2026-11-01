@@ -30,6 +30,8 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
         AppGameEntity::class,
         AppKindChoiceEntity::class,
         SkippedSubfolderEntity::class,
+        RaMatchEntity::class,
+        RaProgressEntity::class,
     ],
     version = PlumDatabase.SCHEMA_VERSION,
     exportSchema = true,
@@ -57,11 +59,13 @@ abstract class PlumDatabase : RoomDatabase() {
 
     abstract fun skippedSubfolderDao(): SkippedSubfolderDao
 
+    abstract fun raDao(): RaDao
+
     companion object {
         const val FILE_NAME = "plumemu.db"
 
         /** The schema version above; a restore refuses a database newer than this. */
-        const val SCHEMA_VERSION = 13
+        const val SCHEMA_VERSION = 14
 
         /**
          * Opens the app's database file; call once and keep the instance for the process. With a

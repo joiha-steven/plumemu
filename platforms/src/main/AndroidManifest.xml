@@ -12,6 +12,7 @@
         <package android:name="aenu.ax360e" />
         <package android:name="aenu.ax360e.free" />
         <package android:name="app.gamenative" />
+        <package android:name="be.codedreams.pixl8" />
         <package android:name="com.PceEmu" />
         <package android:name="com.amigan.droidarcadia" />
         <package android:name="com.androidemu.atari" />
@@ -74,6 +75,7 @@
         <package android:name="com.mxtech.videoplayer.ad" />
         <package android:name="com.mxtech.videoplayer.pro" />
         <package android:name="com.nanodata.armsx" />
+        <package android:name="com.omnidroid" />
         <package android:name="com.panda3ds.pandroid" />
         <package android:name="com.pixelrespawn.linkboy" />
         <package android:name="com.pizzaemulators.pbds" />
@@ -108,8 +110,12 @@
         <package android:name="dev.eden.eden_emulator.nightly" />
         <package android:name="dev.eden.eden_nightly" />
         <package android:name="dev.igawa6.edenduo" />
+        <package android:name="dev.igawa6.edenduo.dev" />
         <package android:name="dev.legacy.eden_emulator" />
         <package android:name="dev.legacy.eden_emulator.nightly" />
+        <package android:name="dev.legacy.lemon_emulator" />
+        <package android:name="dev.lemon.lemon_emulator" />
+        <package android:name="dev.lemon.lemon_emulator.lite" />
         <package android:name="dev.suyu.suyu_emu.relWithDebInfo" />
         <package android:name="emu.x360.mobile" />
         <package android:name="emuready.gamehub.lite" />
@@ -121,6 +127,7 @@
         <package android:name="io.github.gopher64.gopher64" />
         <package android:name="io.github.lime3ds.android" />
         <package android:name="io.github.mandarine3ds.mandarine" />
+        <package android:name="io.github.pruefsumme.widemelon" />
         <package android:name="io.navivani.swiff" />
         <package android:name="io.recompiled.redream" />
         <package android:name="io.wip.pico8" />

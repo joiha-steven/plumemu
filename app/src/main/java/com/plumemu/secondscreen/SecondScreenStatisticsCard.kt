@@ -58,9 +58,8 @@ import com.plumemu.settings.screen.minutesOf
 
 /*
  * The statistics card: while Settings
- * is open the second screen shows Settings › Statistics' figures, larger. Its rows are the page's
- * own (`statisticRowsOf`, the same read) without Version, which is a Settings fact and not a
- * statistic (everything here is also on the one-screen page).
+ * is open the second screen shows Settings › Statistics' figures, larger. Its rows come from the
+ * same read (`statisticRowsOf`): fewer games and one system, but nothing the one-screen page does not show.
  */
 
 /**
@@ -79,8 +78,8 @@ internal fun BoxScope.StatisticsCard(
     val colors = PlumTheme.colors
     val type = PlumTheme.type
     val line = type[dimens.factsRole]
-    // The Settings page's rows for the same figures; Version is not a statistic, and an empty library never reaches here.
-    val rows = remember(statistics) { statisticRowsOf(StatisticsState.Read(statistics)).filter { it != StatisticRow.Version && it != StatisticRow.NoGames } }
+    // The same figures as Settings' Statistics page; an empty library never reaches here.
+    val rows = remember(statistics) { statisticRowsOf(StatisticsState.Read(statistics)).filter { it != StatisticRow.NoGames } }
     val separator = stringResource(R.string.second_screen_separator)
     DroppingColumn(
         dimens,
@@ -129,7 +128,7 @@ internal fun BoxScope.StatisticsCard(
                     Part(StatisticsPart.BoxArt) {
                         FigureRow(AnnotatedString(stringResource(R.string.settings_statistics_box_art)), countOf(row.withArt, row.of), line, SecondScreenTags.STATISTICS_BOX_ART)
                     }
-                StatisticRow.Version, StatisticRow.NoGames, StatisticRow.Unreadable -> Unit
+                StatisticRow.NoGames, StatisticRow.Unreadable -> Unit
             }
         }
     }

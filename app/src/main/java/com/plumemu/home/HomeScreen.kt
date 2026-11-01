@@ -53,6 +53,7 @@ import com.plumemu.game.GameRef
 import com.plumemu.game.closedAtOnceMessage
 import com.plumemu.game.showMessage
 import com.plumemu.game.coreQuestionMessage
+import com.plumemu.update.UpdateManifest
 import com.plumemu.game.showSaveFailed
 import com.plumemu.game.OpenPanel
 import com.plumemu.game.PanelScreen
@@ -93,13 +94,19 @@ internal data class HomeCallbacks(
     val batteryPaceNow: BatteryPaceNow? = null,
     /** The system shown changed (null: Recent, Favorites or Apps); a box-art run favours it. */
     val onSystemShown: (String?) -> Unit = {},
-    /** True while an update was found: START Settings' hint gets a dot (`MainScreen` provides it as [LocalUpdateFound]). */
-    val updateFound: StateFlow<Boolean> = MutableStateFlow(false),
+    /** The version name of the update found, null while none waits: the top bar's pill and START's "Update" hint (`MainScreen` provides it as [LocalUpdateFound]). */
+    val updateFound: StateFlow<String?> = MutableStateFlow(null),
+    /** The release this app was just updated to whose "What's new" card was not shown yet (null: none); `MainScreen` shows the card over an idle main screen. */
+    val whatsNew: StateFlow<UpdateManifest?> = MutableStateFlow(null),
+    /** The card for this versionCode was shown: it is never shown again. */
+    val onWhatsNewShown: (Long) -> Unit = {},
     /** A on "No game folder yet" (or a tap on it): opens the folder picker, as Settings › Library › Add folder does. */
     val onAddFolder: () -> Unit = {},
     /** What change checks found: the top bar's "+24 games" notice and the dots on systems (`MainScreen` provides it as [LocalHomeNotices]). */
     val notices: HomeNotices = HomeNotices(),
-    /** L1 / R1 (or a tap on the Size hint) in a grid picked this size; written to Settings › Appearance › Grid size; [onFailed] if the write could not be saved. */
+    /** The trophy on mastered games, the line after a game and Info's badges (`MainScreen` provides them as [LocalHomeAchievements] and the others); empty signed out. */
+    val achievements: HomeAchievements = HomeAchievements(),
+    /** L1 / R1 (or a tap on the Size hint) in a grid picked this size; written to Settings › Home screen › Grid size; [onFailed] if the write could not be saved. */
     val onGridSize: (GridSize, onFailed: () -> Unit) -> Unit = { _, _ -> },
     /** SELECT made [systemId] a grid ([isGrid]) or a list; written to `appearance.grid_systems`, once per press; [onFailed] if the write could not be saved (on the writer's thread). */
     val onGridView: (systemId: String, isGrid: Boolean, onFailed: () -> Unit) -> Unit = { _, _, _ -> },
@@ -138,8 +145,11 @@ internal fun HomeScreen(
     bars: HomeBars = HomeBars(),
     secondScreen: SecondScreenFeed? = null,
     landingRequest: Int = 0,
+    landingTarget: HomeLandingTarget? = null,
     keyboard: KeyboardChoice = KeyboardChoice.Plumemu,
     gridSystems: Set<String> = emptySet(),
+    /** Told whether the screen is idle (no game panel and no search open): `MainScreen` shows the "What's new" card only then. */
+    onIdle: (Boolean) -> Unit = {},
 ) {
     // List or grid per system: the stored [gridSystems], there from the first frame (MainScreen
     // composes nothing before the settings are read), with this screen's presses over it.
@@ -180,7 +190,8 @@ internal fun HomeScreen(
     val pageRows by rememberUpdatedState(PlumTheme.layout.listRowsThatFit)
     val actions = HomeActionTargets(state, menu, search, feel, gridSizeKeys, toggleView, markedNow, { currentContent }, { currentCallbacks }, { shoulders }, { pageRows })
     FollowRouterActions(router, actions, onEachAction = { obeyedLanding.intValue = currentLandingRequest })
-    LandWhenAsked(landingRequest, obeyedLanding, state, menu, search) { currentContent }
+    val currentLandingTarget by rememberUpdatedState(landingTarget)
+    LandWhenAsked(landingRequest, obeyedLanding, state, menu, search, { currentLandingTarget }) { currentContent }
     TellRouterAboutTyping(router, search, menu)
     FollowSearchResults(search, shown)
     FollowMenuGame(menu, shown, state, isSearchOpen = search.isOpen)
@@ -198,6 +209,9 @@ internal fun HomeScreen(
     FollowShownSystem(shown, state, callbacks.onSystemShown)
     ShowClosedAtOnce(callbacks.notices, menu)
     ShowCoreQuestion(callbacks.notices, menu)
+    val currentOnIdle by rememberUpdatedState(onIdle)
+    LaunchedEffect(menu, search) { snapshotFlow { !menu.isOpen && !search.isOpen }.collect { currentOnIdle(it) } }
+    DisposableEffect(menu) { onDispose { currentOnIdle(false) } }
     TrackHomeScreen(state, search, menu) { currentContent }
     SideEffect { search.onSearchUsed = currentCallbacks.onSearchUsed }
     CompositionLocalProvider(LocalBatteryReading provides (batteryReading ?: NoBatteryReading)) {
@@ -235,6 +249,7 @@ private fun LandWhenAsked(
     state: StripState,
     menu: GameMenuController,
     search: SearchState,
+    target: () -> HomeLandingTarget?,
     content: () -> HomeContent,
 ) {
     LaunchedEffect(request) {
@@ -244,7 +259,9 @@ private fun LandWhenAsked(
         snapshotFlow { obeyed.intValue == request || content().landingEntryId() != null }.first { it }
         if (obeyed.intValue == request) return@LaunchedEffect
         obeyed.intValue = request
-        content().landingEntryId()?.let(state::landOn)
+        // A game asked for by id (Statistics) when its system is on the screen; otherwise the usual landing.
+        val asked = target()?.takeIf { want -> content().entries.any { it.id == want.systemId } }
+        if (asked != null) state.landOn(asked.systemId, asked.gameId) else content().landingEntryId()?.let { state.landOn(it) }
     }
 }
 
@@ -466,7 +483,7 @@ internal fun HomeLayout(
         verticalArrangement = Arrangement.spacedBy(PlumDimens.barGap),
     ) {
         Box(Modifier.fadingIn(searchFade)) {
-            if (searching && search != null) SearchTopBar(search, clock, battery, wifi, charging) else HomeTopBar(content, state, clock, battery, wifi, charging)
+            if (searching && search != null) SearchTopBar(search, clock, battery, wifi, charging) else HomeTopBar(content, state, clock, battery, wifi, charging, onSettings = { onAction(Action.OpenSettings) })
         }
         Box(Modifier.fillMaxWidth().weight(1f)) {
             Box(Modifier.fillMaxSize().fadingIn(searchFade)) {

@@ -1,0 +1,6 @@
+[
+ {"Title":"Sonic the Hedgehog","ID":1,"ConsoleID":1,"ConsoleName":"Genesis/Mega Drive","ImageIcon":"/Images/067895.png","NumAchievements":23,"NumLeaderboards":0,"Points":445,"DateModified":"2023-01-01 00:00:00","ForumTopicID":112,"Hashes":["1BC674BE034E43C96B86487AC69D9293","8c3e7b7a7d5b6f3e2e1d0c9b8a796857"]},
+ {"Title":"Streets of Rage","ID":2,"ConsoleID":"1","ImageIcon":"/Images/000002.png","NumAchievements":"10","Points":"100","Hashes":[]},
+ {"Title":"No id here","ConsoleID":1},
+ "not an object"
+]

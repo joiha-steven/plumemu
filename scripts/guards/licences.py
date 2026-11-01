@@ -37,7 +37,7 @@ POMS_INIT_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lic
 # `+--- group:artifact:version`, `\--- group:artifact:1.0 -> 1.2 (*)`, `group:artifact -> 1.2`
 TREE_LINE = re.compile(r"^[| ]*[+\\]--- ([^\s:]+):([^\s:]+)(?::([^\s]+))?(?: -> ([^\s]+))?(.*)$")
 
-ALLOWED_KINDS = {"Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause", "BSD", "ISC", "CC0-1.0",
+ALLOWED_KINDS = {"Apache-2.0", "MIT", "0BSD", "BSD-2-Clause", "BSD-3-Clause", "BSD", "ISC", "CC0-1.0",
                  "Unlicense"}
 COPYLEFT_KINDS = {"GPL", "LGPL", "AGPL"}
 
@@ -54,6 +54,8 @@ def classify(name, url):
         return "Apache-2.0"
     if re.search(r"\bmit\b|opensource\.org/licenses/mit", s):
         return "MIT"
+    if re.search(r"\b0bsd\b|zero[- ]clause", s):
+        return "0BSD"
     if "bsd" in s:
         if re.search(r"3-clause|new|revised|bsd-3", s):
             return "BSD-3-Clause"

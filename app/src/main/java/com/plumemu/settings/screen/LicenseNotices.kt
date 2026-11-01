@@ -42,6 +42,10 @@ internal object LicenseNotices {
             LicenseNotice(R.string.settings_license_titledb, R.string.settings_licence_mit, "licenses/titledb-MIT.txt"),
             // identify's LZMA decoder is ported from it; public domain has no text to ship.
             LicenseNotice(R.string.settings_license_lzma_sdk, R.string.settings_licence_public_domain, null),
+            // The achievements module's hashes are rewritten from rcheevos' rc_hash; the text ships in achievements' assets.
+            LicenseNotice(R.string.settings_license_rcheevos, R.string.settings_licence_mit, "licenses/rcheevos-MIT.txt"),
+            // The achievements module reads LZMA hunks of .chd discs with it; 0BSD asks for no notice.
+            LicenseNotice(R.string.settings_license_xz, R.string.settings_licence_0bsd, null),
         )
 }
 

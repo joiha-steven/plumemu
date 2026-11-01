@@ -3,9 +3,11 @@ package com.plumemu.home
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -19,9 +21,12 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.Constraints
@@ -29,6 +34,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.plumemu.coreui.components.CoverGlowColor
 import com.plumemu.coreui.components.CoverShadow
 import com.plumemu.coreui.components.CoverTile
 import com.plumemu.coreui.components.coverShadow
@@ -37,6 +43,8 @@ import com.plumemu.coreui.theme.CoverClass
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.POSTER_PALETTE
+import com.plumemu.coreui.theme.posterLookIndex
 import kotlin.math.roundToInt
 
 /**
@@ -46,7 +54,9 @@ import kotlin.math.roundToInt
  * is decoded, and for good when its file cannot be read, its place is the titled tile
  * ([CoverTile]) in the picture's shape, so nothing moves when it lands; the picture then fades in
  * over it in 110 ms (alpha only; at once with motion off or when it was already in memory).
- * Without a picture (none, or the result still being read) the titled tile fills the slot.
+ * Without a picture (none, or the result still being read) the titled tile fills the slot; with a [poster] (the game has
+ * no picture for good: none exists, or its file cannot be read) the poster cover takes the tile's place instead; with
+ * [posterAspect] too it is fitted to that shape inside the slot like a picture (the details column) rather than filling it.
  * [subtitle] is the year when known. [pictureModifier] goes on the drawn cover itself (the
  * grid's focused scale). [titleStyle] is the grid size's (`PlumTypography.coverTitle`); a null
  * [title] leaves the tile untitled (the details column, whose title is right under the cover).
@@ -72,14 +82,24 @@ internal fun CoverArt(
     shrinksToFit: Boolean = false,
     shadow: CoverShadow? = null,
     shadowAlpha: Float = 1f,
+    poster: PosterSpec? = null,
+    posterAspect: Float? = null,
 ) {
     // Outside the focus modifier and the clip: the focused cover's larger copy does not carry it, and nothing cuts it.
     val shadowed = Modifier.coverShadow(shadow, corner, shadowAlpha)
     if (picture != null) {
         val fitted = fitInside(picture.aspect, size)
         Box(modifier = modifier.size(size), contentAlignment = alignment) {
-            CoverPicture(title, subtitle, picture, fitted, corner, titlePadding, titleStyle, shadowed.then(if (shrinksToFit) Modifier.shrinkInto(fitted).then(pictureModifier) else pictureModifier), hasEdge, shadow?.rim ?: Color.Transparent)
+            CoverPicture(title, subtitle, picture, fitted, corner, titlePadding, titleStyle, shadowed.then(if (shrinksToFit) Modifier.shrinkInto(fitted).then(pictureModifier) else pictureModifier), hasEdge, shadow?.rim ?: Color.Transparent, poster)
         }
+    } else if (poster != null && posterAspect != null) {
+        // Fitted to the system's shape inside the slot and placed by [alignment], as a picture is (the details column).
+        val fitted = fitInside(posterAspect, size)
+        Box(modifier = modifier.size(size), contentAlignment = alignment) {
+            PosterTile(poster, corner, shadowed.then(if (shrinksToFit) Modifier.shrinkInto(fitted).then(pictureModifier) else pictureModifier).size(fitted), rim = shadow?.rim ?: Color.Transparent)
+        }
+    } else if (poster != null) {
+        PosterTile(poster, corner, modifier.size(size).then(shadowed).then(pictureModifier), rim = shadow?.rim ?: Color.Transparent)
     } else {
         TitledTile(title, subtitle, size, corner, titlePadding, titleStyle, modifier.size(size).then(shadowed).then(pictureModifier), rim = shadow?.rim ?: Color.Transparent)
     }
@@ -142,6 +162,55 @@ private fun TitledTile(
     )
 }
 
+/**
+ * What a game's poster cover says: the shown [title], its system's display name and short name ("Super Nintendo", "SNES").
+ * A grid cell or details cover is given one only once its picture is known to be missing ([ArtSlot.Absent] or a file that cannot
+ * be read); while the slot is still [ArtSlot.Unknown] it stays null and the plain tile stands, so no colour flashes before a picture.
+ */
+@Immutable
+internal data class PosterSpec(
+    val title: String,
+    val system: String,
+    val systemShort: String,
+)
+
+/** The poster of [row] in this entry: its own system's names in Recent and Favorites, else the entry's. */
+internal fun HomeEntry.posterOf(row: GameRowModel): PosterSpec {
+    val full = if (kind.mixesSystems) systemNames[row.systemId].orEmpty() else name.orEmpty()
+    val short = row.systemAbbr.ifEmpty { full }
+    return PosterSpec(row.title, full.ifEmpty { short }, short)
+}
+
+/** The colour a focused poster glows in: its gradient's middle, so the glow matches what the cover shows, lifted as a picture's is. */
+internal fun posterGlowColor(title: String): Color {
+    val look = POSTER_PALETTE[posterLookIndex(title)]
+    return CoverGlowColor.lifted(lerp(look.top, look.bottom, 0.5f))
+}
+
+/**
+ * [PosterCover] as a cover: [size] comes from the modifier, clipped to [corner], [rim] drawn just inside the edge as a
+ * picture's is (none when transparent). Carries the title for accessibility ([PosterCover] draws text without semantics).
+ * Colours are read while drawing, so a theme change redraws it without recomposing.
+ */
+@Composable
+private fun PosterTile(
+    poster: PosterSpec,
+    corner: Dp,
+    modifier: Modifier,
+    rim: Color = Color.Transparent,
+) {
+    Box(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(corner))
+                .then(if (rim == Color.Transparent) Modifier else Modifier.drawWithContent { drawContent(); drawCoverRim(rim, corner.toPx()) })
+                .semantics { contentDescription = poster.title },
+    ) {
+        // The tag sits on the inner node: the outer one keeps the tags its caller gave it (the cell's, COVER_OWN_SHAPE, DETAILS_COVER).
+        PosterCover(poster.title, poster.system, poster.systemShort, Modifier.fillMaxSize().testTag(HomeTags.POSTER_COVER))
+    }
+}
+
 /** The decoded [picture] drawn at [size] over the titled tile, decoded at that size in pixels; [hasEdge] as [CoverArt]'s. */
 @Composable
 private fun CoverPicture(
@@ -155,6 +224,7 @@ private fun CoverPicture(
     modifier: Modifier,
     hasEdge: Boolean,
     rim: Color,
+    poster: PosterSpec?,
 ) {
     // The grid's rim light on a dark background; on a light one the hairline (the shadow carries the depth there).
     val edge = if (rim == Color.Transparent) PlumTheme.colors.coverEdge else rim
@@ -172,10 +242,16 @@ private fun CoverPicture(
     // The tile stays composed until the picture covers it fully; read here, so a landing picture
     // recomposes this cover once.
     val isCovered = remember(images, picture, widthPx, heightPx) { mutableStateOf(cached != null) }
+    // The file cannot be read (CoilCoverImages logs why): the poster takes the tile's place for good.
+    val isUnreadable = remember(images, picture, widthPx, heightPx) { mutableStateOf(false) }
     if (cached == null) {
         LaunchedEffect(images, picture, widthPx, heightPx) {
             // Null: the file is gone or damaged; the titled tile stays (CoilCoverImages logs why).
-            val loaded = images.load(picture, widthPx, heightPx) ?: return@LaunchedEffect
+            val loaded = images.load(picture, widthPx, heightPx)
+            if (loaded == null) {
+                isUnreadable.value = true
+                return@LaunchedEffect
+            }
             glowColors.learn(picture, loaded)
             bitmap.value = loaded
             if (isMotionOn) alpha.animateTo(1f, tween(PlumMotion.FADE_IN_MS, easing = PlumMotion.EaseOut)) else alpha.snapTo(1f)
@@ -201,7 +277,9 @@ private fun CoverPicture(
                     if (hasEdge) drawCoverRim(edge, corner.toPx(), alpha.value)
                 }.testTag(HomeTags.COVER_PICTURE),
     ) {
-        if (!isCovered.value) TitledTile(title, subtitle, size, corner, padding, titleStyle, Modifier.size(size))
+        if (!isCovered.value) {
+            if (isUnreadable.value && poster != null) PosterTile(poster, corner, Modifier.size(size), rim = if (hasEdge) edge else Color.Transparent) else TitledTile(title, subtitle, size, corner, padding, titleStyle, Modifier.size(size))
+        }
     }
 }
 

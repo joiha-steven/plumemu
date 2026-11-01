@@ -105,17 +105,19 @@ abstract class PlayDao {
     )
     abstract suspend fun secondsPlayedBetween(from: Long, to: Long): Long
 
+    /**
+     * The sessions [secondsPlayedBetween] would count for [from] to [to], as spans: one query for
+     * a week that the caller splits per day with the same rule (Settings › Statistics).
+     */
+    @Query(
+        "SELECT started_at, ended_at, seconds FROM play_session " +
+            "WHERE ended_at >= :from AND (started_at < :to OR ended_at < :to)",
+    )
+    abstract suspend fun sessionsBetween(from: Long, to: Long): List<SessionSpan>
+
     /** True once any session is stored (sessions are kept from schema 5 on, for 400 days). */
     @Query("SELECT EXISTS (SELECT 1 FROM play_session)")
     abstract suspend fun hasAnySession(): Boolean
-
-    /**
-     * Settings › Statistics' "times played" of one game: its recorded sessions over all its copies
-     * ([gameIds]). Sessions exist from schema 5 on and are kept 400 days, so the count never includes
-     * older plays; the caller leaves the figure out at 0.
-     */
-    @Query("SELECT COUNT(*) FROM play_session WHERE game_id IN (:gameIds)")
-    abstract suspend fun sessionCount(gameIds: List<Long>): Int
 
     /**
      * Game menu's Remove from Recent: [gameId] leaves Recent until it is played again.
@@ -131,10 +133,6 @@ abstract class PlayDao {
      */
     @Query("UPDATE play SET recent_removed = 1 WHERE recent_removed = 0")
     abstract suspend fun clearRecent(): Int
-
-    /** The newest `last_played_at` among [gameIds] (the copies of one game); null when none was played. */
-    @Query("SELECT MAX(last_played_at) FROM play WHERE game_id IN (:gameIds)")
-    abstract suspend fun lastPlayedAt(gameIds: List<Long>): Long?
 
     @Query("SELECT * FROM play_session WHERE game_id = :gameId ORDER BY ended_at, id")
     abstract suspend fun sessions(gameId: Long): List<PlaySessionEntity>

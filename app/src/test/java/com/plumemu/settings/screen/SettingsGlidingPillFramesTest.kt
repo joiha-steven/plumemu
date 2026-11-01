@@ -187,12 +187,12 @@ abstract class SettingsGlidingPillFramesBase {
     private fun openEmulators(animationsOn: Boolean, textSize: TextSizeSetting = TextSizeSetting.Medium): (Int) -> String {
         val content = emulators()
         show(animationsOn, content, textSize)
-        down(2)
+        down(SettingsSection.Emulators.shownIndex)
         send(Action.Enter)
         return emulatorRowTag(content)
     }
 
-    private fun sectionTag(i: Int) = SettingsTags.section(SettingsSection.entries[i])
+    private fun sectionTag(i: Int) = SettingsTags.section(shownSections[i])
 
     @Test
     fun theSectionsPillGlidesFromTheOldRowToTheNewOne() {
@@ -218,7 +218,7 @@ abstract class SettingsGlidingPillFramesBase {
             down(1)
             from++
             if (rowTop(sectionTag(from)) != before) break
-            assertTrue("the sections column scrolls at Largest", from < SettingsSection.entries.size - 2)
+            assertTrue("the sections column scrolls at Largest", from < shownSections.size - 2)
         }
         assertScrollGlide("sections", SettingsTags.SECTIONS, ::sectionTag, from)
     }
@@ -290,9 +290,9 @@ abstract class SettingsGlidingPillFramesBase {
     @Test
     fun aPanelListPillGlidesFromTheOldRowToTheNewOne() {
         show(true)
-        down(SettingsSection.entries.indexOf(SettingsSection.Advanced))
+        down(SettingsSection.Appearance.shownIndex)
         send(Action.Enter)
-        down(SettingsSection.Advanced.options.indexOf(SettingsOption.Language))
+        down(SettingsSection.Appearance.options.indexOf(SettingsOption.Language))
         send(Action.Enter) // the language list, its first row focused
         // The panel fades in over 110 ms: let it finish.
         compose.mainClock.advanceTimeBy(300)
@@ -323,9 +323,9 @@ abstract class SettingsGlidingPillFramesBase {
     fun onlyTheFocusedColumnWearsAPillFromOptionsToPanel() {
         show(true)
         val ring = ringColour(rowTop(sectionTag(0)), SettingsTags.SECTIONS)
-        down(SettingsSection.entries.indexOf(SettingsSection.Advanced))
+        down(SettingsSection.Appearance.shownIndex)
         send(Action.Enter)
-        down(SettingsSection.Advanced.options.indexOf(SettingsOption.Language))
+        down(SettingsSection.Appearance.options.indexOf(SettingsOption.Language))
         compose.mainClock.advanceTimeBy(600)
         compose.waitForIdle()
         assertTrue("the options wear a pill while they have the focus", pillTop(ring, SettingsTags.OPTION_LIST) >= 0)

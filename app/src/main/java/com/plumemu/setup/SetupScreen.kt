@@ -1,5 +1,6 @@
 package com.plumemu.setup
 
+import com.plumemu.keyboard.PasteBoard
 import com.plumemu.telemetry.ScreenId
 import com.plumemu.usage.TrackError
 import androidx.compose.foundation.layout.Arrangement
@@ -417,7 +418,8 @@ private fun SetupHints(
         val keys = form.keysOf(form.focus).keys
         val onLetters = keys.page == KeyboardPage.Letters
         val actionWord = signInActionWord(form)
-        val hints = remember(onLetters, actionWord, letters) { typingHints(onLetters, actionWord, hasShift = true, letters) }
+        val canPaste = PasteBoard.hasText
+        val hints = remember(onLetters, actionWord, letters, canPaste) { typingHints(onLetters, actionWord, hasShift = true, letters, canPaste) }
         TypingHintBar(hints, onAction, Modifier.testTag(SetupTags.TYPING_HINTS))
         return
     }

@@ -36,7 +36,7 @@ ALLOWED = {
     "android.permission.REQUEST_INSTALL_PACKAGES",
     # Uninstall from Apps (owner, 2026-10-25): ACTION_DELETE needs it from Android 9; Android still asks to confirm.
     "android.permission.REQUEST_DELETE_PACKAGES",
-    # Haptics (owner, 2026-10-26): a light tick on each cursor move and a click on confirm (Settings > Advanced > Vibration, on
+    # Haptics (owner, 2026-10-26): a light tick on each cursor move and a click on confirm (Settings > Controls > Vibration, on
     # by default). A normal permission: Android asks nobody.
     "android.permission.VIBRATE",
 }

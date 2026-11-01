@@ -1,5 +1,8 @@
 package com.plumemu.settings.screen
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -19,19 +22,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.plumemu.R
+import com.plumemu.coreui.components.drawFlatFace
+import com.plumemu.coreui.components.flatFaceShift
+import com.plumemu.coreui.theme.FlatFace
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.Rgb
 import com.plumemu.coreui.theme.toComposeColor
@@ -105,7 +114,7 @@ private fun ColorSliderRow(
         // What the track draws is its own: the rainbow at full saturation and mid lightness, grey to the hue's full colour at mid lightness, black through the colour to white; so a dark colour never makes a track black.
         val drawn = remember(slider, others) { drawnBase(slider, others) }
         val stops = remember(slider, drawn) { Array(slider.count) { drawn.with(slider, it * slider.step).rgb().toComposeColor() } }
-        SliderTrack(stops, TrackSpans.of(stretches, slider.max), slider.max, fraction = fingerAt ?: (value / slider.max.toFloat()), thumbColor = hsl.rgb())
+        SliderTrack(stops, TrackSpans.of(stretches, slider.max), slider.max, fraction = fingerAt ?: (value / slider.max.toFloat()), thumbColor = hsl.rgb(), held = fingerAt != null)
     }
 }
 
@@ -159,9 +168,17 @@ private fun SliderTrack(
     maxValue: Int,
     fraction: Float,
     thumbColor: Rgb,
+    held: Boolean,
 ) {
-    val ring = PlumTheme.colors.strong
+    val colors = PlumTheme.colors
+    // The thumb goes down into its edge while a finger holds or drags it; with animations off it does at once.
+    val pressed = animateFloatAsState(
+        targetValue = if (held) 1f else 0f,
+        animationSpec = if (PlumTheme.motion.isOn) tween(if (held) PlumMotion.PRESS_IN_MS else PlumMotion.KEY_PRESS_OUT_MS, easing = PlumMotion.EaseOut) else snap(),
+        label = "slider thumb",
+    )
     val thumbFill = thumbColor.toComposeColor()
+    val face = remember(thumbFill) { FlatFace.accent(thumbFill) }
     Canvas(Modifier.fillMaxWidth().height(PlumDimens.settingsSliderThumb)) {
         val width = size.width
         val thumbSize = PlumDimens.settingsSliderThumb.toPx()
@@ -184,11 +201,17 @@ private fun SliderTrack(
                 val right = if (run.last == maxValue) width else (centre(run.last) + centre(run.last + 1)) / 2
                 clipRect(left, top, right, top + barHeight) { drawRect(brush) }
             }
+            // The track is sunken: a 1 dp inset shadow on its top edge.
+            drawRect(colors.inset, topLeft = Offset(0f, top), size = Size(width, PlumDimens.insetShadow.toPx()))
         }
         val at = Offset(centre(0) + usable * fraction, size.height / 2)
         val ringWidth = PlumDimens.settingsSliderThumbRing.toPx()
-        drawCircle(thumbFill, radius = thumbSize / 2 - ringWidth / 2, center = at)
-        drawCircle(ring, radius = thumbSize / 2 - ringWidth / 2, center = at, style = Stroke(ringWidth))
+        // The thumb is a key: flat face in the colour shown, its edge and shadow under it, the ring as before.
+        val left = at.x - thumbSize / 2
+        val faceTop = at.y - thumbSize / 2
+        val down = pressed.value
+        inset(left, faceTop, width - left - thumbSize, size.height - faceTop - thumbSize) { drawFlatFace(face, press = down) }
+        drawCircle(colors.strong, radius = thumbSize / 2 - ringWidth / 2, center = at.copy(y = at.y + flatFaceShift(down, 0f)), style = Stroke(ringWidth))
     }
 }
 

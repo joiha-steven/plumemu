@@ -34,6 +34,7 @@ internal fun SwatchValue(
     value: OptionValue.Swatch,
     style: TextStyle,
     color: () -> Color,
+    valueTag: String,
 ) {
     val colors = PlumTheme.colors
     val preview = LocalColorPreview.current
@@ -65,6 +66,7 @@ internal fun SwatchValue(
                     .then(if (value.hasRing) Modifier.borderDrawn(PlumDimens.switchOffRing, { colors.chip }) else Modifier),
             )
         }
-        BasicText(stringResource(R.string.settings_value_opens, value.name), style = style, color = color, maxLines = 1)
+        BasicText(value.name, style = style, color = color, maxLines = 1)
+        ValueChevron(ChevronSide.Right, style, { colors.muted }, tag = SettingsTags.chevronRight(valueTag))
     }
 }

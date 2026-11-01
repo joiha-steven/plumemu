@@ -19,7 +19,7 @@ internal class SettingsInfoRowsTest : SettingsModelHarness() {
 
     private fun focusBoxArtStatus() {
         model.content = model.content.copy(account = AccountStatus.NotInThisBuild)
-        openSection(SettingsSection.Library)
+        openSection(SettingsSection.Accounts)
         focusOption(SettingsOption.ScraperStatus)
         reported.drain()
     }
@@ -30,11 +30,13 @@ internal class SettingsInfoRowsTest : SettingsModelHarness() {
         val at = model.optionIndex
         for (geometry in listOf(wide, narrow)) {
             press(Action.Enter, geometry)
+            assertEquals("A, $geometry", emptyList<Any>(), reported.drain())
             model.onTapOption(at, actions.shown, geometry)
+            assertEquals("tap, $geometry", emptyList<Any>(), reported.drain())
             model.onTapValue(at, actions.shown, geometry)
             assertEquals(SettingsColumn.Options, model.focus.column)
             assertNull("no panel was entered", model.focus.page)
-            assertEquals(emptyList<Any>(), reported.drain())
+            assertEquals("tap on the value, $geometry", emptyList<Any>(), reported.drain())
         }
         assertNull("no A hint", rowConfirmHint(SettingsOption.ScraperStatus))
     }

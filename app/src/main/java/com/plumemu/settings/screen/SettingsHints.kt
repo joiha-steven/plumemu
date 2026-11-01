@@ -10,6 +10,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.plumemu.R
 import com.plumemu.account.signInConfirmHint
+import com.plumemu.keyboard.PasteBoard
 import com.plumemu.report.reportConfirmHint
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coreinput.Action
@@ -44,7 +45,7 @@ internal fun confirmHint(model: SettingsModel): Int? {
         focus.column == SettingsColumn.Panel && focus.page == PanelPage.Systems ->
             if (model.systems.isCarrying) R.string.settings_hint_done else R.string.settings_hint_move
         focus.column == SettingsColumn.Sections -> R.string.settings_hint_select
-        focus.column == SettingsColumn.Options && model.focusedStatisticGame != null -> R.string.home_hint_play
+        focus.column == SettingsColumn.Options && model.focusedStatisticGame != null -> R.string.settings_hint_go_to
         focus.column == SettingsColumn.Options -> model.focusedOption.let { if (it == null) R.string.settings_hint_change else rowConfirmHint(it) }
         focus.page == PanelPage.LicenseText || focus.page == PanelPage.ReadOnly -> null
         else -> R.string.settings_hint_choose
@@ -63,7 +64,8 @@ internal fun SettingsHints(
     typing?.let { field ->
         val onLetters = field.typing.fieldKeys.keys.page == KeyboardPage.Letters
         val hasShift = field.typing.fieldKeys.keys.hasShift
-        val hints = remember(onLetters, field.actionWord, hasShift, letters) { typingHints(onLetters, field.actionWord, hasShift, letters) }
+        val canPaste = PasteBoard.hasText
+        val hints = remember(onLetters, field.actionWord, hasShift, letters, canPaste) { typingHints(onLetters, field.actionWord, hasShift, letters, canPaste) }
         TypingHintBar(hints, onHint, Modifier.testTag(SettingsTags.TYPING_HINTS))
         return
     }
@@ -98,7 +100,7 @@ internal fun SettingsHints(
         if (focus.column == SettingsColumn.Options) {
             Hint(stringResource(R.string.home_key_l1_r1), stringResource(R.string.settings_hint_section), Modifier.hint(Action.NextSystem, onHint).testTag(SettingsTags.HINT_SECTION))
             val kind = model.focusedOption?.kind
-            if (layout.widthClass == WidthClass.Narrow && model.focusedStatisticGame == null && (kind == OptionKind.Switch || kind == OptionKind.Info || kind == OptionKind.Action)) {
+            if (layout.widthClass == WidthClass.Narrow && model.focusedOption != SettingsOption.Statistic && (kind == OptionKind.Switch || kind == OptionKind.Info || kind == OptionKind.Action)) {
                 Hint(
                     stringResource(R.string.settings_key_right),
                     stringResource(R.string.settings_hint_more),

@@ -1,7 +1,12 @@
 """Run with: python3 -I -m unittest discover -s tools/platforms -p 'test_*.py'"""
+import datetime
+import hashlib
+import json
 import os
 import sys
+import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import convert  # noqa: E402
@@ -314,6 +319,52 @@ class ExtraVariantTests(unittest.TestCase):
             convert.add_extra_variants(rules, {"ppsspp": [("org.ppsspp.ppsspp", None)]})
 
 
+class LemonTests(unittest.TestCase):
+    def test_lemon_is_one_hand_kept_switch_emulator_with_its_own_activity(self):
+        data = convert.convert(os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources"))[0]
+        emulators = {e["id"]: e for e in data["emulators"]}
+        activity = "dev.lemon.lemon_emu.activities.EmulationActivity"
+        lemon = emulators["lemon"]
+        self.assertEqual("dev.lemon.lemon_emulator", lemon["package"])
+        self.assertEqual(activity, lemon["activity"])
+        # The same Intent as Eden's, and as Daijisho (field-tested) starts Lemon.
+        self.assertEqual("android.nfc.action.TECH_DISCOVERED", lemon["action"])
+        self.assertEqual(emulators["eden"]["action"], lemon["action"])
+        self.assertNotIn("mimeType", lemon)
+        self.assertNotIn("category", lemon)
+        self.assertEqual({"mode": "uri", "target": "data"}, lemon["game"])
+        self.assertTrue(lemon["legalRisk"])
+        builds = {lemon["package"]} | {v["package"] for v in lemon["variants"]}
+        self.assertEqual({"dev.lemon.lemon_emulator", "dev.lemon.lemon_emulator.lite", "dev.legacy.lemon_emulator",
+                          "com.antutu.ABenchMark", "com.miHoYo.Yuanshen"}, builds)
+        # Every build, spoofed ones included, names Lemon's activity, so detection can tell it from the real app.
+        self.assertTrue(all(v["activity"] == activity for v in lemon["variants"]))
+        # Daijisho also lists Lemon; its players must not become second Lemon entries.
+        self.assertNotIn("dev-lemon-lemon-emulator", emulators)
+        self.assertNotIn("dev-lemon-lemon-emulator-lite", emulators)
+        switch = next(s for s in data["systems"] if s["id"] == "switch")
+        self.assertIn("lemon", switch["emulators"])
+
+
+    def test_a_daijisho_player_of_a_known_package_with_another_activity_is_kept(self):
+        # The skip needs package AND activity: GameHub Lite's activity under the AnTuTu name is another app.
+        hub = dict(id="hub-under-antutu", name="Hub", systems=["switch"], package="dev.lemon.lemon_emulator",
+                   activity="com.xj.landscape.launcher.ui.gamedetail.GameDetailActivity",
+                   action="android.nfc.action.TECH_DISCOVERED", game={"mode": "uri", "target": "data"})
+        sources = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources")
+        with mock.patch.object(tables, "HAND_EMULATORS", [e for e in tables.HAND_EMULATORS if e["id"] != "lemon"] + [hub]):
+            data = convert.convert(sources)[0]
+        ids = {e["id"] for e in data["emulators"]}
+        self.assertTrue("dev-lemon-lemon-emulator" in ids, "Daijisho Lemon dropped although its activity differs")
+
+    def test_omnidroid_is_last_on_atari7800_and_dos(self):
+        data = convert.convert(os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources"))[0]
+        for system_id in ("atari7800", "dos"):
+            emulators = next(s for s in data["systems"] if s["id"] == system_id)["emulators"]
+            self.assertTrue(emulators[-1].startswith("com-omnidroid"), emulators)
+            self.assertTrue(emulators[0].startswith("retroarch-"), emulators)
+
+
 class OutputTests(unittest.TestCase):
     def test_extra_extensions_are_added_and_claimed_by_no_other_system(self):
         data = convert.convert(os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources"))[0]
@@ -545,6 +596,8 @@ class EmulatorOrderTests(unittest.TestCase):
 
     def test_standalone_emulators_come_before_retroarch_cores(self):
         for system_id, emulators in self.systems.items():
+            if system_id in tables.SYSTEM_EMULATOR_ORDER:
+                continue  # the owner's whole order (Steam; Omnidroid last on atari7800 and dos)
             rest = emulators[1:] if system_id in tables.FIRST_EMULATOR else emulators
             kinds = [e in self.cores for e in rest]
             self.assertEqual(sorted(kinds), kinds, f"{system_id}: {rest}")
@@ -618,6 +671,57 @@ class AppsSystemTests(unittest.TestCase):
                 self.assertEqual(len(keys), len(set(keys)))
                 return
         self.fail("KNOWN_APPS not found in tables.py")
+
+
+class VersionRecordTests(unittest.TestCase):
+    """platforms-version.json: a new sha256 bumps dataVersion; the same output leaves it alone."""
+
+    TODAY = datetime.date(2026, 11, 1)
+    LATER = datetime.date(2026, 11, 5)
+
+    def test_no_file_yet_starts_at_version_one(self):
+        text = convert.version_record(b"data\n", None, self.TODAY)
+        sha = hashlib.sha256(b"data\n").hexdigest()
+        self.assertEqual(f'{{"dataVersion": 1, "sha256": "{sha}", "date": "2026-11-01"}}\n', text)
+
+    def test_same_bytes_leave_the_record_alone(self):
+        first = convert.version_record(b"data\n", None, self.TODAY)
+        self.assertIsNone(convert.version_record(b"data\n", first, self.LATER))
+
+    def test_changed_bytes_bump_the_version_and_date(self):
+        first = convert.version_record(b"data\n", None, self.TODAY)
+        second = json.loads(convert.version_record(b"other\n", first, self.LATER))
+        self.assertEqual({"dataVersion": 2, "sha256": hashlib.sha256(b"other\n").hexdigest(),
+                          "date": "2026-11-05"}, second)
+
+    def test_broken_record_fails_loudly(self):
+        for bad in ("", "{}", '{"dataVersion": 0, "sha256": "x", "date": "d"}',
+                    '{"dataVersion": "3", "sha256": "x", "date": "d"}', '{"dataVersion": true, "sha256": "x"}'):
+            with self.subTest(bad=bad), self.assertRaises(ConvertError):
+                convert.version_record(b"data\n", bad, self.TODAY)
+
+    def test_write_version_touches_the_file_only_on_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "platforms-version.json")
+            convert.write_version(path, b"a\n", self.TODAY)
+            os.utime(path, (1, 1))
+            line = convert.write_version(path, b"a\n", self.LATER)
+            self.assertIn("unchanged", line)
+            self.assertEqual(1, os.stat(path).st_mtime)
+            convert.write_version(path, b"b\n", self.LATER)
+            with open(path, encoding="utf-8") as handle:
+                self.assertEqual(2, json.load(handle)["dataVersion"])
+
+    def test_committed_record_matches_the_committed_asset(self):
+        """The converter on unchanged snapshots must not move the version (it would on any byte)."""
+        assets = os.path.join(os.path.dirname(convert.DEFAULT_OUT))
+        version_path = os.path.join(assets, "platforms-version.json")
+        if not os.path.exists(version_path):
+            self.skipTest("platforms-version.json is not written yet")
+        with open(convert.DEFAULT_OUT, "rb") as handle:
+            data = handle.read()
+        with open(version_path, encoding="utf-8") as handle:
+            self.assertIsNone(convert.version_record(data, handle.read(), self.LATER))
 
 
 if __name__ == "__main__":

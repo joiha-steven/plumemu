@@ -105,6 +105,8 @@ internal fun InfoFacts(
             // The rows of "Name from" (its label and each line) come before the description's.
             val afterName = afterTable + (facts.name?.let { 1 + nameFromLines(it).size } ?: 0)
             facts.scraped?.description?.takeIf { it.isNotEmpty() }?.let { Description(it) { line -> rows.place(afterName + line) } }
+            // RetroAchievements: only while signed in (the state is null otherwise); its rows count up from ACHIEVEMENT_ROWS_FROM.
+            facts.achievements?.let { AchievementsSection(it) { index -> rows.place(index) } }
             if (fit.endRoom > 0) Spacer(Modifier.exactlyHigh(fit.endRoom))
         }
         // The cut row fades out at the edge it continues past (design/rules.md > Lists that scroll).

@@ -27,6 +27,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
                 textSize = decodeTextSize(p),
                 textWeight = optionalEnum<TextWeightSetting>(p, Keys.textWeight),
                 leftEdge = optionalEnum<LeftEdgeSetting>(p, Keys.leftEdge),
+                edgeFade = p[Keys.edgeFade] ?: d.appearance.edgeFade,
                 gridSize = enum(p, Keys.gridSize, d.appearance.gridSize),
                 gridSystems = p[Keys.gridSystems] ?: d.appearance.gridSystems,
                 ownColors = decodeOwnColors(p),
@@ -97,6 +98,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
         if (textWeight == null) p.remove(Keys.textWeight) else p[Keys.textWeight] = textWeight.name
         val leftEdge = s.appearance.leftEdge
         if (leftEdge == null) p.remove(Keys.leftEdge) else p[Keys.leftEdge] = leftEdge.name
+        p[Keys.edgeFade] = s.appearance.edgeFade
         p[Keys.gridSize] = s.appearance.gridSize.name
         p[Keys.gridSystems] = s.appearance.gridSystems
         val ownColors = s.appearance.ownColors
@@ -228,6 +230,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
         val textSizePickMarked = booleanPreferencesKey("appearance.text_size_pick_marked")
         val textWeight = stringPreferencesKey("appearance.text_weight")
         val leftEdge = stringPreferencesKey("appearance.left_edge")
+        val edgeFade = booleanPreferencesKey("appearance.edge_fade")
         val gridSize = stringPreferencesKey("appearance.grid_size")
         /** System ids shown as a grid (a set: the order means nothing). Absent in older files: all lists. */
         val gridSystems = stringSetPreferencesKey("appearance.grid_systems")

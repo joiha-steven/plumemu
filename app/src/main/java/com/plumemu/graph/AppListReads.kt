@@ -12,11 +12,25 @@ import kotlinx.coroutines.sync.withLock
  */
 internal class AppListReads(
     private val into: MutableStateFlow<List<LaunchableApp>>,
-    private val read: suspend () -> List<LaunchableApp>?,
+    private val onChanged: () -> Unit = {},
+    private val source: suspend () -> List<LaunchableApp>?,
 ) {
     private val one = Mutex()
 
     suspend fun refresh() {
-        one.withLock { read()?.let { into.value = it } }
+        read()
     }
+
+    /**
+     * Reads under the same lock and stores the answer; returns it (null: no launcher, list kept). [onChanged] runs when the
+     * stored list differs from the one before, so what was drawn from the old list (icons found by package) asks again.
+     */
+    suspend fun read(): List<LaunchableApp>? =
+        one.withLock {
+            source()?.also {
+                val changed = into.value != it
+                into.value = it
+                if (changed) onChanged()
+            }
+        }
 }

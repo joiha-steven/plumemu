@@ -25,6 +25,7 @@ import okhttp3.Headers
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,6 +35,7 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -95,6 +97,19 @@ internal class ScrapeRunParallelTest : WorkerTestBase() {
             }
         }
     }
+
+    /**
+     * An answer the server never finishes while the test runs: the client's read timeout (real
+     * time, set by each test) or the test's cancel ends the wait. [release] frees the server
+     * thread at the end, so shutting the fake server down does not wait out a long sleep.
+     */
+    private val release = CountDownLatch(1)
+
+    private fun hang() {
+        release.await(10, TimeUnit.SECONDS)
+    }
+
+    @After fun freeHungAnswers() = release.countDown()
 
     private fun rom(n: Int) = fx.rom("Game$n.md", content = "rom $n ".repeat(n * 3))
 
@@ -304,7 +319,7 @@ internal class ScrapeRunParallelTest : WorkerTestBase() {
         lookupAnswer = { n, _ ->
             if (n == 4) {
                 reachedFour.complete(Unit)
-                Thread.sleep(500)
+                hang()
             }
             null
         }
@@ -372,7 +387,7 @@ internal class ScrapeRunParallelTest : WorkerTestBase() {
         maxThreads = 1
         source = FakeScrapeSource(roms.take(4))
         lookupAnswer = { n, _ ->
-            if (n == 2) Thread.sleep(1_500)
+            if (n == 2) hang()
             null
         }
         parallelHost(readTimeoutMillis = 300)
@@ -389,7 +404,7 @@ internal class ScrapeRunParallelTest : WorkerTestBase() {
     @Test fun `three timeouts in a row end the run with a retry`() = runTest {
         maxThreads = 1
         lookupAnswer = { n, _ ->
-            if (n in 1..3) Thread.sleep(1_500)
+            if (n in 1..3) hang()
             null
         }
         parallelHost(readTimeoutMillis = 300)
@@ -405,7 +420,7 @@ internal class ScrapeRunParallelTest : WorkerTestBase() {
         maxThreads = 1
         source = FakeScrapeSource(roms.take(3))
         lookupAnswer = { n, attempt ->
-            if (n == 1 && attempt == 1) Thread.sleep(1_500)
+            if (n == 1 && attempt == 1) hang()
             null
         }
         val work = parallelHost(readTimeoutMillis = 300)
@@ -426,7 +441,7 @@ internal class ScrapeRunParallelTest : WorkerTestBase() {
     @Test fun `games set aside in the last run time out together, not one after another`() = runTest {
         // Games 1-3 met a network error in an earlier run of this scraper and time out again.
         lookupAnswer = { n, _ ->
-            if (n in 1..3) Thread.sleep(2_000)
+            if (n in 1..3) hang()
             null
         }
         parallelHost(readTimeoutMillis = 500)
@@ -479,7 +494,7 @@ internal class ScrapeRunParallelTest : WorkerTestBase() {
         maxThreads = 1
         source = FakeScrapeSource(roms.take(3))
         lookupAnswer = { n, _ ->
-            if (n == 1) Thread.sleep(1_500)
+            if (n == 1) hang()
             null
         }
         parallelHost(readTimeoutMillis = 300)
@@ -492,7 +507,7 @@ internal class ScrapeRunParallelTest : WorkerTestBase() {
         maxThreads = 1
         source = FakeScrapeSource(roms.take(3))
         lookupAnswer = { n, _ ->
-            if (n == 3) Thread.sleep(1_500)
+            if (n == 3) hang()
             null
         }
         parallelHost(readTimeoutMillis = 300)
@@ -504,7 +519,7 @@ internal class ScrapeRunParallelTest : WorkerTestBase() {
         maxThreads = 1
         source = FakeScrapeSource(roms.take(2))
         lookupAnswer = { n, _ ->
-            if (n == 1) Thread.sleep(1_500)
+            if (n == 1) hang()
             null
         }
         val work = parallelHost(readTimeoutMillis = 300)

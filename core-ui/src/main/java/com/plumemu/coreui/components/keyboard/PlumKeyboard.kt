@@ -45,7 +45,7 @@ import kotlin.math.roundToInt
 
 /**
  * The words the keyboard needs from the app's strings (core-ui has no string resources): the
- * space key's label and what a screen reader says for the three icon keys.
+ * space key's label and what a screen reader says for the four icon keys.
  */
 @Immutable
 data class KeyboardLabels(
@@ -53,6 +53,7 @@ data class KeyboardLabels(
     val shift: String,
     val delete: String,
     val hide: String,
+    val paste: String = "",
 )
 
 /**
@@ -87,14 +88,15 @@ fun PlumKeyboard(
     val currentOnEvent by rememberUpdatedState(onEvent)
     val onTap: (KeyId) -> Unit = remember(state) { { id -> state.tap(id)?.let { currentOnEvent(it) } } }
     val page = state.page
-    val rows = KeyboardLayout.rows(page, state.hasShift)
+    val hasPaste = state.hasPaste
+    val rows = KeyboardLayout.rows(page, state.hasShift, hasPaste)
     val keyHeight = layout.keyboardKeyHeight
     val totalHeight = layout.keyboardHeight
     Layout(
         content = {
             rows.forEachIndexed { r, row ->
                 row.forEachIndexed { i, slot ->
-                    key(page, r, i) { KeyCell(state, KeyId(r, i), slot, spec.actionLabel, labels, onTap) }
+                    key(page, hasPaste, r, i) { KeyCell(state, KeyId(r, i), slot, spec.actionLabel, labels, onTap) }
                 }
             }
         },
@@ -183,6 +185,7 @@ private fun iconOf(key: KeyboardKey): KeyIcon? =
         KeyboardKey.Shift -> KeyIcon.Shift
         KeyboardKey.Delete -> KeyIcon.Delete
         KeyboardKey.Hide -> KeyIcon.Hide
+        KeyboardKey.Paste -> KeyIcon.Paste
         else -> null
     }
 
@@ -195,6 +198,7 @@ private fun spokenName(
         KeyIcon.Shift -> labels.shift
         KeyIcon.Delete -> labels.delete
         KeyIcon.Hide -> labels.hide
+        KeyIcon.Paste -> labels.paste
     }
 
 /** The word or character a key without an icon shows; a letter in upper case while shift is on. */
@@ -209,7 +213,7 @@ private fun labelOf(
         is KeyboardKey.Page -> key.label
         KeyboardKey.Space -> labels.space
         KeyboardKey.Action -> actionLabel
-        KeyboardKey.Shift, KeyboardKey.Delete, KeyboardKey.Hide -> ""
+        KeyboardKey.Shift, KeyboardKey.Delete, KeyboardKey.Hide, KeyboardKey.Paste -> ""
     }
 
 /** A key's fill (null: none), ink and type role. */

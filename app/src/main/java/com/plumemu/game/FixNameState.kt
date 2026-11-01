@@ -69,6 +69,9 @@ internal interface TypingState {
     /** Plumemu's keyboard edits the field through this (Android's text field has its own change callback). */
     fun replaceText(text: String)
 
+    /** The most characters (UTF-16 units) [replaceText] keeps: a paste inserts only what fits. */
+    val maxLength: Int get() = Int.MAX_VALUE
+
     /** The caret and keys of Plumemu's keyboard on this field ([ownKeyboardOutcome]); unused with Android's. */
     val fieldKeys: FieldKeys
 

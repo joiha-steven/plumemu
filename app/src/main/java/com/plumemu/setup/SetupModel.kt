@@ -451,6 +451,7 @@ internal class SetupModel(
         // A stored account needs no question: the step opens on "Signed in as …" and Continue, or,
         // when its password was refused, on the form with the name filled in (B: the question).
         val opensOnForm = opensOnTheForm(form, status)
+        if (opensOnForm) form?.startTyping()
         local.update {
             it.copy(
                 step = step,
@@ -507,9 +508,10 @@ internal class SetupModel(
         feel.report(Outcome.Activated)
     }
 
-    /** "Use my account": the sign-in form, its cursor on the username and the keyboard down. */
+    /** "Use my account": the sign-in form, typing in its first empty field. */
     private fun openBoxArtForm() {
         if (state.value.step != SetupStep.BoxArt) return
+        local.value.boxArt?.startTyping()
         local.update { if (it.step == SetupStep.BoxArt) it.copy(isBoxArtFormOpen = true) else it }
         feel.report(Outcome.Activated)
     }

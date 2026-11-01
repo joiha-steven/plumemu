@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 """Converts the Daijishō and ES-DE snapshots into platforms/src/main/assets/platforms.json.
 
-Usage: python3 -I tools/platforms/convert.py [--out PATH]
+Usage: python3 -I tools/platforms/convert.py [--out PATH] [--version-out PATH]
 Standard library only. Output is deterministic. See README.md for the merge rules.
+
+Writing the asset itself (no --out) also keeps platforms-version.json beside it: when the written
+bytes' sha256 differs from the recorded one, dataVersion + 1, the new sha256 and today's date.
+With --out elsewhere it is left alone unless --version-out names it.
 """
 import argparse
 import collections
+import datetime
+import hashlib
 import json
 import os
 import re
@@ -23,6 +29,7 @@ from common import (ConvertError, Unsupported, check_accepts, check_game, hand_l
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_OUT = os.path.join(HERE, "..", "..", "platforms", "src", "main", "assets", "platforms.json")
 DEFAULT_MANIFEST_OUT = os.path.join(HERE, "..", "..", "platforms", "src", "main", "AndroidManifest.xml")
+DEFAULT_VERSION_OUT = os.path.join(HERE, "..", "..", "platforms", "src", "main", "assets", "platforms-version.json")
 RETROARCH_UNPACKS = {"zip", "7z"}
 CORE_SUFFIX = re.compile(r"_libretro(_android)?\.so$")
 
@@ -161,6 +168,10 @@ def convert(sources):
                 target["emulators"].append(emulator_id)
 
     es_packages = registry.esde_packages()
+    # A hand-kept emulator is the owner's record of its builds (from the app's own manifest): a Daijisho
+    # player of the same package and activity would list the emulator twice, with the other Intent.
+    hand_builds = {(e["package"], e.get("activity")) for e in tables.HAND_EMULATORS}
+    hand_builds |= {v for e in tables.HAND_EMULATORS for v in e.get("variants", ())}
     for dj in sorted(dj_platforms, key=lambda p: p["id"]):
         target = system(tables.DJ_TO_ES.get(dj["id"], dj["id"]))
         tables_added = [dj["id"], dj["shortname"]]
@@ -179,6 +190,9 @@ def convert(sources):
                                             "core": core, "regex": dj["accepted"].get(player_name)})
             if package in es_packages and not core:
                 skipped["Daijishō: package already defined by ES-DE"] += 1
+                continue
+            if (package, activity) in hand_builds and not core:
+                skipped["Daijishō: build already defined by a hand-kept emulator"] += 1
                 continue
             emulator_id = registry.add_daijisho(player_name, target["id"], package, activity, launch, core)
             if emulator_id not in target["emulators"]:
@@ -498,11 +512,51 @@ def finish(systems, registry, skipped, dj_players=None):
     return data, skipped, dropped
 
 
+def version_record(data_bytes, current_text, today):
+    """The text of platforms-version.json for `data_bytes`, or None when `current_text` already
+    records their sha256 (the file stays untouched). `current_text` None: no file yet, version 1."""
+    sha = hashlib.sha256(data_bytes).hexdigest()
+    version = 1
+    if current_text is not None:
+        try:
+            current = json.loads(current_text)
+            recorded, version = current["sha256"], current["dataVersion"]
+        except (ValueError, KeyError, TypeError):
+            raise ConvertError("platforms-version.json is not {\"dataVersion\": N, \"sha256\": ..., \"date\": ...}; fix it by hand")
+        if not isinstance(version, int) or isinstance(version, bool) or version < 1:
+            raise ConvertError(f"platforms-version.json: dataVersion {version!r} is not a whole number above 0")
+        if recorded == sha:
+            return None
+        version += 1
+    record = {"dataVersion": version, "sha256": sha, "date": today.isoformat()}
+    return json.dumps(record) + "\n"
+
+
+def write_version(path, data_bytes, today):
+    """Keeps platforms-version.json in step with the written data; returns a line for the summary."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            current = handle.read()
+    except FileNotFoundError:
+        current = None
+    text = version_record(data_bytes, current, today)
+    if text is None:
+        return f"{path} unchanged (same sha256)"
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(text)
+    return f"wrote {path} (dataVersion {json.loads(text)['dataVersion']})"
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", default=DEFAULT_OUT)
     parser.add_argument("--manifest-out", default=DEFAULT_MANIFEST_OUT)
+    parser.add_argument("--version-out", default=None,
+                        help="platforms-version.json to keep; default: the asset's, only when --out is the asset")
     args = parser.parse_args()
+    version_out = args.version_out
+    if version_out is None and os.path.abspath(args.out) == os.path.abspath(DEFAULT_OUT):
+        version_out = DEFAULT_VERSION_OUT
     try:
         data, skipped, dropped = convert(os.path.join(HERE, "sources"))
     except ConvertError as error:
@@ -513,6 +567,13 @@ def main():
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     with open(args.out, "w", encoding="utf-8", newline="\n") as handle:
         handle.write(text + "\n")
+    version_line = None
+    if version_out:
+        try:
+            version_line = write_version(version_out, (text + "\n").encode("utf-8"), datetime.date.today())
+        except ConvertError as error:
+            print(f"convert.py: {error}", file=sys.stderr)
+            return 1
     queries = manifest.render(data)
     os.makedirs(os.path.dirname(os.path.abspath(args.manifest_out)), exist_ok=True)
     with open(args.manifest_out, "w", encoding="utf-8", newline="\n") as handle:
@@ -526,6 +587,8 @@ def main():
         print(f"skipped commands: {count} x {reason}")
     print(f"wrote {args.out} ({len(text.encode('utf-8')) + 1} bytes)")
     print(f"wrote {args.manifest_out} ({len(manifest.emulator_packages(data))} emulator packages in <queries>)")
+    if version_line:
+        print(version_line)
     return 0
 
 

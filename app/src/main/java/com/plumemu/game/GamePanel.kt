@@ -45,6 +45,8 @@ import com.plumemu.coreui.components.EdgeFade
 import com.plumemu.coreui.components.ListEdgeFade
 import com.plumemu.coreui.components.OptionRow
 import com.plumemu.coreui.components.OptionRowLook
+import com.plumemu.coreui.components.PanelTitleWithDot
+import com.plumemu.coreui.components.panelChrome
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.WidthClass
@@ -86,6 +88,8 @@ internal fun GamePanelOverlay(
     val shown = lastShown[0]
     if (shown == null || (!isOpen && isGone)) return
     val slide = with(LocalDensity.current) { (if (isWide) PlumDimens.columnGap + panelWidth + PlumDimens.stripMarginSide else layout.width).toPx() }
+    val colors = PlumTheme.colors
+    val panelStart = if (isWide) PlumDimens.columnGap else PlumDimens.stripMarginSide
     Box(modifier.fillMaxSize()) {
         if (isOpen) {
             Box(Modifier.fillMaxSize().pointerInput(onAction) { detectTapGestures(onTap = { onAction(Action.Back) }) }.testTag(GamePanelTags.OUTSIDE))
@@ -100,12 +104,15 @@ internal fun GamePanelOverlay(
             Box(
                 Modifier
                     .fillMaxHeight()
+                    .background(PlumTheme.colors.bg)
+                    // The panel's card (decision 0011, point 5): hairline edge and soft shadow just outside the column. Drawn before
+                    // the clip below so a typing panel does not cut it; it reads colours only while drawing.
+                    .panelChrome({ colors.bg }, outset = PlumDimens.panelOutset, start = panelStart, end = PlumDimens.stripMarginSide, outsetBottom = PlumDimens.panelOutsetBottom, shadowBottom = PlumDimens.panelShadowBottom)
                     // Over a keyboard tray, a field panel's header may give way from its top: never over the top bar.
                     .then(if (shown.screen is TypingScreen) Modifier.clipToBounds() else Modifier)
-                    .background(PlumTheme.colors.bg)
                     // Taps on the panel's empty parts stay in the panel (they are not "outside").
                     .pointerInput(Unit) { detectTapGestures { } }
-                    .padding(start = if (isWide) PlumDimens.columnGap else PlumDimens.stripMarginSide, end = PlumDimens.stripMarginSide),
+                    .padding(start = panelStart, end = PlumDimens.stripMarginSide),
             ) {
                 // Sliding out, the rows are inert: a tap there would otherwise fall through to the
                 // strip as a Details tap (narrow details stop: Play).
@@ -150,12 +157,12 @@ private fun PanelBody(
 private fun PanelHeader(content: PanelContent) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
-    BasicText(
+    PanelTitleWithDot(
         text = content.title.resolve(),
         style = type.systemNameCurrent.copy(color = colors.text),
+        modifier = Modifier.padding(horizontal = PlumDimens.gameRowPadding),
+        titleModifier = Modifier.testTag(GamePanelTags.TITLE),
         maxLines = TITLE_LINES,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(horizontal = PlumDimens.gameRowPadding).testTag(GamePanelTags.TITLE),
     )
     content.body.forEach { line ->
         Spacer(Modifier.height(PlumDimens.titleLineGap))
@@ -288,6 +295,17 @@ internal object GamePanelTags {
     fun nameFromLine(index: Int) = "game_panel_name_from_$index"
 
     fun descriptionBlock(index: Int) = "game_panel_description_$index"
+
+    /** Info's RetroAchievements section, its one quiet line, its count lines and each badge; [achievement] n is the n-th row of the list (0 first). */
+    const val ACHIEVEMENTS = "game_panel_achievements"
+    const val ACHIEVEMENTS_LINE = "game_panel_achievements_line"
+    const val ACHIEVEMENTS_SUMMARY = "game_panel_achievements_summary"
+
+    /** The quiet "Matched by name" line under the summary of a game found by its name. */
+    const val ACHIEVEMENTS_BY_NAME = "game_panel_achievements_by_name"
+    const val ACHIEVEMENT_BADGE = "game_panel_achievement_badge"
+
+    fun achievement(index: Int) = "game_panel_achievement_$index"
 }
 
 private val IGNORE_ACTIONS: (Action) -> Unit = {}

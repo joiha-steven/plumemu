@@ -51,7 +51,7 @@ class SettingsBoxArtTextTest {
                 BoxArtLine.Retrying(tenPm) to ("No connection, trying again at 10:00 PM" to "No connection"),
                 BoxArtLine.Retrying(null) to ("No connection, trying again soon" to "No connection"),
                 BoxArtLine.Starting(counts) to ("Starting…" to "Starting…"),
-                BoxArtLine.Done(2_012, 2_054) to ("Done: 2,012 of 2,054 games have box art" to "Done"),
+                BoxArtLine.Done(2_012, 2_054) to ("Done: 2,012 of 2,054 games have box art" to null),
                 BoxArtLine.Some(300, 2_054) to ("300 of 2,054 games have box art" to null),
                 BoxArtLine.EmptyLibrary to ("No games yet: box art comes once Plumemu has found your games." to null),
                 BoxArtLine.Unreadable to ("Plumemu could not read how far box art has come." to null),

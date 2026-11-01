@@ -13,6 +13,7 @@ import android.content.pm.PackageManager
 import android.util.Log
 import com.plumemu.battery.batteryPaceOf
 import com.plumemu.coredata.db.AppKind
+import com.plumemu.graph.AchievementsState
 import com.plumemu.graph.AppGameSystems
 import com.plumemu.graph.AppGamesSyncOutcome
 import com.plumemu.graph.AppGraph
@@ -44,6 +45,8 @@ import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -381,6 +384,13 @@ internal class AppGameActions(
     }
 
     override suspend fun nameSource(gameKey: String): String? = gameKey.toLongOrNull()?.let { graph.nameFixes.packSource(it) }
+
+    override suspend fun achievements(gameKey: String): Flow<AchievementsState>? {
+        val id = gameKey.toLongOrNull() ?: return null
+        // The account file only: signed out, nothing else of RetroAchievements is built or asked.
+        if (!graph.achievements.isSignedIn.first()) return null
+        return graph.achievements.progress(id)
+    }
 
     override suspend fun arcadeSet(gameKey: String): ArcadeSetFacts? = gameKey.toLongOrNull()?.let { graph.nameFixes.arcadeSet(it) }
 

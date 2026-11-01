@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # The gate. Prints one PASS/FAIL line per check and exits non-zero if any check fails.
 #
-#   scripts/verify.sh --quick   what a coding agent runs: guard self-tests, the publish-update
-#                               tests, every guard except licences, then
+#   scripts/verify.sh --quick   what a coding agent runs: guard self-tests (the publish-source and
+#                               deploy-web tests inside only when their files changed against
+#                               origin/main), the publish-update tests, every guard except
+#                               licences, then
 #                               `./gradlew assembleDebug lintDebug`
 #   scripts/verify.sh           the full gate, run once by the main session before a merge:
 #                               all guards, the statistics server's checks (server/: npm ci,
@@ -90,13 +92,21 @@ run_check() { # name command...
 skip_check() { printf 'SKIP  %s: %s\n' "$1" "$2"; }
 
 GUARDS="scripts/guards"
-run_check "guard self-tests" "$GUARDS/tests/run.sh"
+# Quick: the release-script self-tests (publish-source, deploy-web; ~26 s) run only when a file
+# they exercise changed against origin/main; the full gate and --ci always run them.
+if [[ $MODE == quick ]]; then run_check "guard self-tests" "$GUARDS/tests/run.sh" --changed-only
+else run_check "guard self-tests" "$GUARDS/tests/run.sh"; fi
 if [[ -f scripts/tests/test_publish_update.py ]]; then
   run_check "publish-update tests" python3 -I scripts/tests/test_publish_update.py
 else
   skip_check "publish-update tests" "scripts/tests/test_publish_update.py is not in this checkout"
 fi
-for guard in english-only ui-text theme-literals module-direction code-length secrets android-regex coroutine-cancellation translations public-boundary; do
+if [[ -f scripts/tests/test_publish_platforms.py ]]; then
+  run_check "publish-platforms tests" python3 -I scripts/tests/test_publish_platforms.py
+else
+  skip_check "publish-platforms tests" "scripts/tests/test_publish_platforms.py is not in this checkout"
+fi
+for guard in english-only ui-text theme-literals module-direction code-length secrets android-regex coroutine-cancellation translations changelog-format public-boundary; do
   if [[ $guard == public-boundary && ! -f scripts/public-paths.txt ]]; then
     skip_check "$guard" "scripts/public-paths.txt is not in this checkout"
     continue

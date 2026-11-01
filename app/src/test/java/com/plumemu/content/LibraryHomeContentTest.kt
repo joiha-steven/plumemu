@@ -3,6 +3,7 @@ package com.plumemu.content
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.plumemu.coredata.db.GameEntity
+import com.plumemu.coredata.db.NewAppGame
 import com.plumemu.coredata.db.PlumDatabase
 import com.plumemu.coredata.db.RomFolderEntity
 import com.plumemu.coredata.db.ScanBatch
@@ -95,6 +96,18 @@ class LibraryHomeContentTest {
         assertEquals("Not a game: it is back", listOf("Browser", "Celeste"), withTimeout(TIMEOUT_MS) { withMarks.content.first { c -> c.appTitles().size == 2 } }.appTitles())
     }
 
+    /** an app game's row carries its package (the screens draw its icon); a file game's row does not. */
+    @Test
+    fun appGameRowsCarryTheirPackage() = runBlocking {
+        db.appGameDao().sync(listOf(NewAppGame("com.a.genshin", "Genshin", "genshin", "android", "Android games")), now = 5)
+        val withPackages = LibraryHomeContent(db.gameDao(), { catalog }, apps, showApps, Dispatchers.Default, appPackages = db.appGameDao().observePackages())
+        val content = withTimeout(TIMEOUT_MS) { withPackages.content.first { c -> c.entries.any { e -> e.rows.any { it.appPackage != null } } } }
+        val android = content.entries.first { it.id == "android" }
+        assertEquals(listOf("com.a.genshin"), android.rows.map { it.appPackage })
+        assertTrue("every game of the Android entry is drawn as an Apps tile", android.isAppGamesGrid)
+        assertTrue("a file game has no package", content.entries.first { it.id == "snes" }.rows.all { it.appPackage == null })
+    }
+
     /** the grid, the details column and the years only while box art is set up; rows carry their scrape key. */
     @Test
     fun boxArtFollowsTheAccountAndRowsCarryTheirScrapeKey() = runBlocking {
@@ -154,7 +167,7 @@ class LibraryHomeContentTest {
         assertEquals(listOf('L', 'M', 'T'), nes.railLetters)
     }
 
-    /** Settings › Appearance › Left edge: each system carries the platform data's code, and the setting reaches the content (default Game counts). */
+    /** Settings › Home screen › Left edge: each system carries the platform data's code, and the setting reaches the content (default Game counts). */
     @Test
     fun systemsCarryTheirCodeAndTheLeftEdgeSettingReachesTheContent() = runBlocking {
         val first = withTimeout(TIMEOUT_MS) { source.content.first { it.systemCount == 3 } }

@@ -51,6 +51,7 @@ import com.plumemu.coreui.components.InsetFocusPillShape
 import com.plumemu.coreui.components.SystemRow
 import com.plumemu.coreui.components.SystemRowLook
 import com.plumemu.coreui.components.rememberGlidingPill
+import com.plumemu.coreui.components.listEdgeFadeMask
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.WidthClass
@@ -186,11 +187,13 @@ private fun SystemsColumn(
         rememberGlidingPill(listState, glide, rowHeight = PlumTheme.layout.systemRowHeight, stride = PlumTheme.layout.systemRowHeight, extraGap = PlumDimens.systemGroupGap, shape = pillShape, fromBottom = true) {
             if (state.focus.column == Column.Systems) state.focus.systemIndex else -1
         }
+    // The column fades out at an edge it continues past (design/rules.md › Lists that scroll).
+    val fades = remember(listState, glide, state) { ListEdgeFades(listState, glide) { state.focus.systemIndex } }
     Box(modifier) {
         pill.Provide {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize().testTag(HomeTags.SYSTEMS).then(pill.modifier).then(glide.modifier),
+                modifier = Modifier.fillMaxSize().testTag(HomeTags.SYSTEMS).listEdgeFadeMask(fades, PlumTheme.edgeFadeOn).then(pill.modifier).then(glide.modifier),
                 contentPadding = PaddingValues(vertical = glide.extra),
             ) {
                 itemsIndexed(content.entries, key = { _, entry -> entry.id }) { index, entry ->

@@ -4,7 +4,9 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.plumemu.account.RA_KEY_PAGE_URL
 import com.plumemu.account.SignInForm
+import com.plumemu.account.SignInKind
 import com.plumemu.account.SignInStep
 import com.plumemu.coreinput.Action
 import com.plumemu.coreui.components.keyboard.KeyboardEvent
@@ -39,6 +41,13 @@ internal abstract class SettingsNavigation(
             // Not a move: no sound, only the same item kept under the cursor. The first content is
             // what the focus was made for (the placeholder before it has no rows to follow).
             if (hasContent && before != value) focusKeptIn(before, value)?.let { focus = it }
+            // A section that left with its device (Second screen): the focus goes to the section above it.
+            // Not moveTo: no move sound for a change nobody made, and Second screen's rows open no page that onFocusChanging must leave.
+            val shown = SettingsSection.shownIn(value)
+            if (focus.section !in shown) {
+                val above = SettingsSection.entries.take(focus.section.ordinal).lastOrNull { it in shown } ?: shown.first()
+                focus = focus.copy(column = SettingsColumn.Sections, section = above, page = null)
+            }
             // "Already reading your games" stays under the progress line until the scan ends.
             if (before.isScanning && !value.isScanning) work.clearScanBusyNotice()
             hasContent = true
@@ -79,6 +88,8 @@ internal abstract class SettingsNavigation(
     protected fun backToSections() = moveTo(focus.copy(column = SettingsColumn.Sections, page = null))
 
     protected fun focusOption(index: Int) {
+        // Already on that row: the first row of a section has no remembered entry, which would read as a move.
+        if (focus.column == SettingsColumn.Options && focus.page == null && (focus.rememberedOption[focus.section] ?: 0) == index) return
         moveTo(focus.copy(column = SettingsColumn.Options, page = null, rememberedOption = focus.rememberedOption + (focus.section to index)))
     }
 
@@ -87,8 +98,8 @@ internal abstract class SettingsNavigation(
         step: Int,
         column: SettingsColumn,
     ) {
-        val sections = SettingsSection.entries
-        var at = focus.section.ordinal + step
+        val sections = SettingsSection.shownIn(content)
+        var at = sections.indexOf(focus.section) + step
         if (column == SettingsColumn.Options) {
             while (at in sections.indices && sections[at].rowsIn(content).isEmpty()) at += step
         }
@@ -153,14 +164,20 @@ internal abstract class SettingsNavigation(
         moveTo(focus.copy(page = PanelPage.UnidentifiedGames, panelIndex = (page?.listIndex ?: 0).coerceAtMost(remaining - 1)))
     }
 
-    /** Library › ScreenScraper while signed out: the sign-in form. */
+    /** Accounts › ScreenScraper while signed out: the sign-in form. */
     val signIn = SettingsSignIn()
 
-    /** The sign-in form for the account row; [username] pre-filled for Sign in again. */
-    protected fun openSignIn(username: String = "") {
-        signIn.open(SettingsSignIn.newForm(username, keyboardChoice))
+    /** The sign-in form for the account row, typing in its first empty field; [username] pre-filled for Sign in again. */
+    protected fun openSignIn(
+        username: String = "",
+        kind: SignInKind = SignInKind.ScreenScraper,
+    ) {
+        signIn.open(SettingsSignIn.newForm(username, keyboardChoice, kind)).startTyping()
         moveTo(focus.copy(column = SettingsColumn.Panel, page = PanelPage.ScraperSignIn, panelIndex = 0))
     }
+
+    /** The RetroAchievements sign-in form; [username] pre-filled for Sign in again. */
+    protected fun openRaSignIn(username: String = "") = openSignIn(username, SignInKind.RetroAchievements)
 
     /** Every action while the sign-in form is open: Back and Cancel close it, a sign-in that worked closes it too. */
     protected fun onSignInAction(action: Action) {
@@ -184,6 +201,10 @@ internal abstract class SettingsNavigation(
             is SignInStep.Stay -> if (step.moved) feel.report(Outcome.Moved)
             is SignInStep.Submit -> {
                 work.signIn(form, step.username, step.password) { if (signIn.form === form && focus.page == PanelPage.ScraperSignIn) leaveSignIn() }
+                feel.report(Outcome.Activated)
+            }
+            SignInStep.OpenKeyPage -> {
+                work.openWebPage(form, RA_KEY_PAGE_URL)
                 feel.report(Outcome.Activated)
             }
             SignInStep.Leave, SignInStep.Done, SignInStep.NotHandled -> {
@@ -287,6 +308,10 @@ internal abstract class SettingsNavigation(
 
     /** Restore…'s or Undo's panel was opened during this visit of its row. */
     private var restorePanelOpened = false
+
+    /** Puts the focus on About's option row [index] (the row the main screen's update notice leads to). */
+    fun focusAboutRow(index: Int) =
+        moveTo(focus.copy(section = SettingsSection.About, column = SettingsColumn.Options, rememberedOption = focus.rememberedOption + (SettingsSection.About to index)))
 
     protected fun moveTo(next: SettingsFocus) {
         val from = focus

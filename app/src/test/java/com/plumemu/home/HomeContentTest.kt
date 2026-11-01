@@ -118,7 +118,7 @@ class HomeContentTest {
         assertEquals("the board's RP5-1", listOf(R.string.home_hint_select, R.string.home_hint_search, R.string.home_hint_settings), systems)
         val games = hintsFor(board, Column.Games, snes).map { it.label }
         assertEquals(
-            "no SELECT without box art; Y Favorite and X Search (D3); START opens the game menu",
+            "SELECT without box art too (the grid needs no account); Y Favorite and X Search (D3); START opens the game menu",
             listOf(
                 R.string.home_hint_play,
                 R.string.home_hint_back,
@@ -126,6 +126,7 @@ class HomeContentTest {
                 R.string.home_hint_search,
                 R.string.home_hint_menu,
                 R.string.home_hint_switch_system,
+                R.string.home_hint_grid_view,
             ),
             games,
         )

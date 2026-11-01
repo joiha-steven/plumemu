@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -35,6 +34,8 @@ import com.plumemu.coreinput.hint
 import com.plumemu.coreinput.tapItem
 import com.plumemu.coreui.components.Hint
 import com.plumemu.coreui.components.HintBar
+import com.plumemu.coreui.components.PanelTitleWithDot
+import com.plumemu.coreui.components.panelChrome
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.WidthClass
@@ -89,14 +90,14 @@ internal fun PinConfirmLayout(
             Column(
                 Modifier
                     .widthIn(max = PlumDimens.homeRolePromptWidth)
-                    .background(colors.sel2, RoundedCornerShape(PlumDimens.cornerSetupChoice))
+                    .panelChrome({ colors.sel2 })
                     // Scrolls when the text is large and the screen short; the focused button comes into view.
                     .testTag(PinConfirmTags.SCROLL)
                     .verticalScroll(rememberScrollState())
                     .padding(PlumDimens.homeRolePromptPadding),
                 verticalArrangement = Arrangement.spacedBy(PlumDimens.setupTitleGapWide),
             ) {
-                BasicText(text = titleOf(screen), style = type.setupTitle(WidthClass.Narrow).copy(color = colors.text), modifier = Modifier.testTag(PinConfirmTags.TITLE))
+                PanelTitleWithDot(text = titleOf(screen), style = type.setupTitle(WidthClass.Narrow).copy(color = colors.text), titleModifier = Modifier.testTag(PinConfirmTags.TITLE))
                 BasicText(text = bodyOf(screen), style = type.description.copy(color = colors.muted))
                 Spacer(Modifier.height(PlumDimens.setupButtonSpacer))
                 Row(horizontalArrangement = Arrangement.spacedBy(PlumDimens.setupButtonGap)) {

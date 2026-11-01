@@ -8,6 +8,7 @@ import com.plumemu.coredata.db.RomFolderEntity
 import com.plumemu.coredata.db.ScanBatch
 import com.plumemu.coredata.db.SystemEntity
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.graph.AchievementCount
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -74,6 +75,20 @@ class SecondScreenPlayFactsTest {
     )
 
     private fun card(title: String) = SecondScreenContent.Game(title, "Super Nintendo", gameId = ids.getValue(title), isPlayKnown = false)
+
+    @Test
+    fun theAchievementsComeWithThePlayFactsAndOnlyThen() =
+        runBlocking {
+            val asked = mutableListOf<Long>()
+            val withRa = SecondScreenPlayFacts(plays = { db.playDao() }, now = { now }, achievementsOf = { id -> asked += id; AchievementCount(12, 45) })
+            val filled = withRa.fill(card("Zelda")) as SecondScreenContent.Game
+            assertEquals(AchievementCount(12, 45), filled.achievements)
+            assertEquals(listOf(ids.getValue("Zelda")), asked)
+            // The same card again (play known) reads nothing more; no reader: no count.
+            assertNull(withRa.fill(filled))
+            assertEquals(listOf(ids.getValue("Zelda")), asked)
+            assertNull((facts.fill(card("Zelda")) as SecondScreenContent.Game).achievements)
+        }
 
     @Test
     fun aPlayedGameGetsItsDaysAndWholeMinutes() =

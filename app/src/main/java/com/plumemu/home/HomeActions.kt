@@ -151,7 +151,7 @@ private fun handleIntent(
         state.focusRow(target)
         false
     }
-    // The reducer sends this with box art, and for Apps also without it (its icons need none).
+    // The reducer sends this for every entry; the grid needs no box art, so only an entry without a grid view or games ends here.
     is StripIntent.ToggleView ->
         content.entry(intent.systemId).let { entry ->
             when {

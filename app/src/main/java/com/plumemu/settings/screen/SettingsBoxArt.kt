@@ -32,7 +32,7 @@ import kotlin.math.ceil
 import kotlin.math.roundToLong
 
 /*
- * Settings › Library › ScreenScraper's box art: the one place a run state
+ * Settings › Accounts › ScreenScraper's box art: the one place a run state
  * becomes words (the panel's status line, the account row's short form), the systems picker and
  * the Re-download confirm. The rows and the account panel are in SettingsAccount.kt; the run
  * itself is the graph's `GraphScrapes`.
@@ -245,13 +245,13 @@ private fun timeLeftText(left: TimeLeft): String {
 
 /**
  * The account row's value: "340 of 2,054", "Paused", "Waiting for Wi-Fi", "Daily limit", "Sign in
- * again", "Done"; null when there is nothing short to say (the row shows the name then).
+ * again"; null when there is nothing short to say (a finished run included): the row then says who is signed in.
  */
 @Composable
 internal fun boxArtShortText(line: BoxArtLine?): String? {
     val format = rememberCountFormat()
     return when (line) {
-        null, BoxArtLine.NotInThisBuild, is BoxArtLine.Some, BoxArtLine.EmptyLibrary, BoxArtLine.Unreadable -> null
+        null, BoxArtLine.NotInThisBuild, is BoxArtLine.Some, is BoxArtLine.Done, BoxArtLine.EmptyLibrary, BoxArtLine.Unreadable -> null
         BoxArtLine.WrongPassword -> stringResource(R.string.settings_account_sign_in_again)
         BoxArtLine.PausedByPerson -> stringResource(R.string.settings_box_art_paused)
         is BoxArtLine.DailyLimit -> stringResource(R.string.settings_box_art_short_daily_limit)
@@ -263,7 +263,6 @@ internal fun boxArtShortText(line: BoxArtLine?): String? {
         is BoxArtLine.Running ->
             line.counts?.let { stringResource(R.string.settings_box_art_short_progress, format.format(it.asked), format.format(it.listed)) }
                 ?: stringResource(R.string.settings_box_art_short_running)
-        is BoxArtLine.Done -> stringResource(R.string.settings_box_art_short_done)
     }
 }
 
@@ -379,7 +378,7 @@ internal enum class ClearConfirmItem { Clear, Cancel }
 internal enum class SignOutConfirmItem { SignOut, Cancel }
 
 /**
- * Library › ScreenScraper › Sign out, asked first: it says what happens to box art (the covers and the grid stop
+ * Accounts › ScreenScraper › Sign out, asked first: it says what happens to box art (the covers and the grid stop
  * showing and downloads stop; the pictures already saved stay on the device for the next sign-in), then Sign out and Cancel.
  */
 @Composable
@@ -412,7 +411,7 @@ internal fun SignOutConfirmPage(
 }
 
 /**
- * Library › ScreenScraper › Clear box art…, asked first: the covers disappear until Download missing
+ * Accounts › ScreenScraper › Clear box art…, asked first: the covers disappear until Download missing
  * fetches them again, the person's own picks and the sign-in stay; then Clear box art and Cancel.
  */
 @Composable
@@ -445,7 +444,7 @@ internal fun ClearBoxArtConfirmPage(
 }
 
 /**
- * Library › ScreenScraper › Choose systems…: every system with games, a checkmark on each chosen
+ * Accounts › ScreenScraper › Choose systems…: every system with games, a checkmark on each chosen
  * one (A or a tap), then Download missing and Re-download for the chosen ones.
  */
 @Composable

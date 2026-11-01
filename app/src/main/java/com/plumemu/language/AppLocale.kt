@@ -11,7 +11,7 @@ import androidx.annotation.RequiresApi
 import java.util.Locale
 
 /**
- * Applies Settings › Advanced › Language (docs/conventions/translation.md › Choosing a language).
+ * Applies Settings › Appearance › Language (docs/conventions/translation.md › Choosing a language).
  *
  * - Android 6 to 12: every Activity and the Application wrap their base context in a configuration
  *   with the picked locale ([wrap]). The pick is read from [LanguageCache], a tiny synchronous file,

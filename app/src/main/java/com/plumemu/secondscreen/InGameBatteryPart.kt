@@ -2,28 +2,20 @@ package com.plumemu.secondscreen
 
 import android.os.SystemClock
 import android.util.Log
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.MultiContentMeasurePolicy
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -34,7 +26,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Dp
 import com.plumemu.R
 import com.plumemu.coreui.theme.InGameColors
 import com.plumemu.coreui.theme.InGameDimens
@@ -67,6 +58,7 @@ internal class InGameBatteryFeed(
     private var refreshedAt = NEVER
     private var screenOn = true
     private var toldNoFigure = false
+    private val steady = SteadyBatteryPace()
 
     /** Null: nothing yet (the clock card alone, no note). */
     val shown: State<InGameBattery?> get() = state
@@ -100,7 +92,14 @@ internal class InGameBatteryFeed(
             toldNoFigure = true
             info("In-game battery: no figure after ${snapshot.readMs / MILLIS_PER_SECOND} s of reads (current and charge counter give no pace); the clock card shows alone")
         }
-        val next = inGameBatteryOf(snapshot, reading, wallClock(), driftNote)
+        val levelNow = reading?.percent ?: snapshot?.levels?.lastOrNull()?.level
+        // A device that gives no figure keeps its own answer (the clock card alone), not "Measuring…".
+        val shown = if (snapshot?.givesNoFigure == true) SteadyBatteryPace.Steady.Figures(snapshot) else steady.steady(snapshot, levelNow)
+        val next =
+            when (shown) {
+                SteadyBatteryPace.Steady.Starting -> inGameBatteryOf(snapshot, reading, wallClock(), driftNote, starting = true)
+                is SteadyBatteryPace.Steady.Figures -> inGameBatteryOf(shown.snapshot, reading, wallClock(), driftNote)
+            }
         if (next != state.value) state.value = next
     }
 
@@ -111,14 +110,16 @@ internal class InGameBatteryFeed(
 }
 
 /**
- * The battery part under the clock card: the time
- * left with "empty at" on its baseline at the right (under it when both do not fit), the chart with
- * its hour labels, and the key at the bottom (or the drift note in its place). The chart takes what
- * height is left up to [InGameDimens.chartMaxHeight]. When less than [InGameDimens.chartMinHeight]
- * would be left, parts give way in this order until it fits: "empty at" when it would need a line of
- * its own (the time left says the same), the key (or the note: its words are also in Settings ›
- * Home screen › In game), the hour labels (their ticks stay). [formatTime] formats a time of day as
- * Android is set (12 or 24 h).
+ * The battery part under the clock card: the head (the level ring, and beside it the time left with
+ * "empty at about 23:15" under it), the chart of this play from its start to empty or full with
+ * "Started 21:07" and "Empty 23:15" under its ends, the facts row ("Played 0:44 · Used 6% · 8% an
+ * hour · as usual"), or the drift note in their place for its minute. The chart takes what height is
+ * left up to [InGameDimens.chartMaxHeight]. When less than [InGameDimens.chartMinHeight] would be
+ * left, parts give way in this order until it fits: "empty at" (the time left and the chart's
+ * "Empty 23:15" say the same), the drift note (its words are also in Settings ›
+ * Second screen › In game), the facts, the chart's labels (their ticks stay). The ring gives way when the head is too wide for it;
+ * [onRingShown] says whether it shows, so the clock card can carry the level when it does not.
+ * [formatTime] formats a time of day as Android is set (12 or 24 h).
  */
 @Composable
 internal fun InGameBatteryPart(
@@ -126,6 +127,7 @@ internal fun InGameBatteryPart(
     dimens: InGameDimens,
     formatTime: (Long) -> String,
     modifier: Modifier = Modifier,
+    onRingShown: (Boolean) -> Unit = {},
 ) {
     val density = LocalDensity.current
     val type = PlumTheme.type
@@ -133,103 +135,125 @@ internal fun InGameBatteryPart(
     val leftStyle = dimens.partStyle(dimens.leftRole, type.font, type.textSize, density)
     val unitStyle = dimens.partStyle(dimens.unitRole, type.font, type.textSize, density)
     val lineColor = if (figures.isLow) InGameColors.partLow else InGameColors.partText
-    // Full, or no counter to divide by: no time left, no "empty at", no gap.
+    // Full, or no counter to divide by: no time left, no "empty at".
     val left = figures.left
+    val endsAt = figures.endsAtMillis?.takeIf { left != null }
     val endText =
-        figures.endsAtMillis?.takeIf { left != null }?.let {
-            stringResource(if (figures.isCharging) R.string.in_game_battery_full_at else R.string.in_game_battery_empty_at, formatTime(it))
+        endsAt?.let {
+            val words =
+                when {
+                    figures.isCharging && figures.isLeftExact -> R.string.in_game_battery_full_at
+                    figures.isCharging -> R.string.in_game_battery_full_at_about
+                    else -> R.string.in_game_battery_empty_at_about
+                }
+            stringResource(words, formatTime(it))
         }
     Layout(
         modifier = modifier,
         contents =
             listOf(
                 {
+                    val ring = if (figures.isLow) InGameColors.batteryLow else InGameColors.ahead
+                    LevelRing(figures.level, dimens, line, ring, if (figures.isLow) InGameColors.batteryLow else InGameColors.battery)
+                },
+                {
                     if (left != null) {
-                        val text = timeLeftText(left, figures.isCharging, figures.isLeftExact, leftStyle, unitStyle)
+                        val text = timeLeftText(left, figures.isCharging, leftStyle, unitStyle)
                         BasicText(text, Modifier.testTag(InGameBatteryTags.TIME_LEFT), style = leftStyle.copy(color = lineColor), maxLines = 1, softWrap = false)
                     }
                 },
                 { if (endText != null) BasicText(endText, Modifier.testTag(InGameBatteryTags.ENDS_AT), style = line, maxLines = 1, softWrap = false) },
-                { Chart(figures.chart, dimens, lineColor) },
-                { HourLabels(figures.chart.startMillis, line, formatTime) },
-                {
-                    if (figures.driftNote) {
-                        Note(stringResource(R.string.in_game_drift_note), line)
-                    } else {
-                        Key(figures, dimens, line, formatTime)
-                    }
-                },
+                { InGameBatteryChart(figures.chart, dimens, lineColor) },
+                // The chart's ends repeat the time left and the facts: a step dimmer, the line ahead's colour.
+                { ChartLabels(figures.chart.startMillis, endsAt, figures.isCharging, line.copy(color = InGameColors.ahead), formatTime) },
+                // For its one minute the drift note takes the facts' place.
+                { if (!figures.driftNote) Facts(figures, line, formatTime) },
+                { if (figures.driftNote) Note(stringResource(R.string.in_game_drift_note), line) },
             ),
-    ) { (heroes, ends, charts, labelsList, bottoms), constraints ->
-        val width = constraints.maxWidth
-        val loose = Constraints(maxWidth = width)
-        val hero = heroes.firstOrNull()?.measure(loose)
-        val end = ends.firstOrNull()?.measure(loose)
-        val labels = labelsList.first().measure(loose)
-        val bottom = bottoms.first().measure(loose)
-        // The head: the time left and "empty at" on one baseline (both here), or "empty at" on a line of its own.
-        val beside = if (hero != null && end != null && hero.width + InGameDimens.headGap.roundToPx() + end.width <= width) hero to end else null
-        val base = beside?.let { (heroPlaced, endPlaced) -> maxOf(heroPlaced[FirstBaseline], endPlaced[FirstBaseline]) } ?: 0
-        val besideHeight = beside?.let { (h, e) -> maxOf(base - h[FirstBaseline] + h.height, base - e[FirstBaseline] + e.height) } ?: 0
-        val headGap = if (hero != null) dimens.headToChartGap.roundToPx() else 0
-        val labelsGap = InGameDimens.chartToLabelsGap.roundToPx()
-        val bottomRoom = bottom.height + dimens.labelsToKeyGap.roundToPx()
-        val minChart = dimens.chartMinHeight.roundToPx()
-
-        fun headHeight(withEnd: Boolean): Int =
-            when {
-                hero == null -> 0
-                beside != null -> besideHeight
-                withEnd && end != null -> hero.height + end.height
-                else -> hero.height
-            }
-
-        fun room(
-            withEnd: Boolean,
-            withBottom: Boolean,
-            withLabels: Boolean,
-        ): Int =
-            constraints.maxHeight - headHeight(withEnd) - headGap -
-                (if (withLabels) labelsGap + labels.height else 0) - (if (withBottom) bottomRoom else 0)
-
-        // What stays, in the order things give way; the last keeps the chart alone under the head.
-        val keeps =
-            listOf(
-                Keeps(end = true, bottom = true, labels = true),
-                Keeps(end = false, bottom = true, labels = true),
-                Keeps(end = false, bottom = false, labels = true),
-                Keeps(end = false, bottom = false, labels = false),
-            ).firstOrNull { room(it.end, it.bottom, it.labels) >= minChart } ?: Keeps(end = false, bottom = false, labels = false)
-        val showsEnd = end != null && (beside != null || keeps.end)
-        val chartHeight = room(keeps.end, keeps.bottom, keeps.labels).coerceIn(0, dimens.chartMaxHeight.roundToPx())
-        val chart = charts.first().measure(Constraints.fixed(width, chartHeight))
-        layout(width, constraints.maxHeight) {
-            if (hero != null) {
-                if (beside != null) {
-                    val besideEnd = beside.second
-                    hero.place(0, base - hero[FirstBaseline])
-                    besideEnd.place(width - besideEnd.width, base - besideEnd[FirstBaseline])
-                } else {
-                    hero.place(0, 0)
-                    if (showsEnd) end?.place(0, hero.height)
-                }
-            }
-            val chartTop = headHeight(showsEnd) + headGap
-            chart.place(0, chartTop)
-            if (keeps.labels) labels.place(0, chartTop + chartHeight + labelsGap)
-            if (keeps.bottom) bottom.place(0, constraints.maxHeight - bottom.height)
-        }
-    }
+        measurePolicy = batteryPartMeasure(dimens, onRingShown),
+    )
 }
 
-private class Keeps(
+/** The part's contents in [InGameBatteryPart]'s order. */
+private enum class PartSlot { Ring, TimeLeft, EndsAt, Chart, Labels, Facts, Note }
+
+/** What stays when the chart needs room, in the order things give way. */
+private data class Keeps(
     val end: Boolean,
-    val bottom: Boolean,
+    val note: Boolean,
     val labels: Boolean,
+    val facts: Boolean,
 )
 
+private val keepsInOrder =
+    listOf(
+        Keeps(end = true, note = true, labels = true, facts = true),
+        Keeps(end = false, note = true, labels = true, facts = true),
+        Keeps(end = false, note = false, labels = true, facts = true),
+        Keeps(end = false, note = false, labels = true, facts = false),
+        Keeps(end = false, note = false, labels = false, facts = false),
+    )
+
+private fun batteryPartMeasure(
+    dimens: InGameDimens,
+    onRingShown: (Boolean) -> Unit,
+) =
+    MultiContentMeasurePolicy { parts, constraints ->
+        fun slot(slot: PartSlot) = parts[slot.ordinal].firstOrNull()
+        val width = constraints.maxWidth
+        val loose = Constraints(maxWidth = width)
+        val ring = slot(PartSlot.Ring)?.measure(loose)
+        val hero = slot(PartSlot.TimeLeft)?.measure(loose)
+        val end = slot(PartSlot.EndsAt)?.measure(loose)
+        val labels = slot(PartSlot.Labels)?.measure(loose)
+        val facts = slot(PartSlot.Facts)?.measure(loose)?.takeIf { it.width > 0 }
+        val note = slot(PartSlot.Note)?.measure(loose)
+        // The ring only where the time left and "empty at" still fit beside it.
+        val ringGap = dimens.ringGap.roundToPx()
+        val textWidth = maxOf(hero?.width ?: 0, end?.width ?: 0)
+        val shownRing = ring?.takeIf { it.width + (if (textWidth > 0) ringGap + textWidth else 0) <= width }
+        val textX = shownRing?.let { it.width + ringGap } ?: 0
+        onRingShown(shownRing != null)
+
+        fun textHeight(withEnd: Boolean) = (hero?.height ?: 0) + (if (withEnd && end != null) end.height else 0)
+        fun headHeight(withEnd: Boolean) = maxOf(shownRing?.height ?: 0, textHeight(withEnd))
+        val headGap = if (headHeight(true) > 0) dimens.headToChartGap.roundToPx() else 0
+        val rowGap = dimens.labelsToKeyGap.roundToPx()
+        val labelsRoom = labels?.let { it.height + InGameDimens.chartToLabelsGap.roundToPx() } ?: 0
+        fun room(keeps: Keeps): Int =
+            constraints.maxHeight - headHeight(keeps.end) - headGap -
+                (if (keeps.labels) labelsRoom else 0) -
+                (if (keeps.facts && facts != null) rowGap + facts.height else 0) -
+                (if (keeps.note && note != null) rowGap + note.height else 0)
+        val minChart = dimens.chartMinHeight.roundToPx()
+        val first = keepsInOrder.firstOrNull { room(it) >= minChart } ?: keepsInOrder.last()
+        // "empty at" stays wherever it costs no height (beside a ring taller than both lines).
+        val keeps = if (headHeight(true) == headHeight(false)) first.copy(end = true) else first
+        val chartHeight = room(keeps).coerceIn(0, dimens.chartMaxHeight.roundToPx())
+        // Still no room once everything has given way (a very short window): no chart rather than one
+        // squeezed to nothing, and no labels for it.
+        val hasChart = chartHeight >= minChart
+        val chart = slot(PartSlot.Chart)!!.measure(Constraints.fixed(width, chartHeight))
+        layout(width, constraints.maxHeight) {
+            val head = headHeight(keeps.end)
+            shownRing?.place(0, (head - shownRing.height) / 2)
+            val textTop = (head - textHeight(keeps.end)) / 2
+            hero?.place(textX, textTop)
+            if (keeps.end) end?.place(textX, textTop + (hero?.height ?: 0))
+            val chartTop = head + headGap
+            if (hasChart) chart.place(0, chartTop)
+            var below = chartTop + chartHeight
+            if (hasChart && keeps.labels && labels != null) {
+                labels.place(0, below + InGameDimens.chartToLabelsGap.roundToPx())
+                below += labelsRoom
+            }
+            if (keeps.facts && facts != null) facts.place((width - facts.width) / 2, below + rowGap)
+            if (keeps.note && note != null) note.place(0, constraints.maxHeight - note.height)
+        }
+    }
+
 /**
- * The numbers large and the words small: "About 4 h 30 min left", "1 h 03 to full". The words come
+ * The numbers large and the words small: "About 4 h 30 min left", "1 h 3 min to full". The words come
  * from whole sentences with placeholders (a duration inside "%1$s left"), so a translation orders them
  * its own way; each number goes in as its own mark first and is found again by that mark, so a
  * translation that puts `%2$s` before `%1$s` still gets each number in its place.
@@ -238,24 +262,19 @@ private class Keeps(
 private fun timeLeftText(
     left: TimeLeft,
     charging: Boolean,
-    exact: Boolean,
     leftStyle: TextStyle,
     unitStyle: TextStyle,
 ): AnnotatedString {
     val locale = currentLocale()
     val hours = left.minutes / MINUTES_PER_HOUR
     val minutes = left.minutes % MINUTES_PER_HOUR
-    // Android's own time to full is exact: its minutes after the hours as "03", with no "min". The
-    // counter's estimate keeps "min" even when rounding left it whole ("1 h 30 min to full").
-    val clockStyle = charging && exact && hours > 0
     val numbers = mutableListOf<String>()
-    fun mark(value: Int, pattern: String = "%d"): String {
-        numbers += String.format(locale, pattern, value)
+    fun mark(value: Int): String {
+        numbers += String.format(locale, "%d", value)
         return numberMark(numbers.size - 1).toString()
     }
     val duration = when {
         hours == 0 -> stringResource(R.string.in_game_battery_duration_minutes, mark(minutes))
-        clockStyle -> stringResource(R.string.in_game_battery_duration_clock, mark(hours), mark(minutes, "%02d"))
         minutes == 0 -> stringResource(R.string.in_game_battery_duration_hours, mark(hours))
         else -> stringResource(R.string.in_game_battery_duration_hours_minutes, mark(hours), mark(minutes))
     }
@@ -297,160 +316,106 @@ internal fun styledNumbers(text: String, numbers: List<String>, numberSpan: Span
         flushWords()
     }
 
-/** The chart: hour ticks at the bottom (no grid), the usual pace dotted, the line ahead dashed, this play's line and its dot now. */
+/**
+ * The level the clock card shows, as a thin ring round its number: the track in [InGameColors.tick],
+ * the level in [color] (the line ahead's grey, or the low red), the number in [numberColor], the clock card's battery
+ * colour (it repeats that line, so it is no brighter). A number wider than the ring's inside makes
+ * the ring larger.
+ */
 @Composable
-private fun Chart(
-    chart: BatteryChart,
+private fun LevelRing(
+    level: Int,
     dimens: InGameDimens,
-    lineColor: Color,
-) {
-    Canvas(Modifier.fillMaxWidth().testTag(InGameBatteryTags.CHART)) {
-        val pad = InGameDimens.chartPad.toPx()
-        fun x(minute: Float) = size.width * minute / CHART_MINUTES
-        fun y(percent: Float) = pad + (size.height - 2 * pad) * (1f - percent / PERCENT)
-        fun at(point: ChartPoint) = Offset(x(point.minute), y(point.percent))
-        val tick = InGameDimens.tickLength.toPx()
-        for (hour in 0..CHART_MINUTES / MINUTES_PER_HOUR) {
-            val tx = x((hour * MINUTES_PER_HOUR).toFloat())
-            drawLine(InGameColors.tick, Offset(tx, size.height), Offset(tx, size.height - tick), InGameDimens.tickStroke.toPx())
-        }
-        val from = chart.usualFrom
-        val to = chart.usualTo
-        if (from != null && to != null) {
-            val dots = PathEffect.dashPathEffect(floatArrayOf(DOT_LENGTH, InGameDimens.usualDotGap.toPx()))
-            drawLine(InGameColors.usual, at(from), at(to), dimens.usualStroke.toPx(), StrokeCap.Round, dots)
-        }
-        val now = chart.played.lastOrNull() ?: return@Canvas
-        chart.aheadTo?.let { end ->
-            val dashes = PathEffect.dashPathEffect(floatArrayOf(InGameDimens.aheadDash.toPx(), InGameDimens.aheadGap.toPx()))
-            drawLine(InGameColors.ahead, at(now), at(end), dimens.aheadStroke.toPx(), StrokeCap.Round, dashes)
-        }
-        drawPlayed(chart.played.map(::at), lineColor, dimens.playedStroke.toPx())
-        drawCircle(lineColor, dimens.nowDotRadius.toPx(), at(now))
-    }
-}
-
-private fun DrawScope.drawPlayed(
-    points: List<Offset>,
+    style: TextStyle,
     color: Color,
-    stroke: Float,
+    numberColor: Color,
 ) {
-    if (points.size < 2) return
-    val path = Path()
-    path.moveTo(points[0].x, points[0].y)
-    for (i in 1 until points.size) path.lineTo(points[i].x, points[i].y)
-    drawPath(path, color, style = Stroke(width = stroke, cap = StrokeCap.Round, join = StrokeJoin.Round))
+    val text = formatBattery(level, currentLocale())
+    Layout(
+        modifier =
+            Modifier.testTag(InGameBatteryTags.RING).drawBehind {
+                val stroke = dimens.ringStroke.toPx()
+                val radius = size.minDimension / 2 - stroke / 2
+                val arc = Size(radius * 2, radius * 2)
+                val corner = Offset(size.width / 2 - radius, size.height / 2 - radius)
+                val ring = Stroke(stroke, cap = StrokeCap.Round)
+                drawArc(InGameColors.tick, 0f, FULL_TURN, false, corner, arc, style = ring)
+                drawArc(color, RING_START, FULL_TURN * level.coerceIn(0, PERCENT) / PERCENT, false, corner, arc, style = ring)
+            },
+        content = { BasicText(text, style = style.copy(color = numberColor), maxLines = 1, softWrap = false) },
+    ) { measurables, _ ->
+        val number = measurables.first().measure(Constraints())
+        val inside = number.width + 2 * (dimens.ringStroke.roundToPx() + InGameDimens.ringPad.roundToPx())
+        val side = maxOf(2 * dimens.ringRadius.roundToPx() + dimens.ringStroke.roundToPx(), inside)
+        layout(side, side) { number.place((side - number.width) / 2, (side - number.height) / 2) }
+    }
 }
 
 /**
- * The four hours' labels under their ticks: the first from the left edge, the last to the right one,
- * the others centred. When they would come nearer than [InGameDimens.labelGap] (12-hour times at the
- * largest text sizes) the two in the middle give way; their ticks stay.
+ * The facts under the chart, one centred row: "Played 0:44 · Used 6% · 8% an hour · as usual" (the
+ * usual pace "usually 9%" with the chart's dotted line), charging "Played 0:44 · +40% an hour · since
+ * 21:20". Where the row is too wide, "Played" gives way first, then "Used", then the usual pace.
  */
 @Composable
-private fun HourLabels(
-    startMillis: Long,
-    style: TextStyle,
-    formatTime: (Long) -> String,
-) {
-    val hours = CHART_MINUTES / MINUTES_PER_HOUR
-    Layout(
-        modifier = Modifier.testTag(InGameBatteryTags.LABELS),
-        content = {
-            for (hour in 0..hours) {
-                BasicText(formatTime(startMillis + hour * HOUR_MILLIS), style = style, maxLines = 1, softWrap = false)
-            }
-        },
-    ) { measurables, constraints ->
-        val width = constraints.maxWidth
-        val placeables = measurables.map { it.measure(Constraints(maxWidth = width)) }
-        val xs =
-            placeables.mapIndexed { i, label ->
-                when (i) {
-                    0 -> 0
-                    hours -> width - label.width
-                    else -> (width * i / hours - label.width / 2).coerceIn(0, width - label.width)
-                }
-            }
-        val gap = InGameDimens.labelGap.roundToPx()
-        val roomy = (0 until hours).all { i -> xs[i] + placeables[i].width + gap <= xs[i + 1] }
-        layout(width, placeables.maxOf { it.height }) {
-            placeables.forEachIndexed { i, label ->
-                if (roomy || i == 0 || i == hours) label.place(xs[i], 0)
-            }
-        }
-    }
-}
-
-/** "— 48% an hour   ··· usually 40%"; "as usual" without a swatch; charging "— +40% an hour   since 21:20". */
-@Composable
-private fun Key(
+private fun Facts(
     figures: BatteryFigures,
-    dimens: InGameDimens,
     style: TextStyle,
     formatTime: (Long) -> String,
 ) {
     val locale = currentLocale()
+    val played =
+        stringResource(
+            R.string.in_game_battery_played,
+            String.format(locale, "%d:%02d", figures.playedMinutes / MINUTES_PER_HOUR, figures.playedMinutes % MINUTES_PER_HOUR),
+        )
+    val used = figures.usedPercent?.let { stringResource(R.string.in_game_battery_used, formatBattery(it, locale)) }
     val pace =
         figures.pacePercent?.let {
-            val percent = formatBattery(it, locale)
-            stringResource(if (figures.isCharging) R.string.in_game_battery_charging_pace else R.string.in_game_battery_pace, percent)
+            stringResource(if (figures.isCharging) R.string.in_game_battery_charging_pace else R.string.in_game_battery_pace, formatBattery(it, locale))
         }
-    val second: Pair<Swatch?, String>? =
+    val last: String? =
         when {
-            figures.isCharging -> figures.chargingSinceMillis?.let { null to stringResource(R.string.in_game_battery_charging_since, formatTime(it)) }
+            pace == null -> null
+            figures.isCharging -> figures.chargingSinceMillis?.let { stringResource(R.string.in_game_battery_charging_since, formatTime(it)) }
             else ->
                 when (val usual = figures.usual) {
                     UsualPace.None -> null
-                    UsualPace.AsUsual -> null to stringResource(R.string.in_game_battery_as_usual)
-                    is UsualPace.Differs -> Swatch.Usual to stringResource(R.string.in_game_battery_usual, formatBattery(usual.percent, locale))
+                    UsualPace.AsUsual -> stringResource(R.string.in_game_battery_as_usual)
+                    is UsualPace.Differs -> stringResource(R.string.in_game_battery_usual, formatBattery(usual.percent, locale))
                 }
         }
-    val lineColor = if (figures.isLow) InGameColors.partLow else InGameColors.partText
-    Row(Modifier.testTag(InGameBatteryTags.KEY), verticalAlignment = Alignment.CenterVertically) {
-        if (pace != null) KeyItem(Swatch.Played, pace, style, dimens, lineColor)
-        if (pace != null && second != null) Spacer(Modifier.width(dimens.keyItemGap))
-        if (second != null) KeyItem(second.first, second.second, style, dimens, lineColor)
-    }
-}
-
-private enum class Swatch { Played, Usual }
-
-@Composable
-private fun KeyItem(
-    swatch: Swatch?,
-    text: String,
-    style: TextStyle,
-    dimens: InGameDimens,
-    lineColor: Color,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        if (swatch != null) {
-            SwatchLine(swatch, dimens, lineColor)
-            Spacer(Modifier.width(InGameDimens.keySwatchGap))
+    // In the order they give way.
+    val pieces = listOfNotNull(played, used, last, pace)
+    val shown = listOfNotNull(played, used, pace, last)
+    val separator = stringResource(R.string.second_screen_separator).trim()
+    Layout(
+        modifier = Modifier.testTag(InGameBatteryTags.FACTS),
+        content = {
+            for (piece in shown) BasicText(piece, style = style, maxLines = 1, softWrap = false)
+            repeat(shown.size - 1) { BasicText(separator, style = style.copy(color = InGameColors.usual), maxLines = 1, softWrap = false) }
+        },
+    ) { measurables, constraints ->
+        val texts = measurables.take(shown.size).map { it.measure(Constraints()) }
+        val dots = measurables.drop(shown.size).map { it.measure(Constraints()) }
+        val gap = InGameDimens.factGap.roundToPx()
+        val dot = dots.firstOrNull()?.width ?: 0
+        fun widthOf(kept: List<Int>) = kept.sumOf { texts[it].width } + (kept.size - 1).coerceAtLeast(0) * (2 * gap + dot)
+        var kept = shown.indices.toList()
+        for (dropped in pieces.dropLast(1)) {
+            if (widthOf(kept) <= constraints.maxWidth) break
+            kept = kept - shown.indexOf(dropped)
         }
-        BasicText(text, style = style, maxLines = 1, softWrap = false)
-    }
-}
-
-@Composable
-private fun SwatchLine(
-    swatch: Swatch,
-    dimens: InGameDimens,
-    lineColor: Color,
-) {
-    val stroke: Dp = if (swatch == Swatch.Usual) dimens.usualStroke else dimens.aheadStroke
-    Canvas(Modifier.size(InGameDimens.keySwatchWidth, stroke * 2)) {
-        val w = stroke.toPx()
-        val mid = size.height / 2
-        // Inset by half the stroke: the round caps stay inside the swatch.
-        val start = Offset(w / 2, mid)
-        val end = Offset(size.width - w / 2, mid)
-        if (swatch == Swatch.Usual) {
-            val dots = PathEffect.dashPathEffect(floatArrayOf(DOT_LENGTH, InGameDimens.usualDotGap.toPx() * SWATCH_DOT_GAP))
-            drawLine(InGameColors.usual, start, end, w, StrokeCap.Round, dots)
-        } else {
-            drawLine(lineColor, start, end, w, StrokeCap.Round)
+        val height = texts.maxOfOrNull { it.height } ?: 0
+        layout(widthOf(kept).coerceAtMost(constraints.maxWidth), height) {
+            var x = 0
+            kept.forEachIndexed { i, index ->
+                if (i > 0) {
+                    dots[i - 1].place(x + gap, 0)
+                    x += 2 * gap + dot
+                }
+                texts[index].place(x, 0)
+                x += texts[index].width
+            }
         }
     }
 }
@@ -477,20 +442,17 @@ internal object InGameBatteryTags {
     const val ENDS_AT = "in_game_battery_ends_at"
     const val CHART = "in_game_battery_chart"
     const val LABELS = "in_game_battery_labels"
-    const val KEY = "in_game_battery_key"
+    const val RING = "in_game_battery_ring"
+    const val FACTS = "in_game_battery_facts"
     const val NOTE = "in_game_battery_note"
 }
 
 private const val MINUTES_PER_HOUR = 60
-private const val HOUR_MILLIS = 3_600_000L
-private const val PERCENT = 100f
+private const val PERCENT = 100
 
-/** A dot: a dash this short with round caps draws a circle as wide as the stroke. */
-private const val DOT_LENGTH = 0.1f
-
-/** The swatch's dots a little closer than the chart's, so three show in 22 dp. */
-private const val SWATCH_DOT_GAP = 0.85f
+/** The ring: a whole turn, its level drawn from the top clockwise. */
+private const val FULL_TURN = 360f
+private const val RING_START = -90f
 
 /** A note wraps to two lines at the largest text sizes rather than being cut. */
 private const val NOTE_MAX_LINES = 2
-

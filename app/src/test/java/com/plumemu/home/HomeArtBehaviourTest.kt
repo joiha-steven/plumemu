@@ -157,15 +157,25 @@ class HomeArtBehaviourTest {
     }
 
     @Test
-    fun withoutBoxArtSelectDoesNothing() {
+    fun withoutBoxArtSelectSwitchesToGridAndBack() {
         show(FakeHomeContent.board())
         openSnes()
-        assertEquals("no SELECT hint", false, hasText("Grid view"))
+        assertEquals("the SELECT hint without an account", true, hasText("Grid view"))
+        // At 768 the details column stays beside the list, with the game's poster cover above its text.
+        assertEquals("the details column", 1, count(HomeTags.DETAILS))
+        assertEquals("the poster cover", 1, count(HomeTags.DETAILS_COVER))
         send(Action.ToggleView)
-        assertEquals("no grid", 0, count(HomeTags.GRID))
-        // At 768 the text-only details column stays beside the list: no cover in it.
-        assertEquals("the text-only details column", 1, count(HomeTags.DETAILS))
-        assertEquals("no cover", 0, count(HomeTags.DETAILS_COVER))
+        assertEquals("the grid", 1, count(HomeTags.GRID))
+        send(Action.ToggleView)
+        assertEquals("the list again", 0, count(HomeTags.GRID))
+    }
+
+    @Test
+    fun withoutBoxArtRecentHasAGrid() {
+        show(FakeHomeContent.board())
+        send(Action.Enter) // Recent's games
+        send(Action.ToggleView)
+        assertEquals("Recent's grid", 1, count(HomeTags.GRID))
     }
 
     @Test
@@ -177,7 +187,7 @@ class HomeArtBehaviourTest {
         assertEquals("the games stop keeps the edge fade over the cover peek", 1, count(HomeTags.EDGE_FADE))
         send(Action.Move(Direction.Right))
         assertEquals("no edge fade on the details stop (Nova-3-details)", 0, count(HomeTags.EDGE_FADE))
-        assertEquals("Super Metroid's facts", true, hasText("Yesterday") && hasText("4 h 12 min") && hasText("Action, Adventure · 8.5/10"))
+        assertEquals("Super Metroid's facts", true, hasText("Yesterday") && hasText("4\u00A0h 12\u00A0min") && hasText("Action, Adventure · 8.5/10"))
         assertEquals("START offers Menu", true, hasText("Menu"))
         send(Action.Menu)
         assertEquals("START opens the game menu", true, count(GamePanelTags.PANEL) == 1)

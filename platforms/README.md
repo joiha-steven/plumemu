@@ -1,6 +1,6 @@
 # platforms
 
-System and emulator definitions (Plumemu's own JSON converted from Daijishō and ES-DE) and, later, their network updates.
+System and emulator definitions (Plumemu's own JSON converted from Daijishō and ES-DE) and the version of the bundled copy (newer copies are downloaded by `app`).
 
 Namespace: `com.plumemu.platforms`. Depends on `kotlinx.serialization` only. It holds the data, the loader and the launch specs; the Android Intent is built in `launcher`.
 
@@ -13,6 +13,8 @@ Namespace: `com.plumemu.platforms`. Depends on `kotlinx.serialization` only. It 
 | `src/main/AndroidManifest.xml` | `<queries>` for every emulator package and MAIN/LAUNCHER, written by the converter; the manifest merger carries it into the app; never edit by hand |
 | `Models.kt` | `GameSystem` (with `displayName`, `order`, the optional `maker`, `year`, `kind` (`SystemKind`), `endYear` and `color` (Int 0xRRGGBB, the system's own colour for Accent color › By system), and `coverRatio`, measured or its `CoverShape` class's default), `Emulator`, `PlatformCatalog` (with `knownApps`, package name to system id) and their small types; `GameSystem.fromInstalledApps` marks the folderless, emulatorless `android` system (file field `source: "apps"`) |
 | `RawData.kt` | The file's shape for kotlinx.serialization (strings, not yet checked) |
+| `src/main/assets/platforms-version.json` | The bundled data's `dataVersion`, the SHA-256 of `platforms.json` and its date; `convert.py` keeps it in step, `BundledVersionTest` fails when they differ |
+| `PlatformDataVersion.kt` | `PlatformDataVersion`, `PlatformDataVersions.parse` (the version file) and `FORMAT_VERSION` (the format a downloaded file must have) |
 | `PlatformLoader.kt` | `PlatformLoader.load(text or stream, source)`: parse, check, log, return `PlatformLoadResult` |
 | `CatalogBuilder.kt` | The checks: unique ids, dangling emulators, empty lists, valid values, unique folders |
 | `PlatformFailure.kt` | The typed failures (file, field, id) and `PlatformLoadResult` |

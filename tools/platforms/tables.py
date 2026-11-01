@@ -364,7 +364,7 @@ ABBREVIATION = {
     "zmachine": "ZM", "zx81": "ZX81", "zxspectrum": "ZX",
 }
 
-# Three-character codes for the home screen's left edge (Settings › Appearance › Left edge › System codes,
+# Three-character codes for the home screen's left edge (Settings › Home screen › Left edge › System codes,
 # owner 2026-10-26): the 48 dp peek shows a system's code where it showed its count. What players say where
 # it fits in three (NES, GBA, PS1, MD, N64, 3DS), else the first letters; the Super Nintendo is SNS (SFC is the
 # Japanese name, SNES takes four). Every system has one, at most CODE_LENGTH characters, no two alike
@@ -430,7 +430,9 @@ FIRST_ORDER = ["snes", "gba", "psx", "psp", "nds", "gc", "megadrive", "nes", "gb
 # Eden Duo, github.com/igawa6/eden-duo src/android/app/duo.gradle (applicationId) and its manifest;
 # PPSSPP Duo, github.com/mkaflowski/PPSSPP-Duo android/build.gradle.kts (the "duo" flavour).
 EXTRA_VARIANTS = {
-    "eden": [("dev.igawa6.edenduo", "org.yuzu.yuzu_emu.activities.EmulationActivity")],
+    # The dev build is also in Daijisho (switch.dev.igawa6.edenduo.dev, same launch as Eden).
+    "eden": [("dev.igawa6.edenduo", "org.yuzu.yuzu_emu.activities.EmulationActivity"),
+             ("dev.igawa6.edenduo.dev", "org.yuzu.yuzu_emu.activities.EmulationActivity")],
     "ppsspp": [("org.ppsspp.ppssppduo", "org.ppsspp.ppsspp.PpssppActivity")],
 }
 
@@ -471,6 +473,24 @@ HAND_EMULATORS = [
         "action": "android.intent.action.VIEW",
         "game": {"mode": "steam_app_id", "target": "data", "template": "droiddeck://game/{id}"},
         "accepts": ["steam"],
+    },
+    {
+        # Lemon (git.lemon-emu.org/lemon/Lemon-Project, src/android, release 1.3.0, 2026-10-28): in neither
+        # source (Daijisho has the main and Lite builds). Only package and activity names are recorded. The
+        # activity is lemon_emu, not the yuzu class. The two spoofed builds
+        # (AnTuTu, Genshin package names) are safe: detection needs the activity to resolve in the package.
+        "id": "lemon", "name": "Lemon", "systems": ["switch"],
+        "package": "dev.lemon.lemon_emulator", "activity": "dev.lemon.lemon_emu.activities.EmulationActivity",
+        "variants": [
+            ("dev.lemon.lemon_emulator.lite", "dev.lemon.lemon_emu.activities.EmulationActivity"),
+            ("dev.legacy.lemon_emulator", "dev.lemon.lemon_emu.activities.EmulationActivity"),
+            ("com.antutu.ABenchMark", "dev.lemon.lemon_emu.activities.EmulationActivity"),
+            ("com.miHoYo.Yuanshen", "dev.lemon.lemon_emu.activities.EmulationActivity"),
+        ],
+        # Started as Eden is (TECH_DISCOVERED + content URI), which is also how Daijisho, field-tested,
+        # starts Lemon (NintendoSwitch.json); the VIEW + octet-stream filter was never tried on a device.
+        "action": "android.nfc.action.TECH_DISCOVERED",
+        "game": {"mode": "uri", "target": "data"},
     },
 ]
 
@@ -555,7 +575,14 @@ GAME_PATH_EXTENSIONS = {"duckstation": ["m3u"]}
 # A system's whole emulator order where the merge rules' order is not wanted; must name exactly the
 # system's emulators. Steam: the Steam apps that start a .steam file first, GameNative first (owner
 # 2026-10-23), then WinNative for .desktop files.
-SYSTEM_EMULATOR_ORDER = {"steam": ["gamenative", "gamehub-lite", "droiddeck", "winnative"]}
+# Atari 7800 and DOS: Omnidroid (Daijisho, 2026-10) is their only standalone, so the merge rules would make it
+# the default ahead of RetroArch; its quality there is unknown, so it goes last (owner review 2026-11-01).
+SYSTEM_EMULATOR_ORDER = {
+    "steam": ["gamenative", "gamehub-lite", "droiddeck", "winnative"],
+    "atari7800": ["retroarch-prosystem", "com-omnidroid-3"],
+    "dos": ["retroarch-dosbox-pure", "retroarch-dosbox-core", "retroarch-dosbox-svn", "retroarch-virtualxt",
+            "com-omnidroid-4"],
+}
 
 # Settings › Appearance › Accent color › By system (owner, 2026-10-25): the colour each system is known by,
 # "RRGGBB". Hardware, logo or box colour, never a name; where each comes from is listed in

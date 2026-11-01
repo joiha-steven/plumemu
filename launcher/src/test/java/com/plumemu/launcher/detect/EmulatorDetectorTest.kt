@@ -86,6 +86,16 @@ class EmulatorDetectorTest {
     }
 
     @Test
+    fun theRealAnTuTuIsNotLemonButLemonUnderThatPackageNameIs() = runTest {
+        FakePackages.install("com.antutu.ABenchMark", "com.antutu.ABenchMark.MainActivity")
+        assertFalse(detector.detect(TestCatalogs.shipped).emulatorIds.contains("lemon"))
+        FakePackages.install("com.antutu.ABenchMark", "dev.lemon.lemon_emu.activities.EmulationActivity")
+        val found = detector.detect(TestCatalogs.shipped)
+        assertTrue(found.emulatorIds.contains("lemon"))
+        assertFalse(found.emulatorIds.contains("eden"))
+    }
+
+    @Test
     fun anUninstallShowsOnTheNextDetection() = runTest {
         FakePackages.install("org.ppsspp.ppsspp", "org.ppsspp.ppsspp.PpssppActivity")
         assertTrue(detector.detect(TestCatalogs.shipped).has("org.ppsspp.ppsspp"))

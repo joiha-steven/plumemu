@@ -8,7 +8,9 @@ import com.plumemu.coredata.db.AppKind
 import com.plumemu.launcher.choice.CoreToConfirm
 import com.plumemu.launcher.FailureReason
 import com.plumemu.launcher.LaunchOutcome
+import com.plumemu.graph.AchievementsState
 import java.io.File
+import kotlinx.coroutines.flow.Flow
 
 /**
  * What Play and the game menu ask of the library, the launcher and Android: a seam so the menu's
@@ -65,6 +67,12 @@ internal interface GameActions {
 
     /** Info › Arcade set: the set the game's file holds; null when not an arcade game or not in the pack. Opens the pack. */
     suspend fun arcadeSet(gameKey: String): ArcadeSetFacts?
+
+    /**
+     * Info's achievements of [gameKey]: Loading, then the answer. Null, and nothing asked of
+     * RetroAchievements, when nobody is signed in (or the game is not a library game).
+     */
+    suspend fun achievements(gameKey: String): Flow<AchievementsState>? = null
 
     /** Fix name…: the system's name list ready to search; null when the game is gone. */
     suspend fun titleList(gameKey: String): TitleList?
@@ -225,6 +233,11 @@ internal data class GameFacts(
     val isPortApp: Boolean = false,
     /** An arcade system's game: Info asks for its set ([GameActions.arcadeSet]) when it opens. */
     val isArcade: Boolean = false,
+    /**
+     * Info's RetroAchievements section: null while signed out (no section, nothing asked); otherwise the
+     * state the controller keeps up to date ([GameActions.achievements]).
+     */
+    val achievements: AchievementsState? = null,
     /** Info › Arcade set (shown in place of File), once read; null before, and for a set the arcade pack does not list. */
     val arcadeSet: ArcadeSetFacts? = null,
     /**

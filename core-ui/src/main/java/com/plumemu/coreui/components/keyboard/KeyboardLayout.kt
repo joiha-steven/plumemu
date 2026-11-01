@@ -38,6 +38,9 @@ sealed interface KeyboardKey {
 
     data object Space : KeyboardKey
 
+    /** Types what the clipboard holds; only on the bottom row while it holds text ([KeyboardLayout.rows]' `hasPaste`). */
+    data object Paste : KeyboardKey
+
     /** The field's natural action; its label comes from [KeyboardSpec.actionLabel]. */
     data object Action : KeyboardKey
 }
@@ -98,12 +101,18 @@ object KeyboardLayout {
 
     /**
      * The rows of [page]. Without [hasShift] the shift key is left out but every other key keeps
-     * its start, so the hole is where shift would be.
+     * its start, so the hole is where shift would be. With [hasPaste] the bottom row gives one column
+     * of the space key to a paste key after hide, so the tray keeps its height and no other key moves.
      */
     fun rows(
         page: KeyboardPage,
         hasShift: Boolean,
-    ): List<List<KeySlot>> = (if (hasShift) withShift else withoutShift).getValue(page)
+        hasPaste: Boolean = false,
+    ): List<List<KeySlot>> =
+        when {
+            hasPaste -> if (hasShift) pasteWithShift else pasteWithoutShift
+            else -> if (hasShift) withShift else withoutShift
+        }.getValue(page)
 
     private val letters: List<List<KeySlot>> =
         listOf(
@@ -135,6 +144,10 @@ object KeyboardLayout {
     private val withoutShift: Map<KeyboardPage, List<List<KeySlot>>> =
         withShift.mapValues { (_, rows) -> rows.map { row -> row.filterNot { it.key == KeyboardKey.Shift } } }
 
+    private val pasteWithShift: Map<KeyboardPage, List<List<KeySlot>>> = withShift.mapValues { (_, rows) -> rows.dropLast(1) + listOf(withPaste(rows.last())) }
+
+    private val pasteWithoutShift: Map<KeyboardPage, List<List<KeySlot>>> = withoutShift.mapValues { (_, rows) -> rows.dropLast(1) + listOf(withPaste(rows.last())) }
+
     private fun characters(
         chars: String,
         offset: Float = 0f,
@@ -148,6 +161,15 @@ object KeyboardLayout {
         listOf(KeySlot(first, 0f, WIDE)) +
             characters(chars, WIDE) +
             KeySlot(KeyboardKey.Delete, WIDE + chars.length, WIDE)
+
+    /** The bottom row with paste: page key 1.5, hide 1, paste 1, space 3.5, action 3. */
+    private fun withPaste(bottom: List<KeySlot>): List<KeySlot> =
+        bottom.flatMap { slot ->
+            when (slot.key) {
+                KeyboardKey.Space -> listOf(KeySlot(KeyboardKey.Paste, slot.start, 1f), KeySlot(KeyboardKey.Space, slot.start + 1f, slot.span - 1f))
+                else -> listOf(slot)
+            }
+        }
 
     /** Page key 1.5, hide 1, space 4.5, action 3. */
     private fun bottomRow(page: KeyboardKey.Page): List<KeySlot> =

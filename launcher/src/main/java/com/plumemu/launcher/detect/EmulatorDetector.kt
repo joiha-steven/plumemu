@@ -123,7 +123,7 @@ class EmulatorDetector internal constructor(
      * One build, checked now (blocking; call off the main thread): used right before a launch, so
      * an emulator uninstalled since the last [detect] is noticed.
      */
-    internal fun isLaunchable(variant: PackageVariant): Boolean = stateOf(variant) == BuildState.Launchable
+    fun isLaunchable(variant: PackageVariant): Boolean = stateOf(variant) == BuildState.Launchable
 
     /**
      * The activity must resolve, not only the package be there: ES-DE's find rules list builds that

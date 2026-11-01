@@ -52,7 +52,7 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
     @Test
     fun aboutListsTheCheckAndTheSwitchAndUpdateAvailableOnlyWhileFound() {
         val rows = SettingsSection.About.rowsIn(SettingsContent())
-        assertEquals(listOf(SettingsOption.Version, SettingsOption.CheckForUpdates, SettingsOption.CheckUpdatesDaily, SettingsOption.Licenses, SettingsOption.Privacy, SettingsOption.ReportProblem), rows)
+        assertEquals(listOf(SettingsOption.Version, SettingsOption.CheckForUpdates, SettingsOption.CheckUpdatesDaily, SettingsOption.UsageStatistics, SettingsOption.Licenses, SettingsOption.Privacy, SettingsOption.ReportProblem), rows)
         val withUpdate = SettingsSection.About.rowsIn(SettingsContent(update = found))
         assertEquals(SettingsOption.UpdateAvailable, withUpdate[1])
         assertEquals(rows.size + 1, withUpdate.size)
@@ -155,6 +155,35 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
         about.content = about.content.copy(update = found.copy(step = UpdateStep.Downloading(1_000, 9_800_000)))
         pressHere(Action.Enter)
         assertEquals(listOf("cancel"), updateCalls)
+    }
+
+    @Test
+    fun upAndDownPastTheButtonsScrollTheNotesWithoutMovingFocus() {
+        about.content = about.content.copy(update = found)
+        openAbout()
+        focusHere(SettingsOption.UpdateAvailable)
+        pressHere(Action.Enter)
+        val before = about.updateNotes.presses
+        pressHere(Action.Move(Direction.Down))
+        pressHere(Action.Move(Direction.Down))
+        pressHere(Action.Move(Direction.Up))
+        assertEquals(before + 1, about.updateNotes.presses)
+        assertEquals(PanelPage.Update, about.focus.page)
+        assertEquals(0, about.focus.panelIndex)
+    }
+
+    @Test
+    fun withTwoButtonsDownMovesToTheSecondBeforeScrolling() {
+        about.content = about.content.copy(update = found.copy(step = UpdateStep.AskMetered))
+        openAbout()
+        focusHere(SettingsOption.UpdateAvailable)
+        pressHere(Action.Enter)
+        val before = about.updateNotes.presses
+        pressHere(Action.Move(Direction.Down))
+        assertEquals(1, about.focus.panelIndex)
+        assertEquals(before, about.updateNotes.presses)
+        pressHere(Action.Move(Direction.Down))
+        assertEquals(before + 1, about.updateNotes.presses)
     }
 }
 

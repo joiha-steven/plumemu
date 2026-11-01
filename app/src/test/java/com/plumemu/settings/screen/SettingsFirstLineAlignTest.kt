@@ -1,15 +1,19 @@
 package com.plumemu.settings.screen
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import com.plumemu.coreui.components.SystemRowTags
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
@@ -100,5 +104,61 @@ class SettingsSectionsScrollCueTest {
         fun shown(suffix: String) = compose.onAllNodesWithTag(SettingsTags.SECTIONS + suffix, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         assertEquals("bottom fade iff it can scroll down", down, shown(FADE_BOTTOM_SUFFIX))
         assertEquals("top fade iff it can scroll up", up, shown(FADE_TOP_SUFFIX))
+    }
+
+    /** An opened section's rows fade the same way (seen cut by a hard line on the Pocket 6): at its first row only the bottom, at its last only the top. */
+    @Test
+    fun anOpenedSectionFadesWhereItContinues() {
+        val last = SettingsSection.Appearance.rowsIn(ShotContent.library).lastIndex
+        var row by mutableStateOf(0)
+        compose.setContent {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) {
+                key(row) {
+                    SettingsAt(
+                        SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Appearance, rememberedOption = mapOf(SettingsSection.Appearance to row)),
+                        content = ShotContent.library,
+                    )
+                }
+            }
+        }
+        fun shown(suffix: String) = compose.onAllNodesWithTag(SettingsTags.OPTION_LIST + suffix, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        for (at in listOf(0, last)) {
+            row = at
+            compose.waitForIdle()
+            val range = compose.onNodeWithTag(SettingsTags.OPTION_LIST, useUnmergedTree = true).fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange]
+            val down = range.value() < range.maxValue()
+            val up = range.value() > 0f
+            assertTrue("row $at: Appearance scrolls at Largest on 576", down || up)
+            assertEquals("row $at: bottom fade iff it can scroll down", down, shown(FADE_BOTTOM_SUFFIX))
+            assertEquals("row $at: top fade iff it can scroll up", up, shown(FADE_TOP_SUFFIX))
+        }
+        row = last
+        compose.waitForIdle()
+        assertTrue("at the last row the top fades", shown(FADE_TOP_SUFFIX))
+    }
+
+    /** A fade never dims the focused row: Text weight opens at the bottom of Appearance with rows past it, and its ring is as bright at its bottom as at its top. */
+    @Test
+    fun aFadeStopsShortOfTheFocusedRow() {
+        val row = SettingsSection.Appearance.rowsIn(ShotContent.library).indexOf(SettingsOption.TextWeight)
+        compose.setContent {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Medium)) {
+                SettingsAt(SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Appearance, rememberedOption = mapOf(SettingsSection.Appearance to row)), content = ShotContent.library)
+            }
+        }
+        compose.waitForIdle()
+        assertTrue("the rows continue past Text weight", compose.onAllNodesWithTag(SettingsTags.OPTION_LIST + FADE_BOTTOM_SUFFIX, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        val image = compose.onRoot().captureToImage().asAndroidBitmap()
+        val d = compose.density.density
+        val box = compose.onNodeWithTag(SettingsTags.option(SettingsOption.TextWeight), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val x = ((box.left.value + (box.right.value - box.left.value) * 0.4f) * d).toInt()
+        // The ring: accent-red pixels down the row, a little past its bounds (the pill may bleed).
+        val ring =
+            ((box.top.value - 8) * d).toInt().coerceAtLeast(0)..((box.bottom.value + 8) * d).toInt().coerceAtMost(image.height - 1)
+        val reds = ring.map { android.graphics.Color.red(image.getPixel(x, it)) to android.graphics.Color.green(image.getPixel(x, it)) }.filter { (r, g) -> r - g > 80 }
+        assertTrue("the focused row's ring is drawn", reds.size >= 2)
+        val top = reds.first().first
+        val bottom = reds.last().first
+        assertTrue("the ring's bottom ($bottom) is as bright as its top ($top)", bottom >= top - 12)
     }
 }

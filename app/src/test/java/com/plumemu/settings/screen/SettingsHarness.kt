@@ -110,6 +110,12 @@ internal object NoActions : SettingsActions {
 
 internal val NoTouch = SettingsTouch({}, {}, {}, {}, {}, {}, {})
 
+/** The section's place in the sections column on a device without a second screen: Downs from the top. */
+internal val SettingsSection.shownIndex: Int get() = SettingsSection.shownIn(SettingsContent()).indexOf(this)
+
+/** The sections a device without a second screen shows, in order. */
+internal val shownSections: List<SettingsSection> = SettingsSection.shownIn(SettingsContent())
+
 /** The focus on [option] of its section in the options column. */
 internal fun optionsAt(option: SettingsOption): SettingsFocus {
     val section = SettingsSection.entries.first { option in it.options }

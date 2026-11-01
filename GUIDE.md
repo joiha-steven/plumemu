@@ -124,9 +124,27 @@ Install emulators from their own developers. Plumemu finds the ones installed (i
   file names. Wrong name? Game menu › Fix name; your fix stays.
 - **Source builds** have no name packs, so games are named from their cleaned file names; Fix name
   still works.
+- **Covers**: a game without box art gets a drawn poster cover with its title, so the grid view
+  works for every system with no account. Android games and Ports show their app icon.
 - **Box art** is optional: sign in with your own free [ScreenScraper](https://www.screenscraper.fr)
-  account in setup or in Settings › Library › ScreenScraper. It downloads on Wi-Fi only. Wrong
-  cover? Game menu › Fix box art.
+  account in setup or in Settings › Accounts › ScreenScraper. It downloads on Wi-Fi only. Wrong
+  cover? Game menu › Fix box art. Box art region, for games with no box in their own region, is in
+  the ScreenScraper panel.
+
+## Achievements
+
+To see a game's achievements, sign in to [RetroAchievements](https://retroachievements.org):
+
+1. On retroachievements.org, open your settings and copy your user name and your Web API key. Use
+   the key, not your password.
+2. In Plumemu open Settings › Accounts › RetroAchievements and type both (Paste in Plumemu's
+   keyboard helps). Sign in checks them.
+3. Open a game's Info: its achievements show with badges, points and dates, and a game you have
+   mastered has a small trophy in the list.
+
+Plumemu only shows achievements; your emulator awards them, signed in there on its own. Some
+`.chd`, `.rvz` and `.wia` files may not match a game yet, and 3DS, MS-DOS and Arduboy games show
+none. Settings › Accounts › RetroAchievements › Sign out removes your name, key and progress.
 
 ## Lists and keeping things tidy
 
@@ -145,19 +163,28 @@ Install emulators from their own developers. Plumemu finds the ones installed (i
 
 Settings › Home screen › Use as home screen makes Plumemu what the Home button opens. Home then
 brings you back to the game you played last. On a handheld with a second screen, such as the AYN
-Thor, Settings › Home screen › Second screen sets what it shows.
+Thor, Settings › Second screen sets what it shows (that section appears only on a handheld that has
+one).
+
+## Typing
+
+Plumemu's keyboard has a Paste key. Sign-in steps open with the keyboard ready in the first empty
+field. Settings › Controls › Keyboard switches to Android's keyboard.
 
 ## Look
 
 Settings › Appearance: ten ready-made [color sets](COLORS.md) or your own colors, text size and
-weight, list or grid, grid size. Settings › Advanced › Language picks the language.
+weight, Fade list edges and Language. Settings › Home screen: grid size and the left edge strip.
+Settings › Controls: Confirm with B, sounds and vibration. List or grid is SELECT on the main
+screen.
 
 ## Back up, restore, update
 
 - Settings › Advanced › Back up saves your settings, or everything (library, box art, play time),
   to a file; Restore puts it back.
-- Settings › About › Update installs a new version when one is out, keeping your library and
-  settings. Only the official build has this; if you built Plumemu from the source, install new
+- When a new version is out, the top bar shows "Update" and the version; START opens it. You can
+  also use Settings › About › Update. It installs the new version, keeping your library and
+  settings, and afterwards a card shows what is new, once. Only the official build has this; if you built Plumemu from the source, install new
   versions yourself.
 
 ## Something wrong?

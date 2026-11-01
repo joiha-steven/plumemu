@@ -127,7 +127,7 @@ class SecondScreenHomeFollowTest {
         compose.runOnIdle { feed!!.setFollowing(true) }
         assertEquals(EntryKind.Apps, content.entries[2].kind)
         // The game index is built off the main thread first.
-        compose.waitUntil(WAIT_MS) { shown() == SecondScreenContent.Apps(content.entries[2].shownCount) }
+        compose.waitUntil(WAIT_MS) { (shown() as? SecondScreenContent.Apps)?.let { it.appCount == content.entries[2].shownCount && it.icons.size == content.entries[2].rows.size } == true }
     }
 
     @Test

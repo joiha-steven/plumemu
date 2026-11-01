@@ -28,7 +28,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
     fun opensOnTheSectionsInSpecOrderWithOnlyWorkingSections() {
         assertEquals(SettingsColumn.Sections, model.focus.column)
         assertEquals(
-            listOf("Library", "Appearance", "Emulators", "Controls", "HomeScreen", "Statistics", "Advanced", "About"),
+            listOf("Library", "Appearance", "HomeScreen", "SecondScreen", "Emulators", "Controls", "Statistics", "Accounts", "Advanced", "About"),
             SettingsSection.entries.map { it.name },
         )
     }
@@ -61,20 +61,24 @@ internal class SettingsModelTest : SettingsModelHarness() {
         openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.TextColor) // remembered for Appearance
         press(Action.NextSystem)
-        assertEquals(SettingsSection.Emulators, model.focus.section)
+        assertEquals(SettingsSection.HomeScreen, model.focus.section)
         assertEquals(SettingsColumn.Options, model.focus.column)
-        assertEquals("no system has games: only Detect new emulators", SettingsOption.DetectEmulators, model.focusedOption)
-        press(Action.NextSystem)
-        assertEquals(SettingsOption.HoldToScrollFaster, model.focusedOption)
-        press(Action.NextSystem)
         assertEquals(SettingsOption.UseAsHome, model.focusedOption)
         press(Action.NextSystem)
+        assertEquals("no second screen: its section is skipped", SettingsSection.Emulators, model.focus.section)
+        assertEquals("no system has games: only Detect new emulators", SettingsOption.DetectEmulators, model.focusedOption)
+        press(Action.NextSystem)
         assertEquals(SettingsOption.ConfirmBottom, model.focusedOption)
+        press(Action.NextSystem)
+        assertEquals("Statistics has no rows yet: Accounts comes next", SettingsSection.Accounts, model.focus.section)
+        assertEquals(SettingsOption.ScraperStatus, model.focusedOption)
+        press(Action.NextSystem)
+        assertEquals(SettingsOption.Animations, model.focusedOption)
         press(Action.NextSystem)
         assertEquals(SettingsSection.About, model.focus.section)
         press(Action.NextSystem)
         assertEquals("the last section stays", SettingsSection.About, model.focus.section)
-        repeat(5) { press(Action.PreviousSystem) }
+        repeat(6) { press(Action.PreviousSystem) }
         assertEquals(SettingsSection.Appearance, model.focus.section)
         assertEquals("each section remembers its option", SettingsOption.TextColor, model.focusedOption)
     }
@@ -160,11 +164,11 @@ internal class SettingsModelTest : SettingsModelHarness() {
 
     @Test
     fun leftEdgeFollowsTextWeightShowsGameCountsUntilPickedThenStepsAndWraps() {
-        val rows = SettingsSection.Appearance.rowsIn(model.content)
-        assertEquals("right after Text weight", rows.indexOf(SettingsOption.TextWeight) + 1, rows.indexOf(SettingsOption.LeftEdge))
+        val rows = SettingsSection.HomeScreen.rowsIn(model.content)
+        assertEquals("right after System info", rows.indexOf(SettingsOption.SystemInfo) + 1, rows.indexOf(SettingsOption.LeftEdge))
         assertEquals(OptionKind.Choice, SettingsOption.LeftEdge.kind)
         assertEquals(3, SettingsOption.LeftEdge.choiceCount(actions.settings))
-        openSection(SettingsSection.Appearance)
+        openSection(SettingsSection.HomeScreen)
         focusOption(SettingsOption.LeftEdge)
         assertNull("nothing is stored until a pick", appearance.leftEdge)
         assertEquals(
@@ -188,8 +192,8 @@ internal class SettingsModelTest : SettingsModelHarness() {
 
     @Test
     fun aTapOnTheLeftEdgeValueStepsItAndTheNamesAreGameCountsSystemCodesLetters() {
-        openSection(SettingsSection.Appearance)
-        val index = SettingsSection.Appearance.rowsIn(model.content).indexOf(SettingsOption.LeftEdge)
+        openSection(SettingsSection.HomeScreen)
+        val index = SettingsSection.HomeScreen.rowsIn(model.content).indexOf(SettingsOption.LeftEdge)
         model.onTapValue(index, actions.settings, wide) // not picked shows Game counts; the first tap focuses and steps to System codes
         assertEquals(LeftEdgeSetting.Codes, appearance.leftEdge)
         model.onTapValue(index, actions.settings, wide)
@@ -202,20 +206,18 @@ internal class SettingsModelTest : SettingsModelHarness() {
     }
 
     @Test
-    fun gridSizeIsListedOnlyWithBoxArtAfterTextSize() {
-        assertEquals("no account, no grid: no row", false, SettingsOption.GridSize in SettingsSection.Appearance.rowsIn(model.content))
-        for (account in listOf(AccountStatus.NotInThisBuild, AccountStatus.SignedOut)) {
-            assertFalse(account.toString(), SettingsOption.GridSize in SettingsSection.Appearance.rowsIn(model.content.copy(account = account)))
+    fun gridSizeIsListedLastAfterLeftEdgeAndEdgeFadeWithOrWithoutAnAccount() {
+        for (account in listOf(AccountStatus.NotInThisBuild, AccountStatus.SignedOut, AccountStatus.SignedIn("plumtester"))) {
+            val rows = SettingsSection.HomeScreen.rowsIn(model.content.copy(account = account))
+            assertEquals("$account: last, after Left edge", listOf(SettingsOption.LeftEdge, SettingsOption.GridSize), rows.takeLast(2))
         }
-        val rows = SettingsSection.Appearance.rowsIn(model.content.copy(account = AccountStatus.SignedIn("plumtester")))
-        assertEquals("last, after Left edge", listOf(SettingsOption.LeftEdge, SettingsOption.GridSize), rows.takeLast(2))
         assertEquals(OptionKind.Choice, SettingsOption.GridSize.kind)
     }
 
     @Test
     fun gridSizeShowsMediumUntilPickedAndStepsWithLeftRightAndWrapsWithA() {
         model.content = model.content.copy(account = AccountStatus.SignedIn("plumtester"))
-        openSection(SettingsSection.Appearance)
+        openSection(SettingsSection.HomeScreen)
         focusOption(SettingsOption.GridSize)
         val index = SettingsOption.GridSize.choiceIndex(actions.settings, TextSizeSetting.Medium)
         assertEquals("the row's value: ‹ Medium › (the default is one step up)", R.string.settings_size_medium, choiceName(SettingsOption.GridSize, index))
@@ -243,8 +245,9 @@ internal class SettingsModelTest : SettingsModelHarness() {
     }
 
     @Test
-    fun keyboardIsTheLastControlsOptionPlumemuByDefaultAndStepsToAndroid() {
-        assertEquals(SettingsOption.Keyboard, SettingsSection.Controls.options.last())
+    fun keyboardIsAControlsOptionBeforeSoundsPlumemuByDefaultAndStepsToAndroid() {
+        val controls = SettingsSection.Controls.options
+        assertEquals("right before Sounds", SettingsOption.Sounds, controls[controls.indexOf(SettingsOption.Keyboard) + 1])
         assertEquals(OptionKind.Choice, SettingsOption.Keyboard.kind)
         openSection(SettingsSection.Controls)
         focusOption(SettingsOption.Keyboard)
@@ -263,9 +266,9 @@ internal class SettingsModelTest : SettingsModelHarness() {
     }
 
     @Test
-    fun switchSystemWithIsAControlsChoiceBeforeKeyboardDefaultsToL2R2AndStepsToL1R1() {
+    fun switchSystemWithIsAControlsChoiceAfterConfirmWithBDefaultsToL2R2AndStepsToL1R1() {
         val controls = SettingsSection.Controls.options
-        assertEquals("right before Keyboard", SettingsOption.Keyboard, controls[controls.indexOf(SettingsOption.SwitchSystemWith) + 1])
+        assertEquals("right after Confirm with B", SettingsOption.ConfirmBottom, controls[controls.indexOf(SettingsOption.SwitchSystemWith) - 1])
         assertEquals(OptionKind.Choice, SettingsOption.SwitchSystemWith.kind)
         openSection(SettingsSection.Controls)
         focusOption(SettingsOption.SwitchSystemWith)
@@ -309,26 +312,31 @@ internal class SettingsModelTest : SettingsModelHarness() {
     }
 
     @Test
-    fun advancedSwitchesFlipTheirKeys() {
-        openSection(SettingsSection.Advanced)
+    fun controlsAndAdvancedSwitchesFlipTheirKeys() {
+        openSection(SettingsSection.Controls)
         press(Action.Enter)
         assertEquals(ConfirmButtonSetting.Bottom, actions.settings.controls.confirmButton)
         press(Action.Enter)
         assertEquals(ConfirmButtonSetting.Right, actions.settings.controls.confirmButton)
-        move(Direction.Down)
-        press(Action.Enter)
-        assertFalse(actions.settings.advanced.animations)
-        move(Direction.Down)
+        focusOption(SettingsOption.Sounds)
         press(Action.Enter)
         assertEquals("Loud, the default, steps on to Off", SoundLevel.Off, actions.settings.advanced.sounds)
         move(Direction.Down)
         press(Action.Enter)
         assertFalse(actions.settings.advanced.vibration)
-        move(Direction.Down) // Language: A opens its panel, nothing is written
-        move(Direction.Down)
+
+        press(Action.Back)
+        openSection(SettingsSection.Advanced)
         press(Action.Enter)
-        assertTrue("off by default, so Enter switches it on", actions.settings.advanced.usageStatistics)
-        assertEquals("one write per change", 6, actions.writes)
+        assertFalse(actions.settings.advanced.animations)
+        focusOption(SettingsOption.ResetLibrary)
+        press(Action.Enter)
+        assertEquals(PanelPage.Confirm, model.focus.page)
+        assertEquals("the confirm step opens on Cancel", 0, actions.resetsLibrary)
+        move(Direction.Right)
+        press(Action.Enter)
+        assertEquals(1, actions.resetsLibrary)
+        assertEquals(SettingsOption.ResetLibrary, model.doneOption)
     }
 
     @Test
@@ -381,7 +389,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
 
     @Test
     fun narrowScreensOpenExplanationsAsAFurtherStopWideOnesShowThemBeside() {
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.UsageStatistics)
         move(Direction.Right, wide)
         assertEquals("wide: the panel is beside already", SettingsColumn.Options, model.focus.column)
@@ -431,7 +439,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
         model.onTapSection(SettingsSection.Advanced)
         assertEquals("a second tap opens it", SettingsColumn.Options, model.focus.column)
 
-        model.onTapOption(1, actions.settings, wide) // Animations: a switch flips on the first tap
+        model.onTapOption(0, actions.settings, wide) // Animations: a switch flips on the first tap
         assertFalse(actions.settings.advanced.animations)
         val resetAll = SettingsSection.Advanced.options.indexOf(SettingsOption.ResetAll)
         model.onTapOption(resetAll, actions.settings, wide) // Reset all: first tap focuses

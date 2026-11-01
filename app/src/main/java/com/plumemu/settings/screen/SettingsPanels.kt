@@ -68,7 +68,8 @@ internal fun SettingsPanel(
         SettingsOption.Restore -> RestorePanel(model, touch)
         SettingsOption.UndoRestore -> UndoRestorePanel(model, touch)
         SettingsOption.Version -> AboutPanel(versionName)
-        SettingsOption.UpdateAvailable -> UpdatePanel(model, touch)
+        SettingsOption.PlatformData -> ExplainPanel(option.label, R.string.settings_platform_data_body)
+        SettingsOption.UpdateAvailable -> UpdatePanel(model, touch, installedLine = versionName)
         SettingsOption.CheckForUpdates -> CheckUpdatesPanel(model)
         SettingsOption.CheckUpdatesDaily -> ExplainPanel(option.label, R.string.settings_check_updates_daily_body)
         SettingsOption.Licenses -> LicensesPanel(model, touch)
@@ -103,6 +104,7 @@ internal fun SettingsPanel(
         SettingsOption.ExportLogs -> ExplainPanel(option.label, R.string.settings_export_logs_body) { PanelLine(model, option, null) }
         SettingsOption.ShowApps -> ExplainPanel(option.label, R.string.settings_show_apps_body)
         SettingsOption.ShowClock -> ExplainPanel(option.label, R.string.settings_clock_body)
+        SettingsOption.EdgeFade -> ExplainPanel(option.label, R.string.settings_edge_fade_body)
         // The switch also governs the battery line of the second screen's in-game clock card.
         SettingsOption.ShowBattery ->
             ExplainPanel(option.label, if (model.content.secondScreen != null) R.string.settings_show_battery_body_two_screens else R.string.settings_show_battery_body)
@@ -110,10 +112,12 @@ internal fun SettingsPanel(
         SettingsOption.SecondScreen -> ExplainPanel(option.label, R.string.settings_second_screen_body)
         SettingsOption.SecondScreenInGame -> ExplainPanel(option.label, R.string.settings_second_screen_in_game_body)
         SettingsOption.ReportProblem -> ReportProblemPanel(model, touch, settings)
-        SettingsOption.ScraperAccount -> ScraperAccountPanel(model, touch)
+        SettingsOption.ScraperAccount -> ScraperAccountPanel(settings, model, touch)
         SettingsOption.ScraperStatus -> ScraperStatusPanel(model)
+        SettingsOption.RetroAchievementsAccount -> RaAccountPanel(model, touch)
         SettingsOption.BoxArtRegion -> ExplainPanel(option.label, R.string.settings_box_art_region_body)
-        SettingsOption.Statistic -> StatisticsPanel(model.focusedStatisticGame)
+        // Statistics is a whole page with no side panel (StatisticsPage).
+        SettingsOption.Statistic -> Unit
     }
 }
 
@@ -313,11 +317,10 @@ internal object SettingsPanelTags {
     const val BACKUP_PASSWORD = "settings_backup_password"
     const val DONE = "settings_done"
 
-    /** Statistics' side panel for a most-played game: its cover, title, facts and the "A to play" line. */
-    const val STATISTIC_COVER = "settings_statistic_panel_cover"
-    const val STATISTIC_TITLE = "settings_statistic_panel_title"
-    const val STATISTIC_FACTS = "settings_statistic_panel_facts"
-    const val STATISTIC_PLAY_HINT = "settings_statistic_panel_play_hint"
+    /** Accounts › RetroAchievements: the two help lines and the line on what is sent. */
+    const val RA_HELP = "settings_ra_help"
+    const val RA_PRIVACY = "settings_ra_privacy"
+
     const val STATUS = "settings_status"
 
     /** The account facts block under the status line. */

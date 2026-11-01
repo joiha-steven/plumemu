@@ -100,7 +100,8 @@ private fun onBoxArtStep(
             goOn()
             feel.report(Outcome.Activated)
         }
-        SignInStep.NotHandled -> Unit
+        // The key page button exists only on RetroAchievements' form, which setup never shows.
+        SignInStep.NotHandled, SignInStep.OpenKeyPage -> Unit
     }
 }
 

@@ -91,7 +91,7 @@ abstract class SecondScreenStatisticsCardFitBase(
             if (statistics.libraryGames > 0) add(SecondScreenTags.STATISTICS_PLAYED)
             if (statistics.hasPlayed) {
                 if (statistics.topSystem != null) add(SecondScreenTags.STATISTICS_SYSTEM)
-                for (rank in statistics.topGames.size downTo 1) add(SecondScreenTags.statisticsGame(rank))
+                for (rank in minOf(statistics.topGames.size, PlayStatistics.SECOND_SCREEN_TOP_GAMES) downTo 1) add(SecondScreenTags.statisticsGame(rank))
             }
         }
 
@@ -160,7 +160,7 @@ abstract class SecondScreenStatisticsCardFitBase(
         // A system name longer than the samples' since the type ramp: at 16 (was 17) their three-line
         // name fits on Roomy at Larger, so it no longer exercised the skip.
         val longNames = SecondScreenStatisticsSamples.longNames
-        val longerSystem = longNames.copy(topSystem = longNames.topSystem?.copy(name = longNames.topSystem?.name + " with the Famicom Disk System"))
+        val longerSystem = longNames.copy(topSystems = longNames.topSystems.map { it.copy(name = it.name + " with the Famicom Disk System") })
         show(longerSystem, PlumThemeSettings.Default.copy(textSize = TextSize.Larger))
         assertFits("$size Larger long names", longerSystem)
         assertTrue("the long system line did not fit", placed(SecondScreenTags.STATISTICS_SYSTEM).isEmpty())
@@ -234,7 +234,7 @@ abstract class SecondScreenStatisticsCardFitBase(
     @Test
     fun theWeekRidesOnTheTotalsLabelLineAtMediumAndIsDroppedNotCutAtLargest() {
         show(SecondScreenStatisticsSamples.withCovers)
-        assertEquals("$size Medium", listOf("Total play time · 2 h 10 min this week"), totalLabels())
+        assertEquals("$size Medium", listOf("Total play time · 2\u00A0h 10\u00A0min this week"), totalLabels())
         show(SecondScreenStatisticsSamples.withCovers.copy(thisWeekSeconds = 0))
         assertEquals(listOf("Total play time · none this week"), totalLabels())
         show(SecondScreenStatisticsSamples.withCovers.copy(thisWeekSeconds = 30))
@@ -246,7 +246,7 @@ abstract class SecondScreenStatisticsCardFitBase(
             for (font in PlumFont.entries) {
                 show(SecondScreenStatisticsSamples.withCovers.copy(thisWeekSeconds = 123 * 3_600L + 45 * 60), PlumThemeSettings.Default.copy(textSize = textSize, font = font))
                 val label = placed(SecondScreenTags.STATISTICS_TOTAL_LABEL).single()
-                assertTrue("$size $textSize $font: ${textOf(label)}", textOf(label) in listOf("Total play time", "Total play time · 123 h 45 min this week"))
+                assertTrue("$size $textSize $font: ${textOf(label)}", textOf(label) in listOf("Total play time", "Total play time · 123\u00A0h 45\u00A0min this week"))
                 assertEquals("one line", 1, layoutOf(label).lineCount)
                 assertNoTextCut(label, "$size $textSize $font label")
                 if (textOf(label) == "Total play time") fellBack += "$textSize $font"
@@ -260,7 +260,7 @@ abstract class SecondScreenStatisticsCardFitBase(
     fun theWordsAreSettingsOwnAndVersionIsNotOnTheCard() {
         show(SecondScreenStatisticsSamples.withCovers)
         val texts = all(SecondScreenTags.STATISTICS).flatMap { node -> buildList { collectTexts(node, this) } }
-        for (expected in listOf("Statistics", "23 h 10 min", "Total play time", "Super Metroid", "12 h 5 min", "55 min", "Most-played system", "19 h 45 min", "Games played", "38 of 412", "Games with box art", "301 of 412")) {
+        for (expected in listOf("Statistics", "23\u00A0h 10\u00A0min", "Total play time", "Super Metroid", "12\u00A0h 5\u00A0min", "55\u00A0min", "Most-played system", "19\u00A0h 45\u00A0min", "Games played", "38 of 412", "Games with box art", "301 of 412")) {
             assertTrue("$size: '$expected' in $texts", texts.any { expected in it })
         }
         assertTrue("$size: no version: $texts", texts.none { it.contains(com.plumemu.settings.screen.TEST_VERSION) })

@@ -165,20 +165,12 @@ class StripReducerTest {
         assertEquals(listOf(StripIntent.OpenSettings), onSnesGames().then(Action.OpenSettings).intents)
     }
 
+    /** The grid needs no box art: SELECT reaches the screen with or without it, on every entry. */
     @Test
-    fun selectTogglesTheViewOnlyWithBoxArt() {
+    fun selectTogglesTheViewWithAndWithoutBoxArt() {
         assertEquals(listOf(StripIntent.ToggleView("snes")), onSnesGames().then(Action.ToggleView).intents)
-        assertTrue(StripReducer.reduce(onSnesGames().focus, Action.ToggleView, noArt, false).intents.isEmpty())
-    }
-
-    /** Apps' grid of icons needs no box art: SELECT reaches the screen there, and still nowhere else. */
-    @Test
-    fun selectTogglesAnEntryWithAGridWithoutArtAlsoWithoutBoxArt() {
-        val appsWithout = noArt.copy(systems = noArt.systems.map { if (it.id == "apps") it.copy(hasGridWithoutArt = true) else it })
-        val onApps = StripReducer.reduce(StripFocus(systemIndex = 2), Action.Enter, appsWithout, false)
-        assertEquals(listOf(StripIntent.ToggleView("apps")), onApps.then(Action.ToggleView, on = appsWithout).intents)
-        assertEquals(listOf(StripIntent.ToggleView("apps")), StripReducer.reduce(StripFocus(systemIndex = 2), Action.ToggleView, appsWithout, false).intents)
-        assertTrue(StripReducer.reduce(onSnesGames().focus, Action.ToggleView, appsWithout, false).intents.isEmpty())
+        assertEquals(listOf(StripIntent.ToggleView("snes")), StripReducer.reduce(onSnesGames().focus, Action.ToggleView, noArt, false).intents)
+        assertEquals(listOf(StripIntent.ToggleView("apps")), StripReducer.reduce(StripFocus(systemIndex = 2), Action.ToggleView, noArt, false).intents)
     }
 
     @Test
@@ -370,6 +362,27 @@ class StripReducerTest {
     fun landingOnAnUnknownSystemChangesNothing() {
         val before = start(Action.TapItem(Column.Systems, 3)).focus
         assertEquals(before, StripReducer.landOn(before, "gone", content, isNarrow = false))
+    }
+
+    @Test
+    fun landingOnAGameFocusesItsRowInTheGamesColumn() {
+        val ids = List(10) { "g$it" }
+        val landed = StripReducer.landOn(StripFocus(), "gba", withGbaIds(ids), isNarrow = false, itemId = "g7")
+        assertEquals(Triple("gba", Column.Games, 7), Triple(landed.systemId, landed.column, landed.row))
+    }
+
+    @Test
+    fun landingOnAGameThatIsGoneFocusesTheSystemsFirstRow() {
+        val ids = List(10) { "g$it" }
+        val deep = StripReducer.landOn(StripFocus(), "gba", withGbaIds(ids), isNarrow = false, itemId = "g5")
+        val landed = StripReducer.landOn(deep, "gba", withGbaIds(ids), isNarrow = false, itemId = "missing")
+        assertEquals(Triple("gba", Column.Games, 0), Triple(landed.systemId, landed.column, landed.row))
+    }
+
+    @Test
+    fun landingOnAGameOfAnUnknownSystemChangesNothing() {
+        val before = start(Action.TapItem(Column.Systems, 3)).focus
+        assertEquals(before, StripReducer.landOn(before, "gone", content, isNarrow = false, itemId = "g1"))
     }
 
     // Settings › Controls › Push right to play: the first Right arms, the second plays.

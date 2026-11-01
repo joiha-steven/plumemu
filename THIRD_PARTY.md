@@ -2,7 +2,7 @@
 
 Fonts, libraries and data inside the Plumemu app, with their licences. The same list, with the
 full licence texts, is in the app under Settings › About › Open-source licenses. Updated with each
-release; this list matches 0.1.0.
+release; this list matches 0.1.1.
 
 | What | Licence |
 |---|---|
@@ -21,7 +21,11 @@ release; this list matches 0.1.0.
 | GameCube, Wii, DS and 3DS titles, from [GameTDB](https://www.gametdb.com) | Used with a link to GameTDB, as its FAQ asks; I have asked for written confirmation |
 | Nintendo Switch titles, from blawar/titledb | MIT |
 | LZMA SDK decoder by Igor Pavlov, ported to Kotlin | Public domain |
+| XZ for Java (`org.tukaani:xz`; decodes the LZMA parts of `.chd` disc images) | 0BSD |
+| RetroAchievements' file-hash rules (rcheevos `rc_hash`), rewritten in Kotlin | MIT |
 
 "MAME" is a trademark of Gregory Ember; Plumemu is not affiliated with the MAME project. Box art
 and game details are not inside the app: they come from [ScreenScraper](https://www.screenscraper.fr)
-with your own account, under ScreenScraper's terms.
+with your own account, under ScreenScraper's terms. Achievements, badges and progress come from
+[RetroAchievements](https://retroachievements.org) with your own user name and Web API key, under
+RetroAchievements' terms; none of it is inside the app.

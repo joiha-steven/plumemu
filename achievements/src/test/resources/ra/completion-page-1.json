@@ -1,0 +1,4 @@
+{"Count":2,"Total":3,"Results":[
+ {"GameID":1,"Title":"Sonic the Hedgehog","ImageIcon":"/Images/067895.png","ConsoleID":1,"ConsoleName":"Genesis/Mega Drive","MaxPossible":23,"NumAwarded":23,"NumAwardedHardcore":23,"MostRecentAwardedDate":"2024-05-01T10:00:00+00:00","HighestAwardKind":"mastered","HighestAwardDate":"2024-05-01T10:00:00+00:00"},
+ {"GameID":2,"ConsoleID":1,"MaxPossible":10,"NumAwarded":3,"NumAwardedHardcore":0,"HighestAwardKind":null}
+]}

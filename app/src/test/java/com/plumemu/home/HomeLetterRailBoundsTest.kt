@@ -28,7 +28,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The letter rail in the system peek (shown with Settings › Appearance › Left edge set to Letters): letters centred in the 48 dp peek, equal
+ * The letter rail in the system peek (shown with Settings › Home screen › Left edge set to Letters): letters centred in the 48 dp peek, equal
  * slots over the column's height, the focused game's letter in the accent, a window when they do not fit,
  * nothing for Recent, and gone while the systems are focused.
  */

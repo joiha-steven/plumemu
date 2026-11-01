@@ -189,6 +189,16 @@ class GraphScraperAccountsTest {
     }
 
     @Test
+    fun aSignedOutStartReadsOnlyTheAccountFileAndBuildsNoScraper() = runBlocking {
+        val accounts = accounts()
+        assertFalse(accounts.isSignedIn.first())
+        assertFalse(accounts.hasUsableAccount())
+        assertNull(accounts.scraper())
+        assertTrue("no scraper made", made.isEmpty())
+        assertEquals("the Keystore is never touched", 0, cipher.encryptions + cipher.decryptions)
+    }
+
+    @Test
     fun aFailedEncryptionIsSaidAndStoresNothing() = runBlocking {
         cipher.fails = true
         val accounts = accounts()

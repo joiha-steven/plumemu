@@ -27,7 +27,7 @@ internal class SettingsColorsTest : SettingsModelHarness() {
     private fun onColors(start: AppearanceSettings) {
         actions.settings = PlumSettings(appearance = start, flags = SetupFlags(setupCompleted = true))
         openSection(SettingsSection.Appearance)
-        assertEquals("Colors is the first Appearance row", SettingsOption.Colors, model.focusedOption)
+        focusOption(SettingsOption.Colors)
     }
 
     private val graphite = AppearanceSettings(background = ColorSetting.Preset("Graphite"))
@@ -35,8 +35,8 @@ internal class SettingsColorsTest : SettingsModelHarness() {
     @Test
     fun colorsIsAChoiceAtTheTopOfAppearanceAboveTheThreeRowsItSets() {
         assertEquals(
-            listOf(SettingsOption.Colors, SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent),
-            SettingsSection.Appearance.options.take(4),
+            listOf(SettingsOption.Language, SettingsOption.Colors, SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent),
+            SettingsSection.Appearance.options.take(5),
         )
         assertEquals(OptionKind.Choice, SettingsOption.Colors.kind)
     }

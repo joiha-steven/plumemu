@@ -46,6 +46,13 @@ class KeyboardScreenshotTest {
             Keyboard(KeyboardSpec("Search", hasShift = false)) { it.at("ACTION") }
         }
 
+    /** The clipboard holds text: the paste key after hide, the space key a column shorter, the paste key focused (the sign-in form's keys). */
+    @Test
+    fun pasteFocused() =
+        ReferenceShots.capture("keyboard_paste") {
+            Keyboard(KeyboardSpec("Sign in", hasShift = true)) { it.withPaste(true).at("PASTE") }
+        }
+
     /** The largest text, focus on c (mockup 7): keys held at 36 on a 432 high screen (the tray near half of it). */
     @Test
     fun largestText() =

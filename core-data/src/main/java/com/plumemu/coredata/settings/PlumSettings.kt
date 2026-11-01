@@ -112,7 +112,7 @@ enum class TextWeightSetting {
 }
 
 /**
- * Settings › Appearance › Left edge: what the home screen's 48 dp peek shows while the focus is in a games list
+ * Settings › Home screen › Left edge: what the home screen's 48 dp peek shows while the focus is in a games list
  * The names are what `appearance.left_edge` stores.
  */
 enum class LeftEdgeSetting {
@@ -132,12 +132,12 @@ enum class LeftEdgeSetting {
     }
 }
 
-/** Settings › Appearance › Grid size, smallest covers first. The names are what `appearance.grid_size` stores. */
+/** Settings › Home screen › Grid size, smallest covers first. The names are what `appearance.grid_size` stores. */
 enum class GridSizeSetting { Small, Medium, Large }
 
 /**
  * Whether A and B are swapped. [Right] is the default: the button printed "A"
- * confirms and the one printed "B" goes back. [Bottom] is the Advanced option "Confirm with B": the
+ * confirms and the one printed "B" goes back. [Bottom] is the Controls option "Confirm with B": the
  * button printed "B" confirms. The names are what older installs stored in `controls.confirm_button`
  * and stay so those values keep their meaning.
  */
@@ -192,8 +192,10 @@ data class AppearanceSettings(
     val textWeight: TextWeightSetting? = null,
     /** Null (never picked, or a file from before the setting) is [LeftEdgeSetting.Default], Counts. */
     val leftEdge: LeftEdgeSetting? = null,
+    /** Settings › Appearance › Fade list edges: the home screen's lists and grids fade out where they continue (on by default). */
+    val edgeFade: Boolean = true,
     /**
-     * Settings › Advanced › Language (docs/conventions/translation.md): a BCP 47 tag of one of the app's
+     * Settings › Appearance › Language (docs/conventions/translation.md): a BCP 47 tag of one of the app's
      * languages ("en", "vi", "zh-CN"), or null to follow the system's language (the default).
      */
     val language: String? = null,
@@ -271,7 +273,7 @@ enum class RecentSizeSetting(val games: Int) {
 enum class SystemOrderSetting { Name, Maker, Manual }
 
 /**
- * Settings › Library › Box art region: whose box to show when the game file's
+ * Settings › Accounts › ScreenScraper › Box art region: whose box to show when the game file's
  * own region has none. [code] is ScreenScraper's region code; the file stores [code] too.
  */
 enum class BoxArtRegionSetting(val code: String) {
@@ -306,7 +308,7 @@ data class HomeScreenSettings(
 }
 
 /**
- * Settings › Home screen › Second screen.
+ * Settings › Second screen.
  * [enabled] is null until the person answers or flips the switch: the app then decides from the
  * kind of screen it finds (on for a built-in one, off when unsure). [inGame] is what the second
  * screen shows while a game runs.
@@ -320,7 +322,8 @@ data class SecondScreenSettings(
 enum class InGameSetting { Clock, Black }
 
 /**
- * Settings › Advanced. [sounds] is how loud the soft interface clicks are ([SoundLevel]; Loud by default, as the old
+ * Stored as `advanced` (the file format); on screen Animations is in Settings › Advanced, Sounds and Vibration in Controls,
+ * Send usage statistics in About. [sounds] is how loud the soft interface clicks are ([SoundLevel]; Loud by default, as the old
  * switch was on by default). [vibration] is the light haptic tick on every move and a stronger one on confirm (on by
  * default). [usageStatistics] is off by default, the person switches it on; the
  * telemetry module follows it (app `graph/GraphTelemetry.kt`).
@@ -333,7 +336,7 @@ data class AdvancedSettings(
 )
 
 /**
- * Settings › Advanced › Sounds: Off, Quiet or Loud. [volume] is the share of the sound pool's volume each
+ * Settings › Controls › Sounds: Off, Quiet or Loud. [volume] is the share of the sound pool's volume each
  * click plays at. Stored by name; an older "on" switch reads as [Loud] and "off" as [Off] ([fromLegacySwitch]).
  */
 enum class SoundLevel(val volume: Float) {

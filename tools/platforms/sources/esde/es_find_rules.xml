@@ -474,6 +474,12 @@
             <entry>io.wip.pico8/com.godot.game.GodotAppLauncher</entry>
         </rule>
     </emulator>
+    <emulator name="PIXL8">
+        <!-- PICO-8 Fantasy Console game engine Pixl8 -->
+        <rule type="androidpackage">
+            <entry>be.codedreams.pixl8/.MainActivity</entry>
+        </rule>
+    </emulator>
     <emulator name="PIZZA-BOY-GBA">
         <!-- Nintendo Game Boy Advance emulator Pizza Boy GBA -->
         <rule type="androidpackage">

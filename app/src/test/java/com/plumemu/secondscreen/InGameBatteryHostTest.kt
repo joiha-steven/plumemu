@@ -26,8 +26,12 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** A meter with fixed figures: reads every second as at the start of a stretch; counts reads and snapshots. */
+/**
+ * A meter with fixed figures: reads every second as at the start of a stretch; counts reads and
+ * snapshots. [readMs]: how long the play has been read (past the card's start-up wait unless set).
+ */
 private class FixedReads(var estimate: BatteryEstimate?) : BatteryReads {
+    var readMs = 10 * 60_000L
     var reads = 0
     var snapshots = 0
 
@@ -41,7 +45,7 @@ private class FixedReads(var estimate: BatteryEstimate?) : BatteryReads {
     override fun snapshot(): BatterySnapshot {
         snapshots++
         val now = SystemClock.elapsedRealtime()
-        return BatterySnapshot(estimate, null, now, listOf(LevelPoint(now - 10 * 60_000L, 70, false)))
+        return BatterySnapshot(estimate, null, now, listOf(LevelPoint(now - 10 * 60_000L, 70, false)), readMs)
     }
 }
 
@@ -129,13 +133,30 @@ class InGameBatteryHostTest : SecondScreenHostTestBase() {
     fun aFirstPlaysFirstMinuteSaysMeasuringThenTheFiguresCome() {
         noteAlreadyShown()
         fixed.estimate = null
+        fixed.readMs = 30_000
         val host = startHost(battery = reads)
         startAGame()
         idle(2_000)
         assertTrue(shownTexts(host).contains(measuring))
         assertFalse(shownTags(host).contains(InGameBatteryTags.CHART))
         fixed.estimate = estimate
+        fixed.readMs = SteadyBatteryPace.START_IGNORE_MS
         // The next read takes them: within a second, no wait for the 10 s.
+        idle(1_500)
+        assertFalse(shownTexts(host).contains(measuring))
+        assertTrue(shownTags(host).contains(InGameBatteryTags.CHART))
+    }
+
+    @Test
+    fun aGamesLoadingMinutesSayMeasuringThenTheFiguresCome() {
+        noteAlreadyShown()
+        fixed.readMs = 30_000
+        val host = startHost(battery = reads)
+        startAGame()
+        idle(2_000)
+        assertTrue("an estimate, but in the start-up wait", shownTexts(host).contains(measuring))
+        assertFalse(shownTags(host).contains(InGameBatteryTags.CHART))
+        fixed.readMs = SteadyBatteryPace.START_IGNORE_MS
         idle(1_500)
         assertFalse(shownTexts(host).contains(measuring))
         assertTrue(shownTags(host).contains(InGameBatteryTags.CHART))
@@ -199,7 +220,7 @@ class InGameBatteryHostTest : SecondScreenHostTestBase() {
         assertTrue(shownTexts(host).contains(driftNote))
         idle(10_000)
         assertFalse("gone after a minute", shownTexts(host).contains(driftNote))
-        assertTrue("the key back in its place", shownTags(host).contains(InGameBatteryTags.KEY))
+        assertTrue("the facts back in their place", shownTags(host).contains(InGameBatteryTags.FACTS))
         backToPlumemu()
         startAGame()
         idle(2_000)

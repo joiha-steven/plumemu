@@ -79,7 +79,7 @@ abstract class SettingsSectionsAlignBase {
             val panelLeft = unclipped(hasTestTag(SettingsTags.PANEL)).left.value
             val pinned = PANEL_LEFT[label]
             expect("header = hint key cap", near(header, hint), "header $header, hint $hint")
-            expect("every section's label", lefts.size == SettingsSection.entries.size, "${lefts.size} of ${SettingsSection.entries.size}")
+            expect("every section's label", lefts.size == shownSections.size, "${lefts.size} of ${shownSections.size}")
             expect("every label = header", lefts.all { near(it, header) }, "header $header, labels ${lefts.distinct()}")
             expect("focused label = header", near(focusedLabel, header), "focused $focusedLabel, header $header")
             val inset = (PlumDimens.stripMarginSide - PlumDimens.gameRowPadding).value

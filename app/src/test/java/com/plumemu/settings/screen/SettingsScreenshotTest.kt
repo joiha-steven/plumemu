@@ -23,6 +23,13 @@ class SettingsScreenshotTest {
     @Test
     fun sections() = ReferenceShots.capture("settings_sections", sizes = ReferenceShots.Size.entries) { SettingsAt(SettingsFocus(section = SettingsSection.Appearance)) }
 
+    /** At Largest the sections do not all fit: the column scrolls and fades its cut row. */
+    @Test
+    fun sectionsLargest() =
+        ReferenceShots.capture("settings_sections", textSize = com.plumemu.coreui.theme.TextSize.Largest) {
+            SettingsAt(SettingsFocus(section = SettingsSection.Controls))
+        }
+
     /** Wide: Background focused with its panel beside. Narrow: its panel opened as the further stop. */
     @Test
     fun appearanceWithAnOptionFocused() =
@@ -41,6 +48,10 @@ class SettingsScreenshotTest {
     /** Left edge focused, showing the default ‹ Game counts ›, with its explanation beside (wide). */
     @Test
     fun appearanceLeftEdge() = ReferenceShots.capture("settings_appearance_left_edge") { SettingsAt(optionsAt(SettingsOption.LeftEdge), settingsForShot()) }
+
+    /** Fade list edges focused, on (the default), with its explanation beside (wide). */
+    @Test
+    fun appearanceEdgeFade() = ReferenceShots.capture("settings_appearance_edge_fade") { SettingsAt(optionsAt(SettingsOption.EdgeFade), settingsForShot()) }
 
     @Test
     fun customColour() =

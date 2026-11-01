@@ -22,7 +22,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings › Appearance › Left edge = Letters where the focused list has no letters to show
+ * Settings › Home screen › Left edge = Letters where the focused list has no letters to show
  * (Recent, a list sorted by last played or year) left the peek blank: the counts faded for a rail that never came.
  * There the peek shows the default, the game counts; the stored setting is not changed.
  */

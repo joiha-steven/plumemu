@@ -44,6 +44,7 @@ internal val EXPECTED_C: List<ExpectedSystem> = listOf(
             flags = setOf(),
             extras = emptyMap(),
         )
+        omnidroid("psp", 19)
         retroArch("ppsspp_libretro_android.so")
     },
     system("ps2", "iso") {
@@ -137,6 +138,7 @@ internal val EXPECTED_C: List<ExpectedSystem> = listOf(
             flags = setOf(LaunchFlag.ClearTask, LaunchFlag.ClearTop),
             extras = mapOf("bootPath" to ExtraValue.Text(URI)),
         )
+        omnidroid("ps2", 18)
         retroArch("pcee2_libretro_android.so")
         retroArch("pcsx2_libretro_android.so")
         retroArch("play_libretro_android.so")
@@ -293,6 +295,7 @@ internal val EXPECTED_C: List<ExpectedSystem> = listOf(
             flags = setOf(),
             extras = mapOf("AutoStartFile" to ExtraValue.Text(URI)),
         )
+        omnidroid("gamecube", 10)
         retroArch("dolphin_libretro_android.so")
     },
     system("arcade", "zip") {

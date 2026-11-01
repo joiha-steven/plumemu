@@ -87,21 +87,35 @@ class Updates(
     private val wallClock: () -> Long,
     /** Told each check that ended ([manual]: Settings' Check for updates), for the statistics (`update_check`). */
     private val onChecked: (manual: Boolean, outcome: CheckOutcome) -> Unit = { _, _ -> },
+    /**
+     * The platform data check ([PlatformDataUpdater.check]) run after each update check in the same job, with "daily"
+     * or "manual". It never changes the update's record, view or gate, and must not throw.
+     */
+    private val dataCheck: suspend (label: String) -> Unit = {},
     private val info: (String) -> Unit,
     private val log: (String) -> Unit,
 ) {
     private val lock = Any()
     private val mutableView = MutableStateFlow(UpdateView())
     val view: StateFlow<UpdateView> = mutableView.asStateFlow()
-    private val mutableHasUpdate = MutableStateFlow(false)
+    private val mutableFoundName = MutableStateFlow<String?>(null)
 
-    /** A check found a release newer than this one (the main screen's dot on START Settings). */
-    val hasUpdate: StateFlow<Boolean> = mutableHasUpdate.asStateFlow()
+    /** The version name of the release found (the top bar's "Update 0.1.1" pill); null while none waits. */
+    val foundVersionName: StateFlow<String?> = mutableFoundName.asStateFlow()
+
+    private val mutableWhatsNew = MutableStateFlow<UpdateManifest?>(null)
+
+    /**
+     * The release this app was updated to, until its "What's new" card was shown ([whatsNewShown]); null otherwise,
+     * and null until the record is read. The main screen shows the card when it is idle.
+     */
+    val whatsNew: StateFlow<UpdateManifest?> = mutableWhatsNew.asStateFlow()
 
     private var record: UpdateRecord? = null
     private var installed: Long = 0
     private var checkJob: Job? = null
     private var updateJob: Job? = null
+    private var dataJob: Job? = null
     /** Told by [onFront] / [onStop] (StartupWork reports the front only while Plumemu is in it). Until then nothing is installed. */
     private var isInFront = false
     private var readyFile: File? = null
@@ -114,17 +128,20 @@ class Updates(
         synchronized(lock) { record }?.let { return it }
         val (read, code) = withContext(io) { store.read() to installedVersionCode() }
         synchronized(lock) { installed = code }
+        val justInstalled = read.found?.takeIf { it.versionCode == code && code > read.whatsNewShownCode }
+        // Notes kept for the card only while they are for the release now installed and not shown yet.
+        val kept = justInstalled ?: read.whatsNew?.takeIf { it.versionCode == code && code > read.whatsNewShownCode }
+        val installedFound = read.found != null && read.found.versionCode <= code
+        if (installedFound) info("Update ${read.found?.versionName} is installed; forgetting it")
         val fresh =
-            if (read.found != null && read.found.versionCode <= code) {
-                info("Update ${read.found.versionName} is installed; forgetting it")
-                read.copy(found = null, lastCheck = read.lastCheck?.copy(outcome = CheckOutcome.UpToDate))
-            } else {
-                read
-            }
-        synchronized(lock) {
-            if (record == null) record = fresh
-        }
-        if (fresh != read) save(fresh)
+            read.copy(
+                found = if (installedFound) null else read.found,
+                lastCheck = if (installedFound) read.lastCheck?.copy(outcome = CheckOutcome.UpToDate) else read.lastCheck,
+                whatsNew = kept,
+            )
+        // Only the call that sets the record saves: a late second call must not overwrite a newer save (whatsNewShown).
+        val isFirst = synchronized(lock) { (record == null).also { if (it) record = fresh } }
+        if (isFirst && fresh != read) save(fresh)
         withContext(io) { downloader.clearLeftovers() }
         publish()
         return synchronized(lock) { checkNotNull(record) { "the record was set above, before it was published" } }
@@ -156,6 +173,8 @@ class Updates(
         val silentInstall =
             synchronized(lock) {
                 isInFront = false
+                // A data download under way stops: nothing is stored, the current data stays.
+                dataJob?.cancel()
                 mutableView.value.step.let { it is UpdateStep.Installing && !it.askedPerson }
             }
         if (silentInstall) forgetReopen("Plumemu left the front during the install")
@@ -202,9 +221,48 @@ class Updates(
         }
         job.start()
         job.join()
+        runDataCheck(manual)
     }
 
     private suspend fun check(manual: Boolean) {
+        try {
+            checkForUpdate(manual)
+        } finally {
+            mutableView.update { it.copy(isChecking = false) }
+        }
+    }
+
+    /**
+     * The platform data check, after the update check has ended and shown its result: its own job, one at a
+     * time, and never in the way of [startUpdate] (which only looks at the update and check jobs). Only on the
+     * network the daily check needs (Wi-Fi or Ethernet, not metered), also when the person pressed Check for updates.
+     */
+    private suspend fun runDataCheck(manual: Boolean) {
+        val label = if (manual) "manual" else "daily"
+        if (network() != NetworkKind.Wifi) return log("Platform data check ($label) skipped: not on Wi-Fi or Ethernet")
+        val job: Job
+        synchronized(lock) {
+            // Never while a game runs (never during a game): the download, unpacking and loading wait for the next check.
+            if (!isInFront) return info("Platform data check ($label) skipped: Plumemu is not in front")
+            if (dataJob?.isActive == true) return
+            job =
+                scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
+                    try {
+                        dataCheck(label)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        // Its own failures are logged inside; this is a bug in it, and the update check's result stands.
+                        log("Platform data check crashed (${e.javaClass.simpleName})")
+                    }
+                }
+            dataJob = job
+        }
+        job.start()
+        job.join()
+    }
+
+    private suspend fun checkForUpdate(manual: Boolean) {
         val label = if (manual) "manual" else "daily"
         try {
             val text = http.text(manifestUrl, UpdateManifests.MAX_MANIFEST_BYTES)
@@ -231,8 +289,6 @@ class Updates(
             // Not a network failure: said as "The update check failed.", the class in the log.
             log("Update check ($label) failed unexpectedly (${e.javaClass.simpleName})")
             finishCheck(CheckOutcome.Failed(CheckFailure.Unexpected), keepFound, success = false, automatic = !manual)
-        } finally {
-            mutableView.update { it.copy(isChecking = false) }
         }
     }
 
@@ -283,7 +339,22 @@ class Updates(
         synchronized(lock) {
             val r = record ?: return
             mutableView.update { it.copy(lastCheck = r.lastCheck, found = r.found) }
-            mutableHasUpdate.value = r.found != null
+            mutableFoundName.value = r.found?.versionName
+            mutableWhatsNew.value = r.whatsNew
+        }
+
+    /** The "What's new" card for [versionCode] was shown: its notes are forgotten and it is never shown again. */
+    fun whatsNewShown(versionCode: Long): Job =
+        scope.launch {
+            loaded()
+            val next =
+                synchronized(lock) {
+                    val before = record ?: return@launch
+                    if (before.whatsNew == null && before.whatsNewShownCode >= versionCode) return@launch
+                    before.copy(whatsNew = null, whatsNewShownCode = maxOf(before.whatsNewShownCode, versionCode)).also { record = it }
+                }
+            save(next)
+            publish()
         }
 
     /**

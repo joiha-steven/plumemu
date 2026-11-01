@@ -66,6 +66,11 @@ internal object SecondScreenTags {
     /** The details card's file line: the file Play launches, without its extension, above the played line. */
     const val FILE_NAME = "second_screen_file_name"
 
+    /** The details card's RetroAchievements line, and the Apps card's icon grid and each icon in it. */
+    const val ACHIEVEMENTS = "second_screen_achievements"
+    const val APPS_GRID = "second_screen_apps_grid"
+    const val APPS_ICON = "second_screen_apps_icon"
+
     /** The statistics card: the whole block, its parts, a most-played game's row and its parts. */
     const val STATISTICS = "second_screen_statistics"
     const val STATISTICS_TOTAL = "second_screen_statistics_total"

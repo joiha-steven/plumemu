@@ -12,6 +12,10 @@ import com.plumemu.BuildConfig
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.settings.screen.SettingsUpdateActions
 import com.plumemu.update.ApkDownloader
+import com.plumemu.update.CertificateSignatureVerifier
+import com.plumemu.update.OwnSigningKeys
+import com.plumemu.update.PlatformDataUpdater
+import com.plumemu.update.UpdateHttp
 import com.plumemu.update.FileUpdateStore
 import com.plumemu.update.NetworkKind
 import com.plumemu.update.OkHttpUpdateHttp
@@ -62,11 +66,29 @@ internal fun graphUpdates(
         inspector = PackageManagerApkInspector(app),
         installer = SessionUpdateInstaller(app),
         wallClock = System::currentTimeMillis,
+        dataCheck = platformDataCheck(app, http, io)::check,
         onChecked = { manual, outcome -> telemetry?.track(updateCheckEventOf(manual, outcome)) },
         info = { Log.i(UPDATE_TAG, it) },
         log = { Log.w(UPDATE_TAG, it) },
     )
 }
+
+/** The platform data check that rides on every update check. */
+private fun platformDataCheck(
+    app: Context,
+    http: UpdateHttp,
+    io: CoroutineDispatcher,
+) = PlatformDataUpdater(
+    http = http,
+    manifestUrl = BuildConfig.PLATFORM_DATA_MANIFEST_URL,
+    installedVersionCode = { installedVersionCode(app) },
+    bundled = { bundledPlatformDataVersion(app) },
+    store = platformDataStore(app),
+    verifier = CertificateSignatureVerifier(OwnSigningKeys(app)),
+    io = io,
+    info = { Log.i(UPDATE_TAG, it) },
+    log = { Log.w(UPDATE_TAG, it) },
+)
 
 /**
  * None without an active network; Metered as Android judges it (mobile data, a hotspot marked

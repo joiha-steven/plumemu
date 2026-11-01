@@ -40,23 +40,19 @@ class KeyCapLookTest {
             for ((letter, want) in letters) {
                 val look = keyCapLook(letter, buttons, colors)
                 assertEquals("$set $letter fill", Rgb(want.first).toComposeColor(), look.fill)
-                val melts = ColorMath.contrast(Rgb(want.first), set.backgroundColor) < 3.0
-                val ring = if (melts) colors.chip else look.fill
-                assertEquals("$set $letter ring: the fill's colour (the chip ring where the fill melts into the background)", ring, look.edge)
                 assertEquals("$set $letter letter", want.second.toComposeColor(), look.letter)
             }
         }
     }
 
     @Test
-    fun everyOtherKeyCapKeepsTheUsualRingAndText() {
+    fun everyOtherKeyCapKeepsTheUsualKeyFaceAndText() {
         for (set in expected.keys) {
             val colors = colorsOf(set)
             for (cap in listOf("START", "SELECT", "L1 R1", "L1", "R1", "↑↓", "a", "AB", "")) {
                 val look = keyCapLook(cap, set.buttons, colors)
                 assertNull("$set '$cap' has no fill", look.fill)
-                assertEquals("$set '$cap' ring", colors.chip, look.edge)
-                assertEquals("$set '$cap' text", colors.text, look.letter)
+                assertEquals("$set '$cap' text", colors.strong, look.letter)
             }
         }
     }
@@ -69,8 +65,7 @@ class KeyCapLookTest {
             for (cap in listOf("A", "B", "X", "Y")) {
                 val look = keyCapLook(cap, themeOf(set).buttonSet?.buttons, colors)
                 assertNull("$set $cap", look.fill)
-                assertEquals(colors.chip, look.edge)
-                assertEquals(colors.text, look.letter)
+                assertEquals(colors.strong, look.letter)
             }
         }
         // Super with one colour changed by hand is Custom, but its buttons stay.
@@ -79,28 +74,6 @@ class KeyCapLookTest {
         assertEquals(ColorSet.Super.buttons, edited.buttonSet?.buttons)
         // No button set (Custom colours picked from nothing): the usual glyphs.
         assertNull(keyCapLook("A", edited.copy(buttonSet = null).buttonSet?.buttons, colorsOf(ColorSet.Super)).fill)
-    }
-
-    /** A fill under 3:1 on the background gets the `chip` ring; one at or above keeps its own colour as ring. */
-    @Test
-    fun aCapUnder3To1OnTheBackgroundGetsTheChipRing() {
-        val buttons = ColorSet.Ivory.buttons!!
-        // Ivory's yellow B on Banana's yellow, and Ivory's own background.
-        val onBanana = colorsOf(ColorSet.Banana)
-        assertTrue(ColorMath.contrast(buttons.b.fill, ColorSet.Banana.backgroundColor) < 3.0)
-        val melting = keyCapLook("B", buttons, onBanana)
-        assertEquals(buttons.b.fill.toComposeColor(), melting.fill)
-        assertEquals(onBanana.chip, melting.edge)
-        // The same set's blue X on Banana is far enough from it: no ring change.
-        assertTrue(ColorMath.contrast(buttons.x.fill, ColorSet.Banana.backgroundColor) >= 3.0)
-        assertEquals(buttons.x.fill.toComposeColor(), keyCapLook("X", buttons, onBanana).edge)
-        // On Black every Ivory fill that reaches 3:1 keeps its own ring; the ones that do not get chip.
-        val black = PlumComposeColors.from(PlumColors.derive(Rgb(0x000000), TextMode.Light, ColorSet.Plumemu.accentColor))
-        for (letter in listOf("A", "B", "X", "Y")) {
-            val fill = buttons.forKeyCap(letter)!!.fill
-            val want = if (ColorMath.contrast(fill, Rgb(0x000000)) < 3.0) black.chip else fill.toComposeColor()
-            assertEquals(letter, want, keyCapLook(letter, buttons, black).edge)
-        }
     }
 
     /** "Confirm with B" swaps what the letters do, not their colours: the cap that reads B is B's colour. */

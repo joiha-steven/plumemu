@@ -53,6 +53,7 @@ object SettingsJson {
                     .put("textSize", s.appearance.textSize?.name ?: JSONObject.NULL)
                     .put("textWeight", s.appearance.textWeight?.name ?: JSONObject.NULL)
                     .put("leftEdge", s.appearance.leftEdge?.name ?: JSONObject.NULL)
+                    .put("edgeFade", s.appearance.edgeFade)
                     .put("gridSize", s.appearance.gridSize.name)
                     // Sorted: a set has no order, and the same settings should give the same file.
                     .put("gridSystems", JSONArray(s.appearance.gridSystems.sorted()))
@@ -165,6 +166,8 @@ object SettingsJson {
                             textSize = optionalEnum<TextSizeSetting>(a, APPEARANCE, "textSize"),
                             textWeight = optionalEnum<TextWeightSetting>(a, APPEARANCE, "textWeight"),
                             leftEdge = optionalEnum<LeftEdgeSetting>(a, APPEARANCE, "leftEdge"),
+                            // Older backups have no key: on, the default.
+                            edgeFade = bool(a, APPEARANCE, "edgeFade", d.appearance.edgeFade),
                             gridSize = enum(a, APPEARANCE, "gridSize", d.appearance.gridSize),
                             // Older backups have no key: every system reads as a list.
                             gridSystems = strings(a, APPEARANCE, "gridSystems")?.filter { it.isNotBlank() }?.toSet() ?: d.appearance.gridSystems,

@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 
 internal const val KEYBOARD_TAG = "keyboard"
 
-internal val TEST_LABELS = KeyboardLabels(space = "Space", shift = "Shift", delete = "Delete", hide = "Hide keyboard")
+internal val TEST_LABELS = KeyboardLabels(space = "Space", shift = "Shift", delete = "Delete", hide = "Hide keyboard", paste = "Paste")
 
 /** Every key cell of the page shown. */
 internal val isKeyCell = SemanticsMatcher("a key cell") { it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("keyboard_key_") == true }
@@ -70,6 +70,7 @@ internal fun KeyboardModel.idOf(label: String): KeyId {
                     KeyboardKey.Hide -> "HIDE"
                     KeyboardKey.Space -> "SPACE"
                     KeyboardKey.Action -> "ACTION"
+                    KeyboardKey.Paste -> "PASTE"
                 }
             if (shown == label) return KeyId(r, i)
         }

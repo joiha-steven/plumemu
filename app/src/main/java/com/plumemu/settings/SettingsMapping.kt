@@ -36,7 +36,7 @@ import com.plumemu.keyboard.KeyboardChoice
 /** Appearance plus Advanced › Animations: everything [PlumThemeSettings] holds. */
 fun PlumSettings.toThemeSettings(): PlumThemeSettings = appearance.toThemeSettings(animationsOn = advanced.animations)
 
-fun AppearanceSettings.toThemeSettings(animationsOn: Boolean): PlumThemeSettings = toColorsAndLook(animationsOn).copy(buttonSet = effectiveButtonSet())
+fun AppearanceSettings.toThemeSettings(animationsOn: Boolean): PlumThemeSettings = toColorsAndLook(animationsOn).copy(buttonSet = effectiveButtonSet(), edgeFadeOn = edgeFade)
 
 /** Everything but the glyph colours, which need the current set ([effectiveButtonSet]) and so this. */
 internal fun AppearanceSettings.toColorsAndLook(animationsOn: Boolean): PlumThemeSettings =

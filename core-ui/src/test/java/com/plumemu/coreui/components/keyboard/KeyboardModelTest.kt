@@ -22,6 +22,7 @@ class KeyboardModelTest {
             KeyboardKey.Hide -> "HIDE"
             KeyboardKey.Space -> "SPACE"
             KeyboardKey.Action -> "ACTION"
+            KeyboardKey.Paste -> "PASTE"
         }
 
     private fun KeyboardModel.focusedLabel(): String = labelOf(focusedSlot.key)
@@ -34,7 +35,8 @@ class KeyboardModelTest {
     private fun rowLabels(
         page: KeyboardPage,
         hasShift: Boolean = true,
-    ): List<String> = KeyboardLayout.rows(page, hasShift).map { row -> row.joinToString(" ") { labelOf(it.key) } }
+        hasPaste: Boolean = false,
+    ): List<String> = KeyboardLayout.rows(page, hasShift, hasPaste).map { row -> row.joinToString(" ") { labelOf(it.key) } }
 
     // Layout
 
@@ -424,5 +426,56 @@ class KeyboardModelTest {
     @Test(expected = IllegalArgumentException::class)
     fun focusingAKeyThatIsNotThereFails() {
         search.focusOn(KeyId(2, 8))
+    }
+
+    // Paste
+
+    @Test
+    fun pasteTakesOneColumnOfSpaceAfterHideAndNothingElseMoves() {
+        for (page in KeyboardPage.entries) {
+            for (hasShift in listOf(true, false)) {
+                val plain = KeyboardLayout.rows(page, hasShift)
+                val paste = KeyboardLayout.rows(page, hasShift, hasPaste = true)
+                assertEquals("$page: the rows above the bottom one stay", plain.dropLast(1), paste.dropLast(1))
+                assertEquals(listOf(1.5f, 1f, 1f, 3.5f, 3f), paste.last().map { it.span })
+                paste.last().zipWithNext().forEach { (a, b) -> assertEquals("$page: $b after $a", a.start + a.span, b.start) }
+                assertEquals(10f, paste.last().last().start + paste.last().last().span)
+            }
+        }
+        assertEquals("123 HIDE PASTE SPACE ACTION", rowLabels(KeyboardPage.Letters, hasPaste = true).last())
+    }
+
+    @Test
+    fun thePasteKeyGivesItsEventAndATapToo() {
+        val model = withShift.withPaste(true).at("PASTE")
+        assertEquals(KeyboardEvent.Paste, model.press().second)
+        val shown = withShift.withPaste(true)
+        assertEquals(KeyboardEvent.Paste, shown.tap(shown.idOf("PASTE")).second)
+    }
+
+    @Test
+    fun theFocusStaysInPlaceWhenThePasteKeyComesOrGoes() {
+        // On the bottom row: the same key, or the space key where the paste key was.
+        assertEquals("ACTION", withShift.at("ACTION").withPaste(true).focusedLabel())
+        assertEquals("HIDE", withShift.at("HIDE").withPaste(true).focusedLabel())
+        assertEquals("SPACE", withShift.withPaste(true).at("PASTE").withPaste(false).focusedLabel())
+        assertEquals("ACTION", withShift.withPaste(true).at("ACTION").withPaste(false).focusedLabel())
+        // Elsewhere the focus does not move at all.
+        val onG = withShift.at("g")
+        assertEquals(onG.focus, onG.withPaste(true).focus)
+        // Up from the paste key and back down lands on it again.
+        val pasted = withShift.withPaste(true).at("PASTE")
+        assertEquals("PASTE", pasted.go(KeyboardDirection.Up).go(KeyboardDirection.Down).focusedLabel())
+        assertEquals("the same model when nothing changes", withShift, withShift.withPaste(false))
+    }
+
+    @Test
+    fun everyPrintableAsciiCharacterIsStillReachableWithPaste() {
+        val model = KeyboardModel(hasShift = true, page = KeyboardPage.Letters, hasPaste = true)
+        val reachable =
+            KeyboardPage.entries.flatMap { page -> KeyboardLayout.rows(page, true, true).flatten().mapNotNull { (it.key as? KeyboardKey.Character)?.char } }.toSet() +
+                ('a'..'z').map { it.uppercaseChar() }
+        for (c in ' '.inc()..'~') assertTrue("'$c' on some page", c in reachable)
+        assertEquals(KeyboardPage.Letters, model.page)
     }
 }

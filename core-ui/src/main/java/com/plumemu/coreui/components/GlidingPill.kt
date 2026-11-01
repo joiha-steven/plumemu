@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.theme.ListGlide
 import com.plumemu.coreui.theme.LocalGlideClock
+import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.Settle
@@ -36,6 +37,9 @@ import kotlin.math.abs
  * such a list and with animations off: each row draws its pill, as it always did.
  */
 internal val LocalGlidingPill = compositionLocalOf<GlidingPill?> { null }
+
+/** True in a list whose halo is drawn outside it ([GlidingPillHost.drawHalo]), animations on or off: a focused row then draws no halo of its own. */
+internal val LocalHaloDrawnOutside = compositionLocalOf { false }
 
 /**
  * The focus pill of a home list, drawn once by the list behind its rows so it can glide from the row it leaves to the row it
@@ -76,10 +80,16 @@ class GlidingPill internal constructor(
     private var lastTop = Float.NaN
     private var lastMoveAt = Long.MIN_VALUE
 
-    internal fun draw(
-        scope: DrawScope,
+    /** True when another node draws this pill's halo ([GlidingPillHost.drawHalo], outside the list's clip): [draw] then leaves it out. */
+    internal var haloElsewhere = false
+
+    /** Where the pill is now (top and height in the list's px, the lag included), or null for none; starts a lag on a move, so a second call in one frame gives the same answer. */
+    private fun place(
         input: PillInput,
-    ) = with(scope) {
+        forHalo: Boolean = false,
+    ): Pair<Float, Float>? {
+        // With animations off the rows draw the pill; only the halo, drawn outside the list, is placed here, with no lag.
+        val on = input.isOn || forHalo
         val index = input.focusedIndex()
         val scroll = input.scroll
         val height: Float
@@ -87,18 +97,18 @@ class GlidingPill internal constructor(
         if (scroll != null) {
             // A column with a ScrollState: the focused row's box is in the column's content coordinates; the visible window starts at the scroll.
             val box = rowBox
-            if (index < 0 || box == null || !input.isOn) {
+            if (index < 0 || box == null || !on) {
                 stopTracking()
-                return@with
+                return null
             }
             height = box.height
             rowTop = box.topIn(content) - scroll.value + input.glide.offset
         } else {
             val info = input.listState!!.layoutInfo
             val item = if (index < 0) null else info.visibleItemsInfo.firstOrNull { it.index == index }
-            if (item == null || !input.isOn) {
+            if (item == null || !on) {
                 stopTracking()
-                return@with
+                return null
             }
             val box = if (measuresRows) rowBox else null
             height = box?.height ?: input.heightPx
@@ -112,27 +122,57 @@ class GlidingPill internal constructor(
                     item.offset + info.beforeContentPadding - input.glide.extraPixels + fromBottom + input.glide.offset
                 }
         }
+        if (!input.isOn) return rowTop to height
         if (index != lastIndex) {
             if (lastIndex != NONE && !lastTop.isNaN()) startLag(lastTop - rowTop, input.stridePx, input.stridePx + input.extraGapPx)
             lastIndex = index
         }
         val top = rowTop + settle.value
         lastTop = top
+        return top to height
+    }
+
+    internal fun draw(
+        scope: DrawScope,
+        input: PillInput,
+    ) = with(scope) {
+        val (top, height) = place(input) ?: return@with
         val colors = input.colors
         val p = press?.progress?.value ?: 0f
         val scale = if (p == 0f) 1f else 1f - (1f - PlumMotion.PRESS_SCALE) * p
         // Settings' lists (a scroll state, or a lazy list measured from itself) clip only above and below: a clip at the side edge that the pill's round cap
         // touches shades one pixel of the cap, which would differ from the row's own pill (the Settings shots).
-        val side = if (scroll != null || content != null) SIDE_UNCLIPPED_PX else 0f
+        val side = if (input.scroll != null || content != null) SIDE_UNCLIPPED_PX else 0f
+        val outline = input.shape.createOutline(androidx.compose.ui.geometry.Size(size.width, height), layoutDirection, this)
+        // The halo has its own clip: it reaches past the list's sides, where the pill's clip (the list's width) would cut it; above and below it is cut at the list.
+        // It stays at the resting size, so a press does not dip it and never repaints the rows it reaches over.
+        val reach = PlumDimens.focusHaloReach.toPx()
+        if (!haloElsewhere) {
+            clipRect(left = -reach - side, right = size.width + reach + side) {
+                withTransform({ translate(0f, top) }) { drawHaloOutside(outline, colors.focusGlow) }
+            }
+        }
         clipRect(left = -side, right = size.width + side) {
             withTransform({
                 translate(0f, top)
                 if (scale != 1f) scale(scale, scale, Offset(size.width / 2f, height / 2f))
             }) {
-                val outline = input.shape.createOutline(androidx.compose.ui.geometry.Size(size.width, height), layoutDirection, this)
                 drawOutline(outline, if (p == 0f) colors.pill else lerp(colors.pill, colors.text, PlumMotion.PRESS_FILL_MIX * p))
                 drawRingInside(outline, colors.accent)
             }
+        }
+    }
+
+    /** The halo alone, for a node outside the list's clip ([GlidingPillHost.drawHalo]): widened by the reach at the sides, cut at the list above and below. */
+    internal fun drawHaloOnly(
+        scope: DrawScope,
+        input: PillInput,
+    ) = with(scope) {
+        val (top, height) = place(input, forHalo = true) ?: return@with
+        val outline = input.shape.createOutline(androidx.compose.ui.geometry.Size(size.width, height), layoutDirection, this)
+        val reach = PlumDimens.focusHaloReach.toPx()
+        clipRect(left = -reach, top = 0f, right = size.width + reach, bottom = size.height) {
+            withTransform({ translate(0f, top) }) { drawHaloOutside(outline, input.colors.focusGlow) }
         }
     }
 
@@ -199,6 +239,8 @@ internal class PillInput(
 @Stable
 class GlidingPillHost internal constructor(
     internal val pill: GlidingPill?,
+    /** The pill that places the halo even with animations off, when [pill] is null; null for a list whose halo the rows draw. */
+    internal val haloPill: GlidingPill? = null,
     /** Goes on the list before its [ListGlide.modifier]: draws the pill behind the rows, not translated by the glide's layer. */
     val modifier: Modifier,
     /**
@@ -207,11 +249,20 @@ class GlidingPillHost internal constructor(
      * wherever it is in its item. Without it a lazy list's rows must be the root of their item, as the game panels' are.
      */
     val contentModifier: Modifier = Modifier,
+    internal val input: PillInput? = null,
 ) {
+    /**
+     * Draws this pill's halo from a node that sits outside the list's clip (see `haloOutside` of [rememberGlidingPill]): call it in a
+     * `drawBehind` of a parent that has the list's size; it reads what the pill reads, so it moves with it and recomposes nothing.
+     */
+    fun drawHalo(scope: DrawScope) {
+        if (haloPill != null && input != null) haloPill.drawHaloOnly(scope, input)
+    }
+
     /** Provide it around the list so its rows stop drawing their own pill. */
     @Composable
     fun Provide(content: @Composable () -> Unit) {
-        androidx.compose.runtime.CompositionLocalProvider(LocalGlidingPill provides pill, content = content)
+        androidx.compose.runtime.CompositionLocalProvider(LocalGlidingPill provides pill, LocalHaloDrawnOutside provides (haloPill != null), content = content)
     }
 }
 
@@ -234,6 +285,8 @@ fun rememberGlidingPill(
     fromBottom: Boolean = false,
     /** The rows differ in height (a note or a badge under a label, a label on three lines): the focused row's own box is the pill's. */
     rowsVary: Boolean = false,
+    /** The halo is drawn by [GlidingPillHost.drawHalo] from a parent outside the list's clip: the pill leaves it out. */
+    haloOutside: Boolean = false,
     focusedIndex: () -> Int,
 ): GlidingPillHost {
     val scope = rememberCoroutineScope()
@@ -248,8 +301,9 @@ fun rememberGlidingPill(
             PillInput(listState, null, glide, colors, shape, with(density) { rowHeight.roundToPx() }.toFloat(), with(density) { stride.toPx() }, with(density) { extraGap.toPx() }, fromBottom, isOn) { latestIndex.value() }
         }
     pill.measuresRows = rowsVary
-    return remember(pill, input) {
-        GlidingPillHost(if (isOn) pill else null, Modifier.drawBehind { pill.draw(this, input) }, Modifier.onPlaced { pill.content = it })
+    pill.haloElsewhere = haloOutside
+    return remember(pill, input, haloOutside) {
+        GlidingPillHost(if (isOn) pill else null, if (haloOutside) pill else null, Modifier.drawBehind { pill.draw(this, input) }, Modifier.onPlaced { pill.content = it }, input)
     }
 }
 
@@ -284,9 +338,9 @@ fun rememberGlidingPill(
     pill.measuresRows = true
     return remember(pill, input) {
         GlidingPillHost(
-            if (isOn) pill else null,
-            Modifier.drawBehind { pill.draw(this, input) },
-            Modifier.onPlaced { pill.content = it },
+            pill = if (isOn) pill else null,
+            modifier = Modifier.drawBehind { pill.draw(this, input) },
+            contentModifier = Modifier.onPlaced { pill.content = it },
         )
     }
 }

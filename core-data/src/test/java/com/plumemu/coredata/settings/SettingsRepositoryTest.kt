@@ -106,7 +106,7 @@ class SettingsRepositoryTest {
                 gridSystems = setOf("snes", "psp"),
                 ownColors = OwnColors(ColorSetting.Preset("Plum"), TextColorSetting.Light, ColorSetting.Custom(0xA79CF5), buttonSet = "Super"),
                 buttonSet = "Ivory",
-                language = "zh-TW",
+                language = "zh-TW", edgeFade = false,
             ),
             controls = ControlsSettings(ConfirmButtonSetting.Bottom, holdToScrollFaster = false, showButtonHints = false, keyboard = KeyboardSetting.Android, pushRightToPlay = true, switchSystemWith = SwitchSystemWithSetting.Bumpers),
             library = LibrarySettings(scanOnStartup = false, sortGames = SortGamesSetting.LastPlayed, boxArtRegion = BoxArtRegionSetting.Japan, boxArtPaused = true,

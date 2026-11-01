@@ -42,9 +42,11 @@ internal suspend fun AppGraph.afterPlay(outcome: PlaySessionOutcome) {
  */
 internal fun AppGraph.afterReturn(): Job =
     appScope.launch {
+        var played: PlaySessionOutcome? = null
         try {
             // The same time Settings › Statistics counts goes to the statistics (game_session).
-            launching()?.playTime?.onResume()?.let { afterPlay(it) }
+            played = launching()?.playTime?.onResume()
+            played?.let { afterPlay(it) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -58,6 +60,8 @@ internal fun AppGraph.afterReturn(): Job =
         } catch (e: Exception) {
             Log.e(TAG, "Work held for a game could not be asked for again (${e.javaClass.simpleName})")
         }
+        // A counted session only: RetroAchievements is asked once about that game (nothing while signed out).
+        (played as? PlaySessionOutcome.Recorded)?.let { achievements.afterGame(it.gameId) }
     }
 
 /** Asks again for the content pass and the box-art run that stopped while a game was played. */

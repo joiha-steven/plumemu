@@ -1,5 +1,6 @@
 package com.plumemu.update
 
+import android.util.Log
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -22,6 +23,27 @@ data class UpdateManifest(
     val released: String,
     val notes: List<String>,
     val notesUrl: String?,
+    /** The notes grouped by kind, in [SectionKind] order; empty when the manifest has none, then [notes] is shown. */
+    val sections: List<NoteSection> = emptyList(),
+)
+
+/** What a group of notes is about, in the order the panel lists them. */
+enum class SectionKind(val key: String) {
+    New("new"),
+    Improved("improved"),
+    Fixed("fixed"),
+    Known("known"),
+    ;
+
+    companion object {
+        fun of(key: String): SectionKind? = entries.firstOrNull { it.key == key }
+    }
+}
+
+/** One group of release notes: a [kind] and its non-empty [items]. */
+data class NoteSection(
+    val kind: SectionKind,
+    val items: List<String>,
 )
 
 /** What reading a manifest decided; [reason] is the one log line. */
@@ -55,6 +77,10 @@ object UpdateManifests {
 
     const val MAX_NOTES = 20
     const val MAX_NOTE_LENGTH = 300
+
+    /** Items in all sections together. */
+    const val MAX_SECTION_ITEMS = 20
+    private const val TAG = "PlumUpdate"
     const val MAX_VERSION_NAME_LENGTH = 40
 
     private val HEX_64 = Regex("^[0-9a-fA-F]{64}$")
@@ -109,7 +135,7 @@ object UpdateManifests {
         val released = string(root, "released").also { if (!ISO_DATE.matches(it)) throw BadField("released", "not an ISO date") }
         val notes = notes(root)
         val notesUrl = if (root.has("notesUrl") && !root.isNull("notesUrl")) httpsUrl(string(root, "notesUrl")) else null
-        return UpdateManifest(versionCode, versionName, apkUrl, size, sha256, minSdk, released, notes, notesUrl)
+        return UpdateManifest(versionCode, versionName, apkUrl, size, sha256, minSdk, released, notes, notesUrl, sections(root))
     }
 
     private fun string(
@@ -142,6 +168,46 @@ object UpdateManifests {
             line.trim()
         }
     }
+
+    /**
+     * The optional `sections`. Anything wrong with the field as a whole (not a list, too many items, a
+     * bad item) drops all of it, so the panel falls back to [UpdateManifest.notes]; a section of an
+     * unknown kind is skipped alone. Each drop is logged under `PlumUpdate`; a manifest is never refused for it.
+     */
+    private fun sections(root: JSONObject): List<NoteSection> {
+        if (!root.has("sections") || root.isNull("sections")) return emptyList()
+        val array = root.opt("sections") as? JSONArray ?: return dropped("not a list")
+        val sections = ArrayList<NoteSection>()
+        var total = 0
+        for (i in 0 until array.length()) {
+            val entry = array.opt(i) as? JSONObject ?: return dropped("entry ${i + 1} is not an object")
+            val keyText = entry.opt("kind") as? String ?: return dropped("entry ${i + 1} has no kind")
+            val items = entry.opt("items") as? JSONArray ?: return dropped("entry ${i + 1} has no list of items")
+            if (items.length() == 0) return dropped("entry ${i + 1} has no items")
+            total += items.length()
+            if (total > MAX_SECTION_ITEMS) return dropped("more than $MAX_SECTION_ITEMS items")
+            val lines =
+                List(items.length()) { j ->
+                    val line = items.opt(j) as? String ?: return dropped("entry ${i + 1} item ${j + 1} is not a string")
+                    if (line.isBlank() || line.length > MAX_NOTE_LENGTH) return dropped("entry ${i + 1} item ${j + 1} is empty or too long")
+                    line.trim()
+                }
+            val kind = SectionKind.of(keyText)
+            if (kind == null) {
+                Log.w(TAG, "Manifest sections: unknown kind \"${keyText.take(MAX_KIND_LOG)}\" ignored")
+                continue
+            }
+            sections.add(NoteSection(kind, lines))
+        }
+        return sections.sortedBy { it.kind.ordinal }
+    }
+
+    private fun dropped(why: String): List<NoteSection> {
+        Log.w(TAG, "Manifest field sections: $why; showing notes")
+        return emptyList()
+    }
+
+    private const val MAX_KIND_LOG = 20
 
     /**
      * The APK's address, relative to the manifest. It must stay on the manifest's own server (scheme,

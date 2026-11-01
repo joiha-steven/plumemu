@@ -23,7 +23,7 @@ internal class SettingsColorsPanelTest : SettingsModelHarness() {
     private fun onColors(start: AppearanceSettings) {
         actions.settings = PlumSettings(appearance = start, flags = SetupFlags(setupCompleted = true))
         openSection(SettingsSection.Appearance)
-        assertEquals(SettingsOption.Colors, model.focusedOption)
+        focusOption(SettingsOption.Colors)
     }
 
     private fun assertOnTheRow() {
@@ -115,7 +115,7 @@ internal class SettingsColorsPanelTest : SettingsModelHarness() {
     @Test
     fun touchATapOnTheValueOpensThePanelATapFocusesASecondUses() {
         onColors(PlumSettings.Defaults.appearance)
-        model.onTapValue(0, actions.shown, wide)
+        model.onTapValue(SettingsSection.Appearance.options.indexOf(SettingsOption.Colors), actions.shown, wide)
         assertEquals(PanelPage.ColorSets, model.focus.page)
         press(Action.Back)
         assertOnTheRow()

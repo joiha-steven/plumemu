@@ -8,6 +8,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.res.stringResource
@@ -17,7 +20,6 @@ import com.plumemu.R
 import com.plumemu.coredata.settings.ConfirmButtonSetting
 import com.plumemu.coreui.components.HINT_KEY_CAP_TAG
 import com.plumemu.coreui.components.Hint
-import com.plumemu.coreui.components.keyCapLook
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.coreui.theme.PlumColors
@@ -39,10 +41,10 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
 
 /**
- * The hint key caps as drawn: in Super, Charcoal, Ivory, Banana and Pocket the A, B, X and Y caps are
- * filled with their printed letter's colour, also with "Confirm with B"; START and L1 R1, and every
- * cap in the other sets or in Custom colours, keep the `chip` ring. Read from the drawn pixels: the
- * top middle of each cap, inside its 1.5 dp ring (the ring is the fill's colour when filled).
+ * The hint key caps as drawn: in Super, Charcoal, Ivory, Banana and Pocket the A, B, X and Y caps have
+ * their printed letter's colour as their flat face, also with "Confirm with B"; START and L1 R1, and every
+ * cap in the other sets or in Custom colours, have the usual `key` face. Read from the drawn pixels: inside
+ * each cap, left of the letter.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -85,10 +87,7 @@ class HintGlyphColorsTest {
         return (0 until count).map { compose.onAllNodesWithTag(HINT_KEY_CAP_TAG)[it].captureToImage().toPixelMap() }
     }
 
-    /** The colour at the top middle of each cap, 1 px in: its ring. */
-    private fun capEdges(): List<Color> = caps().map { it[it.width / 2, 1] }
-
-    /** Inside the cap, between its ring and the letter: 5 px in from the left, half way down. */
+    /** Inside the cap, left of the letter: 5 px in from the left, half way down. */
     private fun PixelMap.inside(): Color = this[INSIDE_X, height / 2]
 
     /** Whether the letter is drawn in [ink]: a few pixels of the cap are that colour. */
@@ -117,19 +116,9 @@ class HintGlyphColorsTest {
         for (set in listOf(ColorSet.Super, ColorSet.Charcoal, ColorSet.Ivory, ColorSet.Banana, ColorSet.Pocket)) {
             theme = themeOf(set)
             val buttons = set.buttons!!
-            val chip = PlumColors.derive(set.backgroundColor, set.textMode, set.accentColor).chip.toComposeColor()
-            val edges = capEdges()
-            assertEquals(6, edges.size)
-            // The ring is the fill's colour, or `chip` where the fill melts into the background (under 3:1).
-            // (Its rule has its own test, KeyCapLookTest; here the ring is what is drawn.)
             val composeColors = PlumComposeColors.from(PlumColors.derive(set.backgroundColor, set.textMode, set.accentColor))
-            fun ring(letter: String) = keyCapLook(letter, buttons, composeColors).edge
-            assertNear("$set A", ring("A"), edges[0])
-            assertNear("$set B", ring("B"), edges[1])
-            assertNear("$set X", ring("X"), edges[2])
-            assertNear("$set Y", ring("Y"), edges[3])
-            assertNear("$set START keeps its ring", chip, edges[4])
-            assertNear("$set L1 R1 keeps its ring", chip, edges[5])
+            assertEquals(6, caps().size)
+            val keyFace = composeColors.keyFace.face
             // Filled inside, not only ringed, and the letter in its own colour on it.
             val drawn = caps()
             val letters = listOf(buttons.a, buttons.b, buttons.x, buttons.y)
@@ -137,8 +126,8 @@ class HintGlyphColorsTest {
                 assertNear("$set cap $i is filled", letters[i].fill.toComposeColor(), drawn[i].inside())
                 assertTrue("$set cap $i's letter is ${letters[i].letter}", drawn[i].hasInk(letters[i].letter.toComposeColor()))
             }
-            val bg = set.backgroundColor.toComposeColor()
-            assertNear("$set START is not filled", bg, drawn[4].inside())
+            assertNear("$set START keeps the usual key face", keyFace, drawn[4].inside())
+            assertNear("$set L1 R1 keeps the usual key face", keyFace, drawn[5].inside())
         }
     }
 
@@ -149,40 +138,42 @@ class HintGlyphColorsTest {
         theme = themeOf(ColorSet.Super)
         show()
         val buttons = ColorSet.Super.buttons!!
-        val edges = capEdges()
-        // B's yellow melts into Super's grey: its ring is chip, but the cap is still filled with it.
-        assertNear("confirm (B) filled", buttons.b.fill.toComposeColor(), caps()[0].inside())
-        assertNear("back (A)", buttons.a.fill.toComposeColor(), edges[1])
+        val drawn = caps()
+        assertNear("confirm (B) filled", buttons.b.fill.toComposeColor(), drawn[0].inside())
+        assertNear("back (A)", buttons.a.fill.toComposeColor(), drawn[1].inside())
     }
 
     @Test
-    fun otherSetsAndCustomColoursKeepTheUsualRing() {
+    fun otherSetsAndCustomColoursKeepTheUsualKeyFace() {
         show()
         val custom = themeOf(ColorSet.Super).copy(text = TextMode.Light.color, buttonSet = null)
         for (look in ColorSet.entries.filter { it.buttons == null }.map(::themeOf) + custom) {
             theme = look
-            val chip = PlumColors.derive(look.backgroundColor, look.textMode, look.accentColor).chip.toComposeColor()
             val colors = PlumColors.derive(look.backgroundColor, look.textMode, look.accentColor)
+            val keyFace = PlumComposeColors.from(colors).keyFace.face
             caps().forEachIndexed { i, cap ->
-                assertNear("$look cap $i ring", chip, cap[cap.width / 2, 1])
-                assertNear("$look cap $i not filled", colors.bg.toComposeColor(), cap.inside())
-                assertTrue("$look cap $i letter in text", cap.hasInk(colors.text.toComposeColor()))
+                assertNear("$look cap $i has the usual key face", keyFace, cap.inside())
+                assertTrue("$look cap $i letter in strong", cap.hasInk(colors.strong.toComposeColor()))
             }
         }
     }
 
-    /** Ivory's buttons stay on a background the person changed; a cap that melts into it gets the `chip` ring. */
+    /** Ivory's buttons stay on a background the person changed; a cap that melts into it still stands off by its edge and shadow. */
     @Test
-    fun aSetsButtonsSurviveAChangedBackgroundAndAMeltingCapGetsARing() {
+    fun aSetsButtonsSurviveAChangedBackground() {
         show()
         val banana = ColorSet.Banana.background
         theme = themeOf(ColorSet.Ivory).copy(background = banana, text = TextMode.Dark.color)
         val buttons = ColorSet.Ivory.buttons!!
-        val colors = PlumColors.derive(theme.backgroundColor, theme.textMode, theme.accentColor)
-        val edges = capEdges()
-        assertNear("A keeps its red ring", buttons.a.fill.toComposeColor(), edges[0])
-        assertNear("B (yellow on yellow) gets the chip ring", colors.chip.toComposeColor(), edges[1])
+        val drawn = caps()
+        assertNear("A keeps its red face", buttons.a.fill.toComposeColor(), drawn[0].inside())
         assertNear("B is still filled with its yellow", buttons.b.fill.toComposeColor(), caps()[1].inside())
+        // A yellow B on Banana melts into the background by colour alone: its edge and shadow under it keep it standing off.
+        val bounds = compose.onAllNodesWithTag(HINT_KEY_CAP_TAG)[1].fetchSemanticsNode().boundsInRoot
+        val root = compose.onRoot().captureToImage().toPixelMap()
+        val below = root[bounds.center.x.toInt(), bounds.bottom.toInt() + 1]
+        val bg = theme.backgroundColor.toComposeColor()
+        assertTrue("the pixel just under B is darker than the background ($below on $bg)", below.luminance() < bg.luminance())
     }
 
     private companion object {

@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -41,6 +40,8 @@ import com.plumemu.coreinput.hint
 import com.plumemu.coreinput.tapItem
 import com.plumemu.coreui.components.Hint
 import com.plumemu.coreui.components.HintBar
+import com.plumemu.coreui.components.PanelTitleWithDot
+import com.plumemu.coreui.components.panelChrome
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.WidthClass
@@ -172,14 +173,14 @@ internal fun HomeRolePromptLayout(
             Column(
                 Modifier
                     .widthIn(max = PlumDimens.homeRolePromptWidth)
-                    .background(colors.sel2, RoundedCornerShape(PlumDimens.cornerSetupChoice))
+                    .panelChrome({ colors.sel2 })
                     // Scrolls when the text is large and the screen short; the focused button comes into view.
                     .testTag(HomeRoleTags.SCROLL)
                     .verticalScroll(rememberScrollState())
                     .padding(PlumDimens.homeRolePromptPadding),
                 verticalArrangement = Arrangement.spacedBy(PlumDimens.setupTitleGapWide),
             ) {
-                BasicText(text = stringResource(R.string.home_role_title), style = type.setupTitle(WidthClass.Narrow).copy(color = colors.text))
+                PanelTitleWithDot(text = stringResource(R.string.home_role_title), style = type.setupTitle(WidthClass.Narrow).copy(color = colors.text))
                 val body = if (showsUnavailable) R.string.home_role_unavailable else R.string.home_role_body
                 BasicText(text = stringResource(body), style = type.description.copy(color = colors.muted))
                 Spacer(Modifier.height(PlumDimens.setupButtonSpacer))

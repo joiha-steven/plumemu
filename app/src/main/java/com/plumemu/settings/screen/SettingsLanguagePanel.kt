@@ -17,7 +17,7 @@ import com.plumemu.language.AppLanguages
 import com.plumemu.language.ownName
 
 /*
- * Advanced › Language's side panel. Item 0 is System default (in the screen's language), then every
+ * Appearance › Language's side panel. Item 0 is System default (in the screen's language), then every
  * shipped language in its own name and script, from that language's own `language_name`: never translated, so a person
  * who landed in a language they cannot read still finds theirs. Up and Down only move; A applies; B closes unchanged.
  */

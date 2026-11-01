@@ -89,7 +89,7 @@ abstract class TextSizeStepBase(
         show()
         compose.waitForIdle()
         assertEquals(null, settings.appearance.textSize)
-        compose.onNodeWithTag(SettingsTags.value(SettingsOption.TextSize), useUnmergedTree = true).onChild().assertTextEquals(expected)
+        compose.onNodeWithTag(SettingsTags.valueText(SettingsTags.value(SettingsOption.TextSize)), useUnmergedTree = true).assertTextEquals(expected)
     }
 
     private companion object {
@@ -105,7 +105,7 @@ class TextSizeStep667Test : TextSizeStepBase(TextSizeSetting.Default) {
     fun theFocusedRowStaysInViewFromLargeToLargest() = assertFocusedRowStaysInViewWhileSteppingToLargest()
 
     @Test
-    fun theRowShowsLargeUntilPicked() = assertRowShowsTheDefaultUntilPicked("‹ Large ›")
+    fun theRowShowsLargeUntilPicked() = assertRowShowsTheDefaultUntilPicked("Large")
 }
 
 @RunWith(RobolectricTestRunner::class)
@@ -114,7 +114,7 @@ class TextSizeStep667Test : TextSizeStepBase(TextSizeSetting.Default) {
 class TextSizeStep837Test : TextSizeStepBase(TextSizeSetting.Large) {
     /** The Thor: nothing stored, so the theme and the row both say Large. */
     @Test
-    fun theRowShowsLargeUntilPicked() = assertRowShowsTheDefaultUntilPicked("‹ Large ›")
+    fun theRowShowsLargeUntilPicked() = assertRowShowsTheDefaultUntilPicked("Large")
 
     @Test
     fun theFocusedRowStaysInViewWhileSteppingUp() = assertFocusedRowStaysInViewWhileSteppingToLargest()

@@ -14,6 +14,9 @@ import com.plumemu.sound.Outcome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+/** Apps, or a system made only of app games: the grid of icons at one fixed size. */
+internal val HomeEntry.isIconGrid: Boolean get() = kind == EntryKind.Apps || isAppGamesGrid
+
 /**
  * L1 / R1 while a game grid (a system's, Recent's, Favorites'; not Apps') has the games focus change the grid size instead of the system
  * (the system is switched with L2 / R2 everywhere, see [homeAction]). core-input still maps the two buttons to system switches; the decision depends on
@@ -28,7 +31,7 @@ internal fun isGridSizeKey(
 ): Boolean {
     if (action != Action.PreviousSystem && action != Action.NextSystem || focus.column != Column.Games) return false
     val entry = content.entries.getOrNull(focus.systemIndex)
-    return entry?.kind != EntryKind.Apps && content.showsGrid(entry, gridIds)
+    return entry?.isIconGrid != true && content.showsGrid(entry, gridIds)
 }
 
 /**
@@ -43,7 +46,7 @@ internal fun isAppsGridKey(
 ): Boolean {
     if (action != Action.PreviousSystem && action != Action.NextSystem || focus.column != Column.Games) return false
     val entry = content.entries.getOrNull(focus.systemIndex)
-    return entry?.kind == EntryKind.Apps && content.showsGrid(entry, gridIds)
+    return entry?.isIconGrid == true && content.showsGrid(entry, gridIds)
 }
 
 /** The size after [action] (L1 smaller, R1 larger), or null at the end: Small on L1 and Large on R1 do nothing. */

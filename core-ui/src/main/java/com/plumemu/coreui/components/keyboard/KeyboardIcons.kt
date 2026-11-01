@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.geometry.CornerRadius
 
 /*
- * The keyboard's three icons (shift, delete, hide), drawn on the canvas like WifiGlyph: no image
+ * The keyboard's four icons (shift, delete, hide, paste), drawn on the canvas like WifiGlyph: no image
  * file, no icon library. Each is drawn in a 24-unit square (the board's SVG viewBox) scaled to the
  * icon's size, with the board's 1.8-unit round stroke.
  */
@@ -23,6 +23,7 @@ internal enum class KeyIcon {
     Shift,
     Delete,
     Hide,
+    Paste,
 }
 
 /**
@@ -55,6 +56,7 @@ internal fun DrawScope.drawKeyIcon(
                 drawLine(ink, Offset(17f, 9f), Offset(11.5f, 15f), STROKE, StrokeCap.Round)
             }
             KeyIcon.Hide -> drawHide(ink, stroke)
+            KeyIcon.Paste -> drawPaste(ink, stroke)
         }
     }
 }
@@ -74,6 +76,17 @@ private fun DrawScope.drawHide(
             lineTo(15f, 18f)
         }
     drawPath(chevron, ink, style = stroke)
+}
+
+/** A clipboard: the board with its clip on top and two lines of text. */
+private fun DrawScope.drawPaste(
+    ink: Color,
+    stroke: Stroke,
+) {
+    drawRoundRect(ink, topLeft = Offset(5f, 4.5f), size = Size(14f, 17f), cornerRadius = CornerRadius(2f), style = stroke)
+    drawRoundRect(ink, topLeft = Offset(9f, 2.5f), size = Size(6f, 4f), cornerRadius = CornerRadius(1f), style = stroke)
+    drawLine(ink, Offset(8.5f, 12f), Offset(15.5f, 12f), STROKE, StrokeCap.Round)
+    drawLine(ink, Offset(8.5f, 16f), Offset(13f, 16f), STROKE, StrokeCap.Round)
 }
 
 /** An upward arrow: a triangle head on a short stem. */

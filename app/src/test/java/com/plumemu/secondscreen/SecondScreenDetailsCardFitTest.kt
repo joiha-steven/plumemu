@@ -310,7 +310,7 @@ abstract class SecondScreenDetailsCardFitBase(
             assertTrue("no played line before the answer", all(SecondScreenTags.FACTS).isEmpty())
             val before = bounds(SecondScreenTags.DESCRIPTION)
             show(each)
-            assertEquals("Snes9x · Played yesterday · 3 h 20 min", textOf(compose.onNodeWithTag(SecondScreenTags.FACTS).fetchSemanticsNode()))
+            assertEquals("Snes9x · Played yesterday · 3\u00A0h 20\u00A0min", textOf(compose.onNodeWithTag(SecondScreenTags.FACTS).fetchSemanticsNode()))
             assertEquals("the description stays where it was", before, bounds(SecondScreenTags.DESCRIPTION))
         }
         show(GAME_NEVER_PLAYED.withDetails(FULL_DETAILS).copy(isPlayKnown = true))
@@ -327,7 +327,7 @@ abstract class SecondScreenDetailsCardFitBase(
                     val line = compose.onNodeWithTag(SecondScreenTags.FACTS).fetchSemanticsNode()
                     assertNoTextCut(line, label)
                     val text = textOf(line)
-                    assertTrue("$label: the play facts stay whole: '$text'", text.endsWith(" · Played yesterday · 3 h 20 min"))
+                    assertTrue("$label: the play facts stay whole: '$text'", text.endsWith(" · Played yesterday · 3\u00A0h 20\u00A0min"))
                     assertTrue("$label: the emulator's words first, whole or cut: '$text'", text.startsWith(words) || text.substringBefore(" · ").endsWith("\u2026"))
                 }
             }

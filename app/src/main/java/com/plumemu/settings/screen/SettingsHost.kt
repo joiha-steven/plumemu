@@ -2,6 +2,7 @@ package com.plumemu.settings.screen
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.plumemu.account.RaAccounts
 import com.plumemu.account.ScraperAccounts
 import com.plumemu.report.ProblemReportActions
 import com.plumemu.coredata.backup.BackupKind
@@ -133,6 +134,9 @@ internal interface SettingsActivityActions {
     /** False when the device offers no screen to pick the home app. */
     fun openHomeSettings(): Boolean
 
+    /** Opens [url] in the device's browser; false when none could. */
+    fun openWebPage(url: String): Boolean = false
+
     /** Asked each time Settings comes back to the front (a binder call; never per frame). */
     fun isHomeApp(): Boolean
 
@@ -181,6 +185,8 @@ internal class SettingsHost(
     val names: SettingsNameActions = SettingsNameActions.None,
     /** The ScreenScraper account. */
     val accounts: ScraperAccounts = ScraperAccounts.Unavailable,
+    /** The RetroAchievements account (Accounts). */
+    val raAccounts: RaAccounts = RaAccounts.None,
     /** Library › Clear Recent…. */
     val recent: SettingsRecentActions = SettingsRecentActions.None,
     /** Box art's Download missing, Re-download, Pause and Resume. */
@@ -237,6 +243,8 @@ internal class SettingsHost(
 
             override fun openHomeSettings(): Boolean = activity.openHomeSettings()
 
+            override fun openWebPage(url: String): Boolean = activity.openWebPage(url)
+
             override fun exportLogs(onDone: (Boolean) -> Unit) = activity.exportLogs(onDone)
 
             override fun forgetFolderAnswer() = library.forgetFolderAnswer()
@@ -268,6 +276,8 @@ internal class SettingsHost(
             override val names: SettingsNameActions get() = this@SettingsHost.names
 
             override val accounts: ScraperAccounts get() = this@SettingsHost.accounts
+
+            override val raAccounts: RaAccounts get() = this@SettingsHost.raAccounts
 
             override val problemReports: ProblemReportActions get() = this@SettingsHost.problemReports
 

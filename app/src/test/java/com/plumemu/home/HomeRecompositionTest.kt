@@ -90,10 +90,12 @@ class HomeRecompositionTest {
      * counted. Nor are the two scroll keepers, which emit nothing: they decide
      * the scroll while composing the move, so it lands in the same frame (a coroutine scrolled
      * one frame late). Nor is the details column ([detailsParts]): it shows the focused game, so a
-     * move re-runs it; the tests that move beside it check it on its own.
+     * move re-runs it (with a poster, [detailsPoster], once); the tests that move beside it check it on its own.
      */
-    private fun othersThatRan(): List<String> {
+    private fun othersThatRan(detailsPoster: Boolean = false): List<String> {
         assertRailLettersAtMostTwo()
+        val posterRuns = calls.filter { info -> POSTER_FILES.any { "($it:" in info } }.groupingBy { it }.eachCount().filterValues { it > (if (detailsPoster) 1 else 0) }
+        assertEquals("posters run only in the details column, once per function: $posterRuns", emptyMap<String, Int>(), posterRuns)
         val rowParts = listOf("GameRow", "SystemRow").map { "com.plumemu.coreui.components.$it " }
         // RailLetter: a move to another letter changes the look of the two letters involved (`assertRailLettersAtMostTwo`).
         val ours = listOf("KeepFocusedVisible", "KeepFocusedCellVisible", "GamesListItem", "FollowRowForms", "RailLetter").map { "com.plumemu.home.$it " }
@@ -109,6 +111,7 @@ class HomeRecompositionTest {
             .filterNot { info -> rowParts.any { info.startsWith(it) } }
             .filterNot { info -> ours.any { info.startsWith(it) } }
             .filterNot { info -> DETAILS_FILES.any { "($it:" in info } }
+            .filterNot { info -> detailsPoster && POSTER_FILES.any { "($it:" in info } }
     }
 
     /**
@@ -180,11 +183,11 @@ class HomeRecompositionTest {
         assertEquals("look followers run: the shown page's", 1, calls.count { it.startsWith("com.plumemu.home.FollowRowForms ") })
         assertEquals("game rows recomposed: ${calls.filter { "GameRow" in it }}", 2, count("GameRow"))
         assertEquals("system rows recomposed", 0, count("SystemRow"))
-        assertEquals("nothing else of ours (bars, columns, hints) recomposes", emptyList<String>(), othersThatRan())
+        assertEquals("nothing else of ours (bars, columns, hints) recomposes", emptyList<String>(), othersThatRan(detailsPoster = true))
         // The move (Super Metroid to Yoshi's Island) crosses from the letter S to Y: exactly those two letters change look.
         assertEquals("rail letters recomposed: ${calls.filter { "RailLetter" in it }}", 2, railLetterRuns())
         assertDetailsRanOnce("no art, 768")
-        assertTrue("the text-only column draws no cover: ${detailsParts()}", detailsParts().none { "Cover" in it })
+        assertEquals("the column redraws its one poster cover, once: ${detailsParts()}", 1, detailsParts().count { it == "com.plumemu.home.DetailsCover" })
         assertEquals(1, state.focus.row)
     }
 
@@ -196,7 +199,7 @@ class HomeRecompositionTest {
         assertEquals("list items run: only the two whose look changed", 2, listItems())
         assertEquals("game rows recomposed: ${calls.filter { "GameRow" in it }}", 2, count("GameRow"))
         assertEquals("system rows recomposed", 0, count("SystemRow"))
-        assertEquals("nothing else of ours (the band, bars, columns, hints) recomposes", emptyList<String>(), othersThatRan())
+        assertEquals("nothing else of ours (the band, bars, columns, hints) recomposes", emptyList<String>(), othersThatRan(detailsPoster = true))
     }
 
     /** The box-art column beside the list at 768: the same rule as the text-only one above. */
@@ -206,7 +209,7 @@ class HomeRecompositionTest {
         moveDownAndCount(state)
         assertEquals("list items run: only the two whose look changed", 2, listItems())
         assertEquals("game rows recomposed: ${calls.filter { "GameRow" in it }}", 2, count("GameRow"))
-        assertEquals("nothing else of ours recomposes", emptyList<String>(), othersThatRan())
+        assertEquals("nothing else of ours recomposes", emptyList<String>(), othersThatRan(detailsPoster = true))
         assertDetailsRanOnce("box art, 768")
     }
 
@@ -313,7 +316,7 @@ class HomeRecompositionTest {
         assertEquals("the line ran once for the new game: ${detailsParts()}", 1, line.size)
         assertEquals("the table ran once for the new game: ${detailsParts()}", 1, table.size)
         assertEquals("the line in the frame the facts arrived in", table.single().second, line.single().second)
-        assertEquals("nothing else of ours recomposes", emptyList<String>(), othersThatRan())
+        assertEquals("nothing else of ours recomposes", emptyList<String>(), othersThatRan(detailsPoster = true))
         compose.runOnIdle { calls.clear() }
         compose.mainClock.advanceTimeBy(IDLE_MS)
         compose.waitForIdle()
@@ -452,6 +455,7 @@ class HomeRecompositionTest {
         moveDownAndCount(state)
         // The ring is drawn over the grid from the focus, so a move redraws it and no cover recomposes.
         assertEquals("covers recomposed: ${calls.filter { "CoverTile" in it }}", 0, count("CoverTile"))
+        assertEquals("posters recomposed", 0, calls.count { c -> POSTER_FILES.any { "($it:" in c } })
         assertEquals("no rows", 0, count("GameRow") + count("SystemRow"))
         // The bar's title shows the focused game, so it changes on a move; nothing else does.
         val barTitle = listOf("GridHintBar", "TitledHintBar", "FocusTitle", "yearAndPublisher")
@@ -482,7 +486,7 @@ class HomeRecompositionTest {
         }
         compose.waitForIdle()
         moveDownAndCount(state)
-        val covers = listOf("CoverArt", "CoverPicture", "TitledTile", "GridCover").map { "com.plumemu.home.$it " } + "com.plumemu.coreui.components.CoverTile "
+        val covers = listOf("CoverArt", "CoverPicture", "TitledTile", "GridCover", "PosterTile").map { "com.plumemu.home.$it " } + "com.plumemu.coreui.components.CoverTile "
         assertEquals("covers recomposed: ${calls.filter { c -> covers.any { c.startsWith(it) } }}", 0, calls.count { c -> covers.any { c.startsWith(it) } })
         val barTitle = listOf("GridHintBar", "TitledHintBar", "FocusTitle", "yearAndPublisher")
         val others =
@@ -565,6 +569,8 @@ class HomeRecompositionTest {
     }
 }
 
+private val POSTER_FILES = listOf("HomeCovers.kt", "PosterCover.kt") // the poster cover's own files
+
 /**
  * The files that hold the details column (box art, text only, the play facts, the battery line under
  * them) and the number format its facts call (`CountFormat.kt`: the rating, days and minutes; the top
@@ -578,9 +584,9 @@ internal fun String.isDetailsPart(): Boolean = (startsWith("com.plumemu.home.") 
 /**
  * Details functions one pass calls more than once: the box-art column's two fact lines ("1994 ·
  * Nintendo", "Action · 7.5/10") and the locale read by the rating and the count format; and
- * WideDetails' three slot lambdas (cover, title block, the rest of [WideDetailsLayout]), which share one name.
+ * WideDetails' and TextDetails' three slot lambdas (cover, title block, the rest of [WideDetailsLayout]), which share one name.
  */
-internal val CALLS_PER_PASS = mapOf("com.plumemu.home.FactLine" to 2, "com.plumemu.home.currentLocale" to 2, "com.plumemu.home.WideDetails.<anonymous>" to 3)
+internal val CALLS_PER_PASS = mapOf("com.plumemu.home.FactLine" to 2, "com.plumemu.home.currentLocale" to 2, "com.plumemu.home.WideDetails.<anonymous>" to 3, "com.plumemu.home.TextDetails.<anonymous>" to 3)
 
 /** One line at Largest in Serif in the 248 details column. */
 internal const val ONE_LINE_TITLE = "Contra III"

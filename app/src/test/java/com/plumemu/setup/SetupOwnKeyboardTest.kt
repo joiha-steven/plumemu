@@ -29,7 +29,7 @@ import org.robolectric.annotation.Config
  * exactly once (counted at the fake account), and the wrong paths: empty fields, a refused sign-in,
  * presses while the account is checked. What must never happen: Android's keyboard, a text field to
  * connect to, a state written while typing is idle, typing keys after setup left, the
- * tray coming up by itself. Android 9 (sdk 28), where the IME shadow sees Compose's requests.
+ * tray down when the form opens. Android 9 (sdk 28), where the IME shadow sees Compose's requests.
  * Passwords here are made-up test values and never appear in a test name or a failure message.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -60,14 +60,16 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
     }
 
     @Test
-    fun theFormOpensWithTheTrayDownAndNoAndroidKeyboard() {
+    fun theFormOpensWithTheTrayUpOnTheUsernameAndNoAndroidKeyboard() {
         showTheForm()
         assertEquals(SignInItem.Username, form.focus)
-        assertNoTray("when the form opens")
+        assertTrue("the tray is up when the form opens", isTrayUp)
         assertNoAndroidKeyboard("when the form opens")
-        assertEquals("a hardware keyboard may type on the field", TextEntry.Field, textEntry())
+        assertEquals(TextEntry.Keyboard, textEntry())
+        assertTrue("START says Next on the username", hintText(Action.Menu).endsWith("Next"))
         press(KeyEvent.KEYCODE_DPAD_DOWN)
-        assertNoTray("after moving onto the password")
+        assertTrue("the D-pad stays on the keys", isTrayUp)
+        assertEquals(SignInItem.Username, form.focus)
     }
 
     @Test
@@ -78,8 +80,7 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
 
     private fun everyButton(swapAB: Boolean) {
         showTheForm(swapAB)
-        press(confirm)
-        assertTrue("A opens the tray", isTrayUp)
+        assertTrue("the form opens with the tray up", isTrayUp)
         assertEquals(TextEntry.Keyboard, textEntry())
         assertTrue(hintText(Action.Menu).endsWith("Next"))
         assertTrue(hintText(Action.Erase()).endsWith("Delete"))
@@ -124,7 +125,6 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
 
     private fun bOnEmpty(swapAB: Boolean) {
         showTheForm(swapAB)
-        press(confirm)
         typeOnKeyboard("plumtester")
         holdB()
         assertEquals("a held B erased the whole name", "", form.username)
@@ -142,7 +142,6 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
     @Test
     fun theSystemsBackPutsTheTrayAwayAndAAgainBringsItBack() {
         showTheForm()
-        press(confirm)
         typeOnKeyboard("plum")
         press(KeyEvent.KEYCODE_BACK)
         assertNoTray("after the system's Back")
@@ -186,6 +185,8 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
     @Test
     fun aHardwareKeyboardTypesWithTheTrayDownAndEnterIsNextThenSignIn() {
         showTheForm()
+        press(back)
+        assertNoTray("after a fresh B")
         typeOnKeyboard("plumtester")
         assertEquals("plumtester", form.username)
         assertNoTray("for a hardware keyboard")
@@ -202,7 +203,7 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
     @Test
     fun emptyFieldsSayWhatIsMissingAndSubmitNothing() {
         showTheForm()
-        press(confirm, KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_BUTTON_START)
+        press(KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_BUTTON_START)
         assertTrue(accounts.signIns.isEmpty())
         assertEquals(SignInResult.Missing, form.message)
         assertTrue(exists(SignInTags.MESSAGE))
@@ -219,7 +220,6 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
     fun aRefusedSignInKeepsTheFieldsAndAOnTheFieldBringsTheTrayBack() {
         accounts.answer = { _, _ -> SignInResult.WrongCredentials }
         showTheForm()
-        press(confirm)
         typeOnKeyboard("plumtester")
         press(KeyEvent.KEYCODE_BUTTON_START)
         typeOnKeyboard("abc")
@@ -238,7 +238,6 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
     fun whileCheckingTheTrayIsDownAndNothingSignsInAgain() {
         accounts.holdsAnswers = true
         showTheForm()
-        press(confirm)
         typeOnKeyboard("plumtester")
         press(KeyEvent.KEYCODE_BUTTON_START)
         typeOnKeyboard("abc")
@@ -259,7 +258,6 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
     @Test
     fun typingIdleWritesNothingAndHasNoAndroidKeyboard() {
         showTheForm()
-        press(confirm)
         typeOnKeyboard("plum")
         assertNoAndroidKeyboard("on the username")
         assertNothingWritesWhileIdle("the username")
@@ -272,7 +270,6 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
     @Test
     fun setupLeavingWhileTypingGivesBBack() {
         showTheForm()
-        press(confirm)
         assertEquals(TextEntry.Keyboard, textEntry())
         shown = false
         compose.waitForIdle()
@@ -282,7 +279,6 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
     @Test
     fun skipLeavesWithNoTypingKeys() {
         showTheForm()
-        press(confirm)
         press(KeyEvent.KEYCODE_BACK)
         // Down to Sign in, Right to Skip, A.
         press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT)
@@ -295,7 +291,6 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
     @Test
     fun androidsKeyboardHasNoTray() {
         showTheForm(keyboard = KeyboardChoice.Android)
-        press(confirm)
         assertNoTray("on Android's path")
         assertEquals(TextEntry.None, textEntry())
         assertTrue("Android's text fields", compose.onAllNodes(hasSetTextAction(), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())

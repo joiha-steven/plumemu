@@ -52,6 +52,20 @@ class SecondScreenBoxArtLogicTest {
         assertNull((onTheGame(content(hasBoxArt = false)) as SecondScreenContent.Game).scrapeKey)
     }
 
+    @Test
+    fun signedInAGameWithNoKeyIsMarkedAsHavingNoPictureAsTheGridShowsItsPoster() {
+        val keyless = metroid.copy(scrapeKey = null)
+        val on = HomeContent.of(listOf(keyless), emptyList(), emptyList(), listOf(SystemGames("snes", "Super Nintendo", listOf(keyless))), hasBoxArt = true)
+        val card = onTheGame(on) as SecondScreenContent.Game
+        assertEquals(true, card.hasNoPicture)
+        assertNull(card.scrapeKey)
+    }
+
+    @Test
+    fun signedInAGameWithAKeyWaitsForItsResultBeforeHavingAPoster() {
+        assertEquals(false, (onTheGame(content(hasBoxArt = true)) as SecondScreenContent.Game).hasNoPicture)
+    }
+
     private fun contentWithRowDetails(hasBoxArt: Boolean): HomeContent {
         val row = metroid.copy(details = facts)
         return HomeContent.of(listOf(row), emptyList(), emptyList(), listOf(SystemGames("snes", "Super Nintendo", listOf(row))), hasBoxArt = hasBoxArt)
@@ -84,7 +98,7 @@ class SecondScreenBoxArtLogicTest {
     fun aGameWithoutAKeyOrWithoutAResultReadsNoPicture() =
         runBlocking {
             assertNull("no key: nothing to read", noDatabase.fill(card(key = null)))
-            assertEquals("a key with no saved front: the card stays without art", card("crc:9"), noDatabase.fill(card("crc:9")))
+            assertEquals("a key with no saved front: the card stays without art, and is marked as having no picture for good (its poster)", card("crc:9").copy(hasNoPicture = true), noDatabase.fill(card("crc:9")))
         }
 
     @Test

@@ -53,6 +53,7 @@ import com.plumemu.R
 import com.plumemu.coreinput.Action
 import com.plumemu.coreui.components.FieldRow
 import com.plumemu.coreui.components.FieldRowFrame
+import com.plumemu.coreui.components.sunkenFieldInRow
 import com.plumemu.coreui.components.OptionRowLook
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
@@ -254,6 +255,7 @@ private fun OwnKeyboardField(
     labelWidth: Dp,
 ) {
     val onTapAt = remember(typing) { { offset: Int -> typing.focusFieldAt(offset) } }
+    val onPaste = remember(typing) { { typing.paste() } }
     FieldRowFrame(
         look = if (typing.inField) OptionRowLook.Focused else OptionRowLook.Normal,
         modifier = Modifier.semantics { contentDescription = hint }.testTag(tag),
@@ -267,11 +269,12 @@ private fun OwnKeyboardField(
             placeholder = placeholder,
             style = style,
             onTapAt = onTapAt,
-            modifier = Modifier.weight(1f).fillMaxHeight(),
+            modifier = Modifier.weight(1f).fillMaxHeight().sunkenFieldInRow(),
             textTag = FixNameTags.typedText(tag),
             placeholderTag = FixNameTags.placeholder(tag),
             // Not typing: the start of the name shows ("Captain Toad: Treasure Tracker", not "Treasure Tracker").
             followsCaret = { typing.isTrayUp },
+            onPaste = onPaste,
         )
     }
 }

@@ -24,7 +24,7 @@ internal object SecondScreenStatisticsSamples {
     val longNames: PlayStatistics =
         withCovers.copy(
             topGames = withCovers.topGames.map { it.copy(title = LONG_TITLE) },
-            topSystem = TopSystem("nes", "Nintendo Entertainment System (Famicom and Family Computer Disk System)", 19 * 3_600L + 45 * 60),
+            topSystems = listOf(TopSystem("nes", "Nintendo Entertainment System (Famicom and Family Computer Disk System)", 19 * 3_600L + 45 * 60)),
         )
 
     val cases: List<Pair<String, PlayStatistics>> =

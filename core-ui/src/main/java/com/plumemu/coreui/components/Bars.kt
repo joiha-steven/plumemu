@@ -1,6 +1,5 @@
 package com.plumemu.coreui.components
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -9,7 +8,6 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -17,16 +15,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.Layout
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.size
@@ -45,6 +45,7 @@ import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.ButtonColors
 import com.plumemu.coreui.theme.ColorMath
 import com.plumemu.coreui.theme.PlumComposeColors
+import com.plumemu.coreui.theme.FlatFace
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.Rgb
@@ -78,6 +79,10 @@ fun TopBar(
     chargingDescription: String = "",
     /** The place text's opacity, read while drawing: the home fades it to show a notice and back. */
     placeAlpha: () -> Float = { 1f },
+    /** The update pill before the clock ("Update 0.1.1"), null for none; the place text gives way to it, the clock never does. */
+    pill: String? = null,
+    /** A tap on the pill. */
+    onPill: () -> Unit = {},
 ) {
     val colors = PlumTheme.colors
     // The colour is read while drawing (`color` below): a moved theme colour redraws the bar and recomposes nothing.
@@ -101,9 +106,38 @@ fun TopBar(
             // Same text, same width, so the same line and the same cut; read once by the semantics (the one above).
             if (emphasised != null) BasicText(text = emphasised, style = style, color = text2, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.clearAndSetSemantics { })
         }
+        if (pill != null) TopBarPill(pill, style, onPill)
         StatusText(clock, style, muted)
         WifiStatus(wifi, style, wifiDescription, muted)
         BatteryStatus(battery, charging, style, chargingDescription, muted)
+    }
+}
+
+/** The accent pill of the top bar: one line, as tall as the bar, never cut (the place text beside it shrinks first). */
+@Composable
+private fun TopBarPill(
+    text: String,
+    style: TextStyle,
+    onTap: () -> Unit,
+) {
+    val colors = PlumTheme.colors
+    Box(
+        Modifier
+            .testTag(TopBarTags.PILL)
+            .height(PlumTheme.layout.topBarHeight)
+            .background(colors.accent, CircleShape)
+            .semantics {
+                role = Role.Button
+                onClick {
+                    onTap()
+                    true
+                }
+            }
+            .pointerInput(onTap) { detectTapGestures(onTap = { onTap() }) }
+            .padding(horizontal = PlumDimens.topBarPillPadding),
+        contentAlignment = Alignment.Center,
+    ) {
+        BasicText(text = text, style = style.copy(color = colors.onAccent), maxLines = 1)
     }
 }
 
@@ -167,6 +201,9 @@ const val HINT_KEY_CAP_TAG = "hint_key_cap"
 /** Test tag of the top bar's Wi-Fi glyph. */
 object TopBarTags {
     const val WIFI = "top_bar_wifi"
+
+    /** The update pill before the clock. */
+    const val PILL = "top_bar_pill"
 
     /** The charging bolt before the battery percentage. */
     const val CHARGING = "top_bar_charging"
@@ -349,9 +386,8 @@ fun Hint(
     // Without a ready-made button set the cap's colours are theme colours, read while drawing (a colour slider's
     // preview moves them without recomposing the hint); with one, the look is read here, as that set seldom changes.
     val setLook = if (buttons?.forKeyCap(keyCap) != null) keyCapLook(keyCap, buttons, colors) else null
-    val capShape = RoundedCornerShape(PlumTheme.layout.keyCapHeight / 2)
+    val setFace = remember(setLook?.fill) { setLook?.fill?.let { FlatFace.accent(it) } }
     val press = rememberHintPress(keyCap)
-    val scales = PlumTheme.motion.isOn
     Row(
         modifier = modifier.height(PlumTheme.layout.hintBarHeight).trackTouch(press),
         horizontalArrangement = Arrangement.spacedBy(PlumDimens.hintKeyGap),
@@ -363,52 +399,12 @@ fun Hint(
                     .testTag(HINT_KEY_CAP_TAG) // outside the layer: its bounds stay the resting cap's
                     // Pressed (design/rules.md › Shapes and motion › Pressed): only the cap dips, and
                     // `press.progress` is read in the layer and draw blocks, never in composition.
-                    .graphicsLayer {
-                        val scale = if (scales) 1f - (1f - PlumMotion.HINT_PRESS_SCALE) * press.progress.value else 1f
-                        scaleX = scale
-                        scaleY = scale
-                    }
+                    .graphicsLayer { translationY = PlumDimens.flatEdge.toPx() * press.progress.value }
                     .height(PlumTheme.layout.keyCapHeight)
                     .defaultMinSize(minWidth = PlumDimens.keyCapMinWidth)
-                    .then(if (setLook?.fill != null) Modifier.background(setLook.fill, capShape) else Modifier)
-                    // Pressed: the ring turns to the text colour too. It is drawn after the border, over it.
-                    .drawWithContent {
-                        drawContent()
-                        val p = press.progress.value
-                        if (p > 0f) {
-                            val w = PlumDimens.keyCapBorder.toPx()
-                            drawRoundRect(
-                                colors.text.copy(alpha = p),
-                                topLeft = Offset(w / 2, w / 2),
-                                size = Size(size.width - w, size.height - w),
-                                cornerRadius = CornerRadius((size.height - w) / 2),
-                                style = Stroke(w),
-                            )
-                        }
-                    }
-                    .then(
-                        if (setLook != null) {
-                            Modifier.border(PlumDimens.keyCapBorder, setLook.edge, capShape)
-                        } else {
-                            // The same ring `border` draws, with the colour read while drawing.
-                            Modifier.drawWithContent {
-                                drawContent()
-                                val w = kotlin.math.ceil(PlumDimens.keyCapBorder.toPx())
-                                drawRoundRect(
-                                    colors.chip,
-                                    topLeft = Offset(w / 2, w / 2),
-                                    size = Size(size.width - w, size.height - w),
-                                    cornerRadius = CornerRadius((size.height - w) / 2),
-                                    style = Stroke(w),
-                                )
-                            }
-                        },
-                    )
+                    // The flat face (design/rules.md › Controls): one draw block. Pressed: the face fills with the text colour.
                     .drawBehind {
-                        val p = press.progress.value
-                        if (p > 0f) {
-                            drawRoundRect(colors.text.copy(alpha = p), cornerRadius = CornerRadius(size.height / 2))
-                        }
+                        drawFlatFace(setFace ?: colors.keyFace, colors.text.copy(alpha = press.progress.value), press = press.progress.value, moveFace = false)
                     }
                     // The board's border-box: 1.5 border + 5 padding on each side (text + 13).
                     // Compose draws the border inside the box, so the padding covers both.
@@ -419,7 +415,7 @@ fun Hint(
                 text = keyCap,
                 style = type.keyCap,
                 maxLines = 1,
-                color = { lerp(setLook?.letter ?: colors.text, colors.bg, press.progress.value) },
+                color = { lerp(setLook?.letter ?: colors.strong, colors.bg, press.progress.value) },
             )
         }
         BasicText(text = label, style = type.hintLabel, color = { colors.muted }, maxLines = 1)
@@ -427,33 +423,23 @@ fun Hint(
     }
 }
 
-/** How a key cap is drawn: its [fill] (null: none, the usual ring on the background), its ring ([edge]) and its [letter]. */
+/** How a key cap in a button set is drawn: its flat [fill] (the printed letter's colour) and its [letter]. Caps without a set use the theme's `key` face and `strong`. */
 data class KeyCapLook(
     val fill: Color?,
-    val edge: Color,
     val letter: Color,
 )
 
 /**
- * [keyCap]'s look. While [buttons] are in use (the set the person last picked) an
- * A, B, X or Y cap is filled with its printed letter's colour, its ring the same colour (so the cap
- * keeps its size and shape) and the letter white or dark as [com.plumemu.coreui.theme.ButtonColor]
- * says. A fill under [MIN_FILL_CONTRAST] against the background (a yellow B on Banana) gets the
- * `chip` ring instead (the token that always reaches 3:1 on the background, the usual key ring),
- * so the cap never melts into it. Every other cap, and every cap without [buttons], is the usual
- * `chip` ring with `text`.
+ * [keyCap]'s look. While [buttons] are in use (the set the person last picked) an A, B, X or Y cap's flat face is its
+ * printed letter's colour and its letter white or dark as [com.plumemu.coreui.theme.ButtonColor] says. Every other cap,
+ * and every cap without [buttons], has no fill of its own: the theme's `key` face with `strong`. A fill close to the
+ * background (a yellow B on Banana) still stands off by its edge and shadow.
  */
 fun keyCapLook(
     keyCap: String,
     buttons: ButtonColors?,
     colors: PlumComposeColors,
 ): KeyCapLook {
-    val glyph = buttons?.forKeyCap(keyCap) ?: return KeyCapLook(fill = null, edge = colors.chip, letter = colors.text)
-    val fill = glyph.fill.toComposeColor()
-    val background = Rgb(colors.bg.toArgb() and 0xFFFFFF)
-    val melts = ColorMath.contrast(glyph.fill, background) < MIN_FILL_CONTRAST
-    return KeyCapLook(fill = fill, edge = if (melts) colors.chip else fill, letter = glyph.letter.toComposeColor())
+    val glyph = buttons?.forKeyCap(keyCap) ?: return KeyCapLook(fill = null, letter = colors.strong)
+    return KeyCapLook(fill = glyph.fill.toComposeColor(), letter = glyph.letter.toComposeColor())
 }
-
-/** A key cap's fill needs this much contrast with the background, or it gets a ring (WCAG's bar for graphics). */
-const val MIN_FILL_CONTRAST = 3.0

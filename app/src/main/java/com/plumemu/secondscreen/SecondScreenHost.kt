@@ -34,6 +34,8 @@ import com.plumemu.coreui.theme.InGameColors
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.theme.SecondScreenDimens
+import com.plumemu.home.HomeAppIcons
+import com.plumemu.home.LocalHomeAppIcons
 import com.plumemu.home.CoverImages
 import com.plumemu.launcher.play.battery.BatteryReads
 import com.plumemu.settings.SettingsTheme
@@ -74,6 +76,8 @@ internal class SecondScreenHost(
     private val forcedOn: Boolean = false,
     /** Decodes the box art the picking card shows; none: cards without art. */
     private val images: CoverImages = CoverImages.None,
+    /** Android's icons for the card of an app game; none: the stand-in letter. */
+    private val appIcons: HomeAppIcons = HomeAppIcons.None,
     /** `Dialog.show`; a test makes it throw. */
     private val showWindow: (Dialog) -> Unit = Dialog::show,
     /** The in-game clock's time source; a test passes its own. */
@@ -385,7 +389,9 @@ internal class SecondScreenHost(
                 stored?.let { current ->
                     SettingsTheme(current, viewedSystem) {
                         CompositionLocalProvider(LocalBatteryPaceNow provides paceNow) {
-                            SecondScreenCard(content, images = images, showBattery = current.homeScreen.showBattery)
+                            CompositionLocalProvider(LocalHomeAppIcons provides appIcons) {
+                                SecondScreenCard(content, images = images, showBattery = current.homeScreen.showBattery)
+                            }
                         }
                     }
                 }

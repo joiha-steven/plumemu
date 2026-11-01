@@ -42,7 +42,7 @@ class SettingsJsonTest {
     /** Every field away from its default, so a field the JSON forgot cannot pass by being the default. */
     private val everyFieldChanged =
         PlumSettings(
-            appearance = AppearanceSettings(ColorSetting.Custom(0x123ABC), TextColorSetting.Dark, ColorSetting.Preset("Teal"), FontSetting.Mono, TextSizeSetting.Huge, GridSizeSetting.Large, gridSystems = setOf("snes", "psp", "My Hacks"), ownColors = OwnColors(ColorSetting.Custom(0x2B54B5), TextColorSetting.Light, ColorSetting.Preset("Blue"), buttonSet = "Charcoal"), buttonSet = "Ivory", textWeight = TextWeightSetting.Medium, leftEdge = LeftEdgeSetting.Letters, language = "vi"),
+            appearance = AppearanceSettings(ColorSetting.Custom(0x123ABC), TextColorSetting.Dark, ColorSetting.Preset("Teal"), FontSetting.Mono, TextSizeSetting.Huge, GridSizeSetting.Large, gridSystems = setOf("snes", "psp", "My Hacks"), ownColors = OwnColors(ColorSetting.Custom(0x2B54B5), TextColorSetting.Light, ColorSetting.Preset("Blue"), buttonSet = "Charcoal"), buttonSet = "Ivory", textWeight = TextWeightSetting.Medium, leftEdge = LeftEdgeSetting.Letters, language = "vi", edgeFade = false),
             controls = ControlsSettings(ConfirmButtonSetting.Bottom, holdToScrollFaster = false, showButtonHints = false, keyboard = KeyboardSetting.Android, pushRightToPlay = true, switchSystemWith = SwitchSystemWithSetting.Bumpers),
             library =
                 LibrarySettings(
@@ -123,6 +123,16 @@ class SettingsJsonTest {
         assertEquals("a missing key is not an unknown value", emptyList<String>(), decoded.unknownKeys)
         assertEquals("Letters", SettingsJson.encode(everyFieldChanged).getJSONObject("appearance").getString("leftEdge"))
         assertTrue(SettingsJson.encode(PlumSettings.Defaults).getJSONObject("appearance").isNull("leftEdge"))
+    }
+
+    @Test
+    fun aBackupFromBeforeEdgeFadeReadsAsOn() {
+        val json = SettingsJson.encode(everyFieldChanged)
+        json.getJSONObject("appearance").remove("edgeFade")
+        val decoded = SettingsJson.decode(json.toString())
+        assertTrue(decoded.settings.appearance.edgeFade)
+        assertEquals("a missing key is not an unknown value", emptyList<String>(), decoded.unknownKeys)
+        assertTrue(PlumSettings.Defaults.appearance.edgeFade)
     }
 
     @Test
@@ -324,7 +334,7 @@ class SettingsJsonTest {
         assertEquals(emptyList<String>(), decodedNone.unknownKeys)
     }
 
-    /** Settings › Advanced › Language goes through a backup; System default (null) clears a picked one; an older backup follows the system. */
+    /** Settings › Appearance › Language goes through a backup; System default (null) clears a picked one; an older backup follows the system. */
     @Test
     fun theLanguageSurvivesABackupAndABackupFromBeforeItFollowsTheSystem() {
         assertEquals("vi", roundTrip(everyFieldChanged).settings.appearance.language)

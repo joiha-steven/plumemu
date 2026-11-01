@@ -53,42 +53,51 @@ abstract class SettingsAccountAlignBase {
 
     protected fun rowsShareTheColumn(label: String) {
         var size by mutableStateOf(TextSize.Small)
+        var section by mutableStateOf(SettingsSection.Library)
         val content = AccountShotContent.of(AccountStatus.SignedIn("plumtester", isRefused = true))
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
-                // The sections column focused: every Library row is drawn alike (no fill, no dot).
-                SettingsAt(SettingsFocus(column = SettingsColumn.Sections, section = SettingsSection.Library), content = content)
+                // The sections column focused: every row is drawn alike (no fill, no dot).
+                SettingsAt(SettingsFocus(column = SettingsColumn.Sections, section = section), content = content)
             }
         }
-        val labels =
+        val libraryLabels =
             mapOf(
                 SettingsOption.RomFolders to "ROM folders",
                 SettingsOption.SortGames to "Sort games",
                 SettingsOption.SystemOrder to "System order",
-                SettingsOption.ScraperAccount to "ScreenScraper",
-                SettingsOption.BoxArtRegion to "Box art region",
             )
+        val accountLabels = mapOf(SettingsOption.ScraperAccount to "ScreenScraper", SettingsOption.RetroAchievementsAccount to "RetroAchievements")
         val problems = mutableListOf<String>()
         for (each in TextSize.entries) {
             size = each
+            section = SettingsSection.Library
             compose.waitForIdle()
             val at = "$label ${each.name}"
             val reference = bounds(SettingsTags.option(SettingsOption.RomFolders))
             val referenceLabel = labelLeft(SettingsOption.RomFolders, "ROM folders")
-            for ((option, text) in labels) {
-                val row = bounds(SettingsTags.option(option))
-                if (!near(row.left.value, reference.left.value) || !near(row.right.value, reference.right.value)) {
-                    problems += "$at: $option row ${row.left}..${row.right}, ROM folders ${reference.left}..${reference.right}"
+            fun check(labels: Map<SettingsOption, String>) {
+                for ((option, text) in labels) {
+                    val row = bounds(SettingsTags.option(option))
+                    if (!near(row.left.value, reference.left.value) || !near(row.right.value, reference.right.value)) {
+                        problems += "$at: $option row ${row.left}..${row.right}, ROM folders ${reference.left}..${reference.right}"
+                    }
+                    val left = labelLeft(option, text)
+                    if (!near(left, referenceLabel)) problems += "$at: $option label at $left, ROM folders' at $referenceLabel"
                 }
-                val left = labelLeft(option, text)
-                if (!near(left, referenceLabel)) problems += "$at: $option label at $left, ROM folders' at $referenceLabel"
             }
-            // System order sits between Sort games and the account; Systems is listed only with systems, which this library has not.
-            val order = listOf(SettingsOption.SortGames, SettingsOption.SystemOrder, SettingsOption.ScraperAccount, SettingsOption.BoxArtRegion)
+            check(libraryLabels)
+            // System order follows Sort games; Systems is listed only with systems, which this library has not.
+            val order = listOf(SettingsOption.SortGames, SettingsOption.SystemOrder)
             order.zipWithNext().forEach { (above, below) ->
                 val gap = bounds(SettingsTags.option(below)).top.value - bounds(SettingsTags.option(above)).bottom.value
                 if (!near(gap, PlumDimens.listRowGap.value)) problems += "$at: gap $above to $below is $gap"
             }
+            section = SettingsSection.Accounts
+            compose.waitForIdle()
+            check(accountLabels)
+            val gap = bounds(SettingsTags.option(SettingsOption.RetroAchievementsAccount)).top.value - bounds(SettingsTags.option(SettingsOption.ScraperAccount)).bottom.value
+            if (!near(gap, PlumDimens.listRowGap.value)) problems += "$at: gap ScreenScraper to RetroAchievements is $gap"
         }
         assertTrue(problems.size.toString() + " problems:\n" + problems.joinToString("\n"), problems.isEmpty())
     }

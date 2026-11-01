@@ -1,0 +1,6 @@
+{"ID":1,"Title":"Sonic the Hedgehog","ConsoleID":1,"ForumTopicID":112,"ImageIcon":"/Images/067895.png","NumAchievements":3,"NumDistinctPlayers":5000,"NumAwardedToUser":2,"NumAwardedToUserHardcore":1,"UserCompletion":"66.67%","HighestAwardKind":"some-future-award",
+ "Achievements":{
+  "9":{"ID":9,"NumAwarded":100,"Title":"Locked one","Description":"Not yet","Points":25,"TrueRatio":50,"Author":"x","BadgeName":"250338","DisplayOrder":3,"MemAddr":"0xH00fe10=1_0xH00fe11=2","type":null},
+  "7":{"ID":7,"Title":"Hardcore win","Description":"Beat it","Points":"10","BadgeName":"250336","DisplayOrder":1,"MemAddr":"0xHfe10=0","DateEarned":"2024-05-01 10:00:00","DateEarnedHardcore":"2024-05-01 10:00:00"},
+  "8":{"ID":8,"Title":"Softcore win","Description":"Beat it soft","Points":5,"BadgeName":"250337","DisplayOrder":2,"MemAddr":"0xHfe11=0","DateEarned":"2024-06-01 10:00:00"}
+ }}

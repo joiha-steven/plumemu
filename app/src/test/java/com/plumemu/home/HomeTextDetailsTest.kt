@@ -20,6 +20,7 @@ import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumLayout
 import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.game.EmulatorToStart
 import kotlinx.coroutines.CancellationException
@@ -95,10 +96,12 @@ class HomeTextDetailsTest {
         assertEquals("Super Metroid", text(HomeTags.DETAILS_TITLE))
         assertEquals("Super Nintendo · USA", text(HomeTags.DETAILS_SYSTEM))
         assertEquals("the facts table", 1, count(HomeTags.DETAILS_FACTS))
-        listOf("Last played", "Play time", "Emulator", "2 days ago", "4 h 12 min", "RetroArch: Snes9x").forEach {
+        listOf("Last played", "Play time", "Emulator", "2 days ago", "4\u00A0h 12\u00A0min", "RetroArch: Snes9x").forEach {
             compose.onNodeWithText(it, useUnmergedTree = true).assertExists()
         }
-        assertEquals("no cover box", 0, count(HomeTags.DETAILS_COVER))
+        // Signed out the poster cover stands where box art would: one cover, no picture.
+        assertEquals("the poster cover box", 1, count(HomeTags.DETAILS_COVER))
+        assertEquals("one poster in the column", 1, count(HomeTags.POSTER_COVER))
         assertEquals("no synopsis", 0, count(HomeTags.DETAILS_SYNOPSIS))
         val list = bounds(HomeTags.GAMES)
         val details = bounds(HomeTags.DETAILS)
@@ -107,7 +110,10 @@ class HomeTextDetailsTest {
         assertDp("the column 248 wide", 248.dp, details.right - details.left)
         assertDp("its right edge at the 24 dp margin", 768.dp - 24.dp, details.right)
         assertDp("top aligned where the cover box starts with box art (the strip's top)", bounds(HomeTags.STRIP).top, details.top)
-        assertDp("the title at the column's top", details.top, bounds(HomeTags.DETAILS_TITLE).top)
+        val cover = bounds(HomeTags.DETAILS_COVER)
+        assertDp("the poster at the column's top, as box art is", details.top, cover.top)
+        assertDp("the poster is the column's width at most", 248.dp, cover.right - cover.left)
+        assertDp("the title one block gap under the poster", cover.bottom + PlumDimens.detailsBlockGapWide, bounds(HomeTags.DETAILS_TITLE).top)
     }
 
     @Test
@@ -255,7 +261,7 @@ class HomeTextDetailsTest {
     fun theBoxArtColumnShowsTheReadFacts() {
         show(LibraryLikeContent.gamesFocused(LibraryLikeContent.SUPER_METROID), LibraryLikeContent.of(hasBoxArt = true))
         assertEquals(1, count(HomeTags.DETAILS_COVER))
-        compose.onNodeWithText("4 h 12 min", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("4\u00A0h 12\u00A0min", useUnmergedTree = true).assertExists()
         compose.onNodeWithText("RetroArch: Snes9x", useUnmergedTree = true).assertExists()
     }
 

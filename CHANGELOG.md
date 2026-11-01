@@ -3,6 +3,40 @@
 What changed in each version of Plumemu, newest first. Downloads are under
 [Releases](../../releases).
 
+## 0.1.1 (2 November 2026)
+
+### New
+
+- Sign in to RetroAchievements in Settings › Accounts to see each game's achievements in Info; mastered games carry a trophy.
+- Games without box art get a drawn cover, so every system, Recent and Favorites can use the grid view, no account needed.
+- Android games and Ports show their app icon, as cover cards beside your other games.
+- Plumemu's keyboard has a Paste key, and sign-in steps open with the keyboard ready in the first empty field.
+- Settings › Statistics is one clear page: play time, your most played games and the systems you play most.
+- The home screen shows "Update" and the version in the top bar when an update is waiting; START opens it.
+- After Plumemu updates itself, a card shows what is new in that version, once.
+- Lemon is recognised as a Switch emulator, and new emulators can arrive in a small data update without a new app.
+
+### Improved
+
+- On dark themes a soft glow surrounds the selected item, and keys and buttons sink when pressed.
+- Sliders and text fields look sunken, and menus have a thin edge and a soft shadow.
+- Home screen lists fade at the edge while there is more to scroll; Settings › Appearance turns it off.
+- Settings are regrouped: Language sits in Appearance, controls are together, and dual-screen handhelds get a Second screen section.
+- Settings values are easier to read, with drawn arrows and a check when you are signed in.
+- On the AYN Thor, the bottom screen shows app icons, the Apps grid and a game's achievements.
+- The battery card on the second screen has a level ring, a timeline of the session and steadier time estimates.
+- Update notes are grouped into New, Improved, Fixed and Known issues, and the update screen shows its progress.
+
+### Known issues
+
+- Some .chd, .rvz and .wia games may not match their achievements, and 3DS, MS-DOS and Arduboy games show none yet.
+- The second screen is tested on the AYN Thor only.
+- Most translations other than French have not yet been read by a native speaker.
+
+### Not in this version
+
+- No screenshots or videos of games yet.
+
 ## 0.1.0 (31 October 2026)
 
 The first stable release, and the first with its source open under the GPL-3.0 (see the

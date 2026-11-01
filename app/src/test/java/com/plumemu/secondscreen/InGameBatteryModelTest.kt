@@ -6,6 +6,7 @@ import com.plumemu.launcher.play.battery.BatterySnapshot
 import com.plumemu.launcher.play.battery.LevelPoint
 import com.plumemu.launcher.play.battery.TimeLeft
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -13,7 +14,7 @@ import org.junit.Test
 
 /**
  * The battery part's words and chart from the meter's figures: what shows in each state, the usual pace only when it differs noticeably, the
- * fixed three hours and how they slide, and nothing outside the chart.
+ * chart from the play's start to empty or full with its whole hours, this play's facts, and nothing outside the chart.
  */
 class InGameBatteryModelTest {
     /** 22 October 2026, 21:00 UTC. */
@@ -41,6 +42,15 @@ class InGameBatteryModelTest {
         val nowElapsed = elapsedStart + (nowMinute - firstMinute) * MINUTE
         return BatterySnapshot(estimate, usual, nowElapsed, points, readMs) to nine + nowMinute * MINUTE
     }
+
+    /** [inGameBatteryOf] on a UTC wall clock. */
+    private fun partOf(
+        snapshot: BatterySnapshot,
+        level: Int,
+        now: Long,
+        charging: Boolean = false,
+        zoneOffset: (Long) -> Int = { 0 },
+    ) = inGameBatteryOf(snapshot, BatteryReading(level, charging), now, driftNote = false, zoneOffset = zoneOffset)!!.figures!!
 
     private fun discharging(
         percentPerHour: Double,
@@ -88,16 +98,23 @@ class InGameBatteryModelTest {
             snapshot(nowMinute = 47, levels = listOf(7 to 70, 20 to 60, 33 to 49, 47 to 38), estimate = discharging(48.0, 45.0), usual = draw(40.0))
         val figures = inGameBatteryOf(snapshot, BatteryReading(38, false), now, driftNote = false)!!.figures!!
         assertEquals(TimeLeft(45, isApproximate = false), figures.left)
-        assertEquals("empty at 22:32", nine + (47 + 45) * MINUTE, figures.endsAtMillis)
+        // 21:47 and 45 minutes: 22:32, on the five minutes 22:30.
+        assertEquals("empty at 22:30", nine + (47 + 43) * MINUTE, figures.endsAtMillis)
         assertEquals(48, figures.pacePercent)
         assertEquals(UsualPace.Differs(40), figures.usual)
         assertEquals(false, figures.isLow)
-        val chart = figures.chart
-        assertEquals("the window starts at 21:00 for a play from 21:07", nine, chart.startMillis)
-        assertEquals(listOf(ChartPoint(7f, 70f), ChartPoint(20f, 60f), ChartPoint(33f, 49f), ChartPoint(47f, 38f)), chart.played)
-        assertEquals("ahead: empty 45 minutes on", ChartPoint(92f, 0f), chart.aheadTo)
-        assertEquals("the usual pace from the play's start", ChartPoint(7f, 70f), chart.usualFrom)
-        assertEquals("70% at 40% an hour: 105 minutes", ChartPoint(112f, 0f), chart.usualTo)
+        assertEquals(38, figures.level)
+        assertEquals("21:07 to 21:47", 40, figures.playedMinutes)
+        assertEquals("70% to 38%", 32, figures.usedPercent)
+        val chart = partOf(snapshot, 38, now).chart
+        assertEquals("the chart starts with the play, at 21:07", nine + 7 * MINUTE, chart.startMillis)
+        assertEquals("to empty: 40 minutes played and 45 ahead", 85f, chart.minutes)
+        assertEquals(listOf(ChartPoint(0f, 70f), ChartPoint(13f, 60f), ChartPoint(26f, 49f), ChartPoint(40f, 38f)), chart.played)
+        assertEquals("ahead: empty 45 minutes on", ChartPoint(85f, 0f), chart.aheadTo)
+        assertEquals("the usual pace from the play's start", ChartPoint(0f, 70f), chart.usualFrom)
+        // 70% at 40% an hour empties in 105 minutes: cut at the chart's end, 85 minutes in, at 13.3%.
+        assertEquals(ChartPoint(85f, 13.25f), chart.usualTo)
+        assertEquals("22:00 is the only whole hour from 21:07 to 22:32", listOf(53f), chart.hourMinutes)
     }
 
     @Test
@@ -108,8 +125,8 @@ class InGameBatteryModelTest {
         assertEquals(UsualPace.AsUsual, figures.usual)
         assertNull(figures.chart.usualFrom)
         assertEquals("about 4 h 15: rounded to 15 minutes above an hour", TimeLeft(255, isApproximate = true), figures.left)
-        assertEquals("the line ahead stops at the chart's right edge", 180f, figures.chart.aheadTo!!.minute)
-        assertTrue(figures.chart.aheadTo!!.percent > 0f)
+        assertEquals("the chart runs to empty", ChartPoint(figures.chart.minutes, 0f), figures.chart.aheadTo)
+        assertEquals("40 minutes played and 261 ahead", 301f, figures.chart.minutes)
     }
 
     @Test
@@ -126,7 +143,7 @@ class InGameBatteryModelTest {
 
     @Test
     fun chargingWithAndroidsTimeToFull() {
-        // Mockup 3: "1 h 03 to full", "+40% an hour", "since 21:20".
+        // Mockup 3: "1 h 3 min to full", "+40% an hour", "since 21:20".
         val estimate =
             BatteryEstimate(
                 isCharging = true, drawMicroamps = -draw(40.0), minutesLeft = 63.0, measuredMs = 0, fullChargeMicroampHours = full,
@@ -139,8 +156,9 @@ class InGameBatteryModelTest {
         assertEquals(40, figures.pacePercent)
         assertEquals("no usual pace while charging", UsualPace.None, figures.usual)
         assertEquals(nine + 20 * MINUTE, figures.chargingSinceMillis)
-        assertEquals("a play from 21:20: the window too", nine + 20 * MINUTE, figures.chart.startMillis)
+        assertEquals("a play from 21:20: the chart too", nine + 20 * MINUTE, figures.chart.startMillis)
         assertEquals("full 63 minutes after now (27 minutes in)", ChartPoint(90f, 100f), figures.chart.aheadTo)
+        assertEquals("nothing used while charging", null, figures.usedPercent)
     }
 
     @Test
@@ -176,6 +194,7 @@ class InGameBatteryModelTest {
         assertNull(figures.endsAtMillis)
         assertNull("no pace into a full battery", figures.pacePercent)
         assertNull(figures.chart.aheadTo)
+        assertEquals("17 minutes played: the chart is still an hour wide", MIN_CHART_MINUTES, figures.chart.minutes)
     }
 
     @Test
@@ -198,17 +217,65 @@ class InGameBatteryModelTest {
     }
 
     @Test
-    fun theWindowStartsOnTheTenMinutesBeforeThePlayAndSlidesByAnHourPastTwoHours() {
-        // Mockup 4: a play from 22:47 shows 22:40 to 01:40.
+    fun theChartRunsFromThePlaysStartToEmptyHoweverLong() {
+        // Mockup 4: a play from 22:47.
         val (fromLate, now) = snapshot(nowMinute = 167, levels = listOf(107 to 70, 167 to 12), estimate = discharging(48.0, 15.0))
-        assertEquals(nine + 100 * MINUTE, inGameBatteryOf(fromLate, BatteryReading(12, false), now, false)!!.figures!!.chart.startMillis)
+        assertEquals(nine + 107 * MINUTE, partOf(fromLate, 12, now).chart.startMillis)
 
-        // Two and a half hours into a play from 21:07: the window has moved on an hour, to 22:00.
+        // Two and a half hours into a play from 21:07, and two hours ahead: all of it.
         val (long, later) = snapshot(nowMinute = 157, levels = listOf(7 to 90, 60 to 70, 120 to 50, 157 to 38), estimate = discharging(20.0, 114.0))
-        val chart = inGameBatteryOf(long, BatteryReading(38, false), later, false)!!.figures!!.chart
-        assertEquals(nine + 60 * MINUTE, chart.startMillis)
-        assertEquals("the line before the window starts at its left edge", ChartPoint(0f, 70f), chart.played.first())
-        assertEquals(ChartPoint(97f, 38f), chart.played.last())
+        val chart = partOf(long, 38, later).chart
+        assertEquals(nine + 7 * MINUTE, chart.startMillis)
+        assertEquals(264f, chart.minutes)
+        assertEquals(ChartPoint(0f, 90f), chart.played.first())
+        assertEquals(ChartPoint(150f, 38f), chart.played.last())
+        assertEquals("22:00 to 01:00", listOf(53f, 113f, 173f, 233f), chart.hourMinutes)
+    }
+
+    @Test
+    fun overTwelveHoursAheadTheChartStopsAtTwelveWithNoEndTime() {
+        // A 20 mA draw on 5,000 mAh (0.4% an hour): empty about 145 hours on, some day next week.
+        val (snapshot, now) = snapshot(nowMinute = 30, levels = listOf(0 to 58, 30 to 58), estimate = discharging(0.4, 8_700.0))
+        val figures = partOf(snapshot, 58, now)
+        assertNull("no clock time for an end days away", figures.endsAtMillis)
+        val chart = figures.chart
+        assertEquals(30f + MAX_AHEAD_MINUTES, chart.minutes)
+        assertFalse("the forecast is cut, not ended", chart.aheadEnds)
+        assertEquals(30f + MAX_AHEAD_MINUTES, chart.aheadTo!!.minute)
+        assertEquals(58f - 0.4f * MAX_AHEAD_MINUTES / 60, chart.aheadTo!!.percent, 0.3f)
+
+        // Twelve hours and under: to empty, with its time.
+        val (near, later) = snapshot(nowMinute = 30, levels = listOf(0 to 58, 30 to 58), estimate = discharging(5.0, 690.0))
+        val within = partOf(near, 58, later)
+        assertTrue(within.chart.aheadEnds)
+        assertEquals(0f, within.chart.aheadTo!!.percent)
+        assertTrue(within.endsAtMillis != null)
+    }
+
+    @Test
+    fun aLongChartTicksEverySecondHour() {
+        // 20 hours ahead: every second hour, at most about twelve ticks.
+        val (snapshot, now) = snapshot(nowMinute = 30, levels = listOf(0 to 90, 30 to 89), estimate = discharging(4.0, 1_200.0))
+        val chart = partOf(snapshot, 89, now).chart
+        assertEquals(0f, chart.hourMinutes.first())
+        assertEquals(120f, chart.hourMinutes[1])
+        assertTrue(chart.hourMinutes.size <= MAX_HOUR_TICKS)
+    }
+
+    @Test
+    fun theTicksAreOnTheWholeHoursOfTheLocalClock() {
+        // Five and a half hours ahead of UTC: 21:07 UTC is 02:37 there, so 03:00 is 23 minutes in.
+        val (snapshot, now) = snapshot(nowMinute = 47, levels = listOf(7 to 70, 47 to 61), estimate = discharging(14.0, 261.0))
+        val chart = partOf(snapshot, 61, now, zoneOffset = { 330 * MINUTE.toInt() }).chart
+        assertEquals(listOf(23f, 83f, 143f, 203f, 263f), chart.hourMinutes)
+    }
+
+    @Test
+    fun aChargerInThePlayLeavesOutWhatItUsed() {
+        val (snapshot, now) = snapshot(nowMinute = 47, levels = listOf(7 to 70, 20 to 60, 33 to 66), estimate = discharging(20.0, 100.0))
+        val charged = snapshot.copy(levels = snapshot.levels.mapIndexed { i, point -> if (i == 2) point.copy(isCharging = true) else point })
+        assertNull(partOf(charged, 64, now).usedPercent)
+        assertEquals(6, partOf(snapshot, 64, now).usedPercent)
     }
 
     @Test
@@ -218,7 +285,7 @@ class InGameBatteryModelTest {
         val chart = inGameBatteryOf(snapshot, BatteryReading(18, false), now, false)!!.figures!!.chart
         val all = chart.played + listOfNotNull(chart.aheadTo, chart.usualFrom, chart.usualTo)
         for (point in all) {
-            assertTrue("$point", point.minute in 0f..CHART_MINUTES.toFloat())
+            assertTrue("$point", point.minute in 0f..chart.minutes)
             assertTrue("$point", point.percent in 0f..100f)
         }
     }

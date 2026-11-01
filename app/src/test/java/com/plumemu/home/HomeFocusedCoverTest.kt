@@ -15,6 +15,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
@@ -321,9 +322,17 @@ class HomeFocusedCoverTest {
     private fun titledCells(): Map<Int, Boolean> {
         val rows = snesRows
         return (0 until columns * 2).associateWith { index ->
-            compose.onAllNodes(hasText(rows[index].title) and hasAnyAncestor(hasTestTag(HomeTags.cover(index))), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+            val inCell = hasAnyAncestor(hasTestTag(HomeTags.cover(index))) or hasTestTag(HomeTags.cover(index))
+            // A tile names its game in text; a poster cover (no picture for good) in its content description.
+            compose.onAllNodes((hasText(rows[index].title) or hasContentDescription(rows[index].title)) and inCell, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
     }
+
+    /** The grid cells (of the first two rows) whose cover is a poster. */
+    private fun posterCells(): Set<Int> =
+        (0 until columns * 2).filter { index ->
+            compose.onAllNodes(hasTestTag(HomeTags.POSTER_COVER) and hasAnyAncestor(hasTestTag(HomeTags.cover(index))), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }.toSet()
 
     private fun assertEveryTileTitled(label: String) {
         val untitled = titledCells().filterValues { !it }.keys
@@ -353,6 +362,7 @@ class HomeFocusedCoverTest {
         val absent = titles.filterIndexed { i, _ -> i % 2 == 1 }.toSet()
         show { HomeWithArt(rememberSource { coverArtSource(noArt = noArt, absent = absent) }, gridActions(FakeHomeContent.BOARD_SNES_INDEX, MEGA_MAN_X), gridIds = setOf("snes")) }
         assertEveryTileTitled("no result, or a result without a picture")
+        assertEquals("no picture for good: every one wears a poster", (0 until columns * 2).toSet(), posterCells())
     }
 
     @Test
@@ -365,13 +375,14 @@ class HomeFocusedCoverTest {
 
     @Test
     @Config(qualifiers = WIDE)
-    fun aPictureThatCannotBeReadLeavesItsTitledTile() {
+    fun aPictureThatCannotBeReadBecomesItsPoster() {
         val gone = "/media/${snesRows[DONKEY_KONG_COUNTRY_2].id}/box-front-grid.webp"
         show { HomeWithArt(rememberSource { coverArtSource(unreadable = setOf(gone)) }, gridActions(FakeHomeContent.BOARD_SNES_INDEX, MEGA_MAN_X), gridIds = setOf("snes")) }
         compose.mainClock.advanceTimeBy(SETTLE_MS)
         compose.waitForIdle()
         val titled = titledCells()
-        assertTrue("the unreadable cover keeps its title", titled.getValue(DONKEY_KONG_COUNTRY_2))
+        assertTrue("the unreadable cover keeps its name", titled.getValue(DONKEY_KONG_COUNTRY_2))
+        assertTrue("and wears its poster", DONKEY_KONG_COUNTRY_2 in posterCells())
         val pictures = compose.onAllNodes(hasTestTag(HomeTags.COVER_PICTURE), useUnmergedTree = true).fetchSemanticsNodes()
         assertTrue("the others show their pictures", pictures.size >= columns * 2)
     }
@@ -433,7 +444,9 @@ class HomeFocusedCoverTest {
         val index = EARTHBOUND
         val row = snesRows[index]
         // At Medium, the focus title's 13 sp (Small, the default, sets 11 sp).
-        show(gridSize = GridSize.Medium) { HomeWithArt(rememberSource { coverArtSource(noArt = setOf(row.title)) }, gridActions(FakeHomeContent.BOARD_SNES_INDEX, MEGA_MAN_X), gridIds = setOf("snes")) }
+        // Still decoding: the titled tile stands (a game with no picture for good wears a poster instead).
+        val pending = snesRows.map { "/media/${it.id}/box-front-grid.webp" }.toSet()
+        show(gridSize = GridSize.Medium) { HomeWithArt(rememberSource { coverArtSource(pending = pending) }, gridActions(FakeHomeContent.BOARD_SNES_INDEX, MEGA_MAN_X), gridIds = setOf("snes")) }
         val year = ArtworkFakes.detailsFor(row.title, index).year.toString()
         fun inCell(text: String) = compose.onNode(hasText(text) and hasAnyAncestor(hasTestTag(HomeTags.cover(index))), useUnmergedTree = true).getUnclippedBoundsInRoot()
         val cell = cell(index)

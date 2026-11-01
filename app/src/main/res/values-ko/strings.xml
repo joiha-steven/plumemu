@@ -39,6 +39,9 @@
     <string name="home_hint_add_folder">폴더 추가</string>
     <!-- Hint bar label beside START: opens Settings. -->
     <string name="home_hint_settings">설정</string>
+    <string name="home_hint_update">업데이트</string>
+    <string name="home_update_pill">업데이트 %1$s</string>
+    <string name="home_whatsnew_title">%1$s의 새로운 기능</string>
     <!-- Hint bar label: a verb, start the game. -->
     <string name="home_hint_play">플레이</string>
     <!-- Hint bar label: a verb, open the focused entry or app. -->
@@ -93,6 +96,7 @@
     <string name="keyboard_shift">Shift</string>
     <string name="keyboard_delete">삭제</string>
     <string name="keyboard_hide">키보드 숨기기</string>
+    <string name="keyboard_paste">붙여넣기</string>
 
     <!-- Main screen, details column (only with box art). %1$s and %2$s are two facts joined:
          a year and a publisher ("1994 · Nintendo"), or a genre and a player count. The games list's
@@ -203,7 +207,7 @@
         <item quantity="other">그 외 %1$s개</item>
     </plurals>
     <string name="setup_stats_title">익명 사용 통계 보내기</string>
-    <!-- The short form of settings_usage_statistics_body (Settings › Advanced › Send usage statistics): the whole text does not fit the Ready step at 768 x 432 (TextSizeScreens*Test). -->
+    <!-- The short form of settings_usage_statistics_body (Settings › About › Send usage statistics): the whole text does not fit the Ready step at 768 x 432 (TextSizeScreens*Test). -->
     <string name="setup_stats_body">익명 집계와 오류 보고만 보내요. 게임, 검색어, 계정은 보내지 않아요. 끄면 한 번만 알리고 더는 보내지 않아요.</string>
     <string name="setup_one_hand_title">오른쪽 두 번 눌러 플레이</string>
     <string name="setup_one_hand_body">위아래로 게임을 고르세요. A 버튼도 그대로 쓸 수 있어요. 설정 › 조작에서 바꿀 수 있어요.</string>
@@ -318,7 +322,7 @@
     <string name="game_fix_box_art_waiting">아직 저장하고 있어요. 백그라운드에서 받는 박스 아트를 먼저 처리하면 1분 정도 걸릴 수 있어요.</string>
     <string name="game_fix_box_art_daily_limit">ScreenScraper의 하루 한도에 도달했어요. %1$s 이후에 다시 시도하세요.</string>
     <string name="game_fix_box_art_server_closed">지금은 ScreenScraper를 이용할 수 없어요. %1$s 이후에 다시 시도하세요.</string>
-    <string name="game_fix_box_art_sign_in_again">ScreenScraper에서 비밀번호를 거부했어요. 설정 › 라이브러리 › ScreenScraper에서 다시 로그인하세요.</string>
+    <string name="game_fix_box_art_sign_in_again">ScreenScraper에서 비밀번호를 거부했어요. 설정 › 계정 › ScreenScraper에서 다시 로그인하세요.</string>
     <string name="game_fix_box_art_offline">인터넷에 연결되어 있지 않아요. Wi-Fi를 확인한 다음 다시 시도하세요.</string>
     <string name="game_fix_box_art_no_wifi">Wi-Fi에 연결되어 있지 않아요. 박스 아트는 Wi-Fi에서만 찾아요.</string>
     <string name="game_fix_box_art_server_error">ScreenScraper가 응답하지 못했어요(코드 %1$s). 나중에 다시 시도하세요.</string>
@@ -453,8 +457,8 @@
     <string name="game_app_kind_later_body">Plumemu가 설치된 앱을 다시 읽을 때 적용됩니다.</string>
     <string name="game_rename_box_art_title">이름은 저장했지만 박스 아트는 찾지 않았어요</string>
     <string name="game_rename_box_art_no_wifi">Wi-Fi에 연결되어 있지 않아요.</string>
-    <string name="game_rename_box_art_sign_in">설정 › 라이브러리 › ScreenScraper에서 로그인하세요.</string>
-    <string name="game_rename_box_art_paused">박스 아트 다운로드가 일시중지되어 있어요. 설정 › 라이브러리 › ScreenScraper에서 다시 시작하세요.</string>
+    <string name="game_rename_box_art_sign_in">설정 › 계정 › ScreenScraper에서 로그인하세요.</string>
+    <string name="game_rename_box_art_paused">박스 아트 다운로드가 일시중지되어 있어요. 설정 › 계정 › ScreenScraper에서 다시 시작하세요.</string>
     <string name="game_rename_box_art_daily_limit">ScreenScraper의 하루 한도에 도달했어요. %1$s 이후에 다시 시도하세요.</string>
     <string name="game_rename_box_art_server_closed">%1$s까지 ScreenScraper를 이용할 수 없어요.</string>
     <string name="game_error_internal_title">게임을 시작할 수 없어요</string>
@@ -501,6 +505,7 @@
     <string name="settings_section_advanced">고급</string>
     <string name="settings_section_statistics">통계</string>
     <string name="settings_section_about">정보</string>
+    <string name="settings_section_second_screen">보조 화면</string>
     <string name="settings_hint_select">선택</string>
     <string name="settings_hint_close">닫기</string>
     <!-- Hint bar label beside Left/Right: step the value to the previous or next choice. -->
@@ -515,9 +520,7 @@
     <string name="settings_hint_choose">선택</string>
     <!-- Narrow screens: opens the focused option's explanation as a further stop (the right button). -->
     <string name="settings_hint_more">설명</string>
-    <!-- Option values: "‹ Light ›" steps left and right; "Graphite »" opens a panel (design/rules.md › Settings: the double mark, a no-break space before it, is never the single › of the Right key). -->
-    <string name="settings_value_choice">‹ %1$s ›</string>
-    <string name="settings_value_opens">%1$s&#160;»</string>
+    <!-- Option values: words only; the chevrons and check beside them are drawn (SettingsValueIcons.kt). -->
     <string name="settings_switch_on">켜짐</string>
     <string name="settings_switch_off">꺼짐</string>
 
@@ -631,6 +634,7 @@
     <string name="settings_hint_hide">숨기기</string>
     <!-- Hint bar label: a verb, show the focused system again. -->
     <string name="settings_hint_show">표시</string>
+    <string name="settings_hint_go_to">이동</string>
     <!-- %1$s is the number of hidden games, already formatted for the locale. -->
     <string name="settings_hidden_games">숨긴 게임(%1$s)</string>
     <string name="settings_hidden_games_title">숨긴 게임</string>
@@ -644,8 +648,8 @@
     <string name="settings_name_fix_failed">이름을 저장하지 못했어요. 아무것도 바뀌지 않았어요.</string>
     <string name="settings_name_fix_game_gone">그 게임은 더 이상 라이브러리에 없어요.</string>
     <string name="settings_rename_box_art_no_wifi">이름은 저장했지만 박스 아트는 찾지 않았어요. Wi-Fi에 연결되어 있지 않아요.</string>
-    <string name="settings_rename_box_art_sign_in">이름은 저장했지만 박스 아트는 찾지 않았어요. 설정 › 라이브러리 › ScreenScraper에서 로그인하세요.</string>
-    <string name="settings_rename_box_art_paused">이름은 저장했지만 박스 아트는 찾지 않았어요. 박스 아트 다운로드가 일시중지되어 있어요. 설정 › 라이브러리 › ScreenScraper에서 다시 시작하세요.</string>
+    <string name="settings_rename_box_art_sign_in">이름은 저장했지만 박스 아트는 찾지 않았어요. 설정 › 계정 › ScreenScraper에서 로그인하세요.</string>
+    <string name="settings_rename_box_art_paused">이름은 저장했지만 박스 아트는 찾지 않았어요. 박스 아트 다운로드가 일시중지되어 있어요. 설정 › 계정 › ScreenScraper에서 다시 시작하세요.</string>
     <string name="settings_rename_box_art_daily_limit">이름은 저장했지만 박스 아트는 찾지 않았어요. ScreenScraper의 하루 한도에 도달했어요. 나중에 다시 시도하세요.</string>
     <string name="settings_rename_box_art_server_closed">이름은 저장했지만 박스 아트는 찾지 않았어요. 지금은 ScreenScraper를 이용할 수 없어요.</string>
     <string name="settings_titles_unreadable">%1$s의 이름 목록을 읽지 못했어요. 나중에 다시 시도하세요.</string>
@@ -688,6 +692,8 @@
     <string name="settings_show_apps_body">기기의 모든 Android 앱을 즐겨찾기 바로 아래 ‘앱’에 보여 줘요. 끄면 ‘앱’ 항목이 표시되지 않아요.</string>
     <string name="settings_clock">시계 표시</string>
     <string name="settings_clock_body">화면 오른쪽 위에 시간을 표시해요.</string>
+    <string name="settings_edge_fade">목록 가장자리 흐리게</string>
+    <string name="settings_edge_fade_body">홈 화면의 목록과 격자는 더 스크롤할 내용이 있을 때 위아래 가장자리가 흐려져요. 끄면 가장자리가 반듯하게 끝나요.</string>
     <!-- The band over a system's games list ("Nintendo · Home console · 1990–2003". -->
     <string name="system_kind_console">가정용 게임기</string>
     <string name="system_kind_handheld">휴대용 게임기</string>
@@ -787,20 +793,24 @@
     <string name="second_screen_charging">충전 중 · %1$s</string>
     <!-- The in-game card's battery part. The time left is drawn in two sizes: the numbers
          (the placeholders of the durations) large, every other character small. A duration fills %1$s of
-         the sentences below: "45 min left", "4 h 30 min left", "1 h 03 to full", "About 45 min left".
+         the sentences below: "45 min left", "4 h 30 min left", "1 h 3 min to full", "About 45 min left".
          The numbers are formatted for the locale; keep each placeholder exactly once. -->
     <string name="in_game_battery_duration_minutes">%1$s분</string>
     <string name="in_game_battery_duration_hours">%1$s시간</string>
     <string name="in_game_battery_duration_hours_minutes">%1$s시간 %2$s분</string>
-    <!-- Android's exact time to full: hours, then the minutes as two digits ("1 h 03"). -->
-    <string name="in_game_battery_duration_clock">%1$s시간 %2$s분</string>
     <string name="in_game_battery_left">%1$s 남음</string>
     <string name="in_game_battery_left_about">약 %1$s 남음</string>
     <string name="in_game_battery_to_full">완충까지 %1$s</string>
     <string name="in_game_battery_to_full_about">완충까지 약 %1$s</string>
     <!-- %1$s is a time of day as Android formats it: "22:35", "10:35 PM". -->
-    <string name="in_game_battery_empty_at">%1$s에 방전 예상</string>
     <string name="in_game_battery_full_at">%1$s에 완충 예상</string>
+    <string name="in_game_battery_empty_at_about">%1$s쯤 방전</string>
+    <string name="in_game_battery_full_at_about">%1$s쯤 완충</string>
+    <string name="in_game_battery_started">시작 %1$s</string>
+    <string name="in_game_battery_empty_label">방전 %1$s</string>
+    <string name="in_game_battery_full_label">완충 %1$s</string>
+    <string name="in_game_battery_played">플레이 %1$s</string>
+    <string name="in_game_battery_used">사용 %1$s</string>
     <!-- The chart's key. %1$s is a percentage: "48%". -->
     <string name="in_game_battery_pace">시간당 %1$s</string>
     <string name="in_game_battery_charging_pace">시간당 +%1$s</string>
@@ -809,7 +819,7 @@
     <!-- %1$s is the time of day charging was first seen. -->
     <string name="in_game_battery_charging_since">%1$s부터</string>
     <string name="in_game_battery_measuring">배터리 사용량 측정 중…</string>
-    <!-- Shown once for a minute the first time the in-game card shows; also ends Settings › Home screen › In game's text. -->
+    <!-- Shown once for a minute the first time the in-game card shows; also ends Settings › Second screen › In game's text. -->
     <string name="in_game_drift_note">화면을 보호하기 위해 1분마다 조금씩 움직여요</string>
     <!-- The picking line of a game measured before: "2 h on this charge · 30% an hour"; charging: the pace only. %1$s is a duration or a percentage. The pace's spaces do not break, so "an hour" never wraps alone. -->
     <string name="battery_line_on_charge">남은 배터리로 %1$s</string>
@@ -824,7 +834,7 @@
     <!-- Read out for the battery glyph; %1$s is the level ("62%"). -->
     <string name="battery_line_level">배터리 %1$s</string>
     <string name="second_screen_setup_question">Plumemu가 여기에 지금 고른 게임을 보여 줄 수 있어요.</string>
-    <string name="settings_second_screen">보조 화면</string>
+    <string name="settings_second_screen">보조 화면 사용</string>
     <string name="settings_second_screen_body">지금 고른 게임을 보여 줘요. 플레이하는 데 꼭 필요하지는 않아요.</string>
     <string name="settings_second_screen_in_game">게임 중</string>
     <string name="settings_second_screen_in_game_body">게임 중에 보조 화면에 표시할 내용이에요. 두 화면을 쓰는 에뮬레이터는 보조 화면을 알아서 사용해요. 화면을 보호하기 위해 카드가 1분마다 조금씩 움직여요.</string>
@@ -950,7 +960,7 @@
     <string name="settings_text_size_body">Plumemu의 모든 글자 크기를 바꿔요. Android의 글꼴 크기 설정도 함께 적용돼요.</string>
     <string name="settings_text_weight_body">Plumemu의 모든 글자 굵기를 바꿔요.</string>
     <string name="settings_left_edge_body">게임 목록을 보고 있을 때 왼쪽 가장자리의 좁은 띠에 표시할 내용: 기종별 게임 수, 기종별 짧은 코드, 또는 현재 목록의 글자.</string>
-    <string name="settings_grid_size_body">그리드 보기에서 박스 아트의 크기예요. 모든 기종과 최근 플레이, 즐겨찾기에 적용돼요. ‘작게’는 한 번에 가장 많은 게임을, ‘크게’는 가장 적은 게임을 보여 줘요.</string>
+    <string name="settings_grid_size_body">그리드 보기에서 커버의 크기예요. 모든 기종과 최근 플레이, 즐겨찾기에 적용돼요. ‘작게’는 한 번에 가장 많은 게임을, ‘크게’는 가장 적은 게임을 보여 줘요.</string>
     <!-- Sample lines in the colour and font panels (the board's). -->
 
     <!-- Advanced (includes the confirm-button option) -->
@@ -1102,7 +1112,6 @@
 
     <!-- About -->
     <!-- Settings › Statistics: play statistics kept on this device, not the Send usage statistics switch of Advanced. -->
-    <string name="settings_statistics_body">이 기기에 저장된 플레이 통계예요. 플레이 시간, 가장 많이 플레이한 게임과 기종, 라이브러리에서 박스 아트가 있는 비율을 보여 줘요. Plumemu에 이미 저장된 정보로 계산하며, 어디에도 보내지 않아요.</string>
     <string name="settings_statistics_total">총 플레이 시간</string>
     <!-- Second screen's statistics card: the total's label line with this week's play time; %1$s is a play time such as "2 h 10 min". The card drops the part after the dot when the line does not fit. -->
     <string name="second_screen_total_week">총 플레이 시간 · 이번 주 %1$s</string>
@@ -1110,37 +1119,47 @@
     <string name="second_screen_total_week_none">총 플레이 시간 · 이번 주 기록 없음</string>
     <!-- The same line when this week's play time is under a minute. -->
     <string name="second_screen_total_week_under_a_minute">총 플레이 시간 · 이번 주 1분 미만</string>
-    <!-- Settings › Statistics' row for this week's play time. -->
+    <!-- Settings › Statistics' tile for this week's play time. -->
     <string name="settings_statistics_this_week">이번 주</string>
-    <!-- That row's value when sessions exist but none fall in this week. -->
-    <string name="settings_statistics_this_week_none">아직 없음</string>
     <!-- A play time under one minute, where "0 min" would read as nothing. -->
     <string name="settings_statistics_under_a_minute">1분 미만</string>
-    <!-- Small heading over the three most-played games in Settings › Statistics. -->
+    <!-- Settings › Statistics: small headings over the five most-played games and the five most-played systems. -->
     <string name="settings_statistics_most_played">가장 많이 플레이한 게임</string>
-    <!-- Side panel of a most-played game in Settings › Statistics: the label of its figures and the line that says A starts it ("A to play"; %1$s is the confirm button's letter). -->
-    <string name="settings_statistics_times_played">플레이 횟수</string>
-    <string name="settings_statistics_play_hint">%1$s 버튼으로 플레이</string>
+    <string name="settings_statistics_systems">시스템</string>
+    <!-- Settings › Statistics' tile: the share of games that have box art, as a percentage. -->
+    <string name="settings_statistics_with_box_art">박스 아트 있음</string>
+    <!-- Settings › Statistics' last line: these figures stay on the device, unlike Advanced › Send usage statistics. -->
+    <string name="settings_statistics_kept_here">이 휴대용 게임기에만 저장돼요</string>
+    <!-- Statistics, under the total play time. %1$s is a number already formatted for the locale. -->
+    <plurals name="settings_statistics_across_games">
+        <item quantity="other">게임 %1$s개에서</item>
+    </plurals>
+    <!-- Statistics, under a system's name. %1$s is a percentage already formatted for the locale ("85%"). -->
+    <string name="settings_statistics_share_of_play">플레이 시간의 %1$s</string>
+    <!-- Settings › Statistics when nothing was played yet: the one line in place of the figures. -->
+    <string name="settings_statistics_play_invite">게임을 플레이하면 여기에 시간이 표시돼요</string>
     <string name="settings_statistics_top_system">가장 많이 플레이한 기종</string>
     <string name="settings_statistics_played">플레이한 게임</string>
     <string name="settings_statistics_box_art">박스 아트가 있는 게임</string>
     <!-- "38 of 412": games played, or games with box art, out of the games in the library; numbers formatted for the locale. -->
     <string name="settings_statistics_count_of">%2$s개 중 %1$s개</string>
     <string name="settings_statistics_nothing_played">아직 플레이한 게임이 없어요</string>
-    <string name="settings_statistics_nothing_played_detail">첫 게임을 플레이하면 여기에 플레이 시간이 표시돼요.</string>
     <string name="settings_statistics_no_games">라이브러리에 아직 게임이 없어요</string>
     <string name="settings_statistics_unreadable">플레이 통계를 불러오지 못했어요</string>
     <string name="settings_statistics_unreadable_detail">설정을 닫았다가 다시 열어 보세요.</string>
     <string name="settings_version">버전</string>
     <string name="settings_version_line">버전 %1$s</string>
-    <!-- Settings › Advanced › Language (docs/conventions/translation.md › Choosing a language). -->
+    <string name="settings_platform_data">플랫폼 데이터</string>
+    <string name="settings_platform_data_value">버전 %1$d · %2$s</string>
+    <string name="settings_platform_data_body">Plumemu가 아는 기종과 에뮬레이터 목록이에요. 앱에 들어 있어요. Plumemu가 업데이트를 확인할 때 같은 서버에서 더 새로운 목록도 내려받고, 다음에 시작할 때부터 사용해요.</string>
+    <!-- Settings › Appearance › Language (docs/conventions/translation.md › Choosing a language). -->
     <string name="settings_language">언어</string>
     <!-- The first choice: follow the language Android is set to. -->
     <string name="settings_language_system">시스템 기본값</string>
     <string name="settings_language_body">Plumemu 화면의 언어예요. A를 눌러 고르세요. 각 언어는 자기 이름으로 표시돼요. 시스템 기본값은 Android의 언어를 따라요. 게임 제목과 기기 이름은 그대로예요.</string>
     <!-- The name of THIS FILE'S language, written in that language: Spanish writes its name in Spanish,
          Japanese in Japanese (the list is in docs/conventions/translation.md › Languages). It is how the
-         language is listed in Settings › Advanced › Language, whatever language the screen is in. Not a
+         language is listed in Settings › Appearance › Language, whatever language the screen is in. Not a
          translation of the word "English". -->
     <string name="language_name">한국어</string>
     <string name="settings_about_body">레트로 휴대용 게임기를 위한 가벼운 런처예요. 계정이 필요 없어요.</string>
@@ -1171,7 +1190,7 @@
     <string name="report_error_refused">서버에서 이 신고를 받지 않았어요. 이메일 주소를 확인하세요. 입력한 내용은 남아 있으니 다시 시도할 수 있어요.</string>
     <string name="report_error_unavailable">이 빌드에서는 신고를 보낼 수 없어요. ‘로그 내보내기’로 파일을 직접 보내 주세요.</string>
     <string name="report_error_not_saved">이 기기에 신고를 저장하지 못했어요.</string>
-    <string name="settings_privacy_body">라이브러리, 설정, 플레이 시간은 이 기기의 Plumemu 전용 저장공간에만 있고, 밖으로 보내지 않아요. 직접 켠 경우에만(설정 › 고급 › 사용 통계 보내기) Plumemu는 개발자에게 익명 사용 집계와 오류 보고를 보내요. 국가, 기기 모델, Android 버전과 앱 버전, 사용하는 화면과 설정, 기종별 플레이 시간이 포함돼요. 게임 제목, 검색어, ScreenScraper 계정은 보내지 않아요. 오류 보고에는 파일 경로가 들어 있을 수 있어요. 끄면 익명으로 “꺼짐” 집계를 한 번 보내고, 그 뒤로는 아무것도 보내지 않아요. 문제 신고는 ‘문제 신고’에서 ‘보내기’를 눌렀을 때만 보내며, 첨부하기로 고른 로그와 그 안의 파일 경로가 포함될 수 있어요. 보낸 정보는 기한 없이 보관해요. Plumemu는 하루에 한 번 Wi-Fi에서 plumemu-app.stevensdesk.com에 새 버전이 있는지 확인해요. 이 서버를 호스팅하는 Cloudflare는 IP 주소를 볼 수 있어요. 위의 ‘매일 업데이트 확인’에서 끌 수 있어요. ScreenScraper 계정을 쓰면 박스 아트를 찾기 위해 Plumemu가 ScreenScraper에 게임마다 파일 이름, 크기, 체크섬을 보내고, 이것으로 찾지 못하면 제목도 보내요.</string>
+    <string name="settings_privacy_body">라이브러리, 설정, 플레이 시간은 이 기기의 Plumemu 전용 저장공간에만 있고, 밖으로 보내지 않아요. 직접 켠 경우에만(설정 › 정보 › 사용 통계 보내기) Plumemu는 개발자에게 익명 사용 집계와 오류 보고를 보내요. 국가, 기기 모델, Android 버전과 앱 버전, 사용하는 화면과 설정, 기종별 플레이 시간이 포함돼요. 게임 제목, 검색어, ScreenScraper 계정은 보내지 않아요. 오류 보고에는 파일 경로가 들어 있을 수 있어요. 끄면 익명으로 “꺼짐” 집계를 한 번 보내고, 그 뒤로는 아무것도 보내지 않아요. 문제 신고는 ‘문제 신고’에서 ‘보내기’를 눌렀을 때만 보내며, 첨부하기로 고른 로그와 그 안의 파일 경로가 포함될 수 있어요. 보낸 정보는 기한 없이 보관해요. Plumemu는 하루에 한 번 Wi-Fi에서 plumemu-app.stevensdesk.com에 새 버전이 있는지 확인해요. 이 서버를 호스팅하는 Cloudflare는 IP 주소를 볼 수 있어요. 위의 ‘매일 업데이트 확인’에서 끌 수 있어요. 같은 매일 확인에서 같은 서버로부터 최신 플랫폼 데이터(기종과 에뮬레이터 목록)도 내려받아요. 그 밖에는 아무것도 보내지 않아요. ScreenScraper 계정을 쓰면 박스 아트를 찾기 위해 Plumemu가 ScreenScraper에 게임마다 파일 이름, 크기, 체크섬을 보내고, 이것으로 찾지 못하면 제목도 보내요. RetroAchievements 계정을 쓰면 Plumemu가 retroachievements.org에 사용자 이름, 키, 게임마다 RetroAchievements 번호를 보내요. 게임 정보를 열 때, 플레이한 뒤, 그리고 Wi-Fi에서 하루에 한 번이에요. 배지 그림은 media.retroachievements.org에서 받아요. 키는 이 기기에 암호화해 저장하고 백업이나 로그에는 절대 넣지 않아요. 로그아웃하면 보내지 않아요.</string>
     <!-- Updates -->
     <string name="settings_update_available">업데이트 있음</string>
     <string name="settings_update_value_downloading">다운로드 중…</string>
@@ -1179,7 +1198,7 @@
     <string name="settings_check_updates">업데이트 확인</string>
     <string name="settings_check_updates_body">Plumemu 업데이트 서버에 새 버전이 있는지 지금 확인해요. 모바일 데이터를 쓰는 중이면 업데이트를 받기 전에 물어봐요.</string>
     <string name="settings_check_updates_daily">매일 업데이트 확인</string>
-    <string name="settings_check_updates_daily_body">하루에 한 번 Wi-Fi에서 Plumemu로 돌아올 때 plumemu-app.stevensdesk.com에 새 버전이 있는지 확인해요. 이 서버를 호스팅하는 Cloudflare는 기기의 IP 주소를 볼 수 있어요. 그 밖에는 아무것도 보내지 않아요. 업데이트는 ‘업데이트’를 선택해야만 설치돼요.</string>
+    <string name="settings_check_updates_daily_body">하루에 한 번 Wi-Fi에서 Plumemu로 돌아올 때 plumemu-app.stevensdesk.com에 새 버전이 있는지 확인해요. 이 서버를 호스팅하는 Cloudflare는 기기의 IP 주소를 볼 수 있어요. 같은 확인에서 같은 서버로부터 최신 플랫폼 데이터(기종과 에뮬레이터 목록)도 내려받아요. 그 밖에는 아무것도 보내지 않아요. 업데이트는 ‘업데이트’를 선택해야만 설치돼요.</string>
     <string name="settings_check_updates_checking">확인 중…</string>
     <string name="settings_check_updates_value">%1$s · %2$s</string>
     <string name="settings_check_updates_value_up_to_date">최신 버전</string>
@@ -1199,7 +1218,11 @@
     <string name="settings_check_updates_timeout">업데이트 서버가 제때 응답하지 않았어요. 나중에 다시 시도하세요.</string>
     <string name="settings_check_updates_http">업데이트 서버에 문제가 있어요. 나중에 다시 시도하세요.</string>
     <string name="settings_check_updates_bad_manifest">업데이트 서버에서 Plumemu가 읽을 수 없는 응답을 보냈어요. 나중에 다시 시도하세요.</string>
-    <string name="settings_update_title">Plumemu %1$s</string>
+    <string name="settings_update_title">Plumemu %1$s → %2$s</string>
+    <string name="settings_update_notes_new">새 기능</string>
+    <string name="settings_update_notes_improved">개선</string>
+    <string name="settings_update_notes_fixed">수정</string>
+    <string name="settings_update_notes_known">알려진 문제</string>
     <string name="settings_update_facts">%1$s 출시 · %2$s</string>
     <string name="settings_update_button">업데이트</string>
     <string name="settings_update_download_anyway">모바일 데이터로 다운로드</string>
@@ -1227,11 +1250,11 @@
 
     <!-- ScreenScraper account: setup's box art step and Settings › Library. -->
     <string name="setup_box_art_title">ScreenScraper 박스 아트</string>
-    <string name="setup_box_art_desc">박스 아트와 게임 정보는 ScreenScraper에서 가져오며, screenscraper.fr의 무료 개인 계정이 필요해요. 나중에 설정 › 라이브러리 › ScreenScraper에서 로그인해도 돼요.</string>
+    <string name="setup_box_art_desc">박스 아트와 게임 정보는 ScreenScraper에서 가져오며, screenscraper.fr의 무료 개인 계정이 필요해요. 나중에 설정 › 계정 › ScreenScraper에서 로그인해도 돼요.</string>
     <string name="setup_box_art_skip">건너뛰기</string>
     <!-- The question before the sign-in form. -->
     <string name="setup_box_art_question_title">ScreenScraper에서 박스 아트를 가져올까요?</string>
-    <string name="setup_box_art_question_desc">박스 아트를 받으려면 screenscraper.fr의 무료 계정이 필요해요. 나중에 설정 › 라이브러리 › ScreenScraper에서 설정해도 돼요.</string>
+    <string name="setup_box_art_question_desc">박스 아트를 받으려면 screenscraper.fr의 무료 계정이 필요해요. 나중에 설정 › 계정 › ScreenScraper에서 설정해도 돼요.</string>
     <string name="setup_box_art_use">내 계정 사용</string>
     <string name="setup_box_art_not_now">나중에</string>
     <string name="setup_ready_box_art">박스 아트: 백그라운드에서 다운로드 중</string>
@@ -1258,15 +1281,16 @@
     <string name="account_error_not_saved">계정을 저장하지 못했어요. 다시 시도하세요.</string>
     <string name="account_error_not_available">이 빌드에서는 박스 아트를 쓸 수 없어요.</string>
     <string name="settings_account_title">ScreenScraper</string>
-    <!-- The ScreenScraper row's value while signed out: "Sign in »". -->
+    <!-- The ScreenScraper row's value while signed out: "Sign in" (the chevron is drawn). -->
     <string name="settings_account_value_sign_in">로그인</string>
+    <string name="settings_account_value_signed_in">로그인됨</string>
     <string name="settings_account_body">박스 아트와 게임 정보는 ScreenScraper에서 가져오며, screenscraper.fr의 무료 개인 계정이 필요해요. 비밀번호는 이 기기에 암호화되어 저장돼요.</string>
     <string name="settings_account_sign_out">로그아웃</string>
     <string name="settings_account_sign_in_again">다시 로그인</string>
     <string name="settings_account_sign_out_failed">로그아웃하지 못했어요. 다시 시도하세요.</string>
     <!-- Sign out's confirm: what happens to box art. -->
     <string name="settings_sign_out_confirm_title">ScreenScraper에서 로그아웃할까요?</string>
-    <string name="settings_sign_out_confirm_body">박스 아트와 그리드가 보이지 않고 다운로드도 멈춰요. 이미 저장한 이미지는 이 기기에 남고, 다시 로그인하면 나타나요.</string>
+    <string name="settings_sign_out_confirm_body">박스 아트가 보이지 않고 다운로드도 멈춰요. 이미 저장한 이미지는 이 기기에 남고, 다시 로그인하면 나타나요.</string>
     <string name="settings_account_not_available">박스 아트: 이 빌드에서 사용 불가</string>
     <string name="settings_account_not_available_body">ScreenScraper에 접근하지 않도록 만든 Plumemu 빌드라서 박스 아트와 게임 정보가 표시되지 않아요. 다른 기능은 모두 쓸 수 있어요.</string>
     <string name="settings_account_refused">비밀번호 오류: 다시 로그인하세요</string>
@@ -1302,7 +1326,6 @@
     <string name="settings_box_art_short_server_closed">이용 불가</string>
     <string name="settings_box_art_short_battery">배터리 부족</string>
     <string name="settings_box_art_short_offline">연결 안 됨</string>
-    <string name="settings_box_art_short_done">완료</string>
     <string name="settings_box_art_download_missing">없는 박스 아트 받기</string>
     <string name="settings_box_art_redownload_all">모두 다시 받기</string>
     <string name="settings_box_art_redownload">다시 받기</string>
@@ -1337,8 +1360,9 @@
         <item quantity="other">기종 %1$s개에 속한 게임의 박스 아트를 다시 받을까요? 직접 고른 박스 아트는 그대로 남아요.</item>
     </plurals>
     <string name="settings_box_art_region">박스 아트 지역</string>
+    <string name="settings_box_art_region_value">박스 아트 지역: %1$s</string>
     <string name="settings_box_art_region_body">게임에 출시 지역의 박스 아트가 없을 때 어느 지역의 박스 아트를 보여 줄지 정해요.</string>
-    <!-- Region names for box art (Settings › Library › Box art region). -->
+    <!-- Region names for box art (Settings › Accounts › ScreenScraper › Box art region). -->
     <string name="settings_region_usa">북미</string>
     <string name="settings_region_europe">유럽</string>
     <string name="settings_region_japan">일본</string>
@@ -1374,6 +1398,29 @@
     <string name="home_notice_unknown_folder">알 수 없는 폴더: %1$s</string>
     <string name="home_notice_unknown_where">설정 › 라이브러리</string>
 
+    <!-- Settings › Accounts › RetroAchievements -->
+    <string name="settings_section_accounts">계정</string>
+    <string name="settings_ra_title">RetroAchievements</string>
+    <string name="settings_ra_value_refused">다시 로그인</string>
+    <string name="settings_ra_refused">RetroAchievements가 키를 받아들이지 않았습니다. 사이트에서 키가 초기화되었을 수 있습니다. 새 키로 다시 로그인하세요.</string>
+    <string name="settings_ra_help_where">업적은 본인 계정으로 retroachievements.org에서 가져옵니다. Plumemu는 진행 상황만 보여 주고, 업적 해제는 에뮬레이터가 합니다.</string>
+    <string name="settings_ra_help_key">Web API 키: retroachievements.org에서 Settings, Keys 순서로 열어 여기에 복사하세요. 비밀번호는 절대 입력하지 마세요. 키는 이 기기에 암호화되어 저장됩니다.</string>
+    <string name="settings_ra_open_key_page">키 페이지 열기</string>
+    <string name="settings_ra_no_browser">retroachievements.org/settings를 열 수 있는 브라우저가 없습니다. 다른 기기에서 열어 키를 여기에 입력하세요.</string>
+    <string name="settings_ra_privacy">사용자 이름, 키, 게임의 RA 번호가 retroachievements.org로 전송됩니다.</string>
+    <string name="account_ra_username_hint">RetroAchievements 사용자 이름</string>
+    <string name="account_ra_key">Web API 키</string>
+    <string name="account_ra_key_hint">Web API 키</string>
+    <string name="account_ra_checking">RetroAchievements에서 계정을 확인하는 중…</string>
+    <string name="account_ra_error_missing">사용자 이름과 Web API 키를 입력하세요.</string>
+    <string name="account_ra_error_wrong">RetroAchievements가 그 키를 받아들이지 않았습니다. Settings › Keys에서 Web API 키를 다시 복사하세요.</string>
+    <string name="account_ra_error_unknown_user">RetroAchievements에 그 사용자 이름이 없습니다.</string>
+    <string name="account_ra_error_busy">RetroAchievements가 응답하지 못했습니다. 나중에 다시 시도하세요.</string>
+    <string name="account_ra_error_rate_limited">RetroAchievements가 Plumemu에 속도를 늦추라고 요청했습니다. 몇 분 뒤에 다시 시도하세요.</string>
+    <plurals name="settings_ra_signed_in">
+        <item quantity="other">%1$s 님으로 로그인됨 · %2$s 포인트</item>
+    </plurals>
+
     <!-- Variant words: what tells two rows of one title apart (Rev 1, English translation) -->
     <string name="variant_revision">Rev %1$s</string>
     <string name="variant_beta">베타</string>
@@ -1393,4 +1440,26 @@
     <string name="game_info_genre">장르</string>
     <string name="game_info_players">플레이어 수</string>
     <string name="game_info_description">설명</string>
+    <!-- RetroAchievements on Info, the main screen's trophy and the after-game line. -->
+    <string name="achievements_summary">업적 %2$d개 중 %1$d개 · %3$d%%</string>
+    <string name="achievements_hardcore">하드코어 %2$d개 중 %1$d개</string>
+    <string name="achievements_loading">업적: 불러오는 중…</string>
+    <string name="achievements_no_set">업적: 이 게임에는 없음</string>
+    <string name="achievements_cannot_hash">업적: 이 파일 형식은 확인할 수 없음</string>
+    <string name="achievements_matched_by_name">이름으로 일치</string>
+    <string name="achievements_error_wrong_key">업적: RetroAchievements가 키를 받아들이지 않았습니다. 설정에서 다시 로그인하세요.</string>
+    <string name="achievements_error_no_connection">업적: RetroAchievements에 연결되지 않음</string>
+    <string name="achievements_error_busy">업적: RetroAchievements가 응답하지 않음</string>
+    <string name="achievements_error_rate_limited">업적: RetroAchievements가 기다려 달라고 했습니다. 나중에 다시 시도하세요.</string>
+    <string name="achievements_error_bad_answer">업적: Plumemu가 읽을 수 없는 응답을 RetroAchievements가 보냈습니다</string>
+    <string name="achievements_error_unavailable">업적: 지금은 이 게임의 파일을 읽을 수 없음</string>
+    <plurals name="achievement_points">
+        <item quantity="other">%1$d점</item>
+    </plurals>
+    <string name="achievement_earned">%1$s · 달성 %2$s</string>
+    <string name="achievement_earned_hardcore">%1$s · 달성 %2$s · 하드코어</string>
+    <plurals name="home_notice_achievements">
+        <item quantity="other">+업적 %1$s개</item>
+    </plurals>
+    <string name="achievement_mastered">마스터함</string>
 </resources>

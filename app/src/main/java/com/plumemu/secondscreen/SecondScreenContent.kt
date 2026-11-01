@@ -2,8 +2,10 @@ package com.plumemu.secondscreen
 
 import androidx.compose.runtime.Immutable
 import com.plumemu.battery.BatteryPace
+import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.coreui.theme.SecondScreenDimens
 import com.plumemu.game.EmulatorToStart
+import com.plumemu.graph.AchievementCount
 import com.plumemu.home.ArtPicture
 import com.plumemu.home.GameDetails
 import com.plumemu.home.SystemInfo
@@ -66,6 +68,22 @@ internal sealed interface SecondScreenContent {
          * played line. Null: never measured, or not read (no line).
          */
         val batteryPace: BatteryPace? = null,
+        /**
+         * The game has no picture for good (signed out, or ScreenScraper's result has none): the card wears its poster
+         * cover where the picture would show (layout C, no description). False while a result is still to be read.
+         */
+        val hasNoPicture: Boolean = false,
+        /** Its system's short name ("SNES") for the poster's band; empty when unknown ([systemName] stands in). */
+        val systemShort: String = "",
+        /** Its system's cover shape, width over height: the poster's shape. */
+        val coverAspect: Float = CoverShape.Landscape.widthOverHeight,
+        /** The package of an installed app listed as a game: layout C shows its Android icon where the poster would stand; null for a file game. */
+        val appPackage: String? = null,
+        /**
+         * The game's RetroAchievements progress as last stored, read with the play facts (one database read, no network); null: signed
+         * out, not matched, nothing stored, or not read yet (no line, no gap).
+         */
+        val achievements: AchievementCount? = null,
     ) : SecondScreenContent
 
     /** A system, Recent or Favorites: its name, its size, and the last game played in it. */
@@ -81,13 +99,17 @@ internal sealed interface SecondScreenContent {
     ) : SecondScreenContent
 
     /** The Apps entry. */
+    @Immutable
     data class Apps(
         val appCount: Int,
+        /** The first apps' icons (at most [MAX_APP_ICONS]); the card draws as many as fit under the title. */
+        val icons: List<AppIconRef> = emptyList(),
     ) : SecondScreenContent
 
-    /** One Android app. */
+    /** One Android app; [iconKey] is what `LocalHomeAppIcons` is asked by (the Apps row's `iconKey`); null: no icon slot. */
     data class App(
         val name: String,
+        val iconKey: String? = null,
     ) : SecondScreenContent
 
     /** Nothing to say (Settings before its figures arrive, search before a result, an empty library): only the Plumemu mark. */
@@ -129,3 +151,13 @@ sealed interface LastPlayLookup {
     /** Favorites: the newest play among the favourites. */
     data object AmongFavorites : LastPlayLookup
 }
+
+/** An app's icon key and name (the name is the icon's description and its stand-in letter). */
+@Immutable
+internal data class AppIconRef(
+    val key: String,
+    val name: String,
+)
+
+/** The most icons an Apps card carries: more than any second-screen size can draw. */
+internal const val MAX_APP_ICONS = 120

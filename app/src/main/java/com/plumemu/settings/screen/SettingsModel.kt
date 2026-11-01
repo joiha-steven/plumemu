@@ -16,7 +16,6 @@ import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.TextEntry
 import com.plumemu.coreui.components.keyboard.KeyboardEvent
 import com.plumemu.coreui.components.keyboard.KeyboardPage
-import com.plumemu.game.GameRef
 import com.plumemu.game.TypingOutcome
 import com.plumemu.game.TypingScreen
 import com.plumemu.game.onKeyboardEvent
@@ -237,8 +236,8 @@ internal class SettingsModel(
         val option = rows().getOrNull(index) ?: return@tapped
         val wasFocused = focus.column == SettingsColumn.Options && optionIndex == index
         focusOnly(index)
-        // Switches, and Use as home screen drawn as one, act on the first tap.
-        if (wasFocused || option.kind == OptionKind.Switch || option == SettingsOption.UseAsHome) activate(option, settings, geometry)
+        // Switches, Use as home screen drawn as one and Statistics' games (shown only once the page is entered) act on the first tap.
+        if (wasFocused || option.kind == OptionKind.Switch || option == SettingsOption.UseAsHome || option == SettingsOption.Statistic) activate(option, settings, geometry)
     }
 
     fun onTapValue(
@@ -249,10 +248,8 @@ internal class SettingsModel(
         isNarrow = geometry.isNarrow
         follow(settings)
         val option = rows().getOrNull(index) ?: return@tapped
-        val wasFocused = focus.column == SettingsColumn.Options && optionIndex == index
         focusOnly(index)
-        // A game row launches the game, so a first tap only focuses it (it could be a mis-tap).
-        if (wasFocused || focusedStatisticGame == null) activate(option, settings, geometry)
+        activate(option, settings, geometry)
     }
 
     /** A tap on item [index] of the panel; in the wide panel beside a focused option it enters the panel. */
@@ -415,8 +412,8 @@ internal class SettingsModel(
     }
 
     private fun onSections(action: Action) {
-        val sections = SettingsSection.entries
-        val at = focus.section.ordinal
+        val sections = SettingsSection.shownIn(content)
+        val at = sections.indexOf(focus.section)
         when (action) {
             is Action.Move ->
                 when (action.direction) {
@@ -446,15 +443,15 @@ internal class SettingsModel(
         when (action) {
             is Action.Move ->
                 when (action.direction) {
-                    Direction.Up -> if (at > 0) focusOption(at - 1)
-                    Direction.Down -> if (at < rows().lastIndex) focusOption(at + 1)
+                    Direction.Up -> if (option == SettingsOption.Statistic && (at == 0 || statisticsScroll.isPastFocus)) statisticsScroll.scroll(down = false) else if (at > 0) focusOption(at - 1)
+                    Direction.Down -> if (at < rows().lastIndex) focusOption(at + 1) else if (option == SettingsOption.Statistic) statisticsScroll.scroll(down = true)
                     Direction.Left -> if (option.kind == OptionKind.Choice) stepChoice(option, -1, wrap = false, settings, geometry) else backToSections()
                     Direction.Right ->
                         when (option.kind) {
                             OptionKind.Choice -> stepChoice(option, +1, wrap = false, settings, geometry)
                             OptionKind.Swatch, OptionKind.Opens -> openPanel(option, settings, geometry)
                             // The explanation, as a further stop on narrow screens (wide shows it already).
-                            OptionKind.Switch, OptionKind.Info, OptionKind.Action -> if (geometry.isNarrow && focusedStatisticGame == null) openPanel(option, settings, geometry)
+                            OptionKind.Switch, OptionKind.Info, OptionKind.Action -> if (geometry.isNarrow && option != SettingsOption.Statistic) openPanel(option, settings, geometry)
                         }
                 }
             Action.Enter -> activate(option, settings, geometry)
@@ -465,12 +462,15 @@ internal class SettingsModel(
         }
     }
 
-    /** Starts a game (Statistics' most-played rows); set by the screen to the game menu's Play, so a failure shows the main screen's message. */
-    var playGame: (GameRef) -> Unit = {}
+    /** Closes Settings with the home cursor on a game (Statistics' most-played rows); set by the screen. */
+    var showOnHome: (systemId: String, gameId: Long) -> Unit = { _, _ -> }
+
+    /** Up or Down past Statistics' first or last game: the page scrolls ([StatisticsPage]). */
+    val statisticsScroll = StatisticsScroll()
 
     /** The focused row when it is one of Statistics' most-played games; null for every other row. */
-    val focusedStatisticGame: StatisticRow.Game?
-        get() = if (focusedOption == SettingsOption.Statistic) content.statisticRows.getOrNull(optionIndex) as? StatisticRow.Game else null
+    val focusedStatisticGame: TopGame?
+        get() = if (focusedOption == SettingsOption.Statistic) content.statistics.gameAt(optionIndex) else null
 
     /** A, a second tap or a tap on the value. */
     private fun activate(
@@ -489,9 +489,9 @@ internal class SettingsModel(
                 feel.report(Outcome.Activated)
             }
             OptionKind.Swatch, OptionKind.Opens -> openPanel(option, settings, geometry)
-            // A on a most-played game plays it, wide or narrow. Every other Info row is
+            // A on a most-played game shows it on the main screen, wide or narrow. Every other Info row is
             // read-only: A and a tap do nothing and make no sound (narrow: Right opens its explanation, "› More").
-            OptionKind.Info -> focusedStatisticGame?.let { game -> playGame(GameRef(game.game.id.toString(), game.game.title)) }
+            OptionKind.Info -> focusedStatisticGame?.let { game -> showOnHome(game.systemId, game.id) }
             OptionKind.Action -> runAction(option)
         }
     }
@@ -552,7 +552,7 @@ internal class SettingsModel(
     }
 
     /** Opens [option]'s panel for the focus; false when it has nothing to focus here (wide, read only). */
-    private fun openPanel(
+    internal fun openPanel(
         option: SettingsOption,
         settings: PlumSettings,
         geometry: SettingsGeometry,
@@ -577,6 +577,7 @@ internal class SettingsModel(
                 SettingsOption.UnknownFolder -> PanelPage.UnknownFolder to (SettingsListPages.unknownFolderAt(focus, content)?.let { SettingsListPages.answerIndex(it, content) } ?: 0)
                 SettingsOption.ScraperAccount ->
                     if (content.account is AccountStatus.SignedIn) PanelPage.ScraperAccount to 0 else return openSignIn().let { true }
+                SettingsOption.RetroAchievementsAccount -> if (raIsSignedIn(content)) PanelPage.RaAccount to 0 else return openRaSignIn().let { true }
                 else -> if (geometry.isNarrow) PanelPage.ReadOnly to 0 else return false
             }
         doneOption = null

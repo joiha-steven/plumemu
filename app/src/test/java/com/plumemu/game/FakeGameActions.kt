@@ -188,6 +188,15 @@ internal class FakeGameActions(
         return arcadeSetAnswer
     }
 
+    /** Info's achievements per game: null (the default) is a signed-out app; [achievementsAsked] counts the asks. */
+    var achievementsFlow: (String) -> kotlinx.coroutines.flow.Flow<com.plumemu.graph.AchievementsState>? = { null }
+    val achievementsAsked = mutableListOf<String>()
+
+    override suspend fun achievements(gameKey: String): kotlinx.coroutines.flow.Flow<com.plumemu.graph.AchievementsState>? {
+        achievementsAsked += gameKey
+        return achievementsFlow(gameKey)
+    }
+
     override suspend fun titleList(gameKey: String): TitleList? {
         readGate?.await()
         readError?.let { throw it }

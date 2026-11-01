@@ -36,9 +36,12 @@ class PlumDimensTest {
     }
 
     @Test
-    fun statisticsPanelCoverIsShorterThanTheDetailsCoverAndFitsTheSidePanel() {
-        assertEquals(130.dp, PlumDimens.settingsStatisticsCoverHeight)
-        assertTrue(PlumDimens.settingsStatisticsCoverHeight < PlumDimens.detailsCoverHeightWide)
+    fun statisticsPageTilesStartTheirWordsOnTheRowsTextLineAndBarsStayThin() {
+        assertEquals(PlumDimens.gameRowPadding, StatisticsDimens.tilePadding)
+        assertEquals(listOf(4.dp, 28.dp, 4.dp, 4.dp), listOf(StatisticsDimens.barHeight, StatisticsDimens.weekChartHeight, StatisticsDimens.weekBarGap, StatisticsDimens.barGap))
+        assertEquals(listOf(4, 2), listOf(StatisticsDimens.WIDE_TILES_PER_ROW, StatisticsDimens.NARROW_TILES_PER_ROW))
+        // Seven bars and their gaps fit a 2-per-row tile at 576 (528 page: (528 - 12) / 2 - 2 x 14 = 230).
+        assertTrue(StatisticsDimens.weekBarGap * 6 < 230.dp)
     }
 
     @Test
@@ -67,8 +70,8 @@ class PlumDimensTest {
         assertEquals(listOf(22.dp, 20.dp, 4.dp), listOf(PlumDimens.gridGapLandscape, PlumDimens.gridGapPortrait, PlumDimens.gridPadding))
         assertEquals(listOf(8.dp, 6.dp), listOf(PlumDimens.cornerCoverLandscape, PlumDimens.cornerCoverPortrait))
         assertEquals(listOf(12.dp, 10.dp, 16.dp), listOf(PlumDimens.coverPaddingLandscape, PlumDimens.coverPaddingPortrait, PlumDimens.gridHintGap))
-        // Focus ring 2.5 wide, 3 away: it reaches 5.5 past the cover; glow blur 12, spread 1.
+        // Focus ring 2.5 wide, 3 away: it reaches 5.5 past the cover; the focus halo reaches 10 more in 7 bands.
         assertEquals(listOf(2.5.dp, 3.dp, 5.5.dp), listOf(PlumDimens.focusRingWidth, PlumDimens.focusRingGap, PlumDimens.focusRingOutset))
-        assertEquals(listOf(12.dp, 1.dp), listOf(PlumDimens.focusGlowBlur, PlumDimens.focusGlowSpread))
+        assertEquals(listOf(10.dp, 7), listOf(PlumDimens.focusHaloReach, PlumDimens.FOCUS_HALO_STEPS))
     }
 }

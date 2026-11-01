@@ -46,6 +46,13 @@ data class UpdateRecord(
     val lastAutoFailureAt: Long? = null,
     val lastCheck: LastCheck? = null,
     val found: UpdateManifest? = null,
+    /**
+     * The release that is now installed and whose "What's new" card has not been shown yet: kept from [found] when
+     * the app starts as that release, forgotten once the card was shown (or the app is no longer that release).
+     */
+    val whatsNew: UpdateManifest? = null,
+    /** The versionCode of the last release whose card was shown: a release is never shown twice. */
+    val whatsNewShownCode: Long = 0,
 )
 
 /** Where [UpdateRecord] is kept; the app's is [FileUpdateStore], tests use a map. */
@@ -126,21 +133,9 @@ class FileUpdateStore(
                 root.put("lastCheckAt", check.at)
                 root.put("lastOutcome", outcomeName(check.outcome))
             }
-            record.found?.let { m ->
-                root.put(
-                    "found",
-                    JSONObject()
-                        .put("versionCode", m.versionCode)
-                        .put("versionName", m.versionName)
-                        .put("apkUrl", m.apkUrl)
-                        .put("size", m.size)
-                        .put("sha256", m.sha256)
-                        .put("minSdk", m.minSdk)
-                        .put("released", m.released)
-                        .put("notes", JSONArray(m.notes))
-                        .put("notesUrl", m.notesUrl ?: JSONObject.NULL),
-                )
-            }
+            record.found?.let { root.put("found", encodeManifest(it)) }
+            record.whatsNew?.let { root.put("whatsNew", encodeManifest(it)) }
+            if (record.whatsNewShownCode > 0) root.put("whatsNewShownCode", record.whatsNewShownCode)
             return root.toString()
         }
 
@@ -152,27 +147,57 @@ class FileUpdateStore(
                 } else {
                     null
                 }
-            val found =
-                root.optJSONObject("found")?.let { f ->
-                    val notes = f.getJSONArray("notes")
-                    UpdateManifest(
-                        versionCode = f.getLong("versionCode"),
-                        versionName = f.getString("versionName"),
-                        apkUrl = f.getString("apkUrl"),
-                        size = f.getLong("size"),
-                        sha256 = f.getString("sha256"),
-                        minSdk = f.getInt("minSdk"),
-                        released = f.getString("released"),
-                        notes = List(notes.length()) { notes.getString(it) },
-                        notesUrl = if (f.isNull("notesUrl")) null else f.getString("notesUrl"),
-                    )
-                }
             return UpdateRecord(
                 lastSuccessAt = if (root.has("lastSuccessAt")) root.getLong("lastSuccessAt") else null,
                 lastAutoFailureAt = if (root.has("lastAutoFailureAt")) root.getLong("lastAutoFailureAt") else null,
                 lastCheck = lastCheck,
-                found = found,
+                found = root.optJSONObject("found")?.let(::decodeManifest),
+                whatsNew = root.optJSONObject("whatsNew")?.let(::decodeManifest),
+                whatsNewShownCode = root.optLong("whatsNewShownCode", 0),
             )
+        }
+
+        private fun encodeManifest(m: UpdateManifest): JSONObject =
+            JSONObject()
+                .put("versionCode", m.versionCode)
+                .put("versionName", m.versionName)
+                .put("apkUrl", m.apkUrl)
+                .put("size", m.size)
+                .put("sha256", m.sha256)
+                .put("minSdk", m.minSdk)
+                .put("released", m.released)
+                .put("notes", JSONArray(m.notes))
+                .put("notesUrl", m.notesUrl ?: JSONObject.NULL)
+                .put(
+                    "sections",
+                    JSONArray(m.sections.map { JSONObject().put("kind", it.kind.key).put("items", JSONArray(it.items)) }),
+                )
+
+        private fun decodeManifest(f: JSONObject): UpdateManifest {
+            val notes = f.getJSONArray("notes")
+            return UpdateManifest(
+                versionCode = f.getLong("versionCode"),
+                versionName = f.getString("versionName"),
+                apkUrl = f.getString("apkUrl"),
+                size = f.getLong("size"),
+                sha256 = f.getString("sha256"),
+                minSdk = f.getInt("minSdk"),
+                released = f.getString("released"),
+                notes = List(notes.length()) { notes.getString(it) },
+                notesUrl = if (f.isNull("notesUrl")) null else f.getString("notesUrl"),
+                sections = decodeSections(f.optJSONArray("sections")),
+            )
+        }
+
+        /** A record written before sections existed has none; an entry this version cannot read is skipped, so the notes show. */
+        private fun decodeSections(array: JSONArray?): List<NoteSection> {
+            array ?: return emptyList()
+            return List(array.length()) { i ->
+                val entry = array.getJSONObject(i)
+                val items = entry.getJSONArray("items")
+                val kind = SectionKind.of(entry.getString("kind"))
+                kind?.let { NoteSection(it, List(items.length()) { j -> items.getString(j) }) }
+            }.filterNotNull()
         }
 
         private fun outcomeName(outcome: CheckOutcome): String =

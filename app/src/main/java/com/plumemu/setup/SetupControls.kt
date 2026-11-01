@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -39,7 +40,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.offset
+import com.plumemu.coreui.components.drawFlatFace
+import com.plumemu.coreui.components.flatKey
+import com.plumemu.coreui.components.KeyState
+import com.plumemu.coreui.components.keyDrive
+import com.plumemu.coreui.components.rememberKeyState
 import com.plumemu.coreui.components.drawFocusRing
+import com.plumemu.coreui.components.drawSunken
 import com.plumemu.coreui.components.focusPill
 import com.plumemu.coreui.components.pressFeel
 import com.plumemu.coreui.theme.PlumDimens
@@ -49,7 +56,7 @@ import com.plumemu.coreui.theme.PlumTheme
  * Setup's building blocks, drawn as the board's RP5-O1 draws them: filled and outlined buttons,
  * choices and folder cards, the emulator and statistics rows, the switch and the step dots.
  * Focus follows docs/design/rules.md › Focus and current: a focused button gets the 2.5 dp accent
- * ring with its soft glow; a focused choice or row gets the `sel` fill.
+ * ring inside the soft focus halo; a focused choice or row gets the `sel` fill.
  */
 
 /**
@@ -60,11 +67,11 @@ internal fun Modifier.focusRing(
     isFocused: Boolean,
     corner: Dp,
     ring: Color,
-    glow: Color,
+    halo: Color,
 ): Modifier =
     drawWithContent {
         drawContent()
-        if (isFocused) drawFocusRing(Offset.Zero, size, corner, ring = ring, glow = glow)
+        if (isFocused) drawFocusRing(Offset.Zero, size, corner, ring = ring, halo = halo)
     }
 
 /** [focusRing] with colours read while drawing: a theme colour that moves (a slider's preview) redraws the ring and recomposes nothing. */
@@ -72,11 +79,11 @@ internal fun Modifier.focusRing(
     isFocused: Boolean,
     corner: Dp,
     ring: () -> Color,
-    glow: () -> Color,
+    halo: () -> Color,
 ): Modifier =
     drawWithContent {
         drawContent()
-        if (isFocused) drawFocusRing(Offset.Zero, size, corner, ring = ring(), glow = glow())
+        if (isFocused) drawFocusRing(Offset.Zero, size, corner, ring = ring(), halo = halo())
     }
 
 /**
@@ -96,7 +103,7 @@ internal fun Modifier.bleed(
     }
 
 /**
- * Filled (accent) or outlined button, 40 high; the touch area grows to Android's minimum by itself.
+ * Pill button with a flat face, 40 high: the main one in the accent, the others as keys; the touch area grows to Android's minimum by itself.
  * [maxLines] 2 lets a label wrap in a narrow column (Settings' 248 dp panel at the largest text
  * sizes); two lines still fit the height, which grows with the text size.
  */
@@ -110,17 +117,18 @@ internal fun SetupButton(
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
-    val shape = RoundedCornerShape(PlumDimens.cornerSetupChoice)
-    val look = if (isPrimary) Modifier else Modifier.border(PlumDimens.setupChoiceRing, colors.sel, shape)
+    val pill = PlumTheme.layout.setupButtonHeight / 2
+    // A flat face that stands off the background (design/rules.md › Controls): the main button in the accent, the others as keys.
+    // It goes down into its edge while pressed, sits higher while focused or hovered, and stays put when animations are off.
+    val key = rememberKeyState()
     Box(
         modifier =
             modifier
-                // Outside the ring, so the ring dips with the button (it is drawn over the content).
-                .pressFeel(isFocused, if (isPrimary) colors.accent else null, shape)
-                .focusRing(isFocused, PlumDimens.cornerSetupChoice, colors.accent, colors.focusGlow)
+                // Outside the face, so the ring stays where the button rests.
+                .focusRing(isFocused, pill, colors.accent, colors.focusGlow)
                 .semantics { role = Role.Button }
                 .then(if (maxLines > 1) Modifier.heightIn(min = PlumTheme.layout.setupButtonHeight) else Modifier.height(PlumTheme.layout.setupButtonHeight))
-                .then(look)
+                .flatKey(key, isFocused, { if (isPrimary) it.accentFace() else it.keyFace }, pill, colors)
                 .padding(horizontal = PlumDimens.setupButtonPadding, vertical = if (maxLines > 1) PlumDimens.titleLineGap else 0.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -206,22 +214,22 @@ internal fun SetupInfoRow(
     }
 }
 
-/** On: accent track, `onAccent` knob at the end. Off: `sel` track, `chip` ring, `muted` knob at the start. */
+/**
+ * On: sunken accent track, flat `onAccent` knob at the end. Off: sunken `chip` track, pale knob at the start. The knob
+ * slides between the ends and squeezes wider while the switch is pressed (a finger, or the confirm button while
+ * [isFocused]); with animations off it jumps and the squeeze is instant.
+ */
 @Composable
 internal fun SetupSwitch(
     isOn: Boolean,
     stateText: String,
     modifier: Modifier = Modifier,
+    isFocused: Boolean = false,
+    /** The knob's state; a row that wants a tap anywhere on it to widen the knob passes its own and feeds it. */
+    key: KeyState = rememberKeyState(),
 ) {
     val colors = PlumTheme.colors
     val motion = PlumTheme.motion
-    val track = RoundedCornerShape(PlumDimens.switchHeight / 2)
-    val look =
-        if (isOn) {
-            Modifier.drawBehind { drawOutline(track.createOutline(size, layoutDirection, this), colors.accent) }
-        } else {
-            Modifier.drawBehind { drawOutline(track.createOutline(size, layoutDirection, this), colors.sel) }.border(PlumDimens.switchOffRing, colors.chip, track)
-        }
     // The knob slides by transform only, or jumps when motion is off.
     val travel by animateFloatAsState(
         targetValue = if (isOn) 1f else 0f,
@@ -233,16 +241,24 @@ internal fun SetupSwitch(
             modifier
                 .semantics { stateDescription = stateText }
                 .size(PlumDimens.switchWidth, PlumDimens.switchHeight)
-                .then(look),
+                .keyDrive(key, isFocused)
+                .drawBehind { drawSunken(if (isOn) colors.accent else colors.chip, colors.inset) },
         contentAlignment = Alignment.CenterStart,
     ) {
-        val inset = (PlumDimens.switchHeight - PlumDimens.switchKnob) / 2
+        val knobInset = (PlumDimens.switchHeight - PlumDimens.switchKnob) / 2
         Box(
             Modifier
-                .padding(start = inset)
+                .padding(start = knobInset)
                 .graphicsLayer { translationX = travel * (PlumDimens.switchWidth - PlumDimens.switchHeight).toPx() }
                 .size(PlumDimens.switchKnob)
-                .drawBehind { drawCircle(if (isOn) colors.onAccent else colors.muted) },
+                .drawBehind {
+                    // Squeezed: wider by a quarter of the knob toward the middle of the track, the face down into its edge.
+                    val grow = size.width * PlumDimens.SWITCH_SQUEEZE * key.press
+                    val atEnd = travel > 0.5f
+                    inset(if (atEnd) -grow else 0f, 0f, if (atEnd) 0f else -grow, 0f) {
+                        drawFlatFace(if (isOn) colors.knobOnFace() else colors.knobFace, press = key.press, raise = 0f)
+                    }
+                },
         )
     }
 }
@@ -269,17 +285,16 @@ internal fun StepDots(
     }
 }
 
-/** The scan's bar: `sel` track, accent part for [fraction] (0–1). Static: nothing animates while the scan runs. */
+/** The scan's bar: sunken `sel` track, accent part for [fraction] (0–1). Static: nothing animates while the scan runs. */
 @Composable
 internal fun SetupProgressBar(
     fraction: Float,
     modifier: Modifier = Modifier,
 ) {
     val colors = PlumTheme.colors
-    val shape = RoundedCornerShape(PlumDimens.setupProgressHeight / 2)
-    Box(modifier.fillMaxWidth().height(PlumDimens.setupProgressHeight).clip(shape).background(colors.sel)) {
+    Box(modifier.fillMaxWidth().height(PlumDimens.setupProgressHeight).drawBehind { drawSunken(colors.sel, colors.inset) }) {
         if (fraction > 0f) {
-            Box(Modifier.fillMaxWidth(fraction.coerceAtMost(1f)).height(PlumDimens.setupProgressHeight).background(colors.accent))
+            Box(Modifier.fillMaxWidth(fraction.coerceAtMost(1f)).height(PlumDimens.setupProgressHeight).drawBehind { drawSunken(colors.accent, colors.inset) })
         }
     }
 }

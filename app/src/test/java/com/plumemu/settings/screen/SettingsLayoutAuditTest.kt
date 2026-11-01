@@ -5,9 +5,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.test.SemanticsMatcher
@@ -36,7 +38,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Settings layout items measured by bounds at 768x432 and
- * 576x432, Graphite and Paper: section rows at least 40 and equal, a two-line option row's text
+ * 576x432, Graphite and Paper: section rows at least 40 and equal (the column scrolls), a two-line option row's text
  * evenly inside its pill, the colour presets on the panel's text column, the first rows of both
  * columns on one line.
  */
@@ -72,15 +74,39 @@ abstract class SettingsLayoutAuditBase {
 
     private val themes = listOf("Graphite" to MediumText.Graphite, "Paper" to MediumText.Paper)
 
+    /**
+     * With nine sections the column does not all fit 432 high at Medium text: it scrolls and fades the cut row
+     * (design/rules.md › Lists that scroll). What still holds: equal rows of at least 40, the focused row and the one past it whole,
+     * the bottom fade drawn while rows are cut.
+     */
     @Test
-    fun sectionRowsAreAtLeast40AndEqualAndTheLastEndsAboveTheHintBar() =
+    fun sectionRowsAreEqualAndAtLeast40TheFocusedAndNextAreWholeAndTheCutBottomFades() =
         inBothThemes(SettingsFocus(column = SettingsColumn.Sections, section = SettingsSection.Library)) { name ->
-            val rows = SettingsSection.entries.map { bounds(SettingsTags.section(it)) }
-            val heights = rows.map { it.bottom.value - it.top.value }
-            assertTrue("$name: every section row at least 40, got $heights", heights.all { it >= PlumDimens.rowHeight.value - 0.01f })
-            assertTrue("$name: equal heights, got $heights", heights.all { kotlin.math.abs(it - heights[0]) < 0.01f })
+            val tags = shownSections.map { SettingsTags.section(it) }
+            val rows = tags.map { bounds(it) }
+            val full = tags.map { compose.onNodeWithTag(it).getUnclippedBoundsInRoot() }.map { it.bottom.value - it.top.value }
+            val seen = rows.map { it.bottom.value - it.top.value }
             val hint = bounds(SettingsTags.HINT_CONFIRM)
-            assertTrue("$name: the last row (${rows.last().bottom}) ends above the hint bar (${hint.top})", rows.last().bottom <= hint.top)
+            // A row is cut when the column shows less of it than its own height.
+            val kept = rows.indices.filter { seen[it] >= full[it] - 0.01f }
+            val cut = rows.indices - kept.toSet()
+            assertTrue("$name: every section row is as tall as the first, got $full", full.all { kotlin.math.abs(it - full[0]) < 0.01f })
+            assertTrue("$name: every section row is at least 40, got $full", full.all { it >= PlumDimens.rowHeight.value - 0.01f })
+            assertTrue("$name: the focused row and the next are whole, got $seen of $full", kept.containsAll(listOf(0, 1)))
+            assertTrue("$name: every row not cut ends above the hint bar (${hint.top}), got ${kept.map { rows[it].bottom }}", kept.all { rows[it].bottom <= hint.top })
+            val fades = compose.onAllNodesWithTag(SettingsTags.SECTIONS + FADE_BOTTOM_SUFFIX).fetchSemanticsNodes().isNotEmpty()
+            assertEquals("$name: the bottom fade is drawn exactly while rows are cut ($seen of $full)", cut.isNotEmpty(), fades)
+            assertTrue("$name: nine rows do not fit here, so the fade must show ($seen of $full)", fades)
+        }
+
+    @Test
+    fun focusingTheLastSectionScrollsItWholeAboveTheHintBar() =
+        inBothThemes(SettingsFocus(column = SettingsColumn.Sections, section = shownSections.last())) { name ->
+            val last = bounds(SettingsTags.section(shownSections.last()))
+            val height = last.bottom.value - last.top.value
+            assertTrue("$name: the last section is whole (at least 40), got $height", height >= PlumDimens.rowHeight.value - 0.01f)
+            val hint = bounds(SettingsTags.HINT_CONFIRM)
+            assertTrue("$name: the last row (${last.bottom}) ends above the hint bar (${hint.top})", last.bottom <= hint.top)
         }
 
     @Test

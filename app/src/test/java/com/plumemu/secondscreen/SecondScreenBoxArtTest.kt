@@ -168,22 +168,20 @@ abstract class SecondScreenBoxArtBase(
     }
 
     @Test
-    fun aPictureThatCannotBeReadLeavesTheCardWithoutArtAndWithoutABlankBox() {
-        show(GAME_LONG_TITLE)
-        val plain = bounds(SecondScreenTags.BLOCK)
-        val plainSize = titleLayout().layoutInput.style.fontSize
+    fun aPictureThatCannotBeReadBecomesThePosterAndLeavesNoBlankBox() {
         val unreadable = FakeCoverImages(unreadable = setOf(LANDSCAPE_FRONT.path))
-        // Nothing else known: the picking card.
+        // Nothing else known: the details card with the poster where the picture would be (as the grid shows it).
         show(GAME_LONG_TITLE.withArt(LANDSCAPE_FRONT), images = unreadable)
-        assertFalse("no box where the cover would be", hasCover())
-        assertEquals("the title is back at its size", plainSize, titleLayout().layoutInput.style.fontSize)
-        assertEquals(plain, bounds(SecondScreenTags.BLOCK))
-        // With details: the details card without art, its title from the left margin.
-        show(GAME_LONG_TITLE.withDetails(FULL_DETAILS, PORTRAIT_FRONT), images = FakeCoverImages(unreadable = setOf(PORTRAIT_FRONT.path)))
-        assertFalse(hasCover())
+        assertEquals("the poster stands in the cover's place", 1, posters())
         assertTrue(all(SecondScreenTags.DETAILS).isNotEmpty())
-        assertEquals(px(dimens.margin), bounds(SecondScreenTags.TITLE).left, 0.5f)
+        // With details: the same, the title beside the poster.
+        show(GAME_LONG_TITLE.withDetails(FULL_DETAILS, PORTRAIT_FRONT), images = FakeCoverImages(unreadable = setOf(PORTRAIT_FRONT.path)))
+        assertEquals(1, posters())
+        assertTrue(all(SecondScreenTags.DETAILS).isNotEmpty())
+        assertTrue("the title beside the poster", bounds(SecondScreenTags.TITLE).left >= bounds(SecondScreenTags.COVER).right)
     }
+
+    private fun posters() = compose.onAllNodesWithTag(com.plumemu.home.HomeTags.POSTER_COVER, useUnmergedTree = true).fetchSemanticsNodes().size
 
     @Test
     fun aSlowPictureNeverHoldsBackTheTextAndItsPlaceIsKept() {

@@ -67,6 +67,9 @@ object PlumDimens {
      */
     val gameRowMinHeight = 38.dp
 
+    /** Under this height a poster cover is left out of the text-only details column rather than cutting its text (the largest text sizes). */
+    val posterMinHeight = 56.dp
+
     /** Between game rows (the board's list `gap: 2px`) and part of the row above's tap area: rows sit 40 apart at the minimum. */
     val listRowGap = 2.dp
 
@@ -100,6 +103,13 @@ object PlumDimens {
     /** Between a favorite's title and its star. */
     val favoriteMarkGap = 8.dp
 
+    /** The trophy after a mastered game's title (every achievement unlocked): a square this wide and high, `favoriteMarkGap` after the title or star. */
+    val masteredMarkSize = 12.dp
+
+    /** Info's achievement badge (RetroAchievements' own picture, drawn square at this size) and the gap between rows of the list. */
+    val achievementBadgeSize = 36.dp
+    val achievementRowGap = 8.dp
+
     /** Between a title and the line under it (the board's details title and its facts). */
     val titleLineGap = 4.dp
 
@@ -112,6 +122,9 @@ object PlumDimens {
     // Bars
     /** Between the clock and the battery on the top bar. */
     val topBarItemGap = 14.dp
+
+    /** Each side of the update pill's text in the top bar. */
+    val topBarPillPadding = 8.dp
 
     /** Between the charging bolt and the battery percentage it stands before. */
     val topBarChargingGap = 3.dp
@@ -128,16 +141,51 @@ object PlumDimens {
     val keyCapPadding = 5.dp
     val keyCapBorder = 1.5.dp
 
+    /** A flat face (keys, buttons, knobs): the edge under it, the hairline of light on top, and how far its shadow reaches below. */
+    val flatEdge = 2.dp
+    val flatRim = 1.dp
+    val flatShadow = 3.dp
+
+    /** A focused or hovered key sits this much higher: its edge grows by it and the face rises by it. */
+    val flatRaise = 1.dp
+
+    /** A pressed switch's knob grows by this share of its width. */
+    const val SWITCH_SQUEEZE = 0.25f
+
+    /** The inset shadow of a sunken track or field. */
+    val insetShadow = 1.dp
+
+    /** A panel (game panel, dialog card, update card): the hairline edge, how far its soft shadow reaches and sinks, its corners. */
+    val panelHairline = 0.5.dp
+    val panelShadowReach = 6.dp
+    val panelShadowDrop = 2.dp
+    val panelCorner = 10.dp
+
+    /**
+     * The game panel's card reaches [panelOutset] past the panel's column at its sides and top, [panelOutsetBottom] below it, and its
+     * shadow [panelShadowBottom] below that: the strip ends 10 dp above the hint keys, so the bottom stays tight (at least 8 dp clear).
+     */
+    val panelOutset = 6.dp
+    val panelOutsetBottom = 0.dp
+    val panelShadowBottom = 2.dp
+
+    /** The accent dot by a panel's title: the hint dot's size, sitting at the title's end inside the panel's padding. */
+    val panelTitleDot = 6.dp
+
+    /** A card title's dot sits this far after its last character (a title may wrap: the dot stays by the first line's end). */
+    val panelTitleDotGap = 8.dp
+
+    /** How far a sunken text field's pill reaches past the text's own box, sideways and up and down. */
+    val fieldInsetX = 10.dp
+    val fieldInsetY = 5.dp
+
+    /** The same for Search's field in the 18 dp top bar, which has less room. */
+    val searchFieldInsetX = 6.dp
+    val searchFieldInsetY = 3.dp
+
     // Settings and setup
     val settingsSectionsWidth = 200.dp
     val settingsPanelWidth = 248.dp
-
-    /**
-     * Settings › Statistics' side panel: the focused game's cover is fitted inside the panel's width by at most this
-     * height (less when the text below needs the room). Shorter than the details column's 178 so the title,
-     * system, three facts and the play line fit the 432 dp screen's panel at Medium.
-     */
-    val settingsStatisticsCoverHeight = 130.dp
 
     /** In a side panel (Settings, the game menu): between the title block and what follows (the board's 12). */
     val panelBlockGap = 12.dp
@@ -157,6 +205,13 @@ object PlumDimens {
 
     val settingsPanelGap = 12.dp
     val settingsPanelListGap = 10.dp
+
+    /** An update note's bullet: the accent dot's size and the width of the column it sits in (the text hangs after it). */
+    val settingsNoteDot = 5.dp
+    val settingsNoteIndent = 14.dp
+
+    /** The fade at the bottom of the update notes while they can scroll further. */
+    val settingsNoteFade = 24.dp
 
     /** Background and accent presets in the panel: 40, 10 apart, background corners 10. */
     val settingsPresetSwatch = 40.dp
@@ -325,6 +380,9 @@ object PlumDimens {
      */
     val appsGridIcon = 56.dp
 
+    /** An app game's icon in the details column and on the second screen's card (it has no cover; Apps has no details column). */
+    val appGameDetailsIcon = 96.dp
+
     /**
      * The narrowest Apps tile at Medium text: the icon and 12 on each side, wide enough for a 9-letter name
      * ("Calculator") on one line. It grows with the text size (`PlumLayout.textScale`), so a larger text
@@ -468,8 +526,13 @@ object PlumDimens {
      * had no dim alpha before this (it dims text through the `muted` colour); the focused cover is dimmed too.
      */
     const val UNFAVORITED_COVER_ALPHA = 0.5f
-    val focusGlowBlur = 12.dp
-    val focusGlowSpread = 1.dp
+
+    /** The badge of an achievement not yet unlocked (its `_lock` picture, dimmed further so the earned ones read first). */
+    const val LOCKED_BADGE_ALPHA = 0.6f
+
+    /** How far the focus halo reaches past the ring (rules.md > Focus and current); drawn as [FOCUS_HALO_STEPS] bands, never blurred. Strength and colour: `FocusHalo`. */
+    val focusHaloReach = 10.dp
+    const val FOCUS_HALO_STEPS = 7
 
     /** How far a focus ring reaches past its item (gap + width): space a grid keeps clear around covers. */
     val focusRingOutset = focusRingGap + focusRingWidth

@@ -10,7 +10,7 @@ import com.plumemu.coredata.settings.SoundLevel
 /**
  * What screens call to make the interface sounds. Owns the player only between [start] and [stop]
  * (the Activity's onStart and onStop), so nothing is held in the background or while an emulator
- * runs. [level] and [vibration] follow Settings › Advanced › Sounds and Vibration ([follow]). Calls come
+ * runs. [level] and [vibration] follow Settings › Controls › Sounds and Vibration ([follow]). Calls come
  * from the main thread and cost nothing there: the player works on its own thread. The haptic tick for
  * a move and the click for a confirm are made here too, so what is heard and what is felt stay in one place.
  */

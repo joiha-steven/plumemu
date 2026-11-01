@@ -7,12 +7,12 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,7 +28,6 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
@@ -44,6 +43,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -52,8 +52,10 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreui.components.FieldRow
 import com.plumemu.coreui.components.FieldRowFrame
 import com.plumemu.coreui.components.OptionRowLook
+import com.plumemu.coreui.components.sunkenFieldInRow
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.game.paste
 import com.plumemu.home.search.hideSystemBars
 import com.plumemu.keyboard.CaretLine
 import com.plumemu.setup.SetupButton
@@ -77,6 +79,8 @@ internal fun SignInBody(
     /** Between the fields, the message and the buttons: setup's content gap, or the panel's. */
     gap: Dp,
     modifier: Modifier = Modifier,
+    /** Lines under the buttons (RetroAchievements' help and privacy lines); not drawn once signed in. */
+    below: @Composable () -> Unit = {},
 ) {
     Column(modifier.testTag(SignInTags.FORM), verticalArrangement = Arrangement.spacedBy(gap)) {
         val name = form.signedInAs
@@ -92,7 +96,7 @@ internal fun SignInBody(
         // The two fields are rows of one list: 2 apart, like every list.
         // Each field keeps its name before the text; both names get the wider one's width, so the
         // two texts start on one line.
-        val labels = listOf(stringResource(R.string.account_username), stringResource(R.string.account_password))
+        val labels = listOf(stringResource(R.string.account_username), stringResource(passwordLabel(form)))
         val measurer = rememberTextMeasurer()
         val labelStyle = PlumTheme.type.settingsOption
         val density = LocalDensity.current
@@ -108,12 +112,24 @@ internal fun SignInBody(
             Field(form, SignInItem.Password, passwordFocus, onTap, onAction, labelWidth, belowPassword)
         }
         when {
-            form.isChecking -> Line(stringResource(R.string.account_checking), SignInTags.CHECKING, isQuiet = true)
-            form.message != null -> form.message?.let { Line(signInMessage(it), SignInTags.MESSAGE, isQuiet = false) }
+            form.isChecking -> Line(stringResource(if (form.kind == SignInKind.RetroAchievements) R.string.account_ra_checking else R.string.account_checking), SignInTags.CHECKING, isQuiet = true)
+            form.message != null -> form.message?.let { Line(signInMessage(it, form.kind), SignInTags.MESSAGE, isQuiet = false) }
         }
         Buttons(form, onTap, listOf(SignInItem.SignIn to R.string.account_sign_in, SignInItem.Leave to leaveLabel))
+        if (SignInItem.OpenKeyPage in form.items) Buttons(form, onTap, listOf(SignInItem.OpenKeyPage to R.string.settings_ra_open_key_page), isPrimary = false)
+        below()
     }
 }
+
+/** The second field's name: a password for ScreenScraper, the Web API key for RetroAchievements. */
+@StringRes
+private fun passwordLabel(form: SignInForm): Int = if (form.kind == SignInKind.RetroAchievements) R.string.account_ra_key else R.string.account_password
+
+@StringRes
+private fun usernameHint(form: SignInForm): Int = if (form.kind == SignInKind.RetroAchievements) R.string.account_ra_username_hint else R.string.account_username_hint
+
+@StringRes
+private fun passwordHint(form: SignInForm): Int = if (form.kind == SignInKind.RetroAchievements) R.string.account_ra_key_hint else R.string.account_password_hint
 
 /** What A does on the focused item, for the hint bar ([leaveLabel] on Skip / Cancel); none while the check runs. */
 @StringRes
@@ -129,16 +145,24 @@ internal fun signInConfirmHint(
             SignInItem.Username, SignInItem.Password -> R.string.account_hint_type
             SignInItem.SignIn -> R.string.account_sign_in
             SignInItem.Leave -> leaveLabel
+            SignInItem.OpenKeyPage -> R.string.settings_ra_open_key_page
             SignInItem.Continue -> R.string.setup_hint_continue
         }
     }
 
 /** The plain line for a failed sign-in: one place, so setup and Settings say the same. */
 @Composable
-internal fun signInMessage(result: SignInResult): String =
+internal fun signInMessage(
+    result: SignInResult,
+    kind: SignInKind = SignInKind.ScreenScraper,
+): String =
     when (result) {
+        SignInResult.RaWrongKey -> stringResource(R.string.account_ra_error_wrong)
+        SignInResult.RaUnknownUser -> stringResource(R.string.account_ra_error_unknown_user)
+        SignInResult.RaBusy -> stringResource(R.string.account_ra_error_busy)
+        SignInResult.RaRateLimited -> stringResource(R.string.account_ra_error_rate_limited)
         is SignInResult.SignedIn -> stringResource(R.string.account_signed_in_as, result.username)
-        SignInResult.Missing -> stringResource(R.string.account_error_missing)
+        SignInResult.Missing -> stringResource(if (kind == SignInKind.RetroAchievements) R.string.account_ra_error_missing else R.string.account_error_missing)
         SignInResult.WrongCredentials -> stringResource(R.string.account_error_wrong)
         SignInResult.Offline -> stringResource(R.string.account_error_offline)
         SignInResult.ServerClosed -> stringResource(R.string.account_error_closed)
@@ -147,6 +171,7 @@ internal fun signInMessage(result: SignInResult): String =
         SignInResult.AppRefused -> stringResource(R.string.account_error_app_refused)
         SignInResult.NotSaved -> stringResource(R.string.account_error_not_saved)
         SignInResult.NotAvailable -> stringResource(R.string.account_error_not_available)
+        SignInResult.NoBrowser -> stringResource(R.string.settings_ra_no_browser)
     }
 
 /** [millis] as the device shows a time of day (its 12 or 24 hour choice), in the device's time zone. */
@@ -181,9 +206,9 @@ private fun Field(
         look = if (focused) OptionRowLook.Focused else OptionRowLook.Normal,
         // The label names the field; an empty one needs no placeholder (it would not fit beside the label at the larger sizes).
         placeholder = "",
-        label = stringResource(if (isPassword) R.string.account_password else R.string.account_username),
+        label = stringResource(if (isPassword) passwordLabel(form) else R.string.account_username),
         labelWidth = labelWidth,
-        keyboardHint = stringResource(if (isPassword) R.string.account_password_hint else R.string.account_username_hint),
+        keyboardHint = stringResource(if (isPassword) passwordHint(form) else usernameHint(form)),
         // A touch on the field means typing there; seen before the field handles it.
         modifier = Modifier.bringIntoViewWhen(focused).pointerInput(index) { awaitEachGesture { awaitFirstDown(pass = PointerEventPass.Initial).also { onTap(index) } } }
             .testTag(if (isPassword) SignInTags.PASSWORD else SignInTags.USERNAME),
@@ -231,7 +256,7 @@ private fun OwnKeyboardField(
     val index = form.items.indexOf(item)
     val keys = form.keysOf(item)
     val text = if (isPassword) PASSWORD_DOT.toString().repeat(form.password.length) else form.username
-    val hint = stringResource(if (isPassword) R.string.account_password_hint else R.string.account_username_hint)
+    val hint = stringResource(if (isPassword) passwordHint(form) else usernameHint(form))
     val trayUp = focused && form.isTrayUp
     val onTapAt =
         remember(form, item, onTap) {
@@ -253,7 +278,7 @@ private fun OwnKeyboardField(
     ) { style ->
         // The dot (drawn by the frame while focused) belongs to the label column: unfocused, its room follows the label.
         BasicText(
-            stringResource(if (isPassword) R.string.account_password else R.string.account_username),
+            stringResource(if (isPassword) passwordLabel(form) else R.string.account_username),
             style = PlumTheme.type.settingsOption.copy(color = PlumTheme.colors.muted),
             maxLines = 1,
             modifier = Modifier.width(labelWidth),
@@ -266,9 +291,10 @@ private fun OwnKeyboardField(
             placeholder = "",
             style = style,
             onTapAt = onTapAt,
-            modifier = Modifier.weight(1f).fillMaxHeight(),
+            modifier = Modifier.weight(1f).fillMaxHeight().sunkenFieldInRow(),
             textTag = SignInTags.typedText(item),
             placeholderTag = SignInTags.placeholder(item),
+            onPaste = form.typing?.let { typing -> { typing.paste() } },
         )
     }
 }
@@ -280,7 +306,8 @@ private const val PASSWORD_DOT = '\u2022'
  * The keyboard follows [SignInForm.inField]: up when A or a tap asked for it on a field (again on
  * each ask, [SignInForm.keyboardAsks]: the system's Back may have closed it); hidden, with the
  * system bars hidden again, when the cursor leaves the field, a check starts or the form goes away.
- * Opening the form or moving onto a field never brings it up.
+ * Moving onto a field never brings it up; opening the step does, through the form's own ask
+ * ([SignInForm.startTyping]).
  *
  * Only after this form put the keyboard up: a form that opens on a button (a failed sign-in, a
  * check running) leaves the keyboard, the focus and the system bars as they are.
@@ -341,6 +368,8 @@ private fun Buttons(
     form: SignInForm,
     onTap: (Int) -> Unit,
     buttons: List<Pair<SignInItem, Int>>,
+    /** The first button is the main one; false for a lone secondary button. */
+    isPrimary: Boolean = true,
 ) {
     // On the column's left line: the host's scroll leaves room for the focus ring (setup's `bleed`).
     val place: @Composable (@Composable () -> Unit) -> Unit =
@@ -355,8 +384,9 @@ private fun Buttons(
             val index = form.items.indexOf(item)
             SetupButton(
                 text = stringResource(label),
-                isPrimary = at == 0,
+                isPrimary = isPrimary && at == 0,
                 isFocused = form.focus == item && !form.isChecking,
+                maxLines = if (item == SignInItem.OpenKeyPage) 2 else 1,
                 modifier =
                     Modifier
                         .then(if (form.stackedButtons) Modifier.fillMaxWidth() else Modifier)

@@ -81,6 +81,12 @@ sealed interface Action {
         val isRepeat: Boolean = false,
     ) : Action
 
+    /**
+     * R3 (the right stick pressed in) while Plumemu's keyboard is up, or the "R3 Paste" hint: insert
+     * what the clipboard holds at the caret. Every other button is already taken while typing.
+     */
+    data object Paste : Action
+
     /** A hardware keyboard's key while a screen takes text ([InputRouter.textEntry] is not [TextEntry.None]). */
     data class Typed(
         val key: TypedKey,

@@ -155,7 +155,8 @@ class HomeBoundsTest {
     @Test
     @Config(qualifiers = WIDE)
     fun wideTwoKeyCapMatchesTheBoard() {
-        compose.setContent { PlumTheme(MediumText.Default) { HomeAt(FakeHomeContent.board(), BoardGamesFocused) } }
+        // In a grid the bar has five hints and Switch system stays; in a list with SELECT it gives way at 768 (HINT_DROP_ORDER).
+        compose.setContent { PlumTheme(MediumText.Default) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, gridIds = setOf("snes")) } }
         assertKeyCap(Action.JumpLetterNext, "Switch system", 40.5.dp)
     }
 

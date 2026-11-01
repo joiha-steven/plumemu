@@ -32,4 +32,8 @@ class SettingsKeyboardScreenshotTest {
 
     @Test
     fun signInPasswordTyping() = ReferenceShots.capture("settings_sign_in_typing_password") { SignInTypingSettings(SignInTypingShots.State.Password) }
+
+    // Accounts › RetroAchievements as it opens: the tray up on the empty user name, the key page button above it.
+    @Test
+    fun raSignInOpened() = ReferenceShots.capture("settings_ra_sign_in_opened") { RaSignInOpenedSettings() }
 }

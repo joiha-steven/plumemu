@@ -102,6 +102,18 @@ class TextEntryRouterTest {
         }
 
     @Test
+    fun r3PastesOnlyWhileTheKeyboardIsUp() =
+        routerTest { h ->
+            h.press(KeyEvent.KEYCODE_BUTTON_THUMBR)
+            h.router.textEntry = TextEntry.Field
+            h.press(KeyEvent.KEYCODE_BUTTON_THUMBR)
+            assertEquals("no action off the keyboard", emptyList<Action>(), h.actions)
+            h.router.textEntry = TextEntry.Keyboard
+            h.press(KeyEvent.KEYCODE_BUTTON_THUMBR)
+            assertEquals(listOf<Action>(Action.Paste), h.actions)
+        }
+
+    @Test
     fun onAFieldWithTheKeyboardDownBStillGoesBack() =
         routerTest { h ->
             h.router.textEntry = TextEntry.Field

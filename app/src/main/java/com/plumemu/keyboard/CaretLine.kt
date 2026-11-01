@@ -4,17 +4,26 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.platform.LocalTextToolbar
+import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
@@ -30,6 +39,9 @@ import kotlin.math.roundToInt
  * No text field: nothing here can bring Android's keyboard up. A tap gives [onTapAt] the tapped
  * character's offset (a caret position). [caret] and [showsCaret] are read while drawing and laying
  * out: a caret move redraws, it does not recompose. Search's query and the game panel's fields.
+ *
+ * A long press does what a tap does and then, while the clipboard holds text and the field takes a
+ * paste ([onPaste]), offers Paste in Android's own floating text toolbar, as Android's fields do.
  */
 @Composable
 internal fun CaretLine(
@@ -44,6 +56,8 @@ internal fun CaretLine(
     placeholderTag: String,
     /** False: the line shows the start of the text, not slid to the caret (a name that is not being typed). Read while laying out. */
     followsCaret: () -> Boolean = { true },
+    /** Inserts the clipboard at the caret; null: a long press offers nothing. */
+    onPaste: (() -> Unit)? = null,
 ) {
     val colors = PlumTheme.colors
     val caretWidth = PlumTheme.layout.caretWidth
@@ -61,10 +75,29 @@ internal fun CaretLine(
                 drawRect(colors.accent, Offset((x - width / 2).coerceAtLeast(0f), laidOut.getLineTop(0)), Size(width, laidOut.getLineBottom(0) - laidOut.getLineTop(0)))
             }
         }
+    val toolbar = LocalTextToolbar.current
+    val currentOnPaste by rememberUpdatedState(onPaste)
+    // The menu goes with the field, with any edit (it was for the caret where the finger was) and as soon as
+    // typing leaves this line (the cursor moved to another field): it pastes only into the line pressed.
+    DisposableEffect(toolbar) { onDispose { line.hideMenu() } }
+    LaunchedEffect(text) { line.hideMenu() }
+    LaunchedEffect(toolbar) { snapshotFlow { showsCaret() }.collect { if (!it) line.hideMenu() } }
     Box(
         modifier
             .clipToBounds()
-            .pointerInput(onTapAt) { detectTapGestures { at -> onTapAt(line.offsetAt(at.x, currentText)) } },
+            .onPlaced { line.coordinates = it }
+            .pointerInput(onTapAt) {
+                detectTapGestures(
+                    onTap = { at ->
+                        line.hideMenu()
+                        onTapAt(line.offsetAt(at.x, currentText))
+                    },
+                    onLongPress = { at ->
+                        onTapAt(line.offsetAt(at.x, currentText))
+                        currentOnPaste?.let { paste -> line.offerPaste(toolbar, at) { if (showsCaret()) paste() } }
+                    },
+                )
+            },
         contentAlignment = Alignment.CenterStart,
     ) {
         if (text.isEmpty()) {
@@ -106,6 +139,37 @@ internal fun CaretLine(
 private class CaretLineLayout {
     var text: TextLayoutResult? = null
     var shift: Int = 0
+
+    /** Where the line is, for the paste menu's place. */
+    var coordinates: LayoutCoordinates? = null
+
+    /** Android's floating menu with Paste only, over the line at [at], while the clipboard holds text. */
+    fun offerPaste(
+        toolbar: TextToolbar,
+        at: Offset,
+        paste: () -> Unit,
+    ) {
+        val coordinates = coordinates?.takeIf { it.isAttached } ?: return
+        if (!PasteBoard.hasText) return
+        val point = coordinates.localToRoot(at)
+        val bounds = coordinates.boundsInRoot()
+        toolbar.showMenu(
+            rect = Rect(point.x, bounds.top, point.x, bounds.bottom),
+            onCopyRequested = null,
+            onPasteRequested = {
+                hideMenu()
+                paste()
+            },
+            onCutRequested = null,
+            onSelectAllRequested = null,
+        )
+        PasteBoard.menuOpened(toolbar, owner = this)
+    }
+
+    /** Closes the paste menu if this line opened it (another line's is not this line's to close). */
+    fun hideMenu() {
+        if (PasteBoard.ownsMenu(this)) PasteBoard.closeMenu()
+    }
 
     /** The character offset nearest [x] (from the line's start), as a caret position in [text]. */
     fun offsetAt(

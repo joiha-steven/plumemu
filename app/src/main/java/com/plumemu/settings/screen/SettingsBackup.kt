@@ -68,13 +68,13 @@ internal fun backupRowValue(state: BackupState): String {
     val word =
         when (state) {
             is BackupState.Running -> return stringResource(R.string.settings_backup_running)
-            BackupState.Idle -> return stringResource(R.string.settings_value_chevron)
+            BackupState.Idle -> return ""
             is BackupState.Done -> R.string.settings_backup_value_saved
             is BackupState.Failed -> R.string.settings_backup_value_failed
             is BackupState.Cancelled -> R.string.settings_backup_value_cancelled
             is BackupState.Interrupted -> R.string.settings_backup_value_interrupted
         }
-    return stringResource(R.string.settings_value_opens, stringResource(word))
+    return stringResource(word)
 }
 
 /** The panel's line for [state]: the progress, or how the last backup ended; null when idle. */

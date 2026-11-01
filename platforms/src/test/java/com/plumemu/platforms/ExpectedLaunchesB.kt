@@ -69,6 +69,7 @@ internal val EXPECTED_B: List<ExpectedSystem> = listOf(
             flags = setOf(),
             extras = emptyMap(),
         )
+        omnidroid("n64", 14)
         retroArch("mupen64plus_next_gles3_libretro_android.so")
         retroArch("parallel_n64_libretro_android.so")
         retroArch("mupen64plus_next_gles2_libretro_android.so")
@@ -175,6 +176,19 @@ internal val EXPECTED_B: List<ExpectedSystem> = listOf(
             flags = setOf(),
             extras = mapOf("uri" to ExtraValue.Text(URI)),
         )
+        // Daijisho nds.io.github.pruefsumme.widemelon: '-a me.magnum.melonds.dev.LAUNCH_ROM\n-n
+        // io.github.pruefsumme.widemelon/me.magnum.melonds.ui.emulator.EmulatorActivity\n-e uri {file.uri}'
+        standalone(
+            "io-github-pruefsumme-widemelon",
+            "io.github.pruefsumme.widemelon",
+            "me.magnum.melonds.ui.emulator.EmulatorActivity",
+            action = "me.magnum.melonds.dev.LAUNCH_ROM",
+            category = null,
+            data = null,
+            mime = null,
+            flags = setOf(),
+            extras = mapOf("uri" to ExtraValue.Text(URI)),
+        )
         // Daijisho nds.com.pizzaemulators.pbds: '-n com.pizzaemulators.pbds/.MainActivity\n -e rom_uri
         // {file.uri}\n --activity-clear-task\n --activity-clear-top'
         standalone(
@@ -188,6 +202,7 @@ internal val EXPECTED_B: List<ExpectedSystem> = listOf(
             flags = setOf(LaunchFlag.ClearTask, LaunchFlag.ClearTop),
             extras = mapOf("rom_uri" to ExtraValue.Text(URI)),
         )
+        omnidroid("nds", 15)
         retroArch("melondsds_libretro_android.so")
         retroArch("melonds_libretro_android.so")
         retroArch("desmume_libretro_android.so")
@@ -235,6 +250,7 @@ internal val EXPECTED_B: List<ExpectedSystem> = listOf(
             flags = setOf(),
             extras = emptyMap(),
         )
+        omnidroid("genesis", 11)
         retroArch("genesis_plus_gx_wide_libretro_android.so")
         retroArch("picodrive_libretro_android.so")
         retroArch("blastem_libretro_android.so")
@@ -316,6 +332,7 @@ internal val EXPECTED_B: List<ExpectedSystem> = listOf(
             flags = setOf(),
             extras = emptyMap(),
         )
+        omnidroid("psx", 20)
         retroArch("mednafen_psx_libretro_android.so")
         retroArch("mednafen_psx_hw_libretro_android.so")
         retroArch("pcsx_rearmed_libretro_android.so")

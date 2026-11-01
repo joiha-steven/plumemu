@@ -118,9 +118,13 @@ internal abstract class WorkerTestBase {
         runBudgetMillis: Long = ScraperWork.DEFAULT_RUN_BUDGET_MILLIS,
         timingLog: com.plumemu.scraper.timing.ScrapeTimingLog = com.plumemu.scraper.timing.ScrapeTimingLog { fx.timingLines += it },
         holdOff: suspend () -> Boolean = { false },
+        /** Real-time read timeout of the client; null keeps OkHttp's 10 s. A test whose server never finishes an answer sets it short. */
+        readTimeoutMillis: Long? = null,
     ): ScraperWork {
         val pauses = SharedPreferencesPauseStore(app()) { fx.logLines += it }
-        val scraper = fx.scraper(fx.config(clock = clock, developer = developer, pauseStore = pauses, timingLog = timingLog))
+        val scraper = fx.scraper(fx.config(clock = clock, developer = developer, pauseStore = pauses, timingLog = timingLog)) {
+            if (readTimeoutMillis != null) readTimeout(readTimeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+        }
         return ScraperWork(
             scraper, source, mediaDir, sizes, lowRamDevice = false, runClock,
             log = { fx.logLines += it }, runBudgetMillis = runBudgetMillis,

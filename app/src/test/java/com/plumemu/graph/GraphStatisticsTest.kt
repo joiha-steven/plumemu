@@ -41,106 +41,7 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
-class GraphStatisticsTest {
-    private val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), PlumDatabase::class.java).build()
-    private val logged = mutableListOf<String>()
-    private var signedIn = true
-    private val asked = mutableListOf<List<String>>()
-
-    /** The home screen's results: a saved box front for every key except those of games named "No art". */
-    private val art =
-        object : HomeArtSource {
-            override fun observe(keys: List<String>): Flow<Map<String, GameArt>> {
-                asked += keys
-                return flowOf(keys.filter { it !in keysWithoutArt }.associateWith { GameArt(ArtPicture("/art/$it.png", 300, 420), null, GameDetails(null, "", "", "", "")) })
-            }
-
-            override suspend fun extras(key: String): DetailsExtras = DetailsExtras.None
-
-            override val images: CoverImages = CoverImages.None
-        }
-    private val keysWithoutArt = mutableSetOf<String>()
-
-    private var clock = 0L
-
-    private fun reader(
-        catalog: Boolean = true,
-        arcadeGames: ArcadeGames = ArcadeGames.None,
-    ) =
-        GraphStatistics(
-            plays = { db.playDao() },
-            scraped = { db.scrapedGameDao() },
-            catalog = { if (catalog) LibraryHomeContentTest.catalog else null },
-            hasBoxArt = { signedIn },
-            art = art,
-            io = Dispatchers.IO,
-            log = { logged += it },
-            now = { clock },
-            zone = { zone },
-            locale = { locale },
-            arcadeSystems = listOf("arcade"),
-            arcadeGames = arcadeGames,
-        )
-
-    private var zone = TimeZone.getTimeZone("UTC")
-    private var locale = Locale.US
-
-    @After
-    fun tearDown() = db.close()
-
-    /** [count] games, the system of each picked by [systemOf]; returns their ids in order. */
-    private suspend fun library(
-        count: Int,
-        systemOf: (Int) -> String = { "snes" },
-    ): List<Long> {
-        val folderId = db.scanDao().insertFolder(RomFolderEntity(treeUri = "content://t/tree/roms", displayName = "ROMs", addedAt = 0))
-        db.scanDao().applyBatch(
-            ScanBatch(
-                folderId,
-                systems = listOf(SystemEntity("snes", "Super Famicom (stored)"), SystemEntity("gba", "gba"), SystemEntity("md", "md")),
-                newGames = List(count) { game(folderId, systemOf(it), "Game %05d".format(it)) },
-            ),
-        )
-        return db.scanDao().gamesInFolder(folderId).sortedBy { it.title }.map { it.id }
-    }
-
-    /** A saved box front for every game whose position passes [has]. */
-    private fun boxFronts(
-        ids: List<Long>,
-        has: (Int) -> Boolean,
-    ) {
-        val sql = db.openHelper.writableDatabase
-        ids.forEachIndexed { at, id ->
-            if (has(at)) {
-                sql.execSQL(
-                    "INSERT INTO scraped_game (scrape_key, game_id, outcome, scraped_at, title, pictures, has_box_front) VALUES (?, ?, 'MATCHED', 1, 't', '', 1)",
-                    arrayOf<Any>("game:$id", id),
-                )
-            }
-        }
-    }
-
-    private fun game(
-        folderId: Long,
-        system: String,
-        title: String,
-    ) = GameEntity(
-        folderId = folderId,
-        documentId = "root/$system/$title",
-        parentDocumentId = "root/$system",
-        relativePath = "$system/$title",
-        fileName = title,
-        sizeBytes = 1,
-        modifiedAt = 1,
-        title = title,
-        sortName = title.lowercase(),
-        regions = "",
-        discGroup = null,
-        discCount = 1,
-        systemId = system,
-        isPrimaryCopy = true,
-    )
-
+internal class GraphStatisticsTest : GraphStatisticsFixture() {
     @Test
     fun everyFigureComesFromThePlayHistoryTheLibraryAndTheStoredBoxArt() =
         runBlocking {
@@ -154,19 +55,21 @@ class GraphStatisticsTest {
             val state = reader().read() as StatisticsState.Read
             val figures = state.statistics
             assertEquals(12_200L, figures.totalSeconds)
-            assertEquals(listOf("Game 00006", "Game 00000", "Game 00001"), figures.topGames.map { it.title })
-            assertEquals(listOf(5_000L, 3_600L, 3_000L), figures.topGames.map { it.seconds })
+            assertEquals(listOf("Game 00006", "Game 00000", "Game 00001", "Game 00007"), figures.topGames.map { it.title })
+            assertEquals(listOf(5_000L, 3_600L, 3_000L, 600L), figures.topGames.map { it.seconds })
             val gba = LibraryHomeContentTest.catalog.system("gba")?.displayName
             assertEquals("the name the main screen shows", gba, figures.topGames[0].systemName)
             assertEquals("the home grid's box front", ArtPicture("/art/game:${ids[6]}.png", 300, 420), figures.topGames[0].cover)
             assertEquals("snes: 6,600 s beats gba's 5,600", "snes", figures.topSystem?.id)
             assertEquals(6_600L, figures.topSystem?.seconds)
+            assertEquals(listOf("snes", "gba"), figures.topSystems.map { it.id })
+            assertEquals("the shown copy's system", listOf("gba", "snes", "snes", "gba"), figures.topGames.map { it.systemId })
             assertEquals(4, figures.playedGames)
             assertEquals(10, figures.libraryGames)
             assertEquals(5, figures.gamesWithBoxArt)
             assertTrue(figures.hasBoxArt)
             assertTrue(figures.hasPlayed)
-            assertEquals("one read of the three games' results", listOf(listOf("game:${ids[6]}", "game:${ids[0]}", "game:${ids[1]}")), asked)
+            assertEquals("one read of the games' results", listOf(listOf("game:${ids[6]}", "game:${ids[0]}", "game:${ids[1]}", "game:${ids[7]}")), asked)
         }
 
     @Test
@@ -178,7 +81,7 @@ class GraphStatisticsTest {
             val figures = (reader(catalog = false).read() as StatisticsState.Read).statistics
             assertNull(figures.topGames.single().cover)
             assertTrue("the slot stays: box art is set up", figures.hasBoxArt)
-            assertEquals(TopSystem("snes", "Super Famicom (stored)", 120), figures.topSystem)
+            assertEquals(listOf(TopSystem("snes", "Super Famicom (stored)", 120)), figures.topSystems)
             assertEquals("the game names its system the same way", "Super Famicom (stored)", figures.topGames.single().systemName)
         }
 
@@ -286,20 +189,6 @@ class GraphStatisticsTest {
             assertEquals(2, read.playedGames)
         }
 
-    @Test
-    fun timesPlayedAddsTheCopiesAndLastPlayedIsTheNewestDayInTheDeviceZone() =
-        runBlocking {
-            val (usa, europe) = copies("Zelda (USA).sfc", "Zelda (Europe).sfc")
-            zone = TimeZone.getTimeZone("Asia/Tokyo")
-            clock = at("2026-10-21T12:00:00Z")
-            // 23:30 UTC the day before is already today in Tokyo (08:30); the other copy's play is 3 days back.
-            db.playDao().addSession(usa, endedAt = at("2026-10-18T10:00:00Z"), seconds = 600)
-            db.playDao().addSession(europe, endedAt = at("2026-10-20T23:30:00Z"), seconds = 600)
-            val game = (reader().read() as StatisticsState.Read).statistics.topGames.single()
-            assertEquals(2, game.timesPlayed)
-            assertEquals("08:30 the same Tokyo day as now (in UTC it would be yesterday)", 0, game.lastPlayedDaysAgo)
-        }
-
     /** Arcade sets of one game have other file names (`dino.zip`, `dinou.zip`): they count by the game library's `arcadeGameOf` names. */
     @Test
     fun arcadeSetsOfOneGameCountTogetherUnderTheShownSet() =
@@ -391,10 +280,6 @@ class GraphStatisticsTest {
             assertTrue("median read took ${median.ms} ms", median < BUDGET_NANOS)
         }
 
-    private fun at(
-        day: String,
-        zoneId: String = "UTC",
-    ): Long = java.time.ZonedDateTime.parse("${day}[$zoneId]").toInstant().toEpochMilli()
 
     @Test
     fun theWeekStartsOnTheLocalesFirstDayAtMidnightInTheDeviceTimeZone() {
@@ -451,6 +336,45 @@ class GraphStatisticsTest {
             assertEquals(0L, figures.thisWeekSeconds)
         }
 
+
+    private suspend fun libraryOfSystems(ids: List<String>): List<Long> {
+        val folderId = db.scanDao().insertFolder(RomFolderEntity(treeUri = "content://t/tree/roms", displayName = "ROMs", addedAt = 0))
+        db.scanDao().applyBatch(
+            ScanBatch(
+                folderId,
+                systems = ids.map { SystemEntity(it, "$it stored") },
+                newGames = ids.mapIndexed { at, system -> game(folderId, system, "Game %05d".format(at)) },
+            ),
+        )
+        return db.scanDao().gamesInFolder(folderId).sortedBy { it.title }.map { it.id }
+    }
+
+    @Test
+    fun topSystemsAreTheFiveLongestPlayedWithTiesBrokenByIdAndASixthLeftOut() =
+        runBlocking {
+            val systems = listOf("snes", "gba", "md", "nes", "gb", "psx")
+            val games = libraryOfSystems(systems)
+            // snes 900, then a three-way tie at 600 (gb, md, nes by id), psx 300 and gba 120 (the sixth).
+            listOf(900L, 120L, 600L, 600L, 600L, 300L).forEachIndexed { at, seconds -> db.playDao().addSession(games[at], endedAt = 1, seconds = seconds) }
+            val figures = (reader(catalog = false).read() as StatisticsState.Read).statistics
+            assertEquals(listOf("snes", "gb", "md", "nes", "psx"), figures.topSystems.map { it.id })
+            assertEquals(listOf(900L, 600L, 600L, 600L, 300L), figures.topSystems.map { it.seconds })
+            assertEquals("snes stored", figures.topSystems.first().name)
+            assertEquals("snes", figures.topSystem?.id)
+            assertEquals(5, figures.topGames.size)
+        }
+
+    @Test
+    fun topSystemsTakeTheirNamesFromTheCatalogLikeTheGamesDo() =
+        runBlocking {
+            val ids = library(2) { if (it == 0) "snes" else "gba" }
+            ids.forEach { db.playDao().addSession(it, endedAt = 1, seconds = 120) }
+            val figures = (reader().read() as StatisticsState.Read).statistics
+            assertEquals(listOf("gba", "snes"), figures.topSystems.map { it.id })
+            figures.topSystems.forEach { assertEquals(LibraryHomeContentTest.catalog.system(it.id)?.displayName, it.name) }
+        }
+
+
     private suspend fun timed(block: suspend () -> Unit): Long {
         val start = System.nanoTime()
         block()
@@ -461,6 +385,5 @@ class GraphStatisticsTest {
 
     private companion object {
         const val BUDGET_NANOS = 100_000_000L
-        const val DAY = 86_400_000L
     }
 }

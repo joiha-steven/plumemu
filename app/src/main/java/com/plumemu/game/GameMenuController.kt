@@ -64,6 +64,9 @@ internal class GameMenuController(
     /** A read or write a panel row started; cancelled when the person leaves that panel. */
     private var work: Job? = null
 
+    /** Info's achievements, read while Info shows; cancelled with the panel ([back], [close]). */
+    private var achievementsRead: Job? = null
+
     /** An arcade set's Other versions, read once its menu shows; cancelled when the menu closes. */
     private var versionsRead: Job? = null
 
@@ -241,6 +244,7 @@ internal class GameMenuController(
     /** Back: from Play with or Info to the menu (its focus kept), from the menu or a message to the list. */
     fun back() {
         work?.cancel()
+        achievementsRead?.cancel()
         endBoxArt()
         val parent = panel?.parent
         panel = arrivedVersions?.let { (key, listing) -> parent?.withVersions(key, listing) } ?: parent
@@ -251,6 +255,7 @@ internal class GameMenuController(
 
     fun close() {
         work?.cancel()
+        achievementsRead?.cancel()
         opening?.cancel()
         forgetVersions()
         endBoxArt()
@@ -468,16 +473,33 @@ internal class GameMenuController(
         panel = info
         val name = facts.name?.takeIf { it.sourceInPack && it.source == null }
         val wantsSet = facts.isArcade && facts.arcadeSet == null
+        // The achievements run in their own job: `work` being active holds the panel's rows back (choose), and a
+        // slow answer from RetroAchievements must never keep Back from working.
+        achievementsRead?.cancel()
+        achievementsRead = scope.launch { readAchievementStates(log, open.game, { actions.achievements(open.game.key) }) { state -> patchInfo(info) { it.copy(achievements = state) } } }
         if (name == null && !wantsSet) return
         work =
             scope.launch {
                 val source = name?.let { readOrNull("name source", open.game) { actions.nameSource(open.game.key) } }
                 val set = if (wantsSet) readOrNull("arcade set", open.game) { actions.arcadeSet(open.game.key) } else null
                 if (source == null && set == null) return@launch
-                val read = facts.copy(name = source?.let { name?.copy(source = it) } ?: facts.name, arcadeSet = set ?: facts.arcadeSet)
-                // The same InfoScroll: the facts stay where Up and Down left them.
-                showIfStill(info, info.copy(screen = screen.copy(facts = read)))
+                patchInfo(info) { read -> read.copy(name = source?.let { name?.copy(source = it) } ?: read.name, arcadeSet = set ?: read.arcadeSet) }
             }
+    }
+
+    /**
+     * Changes the facts of the Info panel [info] stands for, if it is still on screen: several reads (the name's
+     * source, the arcade set, the achievements) land on the same panel, each on what the others left. The same
+     * InfoScroll stays, so the facts stay where Up and Down left them.
+     */
+    private fun patchInfo(
+        info: OpenPanel,
+        change: (GameFacts) -> GameFacts,
+    ) {
+        val shown = panel ?: return
+        val screen = shown.screen as? PanelScreen.Info ?: return
+        if (shown.parent !== info.parent || shown.game != info.game) return
+        panel = shown.copy(screen = screen.copy(facts = change(screen.facts)))
     }
 
     /** Started at once (not cancellable before it begins), then not cancellable at all. */

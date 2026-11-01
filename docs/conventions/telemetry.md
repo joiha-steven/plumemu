@@ -39,7 +39,7 @@ private things. `system_id` and `emulator_id` are the platform data's ids.
 | `view_changed` | `system_id`, `view` (list / grid / details), `grid_size` (small / medium / large, grid only) |
 | `search_used` | `query_length_bucket` (1–2, 3–5, 6+), `results_bucket` (0, 1–9, 10+), `opened_result` (yes / no); never the words |
 | `favorite_changed` | `system_id`, `change` (added / removed) |
-| `game_launched` | `system_id`, `emulator_id`, `from` (list / grid / details / recent / favorites / search / second_screen / statistics), `result` (ok / emulator_missing / emulator_not_chosen / file_missing / error); emulator_id is left out when none was chosen or installed |
+| `game_launched` | `system_id`, `emulator_id`, `from` (list / grid / details / recent / favorites / search / second_screen; statistics is retired: Settings › Statistics no longer starts games), `result` (ok / emulator_missing / emulator_not_chosen / file_missing / error); emulator_id is left out when none was chosen or installed |
 | `game_session` | `system_id`, `emulator_id`, `minutes` (whole, capped at 600; from the launch to Plumemu back in front, the same time Settings › Statistics counts; sessions under 10 seconds are not sent) |
 | `emulator_picked` | `system_id`, `emulator_id`, `where` (setup / settings / per_game); setup is not sent today, as setup picks none |
 | `setting_changed` | `key`, `value` (only fixed choices: background preset or "custom", text colour, accent preset, "by_system" or "custom", font, text size, text weight, left edge, grid size, button layout, keyboard, switch system with, sounds, animations, …; never a colour value or free text) |

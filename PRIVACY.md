@@ -1,26 +1,26 @@
 # Privacy
 
-Last updated: 31 October 2026.
+Last updated: 2 November 2026.
 
 ## Builds you make yourself
 
 Plumemu's source is public. A build made from it is made without the addresses of my servers: it
 sends **no usage statistics and no crash reports** (the switch is not shown), **checks for no
-updates**, and has no ScreenScraper account built in, so it contacts none of the servers named
+updates**, and has no ScreenScraper or RetroAchievements account built in, so it contacts none of the servers named
 below. Everything below describes the official build.
 
 ## Usage statistics and crash reports
 
 Plumemu can send anonymous usage statistics and crash reports to the developer, to decide what to
 fix first. They are **off unless you switch them on**, in the setup or later in Settings ›
-Advanced › Send usage statistics. (Copies installed before 0.0.8-beta build 850, when the setup
+About › Send usage statistics. (Copies installed before 0.0.8-beta build 850, when the setup
 had it on, keep the choice they have; the same switch turns it off.)
 
 - **What is sent**: your country, your device model, the Android and Plumemu versions, a random
   install number that is not linked to you, which screens and settings are used, how often and how
   long Plumemu is used, and how long you play, by system and emulator. Crash reports hold what
   went wrong and where in the app, and may contain file and folder names.
-- **What is never sent**: game titles, the words you search for, your ScreenScraper account, the
+- **What is never sent**: game titles, the words you search for, your ScreenScraper or RetroAchievements account, the
   other apps on your device, your advertising ID. Your IP address reaches the server with any
   connection; it is used only to tell the country and is not kept.
 - **Switching it off** after it was on sends one anonymous "switched off" count, with your country and device
@@ -36,7 +36,7 @@ Send. Settings › Advanced › Export logs only shares the log file where you c
 nothing itself. Reports are kept by the developer, with no time limit.
 
 Two other things go over the network: the update check, below, which carries nothing about you,
-and box art, only if you sign in to ScreenScraper.
+and box art and achievements, only if you sign in to ScreenScraper or RetroAchievements.
 
 ## Update check
 
@@ -48,6 +48,9 @@ Settings › About › Check for updates.
   account, nothing about your library, your device or the version you have.
 - **Who sees it**: the server is hosted by Cloudflare, which sees your IP address and that the
   request comes from an app (`okhttp/<version>`), as for any web request.
+- **Platform data**: in the same check, Plumemu also asks the same server for the list of systems
+  and emulators (`data/platforms/latest.json`) and, only when it names newer data, downloads that
+  file. Nothing else is sent, and nothing about you.
 - **Downloading an update** happens only after you press Update (on mobile data only after a
   second yes), from the same server.
 - **What stays on the device**: when it last checked and what it found, in storage that is never
@@ -74,8 +77,28 @@ ScreenScraper account. Without an account Plumemu does not contact ScreenScraper
   (`thumbnails.libretro.com`). Nothing else, and no account, goes to either.
 - **What stays on the device**: the box art and details it sends back, and your password,
   encrypted with a key that never leaves the device.
-- **Sign out** in Settings › Library › ScreenScraper removes the account from the device.
+- **Sign out** in Settings › Accounts › ScreenScraper removes the account from the device.
 - Your ScreenScraper account is never written to Plumemu's logs.
+
+## Achievements (only if you sign in to RetroAchievements)
+
+Plumemu shows each game's achievements and your progress from [RetroAchievements](https://retroachievements.org),
+using your own user name and Web API key (never your password). Signed out, Plumemu does not
+contact RetroAchievements at all.
+
+- **What is sent** to `retroachievements.org`: your RetroAchievements user name, your Web API key
+  and the RetroAchievements number of a game. Plumemu finds that number from a hash of the game
+  file, which it computes on the handheld; no game file leaves it. RetroAchievements' own privacy
+  terms apply to what it receives.
+- **When**: when a game's Info opens, after you play, and once a day on a network that is not
+  metered when Plumemu comes to the front. Never while a game is running.
+- **Badges** are plain downloads of pictures from `media.retroachievements.org`, with no account
+  data.
+- **What stays on the device**: the game list it downloads, your progress and the games it matched,
+  and your key, encrypted with a key that never leaves the device. The key is never written to
+  Plumemu's logs and never put in a backup; after a restore you sign in again.
+- **Sign out** in Settings › Accounts › RetroAchievements deletes your name, your key and your
+  progress from the device.
 
 ## Battery use
 
@@ -91,8 +114,9 @@ tell a game's usual pace.
 ## Backups
 
 Settings › Advanced › Back up… saves a file where you choose. It holds your settings and, while
-you are signed in, your ScreenScraper user name and password in plain text, so keep it private. A
-backup of everything also holds your library, box art, play time and battery use. Plumemu never
+you are signed in, your ScreenScraper user name and password in plain text, so keep it private. It
+never holds your RetroAchievements key. A backup of everything also holds your library, box art,
+play time and battery use. Plumemu never
 sends a backup anywhere; where the file goes is up to you.
 
 ## What Plumemu reads on the device

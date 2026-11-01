@@ -24,6 +24,9 @@ internal enum class SignInItem {
     /** "Skip" in setup, "Cancel" in Settings. */
     Leave,
 
+    /** RetroAchievements only, under the buttons: opens the site's key page in the browser. */
+    OpenKeyPage,
+
     /** Signed in: the only item, "Continue" in setup. */
     Continue,
 }
@@ -41,6 +44,9 @@ internal sealed interface SignInStep {
     /** Skip (setup) or Cancel (Settings): leave without an account. */
     data object Leave : SignInStep
 
+    /** A or a tap on "Open the key page" (RetroAchievements' form only); the host opens the browser. */
+    data object OpenKeyPage : SignInStep
+
     /** Continue after a sign-in that worked. */
     data object Done : SignInStep
 
@@ -52,8 +58,9 @@ internal sealed interface SignInStep {
  * The ScreenScraper sign-in shared by setup and Settings: a username field, a masked password
  * field, Sign in and Skip / Cancel side by side, and one message line. For both inputs:
  * Up / Down move between the fields and the buttons, Left / Right between the two buttons.
- * The keyboard never comes up by itself: the cursor can rest on a field with the
- * keyboard down; A or a tap on a field opens its keyboard, moving off a field puts it away. The
+ * Opening the step brings the keyboard up on the first empty field ([startTyping]); after that the
+ * cursor can rest on a field with the keyboard down (hidden or B); A or a tap on a field opens its
+ * keyboard, moving off a field puts it away. The
  * keyboard's Next goes to the password with its keyboard, its Done ("Sign in") presses Sign in; A
  * on Sign in submits; a tap on a button presses it. While the check runs only Back is the host's;
  * everything else waits. The password lives only here, in memory, until the host hands it to the
@@ -71,6 +78,8 @@ internal class SignInForm(
     /** Sign in over [SignInItem.Leave] (a narrow panel) instead of beside it: Down and Up move between them too. */
     val stackedButtons: Boolean = false,
     val keyboardKind: KeyboardChoice = KeyboardChoice.Android,
+    /** Settings › Accounts › RetroAchievements: the second field is the Web API key, not a password. */
+    val kind: SignInKind = SignInKind.ScreenScraper,
 ) {
     var username: String by mutableStateOf(initialUsername)
         private set
@@ -95,7 +104,12 @@ internal class SignInForm(
 
     /** The items in screen order; a tap on the n-th is item n. */
     val items: List<SignInItem>
-        get() = if (signedInAs != null) listOf(SignInItem.Continue) else listOf(SignInItem.Username, SignInItem.Password, SignInItem.SignIn, SignInItem.Leave)
+        get() =
+            when {
+                signedInAs != null -> listOf(SignInItem.Continue)
+                kind == SignInKind.RetroAchievements -> listOf(SignInItem.Username, SignInItem.Password, SignInItem.SignIn, SignInItem.Leave, SignInItem.OpenKeyPage)
+                else -> listOf(SignInItem.Username, SignInItem.Password, SignInItem.SignIn, SignInItem.Leave)
+            }
 
     /**
      * Whether the person asked to type (A or a tap on a field; moving off the field ends it) and
@@ -264,8 +278,23 @@ internal class SignInForm(
         keyboard.stop()
     }
 
+    /**
+     * The step opened: the cursor goes to the first empty field (the name, else the password or key,
+     * as after "Sign in again") and its keyboard comes up. Nothing on a signed-in form or during a check.
+     */
+    fun startTyping() {
+        if (signedInAs != null || isChecking) return
+        focus = if (username.isEmpty()) SignInItem.Username else SignInItem.Password
+        askForKeyboard()
+    }
+
     private fun askForKeyboard() {
         keyboard.ask()
+    }
+
+    /** The browser could not open the key page: the message line says so and the focus stays on the button. */
+    fun showNoBrowser() {
+        message = SignInResult.NoBrowser
     }
 
     /** The graph's answer to the last [SignInStep.Submit]. */
@@ -281,8 +310,13 @@ internal class SignInForm(
             return
         }
         message = result
-        // A wrong name or password: back to the password, ready to type it again (A opens its keyboard).
-        focus = if (result == SignInResult.WrongCredentials) SignInItem.Password else SignInItem.SignIn
+        // A wrong name or password (or key): back to it, ready to type it again (A opens its keyboard).
+        focus =
+            when (result) {
+                SignInResult.WrongCredentials, SignInResult.RaWrongKey -> SignInItem.Password
+                SignInResult.RaUnknownUser -> SignInItem.Username
+                else -> SignInItem.SignIn
+            }
     }
 
     private fun move(direction: Direction): Boolean {
@@ -299,21 +333,30 @@ internal class SignInForm(
                     when (direction) {
                         Direction.Up -> SignInItem.Password
                         Direction.Right -> SignInItem.Leave.takeUnless { stackedButtons }
-                        Direction.Down -> SignInItem.Leave.takeIf { stackedButtons }
+                        Direction.Down -> if (stackedButtons) SignInItem.Leave else keyPageOrNull()
                         Direction.Left -> null
                     }
                 SignInItem.Leave ->
                     when (direction) {
                         Direction.Up -> if (stackedButtons) SignInItem.SignIn else SignInItem.Password
                         Direction.Left -> SignInItem.SignIn.takeUnless { stackedButtons }
+                        Direction.Down -> keyPageOrNull()
                         else -> null
                     }
+                // Up goes back to the button the cursor came from (the last one in a stacked panel).
+                SignInItem.OpenKeyPage -> if (direction == Direction.Up) (if (stackedButtons) SignInItem.Leave else buttonAbove) else null
                 SignInItem.Continue -> null
             } ?: return false
+        if (next == SignInItem.OpenKeyPage) buttonAbove = focus
         focus = next
         keyboard.stop()
         return true
     }
+
+    /** The button the cursor left for [SignInItem.OpenKeyPage]. */
+    private var buttonAbove = SignInItem.SignIn
+
+    private fun keyPageOrNull(): SignInItem? = SignInItem.OpenKeyPage.takeIf { it in items }
 
     private fun activate(item: SignInItem): SignInStep =
         when (item) {
@@ -323,6 +366,10 @@ internal class SignInForm(
             }
             SignInItem.SignIn -> submit()
             SignInItem.Leave -> SignInStep.Leave
+            SignInItem.OpenKeyPage -> {
+                message = null
+                SignInStep.OpenKeyPage
+            }
             SignInItem.Continue -> SignInStep.Done
         }
 

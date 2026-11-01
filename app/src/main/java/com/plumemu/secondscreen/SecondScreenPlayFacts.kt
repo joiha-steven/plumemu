@@ -5,6 +5,7 @@ import com.plumemu.coredata.db.GameDao
 import com.plumemu.coredata.db.PlayDao
 import com.plumemu.game.EmulatorToStart
 import com.plumemu.game.daysAgo
+import com.plumemu.graph.AchievementCount
 import com.plumemu.home.GameArt
 import java.util.concurrent.TimeUnit
 
@@ -39,6 +40,11 @@ internal class SecondScreenPlayFacts(
      * shows no battery line. Null for a game never measured too.
      */
     private val paceOf: (suspend (Long) -> BatteryPace?)? = null,
+    /**
+     * A game id's stored RetroAchievements progress (`GraphAchievements.storedCountOf`: the database only, never the network), read
+     * with the play facts; null: no line.
+     */
+    private val achievementsOf: (suspend (Long) -> AchievementCount?)? = null,
     /** Whether the window has room for art; false never opens the result read. */
     private val isArtShown: () -> Boolean = { true },
 ) {
@@ -65,13 +71,14 @@ internal class SecondScreenPlayFacts(
                                 emulator = emulatorOf?.let { read -> EmulatorFact(read(requireNotNull(id))) },
                                 fileName = fileNameOf?.let { read -> read(requireNotNull(id)) },
                                 batteryPace = paceOf?.let { read -> read(requireNotNull(id)) },
+                                achievements = achievementsOf?.let { read -> read(requireNotNull(id)) },
                             )
                         } else {
                             content
                         }
                     if (needsArt && key != null && readArt != null) {
                         val result = readArt(key)
-                        withPlay.copy(art = result?.large, details = result?.details)
+                        withPlay.copy(art = result?.large, details = result?.details, hasNoPicture = result?.large == null)
                     } else {
                         withPlay
                     }

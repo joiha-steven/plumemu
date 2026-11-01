@@ -126,6 +126,12 @@ abstract class AppGameDao {
     @Query("SELECT * FROM app_game ORDER BY game_id")
     abstract suspend fun records(): List<AppGameEntity>
 
+    /** Game id to package of every app game, followed live: the home screen draws such a row with its app's icon. */
+    fun observePackages(): Flow<Map<Long, String>> = observeRecords().map { rows -> rows.associate { it.gameId to it.packageName } }
+
+    @Query("SELECT * FROM app_game")
+    protected abstract fun observeRecords(): Flow<List<AppGameEntity>>
+
     /** The person's answers by package; a stored kind this build does not know is left out (logged). */
     fun observeChoices(): Flow<Map<String, AppKind>> = observeChoiceRows().map(::toChoices)
 

@@ -4,6 +4,8 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.update.CheckFailure
 import com.plumemu.update.CheckOutcome
 import com.plumemu.update.LastCheck
+import com.plumemu.update.NoteSection
+import com.plumemu.update.SectionKind
 import com.plumemu.update.UpdateFailure
 import com.plumemu.update.UpdateManifest
 import com.plumemu.update.UpdateStep
@@ -38,7 +40,20 @@ class SettingsUpdatesScreenshotTest {
             notes = listOf("Updates install from Settings › About.", "Folders are checked again when you come back to Plumemu.", "Fixes the grid's first row being cut."),
             notesUrl = null,
         )
+    private val grouped =
+        release.copy(
+            sections =
+                listOf(
+                    NoteSection(SectionKind.New, listOf("Updates install from Settings › About.", "A short tour of the home screen on first start.")),
+                    NoteSection(SectionKind.Improved, listOf("Folders are checked again when you come back to Plumemu.")),
+                    NoteSection(SectionKind.Fixed, listOf("The grid's first row is no longer cut.", "Scanning a folder with a very long name no longer stops.")),
+                    NoteSection(SectionKind.Known, listOf("Some DAT files need a rescan after the update.")),
+                ),
+        )
+    private val longItem = "A very long note that goes on and on, to show that the text wraps under itself and never under the dot, with words that make the lines longer still, and that it never touches the edge of the panel."
+    private val long = release.copy(sections = listOf(NoteSection(SectionKind.New, listOf(longItem, "Short one.")), NoteSection(SectionKind.Fixed, listOf(longItem))))
     private val found = UpdateView(lastCheck = LastCheck(checkedAt, CheckOutcome.Found), found = release)
+    private fun foundWith(manifest: UpdateManifest, step: UpdateStep = UpdateStep.Idle) = SettingsContent(update = found.copy(found = manifest, step = step))
     private val withUpdate = SettingsContent(update = found)
 
     /** About › Update available, the second row while one is found. */
@@ -54,6 +69,12 @@ class SettingsUpdatesScreenshotTest {
     @Test fun updateRow() = shot("settings_update_row", onUpdateRow, withUpdate)
 
     @Test fun updatePanel() = shot("settings_update_panel", inPanel, withUpdate)
+
+    @Test fun updatePanelWithGroups() = shot("settings_update_groups", inPanel, foundWith(grouped))
+
+    @Test fun updatePanelWithAVeryLongItem() = shot("settings_update_long_item", inPanel, foundWith(long))
+
+    @Test fun downloadingWithGroups() = shot("settings_update_groups_downloading", inPanel, foundWith(grouped, UpdateStep.Downloading(3_400_000, 9_800_000)))
 
     @Test fun downloading() = shot("settings_update_downloading", inPanel, SettingsContent(update = found.copy(step = UpdateStep.Downloading(3_400_000, 9_800_000))))
 

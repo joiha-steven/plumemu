@@ -11,6 +11,8 @@ import com.plumemu.graph.ContentReadWork
 import com.plumemu.graph.followUsageStatistics
 import com.plumemu.graph.storedUsageStatistics
 import com.plumemu.graph.telemetryConfig
+import com.plumemu.keyboard.AndroidClipSource
+import com.plumemu.keyboard.PasteBoard
 import com.plumemu.language.AppLocale
 import com.plumemu.scraper.DeveloperCredentials
 import com.plumemu.scraper.work.ScraperHost
@@ -42,7 +44,7 @@ open class PlumApplication : Application(), Configuration.Provider, ScraperHost,
     override val workManagerConfiguration: Configuration =
         Configuration.Builder().setMinimumLoggingLevel(Log.INFO).build()
 
-    // Settings › Advanced › Language before Android 13 (AppLocale): text read from the application's own
+    // Settings › Appearance › Language before Android 13 (AppLocale): text read from the application's own
     // context (the Shortcuts list's name) follows a new pick from the next start; Activities at once.
     override fun attachBaseContext(base: Context) = super.attachBaseContext(AppLocale.wrap(base))
 
@@ -51,6 +53,7 @@ open class PlumApplication : Application(), Configuration.Provider, ScraperHost,
         val statistics = makeTelemetry()
         telemetry = statistics
         graph = AppGraph(this, telemetry = statistics, problemReports = statistics?.problems)
+        PasteBoard.install(AndroidClipSource(this))
         if (statistics != null) {
             // Reads its files and sends on its own background scope; nothing here waits for it.
             statistics.start()

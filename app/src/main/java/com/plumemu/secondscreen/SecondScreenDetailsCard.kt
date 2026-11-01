@@ -30,6 +30,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -43,11 +45,16 @@ import com.plumemu.R
 import com.plumemu.battery.BatteryPace
 import com.plumemu.battery.PickingBatteryLine
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.game.achievementPercent
+import com.plumemu.graph.AchievementCount
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.SecondScreenDimens
 import com.plumemu.home.ArtPicture
 import com.plumemu.home.CoverImages
 import com.plumemu.home.GameDetails
+import com.plumemu.home.AppGameIcon
+import com.plumemu.home.HomeTags
+import com.plumemu.home.PosterCover
 import com.plumemu.home.fitInside
 import com.plumemu.home.ratingLabel
 import com.plumemu.home.yearAndPublisher
@@ -107,19 +114,26 @@ internal fun BoxScope.PickingCard(
     // Over a grid the top screen shows the cover: the card leaves it out, and nothing is decoded for it.
     val isCoverOnTop = game?.isCoverOnTopScreen == true
     val picture = game?.art?.takeIf { dimens.showsArt && it != unreadable && !isCoverOnTop }
+    // No picture for good: the poster stands where the picture would (not over a grid, whose cell shows it on the top screen).
+    // A picture file that cannot be read counts as no picture, as in the grid.
+    val poster = game?.takeIf { (it.hasNoPicture || (it.art != null && it.art == unreadable)) && picture == null && dimens.showsArt && !isCoverOnTop }
     val lines = detailLinesOf(game?.details)
-    val texts = if (game != null && (picture != null || lines.hasAny)) cardTexts(game, separatorColor = PlumTheme.colors.muted) else null
+    val texts = if (game != null && (picture != null || poster != null || lines.hasAny)) cardTexts(game, separatorColor = PlumTheme.colors.muted) else null
     // Not a detail: a file name alone never turns the picking card into the details card.
     val fileLine = game?.fileName?.takeIf { it.isNotBlank() }?.let(::fileNameWithoutExtension)
+    val ra = game?.achievements
     when {
-        texts != null && picture != null -> DetailsWithArt(texts, lines, fileLine, picture, dimens, images, game?.batteryPace, onUnreadable = { unreadable = picture })
-        texts != null -> DetailsWithoutArt(texts, lines, fileLine, dimens, if (isCoverOnTop) dimens.descriptionMaxLinesBesideGrid else dimens.descriptionMaxLines, game?.batteryPace)
+        content is SecondScreenContent.App && content.iconKey != null && dimens.showsArt -> AppCard(content, content.iconKey, dimens)
+        content is SecondScreenContent.Apps && content.icons.isNotEmpty() && dimens.showsArt -> AppsCard(content, dimens)
+        texts != null && picture != null -> DetailsWithArt(texts, lines, fileLine, dimens, game?.batteryPace, ra) { SecondScreenCover(picture, dimens.artSlot, images) { unreadable = picture } }
+        texts != null && poster != null -> DetailsWithArt(texts, lines, fileLine, dimens, poster.batteryPace, ra) { SecondScreenPoster(poster, dimens.artSlot) }
+        texts != null -> DetailsWithoutArt(texts, lines, fileLine, dimens, if (isCoverOnTop) dimens.descriptionMaxLinesBesideGrid else dimens.descriptionMaxLines, game?.batteryPace, ra)
         else -> PickingBlock(content, dimens)
     }
 }
 
 /**
- * The cover top-left, fitted in the [SecondScreenDimens.artSlot] square at its own shape; beside it
+ * The [cover] (a picture or a poster) top-left, fitted in the [SecondScreenDimens.artSlot] square at its own shape; beside it
  * the top line, title and fact lines; under both, full width, the description in as many of its
  * lines as fit; the file line ([fileLine], none when null) right above the played line on the
  * bottom margin.
@@ -129,21 +143,21 @@ private fun DetailsWithArt(
     texts: CardTexts,
     lines: DetailLines,
     fileLine: String?,
-    picture: ArtPicture,
     dimens: SecondScreenDimens,
-    images: CoverImages,
     pace: BatteryPace?,
-    onUnreadable: () -> Unit,
+    achievements: AchievementCount?,
+    cover: @Composable () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().padding(dimens.margin).testTag(SecondScreenTags.DETAILS)) {
         Row(Modifier.fillMaxWidth()) {
-            SecondScreenCover(picture, dimens.artSlot, images, onUnreadable)
+            cover()
             Spacer(Modifier.width(SecondScreenDimens.artToTextGap))
             Column(Modifier.weight(1f)) { HeadLines(texts, lines, dimens) }
         }
         DescriptionAndFileLine(lines.description, fileLine, dimens, descriptionGap = SecondScreenDimens.artToDescriptionGap, fill = true)
         PlayedLine(texts.facts, dimens, topGap = playedLineGap(fileLine))
         BatteryLine(pace, texts.facts, dimens)
+        AchievementsLine(achievements, texts.facts, dimens)
     }
 }
 
@@ -160,18 +174,20 @@ private fun DetailsWithoutArt(
     dimens: SecondScreenDimens,
     descriptionMaxLines: Int,
     pace: BatteryPace?,
+    achievements: AchievementCount?,
 ) {
     Column(Modifier.fillMaxSize().padding(dimens.margin).testTag(SecondScreenTags.DETAILS), verticalArrangement = Arrangement.Bottom) {
         HeadLines(texts, lines, dimens)
         DescriptionAndFileLine(lines.description, fileLine, dimens, descriptionGap = SecondScreenDimens.descriptionGap, fill = false, descriptionMaxLines = descriptionMaxLines)
         PlayedLine(texts.facts, dimens, topGap = playedLineGap(fileLine))
         BatteryLine(pace, texts.facts, dimens)
+        AchievementsLine(achievements, texts.facts, dimens)
     }
 }
 
 /** The top line, the title (its star kept, cut before it) and "1994 · Nintendo", "Racing · 8/10". */
 @Composable
-private fun ColumnScope.HeadLines(
+internal fun ColumnScope.HeadLines(
     texts: CardTexts,
     lines: DetailLines,
     dimens: SecondScreenDimens,
@@ -333,6 +349,48 @@ internal fun BatteryLine(
 ) {
     if (pace == null || playedFacts == null) return
     PickingBatteryLine(pace, PlumTheme.type[dimens.factsRole].copy(color = PlumTheme.colors.text2), topGap = SecondScreenDimens.factLineGap)
+}
+
+/**
+ * The RetroAchievements line under the battery line, [SecondScreenDimens.factLineGap] below what is above it, in the top screen's
+ * words (`achievements_summary`, Info's own) and the same fact role as the played line; none (and no gap) for a game without stored
+ * progress, and none until the play facts are known (it comes with them).
+ */
+@Composable
+internal fun AchievementsLine(
+    achievements: AchievementCount?,
+    playedFacts: Facts?,
+    dimens: SecondScreenDimens,
+) {
+    if (achievements == null || playedFacts == null) return
+    val percent = achievementPercent(achievements.earned, achievements.total)
+    Spacer(Modifier.height(SecondScreenDimens.factLineGap))
+    BasicText(
+        text = stringResource(R.string.achievements_summary, achievements.earned, achievements.total, percent),
+        style = PlumTheme.type[dimens.factsRole].copy(color = PlumTheme.colors.text2),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.testTag(SecondScreenTags.ACHIEVEMENTS),
+    )
+}
+
+/**
+ * The game's poster cover (the same look as the grid's and the details column's) in the system's shape, fitted in a square of
+ * [slot] like a picture; drawn on the fly, no bitmap.
+ */
+@Composable
+private fun SecondScreenPoster(
+    game: SecondScreenContent.Game,
+    slot: Dp,
+) {
+    // An app game has no cover: its icon stands in the slot.
+    game.appPackage?.let { AppGameIcon(it, game.title, DpSize(slot, slot), Modifier.testTag(SecondScreenTags.COVER)); return }
+    val size = fitInside(game.coverAspect, DpSize(slot, slot))
+    val corner = if (game.coverAspect >= 1f) PlumDimens.cornerCoverLandscape else PlumDimens.cornerCoverPortrait
+    val short = game.systemShort.ifEmpty { game.systemName }
+    Box(Modifier.size(size).clip(RoundedCornerShape(corner)).semantics { contentDescription = game.title }.testTag(SecondScreenTags.COVER)) {
+        PosterCover(game.title, game.systemName.ifEmpty { short }, short, Modifier.fillMaxSize().testTag(HomeTags.POSTER_COVER))
+    }
 }
 
 /**

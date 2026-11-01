@@ -38,30 +38,32 @@ class SettingsSecondScreenRowsTest {
 
     private val settings = PlumSettings(flags = SetupFlags(setupCompleted = true))
 
-    /** Settings › Home screen with [screen] found and [stored] settings, as the graph builds its content. */
+    /** Settings with [option] focused, [screen] found and [stored] settings, as the graph builds its content. */
     private fun show(
         screen: SecondScreen?,
         option: SettingsOption,
         stored: PlumSettings = settings,
     ) {
         val content = SettingsContent().withSecondScreen(screen, stored.secondScreen)
-        val rows = SettingsSection.HomeScreen.rowsIn(content)
+        val section = if (option == SettingsOption.ShowBattery) SettingsSection.HomeScreen else SettingsSection.SecondScreen
+        val rows = section.rowsIn(content)
         val focus =
             SettingsFocus(
                 column = SettingsColumn.Options,
-                section = SettingsSection.HomeScreen,
-                rememberedOption = mapOf(SettingsSection.HomeScreen to rows.indexOf(option).coerceAtLeast(0)),
+                section = section,
+                rememberedOption = mapOf(section to rows.indexOf(option).coerceAtLeast(0)),
             )
         compose.setContent { PlumTheme { SettingsAt(focus, stored, content) } }
     }
 
     @Test
-    fun withoutASecondScreenHomeScreenHasNoSuchRows() {
+    fun withoutASecondScreenNoSectionListsTheRows() {
         show(null, SettingsOption.ShowBattery)
         // The focused row's label shows twice: the row and its panel's title.
         compose.onAllNodesWithText(text(R.string.settings_show_battery))[0].assertIsDisplayed()
         compose.onNodeWithText(text(R.string.settings_second_screen)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.settings_second_screen_in_game)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.settings_section_second_screen)).assertDoesNotExist()
     }
 
     @Test
@@ -70,14 +72,14 @@ class SettingsSecondScreenRowsTest {
         compose.onAllNodesWithText(text(R.string.settings_second_screen)).assertCountEquals(2) // the row and its panel's title
         compose.onNodeWithText(text(R.string.settings_second_screen_in_game)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.settings_second_screen_body)).assertIsDisplayed()
-        compose.onNodeWithText(context.getString(R.string.settings_value_choice, text(R.string.settings_second_screen_clock))).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.settings_second_screen_clock)).assertIsDisplayed()
     }
 
     @Test
     fun theInGameRowShowsBlackAndItsExplanation() {
         val stored = settings.copy(secondScreen = SecondScreenSettings(enabled = true, inGame = InGameSetting.Black))
         show(SecondScreen(2, "Overlay #1", ScreenKind.Unsure), SettingsOption.SecondScreenInGame, stored)
-        compose.onNodeWithText(context.getString(R.string.settings_value_choice, text(R.string.settings_second_screen_black))).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.settings_second_screen_black)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.settings_second_screen_in_game_body)).assertIsDisplayed()
         // The in-game card's once-ever note, said here too so it is never only on the second screen.
         val note = text(R.string.in_game_drift_note).replaceFirstChar { it.lowercase() }

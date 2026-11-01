@@ -1,6 +1,7 @@
 package com.plumemu.settings.screen
 
 import com.plumemu.account.AccountStatus
+import com.plumemu.account.SignInForm
 import com.plumemu.account.SignInItem
 import com.plumemu.account.SignInResult
 import com.plumemu.coredata.settings.BoxArtRegionSetting
@@ -9,6 +10,7 @@ import com.plumemu.coreinput.Direction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -24,26 +26,45 @@ internal class SettingsAccountTest : SettingsModelHarness() {
 
     private fun library() = SettingsSection.Library.rowsIn(model.content)
 
+    /** Accounts' rows: ScreenScraper, then RetroAchievements. */
+    private fun accounts() = SettingsSection.Accounts.rowsIn(model.content)
+
     private fun openAccountRow() {
-        openSection(SettingsSection.Library)
+        openSection(SettingsSection.Accounts)
         focusOption(SettingsOption.ScraperAccount)
+    }
+
+    /**
+     * A on the account row: the form opens typing on its first empty field (tray up); B puts the
+     * tray away and the form stays, the cursor where it was.
+     */
+    private fun openFormAndPutTheTrayAway(first: SignInItem = SignInItem.Username): SignInForm {
+        press(Action.Enter)
+        val form = requireNotNull(model.signIn.form)
+        assertEquals("the cursor opens on the first empty field", first, form.focus)
+        assertTrue("the form opens typing, the tray up", form.isTyping && form.inField && form.isTrayUp)
+        press(Action.Back)
+        assertSame("B puts the tray away and the form stays", form, model.signIn.form)
+        assertFalse(form.isTyping)
+        assertEquals(first, form.focus)
+        return form
     }
 
     @Test
     fun noDeveloperCredentialsListsOnlyTheNotAvailableLine() {
         show(AccountStatus.NotInThisBuild)
-        val rows = library()
+        val rows = accounts()
         assertTrue(SettingsOption.ScraperStatus in rows)
         assertFalse("never asks for an account", SettingsOption.ScraperAccount in rows)
-        assertFalse(SettingsOption.BoxArtRegion in rows)
+        assertFalse(SettingsOption.BoxArtRegion in library())
         assertEquals(BoxArtLine.NotInThisBuild, boxArtLineOf(model.content.account, model.content.boxArt))
     }
 
     @Test
-    fun signedOutListsSignInAndTheRegionWithNoStatusLine() {
+    fun signedOutListsSignInInAccountsAndNoRegionRowWithNoStatusLine() {
         show(AccountStatus.SignedOut)
-        val rows = library()
-        assertEquals(listOf(SettingsOption.ScraperAccount, SettingsOption.BoxArtRegion), rows.filter { it in ACCOUNT_ROWS })
+        assertEquals(listOf(SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount), accounts())
+        assertEquals("the region is no row: it is in the ScreenScraper panel", emptyList<SettingsOption>(), library().filter { it in ACCOUNT_ROWS })
         assertNull(boxArtLineOf(model.content.account, model.content.boxArt))
     }
 
@@ -52,7 +73,8 @@ internal class SettingsAccountTest : SettingsModelHarness() {
         // The daily limit and the wrong password are no rows of their own.
         for (account in listOf(AccountStatus.SignedIn("plumtester"), AccountStatus.SignedIn("plumtester", isRefused = true), AccountStatus.SignedIn("plumtester", dailyLimitUntilMillis = 5_000L))) {
             show(account)
-            assertEquals(listOf(SettingsOption.ScraperAccount, SettingsOption.BoxArtRegion), library().filter { it in ACCOUNT_ROWS })
+            assertEquals(listOf(SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount), accounts())
+            assertEquals(emptyList<SettingsOption>(), library().filter { it in ACCOUNT_ROWS })
         }
         show(AccountStatus.SignedIn("plumtester", isRefused = true))
         assertEquals(BoxArtLine.WrongPassword, boxArtLineOf(model.content.account, model.content.boxArt))
@@ -63,23 +85,19 @@ internal class SettingsAccountTest : SettingsModelHarness() {
     }
 
     @Test
-    fun theAccountRowSitsAfterSortGamesAndBeforeTheGameLists() {
+    fun theAccountsSectionComesBeforeAdvanced() {
         show(AccountStatus.SignedOut)
+        assertEquals(SettingsSection.Advanced.ordinal - 1, SettingsSection.Accounts.ordinal)
         val rows = library()
-        // Sort games, then System order (Systems too once a system has games), then the account.
         assertEquals(rows.indexOf(SettingsOption.SortGames) + 1, rows.indexOf(SettingsOption.SystemOrder))
-        val lastLibraryRow = maxOf(rows.indexOf(SettingsOption.SystemOrder), rows.indexOf(SettingsOption.Systems))
-        assertEquals(lastLibraryRow + 1, rows.indexOf(SettingsOption.ScraperAccount))
     }
 
     @Test
     fun aSignInByGamepadOpensTheFormChecksAndClosesOnSuccess() {
         show(AccountStatus.SignedOut)
         openAccountRow()
-        press(Action.Enter)
+        val form = openFormAndPutTheTrayAway()
         assertEquals(PanelPage.ScraperSignIn, model.focus.page)
-        val form = requireNotNull(model.signIn.form)
-        assertEquals(SignInItem.Username, form.focus)
         form.onUsernameChange("plumtester")
         form.onPasswordChange("hunter2")
         // A on a field opens its keyboard; the cursor walks down to Sign in.
@@ -98,8 +116,7 @@ internal class SettingsAccountTest : SettingsModelHarness() {
         actions.accountsFake.answer = { _, _ -> SignInResult.WrongCredentials }
         show(AccountStatus.SignedOut)
         openAccountRow()
-        press(Action.Enter)
-        val form = requireNotNull(model.signIn.form)
+        val form = openFormAndPutTheTrayAway()
         form.onUsernameChange("plumtester")
         form.onPasswordChange("wrong")
         press(Action.Move(Direction.Down))
@@ -113,13 +130,12 @@ internal class SettingsAccountTest : SettingsModelHarness() {
     fun backAndCancelCloseTheFormWithoutAnAccount() {
         show(AccountStatus.SignedOut)
         openAccountRow()
-        press(Action.Enter)
+        openFormAndPutTheTrayAway()
         press(Action.Back)
-        assertNull(model.signIn.form)
+        assertNull("the second B closes the form", model.signIn.form)
         assertEquals(SettingsColumn.Options, model.focus.column)
 
-        press(Action.Enter)
-        val stacked = requireNotNull(model.signIn.form)
+        val stacked = openFormAndPutTheTrayAway()
         assertTrue("Sign in over Cancel in the narrow panel", stacked.stackedButtons)
         stacked.onAction(Action.Move(Direction.Down))
         stacked.onAction(Action.Move(Direction.Down))
@@ -137,9 +153,9 @@ internal class SettingsAccountTest : SettingsModelHarness() {
     @Test
     fun touchOpensTheFormAndPressesSignIn() {
         show(AccountStatus.SignedOut)
-        openSection(SettingsSection.Library)
-        val row = library().indexOf(SettingsOption.ScraperAccount)
-        model.onTapOption(row, actions.shown, wide)
+        openSection(SettingsSection.Accounts)
+        // The first row has the focus on entering the section: one tap opens it.
+        val row = accounts().indexOf(SettingsOption.ScraperAccount)
         model.onTapOption(row, actions.shown, wide)
         val form = requireNotNull(model.signIn.form)
         model.onTapPanelItem(1, actions.shown, wide)
@@ -235,6 +251,7 @@ internal class SettingsAccountTest : SettingsModelHarness() {
             show(AccountStatus.SignedIn("plumtester", isRefused = true))
             if (model.focus.column != SettingsColumn.Sections) press(Action.Back, geometry)
             if (model.focus.column != SettingsColumn.Sections) press(Action.Back, geometry)
+            while (model.focus.section != SettingsSection.Accounts) press(Action.Move(Direction.Down), geometry)
             press(Action.Enter, geometry)
             focusOption(SettingsOption.ScraperAccount)
             press(Action.Enter, geometry)
@@ -248,20 +265,25 @@ internal class SettingsAccountTest : SettingsModelHarness() {
     }
 
     @Test
-    fun theRegionStepsThroughItsFourValuesAndStoresThem() {
-        show(AccountStatus.SignedOut)
-        openSection(SettingsSection.Library)
-        focusOption(SettingsOption.BoxArtRegion)
+    fun theRegionInTheScreenScraperPanelStepsThroughItsFourValuesAndStoresThem() {
+        show(AccountStatus.SignedIn("plumtester"))
+        openAccountRow()
+        press(Action.Enter)
+        assertEquals(PanelPage.ScraperAccount, model.focus.page)
+        val region = accountPageItems(model.content).indexOf(AccountPageItem.BoxArtRegion)
+        while (model.focus.panelIndex < region) move(Direction.Down)
         assertEquals(BoxArtRegionSetting.Usa, actions.settings.library.boxArtRegion)
-        move(Direction.Right)
+        press(Action.Enter)
         assertEquals(BoxArtRegionSetting.Europe, actions.settings.library.boxArtRegion)
         press(Action.Enter)
         press(Action.Enter)
         assertEquals(BoxArtRegionSetting.World, actions.settings.library.boxArtRegion)
         press(Action.Enter)
         assertEquals("A wraps", BoxArtRegionSetting.Usa, actions.settings.library.boxArtRegion)
-        move(Direction.Left)
-        assertEquals("left stops at the first", BoxArtRegionSetting.Usa, actions.settings.library.boxArtRegion)
+        assertEquals("the panel stays on the item", PanelPage.ScraperAccount, model.focus.page)
+        assertEquals(region, model.focus.panelIndex)
+        // Signed out the panel is the sign-in form: no region to pick.
+        assertEquals(false, AccountPageItem.BoxArtRegion in accountPageItems(model.content.copy(account = AccountStatus.SignedIn("plumtester", isRefused = true))))
     }
 
     private companion object {

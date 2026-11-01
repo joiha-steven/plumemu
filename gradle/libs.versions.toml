@@ -28,6 +28,8 @@ datastore = "1.1.7"
 
 # OkHttp 5 and its test server for the scraper; okhttp-android is minSdk 21.
 okhttp = "5.5.0"
+# XZ for Java (0BSD, pure Java): LZMA hunks of .chd disc images in the achievements module only.
+xz = "1.10"
 # WorkManager 2.12 needs minSdk 24; 2.11.x is the last line with minSdk 23.
 work = "2.11.2"
 # Coil 2 decodes the box art the scraper saved (local files only, no network fetcher used);
@@ -69,6 +71,7 @@ androidx-test-uiautomator = { group = "androidx.test.uiautomator", name = "uiaut
 androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+xz = { group = "org.tukaani", name = "xz", version.ref = "xz" }
 coil-base = { group = "io.coil-kt", name = "coil-base", version.ref = "coil" }
 androidx-work-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 # Test-only: a local fake HTTP server and WorkManager's test helpers for the scraper. Never in the APK.

@@ -35,10 +35,15 @@ object PlumMotion {
     /** A press shorter than this still shows the whole dip (never with motion off: the release is then at once). */
     const val PRESS_MIN_VISIBLE_MS: Long = 100
 
-    /** A pressed key cap or hint shrinks to [HINT_PRESS_SCALE]; its dip goes in over [PRESS_IN_MS] and out over [PRESS_OUT_MS], ease-out. */
-    const val HINT_PRESS_SCALE: Float = 0.92f
+    /** A pressed row, cell or hint goes down over [PRESS_IN_MS] and comes back up over [PRESS_OUT_MS], ease-out. */
     const val PRESS_IN_MS: Int = 60
     const val PRESS_OUT_MS: Int = 100
+
+    /** A flat-face key, switch knob or slider knob comes back up over this long (slower: the edge has to grow back). */
+    const val KEY_PRESS_OUT_MS: Int = 140
+
+    /** A focused or hovered key rises (and falls back) over this long, ease-out. */
+    const val RAISE_MS: Int = 100
 
     /** A pressed item shrinks to this (design/rules.md > Shapes and motion > Pressed). */
     const val PRESS_SCALE: Float = 0.97f

@@ -92,7 +92,7 @@ class PickingBatteryLineNowTest {
     @Test
     fun aChargeWhileRestingGivesTheTimeOfTheNewCharge() {
         show(readWithTheFacts())
-        assertTrue("at 25%: ${shown()}", shown().orEmpty().startsWith("1 h 15 min on this charge"))
+        assertTrue("at 25%: ${shown()}", shown().orEmpty().startsWith("1\u00A0h 15\u00A0min on this charge"))
         assertEquals("the figures just read are not read again", 0, asked)
         battery(60, isCharging = true)
         assertEquals("charging: the pace alone", "20% an hour", shown())
@@ -108,7 +108,7 @@ class PickingBatteryLineNowTest {
         assertEquals(0, asked)
         battery(24, isCharging = false)
         assertEquals("one percent less: read again", 1, asked)
-        assertTrue(shown().orEmpty().startsWith("About 1 h 15 min on this charge"))
+        assertTrue(shown().orEmpty().startsWith("About 1\u00A0h 15\u00A0min on this charge"))
     }
 
     @Test
@@ -117,7 +117,7 @@ class PickingBatteryLineNowTest {
         fails = true
         battery(20, isCharging = false)
         assertEquals(1, asked)
-        assertTrue("kept: ${shown()}", shown().orEmpty().startsWith("1 h 15 min on this charge"))
+        assertTrue("kept: ${shown()}", shown().orEmpty().startsWith("1\u00A0h 15\u00A0min on this charge"))
     }
 
     @Test
@@ -125,7 +125,7 @@ class PickingBatteryLineNowTest {
         show(BatteryPace(minutesOnCharge = 45.0, percentPerHour = null))
         battery(100, isCharging = false)
         assertEquals(0, asked)
-        assertEquals("45 min on this charge", shown())
+        assertEquals("45\u00A0min on this charge", shown())
     }
 
     private companion object {

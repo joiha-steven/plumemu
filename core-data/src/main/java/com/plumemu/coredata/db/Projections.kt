@@ -11,6 +11,18 @@ data class LastPlay(
 )
 
 /**
+ * A recorded play's span (Settings › Statistics' week, `PlayDao.sessionsBetween`): the app splits it
+ * over the days it covers the way [PlayDao.secondsPlayedBetween] splits it over one range.
+ */
+data class SessionSpan(
+    /** Epoch milliseconds. */
+    @ColumnInfo(name = "started_at") val startedAt: Long,
+    /** Epoch milliseconds. */
+    @ColumnInfo(name = "ended_at") val endedAt: Long,
+    val seconds: Long,
+)
+
+/**
  * A game in a group of copies holding a played game (Settings › Statistics, `PlayDao.playedCopies`):
  * where it is and what the regional grouping reads, whether the lists show it, and its play total.
  */

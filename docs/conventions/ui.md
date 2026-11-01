@@ -16,7 +16,7 @@
   fill) and the accent at 3:1. A combination that fails is never offered, and a stored one is drawn
   adjusted, so every screen stays readable.
 - One focus style everywhere: a tinted pill with an accent ring (rows, `focusPill`) or an accent ring
-  (covers, icons, swatches); no dot means focus. Accent text without a fill means "current, not
+  (covers, icons, swatches), both with the focus halo on dark themes (never on a light one; drawn with `drawFocusHalo`, no blur, never laid out, never over the item); no dot means focus. Accent text without a fill means "current, not
   focused". Two focused rows on one screen is a defect.
 - Fonts: the three Plum fonts (Sans, Serif, Mono), each with its tuning row.
 - A row's right-hand text: `year · region` ("1994 · USA") in a single system's list with box art (the year alone where `listShowsPlace` says there is no room: narrow beside the details, Largest text; the region alone without box art); the system's short name in

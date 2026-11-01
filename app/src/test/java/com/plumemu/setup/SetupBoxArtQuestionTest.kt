@@ -46,7 +46,7 @@ import org.robolectric.annotation.Config
 /**
  * The box art question on screen, through the router like the device: by gamepad
  * (default focus, left / right, A on each button, B) and by touch (a tap on each button, the Back
- * hint). Use my account shows the form with the cursor on the username and no keyboard (Android 9,
+ * hint). Use my account shows the form with the cursor on the username and its keyboard up (Android 9,
  * where Robolectric's InputMethodManager shadow sees Compose's keyboard requests).
  */
 @RunWith(RobolectricTestRunner::class)
@@ -100,7 +100,7 @@ class SetupBoxArtQuestionTest {
         }
 
     @Test
-    fun theGamepadStartsOnUseMyAccountWalksBothButtonsAndAOpensTheFormWithoutTheKeyboard() {
+    fun theGamepadStartsOnUseMyAccountWalksBothButtonsAndAOpensTheFormTypingOnTheUsername() {
         showTheQuestion()
         compose.onNodeWithTag(SetupTags.BOX_ART).assertDoesNotExist()
         assertEquals(SetupControl.UseBoxArt, focus)
@@ -113,7 +113,8 @@ class SetupBoxArtQuestionTest {
         compose.onNodeWithTag(SetupTags.BOX_ART).assertIsDisplayed()
         compose.onNodeWithText(context.getString(R.string.setup_box_art_title)).assertIsDisplayed()
         assertEquals(SignInItem.Username, model.state.value.boxArt?.focus)
-        assertFalse("the form opens with the keyboard down", keyboardShows)
+        assertTrue("the form is typing on the username", model.state.value.boxArt?.inField == true)
+        assertTrue("the form opens with the keyboard up", keyboardShows)
 
         send(Action.Back)
         compose.onNodeWithTag(SetupTags.BOX_ART).assertDoesNotExist()
@@ -172,7 +173,7 @@ class SetupBoxArtQuestionTest {
         showTheQuestion()
         tap(SetupTags.control(SetupControl.UseBoxArt))
         compose.onNodeWithTag(SetupTags.BOX_ART).assertIsDisplayed()
-        assertFalse(keyboardShows)
+        assertTrue("the form opens with the keyboard up", keyboardShows)
         tap(SetupTags.HINT_BACK)
         compose.onNodeWithTag(SetupTags.BOX_ART_QUESTION).assertIsDisplayed()
         assertNull(model.state.value.boxArt)

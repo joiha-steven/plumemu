@@ -19,6 +19,8 @@ sources where colour, dp and sp literals may appear.
 | `build.gradle.kts` | Android library with Compose; exposes Compose `ui`, `ui-text`, `foundation` as `api`; test fixtures and Roborazzi |
 | `theme/Rgb.kt` | `Rgb`, an opaque `0xRRGGBB` colour; hex parsing and the board's rounding |
 | `theme/ColorMath.kt` | `mix`, `luminance`, `contrast`, `reach`, `fromHsl`, ported from the design board |
+| `theme/FocusHalo.kt` | The focus halo's colour (accent lightness clamped 0.50-0.66) and peak alpha (32 %, lower for bright accents); none on a light background |
+| `theme/PosterPalette.kt` | `PosterLook`, `POSTER_PALETTE` (23 looks for poster covers), `posterTitleKey`, `posterLookIndex`, and the poster cover's colour and size constants |
 | `theme/ColorPresets.kt` | `TextMode` (Light/Dark), `BackgroundPreset` (8), `AccentPreset` (6, two colour sets) |
 | `theme/ColorChoices.kt` | `BackgroundChoice` and `AccentChoice`: a preset or the person's own colour |
 | `theme/ColorSets.kt` | `ColorSet`: the ten ready-made sets of Settings › Appearance › Colors, `matching` (the current set, derived from the three colours), A/B/X/Y glyph colours by letter (`ButtonColors`), drawn on the hint key caps through `PlumTheme.buttons` while the set is current (`keyCapLook` in `components/Bars.kt`); tests `ColorSetsTest`, `KeyCapLookTest` |
@@ -33,7 +35,7 @@ sources where colour, dp and sp literals may appear.
 | `theme/SecondScreenInGame.kt` | The second screen's in-game card: `InGameDimens` (time and battery sizes, the battery glyph, the shift steps, 2 dp sideways and 4 dp up and down; the battery part's roles, frame, gaps, chart heights and strokes, `partStyle`) and `InGameColors` (fixed, dim, on black; the part's text, low, ahead, usual and tick colours) |
 | `theme/PlumDimens.kt` | Fixed sizes: strip margins, columns, game and system rows, bars and key caps, corners, switch, focus ring, swatches, setup (RP5-O1) the home screen question, side-panel gap, badges |
 | `theme/PlumLayout.kt` | `WidthClass`, `CoverShape` (width over height) with its `CoverClass` (landscape, square, tall), `GridSize` (Small, Medium, Large; the cells per class and size in `PlumLayout.gridCell`) and the width formulas (list, list without art, details stop, grid columns per class and size, gaps, cover width and row height, settings, strip height, rows that fit) |
-| `theme/PlumMotion.kt` | 180 ms ease-out (slides), 200 ms decelerating glide (`GLIDE_MS`, `Decelerate`), 110 ms fade-in, the press dip (`PRESS_*`, `HINT_PRESS_SCALE`) and the favourite star's `STAR_START_SCALE`, the scan dot's 1.6 s breathing (`SCAN_PULSE_*`, `EaseInOut`), and the one switch that says whether motion is on |
+| `theme/PlumMotion.kt` | 180 ms ease-out (slides), 200 ms decelerating glide (`GLIDE_MS`, `Decelerate`), 110 ms fade-in, the press dip (`PRESS_*`; keys come back over `KEY_PRESS_OUT_MS`) and the favourite star's `STAR_START_SCALE`, the scan dot's 1.6 s breathing (`SCAN_PULSE_*`, `EaseInOut`), and the one switch that says whether motion is on |
 | `theme/ListGlide.kt` | `rememberListGlide`: a lazy list or grid that jumps in layout and glides there by `translationY`, with two strides of rows composed past each edge; `LocalGlideClock` (default `System::nanoTime`) is the glide's clock, which frame tests set to the compose clock |
 | `theme/ContentFade.kt` | `rememberContentFade` and `Modifier.fadingIn`: new content fades in (alpha only) when its key changes |
 | `theme/Settle.kt` | `Settle`: a value set while composing and settled to 0 on frames, the engine of both |
@@ -55,7 +57,7 @@ sources where colour, dp and sp literals may appear.
 | `components/Cover.kt` | `CoverTile`, the stand-in cover (flat `sel` tile with the title, in the grid size's style; untitled in the details column) until real box art |
 | `components/CoverGlowColor.kt` | `CoverGlowColor`: a cover's glow colour, the average of its image from a 16 x 16 copy, lifted when dark |
 | `components/CoverShadow.kt` | `CoverShadow` / `rememberCoverShadow` / `Modifier.coverShadow`: the soft shadow under every grid cover (one small blurred ALPHA_8 corner bitmap per look, drawn as nine slices; the focused cover's deeper one drawn by the grid), its `drawGlow` (the focused cover's tinted glow, same slices) and `drawCoverRim` (the 1 dp rim light) |
-| `components/FocusRing.kt` | `DrawScope.drawFocusRing`: the 2.5 dp ring 3 dp out with the soft glow, drawn only (by the parent, over the item) |
+| `components/FocusRing.kt` | `DrawScope.drawFocusRing`: the 2.5 dp ring 3 dp out inside the focus halo, drawn only (by the parent, over the item); `drawFocusHalo` / `drawHaloOutside` draw the halo for rings and pills |
 | `components/keyboard/` | Plumemu's own on-screen keyboard: `KeyboardLayout.kt` (pages, keys, spans, `KeyboardSpec`), `KeyboardModel.kt` (the rules, pure Kotlin: focus, Up/Down by nearest centre, wrap on a fresh press, shift once/locked, pages, events), `KeyboardState.kt` (the model for Compose), `PlumKeyboard.kt` (tray and keys, taps), `KeyboardIcons.kt` (shift, delete, hide) |
 | `src/main/res/font/` | Plum Sans 400/600, Plum Serif 400/600, Plum Mono 400/700 (TTF from `plum-fonts/dist`) |
 | `src/main/assets/licenses/` | `plum-<family>-OFL.txt`, the SIL OFL 1.1 text of each font, shipped in the APK |

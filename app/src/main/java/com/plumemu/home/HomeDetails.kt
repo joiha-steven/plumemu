@@ -62,19 +62,19 @@ internal fun DetailsColumn(
     val textHidden by remember(state) { derivedStateOf { state.focus.column == Column.Systems } }
     if (!content.hasBoxArt) {
         // Wide only (HomeStrip, listHasDetails): not a strip stop, a tap here has nothing to do.
-        if (textHidden) Spacer(modifier.testTag(HomeTags.DETAILS)) else TextDetails(content, entry, game, modifier.testTag(HomeTags.DETAILS))
+        TextDetails(content, entry, game, textHidden, modifier.testTag(HomeTags.DETAILS))
         return
     }
     val slot = LocalHomeArt.current.slot(game.scrapeKey)
     if (PlumTheme.layout.widthClass == WidthClass.Wide) {
         // Not a strip stop on wide screens: a tap here has nothing to do.
-        WideDetails(content, game, slot, textHidden, modifier.testTag(HomeTags.DETAILS))
+        WideDetails(content, game, slot, entry.posterOf(game), entry.shapeOf(game).widthOverHeight, textHidden, modifier.testTag(HomeTags.DETAILS))
     } else {
         // The narrow details stop: a tap from the list opens it, a tap in it plays (core-input).
         val tap = remember(onAction) { Modifier.tapItem(Column.Details, 0, onAction).testTag(HomeTags.DETAILS) }
         // The peek shows the same details as the third stop, cut by the screen's edge, so the person sees there is more to the right
         // With the systems focused the column is off screen or a sliver of cover, so its text is not composed.
-        NarrowDetails(content, game, slot, textHidden, modifier.then(tap))
+        NarrowDetails(content, game, slot, entry.posterOf(game), entry.shapeOf(game).widthOverHeight, textHidden, modifier.then(tap))
     }
 }
 
@@ -83,6 +83,8 @@ private fun WideDetails(
     content: HomeContent,
     game: GameRowModel,
     slot: ArtSlot,
+    poster: PosterSpec,
+    posterAspect: Float,
     textHidden: Boolean,
     modifier: Modifier,
 ) {
@@ -93,7 +95,7 @@ private fun WideDetails(
     val synopsis = extras.synopsis
     // One layout whether the text shows or not, so the cover is not composed again when the systems take focus.
     WideDetailsLayout(
-        cover = { DetailsCover(slot, DpSize(PlumDimens.detailsColumnWidth, PlumDimens.detailsCoverHeightWide), Alignment.BottomStart, isBoxFitted = false, shrinksToFit = true) },
+        cover = { DetailsCover(slot, DpSize(PlumDimens.detailsColumnWidth, PlumDimens.detailsCoverHeightWide), Alignment.BottomStart, isBoxFitted = false, shrinksToFit = true, poster = poster, posterAspect = posterAspect, appPackage = game.appPackage) },
         titleBlock = {
             if (!textHidden) {
                 Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.titleLineGap)) {
@@ -117,6 +119,8 @@ private fun NarrowDetails(
     content: HomeContent,
     game: GameRowModel,
     slot: ArtSlot,
+    poster: PosterSpec,
+    posterAspect: Float,
     textHidden: Boolean,
     modifier: Modifier,
 ) {
@@ -141,7 +145,7 @@ private fun NarrowDetails(
                 // The cover keeps its place on the right while the text is not composed.
                 Spacer(Modifier.weight(1f))
             }
-            DetailsCover(slot, DpSize(PlumDimens.detailsStopCoverWidth, PlumDimens.detailsStopCoverHeight), Alignment.TopStart, isBoxFitted = true)
+            DetailsCover(slot, DpSize(PlumDimens.detailsStopCoverWidth, PlumDimens.detailsStopCoverHeight), Alignment.TopStart, isBoxFitted = true, poster = poster, posterAspect = posterAspect, appPackage = game.appPackage)
         }
         if (!textHidden) Synopsis(synopsis)
     }
@@ -216,26 +220,40 @@ internal suspend fun awaitDetailsSettle() {
  * is below it) the box keeps the slot's size and the picture stands in it by [alignment], so the
  * title never moves from game to game. Without a picture, the tile fills the slot without a
  * title or year: the details title and facts right under it name the game
- * (not twice).
+ * (not twice). With a [poster] (and the system's shape, [posterAspect]) a game with no picture for good wears it, fitted in the slot like a picture.
+ * With an [appPackage] (an app game) the slot holds the app's icon instead ([AppGameIcon]).
  */
 @Composable
-private fun DetailsCover(
+internal fun DetailsCover(
     slot: ArtSlot,
     size: DpSize,
     alignment: Alignment,
     isBoxFitted: Boolean,
     shrinksToFit: Boolean = false,
+    poster: PosterSpec? = null,
+    posterAspect: Float? = null,
+    appPackage: String? = null,
 ) {
+    if (appPackage != null) {
+        // An installed app listed as a game: its Android icon centred in the slot, never a poster.
+        AppGameIcon(appPackage, poster?.title.orEmpty(), size, Modifier.testTag(HomeTags.DETAILS_COVER))
+        return
+    }
     val picture = (slot as? ArtSlot.Found)?.art?.large
+    // The poster stands in for a game that has no picture for good (never while its result is still being read, [ArtSlot.Unknown]),
+    // and for a picture whose file cannot be read; the plain tile shows meanwhile.
+    val shownPoster = if (slot is ArtSlot.Unknown) null else poster
     CoverArt(
         title = null,
         picture = picture,
         size = if (picture != null && isBoxFitted) fitInside(picture.aspect, size) else size,
         alignment = alignment,
-        corner = pictureCorner(picture?.aspect ?: (size.width / size.height)),
+        corner = pictureCorner(picture?.aspect ?: posterAspect.takeIf { shownPoster != null } ?: (size.width / size.height)),
         titlePadding = PlumDimens.coverPaddingDetails,
         modifier = Modifier.testTag(HomeTags.DETAILS_COVER),
         shrinksToFit = shrinksToFit,
+        poster = shownPoster,
+        posterAspect = posterAspect,
     )
 }
 

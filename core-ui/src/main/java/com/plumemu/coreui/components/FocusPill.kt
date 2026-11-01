@@ -68,7 +68,7 @@ fun Modifier.carriedPill(): Modifier =
 
 /**
  * The one look of a focused row (docs/design/rules.md > Focus and current): a [FocusPillShape] pill
- * tinted with the accent (`PlumColors.pill`) and a [PlumDimens.focusPillRing] accent ring inside its edge. It is
+ * tinted with the accent (`PlumColors.pill`) and a [PlumDimens.focusPillRing] accent ring inside its edge, with the focus halo outside it (dark themes; [drawFocusHalo]). It is
  * [pressFeel] too, so the row dips under a press ([rest] is the fill of a row that is not focused, for a card). Put it where the row's `background` was, before the padding, so the
  * pill spans the row's whole box. Both colours are read while drawing: a colour that moves redraws the row and
  * recomposes nothing.
@@ -80,6 +80,8 @@ fun Modifier.focusPill(
     rest: (() -> Color?)? = null,
     /** Cards that keep their own corners (setup's) pass them, so a card has one shape focused or not. */
     shape: Shape = FocusPillShape,
+    /** A key inside the row (a switch's knob) that a finger press on the row presses too. */
+    mirror: KeyState? = null,
 ): Modifier =
     pressFeelWith(
         focused,
@@ -87,7 +89,9 @@ fun Modifier.focusPill(
         shape,
         answersButton,
         ring = { colors -> if (focused) colors.accent else null },
+        halo = { colors -> if (focused) colors.focusGlow else null },
         listDrawsPill = true,
+        mirror = mirror,
     )
 
 /**
@@ -99,6 +103,7 @@ fun Modifier.focusPillSample(): Modifier =
         val colors = PlumTheme.colors
         drawBehind {
             val outline = FocusPillShape.createOutline(size, layoutDirection, this)
+            drawHaloOutside(outline, colors.focusGlow)
             drawOutline(outline, colors.pill)
             drawRingInside(outline, colors.accent)
         }

@@ -32,6 +32,7 @@ include(
     ":platforms",
     ":launcher",
     ":scraper",
+    ":achievements",
     ":telemetry",
     // Test-only: Macrobenchmark and Baseline Profile generation against :app; never shipped.
     ":benchmark",

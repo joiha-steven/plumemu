@@ -3,7 +3,7 @@ package com.plumemu.language
 import java.util.Locale
 
 /**
- * One language Plumemu ships (Settings › Advanced › Language; docs/conventions/translation.md).
+ * One language Plumemu ships (Settings › Appearance › Language; docs/conventions/translation.md).
  * [tag] is what is stored and what Android's per-app language page lists (`res/xml/locales_config.xml`);
  * [folder] the resource folder holding its `strings.xml`. Its name in its own language is that
  * folder's `language_name` string, so it is written by its translator, never in code.

@@ -85,7 +85,7 @@ the 837×471 text-size shots as before.
   art), `SettingsSectionPreviewVi*Test` and `FourThreeScreens*BoundsTest` (Settings, setup, search).
 - Systems focused: the details column (wide) shows only its cover, or nothing without box art: its text would be cut mid-word at the screen edge (as on narrow screens). The strip rests at its start; content past the right edge runs under a 32 dp
   fade. No fade where nothing continues (grids).
-- Peek width 48 by default (adjustable 0–120 in Settings). What the peek shows is Settings › Appearance › Left edge: Game counts (default; each system's count, current in the accent, right-aligned in the row), System codes (the
+- Peek width 48 by default (adjustable 0–120 in Settings). What the peek shows is Settings › Home screen › Left edge: Game counts (default; each system's count, current in the accent, right-aligned in the row), System codes (the
   system's 3-character code in the count's place and style, same row positions, so the column lines up with the names when it
   opens, where the rows go back to their counts; whole at Largest, `HomeLeftEdgeBoundsTest`) or the letter rail: the letters of the focused list (first letter of each game's sort name, so "The" is skipped; digits under "#"), centred in the peek in equal
   slots over the column's height, the focused game's letter in the accent at weight 600 (`meta` /
@@ -115,7 +115,8 @@ One language on every screen, so a glance says where the cursor is:
 | State | Look |
 |---|---|
 | Focused row ("style 3") | A pill: `PlumColors.pill` fill (the background moved 16 % toward the accent, eased back toward the background until `meta` 6:1 and `muted` 4.6:1 still read on it, so any accent is safe) with a 2 dp accent ring drawn inside its edge (`PlumDimens.focusPillRing`); corners half the row's height up to `PlumDimens.cornerFocusPill` (20), so a one-line row is a full pill; `strong` text, weight 500; **no dot**, and the text does not move when focus lands. The pill spans the row's whole box (`Modifier.focusPill`, one modifier for every row; it is `pressFeel` too). System column: the same pill, starting `gameRowPadding` (14) before the label, so it is inset from the screen edge by margin − 14 (10) and the label stays on the page margin. The accent dot that remains means "new games" (system row), never focus. **Carried** (Settings > Library > Systems, A picks a system up): the pill turns solid accent with an `onAccent` ring and `onAccent` text (`Modifier.carriedPill`), so it is told from focused on every preset. Setup's cards keep their own corners (`cornerSetupChoice`, 10) focused or not (`focusPill(shape = …)`); display-only sample rows draw the look with `focusPillSample` (no press, no touch) |
-| Focused cover, swatch or button | 2.5 dp accent ring, 3 dp away, with a very soft glow: shadow 0 0 12 dp, spread 1 dp, accent at 25%. **A grid item (cover or Apps tile) differs**: the ring hugs the item's own shape (its corner radius plus the gap), a 3 dp band of the screen background colour first, then the 2.5 dp accent ring, and no accent glow; under the item the glow is its own colour (see Grid). It also grows and rises (see Grid) and, once focus has rested on it 120 ms, one soft light band sweeps across its face: white at 28 % peak, 45 % of the cover's span wide with soft edges, travelling 25° below horizontal in 400 ms, clipped to the cover's rounded shape, then gone; it plays once per arrival, is cancelled if focus leaves, and does not play when animations are off (`FocusSweep`) |
+| Focused cover, swatch or button | 2.5 dp accent ring, 3 dp away, inside the **focus halo** (below). **A grid item (cover or Apps tile) differs**: the ring hugs the item's own shape (its corner radius plus the gap), a 3 dp band of the screen background colour first, then the 2.5 dp accent ring, and no accent glow; under the item the glow is its own colour (see Grid). It also grows and rises (see Grid) and, once focus has rested on it 120 ms, one soft light band sweeps across its face: white at 28 % peak, 45 % of the cover's span wide with soft edges, travelling 25° below horizontal in 400 ms, clipped to the cover's rounded shape, then gone; it plays once per arrival, is cancelled if focus leaves, and does not play when animations are off (`FocusSweep`) |
+| Focus halo (decision 0011) | A soft glow in the accent colour just outside today's ring, fading to transparent: `PlumDimens.focusHaloReach` (10 dp) in `FOCUS_HALO_STEPS` (7) bands, alpha falling as (1 - t)^2 from the peak. **Dark themes only; Paper and any light background draw none.** The colour is the accent with its lightness clamped to 0.50–0.66 (a dark accent still shows, a bright one does not glare); the peak alpha is 32 %, falling to 16 % as the clamped colour's luminance rises from 0.45 to 0.80 (smoothstep). Maths and tokens: `theme/FocusHalo.kt`; it arrives as `PlumComposeColors.focusGlow` (transparent on a light theme). Drawn as stroked bands, never a blur (a mask filter does not draw on hardware canvases before Android 9) and only outside the shape, so it is never laid out, never covers the item, and a focus move still costs no measure. One function draws it everywhere (`drawFocusHalo` / `drawHaloOutside` in `components/FocusRing.kt`): the row pill (`focusPill`, the gliding pill of the lists and the game menu's `PanelPill`, `focusPillSample`) starts at the pill's edge, a cover, swatch or button ring starts at its outer edge (`focusRingOutset`, 5.5 dp). A list's clip cuts it at the list's top and bottom edge, like the pill |
 | Current, not focused (system while games have focus, section while options have focus, the year of the current game in a peek) | accent text, weight 600, no fill |
 | Preview column (games while systems have focus) | `muted` text, no fill; the remembered row one step brighter (`text2`) |
 
@@ -140,10 +141,37 @@ Lists therefore keep three rows past the focus with motion on (the room a 200 ms
 need) and one with it off; see Shapes and motion.
 
 **Lists that scroll show it**: a game-panel list that does not fit
-(the game menu at Huge and Largest and from Recent, Info's facts with a long title, Settings' sections column) fades out the row
+(the game menu at Huge and Largest and from Recent, Info's facts with a long title, Settings' sections column and an opened section's rows) fades out the row
 cut at its bottom edge, and at its top edge once scrolled (`ListEdgeFade`, `PlumDimens.listEdgeFade` 20, from clear to the
-background, drawn only while rows continue past that edge, touches pass through). The row is still cut, as above;
-the fade makes it plain the list scrolls instead of a half text line ending in a hard edge. Test `GamePanelScrollCueTest`.
+background, drawn only while rows continue past that edge, touches pass through; in Settings' columns it stops short of the
+focused row, covering only the room between it and the edge). The row is still cut, as above;
+the fade makes it plain the list scrolls instead of a half text line ending in a hard edge. Tests `GamePanelScrollCueTest`,
+`SettingsSectionsScrollCueTest`.
+The home screen's scrolling areas (the systems column, the games list, the cover and poster grids, the Apps grid; Recent
+and Favorites with them) fade the same 20 at the top bar and the hint bar, but as an alpha mask (`listEdgeFadeMask`): the
+content itself fades to transparent, so a cover's shadow fades with it on any background. The lists fade while they can
+scroll that way; a grid only where a row is cut at that edge (standing on whole rows its top is never cut, and the room
+under the last whole row may show no next row), so a fade covers a cut row and the 20 or 22 gap before it, never a whole
+row. No fade reaches the focused row or cover (it stops short of it), and the focused cover with its ring is drawn over
+the mask. Settings › Appearance › Fade list edges (on by default) turns it off: the home screen's areas
+then end flat (`PlumTheme.edgeFadeOn`). Test `HomeScrollCueTest`.
+
+## Mastered mark
+
+A trophy after the title of a game whose achievements are all earned (RetroAchievements): `PlumDimens.masteredMarkSize` 12
+square, drawn (no font glyph), colour token `meta`, after the favourite mark with a `favoriteMarkGap` before it, centred on the
+title line. No counts. A focused row keeps it where it is and in `meta` (the focus pill only changes the row's background and text,
+so the mark stays readable on it). Its spoken name is `achievement_mastered`. Shots `home_row_mastered`.
+
+## Achievements in Info
+
+Under the facts, in their scroll (so Up and Down step by row, and a finger scrolls). First the summary ("Achievements 12 of 45 ·
+27%", then "Hardcore 10 of 45" when any are hardcore), then one row per achievement, `achievementRowGap` 8 apart (the same gap
+between the summary and the first row). A row: badge `achievementBadgeSize` 36 square on the facts' text line, then title
+(`text`), description (`text2`), points and earned date (`muted`). A locked achievement uses the `_lock` badge and `muted`
+text, with the badge at `LOCKED_BADGE_ALPHA` 0.6. A badge that fails to load is a neutral `sel` square. A game found by its name (not its file's hash) has one
+more quiet line, "Matched by name" (`muted`, `meta`, the Hardcore line's style), under the summary lines. Other states are one quiet
+line on the same text line. Numbers asserted by `AchievementsInfoBoundsTest`; shots `game_info_achievements_*`.
 
 ## Settings
 
@@ -157,9 +185,11 @@ the fade makes it plain the list scrolls instead of a half text line ending in a
 - **Wide**: options `width − 320` (448 on the RP5), side panel 248 beside them.
 - **Narrow**: options `width − 48` (528 on the Nova); a row with a panel opens it as a further
   stop that takes the same width.
-- Values: three kinds, told apart by the mark. A value that **cycles** with Left / Right is "‹ X ›". A value that **opens a panel or page** (every Opens row, the colour-dot rows, a system's emulator) is "X »": the double angle quote `»` (U+00BB, in every font's Latin-1 set, so no font falls back to another face), after a no-break space so the mark never wraps alone. It is a different shape from the single `›` of the cycling pair and of the Right key cap, and reads at arm's length at 576x432 and 768x432 at every text size because it is the value's own text (same `meta` size and colour). The mark lives in `settings_value_opens` / `settings_value_chevron`; nothing else draws a mark. A switch shows its switch. An **information-only row** (Version, Privacy, Statistics rows, "Box art: not available in this build") has no mark, no A hint, A and a tap do nothing and make no sound, and its value (or, for the box art status, its sentence) is in the secondary text colour (`muted`, `meta` when focused). On a narrow screen the hint bar offers "› More" (the Right key) on such a row and on a switch or action row, never an A "More" beside it.
-- **Statistics page, left column** (`SettingsStatisticsLayoutTest`, `SettingsStatisticsFitTest`). Same order as the second-screen card: the total play time is the page's big figure (`SecondTitleCompact`, 26, 600; its label "Total play time" under it in `smallFact`), "This week" a normal row under it, then a small "Most played" heading (`meta`, not a row: the cursor skips it) over the three games, then the system and the figures. A game row: title, then only the system under it, time at the right; the system row: "Most-played system", the system's name under it, time at the right. **One text line**: every row's text, and the heading, starts at row padding 14 + the cover slot (36 + 10) when box art is set up, empty in rows without a cover. Every row keeps `factsRowGap` (4) above and below its text, so a title of three lines has what a one-line row has. A game without art shows a landscape tile (aspect 1.4, as real covers here) in `chip` with a 1 dp `muted` hairline, visible on Graphite and Paper. The second-screen card keeps its portrait stand-in.
-  **Side panel** (part 2; `settings_statistics_game_panel*`): on a game row, wide screens show that game in the 248 panel: cover fitted in 248 x (at most `settingsStatisticsCoverHeight` 130, less when the text needs the room; the landscape stand-in without art), then the title (`panelTitle`, 2 lines) and the system (`panelBody`, `muted`) 4 apart, one line per fact (label `muted` left, value `text2` right, `factsRowGap` apart: Play time, Times played, Last played; a figure not stored is left out) and "A to play" (`muted`), all on the row-text line with `settingsPanelListGap` (10) between groups. Any other row keeps the privacy explanation. Narrow: no panel, A plays.
+- Values (Settings values): a value is drawn in normal text brightness (`text`; only the dimmed preview beside a focused section column mutes it), never dimmed. Three kinds, told apart by their chevrons, which are drawn marks (`ValueChevron`, `ValueCheck` in `SettingsValueIcons.kt`: a stroke with round caps, sized from the value text's font size so they keep their look at every text size), dimmed (`muted`), never text glyphs. A value that **cycles** with Left / Right has a left and a right chevron at its sides on the **focused row only**; both keep their room when hidden, so the value does not move when the cursor arrives, and each is `settingsValueGap` (8) from the text, so the two gaps are equal. A value that **opens a panel or page** (every Opens row, the colour-dot rows, a system's emulator) ends in a single right chevron, always shown, the same drawing as the cycler's right one, `settingsValueGap` after the text (or alone when the row has no words). A switch shows its switch. Every chevron is vertically centred on the value's text line and every value ends on the same right line (the chevron's, or the switch's). A value takes at most half the options column and may use two lines; the label keeps the rest. **Status says what it means**: a signed-in account row reads "Signed in as <name>" with an accent check before it ("Signed in" when the name is missing); signed out reads "Sign in", a refused key or password "Sign in again", both with no check. ScreenScraper keeps its short box art word ("340 of 2,054", "Paused", "Battery low", ...) while a run says something; a finished run and no run say who is signed in. Never the bare word "Done". Checked by `SettingsValuesAlign768Test` / `SettingsValuesAlign576Test` (centring ±1 px, equal gaps, one right line, no movement, a long name clear of its label), `SettingsRowWordsTest` (the words), shots `settings_values_*`. An **information-only row** (Version, Privacy, Statistics rows, "Box art: not available in this build") has no chevron, no A hint, A and a tap do nothing and make no sound; its box art status sentence (the row's label) stays in the secondary text colour (`muted`, `meta` when focused). On a narrow screen the hint bar offers "› More" (the Right key) on such a row and on a switch or action row, never an A "More" beside it.
+- **Statistics page** (`SettingsStatisticsPage.kt`, sizes `StatisticsDimens`; `SettingsStatisticsLayoutTest`, `SettingsStatisticsFitTest`, shots `settings_statistics`, `_empty`, `_preview`). No side panel: entered, the page is `width − 48` (720 at 768, 528 at 576), from margin to margin. Blocks 12 apart (`settingsPanelGap`): tiles, the lists, the footer.
+  **Tiles**: `sel2` fill, `cornerRow` (8), padding 14 on every side (the rows' text line); label `meta` (13, `meta` colour, 2 lines), figure `DetailsTitleWide` (20, 600, `text`, 2 lines); equal widths and, in a row, equal heights; 12 apart. Every tile ends in something at its foot, pushed to the bottom, so no tile has an empty half: Total play time a line "across 38 games" (`smallFact`, `meta`), Games played and With box art a 4 dp bar (`accent` share on a `bg` track). Four to a row on wide screens, two on narrow ones (a lone last tile keeps the tile width). This week's tile ends in seven bars, 28 high at most, 4 apart, bottom-aligned, each its day's share of the longest day: today `accent`, other days `muted`, a day without play a 4 dp `bg` stub on the sunken look (`drawSunken`); 4 under them each day's narrow name in the locale ("M", "T", `smallFact`, centred, `muted`, today `accent`), from the week's first day as `weekStartOf` counts it. With box art's percentage is rounded down (never 100 % with one cover missing).
+  **Lists**: heading `meta` on the rows' text line; rows at least `rowHeight`, padding 14 across and `factsRowGap` (4) above and below, `listRowGap` (2) apart. A game row: cover slot 36 (+ 10) while box art is set up (a game without a box front wears its poster cover, landscape; the stand-in only while a picture decodes), title `settingsOption` (one line, …) with the time (`meta`) at its right, the system (`smallFact`, `muted`) under it, then a 4 dp bar 4 below: `muted` share of the first game's time on a `sel` track. The focused game is the focus pill (`strong` text, weight 500). A system row is the same box without cover: name and time, then its share of all play time ("85% of play time", `smallFact`, `muted`, rounded, never 0 % for a system played), then the bar; it never takes focus. Both rows have the same lines, so at every text size the two lists keep one row height and their bars line up across. Wide: the two lists side by side, 24 apart (`columnGap`), each half; narrow: stacked.
+  **Footer** "Kept on this handheld only": `smallFact`, `muted`, on the rows' text line. **Empty**: one group centred in the page, across and down: the line (`settingsOption`, `text`, centred), the box-art tile at a tile's width, the footer, 12 apart. **Preview** (sections focused): only the tiles, two to a row, clipped by the preview column. The page scrolls as one column with `ListEdgeFade` at an edge it can scroll past.
 - **Side panel content, one left edge** (the game panel's rule): rows, fields
   and buttons span the panel from its left edge; their text, and the panel's own title, body and
   status lines, start on the row-text line 14 in (`gameRowPadding`; Settings' panel rows use the
@@ -169,7 +199,7 @@ the fade makes it plain the list scrolls instead of a half text line ending in a
   `SettingsSystemsAlignTest`, `SettingsBoundsTest`.
 - **The "+" page's containers**: the swatch grid, the three slider rows and the Color code row are one kind of box: `sel2` fill, `cornerRow`, `settingsPanelRowPadding` at the sides, one `settingsPanelGap` from the next, all spanning the panel so their left and right edges are the same (grid: `settingsSliderRowPad` above and below, the ring's room). The grid's tiles share the width: eight to a row, `swatchGapWide` (`swatchGapNarrow` on Narrow) apart, square. **Selected is a check mark, not a ring** (the focus ring stays the focus language): the tile whose colour equals the colour in use carries a `settingsSliderThumbRing`-wide check in the text colour that reads on it (`TextMode.bestOn`); a tile can be both focused and selected. Checked by `SettingsColorSliderAlign768Test` / `576Test` (Graphite and Paper, Medium and Largest), `PaletteCurationTest`. The selected check (a tick in the readable text colour, never the ring) marks the colour in effect when the page opened and then the one chosen with A, a tap or an applied code; the ring previews the focused tile without moving the check (`SettingsColorPlusSelectionTest`). The grid the cursor walks and the grid drawn are one list, fixed when the page opened, so a store that answers late cannot make them differ.
 - **Colour sliders** ("set by sliders first, the code last"): the "+" page of Background, Text color and Accent has three rows between the swatch grid and the Color code row: Hue (0..360 deg), Saturation and Lightness (0..100 %), set from the colour shown. A row is a hex-row-sized fill (`sel2`, `cornerRow`, focus ring as every row) spanning the panel, one `settingsPanelGap` from the next; inside, on the row-text lines (14 in), the label left and the value right (`meta`), and under them the track: a bar `settingsSliderTrack` (10) high from one text line to the other that draws its own gradient, never the colour's own darkness (a dark colour made the tracks black): Hue is the full spectrum at saturation 100 % and lightness 50 %; Saturation runs from grey to the full colour of the current hue at lightness 50 %; Lightness runs black through the current hue and saturation to white. The thumb shows the current value; which stretches are dimmed or skipped is worked out on the real colour. While the cursor is on the swatch grid the rows show the HSL of the colour being previewed, and a thumb, a dot `settingsSliderThumb` (20) filled with the colour shown and ringed in `strong` (`settingsSliderThumbRing`), its edges on the text lines at both ends. The thumb is the focus dot: the row's ring marks the focused slider. Gamepad: Down from the grid's last row reaches Hue, Saturation, Lightness, then Color code (Up goes back); Left and Right step the focused slider (hue 6 deg, the others 4 %; a held press repeats at the held-direction cadence); Left at a slider's start does nothing (it leaves the page only from the grid's leftmost tile and the Color code row). Touch (the stepped drag felt stuck): a tap on the row sets the value at the finger and focuses the row; a drag moves it only after horizontal touch slop, and a vertical swipe starting on a row scrolls the page. While a finger is down the thumb is drawn under it, continuously, across the whole track (also over dimmed or skipped stretches); the previewed value is the finger's at fine resolution (hue 1 deg, the others 1 %), moved to the nearest passing value over an unreadable stretch; on release or cancel the thumb settles on the value in effect. Nothing is stored while the finger moves (only the screen's colour changes while dragging); the store is written once when it lifts. `ui_move` sounds when the value changes and at most once per D-pad step of travel; the gamepad keeps its steps. Every step previews like a swatch; reaching the Color code row from the sliders keeps the colour tuned (the row shows its code, and a typed code sets the sliders), only B puts back the colour from before the page, and A chooses the shown one and counts as the cursor having moved. **Readable only**: a thumb never stops on a colour that fails `Readability` (Text 7:1 with its derived tokens, Accent 3:1): it steps to the nearest passing value, a tap on an unreadable stretch lands on the nearest passing one, and every track draws its whole length, with the stretches a thumb cannot land on dimmed at `SETTINGS_SLIDER_DIMMED_ALPHA` (no gaps or broken bars; only the drawing changed, the landing is the same). Background has no text or accent test: the tones no text reads on (`Readability.backgroundAllowsText`) are drawn at `SETTINGS_SLIDER_DIMMED_ALPHA` and stepped over. A step sounds `ui_move`; a press at the end of a track is silent. The page scrolls so the focused row stays whole at 576 x 432 and Largest. Checked by `SettingsColorSlidersTest`, `SettingsColorSliderAlignTest`, `SettingsTextColorFit*Test`, shots `settings_color_sliders_*`.
-- Switch on: accent track, knob `onAccent`. Off: `sel` track with a 1.5 dp `chip` ring, `muted` knob.
+- Switch (decision 0011): a sunken pill track, the accent when on and `chip` when off, with a 1 dp inset shadow on its top edge; the knob is a flat-faced circle (see Controls under Shapes and motion).
 
 ## Setup
 
@@ -181,7 +211,7 @@ the chosen folder as a quiet filled card, "+ Add another folder" and Continue. T
 shows the four biggest systems (hidden on narrow screens), emulators picked ("16 of 18
 systems", the missing ones named), the usage statistics switch (on) and Start playing. Every card
 there start on one line (no card has a focus dot now).
-A focused button gets the 2.5 dp accent ring and soft glow, like a focused cover.
+A focused button gets the 2.5 dp accent ring and the focus halo, like a focused cover.
 
 ## Grid
 
@@ -190,7 +220,7 @@ A focused button gets the 2.5 dp accent ring and soft glow, like a focused cover
   - **Landscape**, 1.2 and up (SNES 1.37, N64 1.44): gap 22 (was 14: the grid read as cramped).
   - **Square**, 0.85 up to 1.2 (DS 1.12, PlayStation 1.17, Game Boy / Color / Advance and Dreamcast 1.0, PC Engine 0.85): gap 20 (was 12). Not on the board.
   - **Tall**, below 0.85 (NES 0.73, Mega Drive and Master System 0.71, PS2 and Wii 0.715, GameCube 0.72, Saturn 0.65, PSP 0.575): between rows **22**, between columns 20 (was 12; focus ring: the lifted cover's ring reaches 21.2 dp above a 263 dp row and must clear the cover above, `PlumDimens.gridGapTall`).
-- **Grid size** (Settings › Appearance › Grid size, one for every system):
+- **Grid size** (Settings › Home screen › Grid size, one for every system):
   Small, **Medium (the default**) and Large. Columns = `floor((area + gap) / (cell + gap))` with
   the cell of the class and size below and the **14 (landscape) / 12 (square, tall) gaps** (`gridColumnsGap*`: counted as before the
   gaps grew to 22 / 20, so no grid lost a column); the drawn gap is 22 / 20, so a cover is the covers' span
@@ -236,7 +266,7 @@ A focused button gets the 2.5 dp accent ring and soft glow, like a focused cover
   square class's at the grid size (columns, gap 12, corners and row height of a 1.0 shape; Small
   on the RP5 6 columns of 100.7 x 101), and each game's cover keeps its own system's shape inside
   its cell, fitted and standing on the cell's bottom like a picture. A game without a picture
-  stands as the titled tile in its system's shape, fitted the same way; the ring and the focused
+  wears its poster cover in its system's shape (Poster cover, below), fitted the same way; the ring and the focused
   cover's 10 % growth follow that shape, and its corners are its own class's.
 - **Apps grid** (its size can't be changed): one fixed size, never the
   Grid size. Icon **56** (`PlumDimens.appsGridIcon`), centred at the tile's top under 6 of padding, 4 to the
@@ -258,7 +288,7 @@ A focused button gets the 2.5 dp accent ring and soft glow, like a focused cover
   (invisible against it) so the in-place copy never shows through; the tile focused as the grid opens, with animations off or while idle:
   no grow, no sweep, nothing running (`AppsGrid.kt` shares `CoverLift`, `FocusSweep`, `CoverShadow`'s glow with the
   cover grid). An app without an icon: a `sel` round tile with its first letter (`messageTitle`, `text2`).
-- Focus ring on a grid cover or tile: a 3 dp gap in the background colour, then 2.5 dp in the accent colour, both following the item's corner (no accent glow, the glow is the cover's own colour; see Focus and current). Cover corners 8 (landscape) or 6 (square and tall); the tile's title padding 12 or 10 the same way.
+- Focus ring on a grid cover or tile: a 3 dp gap in the background colour, then 2.5 dp in the accent colour, both following the item's corner (the focus halo sits outside the ring, never over the cover; under the item the glow is the cover's own colour; see Focus and current). Cover corners 8 (landscape) or 6 (square and tall); the tile's title padding 12 or 10 the same way.
 - **Real covers** (the bar is "simple but beautiful"): each box front keeps its own
   shape, fitted in its cell (never cropped, never stretched) and standing on the cell's bottom, so
   a row reads as a shelf; the ring follows the picture, not the cell. The focused cover is drawn
@@ -269,8 +299,8 @@ A focused button gets the 2.5 dp accent ring and soft glow, like a focused cover
   everywhere else stays 10): 5.5 + 2.5 + 5 % of the tallest row (263 dp, PSP at Large on 768) is 21.2. The grid gives that
   10 dp up from its height (`PlumLayout.gridStripHeight`, which the rows that fit follow); nothing of it is cut at any edge of the grid,
   while every other cover ends at the grid's edges. Every tile names its game: until a picture is
-  decoded (and for good when its file cannot be read) its place is the titled tile in the
-  picture's shape, and the picture fades in over it in 110 ms; a picture already in memory is
+  decoded its place is the titled tile in the picture's shape (a file that cannot be read turns
+  into the poster cover), and the picture fades in over it in 110 ms; a picture already in memory is
   drawn at once, with no title under it. A picture has a 1 dp hairline just inside its edge (drawn inside the picture, it moves nothing),
   `coverEdge` (the background 10 % towards the text: a few percent lighter on dark backgrounds,
   darker on light ones; `PlumDimens.coverEdge`), so a box front's black or white border does not
@@ -280,7 +310,7 @@ A focused button gets the 2.5 dp accent ring and soft glow, like a focused cover
   (10,11,12)): the resting edge now has the **rim light** below, and the focused cover has a **glow** (Cover rim and
   glow). Still no plate, blur or gradient on the cover's own edge. Also allowed that day, outside the edge: the **cover
   shadow** and the one-time focus sweep (Focus and current).
-- **Cover shadow** (the grid was flat): every cover, picture or titled tile, sits on a soft black shadow
+- **Cover shadow** (the grid was flat): every cover, picture, poster or titled tile, sits on a soft black shadow
   pushed down, like a box on a table, drawn behind the cover and outside its clip, never part of the
   focused copy. At rest: blur 8 dp, 3 dp down, black at 55 % on a dark background (Graphite) and 22 % on a light one
   (Paper). The focused cover adds a deeper, further one under its larger copy: blur 12 dp, 7 dp down, 55 % / 24 %, faded in with the growth. A dimmed Favorites cover dims its shadow
@@ -288,15 +318,30 @@ A focused button gets the 2.5 dp accent ring and soft glow, like a focused cover
   computed once, in software, into a small ALPHA_8 bitmap of a rounded corner (a mask filter does not draw on a hardware canvas
   before Android 9) and drawn as nine stretched slices at any cover size, so nothing is computed per frame and nothing
   animates while the grid is idle. Both shadows stay inside the gaps (22 dp at least) and the grid's 4 dp padding is only a start: a
-  shadow at the grid's own edge is cut by its clip, as the covers are. The titled tile (a game without
-  art, or waiting): flat `sel`, corners 8 / 6, the title in `gridFocusTitle` (13 / 600, `text2`;
+  shadow at the grid's own edge is cut by its clip, as the covers are. The titled tile (a picture or
+  result still on its way): flat `sel`, corners 8 / 6, the title in `gridFocusTitle` (13 / 600, `text2`;
   `smallTileTitle` 11 / 600 at the Small grid size) and the year under it in `smallFact` (13, `muted`;
   `smallTileYear` 11 at Small), 4 apart, at
   the bottom left inside the cover padding (landscape 12, portrait 10), like a box's label; the
   title wraps over the lines the tile holds, and the year gives way when the title needs its line.
-  The details column's tile for a game without art has no title and no year (the details title
-  and facts are right under it): only the system-styled tile.
-- **Cover rim and glow** (no depth on the dark theme). **Rim:** every grid cover, picture or titled tile
+- **Poster cover** (a game without a picture: signed out of ScreenScraper, no picture found, or a
+  file that cannot be read). Drawn by Plumemu, never saved and never a picture from outside: a
+  gradient between two colours of one look (top at the top left, bottom at the bottom right), a
+  white frame at 35 % inset 4.5 % of the short side, the title centred above a band along the bottom
+  (11 % of the height, the look's deeper `band` colour) holding the system's name in capitals, 800,
+  letter-spaced 0.12 em. 23 looks (`POSTER_PALETTE`, core-ui `theme/PosterPalette.kt`), saturated
+  jewel tones and light pastels, no greys, browns or muddy mixes; a title always gets the same look
+  (a hash of the title in lower case without accents or punctuation, modulo the prime 23, so titles
+  one character apart differ). Ink is white or `#14142B`, whichever reads better, at least 4.5:1
+  against both gradient ends and the band (the lowest is 4.66). The title is in capitals, 800, as large as fits
+  80 % of the width over 2 lines (3 on a cover taller than wide), shrinking in steps to 8 sp, broken
+  between words (CJK between characters), ending in "…"; the band text shrinks to 6 sp, then takes
+  the short name ("SNES"), and on a cover too small for 6 sp shows none. The same cover in the grid
+  (in its system's shape), in the details column (above the title, in the cover's place; it shrinks
+  first when text needs the room and is left out under 56 dp) and on the second screen's details
+  card. The focus ring never touches it: the ring stands outside the cover behind a band of the
+  background colour, so it shows on every look in Graphite, Paper and every colour set.
+- **Cover rim and glow** (no depth on the dark theme). **Rim:** every grid cover, picture, poster or titled tile
   gets a 1 dp white line just inside its rounded edge at 14 % (`PlumDimens.COVER_RIM_ALPHA_DARK`,
   `coverRimColor`), drawn over the cover so the focused copy carries it; nothing moves. On a light background (Paper;
   same test as the shadow) a picture keeps its `coverEdge` hairline and a titled tile has none: the shadow carries
@@ -307,7 +352,7 @@ A focused button gets the 2.5 dp accent ring and soft glow, like a focused cover
   the lifted shadow, so nothing runs while idle. The colour is the average of the cover's image, found once when the
   image is first seen by shrinking it to 16 x 16 (`CoverGlowColor`, kept per picture / app by `CoverGlowColors`, no
   library), pixels under 6 % opacity ignored, and lifted until its brightest channel is 60 % so a dark cover still glows
-  (`COVER_GLOW_MIN_VALUE`); a titled tile glows in its `sel` colour lifted the same way; an Apps tile (which has no rim, shadow or card) in its icon's
+  (`COVER_GLOW_MIN_VALUE`); a poster glows in its gradient's middle colour and a titled tile in its `sel` colour, both lifted the same way; an Apps tile (which has no rim, shadow or card) in its icon's
   average. The glow's blurred shape is made wide enough to reach full strength in its middle (`Look.fullStrength`);
   with only a corner's width it came out at 58 %. Measured on Graphite at 768 x 432: 6 dp under the focused cover is 25
   levels brighter than the background in the cover's blue (12 on the other channels). The glow still shows 8 dp past a
@@ -479,20 +524,22 @@ line's colour (`#555555`, `#8E3740` when low), its ink as tall as the digits' in
 follows Settings › Home screen › Show battery like the top bar: off, the card is the time alone, centred, with
 neither the battery line nor the glyph, and nothing listens to the battery or Wi-Fi; a change shows at once. It moves with the block.
 
-**Battery part** under the clock card (with Show battery on). Unlike the clock card it follows the person's font and Text size (not Android's font scale):
+**Battery part** under the clock card (with Show battery on). Unlike the clock card it follows the person's font and Text size (not Android's font scale), with tabular digits in the head, the chart's labels and the facts alike, so a figure keeps its width as it changes. Plum Sans's digits are tabular with a slashed zero in every weight (its design, as everywhere in the app); Plum Serif's become tabular only through the feature. Durations never pad a zero ("1 h 3 min"):
 
 | | Roomy | Compact |
 |---|---|---|
 | Frame (the clock card at its top, everything drifting together) | 32 top and bottom, 40 sides | 32, 28 |
-| Time left, after the clock card: number 600, words 400 ("45 min left", "About 4 h 15 min left", "1 h 03 to full"), `#767676`; at 15% and below, not charging, `#A0404A` | 28 under; 36 + 20 | 20 under; 26 + 16 |
-| "empty at 22:35" / "full at 22:50" on its baseline at the right, under it when both do not fit (`#767676`) | 16 | 16 |
-| Chart under it: what height is left, at most | 14 under; 144 | 10 under; 104 |
-| Lines: this play (`#767676`, low `#A0404A`), ahead dashed 8 / 7 (`#5C5C5C`), usual pace dotted every 7 (`#555555`), now dot | 3.5, 3, 2.5, r 6 | 3, 2.5, 2, r 5 |
-| Hour ticks at the bottom only (no grid), 5 long, 1.5, `#333333`; labels 4 under (first at the left edge, last at the right, the others centred; 12-hour ones closer than 8 keep only the ends) | 16 | 16 |
-| Key at the bottom, at least 12 / 8 under the labels: swatch 22 + 10 + "48% an hour", 28 / 20, then swatch + "usually 40%" or "as usual" (charging "+40% an hour", "since 21:20") | 16 | 16 |
+| Level ring at the left, after the clock card: track `#333333`, arc from the top clockwise by level `#5C5C5C` (low `#A0404A`), "63%" inside in `#555555` (low `#A0404A`); shown only when the head fits beside it. While it shows, the clock card drops its battery glyph and percent (the Wi-Fi glyph stays); the clock card alone keeps them | 28 under; r 30, stroke 2, 20 to the text | 20 under; r 22, 1.5, 14 |
+| Time left beside it: number 600, words 400 ("45 min left", "7 h 50 min left", "1 h 3 min to full"), `#767676`; at 15% and below, not charging, `#A0404A` | 36 + 20 | 26 + 16 |
+| "empty at about 11:15" (on five minutes) / "full at 22:50" (Android's exact) / "full at about …" under it, `#767676`; gives way first, unless it costs no height | 16 | 16 |
+| Chart under the head: what height is left, at most; runs from the play's first point (to the minute) to empty (charging: full), at least 60 minutes wide; at most 12 h ahead of now (further, the forecast stops on its way down: no end ring, no end time under it or in the head); vertical scale as `BatteryChart.scale` | 16 under; 144 | 10 under; 104 |
+| This play's line (`#767676`, low `#A0404A`, round joins) over a fill of its colour at alpha 0.12 at the line fading to none at the floor; ahead `#5C5C5C` fading to 0.3 of its alpha along its length over a fill of 0.04 fading right and down; a ring (`#3A3A3A`, r 5, stroke 2) at its end; usual pace dotted every 7 (`#555555`); now a dot in a radial glow of 2.6 x its radius at alpha 0.25 with a dotted upright guide (`#333333`, 1.5, 6 apart) to the floor (`InGameColors`). No baseline, no grid; nothing touches the frame's edges | 3, 2, 2, r 5 | 2.5, 1.5, 1.5, r 4 |
+| Hour ticks under the floor on the clock's whole hours (every n hours when over 12), 6 under, 4 long, 1.5, `#333333`; labels 4 under: "Started 2:40" left, "Empty 11:15" / "Full 22:50" right, `#5C5C5C`; the start gives way when both do not fit | 16 | 16 |
+| Facts row centred at the bottom, 10 / 6 under the labels: "Played 0:44 · Used 6% · 8% an hour · as usual" (charging "+40% an hour · since 21:20"; Used left out when the play charged), separators `#555555` with 8 each side; out of width Played goes first, then Used, then usual/since | 16 | 16 |
 
-Out of height (chart under 64 / 48): "empty at" on a line of its own gives way, then the key, then the
-labels. Notes ("Measuring battery use…", "Moves a little every minute to protect the screen") are 16,
+Out of height (chart under 64 / 48) parts give way in order: "empty at", then the note, then the facts,
+then the labels; still under the minimum, no chart. The ring shows only when ring, gap and head fit. The drift note takes the facts'
+place while it shows. Notes ("Measuring battery use…", "Moves a little every minute to protect the screen") are 16,
 `#767676`, centred at the bottom of the frame, at most two lines. Roles `SecondBattery*` in `TypeRole`.
 
 No seconds; 12 or 24 h as Android is set. Charging: "Charging · 82%". At 15% and below, not
@@ -521,7 +568,8 @@ Plumemu's own on-screen keyboard. `PlumKeyboard` in core-ui.
   226.8 to 206.3, a sixth whole result row showing). There is no half-screen limit on the key height any more: every size on 432 and 471 high is under half the screen; the RP4 Pro (375, half 187.5) is above it, as
   before (keys stay 36 for the touch area).
 - **Rows** (spans in columns): `q`–`p` / `a`–`l` half a key in / shift 1.5, `z`–`m`, delete 1.5 / `123` 1.5,
-  hide 1, Space 4.5, action 3. Symbols: `1`–`0` / `@ # $ % & - _ + ` / `=\<` 1.5, `., : ; ! ? /`, delete /
+  hide 1, Space 4.5, action 3; while the clipboard holds text, a paste key (clipboard icon, 1) takes Space's first
+  column on every page: hide 1, paste 1, Space 3.5. Symbols: `1`–`0` / `@ # $ % & - _ + ` / `=\<` 1.5, `., : ; ! ? /`, delete /
   `ABC`, hide, Space, action. Symbols 2 (from `=\<`): `[ ] { } < > = * ^ ~` / `` ` | \ ' " `` in the middle of
   the row / `#+=` (back to Symbols), the same punctuation row, delete / `ABC`, hide, Space, action: every
   printable ASCII character is on some page. A field without shift (Search ignores case) leaves the shift
@@ -657,13 +705,12 @@ letter is white or the dark text colour, whichever contrasts more with its fill 
 `KeyCapLookTest`).
 
 **Glyph colours drawn**. While Super, Charcoal, Ivory, Banana or Pocket is the current set (derived:
-`PlumTheme.buttons`), every `Hint` key cap that reads A, B, X or Y is filled with that letter's
-colour; its 1.5 dp ring takes the fill's colour, so the cap keeps its size and shape (20 high, at
+`PlumTheme.buttons`), every `Hint` key cap that reads A, B, X or Y has that letter's
+colour as its flat face (Controls under Shapes and motion); there is no ring, and the cap keeps its size and shape (20 high, at
 least 20 wide), and the letter is the table's white or `#17181A`, still 10 / 600. The colour is the
 printed letter's, not the role's: with "Confirm with B" the confirm hint reads B and is B's colour.
-START, SELECT, L1 R1 and every cap in the other sets or in Custom colours keep the `chip` ring and
-`text` letter. **No outline around a coloured cap**:
-a fill need not stand out from the background, because the letter on it is what is read, as on the
+START, SELECT, L1 R1 and every cap in the other sets or in Custom colours have the theme's `key` face and a `strong` letter. **A coloured cap needs no
+colour contrast with the background**: its edge and shadow under it make it stand off (`HintGlyphColorsTest` checks the pixel under B on Banana), and the letter on it is what is read, as on the
 handhelds these sets come from. Measured, letter on fill / fill on background: Super A 5.37 / 3.76,
 B 7.83 / 1.59, X 6.91 / 4.84, Y 4.28 / 3.00; Charcoal A 4.70 / 3.01, B 4.93 / 3.93, X and Y 7.83 /
 6.24; Ivory A 4.86 / 4.05, B 7.83 / 1.89, X 4.75 / 3.96, Y 4.93 / 3.00; Banana (red, teal and a darker yellow on the yellow `#F2CD3C`) A 5.37 / 3.47, B 5.01 / 3.24, X and Y 4.86 / 3.14; Pocket (all four the accent magenta, close to the grey DMG's A/B) 8.75 / 5.43. Every letter is 4.28:1 or
@@ -674,7 +721,7 @@ Background's; narrow: the further stop). Title "Colors", one help line, then a t
 order and Custom while the row has it. A tile is a tiny home screen 16:10 in its own colours,
 drawn in fractions of its size: background, a `text2` top-bar line, the `sel` focused row with the
 accent dot and a `strong` title, a `muted` meta line, and the confirm and back glyphs (the person's
-letters) in the set's glyph colours or the usual `chip` ring; palette corners 6 with a 1 dp `chip`
+letters) as small flat keys, in the set's glyph colours or the usual `key` face with a tenth of its width as edge; palette corners 6 with a 1 dp `chip`
 edge. Its name is 4 under it, 11 sp (`colorTileName`, `text2`); the current set's 11 / 600 in the
 accent (Focus and current). Tiles span the row-text lines (14 in on each side), 12 apart across and
 down; a tile is at least 58 × the text size's height factor wide, so 3 per row in the wide panel at
@@ -685,8 +732,12 @@ Checked by `SettingsColorsPanelFit{768,576,Thor}Test` (every font, six sizes); s
 
 ## Shapes and motion
 
-- Row and button corners 8; setup choices 10; key caps fully round (20 high).
+- Row corners 8; setup choices 10; buttons and key caps are pills (fully round).
 - Switch 34×20, knob 16.
+- **Controls (decision 0011, points 2 and 3).** Keys have a flat face that stands off the background: one solid colour (no gradient, dome or texture), a 2 dp edge under it, a 1 dp hairline of light on its top edge and a soft 3 dp shadow, drawn by `drawFlatFace` in one draw block inside the item's bounds except the edge and shadow, which hang below (footprint and text do not move). Shapes are pills and circles. Applies to the hint keys (A B X Y START SELECT L1 R1; an A/B/X/Y cap in a button set keeps its printed colour as its face), dialog buttons (`SetupButton`: the main one in the accent, the others in the `key` face), the switch knob and the colour slider thumb. Face colours are tokens (`FlatFace`): `key` is the background moved 17 % (dark theme) or 11 % (light) toward the text; the edge is 85 % (dark) or 23 % (light) toward black; the knob is a pale face on both themes. Pressed: the hint cap fills with the text colour. Focus stays the ring plus halo. Tracks and fields are sunken (`drawSunken`): the switch track, the slider track, text fields (`sunkenField`, a `sel2` pill reaching 10 / 5 dp past the text's box so the row does not grow) and the progress bar get a 1 dp inset shadow on the top edge (black, 55 % on a dark theme, 28 % on a light one). Checked by `FlatFaceScreenshotTest` (shots `flat_face_*`).
+- **Panels (decision 0011, point 5).** The game panel (menu, Info, Fix name, Fix box art and the others it opens), the update card ("What's new") and the home-role and pin cards wear one chrome (`drawPanelChrome`, `Modifier.panelChrome`): a hairline edge (`panelHairline` 0.5 dp, `panelEdge` = the text colour at 16 % on a dark theme, 14 % on a light one) drawn inside the border, corners `panelCorner` (10), and a soft shadow of four stacked rounded rects reaching `panelShadowReach` (6) and sinking `panelShadowDrop` (2), black at `panelShadow` (45 % peak on Graphite, 14 % on Paper, split over the layers); no blur, no layer, read while drawing so a focus move redraws nothing of it. The game panel keeps its bg fill and its size and place: its card reaches `panelOutset` (6) past the column at the sides and top, `panelOutsetBottom` (0) below, and its shadow only `panelShadowBottom` (2) further down, so the shadow stays 8 dp or more clear of the hint keys (the strip ends 10 above them; `GamePanelChromeTest`); text and rows keep their place. A small accent dot (`PanelTitleDot`, `panelTitleDot` 6, the hint dot's size) follows the title text `panelTitleDotGap` (8) after its last visible character, centred on that line (the last line, or the last visible line of a title cut with an ellipsis; `PanelTitleWithDot`, a custom layout reading the text's line geometry); room for the dot is held back, so a long title wraps (a card) or is cut with an ellipsis (the game panel, 2 lines) a word earlier and the dot never reaches the panel's edge or hangs at the end of a first line. Test `PanelTitleDotTest`. Lists, rows and text inside are flat as before. Settings' side panels are drawn by Settings itself and are not changed yet. Test `PanelLookTest`, shots `game_menu_*`, `pin_confirm_*`, `whats_new_*`.
+- **Press and hover of a key** (decision 0011). Pressed (a finger, the confirm button on a focused button, the held button on its hint key): the face moves down by the edge (2 dp) into it, the edge disappears and the shadow fades away, the content on the face moves with it, and the colour flash stays (hint key: the face fills with the text colour; button: the text colour at `PRESS_FILL_MIX`). Down over `PRESS_IN_MS` (60 ms), up over `KEY_PRESS_OUT_MS` (140 ms; rows and cells keep `PRESS_OUT_MS`, 100 ms), ease-out; a press shorter than 100 ms still shows the whole dip. A focused button, or one under a mouse or stylus (Compose hover; hover never moves the focus), is raised: the face 1 dp higher, the edge 3 dp, a little more shadow, the face a touch lighter (`RAISE_MS`, 100 ms), on top of the ring and halo; the others rest. A tap anywhere on a Settings switch row widens its knob too. A switch's knob slides between its ends and grows a quarter wider while pressed (`on` knob is `onAccent`); the colour slider's thumb goes down while a finger holds or drags it. With animations off (the app setting or the animator scale 0) every change is instant, and a press still shows at once (face down plus colour flash). A cancelled press (finger dragged off, focus lost, the screen closed) returns to rest. One `KeyState` per key (`rememberKeyState`, `keyDrive`, `flatKey` in `components/KeyState.kt`), read only in draw and layer blocks: a press redraws that key and recomposes nothing; layout never changes. Checked by `KeyPressFramesTest` (face offset at rest, pressed, back; cancel; animations off; no recomposition), `HintPressedTest`, `HintPressRecompositionTest`.
+- **Fields look the same on either keyboard**: Settings' `FieldRow` (Android keyboard) and the own-keyboard lines (`CaretLine` in Search, sign-in, Fix name, Report a problem) wear `sunkenField` / `sunkenFieldInRow`; Search's pill is smaller (`searchFieldInset*`) to fit the 18 dp top bar.
 - Strip slide about 180 ms, ease-out; off when animations are off. A move within the column the
   strip is already sliding to lets the slide run on (it does not start over).
 - System names follow the strip, not the focus: their alpha goes from 1 at the systems stop to 0
@@ -734,10 +785,10 @@ Checked by `SettingsColorsPanelFit{768,576,Thor}Test` (every font, six sizes); s
   "Reading..." value and not a folder's "Counting games..." detail (minimalism). One component, `ScanPulseLine` (`ScanPulse` is the dot) in core-ui.
 - **Pressed**: a real button gives a feel. While a button is held, the
   hint whose key cap stands for it looks pressed, like a real key: the cap fills with the `text`
-  colour, its ring and letter follow (the letter takes the `bg` colour), and the cap (only the cap, not the
-  label) scales to 0.92 about its centre, by `graphicsLayer`, so nothing around it moves. In 60 ms
-  ease-out, out 100 ms ease-out; a press shorter than 100 ms still shows the whole dip (the way in is
-  never cut, the way out waits until 100 ms after the press; with animations off there is no wait: the release is at once, in the same frame). The timings and scales are tokens in `PlumMotion` (`PRESS_IN_MS`, `PRESS_OUT_MS`, `PRESS_MIN_VISIBLE_MS`, `HINT_PRESS_SCALE`, `PRESS_SCALE`, `PRESS_FILL_MIX`). A finger down on a hint does the same until
+  colour and its letter takes the `bg` colour, and the cap face (only the cap, not the label) moves down
+  into its edge as any key does (Press and hover of a key, above), so nothing around it moves. In 60 ms
+  ease-out, out `KEY_PRESS_OUT_MS` (140 ms) ease-out; rows, cells and tiles come back over `PRESS_OUT_MS` (100 ms); a press shorter than 100 ms still shows the whole dip (the way in is
+  never cut, the way out waits until 100 ms after the press; with animations off there is no wait: the release is at once, in the same frame). The timings and scales are tokens in `PlumMotion` (`PRESS_IN_MS`, `PRESS_OUT_MS`, `KEY_PRESS_OUT_MS`, `PRESS_MIN_VISIBLE_MS`, `PRESS_SCALE`, `PRESS_FILL_MIX`). A finger down on a hint does the same until
   it lifts. The cap lights for the button printed with its letter (hints print the physical letter: under Confirm with B the confirm hint says "B" and the button printed B lights it; the swap never renames a button). D-pad centre and Enter, which confirm, light the confirm hint's cap, Back and Escape the back hint's; "L1 R1" lights for either; "↑↓" and "→" for the
   D-pad. A hint that appears while its button is still down starts pressed. With animations off the fill
   changes at once and the cap does not shrink. Held keys come from the router (`InputRouter.held`) through
@@ -784,9 +835,9 @@ every sound silent):
 - A press at the end of a list changes nothing and makes no sound. A held D-pad makes at most one
   move sound every 50 ms. Touch scrolling and flings are silent. No sound at app start; launching
   an emulator makes only the confirm of the press.
-- Settings › Advanced › Sounds is three steps, ‹ Off › / ‹ Quiet › (35 % of the pool's volume) / ‹ Loud ›
+- Settings › Controls › Sounds is three steps, ‹ Off › / ‹ Quiet › (35 % of the pool's volume) / ‹ Loud ›
   (full; the default, and what an old "on" reads as); changing it to Quiet or Loud plays one confirm at the new
-  volume, Off is silent. Settings › Advanced › Vibration (on by default) adds a haptic: a light tick on every
+  volume, Off is silent. Settings › Controls › Vibration (on by default) adds a haptic: a light tick on every
   focus move (at most one per 35 ms, so a held D-pad does not buzz) and a firmer click on a confirm; none for
   back. It is made where the sound is (`UiSounds`) with the best the device has (`Haptics.kt`: primitives, else
   the predefined tick and click, else a short low-amplitude one-shot, else a plain vibrate). The sound pool is made and loaded on a background thread when the app becomes visible

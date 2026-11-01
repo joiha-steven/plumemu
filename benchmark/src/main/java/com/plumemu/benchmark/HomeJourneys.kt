@@ -164,5 +164,5 @@ private const val SEARCH_BACKS = 3
 private const val SETTINGS_TITLE = "Settings"
 private const val SETTINGS_SECTIONS = 6
 private const val ROWS_PER_SECTION = 4
-private const val MAX_BACKS = 3
+private const val MAX_BACKS = 6
 private val SEARCH_KEYS = listOf(KeyEvent.KEYCODE_M, KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_R, KeyEvent.KEYCODE_I, KeyEvent.KEYCODE_O)

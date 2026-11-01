@@ -11,14 +11,18 @@ plugins {
  * has neither: both stay empty, and the app then shows no statistics or update rows, asks nothing about
  * them in setup and never connects. The release machine names them in ~/.gradle/gradle.properties, like the release key:
  *   plumemu.updateUrl=<URL of latest.json>
+ *   plumemu.platformDataUrl=<URL of data/platforms/latest.json, the platform data manifest>
+ * (debug builds ignore it; they use plumemu.platformDataDebugUrl, else the published beta.json)
  *   plumemu.statsEndpoint=<base URL of the statistics server>
  * Debug builds fall back to the published addresses below so local work is unchanged; -P on the
  * command line overrides the file for any build.
  */
 val PUBLISHED_UPDATE_MANIFEST_URL = "https://plumemu-app.stevensdesk.com/update/latest.json"
+val PUBLISHED_PLATFORM_DATA_URL = "https://plumemu-app.stevensdesk.com/data/platforms/beta.json"
 val PUBLISHED_STATS_ENDPOINT = "https://plumemu.stevensdesk.com"
 
 val configuredUpdateUrl = providers.gradleProperty("plumemu.updateUrl").getOrElse("").trim()
+val configuredPlatformDataUrl = providers.gradleProperty("plumemu.platformDataUrl").getOrElse("").trim()
 val configuredStatsEndpoint = providers.gradleProperty("plumemu.statsEndpoint").getOrElse("").trim()
 
 /**
@@ -30,6 +34,12 @@ val debugStatsEndpoint = configuredStatsEndpoint.ifEmpty { PUBLISHED_STATS_ENDPO
 val debugStatsCleartext = debugStatsEndpoint.startsWith("http://")
 // -Pplumemu.updateUrl=http://10.0.2.2:8000/latest.json: the emulator reaches the Mac at 10.0.2.2.
 val debugUpdateUrl = configuredUpdateUrl.ifEmpty { PUBLISHED_UPDATE_MANIFEST_URL }
+
+// Debug reads the beta manifest; release only what the property names.
+// A debug build never reads plumemu.platformDataUrl: that line (latest.json, release-signed data) lives in the release
+// machine's ~/.gradle/gradle.properties and applies to every build type, but a debug build only accepts debug-signed data.
+// -Pplumemu.platformDataDebugUrl=http://10.0.2.2:8000/beta.json points it at a local server instead.
+val debugPlatformDataUrl = providers.gradleProperty("plumemu.platformDataDebugUrl").getOrElse("").trim().ifEmpty { PUBLISHED_PLATFORM_DATA_URL }
 
 fun javaStringLiteral(value: String): String = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
@@ -49,7 +59,7 @@ android {
         versionCode = providers.gradleProperty("plumemu.versionCode").orNull?.trim()?.toInt()
             ?: providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }
                 .standardOutput.asText.get().trim().toInt()
-        versionName = "0.1.0"
+        versionName = "0.1.1"
         // The 10,000-game benchmark content may be picked by an intent extra only where this is
         // true: the benchmark build types below, never debug or release (MainActivity).
         buildConfigField("boolean", "BENCHMARK_CONTENT", "false")
@@ -57,6 +67,7 @@ android {
         // named by the release machine's Gradle properties, else empty (the feature is absent). Debug builds
         // fall back to the published addresses (below).
         buildConfigField("String", "UPDATE_MANIFEST_URL", javaStringLiteral(configuredUpdateUrl))
+        buildConfigField("String", "PLATFORM_DATA_MANIFEST_URL", javaStringLiteral(configuredPlatformDataUrl))
         buildConfigField("String", "STATS_ENDPOINT", javaStringLiteral(configuredStatsEndpoint))
         buildConfigField("boolean", "STATS_LOCAL_CLEARTEXT", "false")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -85,6 +96,7 @@ android {
     buildTypes {
         debug {
             buildConfigField("String", "UPDATE_MANIFEST_URL", javaStringLiteral(debugUpdateUrl))
+            buildConfigField("String", "PLATFORM_DATA_MANIFEST_URL", javaStringLiteral(debugPlatformDataUrl))
             buildConfigField("String", "STATS_ENDPOINT", javaStringLiteral(debugStatsEndpoint))
             buildConfigField("boolean", "STATS_LOCAL_CLEARTEXT", debugStatsCleartext.toString())
         }
@@ -123,6 +135,8 @@ android {
                 it.systemProperty("screenscraper.live.timing", providers.gradleProperty("screenscraper.live.timing").getOrElse("false"))
                 // The README's raw screens (ReadmeMediaShots): rendered only with -Dplumemu.readme=true.
                 providers.systemProperty("plumemu.readme").orNull?.let { readme -> it.systemProperty("plumemu.readme", readme) }
+                // The demo video's raw frames (DemoVideoFrames): rendered only with -Dplumemu.demo=true.
+                providers.systemProperty("plumemu.demo").orNull?.let { demo -> it.systemProperty("plumemu.demo", demo) }
             }
         }
     }
@@ -140,24 +154,26 @@ baselineProfile {
     mergeIntoMain = true
 }
 
-// A release signed with the real release key is the one people install and update from. Without the two
+// A release signed with the real release key is the one people install and update from. Without the
 // addresses it would never check for updates (nobody could be moved off it), and a leftover
 // plumemu.versionCode (update testing) would pin its build number. So that build refuses to be made.
 // A build without the key (a source build, CI) is exempt: it must work with none of these properties.
 val releaseBuildPropertiesCheck = tasks.register("releaseBuildPropertiesCheck") {
     val isSigned = providers.gradleProperty("PLUMEMU_RELEASE_STORE_FILE").isPresent
     val hasUpdateUrl = configuredUpdateUrl.isNotEmpty()
+    val hasPlatformDataUrl = configuredPlatformDataUrl.isNotEmpty()
     val hasStatsEndpoint = configuredStatsEndpoint.isNotEmpty()
     val pinnedVersionCode = providers.gradleProperty("plumemu.versionCode").isPresent
     doLast {
         if (!isSigned) return@doLast
         val problems = buildList {
             if (!hasUpdateUrl) add("plumemu.updateUrl is not set: this release would never check for updates")
+            if (!hasPlatformDataUrl) add("plumemu.platformDataUrl is not set: this release would never download platform data updates")
             if (!hasStatsEndpoint) add("plumemu.statsEndpoint is not set: this release would have no statistics and no problem reports")
             if (pinnedVersionCode) add("plumemu.versionCode is set (-P or gradle.properties): it would pin this release's build number")
         }
         if (problems.isNotEmpty()) {
-            throw GradleException("Release build refused:\n  " + problems.joinToString("\n  ") + "\nSet the first two in ~/.gradle/gradle.properties and drop the third.")
+            throw GradleException("Release build refused:\n  " + problems.joinToString("\n  ") + "\nSet the addresses (updateUrl, platformDataUrl, statsEndpoint) in ~/.gradle/gradle.properties and drop plumemu.versionCode.")
         }
     }
 }
@@ -196,6 +212,8 @@ dependencies {
     implementation(project(":launcher"))
     // The ScreenScraper engine; the Application tells it which credentials this build has.
     implementation(project(":scraper"))
+    // RetroAchievements: built only once the person has signed in.
+    implementation(project(":achievements"))
     // Usage statistics: the install id, queue, switch and sender (docs/conventions/telemetry.md).
     implementation(project(":telemetry"))
     // Configuration.Provider on the Application (WorkManager starts on demand).

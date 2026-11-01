@@ -60,9 +60,13 @@ class HomeMixedGridContentTest {
     }
 
     @Test
-    fun withoutBoxArtThereIsNoGridForThemEither() {
-        val noArt = HomeContent.of(listOf(psp), listOf(psp), emptyList(), listOf(SystemGames("psp", "PSP", listOf(psp))))
-        assertEquals(false, noArt.showsGrid(noArt.entries[0], setOf(HomeContent.RECENT_ID)))
-        assertEquals(false, noArt.showsGrid(noArt.entries[1], setOf(HomeContent.FAVORITES_ID)))
+    fun withoutBoxArtRecentAndFavoritesHaveAGridToo() {
+        val noArt = HomeContent.of(listOf(psp, snes), listOf(psp), emptyList(), listOf(SystemGames("psp", "PSP", listOf(psp), coverShape = CoverShape(0.58f)), SystemGames("snes", "SNES", listOf(snes), coverShape = CoverShape(1.4f))))
+        assertEquals(true, noArt.showsGrid(noArt.entries[0], setOf(HomeContent.RECENT_ID)))
+        assertEquals(true, noArt.showsGrid(noArt.entries[1], setOf(HomeContent.FAVORITES_ID)))
+        assertEquals("each game keeps its own system's shape", CoverShape(0.58f), noArt.entries[0].shapeOf(psp))
+        assertEquals(CoverShape(1.4f), noArt.entries[0].shapeOf(snes))
+        val noGames = HomeContent.of(emptyList(), emptyList(), emptyList(), emptyList())
+        assertEquals("an entry without games stays a list", false, noGames.showsGrid(noGames.entries[0], setOf(HomeContent.RECENT_ID)))
     }
 }

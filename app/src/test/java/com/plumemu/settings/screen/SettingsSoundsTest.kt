@@ -68,8 +68,7 @@ internal class SettingsSoundsTest : SettingsModelHarness() {
 
     @Test
     fun applyingALanguageConfirmsByPressAndByTap() {
-        openSection(SettingsSection.Advanced)
-        focusOption(SettingsOption.Language)
+        openSection(SettingsSection.Appearance)
         press(Action.Enter)
         reported.drain()
         assertEquals("the first tap only moves the cursor", listOf(Outcome.Moved), tapped { model.onTapPanelItem(1, actions.settings, wide) })
@@ -115,16 +114,16 @@ internal class SettingsSoundsTest : SettingsModelHarness() {
 
     @Test
     fun theSoundsSwitchIsSilentItselfBothWaysButItsNeighboursClick() {
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.Controls)
         focusOption(SettingsOption.Sounds)
         reported.drain()
         assertEquals("by A", emptyList<Outcome>(), heard(Action.Enter))
-        val sounds = SettingsSection.Advanced.options.indexOf(SettingsOption.Sounds)
-        val reset = SettingsSection.Advanced.options.indexOf(SettingsOption.ResetAll)
-        assertEquals("a tap that only focuses another row", listOf(Outcome.Moved), tapped { model.onTapOption(reset, actions.settings, wide) })
+        val sounds = SettingsSection.Controls.options.indexOf(SettingsOption.Sounds)
+        val switchSystem = SettingsSection.Controls.options.indexOf(SettingsOption.SwitchSystemWith)
+        assertEquals("a tap that only focuses another row", listOf(Outcome.Moved), tapped { model.onTapOption(switchSystem, actions.settings, wide) })
         assertEquals("first tap focuses", listOf(Outcome.Moved), tapped { model.onTapOption(sounds, actions.settings, wide) })
         assertEquals("second tap steps the level, silent", emptyList<Outcome>(), tapped { model.onTapOption(sounds, actions.settings, wide) })
-        heard(Direction.Up) // from Sounds to Animations
+        heard(Direction.Up) // from Sounds to Keyboard
         assertEquals(listOf(Outcome.Activated), heard(Action.Enter))
     }
 

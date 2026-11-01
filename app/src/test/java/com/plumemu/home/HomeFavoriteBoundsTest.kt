@@ -136,10 +136,12 @@ class HomeFavoriteBoundsTest {
 
     @Test
     @Config(qualifiers = WIDE)
-    fun at768EveryGamesHintShows() {
+    fun at768SelectShowsAndSwitchSystemGivesWay() {
         showGames()
-        val order = listOf(Action.Play, Action.Back, Action.ToggleFavorite, Action.Search, Action.Menu, Action.JumpLetterNext)
+        // SELECT shows without an account now; "L2 R2 Switch system" gives way first at 768 (HINT_DROP_ORDER).
+        val order = listOf(Action.Play, Action.Back, Action.ToggleFavorite, Action.Search, Action.Menu, Action.ToggleView)
         order.forEach { assertTrue("${it::class.simpleName} is shown", isShown(it)) }
+        assertTrue("Switch system gave way", !isShown(Action.JumpLetterNext))
         val hints = shownHints(order)
         hints.zipWithNext().forEach { (a, b) -> assertEquals("20 between hints", (a.right + 20.dp).value, b.left.value, TOLERANCE) }
         assertTrue(hints.last().right <= 744.dp + TOLERANCE.dp)

@@ -45,6 +45,9 @@ internal const val DETAILS_FILE_NAME = "Super Metroid (Japan, USA) (En,Ja).sfc"
 internal const val LONG_FILE_NAME =
     "Final Fantasy VII - International Edition (Japan) (Disc 1) (Rev 1) (Special Collector's Edition with the Bonus Disc, the Art Book and More).cue"
 
+/** A game signed out of ScreenScraper: its poster cover and the facts known without it (no description, year or publisher). */
+internal val POSTER_GAME = GAME_WITH_STAR.copy(fileName = DETAILS_FILE_NAME, hasNoPicture = true, systemShort = "SNES", coverAspect = 1.40f)
+
 internal val DETAILS_GAME = GAME_WITH_STAR.withDetails(FULL_DETAILS).copy(fileName = DETAILS_FILE_NAME)
 
 /** A genre too long for the line beside a landscape box: it is cut, the rating stays. */

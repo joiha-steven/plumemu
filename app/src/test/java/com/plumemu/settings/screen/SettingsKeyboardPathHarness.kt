@@ -180,7 +180,7 @@ internal abstract class SettingsKeyboardPathHarness : SettingsModelHarness() {
 
     /** Appearance › Accent › "+": the accent palette, the cursor on its hex row (the stored accent is a preset). */
     protected fun openAccentHexRow() {
-        repeat(SettingsSection.Appearance.ordinal) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.Appearance.shownIndex) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
         repeat(SettingsSection.Appearance.rowsIn(content).indexOf(SettingsOption.Accent)) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
@@ -192,7 +192,7 @@ internal abstract class SettingsKeyboardPathHarness : SettingsModelHarness() {
 
     /** Library › Unidentified games, then A on game [index] (0: Fix name… with a list; 2: Use my own name, no list). */
     protected fun openNameFix(index: Int) {
-        repeat(SettingsSection.Library.ordinal) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.Library.shownIndex) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
         repeat(SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.UnidentifiedGames)) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)

@@ -29,7 +29,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings › Appearance › Grid size on the main screen: the grid follows the
+ * Settings › Home screen › Grid size on the main screen: the grid follows the
  * setting while it is on screen, the focused game stays focused and whole across a change, and
  * each cell draws the saved picture whose height covers what it draws.
  */

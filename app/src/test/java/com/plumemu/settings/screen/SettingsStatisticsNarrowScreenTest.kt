@@ -4,8 +4,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import com.plumemu.MainScreen
+import com.plumemu.R
 import com.plumemu.content.HomeState
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SetupFlags
@@ -28,7 +34,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Settings › Statistics on a narrow screen: a game row has no side panel, so no "More" hint and nothing opens; A plays. */
+/** Settings › Statistics on a narrow screen: no side panel, so no "More" hint and nothing opens; A on a game says "Go to" and shows it on the main screen. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w576dp-h432dp-land-xhdpi")
 class SettingsStatisticsNarrowScreenTest {
@@ -40,6 +46,7 @@ class SettingsStatisticsNarrowScreenTest {
     private val settings = mutableStateOf(PlumSettings(flags = SetupFlags(setupCompleted = true)))
     private lateinit var router: InputRouter
     private val games = FakeGameActions()
+    private val context = ApplicationProvider.getApplicationContext<Context>()
 
     private val host =
         SettingsHost(
@@ -71,33 +78,28 @@ class SettingsStatisticsNarrowScreenTest {
             MainScreen(settings.value, HomeState.Ready(FakeHomeContent.board()), router, HomeCallbacks(games = games), onRetry = {}, settingsHost = host)
         }
         send(Action.Menu)
-        repeat(SettingsSection.Statistics.ordinal) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.Statistics.shownIndex) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
         repeat(index) { send(Action.Move(Direction.Down)) }
     }
 
     @Test
-    fun aGameRowOffersPlayAndNoMoreHintAndDpadRightOpensNothing() {
+    fun aGameOffersGoToAndNoMoreHintAndDpadRightChangesNothing() {
         openStatisticsAtRow(2)
         compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed()
+        compose.onNode(hasText(context.getString(R.string.settings_hint_go_to)) and hasAnyAncestor(hasTestTag(SettingsTags.HINT_CONFIRM)), useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithTag(SettingsTags.HINT_MORE).assertDoesNotExist()
         send(Action.Move(Direction.Right))
         compose.onNodeWithTag(SettingsTags.HINT_MORE).assertDoesNotExist()
-        compose.onNodeWithTag(SettingsPanelTags.STATISTIC_PLAY_HINT, useUnmergedTree = true).assertDoesNotExist()
-        compose.onNodeWithTag(SettingsTags.statistic(2)).assertIsDisplayed()
+        compose.onNodeWithTag(StatisticsTags.game(2)).assertExists()
         assertEquals("nothing was launched", emptyList<String>(), games.launched)
-        send(Action.Enter)
-        assertEquals(listOf("1"), games.launched)
     }
 
     @Test
-    fun anotherReadOnlyRowStillOffersTheExplanationOnNarrow() {
-        openStatisticsAtRow(0)
-        compose.onNodeWithTag(SettingsTags.HINT_MORE).assertIsDisplayed()
-        // One way in, not two: "› More" stays, A says nothing and does nothing.
-        compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertDoesNotExist()
+    fun aOnAGameLeavesSettingsAndLaunchesNothing() {
+        openStatisticsAtRow(2)
         send(Action.Enter)
-        compose.onNodeWithTag(SettingsTags.HINT_MORE).assertIsDisplayed()
-        assertEquals("nothing was launched", emptyList<String>(), games.launched)
+        compose.onNodeWithTag(SettingsTags.SCREEN).assertDoesNotExist()
+        assertEquals(emptyList<String>(), games.launched)
     }
 }

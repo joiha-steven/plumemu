@@ -66,7 +66,6 @@ import com.plumemu.usage.UsageSession
 import com.plumemu.update.Updates
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -178,7 +177,7 @@ class AppGraph(
     private val databaseGate = DatabaseGate { restoreFiles.recoverMovingFiles() }
 
     // Not cached when they fail: Try again (and the next caller) builds them anew.
-    private val catalogLoad = RetryingLazy { withContext(io) { guarded("platform data") { loadShippedCatalog(app) } } }
+    private val platformDataLoad = RetryingLazy { withContext(io) { guarded("platform data") { loadPlatformData(app) } } }
     private val launchingLoad = RetryingLazy {
         val catalog = catalog() ?: return@RetryingLazy null
         withContext(io) { guarded("launching") { Launching.create(app, database, catalog, gameStarts, playBattery) } }
@@ -197,7 +196,7 @@ class AppGraph(
     internal val nameFixes: GraphNameFixes by lazy { GraphNameFixes(this, io, renameBoxArt = renameBoxArtFor(app, this, { libraryScrapeSource }, { scraperPauseStore }, { File(app.noBackupFilesDir, SCRAPE_MEDIA_FOLDER) }, io, log)) }
 
     /** The platform data, read once it works; null while it cannot be read (logged). */
-    suspend fun catalog(): PlatformCatalog? = catalogLoad.get()
+    suspend fun catalog(): PlatformCatalog? = platformDataLoad.get()?.catalog
 
     /** Null when the platform data or the launcher could not be set up (logged). */
     suspend fun launching(): Launching? = launchingLoad.get()
@@ -224,13 +223,13 @@ class AppGraph(
     /** The Apps entry's list as last read (what its rows were drawn from); opening a row looks it up here. */
     internal val listedApps: StateFlow<List<LaunchableApp>> = apps.asStateFlow()
 
-    private val appReads = AppListReads(apps) { launching()?.apps?.list() }
+    private val appReads = AppListReads(apps, onChanged = { appIcons.invalidate() }) { launching()?.apps?.list() }
 
     suspend fun refreshApps() = appReads.refresh()
 
     /** Installed apps as games: [GraphAppGames.marked], `setChoice` / `clearChoice`. */
     internal val appGames: GraphAppGames by lazy {
-        GraphAppGames(dao = { database.appGameDao() }, catalog = ::catalog, readApps = { launching()?.apps?.list() }, presence = { launching()?.apps?.presenceOf(it) }, ownPackage = app.packageName, scope = appScope, io = io, log = { Log.i(APP_GAMES_TAG, it) })
+        GraphAppGames(dao = { database.appGameDao() }, catalog = ::catalog, readApps = { appReads.read() }, presence = { launching()?.apps?.presenceOf(it) }, ownPackage = app.packageName, isLaunchable = { launching()?.detector?.isLaunchable(it) ?: false }, scope = appScope, io = io, log = { Log.i(APP_GAMES_TAG, it) })
     }
 
     /**
@@ -254,7 +253,7 @@ class AppGraph(
             catalog = ::catalog,
             apps = apps,
             showApps = settings.filterNotNull().map { it.homeScreen.showApps }.distinctUntilChanged(),
-            appGames = appGames.marked, log = log,
+            appGames = appGames.marked, appPackages = flow { emitAll(database.appGameDao().observePackages()) }, log = log,
             sort = settings.filterNotNull().map { it.library.sortGames }.distinctUntilChanged(),
             recentSize = settings.filterNotNull().map { it.library.recentSize }.distinctUntilChanged(),
             leftEdge = settings.filterNotNull().map { it.appearance.leftEdge }.distinctUntilChanged(),
@@ -394,11 +393,13 @@ class AppGraph(
                 }.combine(backup.state) { content, backupState -> content.copy(backup = backupState) }
                     .combine(combine(restore.state, restore.wayBack, ::Pair)) { content, (restoreState, wayBack) -> content.copy(restore = restoreState, wayBack = wayBack) }
                     .combine(updates.view) { content, update -> content.copy(update = update) }
+                    .combine(achievements.status) { content, ra -> content.copy(raAccount = ra) }.withPlatformData(platformDataLoad)
                     .combine(boxArtFiles.facts) { content, facts -> content.copy(boxArtBytes = facts.bytes, boxArtGivenUp = facts.givenUp) },
             folderAdd = settingsLibrary.folderAdd,
             library = settingsLibrary,
             names = settingsLibrary.names,
             accounts = scraperAccounts,
+            raAccounts = raAccounts,
             boxArt = scrapes.settingsActions,
             recent = settingsRecentActions(),
             activity = activity,
@@ -474,10 +475,14 @@ class AppGraph(
             holdForPlay = { content.held.holds(HeldWork.BoxArt) },
         )
     }
-
     /** The saved box-art pictures: their size, Clear box art and the daily sweep ([GraphBoxArt]). */
     internal val boxArtFiles: GraphBoxArt by lazy { graphBoxArt(app, this, { File(app.noBackupFilesDir, SCRAPE_MEDIA_FOLDER) }, io, log) }
-
+    /** RetroAchievements ([GraphAchievements]): nothing of it is built while signed out. */
+    internal val achievements: GraphAchievements by lazy { graphAchievementsFor(app, this, io, log) }
+    /** Settings › Accounts › RetroAchievements: sign in and out over [achievements]. */
+    private val raAccounts: GraphRaAccounts by lazy { GraphRaAccounts(achievements, appScope, Dispatchers.Main, log) }
+    /** Info's badge pictures; Coil's loader is made at the first badge drawn (signed in only). */
+    internal val achievementBadges by lazy { achievementBadgesFor(app) }
     /** The background content pass (whole-file CRC of loose cartridges); see [GraphContent]. */
     internal val content: GraphContent by lazy { graphContentFor(app, { scanner() }, { scrapes.requestRun() }, log, { Log.i(TAG, it) }, playingAway({ startup.isInFront }) { launching()?.playTime?.isPending() == true }) }
 
@@ -533,13 +538,13 @@ class AppGraph(
 
         override suspend fun checkPinnedShortcuts() = pinnedShortcuts.checkAvailability()
 
-        override fun frontReturned() = updates.onFront()
+        override fun frontReturned() = updates.onFront().also { achievements.onFront() }
 
         override fun frontLeft() = updates.onStop()
 
         override suspend fun recoverInterruptedBackup() = withContext(io) { backup.recoverInterrupted() }
 
-        override suspend fun finishRestore(): Boolean = withContext(io) { restore.onStartup() }
+        override suspend fun finishRestore(): Boolean = withContext(io) { restore.onStartup() }.also { replaced -> if (replaced) achievements.afterRestore() }
 
         override suspend fun scanLibrary(onEvent: (ScanEvent) -> Unit): Boolean {
             val scanner = scanner() ?: return false
@@ -593,7 +598,3 @@ class AppGraph(
         const val BOX_ART_THUMBNAIL_FOLDER = "box-art-thumbnails"
     }
 }
-
-/** Logs an uncaught failure of the app's scope by class instead of crashing. */
-internal fun loggingHandler(log: (String) -> Unit): CoroutineExceptionHandler =
-    CoroutineExceptionHandler { _, e -> log("Background work failed (${e.javaClass.simpleName})") }

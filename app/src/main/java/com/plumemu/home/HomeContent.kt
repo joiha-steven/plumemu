@@ -46,7 +46,15 @@ data class GameRowModel(
      * tell them apart; empty otherwise.
      */
     val variantRegion: String = "",
+    /**
+     * The package of an installed app listed as a game (Android games, Ports apps); null for a file game and for the
+     * Apps entry's rows. Such a row has no box art: the grid, the details and the second screen draw its Android icon.
+     */
+    val appPackage: String? = null,
 ) {
+    /** What the icons are asked by: an app game's package, else the row's id (the Apps entry's `package/activity`). */
+    val iconKey: String get() = appPackage ?: id
+
     /**
      * The row's right-hand text: with box art the year from
      * [details], else ScreenScraper's ([art]); the region when neither knows one, and nothing while
@@ -163,6 +171,8 @@ data class HomeEntry(
      * shape in the grid ([shapeOf]). Empty for a system's own entry, whose games all take [coverShape].
      */
     val systemShapes: Map<String, CoverShape> = emptyMap(),
+    /** The same ids' display names ("Super Nintendo"), for the poster cover's band in a mixed grid; empty for a system's own entry (its [name] is the one). */
+    val systemNames: Map<String, String> = emptyMap(),
     /** A system's badge and facts for the band over its list ([SystemInfo]); null for the fixed entries and unknown systems. */
     val info: SystemInfo? = null,
     /** The rows are in name order; false for a list sorted by last played (Settings › Library › Sort games). */
@@ -194,11 +204,15 @@ data class HomeEntry(
      */
     val hasGridView: Boolean get() = kind == EntryKind.System || kind.mixesSystems || kind == EntryKind.Apps
 
-    /** Covers come from ScreenScraper, so a game grid needs box art; Apps' icons come from Android and do not. */
-    val gridNeedsBoxArt: Boolean get() = kind != EntryKind.Apps
-
     /** The shape [row]'s cover is drawn in: its own system's in Recent and Favorites (landscape when unknown), else [coverShape]. */
     fun shapeOf(row: GameRowModel): CoverShape = if (kind.mixesSystems) systemShapes[row.systemId] ?: CoverShape.Landscape else coverShape
+
+    /**
+     * A system whose games are all installed apps (Android games): its grid is laid out like Apps' grid, icons and names
+     * on the background ([AppsGrid]). A system that also holds files (Ports) or a mixed list keeps the cover grid, where
+     * an app game's cell draws the same tile.
+     */
+    val isAppGamesGrid: Boolean by lazy(LazyThreadSafetyMode.PUBLICATION) { kind == EntryKind.System && rows.isNotEmpty() && rows.all { it.appPackage != null } }
 
     /** Apps never has a details column or details stop: apps have no art. */
     val hasDetails: Boolean get() = kind != EntryKind.Apps
@@ -219,7 +233,7 @@ class HomeContent private constructor(
      * Favorites come from their own queries and hold them already).
      */
     val hiddenEntries: List<HomeEntry> = emptyList(),
-    /** Settings › Appearance › Left edge: what the peek shows while a games list is focused. Counts is the default. */
+    /** Settings › Home screen › Left edge: what the peek shows while a games list is focused. Counts is the default. */
     val leftEdge: LeftEdgeSetting = LeftEdgeSetting.Default,
 ) {
     /** Systems with games (the "18 systems" of the top bar). */
@@ -243,7 +257,7 @@ class HomeContent private constructor(
     /**
      * [strip] with the grid's columns for each entry in [gridIds] shown as a grid (SELECT), so
      * the focus moves by columns there: a game grid's from its cover shape and the grid size, Apps' from
-     * the width alone ([appsGridColumns]). Without box art only Apps can be a grid.
+     * the width alone ([appsGridColumns]).
      */
     fun stripWith(
         gridIds: Set<String>,
@@ -255,7 +269,7 @@ class HomeContent private constructor(
                 val columns =
                     when {
                         !showsGrid(entry, gridIds) -> 1
-                        entry.kind == EntryKind.Apps -> appsGridColumns(layout)
+                        entry.kind == EntryKind.Apps || entry.isAppGamesGrid -> appsGridColumns(layout)
                         else -> layout.gridColumns(entry.coverShape)
                     }
                 systemEntryOf(entry, columns)
@@ -267,7 +281,7 @@ class HomeContent private constructor(
     private fun systemEntryOf(
         entry: HomeEntry,
         columns: Int,
-    ) = SystemEntry(entry.id, entry.count, columns, entry.hasDetails, entry.rowIds, hasGridWithoutArt = !entry.gridNeedsBoxArt)
+    ) = SystemEntry(entry.id, entry.count, columns, entry.hasDetails, entry.rowIds)
 
     /** The same screen with [entries] in place of these (Favorites marks, FavoriteMarks). */
     internal fun withEntries(
@@ -275,7 +289,7 @@ class HomeContent private constructor(
         hiddenEntries: List<HomeEntry> = this.hiddenEntries,
     ): HomeContent = HomeContent(entries, hasBoxArt, hiddenEntries, leftEdge)
 
-    /** The same screen with the peek showing [edge] (Settings › Appearance › Left edge). */
+    /** The same screen with the peek showing [edge] (Settings › Home screen › Left edge). */
     fun withLeftEdge(edge: LeftEdgeSetting): HomeContent = if (edge == leftEdge) this else HomeContent(entries, hasBoxArt, hiddenEntries, edge)
 
     /**
@@ -287,8 +301,8 @@ class HomeContent private constructor(
         gridIds: Set<String>,
     ): Boolean = entry != null && hasGridFor(entry) && entry.id in gridIds && entry.rows.isNotEmpty()
 
-    /** Whether [entry] can be a grid here: it has a grid view, and box art when its grid needs it (Apps' does not). */
-    fun hasGridFor(entry: HomeEntry): Boolean = entry.hasGridView && (hasBoxArt || !entry.gridNeedsBoxArt)
+    /** Whether [entry] can be a grid here: it has a grid view. Box art is not needed; a game without a picture gets a plain titled tile (a poster cover later). */
+    fun hasGridFor(entry: HomeEntry): Boolean = entry.hasGridView
 
     companion object {
         const val RECENT_ID = "recent"
@@ -307,14 +321,15 @@ class HomeContent private constructor(
             hiddenSystems: List<SystemGames> = emptyList(),
             /** Sort games by name (false: by last played), which decides whether the lists have a letter rail. */
             sortedByName: Boolean = true,
-            /** Settings › Appearance › Left edge. */
+            /** Settings › Home screen › Left edge. */
             leftEdge: LeftEdgeSetting = LeftEdgeSetting.Default,
         ): HomeContent {
             val shapes = (systems + hiddenSystems).associate { it.id to it.coverShape }
+            val names = (systems + hiddenSystems).associate { it.id to it.name }
             val fixed =
                 listOfNotNull(
-                    HomeEntry(RECENT_ID, EntryKind.Recent, null, recent, MixedGridShape, systemShapes = shapes),
-                    HomeEntry(FAVORITES_ID, EntryKind.Favorites, null, favorites, MixedGridShape, systemShapes = shapes, sortedByName = sortedByName),
+                    HomeEntry(RECENT_ID, EntryKind.Recent, null, recent, MixedGridShape, systemShapes = shapes, systemNames = names),
+                    HomeEntry(FAVORITES_ID, EntryKind.Favorites, null, favorites, MixedGridShape, systemShapes = shapes, systemNames = names, sortedByName = sortedByName),
                     if (showApps) HomeEntry(APPS_ID, EntryKind.Apps, null, apps) else null,
                 )
             fun entriesOf(list: List<SystemGames>) =

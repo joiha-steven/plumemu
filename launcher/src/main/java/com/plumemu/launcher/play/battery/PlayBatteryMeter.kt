@@ -169,7 +169,10 @@ class PlayBatteryMeter(private val reader: BatteryReader) : PlayBattery, Battery
     private companion object {
         const val PERCENT = 100
 
-        /** Level points kept: the level changes at most once a minute's read, so four hours, more than the chart's three. */
+        /**
+         * Level points kept, one per change of level or of charging: a whole discharge is 100, so a play
+         * that drains, charges and drains again still keeps its start (the chart runs from it).
+         */
         const val MAX_LEVEL_POINTS = 240
     }
 }

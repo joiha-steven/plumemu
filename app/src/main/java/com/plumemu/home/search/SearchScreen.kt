@@ -63,10 +63,12 @@ import com.plumemu.coreui.components.GameRowLook
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.components.WifiStatus
 import com.plumemu.coreui.components.BatteryStatus
+import com.plumemu.coreui.components.sunkenField
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.components.rememberGlidingPill
 import com.plumemu.coreui.theme.rememberListGlide
 import com.plumemu.home.KeepFocusedVisible
+import com.plumemu.home.masteredLabel
 import com.plumemu.home.rememberCountFormat
 import com.plumemu.home.variantSubtitle
 import com.plumemu.keyboard.CaretLine
@@ -132,9 +134,10 @@ private fun SearchQueryLine(
         placeholder = stringResource(R.string.home_search_hint),
         style = style.copy(color = PlumTheme.colors.text),
         onTapAt = search::focusQueryAt,
-        modifier = modifier.testTag(SearchTags.FIELD),
+        modifier = modifier.sunkenField(PlumDimens.searchFieldInsetX, PlumDimens.searchFieldInsetY).testTag(SearchTags.FIELD),
         textTag = SearchTags.QUERY,
         placeholderTag = SearchTags.PROMPT,
+        onPaste = search::paste,
     )
 }
 
@@ -183,6 +186,7 @@ private fun AndroidSearchField(
             keyboardActions = KeyboardActions(onSearch = { search.toResults() }),
             modifier =
                 modifier
+                    .sunkenField(PlumDimens.searchFieldInsetX, PlumDimens.searchFieldInsetY)
                     // A touch on the field means typing again; seen before the field handles it.
                     .pointerInput(search) { awaitEachGesture { awaitFirstDown(pass = PointerEventPass.Initial).also { search.focusField() } } }
                     // On the results the field cannot take focus: Android hands a window's focus to
@@ -286,7 +290,7 @@ internal fun SearchResults(
             val tap = remember(index, onAction) { Modifier.tapItem(Column.Games, index, onAction).testTag(SearchTags.result(index)) }
             // The tags were set per system list (withVariantTags), so two games of one title read as they do there.
             val subtitle = remember(resources, hit.row.variantTags, hit.row.variantRegion) { variantSubtitle(resources, hit.row.variantTags, hit.row.variantRegion) }
-            GameRow(title = hit.row.title, trailing = hit.row.trailing(hasBoxArt = false, showsSystem = true), look = look, modifier = tap, isFavorite = hit.row.isFavorite, subtitle = subtitle)
+            GameRow(title = hit.row.title, trailing = hit.row.trailing(hasBoxArt = false, showsSystem = true), look = look, modifier = tap, isFavorite = hit.row.isFavorite, subtitle = subtitle, masteredLabel = masteredLabel(hit.row.id))
         }
     }
     }

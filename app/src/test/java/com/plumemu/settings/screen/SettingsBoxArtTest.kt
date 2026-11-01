@@ -11,7 +11,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * Settings › Library › ScreenScraper's box art: what the panel offers in each state,
+ * Settings › Accounts › ScreenScraper's box art: what the panel offers in each state,
  * Download missing, Re-download all and its confirm, Choose systems… with its checkmarks, Pause and
  * Resume; gamepad and touch; and the one mapping from the run's state to a line.
  */
@@ -27,7 +27,7 @@ internal class SettingsBoxArtTest : SettingsModelHarness() {
     }
 
     private fun openPanel() {
-        openSection(SettingsSection.Library)
+        openSection(SettingsSection.Accounts)
         focusOption(SettingsOption.ScraperAccount)
         press(Action.Enter)
         assertEquals(PanelPage.ScraperAccount, model.focus.page)
@@ -46,7 +46,7 @@ internal class SettingsBoxArtTest : SettingsModelHarness() {
         show()
         openPanel()
         assertEquals(
-            listOf(AccountPageItem.DownloadMissing, AccountPageItem.RedownloadAll, AccountPageItem.ChooseSystems, AccountPageItem.ClearBoxArt, AccountPageItem.PauseOrResume, AccountPageItem.SignOut),
+            listOf(AccountPageItem.DownloadMissing, AccountPageItem.RedownloadAll, AccountPageItem.ChooseSystems, AccountPageItem.ClearBoxArt, AccountPageItem.PauseOrResume, AccountPageItem.BoxArtRegion, AccountPageItem.SignOut),
             items(),
         )
         assertEquals(0, model.focus.panelIndex)
@@ -57,11 +57,11 @@ internal class SettingsBoxArtTest : SettingsModelHarness() {
         show(account = AccountStatus.SignedIn("plumtester", isRefused = true))
         assertEquals(listOf(AccountPageItem.SignInAgain, AccountPageItem.SignOut), items())
         show(boxArt = ScrapeStatus.Idle(ScrapeCounts(0, 0, 0)), systems = emptyList())
-        assertEquals("pictures may be left of games that are gone", listOf(AccountPageItem.ClearBoxArt, AccountPageItem.SignOut), items())
+        assertEquals("pictures may be left of games that are gone", listOf(AccountPageItem.ClearBoxArt, AccountPageItem.BoxArtRegion, AccountPageItem.SignOut), items())
         show(boxArt = ScrapeStatus.PausedByPerson(ScrapeCounts(0, 0, 0)), systems = emptyList())
-        assertEquals("Resume stays reachable", listOf(AccountPageItem.ClearBoxArt, AccountPageItem.PauseOrResume, AccountPageItem.SignOut), items())
+        assertEquals("Resume stays reachable", listOf(AccountPageItem.ClearBoxArt, AccountPageItem.PauseOrResume, AccountPageItem.BoxArtRegion, AccountPageItem.SignOut), items())
         show(systems = SYSTEMS.take(1))
-        assertEquals("one system: nothing to choose", listOf(AccountPageItem.DownloadMissing, AccountPageItem.RedownloadAll, AccountPageItem.ClearBoxArt, AccountPageItem.PauseOrResume, AccountPageItem.SignOut), items())
+        assertEquals("one system: nothing to choose", listOf(AccountPageItem.DownloadMissing, AccountPageItem.RedownloadAll, AccountPageItem.ClearBoxArt, AccountPageItem.PauseOrResume, AccountPageItem.BoxArtRegion, AccountPageItem.SignOut), items())
     }
 
     @Test

@@ -14,6 +14,7 @@ import android.util.Log
 import android.view.Choreographer
 import android.view.KeyEvent
 import android.view.MotionEvent
+import com.plumemu.keyboard.PasteBoard
 import com.plumemu.language.LocalizedActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.SystemBarStyle
@@ -60,7 +61,9 @@ import com.plumemu.home.HomeArtSource
 import com.plumemu.home.HomeCallbacks
 import com.plumemu.graph.homeNotices
 import com.plumemu.graph.afterReturn
+import com.plumemu.home.HomeAchievements
 import com.plumemu.home.HomeNotices
+import com.plumemu.graph.homeAchievements
 import com.plumemu.home.HomePlayFactsSource
 import com.plumemu.launcher.play.battery.BatteryReads
 import com.plumemu.secondscreen.AndroidDisplaySource
@@ -139,12 +142,15 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
             appIcons = if (isBenchmarkBuild) HomeAppIcons.None else GraphAppIcons(graph),
             // The battery line's figures again when the battery changes, under the details and in Info (benchmark builds: no line).
             batteryPaceNow = if (isBenchmarkBuild) null else graph.batteryPaceNow(),
-            updateFound = if (isBenchmarkBuild) MutableStateFlow(false) else graph.updates.hasUpdate,
+            updateFound = if (isBenchmarkBuild) MutableStateFlow(null) else graph.updates.foundVersionName,
+            whatsNew = if (isBenchmarkBuild) MutableStateFlow(null) else graph.updates.whatsNew,
+            onWhatsNewShown = { code -> if (!isBenchmarkBuild) graph.updates.whatsNewShown(code) },
             onAddFolder = { if (!isBenchmarkBuild) graph.addFolderFromHome(settingsActivityActions) },
             notices = if (isBenchmarkBuild) HomeNotices() else graph.homeNotices(),
+            achievements = if (isBenchmarkBuild) HomeAchievements() else graph.homeAchievements(),
             // A box-art run asks the shown system's games first.
             onSystemShown = { systemId -> if (!isBenchmarkBuild) graph.viewedSystem.value = systemId },
-            // L1 / R1 in a grid: the same setting and queue as Settings › Appearance › Grid size.
+            // L1 / R1 in a grid: the same setting and queue as Settings › Home screen › Grid size.
             onGridSize = { size, onFailed ->
                 if (!isBenchmarkBuild) {
                     graph.settingsWriter.submitTold({ it.copy(appearance = it.appearance.copy(gridSize = size.toSetting())) }, onFailed, graph::trackSettingChanges)
@@ -192,6 +198,8 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
                     fileNameOf = if (isBenchmarkBuild) null else { id -> graph.launchedFileName(id) },
                     // The game's usual battery pace for the line under the played line (benchmark builds: none).
                     paceOf = if (isBenchmarkBuild) null else { id -> graph.batteryPaceOf(id) },
+                    // The stored RetroAchievements progress for one line on the details card: the database only (benchmark builds: none).
+                    achievementsOf = if (isBenchmarkBuild) null else { id -> graph.achievements.storedCountOf(id) },
                     isArtShown = { secondScreenFeed.hasArtRoom },
                 )::fill,
         )
@@ -283,6 +291,7 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
             override fun openRestorePicker(): Boolean = restorePicker.open()
 
             override fun exportLogs(onDone: (Boolean) -> Unit) = shareLogFile(onDone)
+            override fun openWebPage(url: String): Boolean = com.plumemu.account.openWebPage(url) { startActivity(it) }
 
             override fun openHomeSettings(): Boolean {
                 // Already the home app: Android's home settings, to switch back (the role request
@@ -454,6 +463,7 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
                 // Benchmarks measure the window on the emulator's overlay display, which is off by default.
                 forcedOn = isSecondScreenForced,
                 images = if (isBenchmarkBuild) CoverImages.None else graph.homeArt.images,
+                appIcons = if (isBenchmarkBuild) HomeAppIcons.None else GraphAppIcons(graph),
                 // Benchmarks measure the window's own cost: no battery reads there.
                 battery = if (isBenchmarkBuild) BatteryReads.None else graph.playBattery,
                 // The picking line's figures again when the battery changes (benchmark builds: no line).
@@ -528,6 +538,9 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
         if (!hasFocus) input.releaseAll()
         // A dialog, the notification shade or another app may have brought the bars back.
         if (hasFocus) hideSystemBars()
+        // Text copied in another app (the RetroAchievements key in a browser): Android 10 and later only
+        // answer while we have the focus, so the paste key is decided again now.
+        if (hasFocus) PasteBoard.refresh()
     }
 
     /**
