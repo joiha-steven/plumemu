@@ -48,6 +48,9 @@ Settings › About › Check for updates.
   account, nothing about your library, your device or the version you have.
 - **Who sees it**: the server is hosted by Cloudflare, which sees your IP address and that the
   request comes from an app (`okhttp/<version>`), as for any web request.
+- **Counted**: the server counts each update check and each update download by day, file and
+  country, whether usage statistics are on or off. It keeps no IP address, no identifier and
+  nothing else about the request.
 - **Platform data**: in the same check, Plumemu also asks the same server for the list of systems
   and emulators (`data/platforms/latest.json`) and, only when it names newer data, downloads that
   file. Nothing else is sent, and nothing about you.
