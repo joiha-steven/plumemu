@@ -315,17 +315,26 @@ abstract class GlidingPillFramesBase {
         compose.runOnIdle { state.dispatch(Action.Move(Direction.Down)) }
         compose.mainClock.autoAdvance = true
         val gaps = mutableListOf<Float>()
+        val tops = mutableListOf<Float>()
         compose.mainClock.autoAdvance = false
         repeat(framesFor(PlumMotion.GLIDE_MS) + 2) {
             compose.mainClock.advanceTimeByFrame()
             compose.waitForIdle()
             val top = pillTop(ring)
             val centre = haloCentreLeftOfList()
-            if (top >= 0 && centre >= 0f) gaps += centre - top
+            if (top >= 0 && centre >= 0f) {
+                gaps += centre - top
+                tops += top.toFloat()
+            }
         }
         println("halo centre minus pill top per frame: $gaps")
         assertTrue("measured in several frames: $gaps", gaps.size > 5)
-        assertTrue("the halo never lags or leads the pill by a frame: $gaps", gaps.max() - gaps.min() <= 1f)
+        // A halo one frame behind or ahead is off by that frame's step, at mid-glide the largest one;
+        // anything under half of it is edge anti-aliasing, which differs between renderers (Linux CI
+        // spreads 1.5 px where macOS spreads 1).
+        val fastestStep = tops.zipWithNext { a, b -> kotlin.math.abs(b - a) }.max()
+        assertTrue("the pill glides several pixels a frame: $tops", fastestStep >= 6f)
+        assertTrue("the halo never lags or leads the pill by a frame: $gaps (fastest step $fastestStep)", gaps.max() - gaps.min() < fastestStep / 2)
     }
 
     /** An L2/R2 system switch: in every frame, a halo left of the list belongs to a pill drawn in the list (none is left on the old page). */
