@@ -1,6 +1,8 @@
 <h1 align="center">Plumemu</h1>
 
-<p align="center">A calm, light launcher for Android retro handhelds. Free and open source.</p>
+<p align="center"><b>Drop in a messy ROM folder, get a tidy library.</b><br>
+Right names, one row per game, no account, no internet. A light, free launcher for Android retro
+handhelds.</p>
 
 
 <p align="center">
@@ -23,24 +25,47 @@
 
 ---
 
-## Why Plumemu
+## Why pick Plumemu
 
-1. **Your games have names from the first minute, offline.** No account, no scraping, no internet:
-   Plumemu reads each game's own code and knows about 29,000 arcade sets, so a folder of cryptic files
-   becomes a tidy list the moment setup ends.
-2. **It works out of the box.** Pick your ROMs folder and you are playing: it finds the emulators
-   you have installed, picks one for each system and adds new games by itself. Setup takes two
-   minutes.
-3. **It is light, even on old handhelds.** An 8.2 MB download that runs on Android 6.0, opens a
-   library of 10,000 games in about a quarter of a second and uses no CPU while it waits.
-4. **It never touches your files.** It sees only the folder you pick, and never deletes, moves or
-   renames a game file.
-5. **It uses everything your handheld has.** The second screen shows details and how long your
-   battery lasts at this game's pace, and every screen works with both buttons and touch.
-6. **It moves smoothly.** Lists and grids glide for a fifth of a second and the selection glides
-   with them, so you can follow where you are.
-7. **It is open.** The source is public under GPL-3.0, and [what Plumemu sends](#what-plumemu-sends)
-   is a table you can check against the code.
+**Your games get their real names, offline.** Most launchers only trim `(USA) [!]` off the file
+name, so `sf2.zip` stays "sf2". Plumemu reads each game's own code inside zip, 7z, CHD and disc
+images and knows about 29,000 arcade sets, so `sf2.zip` becomes *Street Fighter II: The World
+Warrior*. No account, no scraping, no waiting.
+
+**One row per game.** Three regional copies, a Rev 1 and a set in another folder are one game in
+your list, not five. You pick which copy plays from the game's menu.
+
+**Playing in two minutes, not an evening.** Pick your ROMs folder; Plumemu finds the emulators you
+have, chooses one for each system and adds new games by itself. There are no platform files to
+import, no theme engine to learn and no scraper to configure before the first game.
+
+**Light enough for the handheld you already own.** An 8.2 MB download that runs on Android 6.0
+and 2 GB devices, fits 4:3 screens as well as 16:9, opens 10,000 games in about a quarter
+of a second and uses no CPU while it waits.
+
+**Made for dual-screen handhelds.** On the AYN Thor the second screen shows the game's details and
+how long your battery lasts at this game's pace.
+
+**Buttons and touch, both first.** Every screen works fully with the gamepad and with your finger.
+
+**Hands off your files.** It sees only the folder you pick and never deletes, moves or renames a
+game file.
+
+**Free and open.** No price, no account. The source is public under GPL-3.0, and
+[what Plumemu sends](#what-plumemu-sends) is a short table you can check against the code.
+
+### At a glance
+
+| | Plumemu |
+|---|---|
+| Game names | Read from the game itself, offline, about 29,000 arcade sets |
+| Duplicates | Regions, revisions and arcade clones folded into one row |
+| Setup | Pick a folder; emulators found and chosen for you |
+| Covers | A drawn cover for every game; real box art with a free ScreenScraper account |
+| Runs on | Android 6.0 and later, 2 GB devices, 16:9 and 4:3 screens |
+| Second screen | Details and battery time left on the AYN Thor |
+| Achievements | RetroAchievements shown per game |
+| Price, source | Free, GPL-3.0 |
 
 ## What it does
 
