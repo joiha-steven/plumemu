@@ -7,6 +7,7 @@ import com.plumemu.scraper.PauseReason
 import com.plumemu.scraper.ScrapeResult
 import com.plumemu.scraper.UnavailableReason
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
@@ -191,11 +192,16 @@ internal class GraphScrapeLimitsTest : GraphScrapesHarness() {
         // A new process: the account is stored, the scraper must be made again, and that hangs.
         val gate = java.util.concurrent.CountDownLatch(1)
         blockMaking = gate
+        // The blocked wait is on another thread, and the gate opens before the join: collecting on
+        // this thread blocked it (the test's own timeout could not fire) and, under load, `first()`
+        // waited for the blocked producer to end before the gate opened.
+        val firstValue = CompletableDeferred<AccountLimits?>()
+        val collecting = launch(Dispatchers.Default) { graph().accountLimits.collect { firstValue.complete(it) } }
         try {
-            val fresh = graph()
-            assertNull(withTimeout(2_000) { fresh.accountLimits.first() })
+            assertNull(withTimeout(10_000) { firstValue.await() })
         } finally {
             gate.countDown()
+            collecting.cancelAndJoin()
         }
     }
 

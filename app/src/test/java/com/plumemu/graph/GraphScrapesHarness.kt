@@ -49,6 +49,8 @@ import org.junit.Before
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 internal abstract class GraphScrapesHarness {
+    @get:org.junit.Rule val timeout = graphTestTimeout()
+
     protected val context: Context = ApplicationProvider.getApplicationContext()
     protected val storeJob = Job()
     protected val scopeJob = SupervisorJob()

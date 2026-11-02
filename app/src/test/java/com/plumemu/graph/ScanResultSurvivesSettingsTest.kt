@@ -21,6 +21,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class ScanResultSurvivesSettingsTest {
+    @get:org.junit.Rule val timeout = graphTestTimeout()
+
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val graph = AppGraph(context, log = {})
     private val library = GraphSettingsLibrary(graph, context, Dispatchers.IO, main = Dispatchers.Unconfined, log = {}, info = {})
@@ -33,7 +35,7 @@ class ScanResultSurvivesSettingsTest {
 
     @Test
     fun theResultSurvivesTheContentFlowBeingCollectedCancelledAndCollectedAgain() = runBlocking {
-        graph.startup.requestScan().join()
+        graph.startup.requestScan().joinWithin()
         assertNotNull("a pass ended with a result", graph.startup.scanReport.value.result)
 
         val firstLook = withTimeout(TIMEOUT_MS) { library.content.first() }

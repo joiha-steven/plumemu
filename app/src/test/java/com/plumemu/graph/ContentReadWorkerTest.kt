@@ -33,6 +33,8 @@ class ContentHostApp : Application(), ContentReadHost {
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = ContentHostApp::class)
 internal class ContentReadWorkerTest {
+    @get:org.junit.Rule val timeout = graphTestTimeout()
+
     private val logs = mutableListOf<String>()
     private var boxArtRequests = 0
     private var budgetSeen: ContentReadBudget? = null
@@ -107,7 +109,7 @@ internal class ContentReadWorkerTest {
     }
 
     private fun uniqueWork(): List<WorkInfo> =
-        WorkManager.getInstance(app()).getWorkInfosForUniqueWork(ContentReadScheduler.UNIQUE_WORK_NAME).get()
+        WorkManager.getInstance(app()).getWorkInfosForUniqueWork(ContentReadScheduler.UNIQUE_WORK_NAME).get(30, java.util.concurrent.TimeUnit.SECONDS)
 
     @Test fun `a request needs a battery that is not low and no network, and keeps the run already waiting`() {
         ContentReadScheduler.enqueue(app())

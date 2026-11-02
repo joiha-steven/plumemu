@@ -19,6 +19,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class GraphAchievementsMasteredTest {
+    @get:org.junit.Rule val timeout = graphTestTimeout()
+
     @get:Rule
     val temp = TemporaryFolder()
 

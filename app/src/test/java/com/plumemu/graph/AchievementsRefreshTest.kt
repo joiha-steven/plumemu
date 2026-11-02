@@ -32,6 +32,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class AchievementsRefreshTest {
+    @get:org.junit.Rule val timeout = graphTestTimeout()
+
     @get:Rule
     val temp = TemporaryFolder()
 
@@ -81,11 +83,11 @@ class AchievementsRefreshTest {
     fun theFrontRunsItOnceADay() = runBlocking {
         h.signIn()
         completionAnswers()
-        h.achievements.onFront().join()
-        h.achievements.onFront().join()
+        h.achievements.onFront().joinWithin()
+        h.achievements.onFront().joinWithin()
         assertEquals(1, h.server.requestCount)
         h.now.addAndGet(DAY)
-        h.achievements.onFront().join()
+        h.achievements.onFront().joinWithin()
         assertEquals(2, h.server.requestCount)
     }
 
@@ -154,7 +156,7 @@ class AchievementsRefreshTest {
         h.awaitArrived(COMPLETION)
         assertTrue(h.achievements.signOut())
         h.release(COMPLETION)
-        assertFalse(run.await())
+        assertFalse(run.awaitWithin())
         assertEquals("no success mark", 0L, h.marks.lastSuccess())
         assertEquals("no failure mark", 0L, h.marks.lastFailure())
         assertEquals(0, h.db.openHelper.readableDatabase.query("SELECT * FROM ra_progress").use { it.count })

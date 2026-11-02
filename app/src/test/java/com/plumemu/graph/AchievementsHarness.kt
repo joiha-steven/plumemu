@@ -26,6 +26,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import mockwebserver3.Dispatcher
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -54,7 +55,7 @@ internal class AchievementsHarness(private val folder: File) : AutoCloseable {
         arrived[endpoint] = CompletableDeferred()
     }
 
-    suspend fun awaitArrived(endpoint: String) = arrived.getValue(endpoint).await()
+    suspend fun awaitArrived(endpoint: String) = withTimeout(WAIT_MS) { arrived.getValue(endpoint).await() }
 
     fun release(endpoint: String) {
         holds.remove(endpoint)?.complete(Unit)
@@ -71,7 +72,7 @@ internal class AchievementsHarness(private val folder: File) : AutoCloseable {
                 val endpoint = request.url.pathSegments.last()
                 holds[endpoint]?.let { hold ->
                     arrived.getOrPut(endpoint) { CompletableDeferred() }.complete(Unit)
-                    runBlocking { hold.await() }
+                    runBlocking { withTimeout(WAIT_MS) { hold.await() } }
                 }
                 return answers[endpoint]?.invoke() ?: MockResponse.Builder().code(404).build()
             }

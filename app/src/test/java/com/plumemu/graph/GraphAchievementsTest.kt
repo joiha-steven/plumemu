@@ -38,6 +38,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class GraphAchievementsTest {
+    @get:org.junit.Rule val timeout = graphTestTimeout()
+
     @get:Rule
     val temp = TemporaryFolder()
 
@@ -53,7 +55,7 @@ class GraphAchievementsTest {
         assertEquals(AchievementsState.NotSignedIn, h.achievements.progressFor(zork))
         assertEquals(listOf(AchievementsState.Loading, AchievementsState.NotSignedIn), h.achievements.progress(zork).toList())
         h.achievements.afterGame(zork)
-        h.achievements.onFront().join()
+        h.achievements.onFront().joinWithin()
         assertFalse(h.achievements.refreshIfDue())
         assertEquals("no request", 0, h.server.requestCount)
         assertEquals("no client", 0, h.clientsBuilt.get())
@@ -260,9 +262,9 @@ class GraphAchievementsTest {
 
         assertTrue(h.achievements.signOut())
         listOf(GAME_LIST, GAME_PROGRESS, AchievementsHarness.COMPLETION).forEach(h::release)
-        refresh.await()
-        info.await()
-        back.await()
+        refresh.awaitWithin()
+        info.awaitWithin()
+        back.awaitWithin()
 
         assertEquals("no progress row", 0, h.db.openHelper.readableDatabase.query("SELECT * FROM ra_progress").use { it.count })
         assertNull("no match row for the game being matched", h.db.raDao().match(zork))
