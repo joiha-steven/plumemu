@@ -94,10 +94,11 @@ abstract class HomeGridClipBase {
             // Scrolled: the cell at the grid's top is not the first one.
             val atTop = nodes.filter { abs(it.positionInRoot.y - top) <= 1f }.map { node -> node.config.first { it.key.name == "TestTag" }.value.toString() }
             if (atTop.isNotEmpty() && HomeTags.cover(0) !in atTop) scrolledSteps++
-            val pixels = compose.onRoot().captureToImage().toPixelMap()
+            // Captured only in a step that cuts a row: the capture is most of this test's time.
+            val pixels by lazy { compose.onRoot().captureToImage().toPixelMap() }
             val left = (grid.left.value * density).toInt()
             val right = (grid.right.value * density).toInt() - 2
-            val background = pixels[right + 1, (top - gap / 2).toInt()]
+            val background by lazy { pixels[right + 1, (top - gap / 2).toInt()] }
 
             fun dirty(y0: Int, y1: Int): Int {
                 var n = 0
