@@ -6,9 +6,12 @@ import com.plumemu.scraper.AccountLimits
 import com.plumemu.scraper.PauseReason
 import com.plumemu.scraper.ScrapeResult
 import com.plumemu.scraper.UnavailableReason
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -148,11 +151,18 @@ internal class GraphScrapeLimitsTest : GraphScrapesHarness() {
         limitsToGive = null
         check = AccountCheck.Refused(UnavailableReason.BadUserCredentials)
 
+        // Watch the status first and wait for its first value: a collector that starts while the
+        // refusal is being written can miss that update (seen 1 in ~800 tries under CPU load), which
+        // is the 5 s timeout seen on the slow CI runner.
+        val subscribed = CompletableDeferred<Unit>()
+        val answer = scope.async { accounts.status.onEach { subscribed.complete(Unit) }.first { it is AccountStatus.SignedIn && it.isRefused } }
+        withTimeout(5_000) { subscribed.await() }
+
         // Settings stays open until the answer is recorded: closing it as soon as the check starts
         // cancelled the check before its answer was kept on a slow machine.
         val visit = scope.launch { scrapes.accountLimits.collect { } }
         val status = try {
-            withTimeout(5_000) { accounts.status.first { it is AccountStatus.SignedIn && it.isRefused } }
+            withTimeout(5_000) { answer.await() }
         } finally {
             visit.cancelAndJoin()
         }
