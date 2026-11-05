@@ -17,8 +17,9 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.components.FAVORITE_STAR
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumFont
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.home.search.SearchIndex
 import com.plumemu.home.search.SearchState
@@ -67,7 +68,7 @@ class HomeFavoriteBoundsTest {
 
     private fun showGames() {
         compose.setContent {
-            PlumTheme(MediumText.Graphite.copy(font = font)) {
+            PlumTheme(TableText.Graphite.copy(font = font)) {
                 HomeAt(FakeHomeContent.withFavorites(longTitle = true), BoardGamesFocused)
             }
         }
@@ -138,12 +139,15 @@ class HomeFavoriteBoundsTest {
     @Config(qualifiers = WIDE)
     fun at768SelectShowsAndSwitchSystemGivesWay() {
         showGames()
-        // SELECT shows without an account now; "L2 R2 Switch system" gives way first at 768 (HINT_DROP_ORDER).
-        val order = listOf(Action.Play, Action.Back, Action.ToggleFavorite, Action.Search, Action.Menu, Action.ToggleView)
+        // SELECT shows without an account now; "L2 R2 Switch system" gives way first at 768 (HINT_DROP_ORDER); "R3 Sort" still fits.
+        val order = listOf(Action.Play, Action.Back, Action.ToggleFavorite, Action.Search, Action.Sort, Action.Menu, Action.ToggleView)
         order.forEach { assertTrue("${it::class.simpleName} is shown", isShown(it)) }
         assertTrue("Switch system gave way", !isShown(Action.JumpLetterNext))
         val hints = shownHints(order)
-        hints.zipWithNext().forEach { (a, b) -> assertEquals("20 between hints", (a.right + 20.dp).value, b.left.value, TOLERANCE) }
+        // The seven do not fit with the board's 17.33 gap, so it shrinks (never under 9) just enough for them to: one gap between all of them.
+        val gaps = hints.zipWithNext().map { (a, b) -> b.left.value - a.right.value }
+        gaps.forEach { assertTrue("a gap of $it is between 9 and the board's 17.33", it >= PlumDimens.hintGap.value - TOLERANCE && it <= PlumDimens.hintGapBoard.value + TOLERANCE) }
+        assertTrue("the gaps are one: $gaps", gaps.max() - gaps.min() <= 1.1f)
         assertTrue(hints.last().right <= 744.dp + TOLERANCE.dp)
         assertNoHintTextCut("768")
         println("Hint bar at 768: " + hints.joinToString { "%.1f–%.1f".format(it.left.value, it.right.value) })
@@ -158,7 +162,7 @@ class HomeFavoriteBoundsTest {
                 showResults("super", SearchIndex.of(content).find("super"))
                 toResults()
             }
-        compose.setContent { PlumTheme(MediumText.Default) { HomeAt(content, BoardGamesFocused, search = search) } }
+        compose.setContent { PlumTheme(TableText.Default) { HomeAt(content, BoardGamesFocused, search = search) } }
         compose.waitForIdle()
         val row = bounds(SearchTags.result(0))
         assertEquals("results start where the games list does (peek 48 + gap 24)", 72f, row.left.value, TOLERANCE)

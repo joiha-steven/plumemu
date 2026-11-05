@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumFont
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.SecondScreenText
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.SecondScreenDimens
@@ -50,7 +50,7 @@ abstract class SecondScreenStatisticsCardFitBase(
     @get:Rule
     val rules = rulesAround(compose)
 
-    private var settings by mutableStateOf(MediumText.Default)
+    private var settings by mutableStateOf(SecondScreenText.Default)
     private var content by mutableStateOf<SecondScreenContent>(SecondScreenContent.Calm)
 
     @Before
@@ -61,7 +61,7 @@ abstract class SecondScreenStatisticsCardFitBase(
 
     private fun show(
         statistics: PlayStatistics,
-        settings: PlumThemeSettings = MediumText.Default,
+        settings: PlumThemeSettings = SecondScreenText.Default,
     ) {
         this.settings = settings
         this.content = SecondScreenContent.Statistics(statistics)

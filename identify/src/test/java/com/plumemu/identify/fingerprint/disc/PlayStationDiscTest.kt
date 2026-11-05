@@ -34,6 +34,8 @@ class PlayStationDiscTest {
         assertEquals(CodeKind.PS1, f.codeKind)
         assertEquals("SLUS-99999", f.productCode)
         assertNull(f.internalTitle)
+        // The image's size gives track keys too (a CD system's bare ISO), but they are no fix key.
+        assertTrue(f.trackKeys.orEmpty().isNotEmpty())
         assertEquals(listOf("code:PS1:SLUS-99999"), f.fixKeys())
         assertTrue("read $bytes", bytes < 10 * 1024)
     }

@@ -60,10 +60,10 @@ whole-file CRC). Every read of one disc, sibling files included, is capped at 64
 - **Serials**, normalised to "PREFIX-DIGITS" (3 to 5 letters, 3 to 7 digits, e.g. "SLUS-99999"): PS1 and PS2 from `SYSTEM.CNF` (`BOOT` / `BOOT2`); PSP
   from `UMD_DATA.BIN`, title and `DISC_ID` from `PSP_GAME/PARAM.SFO`; PBP (`EBOOT.PBP`, PS1
   classics) from its `PARAM.SFO`; GameCube / Wii game id and title from the disc header (plain,
-  WBFS, RVZ, WIA, GCZ); Saturn, Sega CD and Dreamcast (`IP.BIN`) from the system area at sector
+  WBFS, RVZ, WIA, GCZ; RVZ and WIA from the copy in the file head, no group decompressed); Saturn, Sega CD and Dreamcast (`IP.BIN`) from the system area at sector
   0 of the data track.
-- **Containers**: CSO v1 (deflate blocks, only those needed, index shift and padding), CHD v5
-  (header SHA-1, compressed or plain map, hunks stored / `zlib` / `cdzl` / `lzma` / `cdlz`, the data track from
+- **Containers**: CSO v1 and v2 and ZSO (deflate, LZ4 or stored blocks, only those needed, index shift and padding), CHD v5
+  (header SHA-1, compressed or plain map, hunks stored / `zlib` / `cdzl` / `lzma` / `cdlz` / `zstd` / `cdzs`, the data track from
   the `CHTR` / `CHT2` / `CHGD` metadata: GD-ROM track 3 for a Dreamcast), cue sheets (a Dreamcast
   cue gives the first data track after `REM HIGH-DENSITY AREA`, or track 3 or later for the
   `dreamcast` system), `.gdi` and `.m3u` through `SiblingOpener` (an `.m3u` is followed once,
@@ -87,9 +87,9 @@ compressed as it is); the cap holds either way.
 
 | What | Why |
 |---|---|
-| CHD hunks in `cdfl`, `flac`, `zstd`, `cdzs`, `huff` | No FLAC, Zstandard or CHD-Huffman decoder in the allowed libraries. chdman picks `cdlz` / `lzma` for most data hunks, which are read; a data hunk stored in one of these gives only the `chd:` key. |
+| CHD hunks in `cdfl`, `flac`, `huff` | No FLAC or CHD-Huffman decoder in the allowed libraries. chdman picks `cdlz` / `lzma` / `cdzs` / `zstd` for most data hunks, which are read; a data hunk stored in one of these gives only the `chd:` key. |
 | CHD hunks in a parent CHD, CHD v3 / v4 hunks | Rare; v4 still gives its raw-data SHA-1 |
-| ZSO, CSO v2 | LZ4 blocks; no LZ4 decoder |
+| CSO of a later version than 2, ZSO of a later version than 1 | Unknown layout |
 | DiscJuggler `.cdi` | Its track layout is a separate format; Dreamcast games are read from `.gdi` and CHD |
 | PC Engine CD / TurboGrafx-CD, 3DO, Neo Geo CD | No serial this module knows on those discs; identified by name (layer 4). A CHD of these systems still gives its `chd:` key |
 | The CHD map CRC | It covers every hunk, and finding the first hunks needs only part of the map; a damaged map shows up as a hunk that fails to decompress |
@@ -148,9 +148,8 @@ input size itself as the dictionary: a match can never reach further back than t
 
 **CHD** (`fingerprint/disc/ChdLzma.kt`): an `lzma` hunk is one raw LZMA stream; a `cdlz` hunk is
 the ECC bitmap, the 2- or 3-byte length of the LZMA part, the sectors as LZMA and the subcode
-deflated (not read). A hunk is decoded only as far as the read needs (whole frames for a CD),
-again further when a later read needs more, from compressed bytes fetched once while it is the
-last hunk read (`HunkBytes` keeps only the last LZMA hunk); a whole hunk gets every MAME check. Damaged data is a note
+deflated. A hunk is decoded whole with every MAME check, and must match the CRC-16 the map keeps
+for it (`ChdCd.assemble` puts the sync and ECC back first). Damaged data is a note
 (`chd: hunk n: LZMA data damaged (...)`) and the CHD SHA-1 stays.
 
 ## 7z
@@ -219,16 +218,18 @@ of the files.
 | `src/main/.../fingerprint/disc/ParamSfo.kt` | PARAM.SFO parser |
 | `src/main/.../fingerprint/disc/SegaDiscs.kt` | Saturn, Sega CD, Dreamcast system areas |
 | `src/main/.../fingerprint/disc/NintendoDiscs.kt` | GameCube / Wii header; WBFS, RVZ, WIA, GCZ |
-| `src/main/.../fingerprint/disc/CsoSource.kt` | CSO v1 as a source, block by block |
+| `src/main/.../fingerprint/disc/CsoSource.kt` | CSO v1 / v2 and ZSO as a source, block by block |
+| `src/main/.../codec/zstd/`, `codec/lz4/` | Zstandard (RFC 8878) and LZ4 block decoders, public: `achievements` uses them too |
 | `src/main/.../fingerprint/disc/ChdSource.kt` | CHD header; CHD v5 as a source, hunk by hunk (`zlib`, `cdzl`, `lzma`, `cdlz`) |
-| `src/main/.../fingerprint/disc/ChdLzma.kt` | CHD `lzma` and `cdlz` hunks, decoded as far as needed; `HunkBytes` keeps the compressed bytes |
+| `src/main/.../fingerprint/disc/ChdLzma.kt` | CHD `lzma` and `cdlz` hunks, decoded whole; `HunkBytes` fetches the compressed bytes |
 | `src/main/.../fingerprint/disc/ChdMap.kt` | CHD v5 maps: plain, and compressed (MAME Huffman, bit reader) |
 | `src/main/.../fingerprint/disc/ChdTracks.kt` | The data track (frame, type) from CHD track metadata; GD-ROM track 3 |
 | `src/main/.../fingerprint/disc/TrackLists.kt` | Cue sheet, `.gdi` and `.m3u` parsing |
 | `src/main/.../fingerprint/disc/SheetReferences.kt` | Public: every file name a `.cue`, `.gdi` or `.m3u` lists (the scan hides them as parts of the sheet's game); tests `SheetReferencesTest` |
 | `src/test/.../fingerprint/disc/DiscImages.kt` | Generated ISO 9660 images, raw sectors, PARAM.SFO, PBP, Sega areas, Nintendo headers, in-memory siblings |
-| `src/test/.../fingerprint/disc/PackedImages.kt` | Generated CSO, CHD v5 (compressed map, cdzl, zlib), GCZ, WBFS, RVZ / WIA |
+| `src/test/.../fingerprint/disc/PackedImages.kt` | Generated CSO v1 / v2, ZSO, CHD v5 (compressed map, cdzl, cdzs, zstd, zlib), GCZ, WBFS, RVZ / WIA (with their SHA-1 sums) |
 | `src/test/.../fingerprint/disc/PlayStationDiscTest.kt` | PS1, PS2, PSP, PBP; serial spellings; PARAM.SFO bounds |
+| `src/test/.../fingerprint/disc/CompressedDiscFormatsTest.kt` | zstd / cdzs CHD, CSO v2, ZSO, RVZ, WIA give the plain image's serial; damage gives notes |
 | `src/test/.../fingerprint/disc/PackedDiscTest.kt` | CSO, ZSO, CHD (codecs, maps, self and parent hunks, SHA-1 key), cue, `.m3u`, `.gdi`, GD-ROM CHD |
 | `src/test/.../fingerprint/disc/NintendoSegaDiscTest.kt` | GameCube / Wii and containers, Saturn, Sega CD, NDS banner, skipped systems, `.bin` fallback |
 | `src/test/.../fingerprint/disc/ChdMapTest.kt` | A hand-written compressed map (unbalanced tree, long run, pseudo types), bad trees, short maps |

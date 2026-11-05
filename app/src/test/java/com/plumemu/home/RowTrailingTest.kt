@@ -75,4 +75,29 @@ class RowTrailingTest {
     fun aMixedListKeepsTheShortNameWhateverTheJoin() {
         assertEquals("SNES", row.trailing(hasBoxArt = true, showsSystem = true, joinPlace = join))
     }
+
+    @Test
+    fun theColumnsKeepTheRegionWhenNoYearIsKnown() {
+        assertEquals("1995" to "USA", row.yearAndRegion(hasBoxArt = true))
+        // No year: its cell is empty and the region stays in its column (never moved, never written in the year's place).
+        assertEquals("" to "USA", row.copy(details = GameDetails(null, "Square", "RPG", "1", "")).yearAndRegion(hasBoxArt = true))
+        assertEquals("" to "USA", row.copy(details = null).yearAndRegion(hasBoxArt = true, art = ArtSlot.Unknown))
+        assertEquals("" to "USA", row.yearAndRegion(hasBoxArt = false))
+        assertEquals("1995" to "", row.copy(region = "").yearAndRegion(hasBoxArt = true))
+    }
+
+    @Test
+    fun aMixedListHasNoColumns() {
+        assertEquals(null, row.yearAndRegion(hasBoxArt = true, showsSystem = true))
+        assertEquals("" to "USA", row.copy(systemAbbr = "").yearAndRegion(hasBoxArt = false, showsSystem = true))
+    }
+
+    @Test
+    fun onlyDigitsAreAYear() {
+        assertTrue(isYearText("1994"))
+        assertFalse(isYearText("USA"))
+        assertFalse(isYearText("PS1"))
+        assertFalse(isYearText("N64"))
+        assertFalse(isYearText(""))
+    }
 }

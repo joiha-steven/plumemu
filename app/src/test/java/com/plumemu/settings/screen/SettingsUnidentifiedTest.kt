@@ -115,6 +115,89 @@ internal class SettingsUnidentifiedTest : SettingsModelHarness() {
         assertEquals("the next game moves up into the place", 1, model.focus.panelIndex)
     }
 
+    /** The page for game [index] of the list, with its results and suggestions answered as the panel's follower answers them. */
+    private fun openFixNameWithSuggestions(index: Int): FixNameState {
+        openList()
+        repeat(index) { move(Direction.Down) }
+        press(Action.Enter)
+        val state = fixName()
+        state.showResults(state.query, state.finder!!.find(state.query))
+        state.showSuggestions(state.finder!!.suggest(state.query))
+        return state
+    }
+
+    @Test
+    fun suggestionsAreOnlyShownTheFieldStaysFirstAndNothingIsStoredUntilAPick() {
+        val state = openFixNameWithSuggestions(0)
+        assertEquals(listOf(titles[0]), state.shownSuggestions)
+        assertTrue("the cursor starts on the field, not on a suggestion", state.inField)
+        assertTrue(names.chosen.isEmpty())
+        assertEquals("a suggestion is also a result: listed once", listOf(titles[0]), state.choices)
+    }
+
+    @Test
+    fun theDPadMovesIntoTheSuggestionsAndAPicksOneThroughTheUsualStore() {
+        val state = openFixNameWithSuggestions(0)
+        move(Direction.Down)
+        assertEquals(0, state.row)
+        press(Action.Enter)
+        assertEquals(listOf(21L to titles[0]), names.chosen)
+        assertNull(model.nameFix.open)
+        assertEquals(PanelPage.UnidentifiedGames, model.focus.page)
+    }
+
+    @Test
+    fun aTapOnASuggestionPicksIt() {
+        openFixNameWithSuggestions(0)
+        press(Action.TapItem(Column.Details, 0))
+        assertEquals(listOf(21L to titles[0]), names.chosen)
+    }
+
+    @Test
+    fun backFromTheSuggestionsLeavesWithoutStoring() {
+        openFixNameWithSuggestions(0)
+        move(Direction.Down)
+        press(Action.Back)
+        assertTrue("B backs out, nothing stored", names.chosen.isEmpty())
+        assertNull(model.nameFix.open)
+    }
+
+    @Test
+    fun suggestionsLeaveWhenTheNameIsEditedAndNoneFoundOrStillLookingShowNoRows() {
+        val state = openFixNameWithSuggestions(0)
+        state.onQueryChange("zork")
+        assertTrue(state.shownSuggestions.isEmpty())
+        state.onQueryChange(state.firstQuery)
+        assertEquals(1, state.shownSuggestions.size)
+
+        val none = FixNameState("qwxv plomb", TitleFinder(titles), suggests = true)
+        assertNull("still looking", none.suggestions)
+        assertTrue(none.shownSuggestions.isEmpty())
+        none.showSuggestions(none.finder!!.suggest(none.query))
+        assertEquals("nothing close: an empty answer, not an error", emptyList<TitleChoice>(), none.suggestions)
+    }
+
+    @Test
+    fun aGameMenuPageNeverSuggests() {
+        val state = FixNameState("zork quest 2", TitleFinder(titles))
+        state.showSuggestions(state.finder!!.suggest(state.query))
+        assertTrue(state.shownSuggestions.isEmpty())
+    }
+
+    @Test
+    fun suggestionsArrivingAfterTheCursorMovedKeepTheCursorOnItsResult() {
+        val state = FixNameState("zork quest", TitleFinder(titles), suggests = true)
+        val other = TitleChoice("Zork Quest Remix", "", null, null)
+        state.showResults(state.query, listOf(titles[0], other))
+        state.onAction(Action.Move(Direction.Down))
+        state.onAction(Action.Move(Direction.Down))
+        assertEquals("the cursor is on the second result", other, state.choices[state.row])
+        // Two suggestions not among the results go in above it: the row number must follow the result.
+        state.showSuggestions(listOf(TitleChoice("Zork Quest Gold", "", null, null), TitleChoice("Zork Quest Silver", "", null, null)))
+        assertEquals(4, state.choices.size)
+        assertEquals(other, state.choices[state.row])
+    }
+
     @Test
     fun aPickSaysWhyBoxArtWasNotLookedUpAndNothingWhenItWas() {
         openList()

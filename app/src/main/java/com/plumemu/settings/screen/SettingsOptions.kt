@@ -11,14 +11,13 @@ import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.SwitchSystemWithSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.RecentSizeSetting
-import com.plumemu.coredata.settings.SortGamesSetting
+import com.plumemu.game.SortChoices
 import com.plumemu.coredata.settings.SoundLevel
 import com.plumemu.coredata.settings.SystemOrderSetting
 import com.plumemu.coredata.settings.GridSizeSetting
 import com.plumemu.coredata.settings.LeftEdgeSetting
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coredata.settings.TextWeightSetting
-import com.plumemu.coreui.theme.Rgb
 import com.plumemu.secondscreen.SecondScreen
 import com.plumemu.secondscreen.isSecondScreenOn
 import com.plumemu.settings.colorSet
@@ -101,7 +100,7 @@ internal enum class SettingsSection(
     /**
      * The rows shown for [content]: in Emulators one [SettingsOption.SystemEmulator] per system with
      * games first; in Library Systems after System order (only while a system has games), one
-     * [SettingsOption.UnknownFolder] per folder of [SettingsContent.unknownFolders], then "Unidentified games (n)"
+     * [SettingsOption.UnknownFolder] per folder of [SettingsContent.unknownFolders], Files not added, then "Unidentified games (n)"
      * and "Hidden games (n)", each only while it has games, then Recent size and Clear Recent… last; in Second screen In
      * game after the switch only while it is on (Settings has no dimmed rows); nothing in a section that is not [shownIn]. A build from source has
      * no statistics server and no update manifest: none of the rows that need them is listed
@@ -112,12 +111,13 @@ internal enum class SettingsSection(
     private fun listedIn(content: SettingsContent): List<SettingsOption> =
         when {
             this == Emulators -> List(content.systems.size) { SettingsOption.SystemEmulator } + options
-            this == Statistics -> List(statisticStopsOf(content.statistics)) { SettingsOption.Statistic }
+            this == Statistics -> statisticsStopsIn(content)
             // ScreenScraper (its status line only in a build without credentials), then RetroAchievements.
             this == Accounts -> accountRowsIn(content) + options
             this == Library ->
                 options + listOfNotNull(SettingsOption.Systems.takeIf { content.librarySystems.isNotEmpty() }) +
                     List(content.unknownFolders.size) { SettingsOption.UnknownFolder } +
+                    SettingsOption.FilesNotAdded +
                     listOfNotNull(
                         SettingsOption.UnidentifiedGames.takeIf { content.unidentifiedGames.isNotEmpty() },
                         SettingsOption.HiddenGames.takeIf { content.hiddenGames.isNotEmpty() },
@@ -267,6 +267,9 @@ internal enum class SettingsOption(
      */
     UnknownFolder(R.string.settings_unknown_folder_title, OptionKind.Opens),
 
+    /** "12 »": the files the scans left out, grouped by reason ([PanelPage.FilesNotAdded]); always listed. */
+    FilesNotAdded(R.string.settings_files_not_added_title, OptionKind.Opens),
+
     /** Listed only while games are named from their file alone; A or a tap on one opens Fix name…. */
     UnidentifiedGames(R.string.settings_unidentified_games_title, OptionKind.Opens),
 
@@ -298,6 +301,12 @@ internal enum class SettingsOption(
     SecondScreenInGame(R.string.settings_second_screen_in_game, OptionKind.Choice),
 
     /**
+     * "Box art »" with the source in force as its value: its panel ([PanelPage.BoxArtSource]) lists the three
+     * choices (ScreenScraper, Box art only, Plumemu's own covers), each with one line on what it brings; A applies.
+     */
+    BoxArtSource(R.string.settings_box_art_source, OptionKind.Opens),
+
+    /**
      * "ScreenScraper", signed in or out (the label stays put): its value is "Sign in »" while signed
      * out, else the box art's short state or the name (`optionValue`); its panel signs in, or shows
      * the status and the box art actions.
@@ -318,6 +327,9 @@ internal enum class SettingsOption(
 
     /** A cursor stop of Statistics: a most-played game by its place, or the page itself ([statisticStopsOf]). */
     Statistic(R.string.settings_section_statistics, OptionKind.Info),
+
+    /** Statistics' last stop: count only the time a game was on the screen; needs Android's Usage access. */
+    ExactPlayTime(R.string.settings_exact_play_time, OptionKind.Switch),
 }
 
 /**
@@ -414,6 +426,9 @@ internal enum class PanelPage {
      */
     ScraperAccount,
 
+    /** Accounts › Box art: the choices of [boxArtSourceChoices], each with its line; A applies (ScreenScraper while signed out opens its sign-in form first). */
+    BoxArtSource,
+
     /** Accounts › RetroAchievements while signed in: who is signed in, Sign in again (after a refusal) and Sign out ([raPageItems]). */
     RaAccount,
 
@@ -423,8 +438,8 @@ internal enum class PanelPage {
     /** Re-download's confirm: Re-download, then Cancel (focused first); about [SettingsFocus.redownloadSystems]. */
     ScraperConfirm,
 
-    /** Sign out's confirm: Sign out, then Cancel (focused first). */
-    ScraperSignOutConfirm,
+    /** Sign out's confirm, ScreenScraper's and RetroAchievements': Sign out, then Cancel (focused first). */
+    ScraperSignOutConfirm, RaSignOutConfirm,
 
     /** Clear box art's confirm: Clear box art, then Cancel (focused first). */
     ScraperClearConfirm,
@@ -434,12 +449,19 @@ internal enum class PanelPage {
 
     /** Library › an unknown folder: Ignore this folder, then every system; A applies ([SettingsFocus.folderKey]). */
     UnknownFolder,
+
+    /** Library › Files not added: every line of [SettingsContent.notAdded]; A on a folder's line goes to its row. */
+    FilesNotAdded,
 }
 
-/** Value of a ‹ › option, for the row and for stepping. */
+/**
+ * Value of a ‹ › option, for the row and for stepping. [sorts]: which of Year and Rating Sort games lists
+ * (the default lists every sort: the row's name is read by position in all of them; stepping passes the library's answer).
+ */
 internal fun SettingsOption.choiceIndex(
     settings: PlumSettings,
     defaultTextSize: TextSizeSetting,
+    sorts: SortChoices.Values = SortChoices.Values.All,
 ): Int =
     when (this) {
         SettingsOption.Colors -> settings.appearance.let { it.colorsCycle().indexOf(it.colorSet()) }
@@ -448,7 +470,7 @@ internal fun SettingsOption.choiceIndex(
         SettingsOption.TextWeight -> (settings.appearance.textWeight ?: TextWeightSetting.Default).ordinal
         SettingsOption.LeftEdge -> (settings.appearance.leftEdge ?: LeftEdgeSetting.Default).ordinal
         SettingsOption.GridSize -> settings.appearance.gridSize.ordinal
-        SettingsOption.SortGames -> settings.library.sortGames.ordinal
+        SettingsOption.SortGames -> SortChoices(settings.library.sortGames, sorts).options.indexOf(settings.library.sortGames)
         SettingsOption.RecentSize -> settings.library.recentSize.ordinal
         SettingsOption.Keyboard -> settings.controls.keyboard.ordinal
         SettingsOption.SwitchSystemWith -> settings.controls.switchSystemWith.ordinal
@@ -459,7 +481,7 @@ internal fun SettingsOption.choiceIndex(
         else -> 0
     }
 
-internal fun SettingsOption.choiceCount(settings: PlumSettings): Int =
+internal fun SettingsOption.choiceCount(settings: PlumSettings, sorts: SortChoices.Values = SortChoices.Values.All): Int =
     when (this) {
         // Custom is a value only while there is a custom look to be on or go back to.
         SettingsOption.Colors -> settings.appearance.colorsCycle().size
@@ -468,7 +490,7 @@ internal fun SettingsOption.choiceCount(settings: PlumSettings): Int =
         SettingsOption.TextWeight -> TextWeightSetting.entries.size
         SettingsOption.LeftEdge -> LeftEdgeSetting.entries.size
         SettingsOption.GridSize -> GridSizeSetting.entries.size
-        SettingsOption.SortGames -> SortGamesSetting.entries.size
+        SettingsOption.SortGames -> SortChoices(settings.library.sortGames, sorts).options.size
         SettingsOption.RecentSize -> RecentSizeSetting.entries.size
         SettingsOption.Keyboard -> KeyboardSetting.entries.size
         SettingsOption.SwitchSystemWith -> SwitchSystemWithSetting.entries.size
@@ -483,9 +505,10 @@ internal fun SettingsOption.choiceCount(settings: PlumSettings): Int =
 internal fun SettingsOption.withChoice(
     settings: PlumSettings,
     index: Int,
+    sorts: SortChoices.Values = SortChoices.Values.All,
 ): PlumSettings =
     when (this) {
-        SettingsOption.SortGames -> settings.copy(library = settings.library.copy(sortGames = SortGamesSetting.entries[index]))
+        SettingsOption.SortGames -> settings.copy(library = settings.library.copy(sortGames = SortChoices(settings.library.sortGames, sorts).options[index]))
         SettingsOption.RecentSize -> settings.copy(library = settings.library.copy(recentSize = RecentSizeSetting.entries[index]))
         SettingsOption.Keyboard -> settings.copy(controls = settings.controls.copy(keyboard = KeyboardSetting.entries[index]))
         SettingsOption.SwitchSystemWith -> settings.copy(controls = settings.controls.copy(switchSystemWith = SwitchSystemWithSetting.entries[index]))
@@ -520,6 +543,7 @@ internal fun SettingsOption.switchValue(settings: PlumSettings): Boolean =
         SettingsOption.EdgeFade -> settings.appearance.edgeFade
         SettingsOption.Vibration -> settings.advanced.vibration
         SettingsOption.UsageStatistics -> settings.advanced.usageStatistics
+        SettingsOption.ExactPlayTime -> settings.advanced.exactPlayTime
         SettingsOption.CheckUpdatesDaily -> settings.updates.checkDaily
         SettingsOption.ScanOnStartup -> settings.library.scanOnStartup
         SettingsOption.HoldToScrollFaster -> settings.controls.holdToScrollFaster
@@ -543,6 +567,7 @@ internal fun SettingsOption.toggled(settings: PlumSettings): PlumSettings =
         SettingsOption.EdgeFade -> settings.withAppearance { it.copy(edgeFade = !it.edgeFade) }
         SettingsOption.Vibration -> settings.copy(advanced = settings.advanced.copy(vibration = !settings.advanced.vibration))
         SettingsOption.UsageStatistics -> settings.copy(advanced = settings.advanced.copy(usageStatistics = !settings.advanced.usageStatistics))
+        SettingsOption.ExactPlayTime -> settings.copy(advanced = settings.advanced.copy(exactPlayTime = !settings.advanced.exactPlayTime))
         SettingsOption.CheckUpdatesDaily -> settings.copy(updates = settings.updates.copy(checkDaily = !settings.updates.checkDaily))
         SettingsOption.ScanOnStartup -> settings.copy(library = settings.library.copy(scanOnStartup = !settings.library.scanOnStartup))
         SettingsOption.HoldToScrollFaster ->
@@ -573,14 +598,3 @@ internal inline fun PlumSettings.withAppearance(change: (AppearanceSettings) -> 
  */
 // Buttons None, not undecided: the defaults have none, and "undecided" would be settled from the colours only at the next start.
 internal fun PlumSettings.resetKeepingFlags(): PlumSettings = PlumSettings(appearance = AppearanceSettings(buttonSet = AppearanceSettings.BUTTONS_NONE), flags = flags)
-
-/** "#1a2b3c", "1A2B3C" → the colour; anything else → null. */
-internal fun parseHexColor(text: String): Rgb? = Rgb.fromHexOrNull("#" + text.trim().removePrefix("#").uppercase())
-
-/** The name of Left edge's value [index] (`LeftEdgeSetting.entries` order). */
-internal fun leftEdgeNameRes(index: Int): Int =
-    when (LeftEdgeSetting.entries[index]) {
-        LeftEdgeSetting.Counts -> R.string.settings_left_edge_counts
-        LeftEdgeSetting.Codes -> R.string.settings_left_edge_codes
-        LeftEdgeSetting.Letters -> R.string.settings_left_edge_letters
-    }

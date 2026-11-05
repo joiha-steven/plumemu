@@ -66,6 +66,14 @@ class TelemetryEventTest {
                 TelemetryEvent.FirstOpen to ("first_open" to emptyMap()),
                 TelemetryEvent.QueueOverflow(100) to ("queue_overflow" to mapOf("dropped" to "100")),
                 TelemetryEvent.StatsSwitchedOn(SwitchPlace.Settings) to ("stats_switched_on" to mapOf("where" to "settings")),
+                TelemetryEvent.GameUnidentified(SystemRef("psx"), "cue", 72, 0x0A1B2C3DL, "ps1", "SLUS-99999", 0x00112233445566AAL) to
+                    (
+                        "game_unidentified" to
+                            mapOf(
+                                "system_id" to "psx", "container" to "cue", "size" to "72", "crc" to "0a1b2c3d",
+                                "code_kind" to "ps1", "code" to "SLUS-99999", "track_key" to "00112233445566aa",
+                            )
+                    ),
             )
         for ((event, expected) in cases) {
             assertEquals(expected.first, event.name)

@@ -68,9 +68,9 @@ class AppGameCoverTest {
             val cell = bounds(app)
             assertSame("cell $app same width as a file game's", file.width, cell.width)
             assertEquals("cell $app same height", file.height, cell.height)
-            val row = bounds(if (app == 5) 4 else 0)
-            assertEquals("cell $app same top as its row's file game", row.top, cell.top)
-            assertEquals("cell $app same bottom", row.bottom, cell.bottom)
+            val row = (0..11).filter { it !in listOf(2, 3, 5) }.mapNotNull { runCatching { bounds(it) }.getOrNull() }.firstOrNull { it.top == cell.top }
+            // A card may stand alone on its row (five columns now): then only its height, checked above, is compared.
+            row?.let { assertEquals("cell $app same bottom", it.bottom, cell.bottom) }
         }
         // Without a picture the file game's poster fills its cell; the app game's card is as large as that poster.
         val poster = compose.onNode(hasTestTag(HomeTags.POSTER_COVER) and hasAnyAncestor(hasTestTag(HomeTags.cover(0))), useUnmergedTree = true).getBoundsInRoot()
@@ -112,8 +112,11 @@ class AppGameCoverTest {
         val reference = bounds(0)
         for (app in FavoriteAppGameIndexes) {
             val cell = bounds(app)
-            assertSame(reference.width, cell.width)
-            assertEquals(reference.height, cell.height)
+            // Packed rows: a card is as wide as its system's shape (Android games and Ports are square) at its row's height. The
+            // requirement changed: rows are justified, each at its own height, so only the row's other cells (below) share it; across
+            // rows the heights stay near the first row's (a justified row's scale is 0.8 to 1.25 of the target).
+            assertTrue("cell $app is about square (${cell.width} x ${cell.height})", cell.width.value in cell.height.value * 0.85f - 1f..cell.height.value * 1.2f + 1f)
+            assertTrue("cell $app is about the first row's height (${cell.height} against ${reference.height})", cell.height.value in reference.height.value * 0.8f..reference.height.value * 1.25f)
             assertTrue("cell $app has the top of a file game's cell", (0..11).any { it !in FavoriteAppGameIndexes && bounds(it).top == cell.top && bounds(it).bottom == cell.bottom })
         }
         assertEquals(1, inCell(HomeTags.APP_ICON, 2))

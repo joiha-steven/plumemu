@@ -274,6 +274,19 @@ def standalone_first(emulator_ids, registry):
     return standalone + cores
 
 
+def core_order(emulator_ids, preferred, registry):
+    """The RetroArch cores among [emulator_ids]: the first stays first (it is the system's default core, which
+    only an owner decision changes), the others follow [preferred] (core ids without "retroarch-"), then the
+    rest in their order; every core keeps the slot of a core, so standalone emulators stay where they are."""
+    cores = [e for e in emulator_ids if registry.by_id[e].get("core")]
+    if not cores:
+        return list(emulator_ids)
+    first, rest = cores[0], cores[1:]
+    named = [e for e in (f"retroarch-{c}" for c in preferred) if e in rest]
+    ordered = iter([first] + named + [e for e in rest if e not in named])
+    return [next(ordered) if e in cores else e for e in emulator_ids]
+
+
 def accepts_from_daijisho(emulator_id, player_names, registry, dj_players, out_systems):
     """The files [emulator_id] opens, read from the acceptedFilenameRegex of the Daijisho players that
     start it, one or more for each of its systems; within its systems' extensions."""
@@ -323,6 +336,7 @@ def finish(systems, registry, skipped, dj_players=None):
             if sorted(order) != sorted(s["emulators"]):
                 raise ConvertError(f"SYSTEM_EMULATOR_ORDER of {system_id} must name exactly {sorted(s['emulators'])}, not {order}")
             s["emulators"] = list(order)
+        s["emulators"] = core_order(s["emulators"], tables.RETROARCH_CORE_ORDER.get(system_id, ()), registry)
         first = tables.FIRST_EMULATOR.get(system_id)
         if first:
             if first not in s["emulators"]:
@@ -431,6 +445,13 @@ def finish(systems, registry, skipped, dj_players=None):
         for folder in system["folders"]:
             if owner.setdefault(folder, system["id"]) != system["id"]:
                 raise ConvertError(f"folder {folder!r} belongs to both {owner[folder]} and {system['id']}")
+    known_cores = {e["id"] for e in registry.by_id.values() if e.get("core")}
+    for system_id, cores in tables.RETROARCH_CORE_ORDER.items():
+        if system_id not in ids:
+            raise ConvertError(f"RETROARCH_CORE_ORDER lists {system_id}, which is not a system")
+        for core in cores:
+            if f"retroarch-{core}" not in known_cores:
+                raise ConvertError(f"RETROARCH_CORE_ORDER of {system_id} names {core!r}, which is no RetroArch core")
     for system_id in tables.SYSTEM_EMULATOR_ORDER:
         if system_id not in ids:
             raise ConvertError(f"SYSTEM_EMULATOR_ORDER lists {system_id}, which is not a system")

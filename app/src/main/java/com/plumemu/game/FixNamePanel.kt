@@ -5,7 +5,6 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -15,9 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.KeyboardActions
@@ -53,12 +49,11 @@ import com.plumemu.R
 import com.plumemu.coreinput.Action
 import com.plumemu.coreui.components.FieldRow
 import com.plumemu.coreui.components.FieldRowFrame
-import com.plumemu.coreui.components.sunkenFieldInRow
+import com.plumemu.coreui.components.fieldLine
+import com.plumemu.coreui.theme.FieldDimens
 import com.plumemu.coreui.components.OptionRowLook
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
-import com.plumemu.coreui.theme.rememberListGlide
-import com.plumemu.home.KeepFocusedVisible
 import com.plumemu.home.search.hideSystemBars
 import com.plumemu.keyboard.CaretLine
 import com.plumemu.keyboard.KeyboardChoice
@@ -91,33 +86,17 @@ internal fun FixNameBody(
         onAction = onAction,
         tag = FixNameTags.FIELD,
     )
-    Spacer(Modifier.height(PlumDimens.listRowGap))
+    Spacer(Modifier.height(FieldDimens.gap))
     if (state.isLoading) {
         PlainLine(stringResource(R.string.game_fix_name_loading), FixNameTags.LOADING)
         return
     }
-    if (state.query.isNotBlank() && state.isAnswered && state.results.isEmpty()) {
+    // With the suggestions block up, its own line says what it found, so no "no match" line then.
+    if (!state.showsSuggestions && state.query.isNotBlank() && state.isAnswered && state.results.isEmpty()) {
         PlainLine(stringResource(R.string.game_fix_name_no_match), FixNameTags.NO_MATCH)
         return
     }
-    val listState = rememberLazyListState()
-    val glide = rememberListGlide(stride = PlumTheme.layout.rowHeight + PlumDimens.listRowGap)
-    val pill = rememberPanelPill(listState, glide, if (state.inField) -1 else state.row)
-    pill.Provide {
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxWidth().testTag(FixNameTags.RESULTS).then(pill.modifier).then(glide.modifier),
-        contentPadding = PaddingValues(vertical = glide.extra),
-        verticalArrangement = Arrangement.spacedBy(PlumDimens.listRowGap),
-    ) {
-        itemsIndexed(state.results, key = { index, _ -> index }) { index, choice ->
-            val look = if (!state.inField && index == state.row) OptionRowLook.Focused else OptionRowLook.Normal
-            val row = PanelRow(resultKey(index), UiText.Plain(choice.name), PanelCommand.PickTitle(choice), note = releaseNote(choice))
-            PanelRowView(row, look, index, onAction)
-        }
-    }
-    }
-    KeepFocusedVisible(listState, glide) { if (state.inField) 0 else state.row }
+    FixNameResults(state, onAction)
 }
 
 /**
@@ -148,7 +127,7 @@ internal fun OwnNameBody(
                 style = PlumTheme.type.smallFact.copy(color = PlumTheme.colors.text2),
                 maxLines = REFUSED_LINES,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = PlumDimens.gameRowPadding).testTag(FixNameTags.REFUSED),
+                modifier = Modifier.padding(horizontal = PlumDimens.panelTitleStart).testTag(FixNameTags.REFUSED),
             )
         }
         Spacer(Modifier.height(PlumDimens.listRowGap))
@@ -192,8 +171,10 @@ internal fun TypingField(
     label: String? = null,
 ) {
     val labelWidth = label?.let { labelWidthOf(it) } ?: 0.dp
+    // A field alone in its sheet starts and ends on the line the rows' texts keep; one with a label has the label there.
+    val inset = if (label == null) Modifier.padding(horizontal = PlumDimens.panelTitleStart) else Modifier
     if (typing.keyboardKind == KeyboardChoice.Plumemu) {
-        OwnKeyboardField(value, typing, placeholder, hint, tag, label, labelWidth)
+        OwnKeyboardField(value, typing, placeholder, hint, tag, label, labelWidth, inset)
         return
     }
     val focus = remember { FocusRequester() }
@@ -231,7 +212,7 @@ internal fun TypingField(
         labelWidth = labelWidth,
         keyboardHint = hint,
         // A touch on the field means typing again; seen before the field handles it.
-        modifier = Modifier.pointerInput(typing) { awaitEachGesture { awaitFirstDown(pass = PointerEventPass.Initial).also { typing.focusField() } } }.testTag(tag),
+        modifier = inset.pointerInput(typing) { awaitEachGesture { awaitFirstDown(pass = PointerEventPass.Initial).also { typing.focusField() } } }.testTag(tag),
         fieldModifier = Modifier.focusProperties { canFocus = up }.focusRequester(focus),
         keyboardOptions = options,
         keyboardActions = KeyboardActions(onSearch = { typing.onKeyboardAction()?.let(onAction) }, onDone = { typing.onKeyboardAction()?.let(onAction) }),
@@ -253,15 +234,16 @@ private fun OwnKeyboardField(
     tag: String,
     label: String?,
     labelWidth: Dp,
+    inset: Modifier,
 ) {
     val onTapAt = remember(typing) { { offset: Int -> typing.focusFieldAt(offset) } }
     val onPaste = remember(typing) { { typing.paste() } }
     FieldRowFrame(
         look = if (typing.inField) OptionRowLook.Focused else OptionRowLook.Normal,
-        modifier = Modifier.semantics { contentDescription = hint }.testTag(tag),
-        answersButton = !typing.isTrayUp,
+        label = label,
+        labelWidth = labelWidth,
+        modifier = inset.semantics { contentDescription = hint }.testTag(tag),
     ) { style ->
-        if (label != null) FieldLabel(label, labelWidth)
         CaretLine(
             text = value,
             caret = { typing.fieldKeys.caret },
@@ -269,7 +251,7 @@ private fun OwnKeyboardField(
             placeholder = placeholder,
             style = style,
             onTapAt = onTapAt,
-            modifier = Modifier.weight(1f).fillMaxHeight().sunkenFieldInRow(),
+            modifier = Modifier.fieldLine(),
             textTag = FixNameTags.typedText(tag),
             placeholderTag = FixNameTags.placeholder(tag),
             // Not typing: the start of the name shows ("Captain Toad: Treasure Tracker", not "Treasure Tracker").
@@ -288,28 +270,17 @@ private fun labelWidthOf(label: String): Dp {
     return with(density) { measurer.measure(label, style, maxLines = 1).size.width.toDp() }
 }
 
-/** [FieldRow]'s label column for the field typed with Plumemu's keyboard. */
-@Composable
-private fun RowScope.FieldLabel(
-    label: String,
-    labelWidth: Dp,
-) {
-    val colors = PlumTheme.colors
-    BasicText(label, style = PlumTheme.type.settingsOption.copy(color = colors.muted), maxLines = 1, modifier = Modifier.width(labelWidth))
-    Spacer(Modifier.width(PlumDimens.rowTrailingGap))
-}
-
 /** Whether this field put the keyboard up (plain, not state: nothing draws from it). */
 private class KeyboardOwner {
     var hasShown = false
 }
 
 @Composable
-private fun PlainLine(
+internal fun PlainLine(
     text: String,
     tag: String,
 ) {
-    Box(Modifier.height(PlumTheme.layout.rowHeight).padding(horizontal = PlumDimens.gameRowPadding), contentAlignment = Alignment.CenterStart) {
+    Box(Modifier.height(PlumTheme.layout.rowHeight).padding(horizontal = PlumDimens.panelTitleStart), contentAlignment = Alignment.CenterStart) {
         BasicText(
             text,
             style = PlumTheme.type.settingsOption.copy(color = PlumTheme.colors.muted),
@@ -327,6 +298,12 @@ private fun PlainLine(
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 internal fun FollowTitleResults(state: FixNameState) {
+    // The closest titles to the opening name: once per page, when its list is ready, off the main thread.
+    LaunchedEffect(state, state.finder) {
+        val finder = state.finder ?: return@LaunchedEffect
+        if (!state.suggests || state.suggestions != null) return@LaunchedEffect
+        state.showSuggestions(withContext(Dispatchers.Default) { finder.suggest(state.firstQuery) { ensureActive() } })
+    }
     LaunchedEffect(state) {
         snapshotFlow { state.finder to state.query }
             .mapLatest { (finder, query) ->
@@ -344,6 +321,12 @@ internal object FixNameTags {
     const val RESULTS = "fix_name_results"
     const val NO_MATCH = "fix_name_no_match"
     const val LOADING = "fix_name_loading"
+
+    /** The lines over the suggestions block: closest titles found, none found, still looking, and the other results. */
+    const val SUGGESTIONS = "fix_name_suggestions"
+    const val NO_SUGGESTION = "fix_name_no_suggestion"
+    const val SUGGESTING = "fix_name_suggesting"
+    const val OTHERS = "fix_name_others"
     const val REFUSED = "own_name_refused"
 
     /** Use my own name's refusal and Save, under the field. */

@@ -19,13 +19,16 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Only a change check tells the home what it found ("+24 games"): the startup scan, a manual rescan,
- * setup's scan and the first scan of a new folder stay silent.
+ * The home is told what a scan found ("+24 games") only for scans that stamped added_at, from a change check or a
+ * folder added in Settings; the startup scan, a manual rescan and setup's scans stay silent.
  */
 class StartupWorkChangesFoundTest {
     private val infoLines = CopyOnWriteArrayList<String>()
     private val found = CopyOnWriteArrayList<Collection<ScanStats>>()
     private var startupStats = added(7)
+    /** Folders whose scan stamps no added_at (setup, Try again, the first scan after Reset library). */
+    private var unstamped = emptySet<Long>()
+    private var scanFails = false
     private var changes = FolderChanges(setOf(2L), emptyMap(), foldersChecked = 2, directoriesAsked = 3)
 
     private val tasks = object : StartupTasks {
@@ -38,14 +41,14 @@ class StartupWorkChangesFoundTest {
         override suspend fun setRescanAfterReset(pending: Boolean) = Unit
 
         override suspend fun scanLibrary(onEvent: (ScanEvent) -> Unit): Boolean {
-            onEvent(ScanEvent.FolderFinished(1, FolderOutcome.Scanned(startupStats)))
-            return true
+            finish(1, startupStats, onEvent)
+            return !scanFails
         }
 
         override suspend fun changedFolders(onlyFolderIds: Set<Long>?): FolderChanges = changes
 
         override suspend fun scanFolders(folderIds: Set<Long>, onEvent: (ScanEvent) -> Unit): Boolean {
-            for (id in folderIds.sorted()) onEvent(ScanEvent.FolderFinished(id, FolderOutcome.Scanned(added(3))))
+            for (id in folderIds.sorted()) finish(id, added(3, stamped = id !in unstamped), onEvent)
             return true
         }
 
@@ -54,7 +57,15 @@ class StartupWorkChangesFoundTest {
         override suspend fun finishRestore(): Boolean = false
     }
 
-    private fun added(n: Int) = ScanStats(1, 5, 3, n, 0, 0, 0, 0, 0)
+    /** What the scanner sends: the folder's stats, then (when it stamped) the count after naming, one fewer than the rows added. */
+    private fun finish(id: Long, stats: ScanStats, onEvent: (ScanEvent) -> Unit) {
+        onEvent(ScanEvent.FolderFinished(id, FolderOutcome.Scanned(stats)))
+        if (stats.stampedAddedAt) onEvent(ScanEvent.AddedListed(id, mapOf("snes" to stats.gamesAdded - 1)))
+    }
+
+    private fun listed(stats: Collection<ScanStats>) = stats.map { it.listedAddedBySystem.values.sum() }
+
+    private fun added(n: Int, stamped: Boolean = true) = ScanStats(1, 5, 3, n, 0, 0, 0, 0, 0, stampedAddedAt = stamped)
 
     private fun withUnknown(vararg names: String) = ScanStats(1, 5, 3, 0, 0, 0, 0, 0, 0, newUnknownFolders = names.map { UnknownFolder(it, 2) })
 
@@ -94,25 +105,78 @@ class StartupWorkChangesFoundTest {
         work.onStart()
         runCurrent()
         assertEquals(infoLines.toString(), 1, found.size)
-        assertEquals(listOf(3), found.single().map { it.gamesAdded })
+        assertEquals(listOf(2), listed(found.single()))
     }
 
     @Test
-    fun aFolderOnItsFirstScanIsNotNews() = runTest {
-        changes = FolderChanges(setOf(2L, 3L), emptyMap(), foldersChecked = 3, directoriesAsked = 3, neverScannedFolderIds = setOf(3L))
+    fun aFolderAddedInSettingsReachesTheNoticeOnlyWhenItsScanStamped() = runTest {
+        startupStats = added(4, stamped = true)
+        val work = work()
+        work.onStart()
+        work.onContentShown()
+        runCurrent()
+        assertEquals("the startup scan", 0, found.size)
+        work.requestScan(ScanTrigger.FolderAdded)
+        runCurrent()
+        assertEquals(listOf(3), listed(found.single()))
+
+        found.clear()
+        startupStats = added(4, stamped = false)
+        work.requestScan(ScanTrigger.FolderAdded)
+        runCurrent()
+        assertEquals("a scan that stamped nothing tells nothing", listOf(emptyList<ScanStats>()), found.map { it.toList() })
+    }
+
+    @Test
+    fun aFolderAddMergedIntoAPendingManualRequestStillTellsTheNotice() = runTest {
+        startupStats = added(4, stamped = true)
+        val work = work()
+        work.onStart()
+        work.onContentShown()
+        runCurrent()
+        found.clear()
+        work.requestScan(ScanTrigger.Manual)
+        work.requestScan(ScanTrigger.FolderAdded)
+        runCurrent()
+        assertEquals(listOf(3), listed(found.single()))
+    }
+
+    @Test
+    fun aFolderAddWhoseScanFailedIsKeptForTheNextFullScan() = runTest {
+        startupStats = added(4, stamped = true)
+        val work = work()
+        work.onStart()
+        work.onContentShown()
+        runCurrent()
+        found.clear()
+        scanFails = true
+        work.requestScan(ScanTrigger.FolderAdded)
+        runCurrent()
+        assertEquals("a failed scan tells nothing", 0, found.size)
+        scanFails = false
+        work.requestScan(ScanTrigger.Manual)
+        runCurrent()
+        assertEquals("the next full scan still tells about the added folder", listOf(3), listed(found.single()))
+    }
+
+    @Test
+    fun aScanThatStampedNothingIsNotNews() = runTest {
+        changes = FolderChanges(setOf(2L, 3L), emptyMap(), foldersChecked = 3, directoriesAsked = 3)
+        unstamped = setOf(3L)
         val work = work()
         work.onStart()
         work.onContentShown()
         runCurrent()
         work.onStart()
         runCurrent()
-        assertEquals("only the folder that had been scanned before counts", listOf(3), found.single().map { it.gamesAdded })
+        assertEquals("only the scan that stamped added_at counts", listOf(2), listed(found.single()))
         assertEquals(1, found.single().size)
     }
 
     @Test
-    fun anAllNewFolderCheckTellsNothing() = runTest {
-        changes = FolderChanges(setOf(5L), emptyMap(), foldersChecked = 1, directoriesAsked = 1, neverScannedFolderIds = setOf(5L))
+    fun aCheckWhoseScansStampedNothingTellsNothing() = runTest {
+        changes = FolderChanges(setOf(5L), emptyMap(), foldersChecked = 1, directoriesAsked = 1)
+        unstamped = setOf(5L)
         val work = work()
         work.onStart()
         work.onContentShown()

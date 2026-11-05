@@ -24,25 +24,37 @@ enum class ColorSet(
      * that moved a set's accent does not turn it into Custom. Add the old value here whenever a set's accent changes.
      */
     val previousAccents: List<Rgb> = emptyList(),
+    /**
+     * Backgrounds this set had before its current one, read like [previousAccents] (text stays the set's, and the stored text
+     * presets are names, so a moved text colour needs no entry). Add the old value here whenever a set's background changes.
+     */
+    val previousBackgrounds: List<Rgb> = emptyList(),
 ) {
-    /** Today's default look exactly (`PlumThemeSettings.Default`), so a fresh install shows it. */
-    Plumemu(BackgroundChoice.Preset(BackgroundPreset.Black), TextMode.Light, AccentChoice.Preset(AccentPreset.Red)),
+    /** The default look exactly (`PlumThemeSettings.Default`), so a fresh install shows it. Its accent was the Red preset's light-text colour before. */
+    Plumemu(
+        BackgroundChoice.Preset(BackgroundPreset.Black),
+        TextMode.Light,
+        AccentChoice.Custom(Rgb(0x3E7BE0)),
+        previousAccents = listOf(Rgb(0xDA4655)),
+    ),
     Paper(BackgroundChoice.Preset(BackgroundPreset.Paper), TextMode.Dark, AccentChoice.Preset(AccentPreset.Red)),
 
-    /** Background lightened from #C8C6BE so secondary text reaches 11:1. */
+    /** Background lightened from #C8C6BE so secondary text reaches 11:1 (the dark text is #1C1C1E). */
     Pocket(
-        BackgroundChoice.Custom(Rgb(0xCDCCC4)),
+        BackgroundChoice.Custom(Rgb(0xD2D1CA)),
         TextMode.Dark,
         AccentChoice.Custom(Rgb(0x8C1D4E)),
         ButtonColors(a = ButtonColor(Rgb(0x8C1D4E)), b = ButtonColor(Rgb(0x8C1D4E)), x = ButtonColor(Rgb(0x8C1D4E)), y = ButtonColor(Rgb(0x8C1D4E))),
+        previousBackgrounds = listOf(Rgb(0xCDCCC4)), // before the dark text became #1C1C1E
     ),
 
     /** Background lightened from #9BBC0F (secondary text 11:1); accent darkened from #306230 to #2E5E2E (badge text 4.75:1, ring on the pill 3.98:1). */
     DotMatrix(
-        BackgroundChoice.Custom(Rgb(0xB4DB11)),
+        BackgroundChoice.Custom(Rgb(0xB8E011)),
         TextMode.Dark,
         AccentChoice.Custom(Rgb(0x2E5E2E)),
         previousAccents = listOf(Rgb(0x306130)), // earlier value, before the theme balance: ring on the pill and badge text
+        previousBackgrounds = listOf(Rgb(0xB4DB11)), // before the dark text became #1C1C1E
     ),
 
     /** Accent darkened from #C8302B to #AA2924 (badge text 4.82:1, ring on the pill 4.04:1); the A glyph keeps #C8302B. */
@@ -77,10 +89,11 @@ enum class ColorSet(
 
     /** A red, B teal, X and Y a darker yellow than the background; every letter white. */
     Banana(
-        BackgroundChoice.Custom(Rgb(0xF2CD3C)),
+        BackgroundChoice.Custom(Rgb(0xF2CF43)),
         TextMode.Dark,
         AccentChoice.Custom(Rgb(0x1F45A8)),
         ButtonColors(a = ButtonColor(Rgb(0xC8302B)), b = ButtonColor(Rgb(0x0E7C7C)), x = ButtonColor(Rgb(0x926B00)), y = ButtonColor(Rgb(0x926B00))),
+        previousBackgrounds = listOf(Rgb(0xF2CD3C)), // before the dark text became #1C1C1E
     ),
     Cream(BackgroundChoice.Custom(Rgb(0xE9DFC8)), TextMode.Dark, AccentChoice.Custom(Rgb(0x9A1F2B))),
     ;
@@ -99,16 +112,25 @@ enum class ColorSet(
         fun matching(settings: PlumThemeSettings): ColorSet? = entries.firstOrNull { it.isIn(settings) }
 
         /**
-         * [settings] with a set's previous accent ([ColorSet.previousAccents]) replaced by its current one, when the background and
-         * text are that set's; anything else (a custom accent near the old one included) is returned as it is.
+         * [settings] with a set's previous background or accent ([ColorSet.previousBackgrounds], [ColorSet.previousAccents]) replaced by
+         * its current one, when the rest is that set's; anything else (a custom colour near an old one included) is returned as it is.
          */
         fun settled(settings: PlumThemeSettings): PlumThemeSettings {
-            val accent = settings.accent as? AccentChoice.Custom ?: return settings
-            val set =
-                entries.firstOrNull {
-                    accent.color in it.previousAccents && settings.backgroundColor == it.backgroundColor && settings.text == it.textMode.color
-                } ?: return settings
-            return settings.copy(accent = set.accent)
+            if (settings.accent is AccentChoice.BySystem) return settings
+            for (set in entries) {
+                if (settings.text != set.textMode.color) continue
+                val oldBackground = settings.background is BackgroundChoice.Custom && settings.backgroundColor in set.previousBackgrounds
+                val oldAccent = (settings.accent as? AccentChoice.Custom)?.color in set.previousAccents
+                if (!oldBackground && !oldAccent) continue
+                val backgroundOk = oldBackground || settings.backgroundColor == set.backgroundColor
+                val accentOk = oldAccent || settings.accent.resolve(set.textMode) == set.accentColor
+                if (!backgroundOk || !accentOk) continue
+                return settings.copy(
+                    background = if (oldBackground) set.background else settings.background,
+                    accent = if (oldAccent) set.accent else settings.accent,
+                )
+            }
+            return settings
         }
     }
 }

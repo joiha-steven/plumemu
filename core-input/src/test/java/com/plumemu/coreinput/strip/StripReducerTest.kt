@@ -165,6 +165,12 @@ class StripReducerTest {
         assertEquals(listOf(StripIntent.OpenSettings), onSnesGames().then(Action.OpenSettings).intents)
     }
 
+    @Test
+    fun sortOpensTheSortChoicesOnAGameAndDoesNothingOnTheSystemColumn() {
+        assertEquals(emptyList<StripIntent>(), start(Action.Sort).intents)
+        assertEquals(listOf(StripIntent.OpenSortMenu("snes", 1)), onSnesGames().then(down).then(Action.Sort).intents)
+    }
+
     /** The grid needs no box art: SELECT reaches the screen with or without it, on every entry. */
     @Test
     fun selectTogglesTheViewWithAndWithoutBoxArt() {
@@ -277,7 +283,7 @@ class StripReducerTest {
         assertEquals(0, gba.focus.reconciled(shrunk, false).row)
     }
 
-    // Apps never has details (apps have no art), even with box art.
+    // An Apps grid has no details column or stop (hasDetails false), even with box art.
     private val appsWithoutDetails =
         content.copy(systems = content.systems.map { if (it.id == "apps") it.copy(hasDetails = false) else it })
 
@@ -483,7 +489,7 @@ class StripReducerTest {
         val appsGames = pushed(atApps, Action.Enter, on = noDetails, narrow = true).focus
         assertEquals(Column.Games, appsGames.column)
         val first = pushed(appsGames, right, on = noDetails, narrow = true)
-        assertEquals("Apps has no details stop: Right arms", true, first.armsRight)
+        assertEquals("An entry with hasDetails false has no details stop: Right arms", true, first.armsRight)
         assertEquals(Column.Games, first.focus.column)
         assertEquals(listOf(StripIntent.Play("apps", 0)), pushed(appsGames, right, on = noDetails, narrow = true, armed = true).intents)
     }

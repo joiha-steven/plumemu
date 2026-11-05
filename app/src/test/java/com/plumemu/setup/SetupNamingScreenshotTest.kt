@@ -1,7 +1,7 @@
 package com.plumemu.setup
 
 import com.github.takahirom.roborazzi.captureRoboImage
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
 import org.junit.Test
@@ -29,7 +29,7 @@ class SetupNamingScreenshotTest {
     fun classicSize() {
         RuntimeEnvironment.setQualifiers("w620dp-h540dp-land-xhdpi")
         for ((name, state) in listOf("setup_scan_naming" to SetupFakes.scanningNaming, "setup_ready_naming" to SetupFakes.readyStillNaming)) {
-            captureRoboImage(filePath = "${ReferenceShots.OUTPUT_DIR}/${name}_620x540_graphite.png") { PlumTheme(MediumText.Graphite) { SetupAt(state) } }
+            captureRoboImage(filePath = "${ReferenceShots.OUTPUT_DIR}/${name}_620x540_graphite.png") { PlumTheme(TableText.Graphite) { SetupAt(state) } }
         }
     }
 }

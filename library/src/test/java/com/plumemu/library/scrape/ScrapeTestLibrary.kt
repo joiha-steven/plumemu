@@ -50,7 +50,7 @@ internal class ScrapeTestLibrary(private val file: File, private val tree: Docum
 
     private fun open(): PlumDatabase =
         Room.databaseBuilder(ApplicationProvider.getApplicationContext(), PlumDatabase::class.java, file.absolutePath)
-            .addMigrations(*PlumMigrations.ALL)
+            .addMigrations(*PlumMigrations.all { GameDetails.listedRatingOf(it) })
             .build()
 
     /** Closes the database and opens the same file again, like a new process. */

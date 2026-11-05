@@ -6,7 +6,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Guards the shipped font files: only Sans, Serif and Mono (Plum Pixel was dropped),
+ * Guards the shipped font files: only Jost, Sans, Serif and Mono (Plum Pixel was dropped),
  * and each family ships its OFL text, which the licence requires.
  * Unit tests run with the module directory as the working directory.
  */
@@ -18,6 +18,11 @@ class FontFilesTest {
     fun shipsExactlyTheExpectedFontFiles() {
         val expected =
             setOf(
+                "jost_400.ttf",
+                "jost_500.ttf",
+                "jost_600.ttf",
+                "jost_700.ttf",
+                "jost_800.ttf",
                 "plum_sans_400.ttf",
                 "plum_sans_500.ttf",
                 "plum_sans_600.ttf",

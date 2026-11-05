@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -25,6 +26,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -97,8 +100,8 @@ internal fun InfoFacts(
         val available = if (constraints.hasBoundedHeight) constraints.maxHeight else Constraints.Infinity
         val shape = rows.shape
         val fit = remember(available, shape) { factsFit(available, shape) }
-        Box(Modifier.atMostHigh(fit.viewport)) {
-        Column(Modifier.verticalScroll(state).then(rows.contentModifier).testTag(GamePanelTags.FACTS_SCROLL)) {
+        Box(Modifier.atMostHigh(fit.viewport).graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }) {
+        Column(Modifier.fillMaxHeight().verticalScroll(state).then(rows.contentModifier).testTag(GamePanelTags.FACTS_SCROLL)) {
             InfoRows(lines, battery, labelStyle, labelWidth, valueLines, rows)
             val afterTable = lines.size + (if (battery == null) 0 else 1)
             facts.name?.let { NameFrom(it) { line -> rows.place(afterTable + line) } }
@@ -110,8 +113,8 @@ internal fun InfoFacts(
             if (fit.endRoom > 0) Spacer(Modifier.exactlyHigh(fit.endRoom))
         }
         // The cut row fades out at the edge it continues past (design/rules.md > Lists that scroll).
-        if (state.canScrollForward) ListEdgeFade(atBottom = true, Modifier.align(Alignment.BottomCenter).testTag(GamePanelTags.FADE_BOTTOM))
-        if (state.canScrollBackward) ListEdgeFade(atBottom = false, Modifier.align(Alignment.TopCenter).testTag(GamePanelTags.FADE_TOP))
+        if (state.canScrollForward) ListEdgeFade(atBottom = true, Modifier.align(Alignment.BottomCenter).testTag(GamePanelTags.FADE_BOTTOM), erases = true)
+        if (state.canScrollBackward) ListEdgeFade(atBottom = false, Modifier.align(Alignment.TopCenter).testTag(GamePanelTags.FADE_TOP), erases = true)
         }
     }
 }
@@ -128,7 +131,7 @@ private fun InfoRows(
 ) {
     val style = PlumTheme.type.meta.copy(color = PlumTheme.colors.text2)
     Column(
-        Modifier.padding(horizontal = PlumDimens.gameRowPadding).testTag(GamePanelTags.FACTS),
+        Modifier.padding(horizontal = PlumDimens.panelTitleStart).testTag(GamePanelTags.FACTS),
         verticalArrangement = Arrangement.spacedBy(PlumDimens.factsRowGap),
     ) {
         lines.forEachIndexed { index, (label, value) ->
@@ -146,11 +149,11 @@ private fun InfoRows(
     }
 }
 
-/** At most [px] high (exact pixels: the stops are worked out in them). */
+/** Exactly [px] high, or the room there is when less (exact pixels: the stops are worked out in them). */
 private fun Modifier.atMostHigh(px: Int): Modifier =
     layout { measurable, constraints ->
         val height = minOf(px, constraints.maxHeight)
-        val placeable = measurable.measure(constraints.copy(minHeight = minOf(constraints.minHeight, height), maxHeight = height))
+        val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
         layout(placeable.width, placeable.height) { placeable.place(0, 0) }
     }
 
@@ -184,7 +187,7 @@ private fun NameFrom(
     val colors = PlumTheme.colors
     val style = PlumTheme.type.meta
     Column(
-        modifier = Modifier.padding(start = PlumDimens.gameRowPadding, end = PlumDimens.gameRowPadding, top = PlumDimens.panelBlockGap).testTag(GamePanelTags.NAME_FROM),
+        modifier = Modifier.padding(start = PlumDimens.panelTitleStart, end = PlumDimens.panelTitleStart, top = PlumDimens.panelBlockGap).testTag(GamePanelTags.NAME_FROM),
         verticalArrangement = Arrangement.spacedBy(PlumDimens.factsRowGap),
     ) {
         BasicText(text = stringResource(R.string.game_info_name_from), style = style.copy(color = colors.muted), maxLines = 1, modifier = place(0).testTag(GamePanelTags.nameFromLine(0)))
@@ -208,7 +211,7 @@ private fun Description(
     val colors = PlumTheme.colors
     val style = PlumTheme.type.meta
     val measurer = rememberTextMeasurer()
-    val padding = PlumDimens.gameRowPadding
+    val padding = PlumDimens.panelTitleStart
     Column(
         modifier = Modifier.padding(start = padding, end = padding, top = PlumDimens.panelBlockGap).testTag(GamePanelTags.DESCRIPTION),
         verticalArrangement = Arrangement.spacedBy(PlumDimens.factsRowGap),
@@ -331,9 +334,9 @@ private fun FollowPresses(
 
 private const val NAME_FROM_LINES = 2
 
-/** The Battery row may wrap to three lines on the side panel's width before it is cut. */
-private const val INFO_BATTERY_LINES = 3
-private const val VALUE_TWO_LINES_MAX_SCALE = 1.3f
+/** The Battery row may wrap to four lines on the side panel's width before it is cut. */
+private const val INFO_BATTERY_LINES = 4
+private const val VALUE_TWO_LINES_MAX_SCALE = 1.4f
 
 /** The emulator Play starts, in the Info panel's words; also the second screen's played line. */
 @Composable

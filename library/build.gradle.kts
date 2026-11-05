@@ -25,9 +25,12 @@ android {
                 // The corpus harness: -Pcorpus.update=true rewrites
                 // src/test/resources/corpus/scores.txt with the current scores.
                 test.systemProperty("corpus.update", providers.gradleProperty("corpus.update").getOrElse("false"))
+                // -Pdevices.update=true rewrites the device listings' scores file (DeviceListingTest).
+                test.systemProperty("devices.update", providers.gradleProperty("devices.update").getOrElse("false"))
                 test.systemProperty("plumemu.root", rootProject.layout.projectDirectory.asFile.absolutePath)
                 // Tests read the shipped rules and name packs from the source tree.
                 test.inputs.file("../platforms/src/main/assets/platforms.json")
+                if (file("../tools/corpus/devices").isDirectory) test.inputs.dir("../tools/corpus/devices")
                 // The public source copy has no name packs (its tests skip), so the folder may be absent.
                 if (file("../identify/src/main/assets/identify").isDirectory) test.inputs.dir("../identify/src/main/assets/identify")
             }

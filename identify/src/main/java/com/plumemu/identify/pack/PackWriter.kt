@@ -65,6 +65,7 @@ class ConsolePackBuilder(private val systemId: String, private val dataVersion: 
         val source: Int,
         val crcs: List<Pair<Long, Long?>>,
         val codes: List<Pair<String, Int>>,
+        val trackKeys: List<Long>,
     )
 
     private val sources = ArrayList<PackSource>()
@@ -92,6 +93,7 @@ class ConsolePackBuilder(private val systemId: String, private val dataVersion: 
     /**
      * Adds a release of [title]. [crcs] are (CRC-32, content size or null when unknown);
      * [codes] are (product code, code kind byte from PACKS.md, 0 when unspecified).
+     * [trackKeys] are the [TrackSizeKeys] of the disc, stored in the `TRKS` section.
      */
     fun release(
         title: Int,
@@ -101,6 +103,7 @@ class ConsolePackBuilder(private val systemId: String, private val dataVersion: 
         source: Int? = null,
         crcs: List<Pair<Long, Long?>> = emptyList(),
         codes: List<Pair<String, Int>> = emptyList(),
+        trackKeys: List<Long> = emptyList(),
     ) {
         require(title in titles.indices) { "unknown title handle" }
         require(source == null || source in sources.indices) { "unknown source index" }
@@ -110,7 +113,7 @@ class ConsolePackBuilder(private val systemId: String, private val dataVersion: 
         if (unknownLanguages.isNotEmpty()) warnings += "${titles[title].name}: languages dropped: $unknownLanguages"
         crcs.forEach { (crc, _) -> require(crc in 0..PackWriter.UINT_MAX) { "CRC must be an unsigned 32-bit value" } }
         codes.forEach { (_, kind) -> require(kind in 0..0xFF) { "code kind must fit a byte" } }
-        releases += ReleaseIn(title, regionMask, languageMask, variant, source ?: PackFormat.NO_SOURCE, crcs, codes)
+        releases += ReleaseIn(title, regionMask, languageMask, variant, source ?: PackFormat.NO_SOURCE, crcs, codes, trackKeys)
     }
 
     /** The pack bytes, trailer included. */
@@ -141,6 +144,7 @@ class ConsolePackBuilder(private val systemId: String, private val dataVersion: 
         val releaseBytes = LittleEndianBuffer()
         val crcRows = ArrayList<LongArray>()
         val codeRows = ArrayList<Triple<ByteArray, Int, Int>>()
+        val trackRows = ArrayList<Pair<Long, Int>>()
         releaseOrder.forEachIndexed { position, old ->
             val r = releases[old]
             releaseBytes.u32(newIndex[r.title].toLong())
@@ -154,23 +158,22 @@ class ConsolePackBuilder(private val systemId: String, private val dataVersion: 
                 crcRows += longArrayOf(crc, stored, position.toLong())
             }
             r.codes.forEach { (code, kind) -> codeRows += Triple(code.toByteArray(Charsets.UTF_8), kind, position) }
+            r.trackKeys.forEach { key -> trackRows += key to position }
         }
         val crcBytes = crcSection(crcRows)
         val codeBytes = codeSection(codeRows, pool)
         val sourceBytes = sourcesSection(sources, pool)
-        return PackWriter.assemble(
-            PackKind.CONSOLE,
-            systemId,
-            dataVersion,
-            listOf(
-                PackFormat.TAG_STRINGS to pool.bytes(),
-                PackFormat.TAG_SOURCES to sourceBytes,
-                PackFormat.TAG_TITLES to titleBytes.toByteArray(),
-                PackFormat.TAG_RELEASES to releaseBytes.toByteArray(),
-                PackFormat.TAG_CRCS to crcBytes.toByteArray(),
-                PackFormat.TAG_CODES to codeBytes.toByteArray(),
-            ),
+        val sections = arrayListOf(
+            PackFormat.TAG_STRINGS to pool.bytes(),
+            PackFormat.TAG_SOURCES to sourceBytes,
+            PackFormat.TAG_TITLES to titleBytes.toByteArray(),
+            PackFormat.TAG_RELEASES to releaseBytes.toByteArray(),
+            PackFormat.TAG_CRCS to crcBytes.toByteArray(),
+            PackFormat.TAG_CODES to codeBytes.toByteArray(),
         )
+        // Written only when some release has a key: a pack without discs stays byte for byte as before.
+        if (trackRows.isNotEmpty()) sections += PackFormat.TAG_TRACKS to trackSection(trackRows).toByteArray()
+        return PackWriter.assemble(PackKind.CONSOLE, systemId, dataVersion, sections)
     }
 }
 
@@ -252,6 +255,21 @@ private fun crcSection(rows: MutableList<LongArray>): LittleEndianBuffer {
     rows.sortWith(compareBy({ it[0] }, { it[1] }, { it[2] }))
     val out = LittleEndianBuffer()
     rows.forEach { out.u32(it[0]); out.u32(it[1]); out.u32(it[2]) }
+    return out
+}
+
+/** Rows (key, release) sorted by the unsigned key, then release; a repeated row is written once. */
+private fun trackSection(rows: MutableList<Pair<Long, Int>>): LittleEndianBuffer {
+    rows.sortWith { a, b -> java.lang.Long.compareUnsigned(a.first, b.first).takeIf { it != 0 } ?: (a.second - b.second) }
+    val out = LittleEndianBuffer()
+    var last: Pair<Long, Int>? = null
+    for (row in rows) {
+        if (row == last) continue
+        last = row
+        out.u32(row.first and PackWriter.UINT_MAX)
+        out.u32(row.first ushr 32)
+        out.u32(row.second.toLong())
+    }
     return out
 }
 

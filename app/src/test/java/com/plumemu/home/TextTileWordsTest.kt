@@ -120,7 +120,9 @@ abstract class TextTileWordsBase {
         if (node.left < tile.left + pad - 0.5.dp || node.right > tile.right - pad + 0.5.dp) problems += "title $node leaves the tile's text area across ($tile)"
         if (node.top < tile.top - 0.5.dp || node.bottom > tile.bottom + 0.5.dp) problems += "title $node leaves the tile ($tile)"
         for (line in 0 until result.lineCount) {
-            if (result.getLineRight(line) > result.size.width + 1f) problems += "line $line is wider than the title's box"
+            // An ellipsized line reports its width before the cut; what is drawn ends at the visible end (the "…" takes the rest of the box).
+            val right = if (result.isLineEllipsized(line)) result.getHorizontalPosition(result.getLineEnd(line, visibleEnd = true), true) else result.getLineRight(line)
+            if (right > result.size.width + 1f) problems += "line $line is wider than the title's box"
         }
         return if (problems.isEmpty()) null else "$label: ${problems.joinToString("; ")}"
     }

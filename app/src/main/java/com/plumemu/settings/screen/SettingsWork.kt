@@ -10,6 +10,7 @@ import com.plumemu.account.SignInKind
 import com.plumemu.report.ProblemReportForm
 import com.plumemu.report.ReportStep
 import com.plumemu.coredata.backup.BackupKind
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.library.scrape.AskAgain
 import com.plumemu.account.SignInResult
 import com.plumemu.game.PanelCommand
@@ -214,16 +215,25 @@ internal class SettingsWork(
         }
     }
 
-    /** Sign in from the panel's form; the form shows the answer, [onSignedIn] runs when ScreenScraper accepted. */
+    /**
+     * Sign in from the panel's form; the form shows the answer, [onSignedIn] runs when ScreenScraper accepted.
+     * [isOpen] false (the form was left meanwhile): the account is stored all the same, but it does not become the
+     * box art choice, which the person may have made since.
+     */
     fun signIn(
         form: SignInForm,
         username: String,
         password: String,
+        isOpen: () -> Boolean = { true },
         onSignedIn: () -> Unit,
     ) {
         val onDone = { result: SignInResult ->
             form.showResult(result)
-            if (result is SignInResult.SignedIn) onSignedIn()
+            if (result is SignInResult.SignedIn) {
+                // Signing in to ScreenScraper is choosing it, whatever was picked before.
+                if (form.kind == SignInKind.ScreenScraper && isOpen()) setBoxArtSource(BoxArtSourceSetting.ScreenScraper)
+                onSignedIn()
+            }
         }
         if (form.kind == SignInKind.RetroAchievements) actions.raAccounts.signIn(username, password, onDone) else actions.accounts.signIn(username, password, onDone)
     }
@@ -301,6 +311,11 @@ internal class SettingsWork(
         actions.boxArt.setPaused(isPaused) { stored -> if (!stored) notice = SettingsOption.ScraperAccount to SettingsNotice.BoxArtPauseFailed }
     }
 
+    /** Accounts › Box art: store the choice; the graph makes the run follow it. A failure is said under the row. */
+    fun setBoxArtSource(source: BoxArtSourceSetting) {
+        actions.boxArt.setSource(source) { stored -> if (!stored) notice = SettingsOption.BoxArtSource to SettingsNotice.BoxArtSourceFailed }
+    }
+
     /** The focus left Back up…: how the last backup ended is not shown again. */
     fun leaveBackup() = actions.backup.forgetResult()
 
@@ -325,7 +340,30 @@ internal class SettingsWork(
         actions.exportLogs { shared -> if (!shared) notice = SettingsOption.ExportLogs to SettingsNotice.ExportLogsFailed }
     }
 
+    /**
+     * Statistics › Exact play time, A or a tap. Switching on first sends the person to Android's Usage access screen
+     * when it is not granted; if the device has none the switch stays off and a line says so. On, with or without access,
+     * switches off: with no access (refused, taken away, or a restored backup) the person must be able to leave that state
+     * even when the device has no such screen; turning on again opens Android's screen again.
+     */
+    fun toggleExactPlayTime(
+        isOn: Boolean,
+        hasAccess: Boolean,
+    ) {
+        fun store(on: Boolean) = actions.update { it.copy(advanced = it.advanced.copy(exactPlayTime = on)) }
+        notice = null
+        when {
+            isOn -> store(false)
+            hasAccess -> store(true)
+            actions.openUsageAccess() -> store(true)
+            else -> notice = SettingsOption.ExactPlayTime to SettingsNotice.UsageAccessUnavailable
+        }
+    }
+
     fun openHomeSettings() {
-        if (!actions.openHomeSettings()) notice = SettingsOption.UseAsHome to SettingsNotice.HomeRoleUnavailable
+        notice = null
+        // Android's question closed with Plumemu still not the home app and no list to open: say so, never nothing.
+        val opened = actions.openHomeSettings { notice = SettingsOption.UseAsHome to SettingsNotice.HomeRoleNotYet }
+        if (!opened) notice = SettingsOption.UseAsHome to SettingsNotice.HomeRoleUnavailable
     }
 }

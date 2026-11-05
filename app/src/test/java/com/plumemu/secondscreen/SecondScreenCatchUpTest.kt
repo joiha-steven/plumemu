@@ -2,27 +2,25 @@ package com.plumemu.secondscreen
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.unit.Dp
-import com.plumemu.battery.BatteryPace
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.AppsGridDimens
+import com.plumemu.coreui.theme.SecondScreenGameCardDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.SecondScreenDimens
 import com.plumemu.coreui.theme.TextSize
-import com.plumemu.graph.AchievementCount
 import com.plumemu.home.FakeAppIcons
 import com.plumemu.home.FakeCoverImages
 import com.plumemu.home.HomeTags
 import com.plumemu.home.LocalHomeAppIcons
 import com.plumemu.home.appComposeRule
-import com.plumemu.home.assertNoTextCut
 import com.plumemu.home.rulesAround
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -36,8 +34,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The second screen's catch-up with the top screen, measured: the App card's icon, the Apps card's icon grid
- * and the details card's RetroAchievements line, at every text size on both second-screen sizes.
+ * The App card's icon and the Apps card's icon grid, measured at every text size on both second-screen sizes.
  */
 abstract class SecondScreenCatchUpBase(
     private val size: SecondSize,
@@ -76,6 +73,23 @@ abstract class SecondScreenCatchUpBase(
 
     private fun bounds(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
 
+    /** The App card keeps the game card's margins. */
+    private fun assertInsideGameMargins(
+        label: String,
+        tags: List<String>,
+    ) {
+        val card = bounds(SecondScreenTags.CARD)
+        for (tag in tags) {
+            for (node in all(tag)) {
+                val b = node.boundsInRoot
+                assertTrue("$label: $tag left ${b.left}", b.left >= card.left + px(SecondScreenGameCardDimens.marginSide) - 0.5f)
+                assertTrue("$label: $tag top ${b.top}", b.top >= card.top + px(SecondScreenGameCardDimens.marginTop) - 0.5f)
+                assertTrue("$label: $tag right ${b.right}", b.right <= card.right - px(SecondScreenGameCardDimens.marginSide) + 0.5f)
+                assertTrue("$label: $tag bottom ${b.bottom}", b.bottom <= card.bottom - px(SecondScreenGameCardDimens.marginBottom) + 0.5f)
+            }
+        }
+    }
+
     private fun assertInside(
         label: String,
         tags: List<String>,
@@ -93,96 +107,59 @@ abstract class SecondScreenCatchUpBase(
         }
     }
 
-    // ---- the RetroAchievements line
-
-    private val ra = AchievementCount(earned = 12, total = 45)
-    private val pace = BatteryPace(minutesOnCharge = 120.0, percentPerHour = 30.0)
-
-    private val raCases =
-        listOf(
-            "art" to DETAILS_GAME.copy(art = LANDSCAPE_FRONT, achievements = ra),
-            "no art" to DETAILS_GAME.copy(achievements = ra),
-            "poster" to POSTER_GAME.copy(achievements = ra),
-            "long file and pace" to DETAILS_GAME.copy(art = LANDSCAPE_FRONT, fileName = LONG_FILE_NAME, batteryPace = pace, achievements = ra),
-        )
-
-    @Test
-    fun theAchievementsLineUsesTheTopScreensWordsAndRestsOnTheBottomMargin() {
-        for ((name, game) in raCases) {
-            show(game)
-            val line = compose.onNodeWithTag(SecondScreenTags.ACHIEVEMENTS, useUnmergedTree = true).fetchSemanticsNode()
-            assertEquals("$size $name", "Achievements 12 of 45 · 27%", line.config[SemanticsProperties.Text].joinToString(""))
-            val card = bounds(SecondScreenTags.CARD)
-            val b = line.boundsInRoot
-            assertEquals("$size $name: on the bottom margin", card.bottom - px(dimens.margin), b.bottom, 0.5f)
-            assertTrue("$size $name: under the played line", b.top >= bounds(SecondScreenTags.FACTS).bottom)
-        }
-    }
-
-    @Test
-    fun noProgressMeansNoLineAndTheCardIsAsBefore() {
-        for ((name, game) in raCases) {
-            show(game.copy(achievements = null))
-            assertTrue("$size $name: no line", all(SecondScreenTags.ACHIEVEMENTS).isEmpty())
-            if (game.batteryPace == null) {
-                assertEquals("$size $name: played line on the margin", bounds(SecondScreenTags.CARD).bottom - px(dimens.margin), bounds(SecondScreenTags.FACTS).bottom, 0.5f)
-            }
-        }
-    }
-
-    @Test
-    fun noLineUntilThePlayFactsAreRead() {
-        show(DETAILS_GAME.copy(achievements = ra, isPlayKnown = false))
-        assertTrue(all(SecondScreenTags.ACHIEVEMENTS).isEmpty())
-    }
-
-    @Test
-    fun everyLineFitsAndNothingOverlapsAtEveryTextSize() {
-        for (textSize in TextSize.entries) {
-            for ((name, game) in raCases) {
-                show(game, textSize)
-                val label = "$size $textSize $name"
-                assertInside(label, listOf(SecondScreenTags.TOP, SecondScreenTags.TITLE, SecondScreenTags.FACT_LINE, SecondScreenTags.FACTS, SecondScreenTags.ACHIEVEMENTS))
-                val line = compose.onNodeWithTag(SecondScreenTags.ACHIEVEMENTS, useUnmergedTree = true).fetchSemanticsNode()
-                assertEquals("$label: the line is not cut", 1, assertNoTextCut(line, label))
-                // Text parts stack top to bottom without touching (the cover beside the head is not one of them).
-                val stack = listOf(SecondScreenTags.TOP, SecondScreenTags.TITLE, SecondScreenTags.FACT_LINE, SecondScreenTags.DESCRIPTION, SecondScreenTags.FILE_NAME, SecondScreenTags.FACTS, SecondScreenTags.ACHIEVEMENTS)
-                    .flatMap { tag -> all(tag).map { tag to it.boundsInRoot } }
-                    .sortedBy { it.second.top }
-                stack.zipWithNext().forEach { (a, b) -> assertTrue("$label: ${a.first} over ${b.first}", a.second.bottom <= b.second.top + 0.5f) }
-                assertTrue("$label: the title and the played line are never given up", all(SecondScreenTags.TITLE).isNotEmpty() && all(SecondScreenTags.FACTS).isNotEmpty())
-            }
-        }
-    }
-
     // ---- the App card
 
     @Test
-    fun theAppCardShowsItsIconInTheArtSlotBesideTheName() {
+    fun theAppCardShowsTheNameWithAnAppTagTheIconLargeAndCentredAndThePackage() {
         for (textSize in TextSize.entries) {
             show(SecondScreenContent.App("RetroArch", "com.retroarch/.Main"), textSize)
             val label = "$size $textSize"
             assertEquals("$label: one icon", 1, all(HomeTags.APP_GAME_ICON).size)
-            val slot = bounds(SecondScreenTags.COVER)
-            assertEquals("$label: the slot is the art slot", px(dimens.artSlot), slot.width, 0.5f)
-            assertTrue("$label: the icon is the app game's size", bounds(HomeTags.APP_GAME_ICON).width <= px(PlumDimens.appGameDetailsIcon) + 0.5f)
-            assertInside(label, listOf(SecondScreenTags.TOP, SecondScreenTags.TITLE, SecondScreenTags.COVER))
-            assertTrue("$label: the title is beside the icon", bounds(SecondScreenTags.TITLE).left >= slot.right)
+            val card = bounds(SecondScreenTags.CARD)
+            val icon = bounds(HomeTags.APP_GAME_ICON)
+            assertTrue("$label: the icon is larger than the details icon, ${icon.width}", icon.width > px(AppsGridDimens.appGameDetailsIcon) + 0.5f)
+            assertEquals("$label: the icon is centred across the card", (card.left + card.right) / 2, (icon.left + icon.right) / 2, 1f)
+            val title = bounds(GameCardTags.TITLE)
+            val tag = bounds(GameCardTags.SYSTEM)
+            val file = bounds(GameCardTags.FILE)
+            assertTrue("$label: the tag is at the title's right", tag.left >= title.right - 0.5f)
+            assertTrue("$label: the icon is under the title", icon.top >= title.bottom - 0.5f)
+            assertTrue("$label: the package is under the icon", file.top >= icon.bottom - 0.5f)
+            assertEquals("$label: the tag", "APP", compose.onNodeWithTag(GameCardTags.SYSTEM, useUnmergedTree = true).fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString(""))
+            assertInsideGameMargins(label, listOf(GameCardTags.TITLE, GameCardTags.SYSTEM, SecondScreenTags.COVER, GameCardTags.FILE))
         }
     }
 
     @Test
-    fun anAppWithoutAnIconShowsTheLetterStandIn() {
-        show(SecondScreenContent.App("No Icon App", NO_ICON_KEY))
-        assertEquals(0, all(HomeTags.APP_GAME_ICON).size)
-        assertEquals(1, all(HomeTags.APP_ICON_STAND_IN).size)
+    fun aLongNameAndPackageKeepInsideTheCard() {
+        for (textSize in TextSize.entries) {
+            show(APP_LONG_NAME, textSize)
+            val label = "$size $textSize long"
+            assertInsideGameMargins(label, listOf(GameCardTags.TITLE, GameCardTags.SYSTEM, SecondScreenTags.COVER, GameCardTags.FILE))
+            assertTrue("$label: the title stays on one line", bounds(GameCardTags.TITLE).height < px(dimens.margin) * 2.5f)
+        }
     }
 
     @Test
-    fun anAppWithNoIconKeyKeepsThePickingBlock() {
+    fun anAppWithoutAnIconShowsTheInitialOnADisc() {
+        for (textSize in TextSize.entries) {
+            show(SecondScreenContent.App("No Icon App", NO_ICON_KEY), textSize)
+            val label = "$size $textSize"
+            assertEquals(0, all(HomeTags.APP_GAME_ICON).size)
+            val disc = bounds(HomeTags.APP_ICON_STAND_IN)
+            val card = bounds(SecondScreenTags.CARD)
+            assertTrue("$label: the disc is large, ${disc.width}", disc.width > px(AppsGridDimens.appGameDetailsIcon) + 0.5f)
+            assertEquals("$label: the disc is round", disc.width, disc.height, 0.5f)
+            assertEquals("$label: the disc is centred across the card", (card.left + card.right) / 2, (disc.left + disc.right) / 2, 1f)
+            assertInsideGameMargins(label, listOf(HomeTags.APP_ICON_STAND_IN))
+        }
+    }
+
+    @Test
+    fun anAppWithNoIconKeyHasTheDiscAndNoPackageLine() {
         show(SecondScreenContent.App("RetroArch"))
-        assertEquals(1, all(SecondScreenTags.BLOCK).size)
-        assertEquals(0, all(SecondScreenTags.COVER).size)
+        assertEquals(1, all(HomeTags.APP_ICON_STAND_IN).size)
+        assertEquals(0, all(GameCardTags.FILE).size)
     }
 
     // ---- the Apps card
@@ -199,7 +176,7 @@ abstract class SecondScreenCatchUpBase(
             val shown = all(SecondScreenTags.APPS_ICON)
             assertInside(label, listOf(SecondScreenTags.TOP, SecondScreenTags.TITLE, SecondScreenTags.APPS_ICON))
             assertTrue("$label: the grid is under the title", grid.top >= title.bottom)
-            val icon = px(PlumDimens.appsGridIcon)
+            val icon = px(AppsGridDimens.appsGridIcon)
             val gap = px(PlumDimens.gridGapPortrait)
             val columns = ((grid.width + gap) / (icon + gap)).toInt()
             val rows = ((grid.height + gap) / (icon + gap)).toInt()

@@ -7,8 +7,8 @@ import com.plumemu.identify.source.RandomAccessSource
 import com.plumemu.identify.source.readFully
 import java.io.IOException
 
-/** Where one CHD hunk is and how it is stored. */
-internal data class ChdHunk(val type: Int, val length: Long, val offset: Long) {
+/** Where one CHD hunk is and how it is stored; [crc] is the CRC-16 of its decompressed bytes, -1 when the map has none. */
+internal data class ChdHunk(val type: Int, val length: Long, val offset: Long, val crc: Int = -1) {
     companion object {
         /** Codec 0-3 of the header: [type] indexes the header's codec list. */
         const val CODEC_3 = 3
@@ -58,7 +58,7 @@ internal class UncompressedChdMap(
  * Finding hunk n needs the types of all hunks (the second part starts after them) but only the
  * lengths of hunks 0..n, so the stream is fetched in 4 KB pieces and decoded only that far. The
  * map CRC covers every hunk and is not checked: a damaged map shows up as a hunk that fails to
- * decompress, which becomes a note.
+ * decompress or to match its own CRC-16 ([ChdHunk.crc], checked by [ChdSource]), which becomes a note.
  */
 internal class CompressedChdMap private constructor(
     private val bits: BitReader,
@@ -88,8 +88,8 @@ internal class CompressedChdMap private constructor(
         return when (type) {
             in 0..ChdHunk.CODEC_3 -> {
                 val length = bits.read(lengthBits)
-                bits.read(CRC_BITS)
-                ChdHunk(type, length, position).also { position += length }
+                val crc = bits.read(CRC_BITS).toInt()
+                ChdHunk(type, length, position, crc).also { position += length }
             }
             ChdHunk.NONE -> {
                 bits.read(CRC_BITS)

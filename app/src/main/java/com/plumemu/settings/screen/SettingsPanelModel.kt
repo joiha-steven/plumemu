@@ -24,6 +24,10 @@ internal abstract class SettingsPanelModel(
     protected val actions: SettingsActions,
     initialFocus: SettingsFocus,
 ) : SettingsFolderModel(initialFocus, SettingsWork(actions)) {
+    init {
+        report.draft = actions.reportDraft
+    }
+
     protected val custom = SettingsCustomColor(actions)
 
     /** The "+" page's check: the colour it opened with, then the one chosen. */
@@ -190,10 +194,13 @@ internal abstract class SettingsPanelModel(
             PanelPage.Folder -> onFolderPageEnter(index)
             PanelPage.SkipSubfolder -> onSkipPickEnter(index)
             PanelPage.HiddenGames -> SettingsListPages.unhideAt(index, content, work, focus)?.let(::moveTo) ?: closePanel()
+            PanelPage.FilesNotAdded -> SettingsListPages.toUnknownFolderRow(index, content, focus)?.let(::moveTo) ?: feel.report(Outcome.Nothing)
             PanelPage.UnidentifiedGames -> openNameFix(index)
             PanelPage.FixName, PanelPage.ScraperSignIn, PanelPage.ProblemReport -> Unit
+            PanelPage.BoxArtSource -> onBoxArtSourceEnter(boxArtSourceChoices(content.account).getOrNull(index))
             PanelPage.ScraperAccount -> onAccountEnter(accountPageItems(content).getOrNull(index))
-            PanelPage.RaAccount -> enterRaItem(raPageItems(content).getOrNull(index), content, work, { feel.report(Outcome.Activated) }, ::openRaSignIn) { if (focus.page == PanelPage.RaAccount) closePanel() }
+            PanelPage.RaAccount -> enterRaItem(raPageItems(content).getOrNull(index), content, ::askRaSignOut, ::openRaSignIn) { if (focus.page == PanelPage.RaAccount) closePanel() }
+            PanelPage.RaSignOutConfirm -> onRaSignOutConfirmEnter(SignOutConfirmItem.entries.getOrNull(index))
             PanelPage.ScraperSystems -> onSystemsEnter(index)
             PanelPage.ScraperConfirm -> onBoxArtConfirmEnter(BoxArtConfirmItem.entries.getOrNull(index))
             PanelPage.ScraperSignOutConfirm -> onSignOutConfirmEnter(SignOutConfirmItem.entries.getOrNull(index))
@@ -264,25 +271,12 @@ internal abstract class SettingsPanelModel(
             PanelPage.ScraperSystems -> backToAccountPage(AccountPageItem.ChooseSystems)
             PanelPage.ScraperConfirm -> backFromBoxArtConfirm()
             PanelPage.ScraperSignOutConfirm -> backToAccountPage(AccountPageItem.SignOut)
+            PanelPage.RaSignOutConfirm -> backToRaPage()
             PanelPage.ScraperClearConfirm -> backToAccountPage(AccountPageItem.ClearBoxArt)
             // B at Undo's own confirm goes back to its first step, on the button it asked about.
             PanelPage.UndoRestore -> focus.undoAsk?.let { moveTo(focus.copy(undoAsk = null, panelIndex = it.ordinal)) } ?: closePanel()
             else -> closePanel()
         }
-    }
-
-    /**
-     * A on Library › an unknown folder: item 0 is Ignore this folder, the others the systems. Applies
-     * to the folder the panel opened for (by id), whatever the list does meanwhile; a folder that is
-     * gone closes the panel. A second A while the answer is being saved does nothing.
-     */
-    private fun onUnknownFolderEnter(index: Int) {
-        val key = focus.folderKey ?: return closePanel()
-        if (content.unknownFolders.none { it.key == key }) return closePanel()
-        val systemId = if (index == 0) null else (content.folderSystemChoices.getOrNull(index - 1) ?: return).id
-        if (!work.chooseFolderSystem(key, systemId, content)) return feel.report(Outcome.Nothing)
-        feel.report(Outcome.Activated)
-        closePanel()
     }
 
     // Accounts › ScreenScraper's box art.
@@ -419,67 +413,6 @@ internal abstract class SettingsPanelModel(
             null -> return
         }
         feel.report(Outcome.Activated)
-    }
-
-    /** A system's checkmark flips; the two actions work on the systems checked. */
-    private fun onSystemsEnter(index: Int) {
-        val chosen = chosenSystemsIn(content, focus)
-        when (systemsPickActionAt(content, index)) {
-            null -> {
-                val system = content.systems.getOrNull(index) ?: return
-                val next = if (system.systemId in chosen) chosen - system.systemId else chosen + system.systemId
-                moveTo(focus.copy(chosenSystems = next))
-            }
-            SystemsPickAction.DownloadMissing -> {
-                if (chosen.isEmpty()) return
-                work.askAgain(AskAgain.Missing, chosen)
-                cause = Cause.Enter
-                backToAccountPage(AccountPageItem.ChooseSystems)
-            }
-            SystemsPickAction.Redownload -> if (chosen.isNotEmpty()) openBoxArtConfirm(chosen)
-        }
-    }
-
-    private fun openBoxArtConfirm(systems: Set<String>?) =
-        moveTo(focus.copy(page = PanelPage.ScraperConfirm, panelIndex = BoxArtConfirmItem.Cancel.ordinal, redownloadSystems = systems))
-
-    private fun onBoxArtConfirmEnter(item: BoxArtConfirmItem?) {
-        if (item == BoxArtConfirmItem.Redownload) {
-            work.askAgain(AskAgain.All, focus.redownloadSystems)
-            cause = Cause.Enter
-            backToAccountPage(if (focus.redownloadSystems == null) AccountPageItem.RedownloadAll else AccountPageItem.ChooseSystems)
-        } else {
-            backFromBoxArtConfirm()
-        }
-    }
-
-    private fun onClearConfirmEnter(item: ClearConfirmItem?) {
-        if (item == ClearConfirmItem.Clear) {
-            work.clearBoxArt()
-            cause = Cause.Enter
-        }
-        backToAccountPage(AccountPageItem.ClearBoxArt)
-    }
-
-    private fun onSignOutConfirmEnter(item: SignOutConfirmItem?) {
-        if (item == SignOutConfirmItem.SignOut) {
-            work.signOut()
-            closePanel()
-        } else {
-            backToAccountPage(AccountPageItem.SignOut)
-        }
-    }
-
-    /** Back or Cancel: to the button that opened it (Re-download all, or the picker's Re-download). */
-    private fun backFromBoxArtConfirm() {
-        val systems = focus.redownloadSystems ?: return backToAccountPage(AccountPageItem.RedownloadAll)
-        val at = content.systems.size + SystemsPickAction.Redownload.ordinal
-        moveTo(focus.copy(page = PanelPage.ScraperSystems, panelIndex = at, chosenSystems = systems, redownloadSystems = null))
-    }
-
-    private fun backToAccountPage(on: AccountPageItem) {
-        val index = accountPageItems(content).indexOf(on).coerceAtLeast(0)
-        moveTo(focus.copy(page = PanelPage.ScraperAccount, panelIndex = index, chosenSystems = emptySet(), redownloadSystems = null))
     }
 
     protected fun systemAtFocus(): SystemEmulators? = SettingsListPages.systemAt(focus, content)

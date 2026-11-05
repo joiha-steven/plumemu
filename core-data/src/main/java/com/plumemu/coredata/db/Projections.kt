@@ -73,6 +73,31 @@ data class GameListRow(
     @ColumnInfo(name = "sort_name") val sortName: String,
     /** The file's name: the variant tags (Rev 1, T+Eng) that tell two rows of one title apart are read from it for display; never shown whole. */
     @ColumnInfo(name = "file_name") val fileName: String = "",
+    /** The saved box front's shape ([GameEntity.artAspect]); null while it is not known. */
+    @ColumnInfo(name = "art_aspect") val artAspect: Float? = null,
+)
+
+/** One played game row of a system with its last play, whatever its visibility or copy: the raw input of the second screen's "Last played". */
+data class CopyPlay(
+    @ColumnInfo(name = "game_id") val gameId: Long,
+    @ColumnInfo(name = "last_played_at") val lastPlayedAt: Long,
+)
+
+/**
+ * A [GameListRow]'s columns plus when the game was last played (wall-clock milliseconds), for the
+ * second screen's "Last played" and Recent covers. A separate class so [GameListRow], used by every
+ * list, stays as small as it is.
+ */
+data class PlayedGameRow(
+    val id: Long,
+    val title: String,
+    val regions: String,
+    @ColumnInfo(name = "is_favorite") val isFavorite: Boolean,
+    @ColumnInfo(name = "system_id") val systemId: String,
+    @ColumnInfo(name = "scrape_key") val scrapeKey: String,
+    @ColumnInfo(name = "sort_name") val sortName: String,
+    @ColumnInfo(name = "file_name") val fileName: String = "",
+    @ColumnInfo(name = "last_played_at") val lastPlayedAt: Long,
 )
 
 /** A hidden game as Settings › Library › Hidden games lists it: the title and its system. */
@@ -84,11 +109,23 @@ data class HiddenGameRow(
     @ColumnInfo(name = "system_id") val systemId: String,
 )
 
+/** A game of Unidentified games with its stored fingerprint (`game.fingerprint`), for the statistics. */
+data class UnidentifiedFingerprintRow(
+    @ColumnInfo(name = "system_id") val systemId: String,
+    val fingerprint: String,
+)
+
 /** One picked folder's games and systems (folders with no games have no row). */
 data class FolderGameCount(
     @ColumnInfo(name = "folder_id") val folderId: Long,
     @ColumnInfo(name = "game_count") val gameCount: Int,
     @ColumnInfo(name = "system_count") val systemCount: Int,
+)
+
+/** One system's count of games a list shows that a scan stamped ([ScanDao.listedAmong]). */
+data class AddedInSystem(
+    @ColumnInfo(name = "system_id") val systemId: String,
+    @ColumnInfo(name = "n") val count: Int,
 )
 
 /** A system with the number of games it shows, for the strip of systems. */

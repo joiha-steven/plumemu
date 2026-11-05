@@ -188,6 +188,29 @@ abstract class SettingsStatisticsFitBase(
     @Test
     fun unreadable() = check("statistics_unreadable") { SettingsAt(StatisticsShots.focusAt(0), content = SettingsContent(statistics = StatisticsState.Failed)) }
 
+    /**
+     * The failed page's switch, explanation and footer are all whole, and clear of the hint bar, at every size but Largest in Serif
+     * and Mono, or on a window under 432 dp high, where the page scrolls instead (reached by Down: `SettingsStatisticsFailedInputTest`).
+     */
+    @Test
+    fun unreadableShowsTheSwitchTheExplanationAndTheFooterWhole() =
+        check(
+            "statistics_unreadable_whole",
+            extra = { root, label, size, font ->
+                val hint = findTagged(root, SettingsTags.HINT_BACK)
+                if (size == TextSize.Largest && (font != PlumFont.Sans || heightDp < 432)) return@check emptyList()
+                listOf(StatisticsTags.EXACT_PLAY_TIME, StatisticsTags.EXACT_PLAY_TIME_BODY, StatisticsTags.FOOTER).mapNotNull { tag ->
+                    val node = findTagged(root, tag)
+                    when {
+                        node == null || hint == null -> "$label: $tag or the hint bar is not drawn"
+                        notFullyShown(node, root) != null -> "$label: $tag ${notFullyShown(node, root)}"
+                        node.boundsInRoot.bottom > hint.boundsInRoot.top + 0.5f -> "$label: $tag ends at ${node.boundsInRoot.bottom}, the hint bar starts at ${hint.boundsInRoot.top}"
+                        else -> null
+                    }
+                }
+            },
+        ) { SettingsAt(StatisticsShots.focusAt(0), content = SettingsContent(statistics = StatisticsState.Failed)) }
+
     /** The sections column focused: only the tiles, two to a row, and their figures whole. */
     @Test
     fun thePreview() =

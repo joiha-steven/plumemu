@@ -22,6 +22,23 @@ import kotlin.math.roundToInt
  * screen, memory range and languages.
  */
 internal object CommonFields {
+    /** [read], or the version fields only when the device details cannot be read. */
+    fun readOrMinimal(
+        app: Context,
+        config: TelemetryConfig,
+        log: (String) -> Unit,
+    ): JsonObject =
+        try {
+            read(app, config)
+        } catch (e: RuntimeException) {
+            log("Statistics: device details could not be read (${e.javaClass.simpleName})")
+            buildJsonObject {
+                put("app_version", JsonPrimitive(config.appVersion))
+                put("version_code", JsonPrimitive(config.versionCode))
+                put("build_type", JsonPrimitive(config.buildType.wire))
+            }
+        }
+
     fun read(
         context: Context,
         config: TelemetryConfig,

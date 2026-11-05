@@ -9,17 +9,24 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.plumemu.coreui.components.EdgeFades
+import com.plumemu.coreui.components.listEdgeFadeMaskInRoom
 import kotlin.math.abs
 
 /**
@@ -53,10 +60,22 @@ class ListGlide internal constructor(
     private val nowNanos: () -> Long,
 ) {
     private var extraPx by mutableIntStateOf(0)
+    // State: the layout's clip reads it ([bleedPx]); with motion on `extraPx` stays put when it flips, so only this read relays the list out.
+    private var glowRoom by mutableStateOf(false)
+
+    /** True when the list keeps room past its ends for a focused end row's glow ([SlabDimens.listEndRoom]); else only for the slab's overhang. */
+    internal val keepsGlowRoom: Boolean get() = glowRoom
     private var lastJumpAt = Long.MIN_VALUE
 
-    /** Room past each edge of the list: one row's stride with motion on, 0 with it off. */
+    /**
+     * Room past each edge of the list: two strides with motion on; with it off only the room a focused first or last row's slab
+     * overhangs by ([SlabDimens.maxOverhang]), which the list's own clip would cut, or 0 for a list without slabs.
+     */
     var extra: Dp by mutableStateOf(0.dp)
+        private set
+
+    /** Whether motion is on: the rows are drawn off their place and glide. [extra] alone does not tell, it holds the slab's room with motion off. */
+    var motionOn: Boolean by mutableStateOf(false)
         private set
 
     /** How far the rows are drawn from their laid-out place, in px (positive: lower). */
@@ -72,21 +91,51 @@ class ListGlide internal constructor(
         get() = settle.isSettling
 
     /** Clip, extra rows and the glide's translation; goes after the list's own size and tags. */
-    val modifier: Modifier =
+    val modifier: Modifier = chain(Modifier)
+
+    /**
+     * [modifier] with the list's edge fade ([listEdgeFadeMaskInRoom]) inside its taller layout, so the fade's offscreen layer holds the room past the
+     * list's ends and does not cut a slab there. Use it instead of `listEdgeFadeMask(...).then(glide.modifier)`. With [hidesCutRows] a list that shows whole rows keeps hiding a cut row when [isOn] is false (no ramp then).
+     */
+    fun withFadeMask(
+        fades: EdgeFades,
+        isOn: Boolean,
+        hidesCutRows: Boolean = false,
+    ): Modifier = if (isOn || hidesCutRows) chain(Modifier.listEdgeFadeMaskInRoom(fades, rampsOn = isOn) { extraPx.toFloat() }) else modifier
+
+    private fun chain(inside: Modifier): Modifier =
         Modifier
-            .clipToBounds()
-            .layout { measurable, constraints ->
-                val extra = extraPx
-                if (extra == 0 || !constraints.hasBoundedHeight) {
-                    val placeable = measurable.measure(constraints)
-                    layout(placeable.width, placeable.height) { placeable.place(0, 0) }
-                } else {
-                    val taller =
-                        constraints.copy(minHeight = constraints.minHeight + 2 * extra, maxHeight = constraints.maxHeight + 2 * extra)
-                    val placeable = measurable.measure(taller)
-                    layout(placeable.width, (placeable.height - 2 * extra).coerceAtLeast(0)) { placeable.place(0, -extra) }
-                }
-            }.graphicsLayer { translationY = settle.value }
+            // Under its siblings: the room above the list reaches over what is above it (a field).
+            .zIndex(-1f)
+            // The outer layout widens the list by the slab's overhang ([SlabDimens.maxOverhang]) each side and
+            // clips to that; the inner one adds the rest of the room. A tap outside the clip never reaches the
+            // layout inside, which would otherwise take the taps of what is above the list (a field over it).
+            .layout { measurable, constraints -> growBy(measurable, constraints, bleedPx()) }
+            .graphicsLayer { clip = true }
+            .layout { measurable, constraints -> growBy(measurable, constraints, extraPx - bleedPx()) }
+            .then(inside)
+            .graphicsLayer { translationY = settle.value }
+
+    private fun Density.bleedPx() = minOf(endRoom().roundToPx(), extraPx)
+
+    /** How far past its window the list draws: the slab's overhang, plus the glow's reach for a list that asked for it. */
+    private fun endRoom() = if (glowRoom) SlabDimens.listEndRoom else SlabDimens.maxOverhang
+
+    /** [measurable] [by] px taller at each end than the list's room, reported as the list's own height and placed [by] higher. */
+    private fun MeasureScope.growBy(
+        measurable: Measurable,
+        constraints: Constraints,
+        by: Int,
+    ): MeasureResult {
+        // A list with no room at all (the text left it none) shows nothing: its room would show slivers of rows over what is beside it.
+        if (by <= 0 || !constraints.hasBoundedHeight || constraints.maxHeight <= 0) {
+            val placeable = measurable.measure(constraints)
+            return layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+        }
+        val taller = constraints.copy(minHeight = constraints.minHeight + 2 * by, maxHeight = constraints.maxHeight + 2 * by)
+        val placeable = measurable.measure(taller)
+        return layout(placeable.width, (placeable.height - 2 * by).coerceAtLeast(0)) { placeable.place(0, -by) }
+    }
 
     /**
      * The list's layout moved its rows by [movedPx] this frame (positive: down; 0: the focus moved
@@ -101,7 +150,7 @@ class ListGlide internal constructor(
         roomAbovePx: Float = Float.MAX_VALUE,
         roomBelowPx: Float = Float.MAX_VALUE,
     ) {
-        if (extraPx == 0) return
+        if (!motionOn) return
         val above = roomAbovePx.coerceAtLeast(0f)
         val below = roomBelowPx.coerceAtLeast(0f)
         if (movedPx == 0f) {
@@ -117,16 +166,31 @@ class ListGlide internal constructor(
         settle.start(plan.from.coerceIn(-above, below), plan.durationNanos, plan.easing)
     }
 
+    /**
+     * A move that needed no scroll, counted as a step of a held key: the first scroll after it glides at the repeats' speed (as the focus pill's
+     * lag does) instead of easing out from rest, which would draw the pill back for a few frames.
+     */
+    fun stepped() {
+        if (motionOn) lastJumpAt = nowNanos()
+    }
+
     internal fun update(
         stride: Dp,
         isOn: Boolean,
         density: Density,
+        slabRoom: Boolean = true,
+        glowRoom: Boolean = false,
     ) {
-        val room = if (isOn) stride * ROOM_STRIDES else 0.dp
-        val roomPx = with(density) { room.roundToPx() }
-        if (room != extra) extra = room
-        if (roomPx != extraPx) extraPx = roomPx
-        if (!isOn && settle.isSettling) settle.stop()
+        // Compared without observing: this runs while composing, and a scope that read what it then writes would compose twice.
+        Snapshot.withoutReadObservation {
+            if (isOn != motionOn) motionOn = isOn
+            if (glowRoom != this.glowRoom) this.glowRoom = glowRoom
+            val room = if (isOn) stride * ROOM_STRIDES else if (slabRoom) endRoom() else 0.dp
+            val roomPx = with(density) { room.roundToPx() }
+            if (room != extra) extra = room
+            if (roomPx != extraPx) extraPx = roomPx
+            if (!isOn && settle.isSettling) settle.stop()
+        }
     }
 
     private companion object {
@@ -147,11 +211,20 @@ val LocalGlideClock = compositionLocalOf<() -> Long> { System::nanoTime }
  * kept past each edge, and a glide never draws the rows further than that from their place.
  */
 @Composable
-fun rememberListGlide(stride: Dp): ListGlide {
+fun rememberListGlide(
+    stride: Dp,
+    /** False for a list whose rows wear no slab (the grids): with motion off it then keeps no room past its ends. */
+    slabRoom: Boolean = true,
+    /**
+     * True for a list that may draw a focused end row's glow past its window ([SlabDimens.listEndRoom]):
+     * the games and systems lists, whose strip leaves room. A column that ends right above the hint keys' gap keeps the slab's overhang only.
+     */
+    glowRoom: Boolean = false,
+): ListGlide {
     val scope = rememberCoroutineScope()
     val clock = rememberUpdatedState(LocalGlideClock.current)
     val glide = remember(scope) { ListGlide(Settle(scope)) { clock.value() } }
-    glide.update(stride, PlumTheme.motion.isOn, LocalDensity.current)
+    glide.update(stride, PlumTheme.motion.isOn, LocalDensity.current, slabRoom, glowRoom)
     return glide
 }
 

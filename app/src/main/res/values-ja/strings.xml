@@ -69,6 +69,7 @@
     <string name="home_hint_unfavorite">登録解除</string>
     <!-- X: open search. -->
     <string name="home_hint_search">検索</string>
+    <string name="home_hint_sort">並べ替え</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
          shown when no title matches. -->
@@ -78,6 +79,7 @@
     <string name="home_search_no_match">一致するゲームはありません</string>
     <string name="home_search_empty">ゲーム名を入力して検索</string>
     <string name="home_favorites_empty">ゲームで %1$s を押すとお気に入りに追加</string>
+    <string name="home_recent_empty">プレイしたゲームがここに表示されます</string>
     <!-- Search's hints while Plumemu's keyboard is up (B deletes, X types a space, Y changes the page, L1 R1 move the caret). -->
     <string name="home_hint_delete">削除</string>
     <string name="home_hint_space">スペース</string>
@@ -102,9 +104,13 @@
          a year and a publisher ("1994 · Nintendo"), or a genre and a player count. The games list's
          right-hand text reuses it for a year and a region ("1994 · USA"). -->
     <string name="home_details_pair">%1$s · %2$s</string>
+    <string name="home_details_publisher_year">%1$s、%2$s</string>
     <string name="home_details_last_played">最終プレイ</string>
-    <string name="home_details_play_time">プレイ時間</string>
+    <string name="home_details_play_time">プレイ</string>
+    <string name="home_details_genre">ジャンル</string>
+    <string name="home_details_rating_label">評価</string>
     <string name="home_details_emulator">エミュレーター</string>
+    <string name="home_details_battery">バッテリー</string>
     <string name="home_details_never">未プレイ</string>
     <string name="home_details_today">今日</string>
     <string name="home_details_yesterday">昨日</string>
@@ -120,9 +126,11 @@
 
     <!-- Main screen with no games at all. -->
     <string name="home_empty_title">ゲームフォルダがまだありません</string>
-    <string name="home_empty_body">%1$s フォルダを追加</string>
-    <string name="home_nogames_title">ゲームがまだ見つかりません</string>
-    <string name="home_nogames_body">フォルダにゲームがあるか確認してください。\n%1$s</string>
+    <string name="home_empty_body_folder">ゲームが入っているフォルダを選んでください。中にあるゲームを Plumemu が一覧にします。</string>
+    <string name="home_empty_files_not_added">追加されなかったファイル</string>
+    <string name="home_empty_choose_folder">フォルダを選ぶ</string>
+    <string name="home_nogames_title">まだゲームがありません</string>
+    <string name="home_nogames_body_files">このフォルダには、この端末のエミュレーターで開けるファイルがありません。「追加されなかったファイル」でファイルごとの理由を確認できます。</string>
 
     <!-- The library could not be read (database or platform data failed); shown instead of the main screen. -->
     <string name="home_library_error_title">ライブラリを開けませんでした</string>
@@ -137,9 +145,9 @@
     <!-- Setup, folder step. -->
     <string name="setup_folder_title">ゲームはどこにありますか？</string>
     <string name="setup_folder_desc">ROMが入っているフォルダを選んでください。snesやpsxのようなサブフォルダは、自動で機種ごとに振り分けます。</string>
-    <string name="setup_folder_point_opens">Androidのフォルダ選択画面が「ROMs」フォルダで開きます</string>
-    <!-- “Use this folder” is the button of Android's own folder picker: write it as Android words it in your language. -->
-    <string name="setup_folder_point_use">そこで「このフォルダを使用」をタップします</string>
+    <string name="setup_folder_point_opens">Androidのフォルダ選択画面が開きます。ゲームのフォルダへ移動してください。</string>
+    <!-- No button name: it differs by Android version. -->
+    <string name="setup_folder_point_use">そのあと、その画面でそのフォルダを確定します。</string>
     <string name="setup_folder_point_private">Plumemuがアクセスするのは選んだフォルダだけです</string>
     <string name="setup_choose_folder">フォルダを選択</string>
     <string name="setup_set_up_later">あとで設定</string>
@@ -188,7 +196,10 @@
     <string name="setup_ready_title">ライブラリの準備ができました</string>
     <string name="setup_ready_desc">ゲームは機種ごとに名前順で並んでいます。設定はあとからいつでも変更できます。</string>
     <string name="setup_ready_naming">名前は引き続き判定中 · バックグラウンドで続きます</string>
-    <string name="setup_ready_empty_desc">まだゲームが見つかっていません。フォルダはあとから「設定 › ライブラリ › ROMフォルダ」で追加できます。</string>
+    <string name="setup_ready_empty_desc">フォルダはあとから「設定 › ライブラリ › ROMフォルダ」で追加できます。</string>
+    <string name="setup_ready_empty_title">まだゲームが見つかっていません</string>
+    <string name="setup_ready_no_folder_title">ゲームはあとから追加できます</string>
+    <string name="setup_ready_no_folder_desc">準備ができたら、ホーム画面でゲームのフォルダを選んでください。</string>
     <!-- %1$s and %2$s are numbers formatted for the locale. -->
     <string name="setup_emulators_some">%2$s機種中%1$s機種でエミュレーターが見つかりました</string>
     <plurals name="setup_emulators_all">
@@ -209,8 +220,6 @@
     <string name="setup_stats_title">匿名の利用統計を送信</string>
     <!-- The short form of settings_usage_statistics_body (Settings › About › Send usage statistics): the whole text does not fit the Ready step at 768 x 432 (TextSizeScreens*Test). -->
     <string name="setup_stats_body">匿名の利用状況とクラッシュレポートです。ゲーム、検索語、アカウントは送りません。オフにすると、オフにしたことだけを1回送り、以後は何も送りません。</string>
-    <string name="setup_one_hand_title">右を2回押してプレイ</string>
-    <string name="setup_one_hand_body">上下でゲームを選びます。Aボタンも使えます。「設定 › 操作」で変更できます。</string>
     <string name="setup_stats_on">オン</string>
     <string name="setup_stats_off">オフ</string>
     <string name="setup_start_playing">はじめる</string>
@@ -238,6 +247,8 @@
     <string name="home_role_yes">はい</string>
     <string name="home_role_not_now">あとで</string>
     <string name="home_role_unavailable">この端末にはホームアプリを選ぶ画面がありません。Androidの「設定 › アプリ › デフォルトのアプリ」でPlumemuを選んでください。</string>
+    <string name="home_role_not_yet">Plumemuはまだホームアプリになっていません。Androidの設定で選んでください。</string>
+    <string name="home_role_open_settings">設定を開く</string>
     <string name="home_role_ok">OK</string>
     <string name="home_role_hint_select">決定</string>
     <string name="home_role_hint_not_now">あとで</string>
@@ -282,12 +293,18 @@
     <!-- Game menu row: a verb, take the game out of Favorites. -->
     <string name="game_menu_unfavorite">お気に入りから外す</string>
     <!-- Game menu row: a verb, hide the game from every list (Settings › Library › Hidden games brings it back). -->
-    <string name="game_menu_hide">非表示にする</string>
+    <string name="game_menu_hide">ゲームを非表示</string>
+    <!-- Game menu row: opens Info, where the achievements are. -->
+    <string name="game_menu_achievements">実績</string>
+    <!-- Its value: earned, then total, both numbers ("12 of 40"). -->
+    <string name="game_menu_achievements_count">%1$s / %2$s</string>
     <string name="game_menu_remove_from_recent">最近遊んだから削除</string>
     <!-- Game menu row: opens the game's facts. A short noun. -->
     <string name="game_menu_info">情報</string>
     <!-- Fixing a game's name. -->
     <string name="game_menu_name">名前…</string>
+    <string name="game_menu_sort_by">並べ替え…</string>
+    <string name="game_sort_title">並べ替え</string>
     <string name="game_menu_fix_name">名前を修正…</string>
     <string name="game_menu_own_name">自分で名前を付ける</string>
     <string name="game_menu_not_a_game">ゲームではない</string>
@@ -296,6 +313,11 @@
     <string name="game_fix_name_prompt">名前の一部を入力</string>
     <string name="game_fix_name_no_match">一致するタイトルがリストにありません</string>
     <string name="game_fix_name_loading">名前を読み込んでいます…</string>
+    <!-- Settings › Unidentified games: the closest official titles, shown above the other results; only offered, never applied. -->
+    <string name="game_fix_name_suggestions">近いタイトル</string>
+    <string name="game_fix_name_no_suggestion">近いタイトルがありません</string>
+    <string name="game_fix_name_suggesting">近いタイトルを探しています…</string>
+    <string name="game_fix_name_others">ほかのタイトル</string>
     <!-- A title's regions and year under it in Fix name: "USA, Europe · 1994". -->
     <string name="game_fix_name_release">%1$s · %2$s</string>
     <string name="game_fix_name_no_list">%1$sの名前リストはまだありません。このゲームに自分で名前を付けることはできます。</string>
@@ -307,7 +329,7 @@
     <string name="game_own_name_empty">名前を入力してください。空の名前は保存できません。</string>
     <string name="game_own_name_save">名前を保存</string>
     <!-- Fix box art…: the game menu's entry and its panel's lines. -->
-    <string name="game_menu_fix_box_art">パッケージ画像を修正…</string>
+    <string name="game_menu_fix_box_art">パッケージ画像</string>
     <string name="game_fix_box_art_title">パッケージ画像を修正</string>
     <string name="game_fix_box_art_prompt">ゲーム名を入力</string>
     <string name="game_fix_box_art_field_label">名前</string>
@@ -391,7 +413,7 @@
     <string name="game_info_play_time">プレイ時間</string>
     <string name="game_info_none">なし</string>
     <!-- Info: nothing is chosen for the system yet; Play asks which emulator. -->
-    <string name="game_info_emulator_not_chosen">未選択（プレイ時に選択）</string>
+    <string name="game_info_emulator_not_chosen">プレイ時に選択</string>
     <string name="game_info_no_emulator">インストールされていません</string>
     <!-- %1$s is the emulator the person chose, uninstalled since. -->
     <string name="game_info_not_installed">%1$s（未インストール）</string>
@@ -471,6 +493,11 @@
     <string name="game_action_yes">はい</string>
     <string name="game_action_no">いいえ</string>
     <string name="game_core_missing_body">%1$sでゲームが起動しませんでした。RetroArchにコアがインストールされていない可能性があります。別のエミュレーターを選ぶか、RetroArchでコアをインストールしてください。</string>
+    <string name="game_core_next_body">%1$sでゲームが起動しませんでした。RetroArchにコアがインストールされていない可能性があります。別のコアなら動くかもしれません。</string>
+    <string name="game_core_try_row">%1$sを試しますか？</string>
+    <string name="game_core_none_left_body">%1$sでゲームが起動せず、試せるコアが残っていません。コアを入手するには、RetroArchの「オンラインアップデーター」›「コアダウンローダー」を開き、%2$sをダウンロードしてください。</string>
+    <string name="game_core_arcade_note">アーケードのセットは特定のエミュレーターのバージョン向けに作られているため、このセットは別のコアが必要かもしれません。</string>
+    <string name="game_core_arcade_old_name_note">アーケードのセットは特定のエミュレーターのバージョン向けに作られています。このセットの名前はMAME 2003-Plusで使われているため、そのコアが必要かもしれません。</string>
     <!-- A pinned shortcut (Steam, Windows, Shortcuts): listed, not startable by Plumemu yet. %1$s is the app that published it. -->
     <string name="game_error_shortcut_title">ショートカットを起動できませんでした</string>
     <string name="game_error_shortcut_body_app">元のアプリ「%1$s」から開いてください。</string>
@@ -518,6 +545,7 @@
     <string name="settings_hint_section">カテゴリ切替</string>
     <!-- Hint bar label beside A in a list of choices: a verb, pick the focused one. -->
     <string name="settings_hint_choose">選択</string>
+    <string name="settings_hint_try_again">再試行</string>
     <!-- Narrow screens: opens the focused option's explanation as a further stop (the right button). -->
     <string name="settings_hint_more">詳細</string>
     <!-- Option values: words only; the chevrons and check beside them are drawn (SettingsValueIcons.kt). -->
@@ -591,8 +619,11 @@
     <string name="settings_sort_games">ゲームの並び順</string>
     <string name="settings_sort_by_name">名前</string>
     <string name="settings_sort_by_last_played">最終プレイ</string>
+    <string name="settings_sort_by_most_played">プレイ時間が長い順</string>
+    <string name="settings_sort_by_recently_added">追加が新しい順</string>
     <string name="settings_sort_by_year">発売年</string>
-    <string name="settings_sort_games_body">各機種のリストとお気に入りの並べ方です。「最近遊んだ」は常に、最後に遊んだゲームが先頭になります。</string>
+    <string name="settings_sort_by_rating">評価</string>
+    <string name="settings_sort_games_body">各機種のリストとお気に入りの並べ方です。並べ替えの基準がないゲーム（未プレイ、発売年なし、評価なし）は、名前順で後ろに並びます。発売年と評価は、ScreenScraper のその値を持つゲームがあるときだけ選べます。「最近遊んだ」は常に、最後に遊んだゲームが先頭です。</string>
     <string name="settings_recent_size">最近遊んだの件数</string>
     <string name="settings_recent_size_body">「最近遊んだ」に残すゲームの数です。いっぱいになると、いちばん前に遊んだゲームから消えます。プレイ時間と統計は変わりません。</string>
     <string name="settings_clear_recent">最近遊んだを消去…</string>
@@ -774,21 +805,57 @@
     <string name="settings_show_battery_body_two_screens">画面の右上にバッテリー残量を表示します。サブ画面の時計にも表示されます。</string>
     <!-- Second screen, picking cards. Top line: "Super Nintendo · USA"; the separator is also used in the facts line (quoted: Android trims the spaces of an unquoted string). -->
     <string name="second_screen_android_app">Androidアプリ</string>
-    <!-- The game card's played line ("DuckStation · Played 3 days ago"). %1$s is a number formatted for the locale. -->
-    <string name="second_screen_played_today">今日プレイ</string>
-    <string name="second_screen_played_yesterday">昨日プレイ</string>
-    <plurals name="second_screen_played_days_ago">
-        <item quantity="other">%1$s日前にプレイ</item>
-    </plurals>
-    <!-- The system card: how long ago its last game was played, after the title and a " · " ("Last played Super Metroid · yesterday"). Lower case in English because it follows the title mid-line. -->
+    <string name="second_screen_app_tag">アプリ</string>
     <string name="second_screen_ago_today">今日</string>
     <string name="second_screen_ago_yesterday">昨日</string>
     <plurals name="second_screen_ago_days">
         <item quantity="other">%1$s日前</item>
     </plurals>
     <string name="second_screen_not_played">未プレイ</string>
-    <!-- %1$s is a game's title. -->
-    <string name="second_screen_last_game">最終プレイ：%1$s</string>
+    <string name="second_game_achievements">実績</string>
+    <string name="second_game_of_total">/ %1$s</string>
+    <string name="second_game_points">%1$s / %2$s ポイント</string>
+    <string name="second_game_latest">最新：%1$s</string>
+    <string name="second_game_play_label">プレイ時間 · 過去8週間</string>
+    <plurals name="second_game_sessions">
+        <item quantity="other">%1$s回のプレイ</item>
+    </plurals>
+    <string name="second_game_about_session">1回あたり約%1$s</string>
+    <string name="second_game_this_week">今週</string>
+    <string name="second_screen_last_played">最近プレイ</string>
+    <string name="second_screen_play_time">プレイ時間</string>
+    <string name="second_screen_played">プレイ済み</string>
+    <string name="second_screen_achievements">実績</string>
+    <string name="second_screen_on_system">%1$sで</string>
+    <string name="second_screen_games_played">プレイしたゲーム</string>
+    <string name="second_screen_mastered">マスター</string>
+    <plurals name="second_screen_points">
+        <item quantity="other">%1$sポイント</item>
+    </plurals>
+    <plurals name="second_screen_games_with_progress">
+        <item quantity="other">進行中 %1$s本</item>
+    </plurals>
+    <plurals name="second_screen_new_this_week">
+        <item quantity="other">今週の新規 %1$s本</item>
+    </plurals>
+    <string name="second_screen_opens_in">%1$sで起動</string>
+    <plurals name="second_screen_files_not_added">
+        <item quantity="other">未追加 %1$sファイル</item>
+    </plurals>
+    <string name="second_screen_last_week">先週 %1$s</string>
+    <string name="second_screen_shown_of">%2$s件中%1$s件を表示</string>
+    <plurals name="second_screen_on_systems">
+        <item quantity="other">%1$s機種</item>
+    </plurals>
+    <string name="second_screen_when_now">たった今</string>
+    <plurals name="second_screen_when_minutes">
+        <item quantity="other">%1$s分前</item>
+    </plurals>
+    <string name="second_screen_when_hours_short">%1$s時間前</string>
+    <plurals name="second_screen_when_hours">
+        <item quantity="other">%1$s時間前</item>
+    </plurals>
+    <string name="second_screen_when_last_week">先週</string>
     <!-- The second screen's in-game card: the battery line while charging ("Charging · 82%"). -->
     <string name="second_screen_charging">充電中 · %1$s</string>
     <!-- The in-game card's battery part. The time left is drawn in two sizes: the numbers
@@ -956,7 +1023,7 @@
     <string name="settings_color_adjusted_accent">読みやすさを保つため、アクセントカラーを変更しました</string>
     <string name="settings_color_adjusted_both">読みやすさを保つため、文字の色とアクセントカラーを変更しました</string>
     <string name="settings_accent_body">選択中の機種、フォーカスの点、スイッチ、ボタンに使う色です。「機種別」では、機種ごとに色が変わります。</string>
-    <string name="settings_font_body">3種類のPlumフォントです。どれも小さな画面で同じ大きさに見えるよう調整しています。</string>
+    <string name="settings_font_body">Plumemuのすべての文字に使うフォントです。</string>
     <string name="settings_text_size_body">Plumemuのすべての文字の大きさを変えます。Android本体のフォントサイズも上乗せされます。</string>
     <string name="settings_text_weight_body">Plumemuのすべての文字の太さを変えます。</string>
     <string name="settings_left_edge_body">ゲーム一覧を開いているとき、左端の細い帯に表示するもの。機種ごとのゲーム数、機種ごとの短いコード、または今の一覧の頭文字。</string>
@@ -1130,6 +1197,10 @@
     <string name="settings_statistics_with_box_art">パッケージ画像あり</string>
     <!-- Settings › Statistics' last line: these figures stay on the device, unlike Advanced › Send usage statistics. -->
     <string name="settings_statistics_kept_here">この携帯機にだけ保存されます</string>
+    <string name="settings_exact_play_time">正確なプレイ時間</string>
+    <string name="settings_exact_play_time_body">ゲームが画面に表示されている時間だけを数えます。オフのときはほかのアプリの時間も数えます（最長4時間）。Androidの「使用状況へのアクセス」が必要で、オンにするとその画面が開きます。Plumemuが見るのは自分のゲームだけで、何も送信しません。</string>
+    <string name="settings_exact_play_time_needs_access">使用状況へのアクセスが必要</string>
+    <string name="settings_exact_play_time_unavailable">この端末には使用状況へのアクセス画面がないため、正確なプレイ時間はオンにできません</string>
     <!-- Statistics, under the total play time. %1$s is a number already formatted for the locale. -->
     <plurals name="settings_statistics_across_games">
         <item quantity="other">%1$s本のゲームで</item>
@@ -1144,7 +1215,9 @@
     <!-- "38 of 412": games played, or games with box art, out of the games in the library; numbers formatted for the locale. -->
     <string name="settings_statistics_count_of">%1$s/%2$s</string>
     <string name="settings_statistics_nothing_played">まだプレイ記録がありません</string>
-    <string name="settings_statistics_no_games">ライブラリにまだゲームがありません</string>
+    <string name="settings_statistics_no_plays_title">プレイ時間はまだありません</string>
+    <string name="settings_statistics_no_games_title">ゲームがまだありません</string>
+    <string name="settings_statistics_no_games_body">Plumemuがゲームを見つけると、プレイ時間が記録されます</string>
     <string name="settings_statistics_unreadable">プレイ記録を読み込めませんでした</string>
     <string name="settings_statistics_unreadable_detail">設定を開き直すと、もう一度読み込みます。</string>
     <string name="settings_version">バージョン</string>
@@ -1190,7 +1263,7 @@
     <string name="report_error_refused">サーバーがこの報告を受け付けませんでした。メールアドレスを確認してください。入力した内容は残っているので、もう一度送信できます。</string>
     <string name="report_error_unavailable">このビルドでは報告を送信できません。「ログをエクスポート」を使って、ファイルを直接送ってください。</string>
     <string name="report_error_not_saved">報告をこの端末に保存できませんでした。</string>
-    <string name="settings_privacy_body">ライブラリ、設定、プレイ時間は、この端末のPlumemu専用の保存領域に保存され、送信されることはありません。オンにした場合のみ（設定 › 情報 › 利用統計を送信）、Plumemuは、匿名の利用状況とクラッシュレポートを開発者に送信します。内容は、国、端末のモデル、Androidとアプリのバージョン、使っている画面と設定、機種ごとのプレイ時間です。ゲームのタイトル、検索語、ScreenScraperのアカウントは送りません。クラッシュレポートにはファイルパスが含まれることがあります。オフにすると、オフにしたことだけを匿名で1回送り、以後は何も送りません。問題の報告は「問題を報告」で「送信」を押したときだけ送られ、添付を選んだログ（ファイルパスを含む）が含まれることがあります。送信された情報は、期限を設けずに保管されます。Plumemuは1日1回、Wi-Fi接続時にplumemu-app.stevensdesk.comへ新しいバージョンがあるかを問い合わせます。このサーバーをホストしているCloudflareには、IPアドレスが見えます。この確認は、上の「アップデートを毎日確認」でオフにできます。この毎日の確認では、同じサーバーから最新のプラットフォームデータ（機種とエミュレーターの一覧）もダウンロードします。それ以外は何も送信しません。ScreenScraperのアカウントを使っている場合、Plumemuはパッケージ画像を探すため、各ゲームのファイル名、サイズ、チェックサムを、それで見つからなければタイトルもScreenScraperに送ります。RetroAchievementsのアカウントを使っている場合、Plumemuはゲームの情報を開いたとき、プレイしたあと、Wi-Fi接続時の1日1回、ユーザー名、キー、各ゲームのRetroAchievements番号をretroachievements.orgに送ります。バッジ画像はmedia.retroachievements.orgから取得します。キーはこの端末に暗号化して保存し、バックアップやログには入れません。サインアウトすると送信は止まります。</string>
+    <string name="settings_privacy_body">ライブラリ、設定、プレイ時間は、この端末のPlumemu専用の保存領域に保存され、送信されることはありません。オンにした場合のみ（設定 › 情報 › 利用統計を送信）、Plumemuは、匿名の利用状況とクラッシュレポートを開発者に送信します。内容は、国、端末のモデル、Androidとアプリのバージョン、使っている画面と設定、機種ごとのプレイ時間です。ゲームのタイトル、検索語、ScreenScraperのアカウントは送りません。クラッシュレポートにはファイルパスが含まれることがあります。オフにすると、オフにしたことだけを匿名で1回送り、以後は何も送りません。問題の報告は「問題を報告」で「送信」を押したときだけ送られ、添付を選んだログ（ファイルパスを含む）が含まれることがあります。送信された情報は、期限を設けずに保管されます。Plumemuは1日1回、Wi-Fi接続時にplumemu-app.stevensdesk.comへ新しいバージョンがあるかを問い合わせます。このサーバーをホストしているCloudflareには、IPアドレスが見えます。この確認は、上の「アップデートを毎日確認」でオフにできます。この毎日の確認では、同じサーバーから最新のプラットフォームデータ（機種とエミュレーターの一覧）もダウンロードします。それ以外は何も送信しません。ScreenScraperのアカウントを使っている場合、Plumemuはパッケージ画像を探すため、各ゲームのファイル名、サイズ、チェックサムを、それで見つからなければタイトルもScreenScraperに送ります。RetroAchievementsのアカウントを使っている場合、Plumemuはゲームの情報を開いたとき、プレイしたあと、Wi-Fi接続時の1日1回、ユーザー名、キー、各ゲームのRetroAchievements番号をretroachievements.orgに送ります。バッジ画像はmedia.retroachievements.orgから取得します。キーはこの端末に暗号化して保存し、バックアップやログには入れません。サインアウトすると送信は止まります。「設定」\u203A「統計」で正確なプレイ時間をオンにすると、Plumemuはプレイ時間帯のイベントをAndroidの使用状況へのアクセスから受け取り、Plumemuから起動したゲームやアプリと画面に関するものだけを残します。プレイ時間の長さ以外は保存せず、送信もしません。</string>
     <!-- Updates -->
     <string name="settings_update_available">アップデートあり</string>
     <string name="settings_update_value_downloading">ダウンロード中…</string>
@@ -1253,11 +1326,20 @@
     <string name="setup_box_art_desc">パッケージ画像とゲーム情報は、screenscraper.frで作る無料の個人アカウントを使ってScreenScraperから取得します。あとから「設定 › アカウント › ScreenScraper」でログインすることもできます。</string>
     <string name="setup_box_art_skip">スキップ</string>
     <!-- The question before the sign-in form. -->
-    <string name="setup_box_art_question_title">ScreenScraperからパッケージ画像を取得しますか？</string>
-    <string name="setup_box_art_question_desc">パッケージ画像の取得には、screenscraper.frの無料アカウントを使います。あとから「設定 › アカウント › ScreenScraper」で設定することもできます。</string>
-    <string name="setup_box_art_use">アカウントを使う</string>
-    <string name="setup_box_art_not_now">あとで</string>
+    <string name="setup_confirm_title">決定に使うボタンは？</string>
+    <string name="setup_confirm_desc">Aで決定、Bで戻ります。逆にしたい場合は「Bを使う」を選んでください。</string>
+    <string name="setup_confirm_keep">Aを使う</string>
+    <string name="setup_confirm_use_b">Bを使う</string>
+    <string name="setup_confirm_active_a">決定ボタン: A</string>
+    <string name="setup_confirm_active_b">決定ボタン: B</string>
+    <string name="setup_confirm_again_desc">十字キーでふだん使うボタンを選んでください。今使っているほうを選ぶと次へ進みます。</string>
+    <string name="setup_look_title">見た目を選ぶ</string>
+    <string name="setup_look_desc">色を選んでください。「設定 › 外観」でいつでも変更できます。</string>
+    <string name="setup_box_art_question_title">パッケージ画像</string>
+    <string name="setup_box_art_question_desc">ゲームのパッケージ画像の取得元です。「設定 › アカウント › パッケージ画像」でいつでも変更できます。</string>
     <string name="setup_ready_box_art">パッケージ画像：バックグラウンドでダウンロード中</string>
+    <string name="setup_ready_box_art_offline">パッケージ画像：オンラインになったら開始します</string>
+    <string name="setup_ready_box_art_sign_in">パッケージ画像：「設定 › アカウント」で再度サインインしてください</string>
     <string name="account_username">ユーザー名</string>
     <string name="account_password">パスワード</string>
     <!-- What the keyboard shows as the field's name (EditorInfo.hintText), even in a full-screen editor. -->
@@ -1291,6 +1373,8 @@
     <!-- Sign out's confirm: what happens to box art. -->
     <string name="settings_sign_out_confirm_title">ScreenScraperからログアウトしますか？</string>
     <string name="settings_sign_out_confirm_body">ボックスアートが表示されなくなり、ダウンロードも止まります。保存済みの画像はこの端末に残り、再ログインすると表示されます。</string>
+    <string name="settings_ra_sign_out_confirm_title">RetroAchievementsからログアウトしますか？</string>
+    <string name="settings_ra_sign_out_confirm_body">ユーザー名、キー、ここに表示される進行状況はこの端末から消えます。実績は retroachievements.org に残ります。キーで再ログインすると表示されます。</string>
     <string name="settings_account_not_available">パッケージ画像：このビルドでは利用できません</string>
     <string name="settings_account_not_available_body">このPlumemuはScreenScraperを使わずにビルドされているため、パッケージ画像とゲーム情報は表示されません。それ以外の機能はすべて使えます。</string>
     <string name="settings_account_refused">パスワードが違います：もう一度ログインしてください</string>
@@ -1311,10 +1395,14 @@
     <string name="settings_box_art_retrying_at">接続できないため、%1$sに再試行します</string>
     <string name="settings_box_art_retrying">接続できないため、まもなく再試行します</string>
     <string name="settings_box_art_starting">開始しています…</string>
-    <string name="settings_box_art_done">完了：%2$s本中%1$s本にパッケージ画像があります</string>
+    <string name="settings_box_art_done">パッケージ画像：%2$s本中%1$s本</string>
     <string name="settings_box_art_some">%2$s本中%1$s本にパッケージ画像があります</string>
     <string name="settings_box_art_empty">まだゲームがありません。ゲームが見つかると、パッケージ画像を取得します。</string>
     <string name="settings_box_art_unreadable">パッケージ画像の取得状況を読み込めませんでした。</string>
+    <string name="settings_box_art_none_found">これらのゲームのパッケージ画像は見つかりませんでした</string>
+    <string name="settings_box_art_failed_offline">ネットワークに接続できないため、パッケージ画像をダウンロードできませんでした</string>
+    <string name="settings_box_art_failed_server">パッケージ画像のサーバーから応答がありませんでした</string>
+    <string name="settings_box_art_short_no_answer">応答なし</string>
     <string name="settings_box_art_fact_requests">今日のリクエスト：%1$s/%2$s</string>
     <string name="settings_box_art_fact_requests_used_up">今日のリクエスト：%1$s/%2$s · 1日の上限に達しました</string>
     <string name="settings_box_art_fact_requests_only">今日のリクエスト：%1$s</string>
@@ -1392,6 +1480,20 @@
     <string name="settings_unknown_folder_body_none">このフォルダが属する機種を選んでください。</string>
     <string name="settings_unknown_folder_body_answered">答えを変えるには、別の機種を選んでください。</string>
     <string name="settings_unknown_folder_failed">その答えを保存できませんでした。何も変更されていません。</string>
+    <string name="settings_files_not_added_title">追加されなかったファイル</string>
+    <string name="settings_files_not_added_body">フォルダー内でライブラリに入っていないファイルとその理由です。</string>
+    <string name="settings_files_not_added_none">すべてのファイルがライブラリにあります</string>
+    <string name="settings_files_not_added_no_system">機種のフォルダーの外</string>
+    <string name="settings_files_not_added_unmatched_system">%1$s のエミュレーターでは開けないファイル</string>
+    <string name="settings_files_not_added_unmatched">どのエミュレーターでも開けないファイル</string>
+    <string name="settings_files_not_added_bios">BIOS とファームウェア</string>
+    <string name="settings_files_not_added_saves">セーブデータとステートセーブ</string>
+    <string name="settings_files_not_added_junk">メモ、画像、隠しファイル</string>
+    <string name="settings_files_not_added_folder">%1$s · %2$s</string>
+    <plurals name="settings_files_not_added_more">
+        <item quantity="one">ほか %1$s 個のファイル</item>
+        <item quantity="other">ほか %1$s 個のファイル</item>
+    </plurals>
     <plurals name="home_notice_unknown_folders">
         <item quantity="other">不明なフォルダ%1$s件</item>
     </plurals>
@@ -1462,4 +1564,15 @@
         <item quantity="other">実績 +%1$s</item>
     </plurals>
     <string name="achievement_mastered">マスター済み</string>
+
+    <!-- Settings › Accounts › Box art: where box art comes from. -->
+    <string name="settings_box_art_source">ボックスアート</string>
+    <string name="settings_box_art_source_body">Plumemuがボックスアートを取得する場所です。Aで選びます。</string>
+    <string name="settings_box_art_source_screenscraper">ボックスアートとゲーム情報</string>
+    <string name="settings_box_art_source_screenscraper_line">ボックスアートに加え、発売年、評価、ジャンル、発売元、説明が付きます。無料のScreenScraperアカウントが必要です。</string>
+    <string name="settings_box_art_source_libretro">ボックスアートのみ</string>
+    <string name="settings_box_art_source_libretro_line">libretroのボックス前面をWi-Fiで取得します。詳細なし。アカウント不要。</string>
+    <string name="settings_box_art_source_own">Plumemu標準のカバー</string>
+    <string name="settings_box_art_source_own_line">ネットワークを使いません。Plumemuが各ゲームのポスターカバーを描きます。</string>
+    <string name="settings_box_art_source_failed">Plumemuは保存できませんでした。もう一度お試しください。</string>
 </resources>

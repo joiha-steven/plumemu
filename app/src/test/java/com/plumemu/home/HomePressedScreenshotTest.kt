@@ -33,7 +33,7 @@ abstract class HomePressedShotBase(
     private fun shot(preset: ReferenceShots.Preset) {
         val held = mutableStateOf<Set<String>>(emptySet())
         compose.setContent {
-            PlumTheme(preset.settings.copy(textSize = TextSize.Medium)) {
+            PlumTheme(preset.settings.copy(textSize = TextSize.Small)) {
                 CompositionLocalProvider(LocalHeldKeys provides held) { HomeAt(FakeHomeContent.board(), BoardGamesFocused) }
             }
         }

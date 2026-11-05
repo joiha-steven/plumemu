@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -28,20 +30,29 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.LastBaseline
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
+import com.plumemu.coreui.theme.FocusSlab
 import com.plumemu.coreui.theme.PlumComposeColors
+import com.plumemu.coreui.theme.LeftColumnDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.SlabDimens
+import com.plumemu.coreui.theme.PlumTypography
 
 /*
  * The rows of the main screen's strip, in the one focus language (docs/design/rules.md › Focus
@@ -100,6 +111,16 @@ fun GameRowLook.composedAs(): GameRowLook =
  * A mastered game ([masteredLabel] is its spoken name, null otherwise) has a small trophy after the title
  * (and the star), in `meta`, [PlumDimens.masteredMarkSize] square; like the star, a long title is cut before it.
  *
+ * [region] given (maybe empty; a wide single system's list) puts [trailing], the year, and the region in the board's two right-aligned
+ * columns ([PlumDimens.rowYearColumn], [PlumDimens.rowRegionColumn], growing with the text size so a region keeps its line); null keeps the one trailing text.
+ * Either way a year is set in `rowYear` and a region or system code in `tag` (tracked caps); [trailingIsCode] says the one text is a code.
+ *
+ * [endPadding] is the right inset, read while laying out (the narrow details stop shows only the year of a slid-out row and passes
+ * [PlumDimens.gameRowPeekEndPadding]): a change of stop re-lays out the rows and recomposes none.
+ *
+ * [endHidden] is read while drawing: true leaves the year and region (the right-hand text) undrawn and out of semantics, so a card over
+ * the list's right part never cuts them; it takes no room back (nothing is laid out again) and recomposes nothing.
+ *
  * [look] sets the fill, the dot, the weights and the trailing text. The title's colour is read
  * while drawing from [drawnLook] (by default [look]); a caller that passes one gives
  * [look] as its [composedAs], so a change of colour alone redraws the title and recomposes nothing.
@@ -114,9 +135,12 @@ fun GameRow(
     drawnLook: (() -> GameRowLook)? = null,
     subtitle: String = "",
     masteredLabel: String? = null,
+    region: String? = null,
+    endPadding: () -> Dp = DefaultRowEndPadding,
+    trailingIsCode: Boolean = false,
+    endHidden: () -> Boolean = NeverHidden,
 ) {
     val colors = PlumTheme.colors
-    val type = PlumTheme.type
     val focused = look == GameRowLook.Focused
     val titleColor = remember(colors, look, drawnLook) { ColorProducer { titleColorOf(drawnLook?.invoke() ?: look, colors) } }
     // The row's box is its tap area: the drawn row plus the gap under it, so a game row is never under
@@ -129,7 +153,8 @@ fun GameRow(
                     .height(PlumTheme.layout.gameRowHeight)
                     .testTag(GAME_ROW_DRAWN_TAG)
                     .focusPill(focused)
-                    .padding(horizontal = PlumDimens.gameRowPadding),
+                    .padding(start = PlumDimens.gameRowPadding)
+                    .endInset(endPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
                 // The title and the year share one baseline (the year is smaller, so centring each on its own put
@@ -139,61 +164,148 @@ fun GameRow(
             // the highest as its first, and the smaller star sits higher than the title, so the first would be the star's.
             Row(Modifier.weight(1f)) {
                 Row(Modifier.weight(1f).alignBy(LastBaseline), verticalAlignment = Alignment.CenterVertically) {
-                    // The subtitle (what tells this row from another of the same title) is part of the title's text, in the
-                    // trailing text's style: one line with one ellipsis, so a narrow row cuts the subtitle before the title.
-                    val titleStyle =
-                        when {
-                            focused -> type.gameTitleFocused
-                            look == GameRowLook.MenuOpen -> type.gameTitleCurrent
-                            else -> type.gameTitle
-                        }
-                    if (subtitle.isEmpty()) {
-                        // The common row keeps the plain String text (the main scroll path).
-                        BasicText(
-                            text = title,
-                            style = titleStyle,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                            color = titleColor,
-                        )
-                    } else {
-                        val subtitleColor =
-                            when (look) {
-                                GameRowLook.Focused -> colors.meta
-                                GameRowLook.Current -> colors.accent
-                                else -> colors.muted
-                            }
-                        val smallFact = if (look == GameRowLook.Current) type.smallFactCurrent else type.smallFact
-                        val text = remember(title, subtitle, smallFact, subtitleColor) { titleWithSubtitle(title, subtitle, smallFact, subtitleColor) }
-                        BasicText(
-                            text = text,
-                            style = titleStyle,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                            color = titleColor,
-                        )
-                    }
+                    RowTitle(title, subtitle, look, titleColor)
                     FavoriteMark(isFavorite)
                     if (masteredLabel != null) MasteredMark(masteredLabel)
                 }
-                if (trailing.isNotEmpty()) {
-                    Spacer(Modifier.width(PlumDimens.rowTrailingGap))
-                    BasicText(
-                        text = trailing,
-                        style =
-                            when (look) {
-                                GameRowLook.Focused -> type.smallFact.copy(color = colors.meta)
-                                GameRowLook.Current -> type.smallFactCurrent.copy(color = colors.accent)
-                                else -> type.smallFact.copy(color = colors.muted)
-                            },
-                        maxLines = 1,
-                        modifier = Modifier.alignBy(LastBaseline),
-                    )
-                }
+                RowEnd(trailing, region, look, trailingIsCode, endHidden)
             }
         }
+    }
+}
+
+/**
+ * The row's right-hand text in the board's styles: with a [region] (maybe empty) the year and region columns, each
+ * right-aligned in its own width so an empty year cell never moves the region; otherwise [trailing] alone, a year in the
+ * year style or, when [isCode] (a region or a system's short name), in the region's tracked caps. Inline: no scope of its own.
+ */
+@Composable
+private inline fun RowScope.RowEnd(
+    trailing: String,
+    region: String?,
+    look: GameRowLook,
+    isCode: Boolean,
+    noinline hidden: () -> Boolean,
+) {
+    val colors = PlumTheme.colors
+    val type = PlumTheme.type
+    val scale = PlumTheme.layout.textScale
+    val gone = Modifier.hiddenWhile(hidden)
+    if (region != null) {
+        Spacer(Modifier.width(PlumDimens.rowTrailingGap))
+        BasicText(text = trailing, style = yearStyle(look, colors, type).copy(textAlign = TextAlign.End), maxLines = 1, modifier = gone.width(PlumDimens.rowYearColumn * scale).alignBy(LastBaseline))
+        BasicText(text = region, style = codeStyle(look, colors, type).copy(textAlign = TextAlign.End), maxLines = 1, modifier = gone.width(PlumDimens.rowRegionColumn * scale).alignBy(LastBaseline))
+    } else if (trailing.isNotEmpty()) {
+        Spacer(Modifier.width(PlumDimens.rowTrailingGap))
+        BasicText(text = trailing, style = if (isCode) codeStyle(look, colors, type) else yearStyle(look, colors, type), maxLines = 1, modifier = gone.alignBy(LastBaseline))
+    }
+}
+
+/**
+ * The year in [look]: resting `muted`, current accent 600, on the focused slab brighter and one face heavier (the board's #D6D2C8 at 500 over
+ * 400). Focused weights move from the resting style's, so they follow the text weight setting like every other role.
+ */
+private fun yearStyle(
+    look: GameRowLook,
+    colors: PlumComposeColors,
+    type: PlumTypography,
+): TextStyle =
+    when (look) {
+        GameRowLook.Focused -> type.rowYear.let { it.copy(color = colors.slab.year, fontWeight = it.heavierBy(FocusSlab.YEAR_WEIGHT - BOARD_YEAR_WEIGHT)) }
+        GameRowLook.Current -> type.rowYearCurrent.copy(color = colors.accent)
+        else -> type.rowYear.copy(color = colors.muted)
+    }
+
+/** A region or system code in [look]: tracked caps 600, resting `muted`, current accent, on the focused slab brighter and as heavy (dark) or one face heavier (light; the board's 600 / 700). */
+private fun codeStyle(
+    look: GameRowLook,
+    colors: PlumComposeColors,
+    type: PlumTypography,
+): TextStyle {
+    val region = type.tag
+    return when (look) {
+        GameRowLook.Focused -> region.copy(color = colors.slab.region, fontWeight = region.heavierBy(colors.slab.regionWeight - BOARD_REGION_WEIGHT))
+        GameRowLook.Current -> region.copy(color = colors.accent)
+        else -> region.copy(color = colors.muted)
+    }
+}
+
+/** The board's resting weights of the year and the region, from which the focused ones step. */
+private const val BOARD_YEAR_WEIGHT = 400
+private const val BOARD_REGION_WEIGHT = 600
+
+/** This style's weight [by] heavier (whole faces, capped at the heaviest, 800). */
+private fun TextStyle.heavierBy(by: Int): FontWeight = FontWeight(((fontWeight?.weight ?: BOARD_YEAR_WEIGHT) + by).coerceAtMost(800))
+
+private val DefaultRowEndPadding: () -> Dp = { PlumDimens.gameRowEndPadding }
+
+private val NeverHidden: () -> Boolean = { false }
+
+/**
+ * Not drawn, and invisible to semantics, while [hidden] is true; read in the draw and semantics passes only, so a change recomposes and
+ * lays out nothing. Used for text a card over the list would cut by its edge.
+ */
+private fun Modifier.hiddenWhile(hidden: () -> Boolean): Modifier =
+    drawWithContent { if (!hidden()) drawContent() }.semantics { if (hidden()) invisibleToUser() }
+
+/** Leaves [inset] free at the right of the content; read in the layout pass, so a changing inset does not recompose. */
+private fun Modifier.endInset(inset: () -> Dp): Modifier =
+    layout { measurable, constraints ->
+        val end = inset().roundToPx()
+        val placeable = measurable.measure(constraints.offset(horizontal = -end))
+        layout(placeable.width + end, placeable.height) { placeable.place(0, 0) }
+    }
+
+/**
+ * The title (with its [subtitle]) of a game row, filling what the star and trophy leave. Inline so it
+ * has no recompose scope of its own: a call with a [ColorProducer] is never skippable, and a row
+ * that did not change must not recompose when the list moves.
+ */
+@Composable
+private inline fun RowScope.RowTitle(
+    title: String,
+    subtitle: String,
+    look: GameRowLook,
+    titleColor: ColorProducer,
+) {
+    val colors = PlumTheme.colors
+    val type = PlumTheme.type
+    val focused = look == GameRowLook.Focused
+    // The subtitle (what tells this row from another of the same title) is part of the title's text, in the
+    // trailing text's style: one line with one ellipsis, so a narrow row cuts the subtitle before the title.
+    val titleStyle =
+        when {
+            focused -> type.gameTitleFocused
+            look == GameRowLook.MenuOpen -> type.gameTitleCurrent
+            else -> type.gameTitle
+        }
+    if (subtitle.isEmpty()) {
+        // The common row keeps the plain String text (the main scroll path).
+        BasicText(
+            text = title,
+            style = titleStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+            color = titleColor,
+        )
+    } else {
+        val subtitleColor =
+            when (look) {
+                GameRowLook.Focused -> colors.meta
+                GameRowLook.Current -> colors.accent
+                else -> colors.muted
+            }
+        val smallFact = if (look == GameRowLook.Current) type.smallFactCurrent else type.smallFact
+        val text = remember(title, subtitle, smallFact, subtitleColor) { titleWithSubtitle(title, subtitle, smallFact, subtitleColor) }
+        BasicText(
+            text = text,
+            style = titleStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+            color = titleColor,
+        )
     }
 }
 
@@ -337,7 +449,11 @@ fun SystemRow(
     modifier: Modifier = Modifier,
     bleedStart: Dp,
     hasDot: Boolean = false,
-) = SystemRow(name, count, look, nameAlpha = if (showName) NameShown else NameHidden, modifier = modifier, bleedStart = bleedStart, hasDot = hasDot)
+    /** False: no count and none of its room (Settings' sections in three columns, whose labels need it); [endPadding] 0 there too. */
+    showCount: Boolean = true,
+    endPadding: Dp = PlumDimens.systemRowPadding,
+    barInset: Dp = LeftColumnDimens.systemBarInset,
+) = SystemRow(name, count, look, nameAlpha = if (showName) NameShown else NameHidden, modifier = modifier, bleedStart = bleedStart, hasDot = hasDot, showCount = showCount, endPadding = endPadding, barInset = barInset)
 
 /**
  * The same row with the name drawn at [nameAlpha], read while drawing: the main screen fades the
@@ -358,11 +474,17 @@ fun SystemRow(
     hasDot: Boolean = false,
     /** True: the count fades with the names (the letter rail takes its place in the peek). False: it stays, as counts and system codes do. */
     fadeCount: Boolean = false,
+    showCount: Boolean = true,
+    endPadding: Dp = PlumDimens.systemRowPadding,
+    /** Read while drawing: true leaves the count undrawn (a card over the page would cut it); its room stays. */
+    countHidden: () -> Boolean = NeverHidden,
+    /** The accent bar's distance from the slab's left edge (the slab itself starts at [LeftColumnDimens.systemPillStart]). */
+    barInset: Dp = LeftColumnDimens.systemBarInset,
 ) {
-    BleedingSystemRow(name, count, look, nameAlpha, bleedStart, modifier, hasDot, fadeCount)
+    BleedingSystemRow(name, count, look, nameAlpha, bleedStart, modifier, hasDot, fadeCount, showCount, endPadding, countHidden, barInset)
 }
 
-/** Label at [bleedStart]; the focus pill starts [PlumDimens.gameRowPadding] before it (Home and Settings). */
+/** Label at [bleedStart]; the focus pill starts at [LeftColumnDimens.systemPillStart] and its accent bar [barInset] in (Home and Settings). */
 @Composable
 private fun BleedingSystemRow(
     name: String,
@@ -373,18 +495,21 @@ private fun BleedingSystemRow(
     modifier: Modifier,
     hasDot: Boolean,
     fadeCount: Boolean,
+    showCount: Boolean,
+    endPadding: Dp,
+    countHidden: () -> Boolean,
+    barInset: Dp,
 ) {
     val colors = PlumTheme.colors
     val focused = look == SystemRowLook.Focused
-    // The pill starts [gameRowPadding] before the label, as a game row's does, so it is inset from the screen edge
-    // by the rest of [bleedStart] and the label never moves with focus. It is drawn by focusPill so it dips with the row;
+    // The pill starts [systemPillStart] from the screen edge and the label never moves with focus. It is drawn by focusPill so it dips with the row;
     // the empty PILL box only keeps the tag for the layout test.
-    val inset = (bleedStart - PlumDimens.gameRowPadding).coerceAtLeast(0.dp)
+    val inset = LeftColumnDimens.systemPillStart
     // The press (dip and finger) is on the whole row, the touch target; only the drawn pill starts at [inset].
-    Box(modifier = modifier.fillMaxWidth().height(PlumTheme.layout.systemRowHeight).focusPill(focused, shape = remember(inset) { InsetFocusPillShape(inset) })) {
+    Box(modifier = modifier.fillMaxWidth().height(PlumTheme.layout.systemRowHeight).focusPill(focused, shape = remember(inset, barInset) { InsetFocusPillShape(inset, barInset) })) {
         if (focused) Box(Modifier.fillMaxSize().padding(start = inset).testTag(SystemRowTags.PILL))
         Row(
-            modifier = Modifier.fillMaxSize().padding(start = bleedStart, end = PlumDimens.systemRowPadding),
+            modifier = Modifier.fillMaxSize().padding(start = bleedStart, end = endPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(modifier = Modifier.weight(1f).fadedBy(nameAlpha), verticalAlignment = Alignment.CenterVertically) {
@@ -396,7 +521,7 @@ private fun BleedingSystemRow(
                 Box(Modifier.fadedBy(nameAlpha).size(PlumDimens.hintDot).drawBehind { drawCircle(colors.accent) }.testTag(SystemRowTags.NEW_DOT))
             }
             // Faded with the names only while the letter rail takes the peek (Settings › Home screen › Left edge).
-            SystemCount(count, look, nameAlpha, fadeCount)
+            if (showCount) SystemCount(count, look, nameAlpha, fadeCount, countHidden)
         }
     }
 }
@@ -421,7 +546,7 @@ private fun SystemName(
             SystemRowLook.Normal -> { { colors.text2 } }
             SystemRowLook.Current -> { { colors.accent } }
         }
-    BasicText(text = name, style = style, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag(SystemRowTags.LABEL))
+    EllipsisText(text = name, style = style, color = color, maxLines = 1, modifier = Modifier.testTag(SystemRowTags.LABEL))
 }
 
 @Composable
@@ -430,6 +555,7 @@ private fun SystemCount(
     look: SystemRowLook,
     nameAlpha: () -> Float,
     fade: Boolean,
+    hidden: () -> Boolean,
 ) {
     val colors = PlumTheme.colors
     val color: () -> Color =
@@ -439,7 +565,7 @@ private fun SystemCount(
             SystemRowLook.Current -> { { colors.accent } }
         }
     Spacer(Modifier.width(PlumDimens.rowTrailingGap))
-    BasicText(text = count, modifier = (if (fade) Modifier.fadedBy(nameAlpha) else Modifier).testTag(SystemRowTags.COUNT), style = PlumTheme.type.meta, color = color, maxLines = 1)
+    BasicText(text = count, modifier = (if (fade) Modifier.fadedBy(nameAlpha) else Modifier).hiddenWhile(hidden).testTag(SystemRowTags.COUNT), style = PlumTheme.type.meta, color = color, maxLines = 1)
 }
 
 /** Draws at [alpha], read while drawing; no offscreen buffer per row while the names fade (dot and name do not overlap). */

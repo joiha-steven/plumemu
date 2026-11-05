@@ -106,7 +106,7 @@ internal fun TypingState.ownKeyboardOutcome(action: Action): TypingOutcome? {
         is Action.Typed -> return typed(action.key)
         // A tap on a row does what it does with the tray down.
         is Action.TapItem, is Action.LongPressItem -> return null
-        Action.OpenSettings -> Unit
+        Action.OpenSettings, Action.Sort -> Unit
     }
     return TypingOutcome.Handled
 }

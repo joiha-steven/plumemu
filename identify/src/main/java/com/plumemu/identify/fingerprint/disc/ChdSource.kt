@@ -91,14 +91,15 @@ internal class ChdHeader private constructor(
 /**
  * The logical data of a CHD v5, one hunk decompressed at a time on demand. Codecs read: hunks
  * stored as is, `zlib` (raw deflate), `cdzl` (CD: deflate of the sectors and, separately, of
- * the subcode), `lzma` and `cdlz` (the same with LZMA, [ChdLzma]). Every other codec (`cdfl`,
- * `flac`, `zstd`, `cdzs`, `huff`, ...) throws [NotRead]: their decoders are not in the allowed
- * libraries. Hunks in a parent CHD are not read. Used by one disc read on one thread; keeps the
+ * the subcode), `lzma` and `cdlz` (the same with LZMA, [ChdLzma]), `zstd` and `cdzs` (the same
+ * with zstd, [zstd]). Every
+ * other codec (`cdfl`, `flac`, `huff`, ...) throws [NotRead]: no decoder for them is allowed.
+ * Hunks in a parent CHD are not read. Used by one disc read on one thread; keeps the
  * last hunk decoded.
  *
- * An LZMA hunk is decoded only as far as the read needs (a CD hunk in whole frames), and again
- * further, at least twice as far, when a later read needs more; its compressed bytes are kept,
- * so going further fetches only what the longer prefix adds. Damaged LZMA data is a [NotRead].
+ * Every hunk is decoded whole and must match the CRC-16 the map keeps for it (a CD hunk with its
+ * subcode and rebuilt ECC, [ChdCd]): a hunk that does not is a [NotRead], never data. Damaged
+ * LZMA data is a [NotRead] too.
  */
 internal class ChdSource(private val file: RandomAccessSource, private val header: ChdHeader) : RandomAccessSource {
     private val map: ChdMap = if (header.compressed) {
@@ -108,12 +109,8 @@ internal class ChdSource(private val file: RandomAccessSource, private val heade
     }
     private var cachedHunk = -1L
 
-    /** Hunk [cachedHunk], or the start of it when an LZMA hunk was decoded only that far. */
+    /** Hunk [cachedHunk], whole. */
     private var cached = ByteArray(0)
-
-    /** Compressed bytes of the last LZMA hunk read, kept for a longer prefix of it. */
-    private var lzmaBytes: HunkBytes? = null
-    private var lzmaBytesHunk = -1L
 
     override val size: Long get() = header.logicalBytes
 
@@ -131,28 +128,30 @@ internal class ChdSource(private val file: RandomAccessSource, private val heade
                 return file.readFully(entry.offset + inHunk, n).also { it.copyInto(dst, offset) }.size
             }
         }
-        val data = hunk(index, 0, inHunk + n)
+        val data = hunk(index, 0)
         System.arraycopy(data, inHunk, dst, offset, n)
         return n
     }
 
-    /** At least the first [needed] bytes of hunk [index]; the whole hunk except for LZMA codecs. */
+    /** Hunk [index], whole and checked against the CRC-16 of the map. */
     @Throws(IOException::class)
-    private fun hunk(index: Long, depth: Int, needed: Int): ByteArray {
-        if (index == cachedHunk && cached.size >= needed) return cached
+    private fun hunk(index: Long, depth: Int): ByteArray {
+        if (index == cachedHunk) return cached
         val entry = map.hunk(index)
         val data = when (entry.type) {
-            in 0..ChdHunk.CODEC_3 -> decode(index, entry, header.codecs[entry.type], needed)
+            in 0..ChdHunk.CODEC_3 -> decode(index, entry, header.codecs[entry.type]).also {
+                if (entry.crc >= 0 && ChdCd.crc16(it) != entry.crc) throw NotRead("chd: hunk $index fails its CRC-16")
+            }
             ChdHunk.NONE -> whole(index, read(entry))
             ChdHunk.ZEROS -> ByteArray(header.hunkBytes)
             ChdHunk.SELF -> {
                 if (entry.offset >= index || depth > MAX_SELF_DEPTH) throw NotRead("chd: hunk $index refers to hunk ${entry.offset}")
-                hunk(entry.offset, depth + 1, needed)
+                hunk(entry.offset, depth + 1)
             }
             ChdHunk.PARENT -> throw NotRead("chd: hunk $index is in a parent CHD, not read")
             else -> throw NotRead("chd: hunk $index has type ${entry.type}")
         }
-        if (data.size < needed || data.size > header.hunkBytes) throw NotRead("chd: hunk $index decompressed to ${data.size} bytes")
+        if (data.size != header.hunkBytes) throw NotRead("chd: hunk $index decompressed to ${data.size} bytes")
         cachedHunk = index
         cached = data
         return data
@@ -176,65 +175,51 @@ internal class ChdSource(private val file: RandomAccessSource, private val heade
     }
 
     @Throws(IOException::class)
-    private fun decode(index: Long, entry: ChdHunk, codec: String, needed: Int): ByteArray = when (codec) {
+    private fun decode(index: Long, entry: ChdHunk, codec: String): ByteArray = when (codec) {
         "zlib" -> whole(index, inflate(read(entry), header.hunkBytes, nowrap = true, what = "chd zlib"))
-        "cdzl" -> whole(index, decodeCdZlib(read(entry)))
-        "lzma", "cdlz" -> decodeLzma(index, entry, codec, needed)
+        "cdzl" -> whole(index, decodeCd(read(entry), "chd cdzl") { d, n -> inflate(d, n, nowrap = true, what = "chd cdzl") })
+        "zstd" -> whole(index, zstd(read(entry), header.hunkBytes, "chd zstd"))
+        "cdzs" -> whole(index, decodeCd(read(entry), "chd cdzs") { d, n -> zstd(d, n, "chd cdzs") })
+        "lzma", "cdlz" -> decodeLzma(index, entry, codec)
         else -> throw NotRead("chd: hunk codec ${codec.ifEmpty { "(none)" }} not read")
     }
 
     /**
-     * The first [needed] bytes of an `lzma` / `cdlz` hunk, or more: twice what the last decode
-     * of the same hunk gave, so reading a hunk piece by piece decodes it a few times, not once
-     * per piece. [LzmaException] is not an IOException or a
-     * RuntimeException: it is turned into a [NotRead] here, or it would escape every catch.
+     * A whole `lzma` / `cdlz` hunk: its CRC-16 covers all of it, so a prefix could not be checked.
+     * [LzmaException] is not an IOException or a RuntimeException: it is turned into a [NotRead]
+     * here, or it would escape every catch.
      */
     @Throws(IOException::class)
-    private fun decodeLzma(index: Long, entry: ChdHunk, codec: String, needed: Int): ByteArray {
+    private fun decodeLzma(index: Long, entry: ChdHunk, codec: String): ByteArray {
         checkRange(entry)
-        val bytes = lzmaBytes.takeIf { lzmaBytesHunk == index }
-            ?: HunkBytes(file, entry.offset, entry.length.toInt()).also {
-                lzmaBytes = it
-                lzmaBytesHunk = index
-            }
-        val before = if (cachedHunk == index) cached.size else 0
-        val wanted = maxOf(needed, minOf(header.hunkBytes, before * 2))
+        val bytes = HunkBytes(file, entry.offset, entry.length.toInt())
         try {
-            if (codec == "lzma") return ChdLzma.lzmaHunk(bytes, header.hunkBytes, minOf(wanted, header.hunkBytes))
-            val frames = header.hunkBytes / ChdHeader.CD_FRAME
-            val wantedFrames = (wanted + ChdHeader.CD_FRAME - 1) / ChdHeader.CD_FRAME
-            return ChdLzma.cdlzHunk(bytes, header.hunkBytes, minOf(wantedFrames, frames))
+            if (codec == "lzma") return ChdLzma.lzmaHunk(bytes, header.hunkBytes)
+            return ChdLzma.cdlzHunk(bytes, header.hunkBytes)
         } catch (e: LzmaException) {
             throw NotRead("chd: hunk $index: LZMA data damaged (${e.message})")
         }
     }
 
     /**
-     * `cdzl` (MAME `chd_cd_decompressor`): a bitmap with one bit per frame (set: the sync header
-     * and ECC were removed and must be put back), the length of the sector part (2 bytes, 3 when
-     * the hunk is 64 KB or more), the deflated sectors (2352 bytes per frame), the deflated
-     * subcode (96 per frame). The subcode is not needed here and is left as zeros; the ECC is
-     * not regenerated (the user data does not need it), but the sync header is.
+     * `cdzl` and `cdzs` (MAME `chd_cd_decompressor`): a bitmap with one bit per frame (set: the
+     * sync header and ECC were removed and must be put back), the length of the sector part (2
+     * bytes, 3 when the hunk is 64 KB or more), the sectors (2352 bytes per frame) packed as
+     * [unpack] undoes with [sectorsOf], then the subcode (96 per frame) packed the same way.
+     * [ChdCd.assemble] puts the hunk together, so its CRC-16 can be checked.
      */
-    private fun decodeCdZlib(src: ByteArray): ByteArray {
+    private fun decodeCd(src: ByteArray, what: String, unpack: (ByteArray, Int) -> ByteArray): ByteArray {
         val frames = header.hunkBytes / ChdHeader.CD_FRAME
         val eccBytes = (frames + 7) / 8
         val lengthBytes = if (header.hunkBytes < 65536) 2 else 3
-        if (src.size < eccBytes + lengthBytes) throw NotRead("chd cdzl: hunk is truncated")
+        if (src.size < eccBytes + lengthBytes) throw NotRead("$what: hunk is truncated")
         var baseLength = 0
         for (i in 0 until lengthBytes) baseLength = (baseLength shl 8) or src.u8(eccBytes + i)
         val start = eccBytes + lengthBytes
-        if (start + baseLength > src.size) throw NotRead("chd cdzl: sector data length is out of range")
-        val sectors = inflate(src.copyOfRange(start, start + baseLength), frames * SECTOR, nowrap = true, what = "chd cdzl")
-        if (sectors.size != frames * SECTOR) throw NotRead("chd cdzl: sector data is short")
-        val out = ByteArray(header.hunkBytes)
-        for (frame in 0 until frames) {
-            System.arraycopy(sectors, frame * SECTOR, out, frame * ChdHeader.CD_FRAME, SECTOR)
-            if (src.u8(frame / 8) and (1 shl (frame % 8)) != 0) {
-                System.arraycopy(ChdLzma.CD_SYNC, 0, out, frame * ChdHeader.CD_FRAME, ChdLzma.CD_SYNC.size)
-            }
-        }
-        return out
+        if (start + baseLength > src.size) throw NotRead("$what: sector data length is out of range")
+        val sectors = unpack(src.copyOfRange(start, start + baseLength), frames * SECTOR)
+        val subcode = unpack(src.copyOfRange(start + baseLength, src.size), frames * ChdCd.SUBCODE)
+        return ChdCd.assemble(frames, src.copyOfRange(0, eccBytes), sectors, subcode, what)
     }
 
     override fun close() = Unit

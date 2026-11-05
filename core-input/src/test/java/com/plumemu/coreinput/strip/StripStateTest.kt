@@ -314,8 +314,7 @@ class StripStateTest {
     }
 
     /**
-     * The app's second screen takes the details (layout C): the entry loses its details stop while
-     * the cursor stands on it. The cursor is on the list in that same composition, on the same row,
+     * The entry loses its details stop (`hasDetails` turns false) while the cursor stands on it. The cursor is on the list in that same composition, on the same row,
      * the strip resting at the games stop; when the stop comes back the cursor stays on the list.
      */
     @Test

@@ -157,7 +157,7 @@ abstract class GameInfoBatteryFitBase(
 
     @Test
     fun theRowSaysTheLineAfterPlayTime() {
-        assertNone(problems(facts(BatteryPace(minutesOnCharge = 120.0, percentPerHour = 30.0)), listOf(PlumFont.Sans to TextSize.Medium)))
+        assertNone(problems(facts(BatteryPace(minutesOnCharge = 120.0, percentPerHour = 30.0)), listOf(PlumFont.Sans to TextSize.Small)))
         compose.onNodeWithText("2 h on this charge · 30%\u00A0an\u00A0hour", useUnmergedTree = true).assertExists()
         val last = compose.onNodeWithTag(GamePanelTags.fact(8), useUnmergedTree = true).fetchSemanticsNode()
         val before = compose.onNodeWithTag(GamePanelTags.fact(7), useUnmergedTree = true).fetchSemanticsNode()
@@ -166,25 +166,17 @@ abstract class GameInfoBatteryFitBase(
 
     @Test
     fun aGameNeverMeasuredHasTheEightRows() {
-        assertNone(problems(facts(null), listOf(PlumFont.Sans to TextSize.Medium)))
+        assertNone(problems(facts(null), listOf(PlumFont.Sans to TextSize.Small)))
         assertEquals(0, compose.onAllNodesWithTag(GamePanelTags.fact(8), useUnmergedTree = true).fetchSemanticsNodes().size)
         assertEquals(0, compose.onAllNodesWithTag(PickingBatteryTags.LINE, useUnmergedTree = true).fetchSemanticsNodes().size)
     }
 }
 
 /**
- * Measured at the default weight Medium: where Info's battery row (three lines at most) drops "on this charge" to keep its
- * numbers whole, by width and wording; everywhere else the whole sentence fits.
+ * Where Info's battery row (four lines at most) drops "on this charge" to keep its numbers whole, by width and wording. Since the card
+ * is the board's 293 dp wide, the whole sentence fits everywhere (before, "longest under 1%" gave way at Largest Serif and Mono at 768 and 837).
  */
-private val INFO_WORDS_GIVE_WAY: Map<Pair<Int, String>, Set<String>> =
-    mapOf(
-        (768 to "longest") to setOf("Largest Mono"),
-        (837 to "longest") to setOf("Largest Mono"),
-        (768 to "longest two-digit pace") to setOf("Largest Mono"),
-        (837 to "longest two-digit pace") to setOf("Largest Mono"),
-        (768 to "longest under 1%") to setOf("Largest Serif", "Largest Mono"),
-        (837 to "longest under 1%") to setOf("Largest Serif", "Largest Mono"),
-    )
+private val INFO_WORDS_GIVE_WAY: Map<Pair<Int, String>, Set<String>> = emptyMap()
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)

@@ -10,7 +10,10 @@ import kotlinx.coroutines.flow.Flow
 
 /** Picked folders, scanned directories and the scan's writes to `game`. */
 @Dao
-abstract class ScanDao {
+abstract class ScanDao(
+    /** For the left-out files written in [finishScan]'s transaction ([LeftOutFileDao]). */
+    private val database: PlumDatabase,
+) {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     abstract suspend fun insertFolder(folder: RomFolderEntity): Long
 
@@ -51,12 +54,22 @@ abstract class ScanDao {
         deleteAllGames()
         // Name fixes are the person's data on games too; content keys would outlive the rows.
         deleteAllNameFixes()
+        // What the scans left out is about directories the next scan reads again.
+        database.leftOutFileDao().deleteAll()
         forgetDirectories()
         clearScanTimes()
     }
 
     @Query("DELETE FROM name_fix")
     protected abstract suspend fun deleteAllNameFixes()
+
+    /**
+     * Whether a finished scan left any game in a picked folder (shortcut and app rows do not
+     * count; pending rows of a stopped scan do not either). False before the first scan of a
+     * library and after [forgetLibrary]: that scan writes no `added_at` ([ScanBatch.addedAt]).
+     */
+    @Query("SELECT EXISTS (SELECT 1 FROM game WHERE is_pending = 0 AND folder_id IN (SELECT id FROM rom_folder WHERE " + PICKED + "))")
+    abstract suspend fun hasScannedGames(): Boolean
 
     @Query("DELETE FROM game")
     protected abstract suspend fun deleteAllGames()
@@ -70,6 +83,16 @@ abstract class ScanDao {
             "WHERE folder_id = :folderId AND parent_document_id = :parentDocumentId",
     )
     abstract suspend fun gamesInDirectory(folderId: Long, parentDocumentId: String): List<StoredGame>
+
+    /**
+     * Of the games [ids] (at most a few hundred per call) those a list shows, per system: the filter of
+     * [GameDao.observeAddedSince], so the home notice and the second screen count the same games.
+     */
+    @Query(
+        "SELECT system_id, COUNT(*) AS n FROM game WHERE id IN (:ids) AND is_hidden = 0 AND is_not_game = 0 " +
+            "AND is_primary_copy = 1 AND is_pending = 0 GROUP BY system_id",
+    )
+    abstract suspend fun listedAmong(ids: List<Long>): List<AddedInSystem>
 
     /** All games of a folder; only for tests and diagnostics, never for a list screen. */
     @Query("SELECT * FROM game WHERE folder_id = :folderId ORDER BY relative_path")
@@ -104,7 +127,7 @@ abstract class ScanDao {
     @Transaction
     open suspend fun applyBatch(batch: ScanBatch): List<StoredGame> {
         if (batch.systems.isNotEmpty()) insertSystems(batch.systems)
-        val ids = if (batch.newGames.isEmpty()) emptyList() else insertGames(batch.newGames.map { it.copy(isPending = true) })
+        val ids = if (batch.newGames.isEmpty()) emptyList() else insertGames(batch.newGames.map { it.copy(isPending = true, addedAt = batch.addedAt) })
         val inserted = ArrayList<StoredGame>(batch.newGames.size)
         batch.newGames.forEachIndexed { index, game ->
             val fields = game.scanFields()
@@ -134,8 +157,13 @@ abstract class ScanDao {
             deleteGames(listOf(fold.foldedGameId))
         }
         finish.removedGameIds.chunked(MAX_IDS_PER_STATEMENT).forEach { deleteGames(it) }
-        for (path in finish.removedDirectoryPaths) deleteDirectoriesInSubtree(finish.folderId, path, "$path/")
+        val leftOut = database.leftOutFileDao()
+        for (path in finish.removedDirectoryPaths) {
+            deleteDirectoriesInSubtree(finish.folderId, path, "$path/")
+            leftOut.deleteSubtree(finish.folderId, path)
+        }
         if (finish.directories.isNotEmpty()) upsertDirectories(finish.directories)
+        finish.leftOut?.let { leftOut.write(finish.folderId, it) }
         clearPending(finish.folderId)
     }
 

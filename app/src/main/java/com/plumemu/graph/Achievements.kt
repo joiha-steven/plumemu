@@ -9,6 +9,7 @@ import com.plumemu.achievements.hash.RaCannotHashReason
 import com.plumemu.achievements.match.RaMatch
 import com.plumemu.achievements.match.RaMatcher
 import com.plumemu.achievements.match.RaSystems
+import com.plumemu.coredata.db.RaAchievementEntity
 import com.plumemu.coredata.db.RaDao
 import com.plumemu.coredata.db.RaMatchEntity
 import com.plumemu.coredata.db.RaProgressEntity
@@ -16,6 +17,10 @@ import com.plumemu.coredata.db.RaUnmatchedGame
 import com.plumemu.identify.name.MatchKey
 import com.plumemu.identify.name.TitleCleaner
 import java.io.IOException
+import java.text.ParseException
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
@@ -29,7 +34,8 @@ import kotlinx.coroutines.withContext
  *
  * - A game's achievements on demand ([progressFor]): the stored match when the file has not
  *   changed (a stored hash is looked up again, so a set added later is found), else the file is
- *   hashed; then the person's progress, stored as the game's progress row.
+ *   hashed; then the person's progress, stored as the game's progress row with its points and its
+ *   achievement list ([saveGameProgress]; the only answer that carries points).
  * - After a game ([afterGame]): only an already matched game is asked about, once.
  * - The daily completion refresh ([refreshCompletion]).
  *
@@ -79,7 +85,7 @@ internal class Achievements(
         return when (val progress = client.gameProgress(raGameId, ulid)) {
             is RaResult.Failure -> failed("game progress", progress)
             is RaResult.Ok -> {
-                write { dao.upsertProgress(listOf(rowOf(progress.value))) }
+                write { saveGameProgress(progress.value) }
                 readyOf(progress.value).copy(matchedByName = byName)
             }
         }
@@ -103,7 +109,7 @@ internal class Achievements(
             }
             is RaResult.Ok -> answer.value
         }
-        if (!write { dao.upsertProgress(listOf(rowOf(progress))) }) return null
+        if (!write { saveGameProgress(progress) }) return null
         val previous = before?.awardedSoftcore ?: (if (hasBaseline) 0 else return null)
         val rise = progress.awarded - previous
         if (rise <= 0) return null
@@ -230,14 +236,52 @@ internal class Achievements(
         true
     }
 
-    private fun rowOf(progress: RaGameProgress) = RaProgressEntity(
-        raGameId = progress.id.toLong(),
-        achievementsTotal = progress.achievementCount,
-        awardedSoftcore = progress.awarded,
-        awardedHardcore = progress.awardedHardcore,
-        highestAward = progress.highestAward.raw,
-        updatedAt = clock(),
-    )
+    /**
+     * The game's progress row and achievement list, from `API_GetGameInfoAndUserProgress`: each
+     * achievement's `Points` summed (all of them, and the unlocked ones in either mode). When the
+     * answer lists fewer achievements than its `NumAchievements` (one did not read), points and the
+     * list are left as not known rather than stored short. An unlock time that does not read
+     * leaves that achievement out of the stored list (the counts and points still have it).
+     */
+    private suspend fun saveGameProgress(progress: RaGameProgress) {
+        val complete = progress.achievements.size == progress.achievementCount
+        val row = RaProgressEntity(
+            raGameId = progress.id.toLong(),
+            achievementsTotal = progress.achievementCount,
+            awardedSoftcore = progress.awarded,
+            awardedHardcore = progress.awardedHardcore,
+            highestAward = progress.highestAward.raw,
+            updatedAt = clock(),
+            pointsEarned = if (complete) progress.achievements.filter { it.isEarned }.sumOf { it.points } else null,
+            pointsTotal = if (complete) progress.achievements.sumOf { it.points } else null,
+        )
+        var unreadTimes = 0
+        val achievements = if (!complete) {
+            null
+        } else {
+            progress.achievements.mapNotNull { achievement ->
+                val earned = achievement.earnedAt?.let(::raTimeMillis)
+                val hardcore = achievement.earnedHardcoreAt?.let(::raTimeMillis)
+                if ((achievement.earnedAt != null && earned == null) || (achievement.earnedHardcoreAt != null && hardcore == null)) {
+                    unreadTimes++
+                    return@mapNotNull null
+                }
+                RaAchievementEntity(
+                    raGameId = row.raGameId,
+                    achievementId = achievement.id.toLong(),
+                    title = achievement.title,
+                    badgeName = achievement.badgeName,
+                    points = achievement.points,
+                    // A hardcore unlock is an unlock in either mode too (RetroAchievements sets both).
+                    earnedAt = earned ?: hardcore,
+                    earnedHardcoreAt = hardcore,
+                )
+            }
+        }
+        if (!complete) log("RetroAchievements game list of ${progress.id} incomplete; points not stored")
+        if (unreadTimes > 0) log("RetroAchievements game ${progress.id}: $unreadTimes unlock times did not read")
+        dao.saveGameProgress(row, achievements)
+    }
 
     private fun rowOf(game: RaCompletion, now: Long) = RaProgressEntity(
         raGameId = game.gameId.toLong(),
@@ -256,3 +300,14 @@ internal class Achievements(
         const val MAX_TITLE_HASHES = 20
     }
 }
+
+/** RetroAchievements' time text (`yyyy-MM-dd HH:mm:ss`, UTC, as Info reads it) as epoch milliseconds; null when it does not read. */
+internal fun raTimeMillis(text: String): Long? =
+    try {
+        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+            isLenient = false
+        }.parse(text.trim())?.time
+    } catch (_: ParseException) {
+        null
+    }

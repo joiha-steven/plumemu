@@ -221,6 +221,18 @@ data class GameEntity(
     @ColumnInfo(name = "is_not_game", defaultValue = "0") val isNotGame: Boolean = false,
     /** The identification pass still has to name this row (new, or its file changed). */
     @ColumnInfo(name = "needs_identify", defaultValue = "1") val needsIdentify: Boolean = true,
+    /**
+     * When a scan first inserted the row (epoch milliseconds, [ScanBatch.addedAt]); never changed
+     * by a rescan, an update, a rename or a move. Null for rows setup's scans inserted and for the first scan after
+     * Reset library ([ScanDao.hasScannedGames]), for rows from before schema 17 (no time is
+     * known; `modified_at` is the file's own time) and for rows no scan inserted (shortcuts, apps).
+     */
+    @ColumnInfo(name = "added_at") val addedAt: Long? = null,
+    /**
+     * The saved box front's width over height, so a grid packs at the right shape before any result is read. Null while no
+     * picture is known (rows from before schema 18 too). Written only by [ArtAspects.sync], which follows `scraped_game`.
+     */
+    @ColumnInfo(name = "art_aspect") val artAspect: Float? = null,
 )
 
 /** The `NameTrust` names stored in `game.name_trust` that SQL in this module compares with. */

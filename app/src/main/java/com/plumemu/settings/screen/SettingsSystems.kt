@@ -40,6 +40,7 @@ import com.plumemu.content.SystemOrder
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SystemOrderSetting
 import com.plumemu.coreui.components.carriedPill
+import com.plumemu.coreui.components.EllipsisText
 import com.plumemu.coreui.components.focusPill
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
@@ -326,7 +327,7 @@ private fun SystemArrangeRow(
                     isHidden -> type.meta.copy(color = colors.muted)
                     else -> type.meta.copy(color = colors.text)
                 }
-            BasicText(system.name, style = nameStyle, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag(SettingsTags.SYSTEM_NAME))
+            EllipsisText(system.name, style = nameStyle, maxLines = 3, modifier = Modifier.testTag(SettingsTags.SYSTEM_NAME))
             BasicText(
                 pluralStringResource(R.plurals.settings_systems_games, system.gameCount, rememberCountFormat().format(system.gameCount)),
                 style = type.smallFact.copy(color = if (onAccent) colors.onAccent else if (isFocused) colors.meta else colors.muted),

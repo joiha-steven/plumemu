@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.plumemu.R
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.components.EllipsisText
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.SecondScreenDimens
 import com.plumemu.home.ArtPicture
@@ -77,7 +78,7 @@ internal fun BoxScope.StatisticsCard(
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
-    val line = type[dimens.factsRole]
+    val line = type.card(dimens.factsRole)
     // The same figures as Settings' Statistics page; an empty library never reaches here.
     val rows = remember(statistics) { statisticRowsOf(StatisticsState.Read(statistics)).filter { it != StatisticRow.NoGames } }
     val separator = stringResource(R.string.second_screen_separator)
@@ -85,12 +86,12 @@ internal fun BoxScope.StatisticsCard(
         dimens,
         Modifier.align(Alignment.BottomStart).padding(dimens.margin).testTag(SecondScreenTags.STATISTICS),
     ) {
-        Part(StatisticsPart.Top) { TopLine(stringResource(R.string.settings_section_statistics), type[dimens.topRole].copy(color = colors.meta)) }
+        Part(StatisticsPart.Top) { TopLine(stringResource(R.string.settings_section_statistics), type.card(dimens.topRole).copy(color = colors.meta)) }
         for (row in rows) {
             when (row) {
                 is StatisticRow.Total -> {
                     Part(StatisticsPart.Total) {
-                        BasicText(statisticTime(row.seconds), style = type[dimens.titleRole].copy(color = colors.text), softWrap = false, modifier = Modifier.testTag(SecondScreenTags.STATISTICS_TOTAL))
+                        BasicText(statisticTime(row.seconds), style = type.card(dimens.titleRole).copy(color = colors.text), softWrap = false, modifier = Modifier.testTag(SecondScreenTags.STATISTICS_TOTAL))
                     }
                     Part(StatisticsPart.TotalLabel) {
                         val week = rows.firstOrNull { it is StatisticRow.ThisWeek } as StatisticRow.ThisWeek?
@@ -105,7 +106,7 @@ internal fun BoxScope.StatisticsCard(
                 is StatisticRow.ThisWeek -> Unit
                 StatisticRow.NothingPlayed ->
                     Part(StatisticsPart.NothingPlayed) {
-                        BasicText(stringResource(R.string.settings_statistics_nothing_played), style = type[dimens.detailsTitleRole].copy(color = colors.text2), modifier = Modifier.testTag(SecondScreenTags.STATISTICS_NOTHING_PLAYED))
+                        BasicText(stringResource(R.string.settings_statistics_nothing_played), style = type.card(dimens.detailsTitleRole).copy(color = colors.text2), modifier = Modifier.testTag(SecondScreenTags.STATISTICS_NOTHING_PLAYED))
                     }
                 is StatisticRow.Game ->
                     Part(StatisticsPart.Game(row.rank)) {
@@ -183,11 +184,10 @@ private fun GameRow(
             Spacer(Modifier.width(SecondScreenDimens.statisticsCoverGap))
         }
         Row(Modifier.weight(1f)) {
-            BasicText(
+            EllipsisText(
                 text = row.game.title,
                 style = line.copy(color = colors.text),
                 maxLines = dimens.statisticsTitleMaxLines,
-                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).alignByBaseline().testTag(SecondScreenTags.STATISTICS_GAME_TITLE),
             )
             Spacer(Modifier.width(SecondScreenDimens.statisticsFigureGap))

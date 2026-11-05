@@ -5,9 +5,11 @@ import androidx.compose.runtime.Immutable
 import com.plumemu.battery.BatteryPace
 import com.plumemu.coredata.db.AddedSession
 import com.plumemu.coredata.db.AppKind
+import com.plumemu.coredata.settings.SortGamesSetting
 import com.plumemu.launcher.choice.CoreToConfirm
 import com.plumemu.launcher.FailureReason
 import com.plumemu.launcher.LaunchOutcome
+import com.plumemu.graph.AchievementCount
 import com.plumemu.graph.AchievementsState
 import java.io.File
 import kotlinx.coroutines.flow.Flow
@@ -30,6 +32,9 @@ internal interface GameActions {
 
     /** The system's emulators for "Play with" and the no-emulator message; null when the game or its system is unknown. */
     suspend fun emulators(gameKey: String): EmulatorListing?
+
+    /** Emits when the installed packages may have changed, so an open panel about emulators reads them again. */
+    val emulatorChanges: kotlinx.coroutines.flow.Flow<Unit> get() = kotlinx.coroutines.flow.emptyFlow()
 
     suspend fun setFavorite(gameKey: String, isFavorite: Boolean)
 
@@ -126,6 +131,12 @@ internal interface GameActions {
     /** No to "Did it start?": the person's game and system choices of [emulatorId] (the core that failed) are cleared; others stay. */
     suspend fun forgetFailedCore(gameKey: String, emulatorId: String)
 
+    /**
+     * The next core [emulatorId] is offered after No: when it is played, its question knows [tried] (the
+     * cores already answered No for this game) and does not offer them again.
+     */
+    suspend fun expectCoreTry(gameKey: String, emulatorId: String, tried: Set<String>)
+
     /** Benchmark and preview builds: nothing to launch, nothing stored. */
     object None : GameActions {
         override suspend fun launch(
@@ -181,6 +192,8 @@ internal interface GameActions {
         override suspend fun takeBackPlay(added: AddedSession): Boolean = false
 
         override suspend fun forgetFailedCore(gameKey: String, emulatorId: String) = Unit
+
+        override suspend fun expectCoreTry(gameKey: String, emulatorId: String, tried: Set<String>) = Unit
 
         override suspend fun pickBoxArt(gameKey: String, hit: BoxArtHit, onSavingPictures: () -> Unit): BoxArtStoreOutcome =
             BoxArtStoreOutcome.Failed(BoxArtProblem.NotAvailable)
@@ -238,6 +251,8 @@ internal data class GameFacts(
      * state the controller keeps up to date ([GameActions.achievements]).
      */
     val achievements: AchievementsState? = null,
+    /** The menu's Achievements entry: the stored progress (database only, never the network); null: signed out, no set or nothing stored. */
+    val achievementCount: AchievementCount? = null,
     /** Info › Arcade set (shown in place of File), once read; null before, and for a set the arcade pack does not list. */
     val arcadeSet: ArcadeSetFacts? = null,
     /**
@@ -251,6 +266,10 @@ internal data class GameFacts(
     val scraped: ScrapedFacts? = null,
     /** The menu was opened from the Recent entry: it lists Remove from Recent. Set by the controller, never read from the library. */
     val canRemoveFromRecent: Boolean = false,
+    /** The menu was opened from a list the sort orders (a system's or Favorites): it lists Sort by…. Set by the controller. */
+    val canSort: Boolean = false,
+    /** The sort the lists follow, shown after Sort by…; set by the controller with [canSort], null when it could not be read. */
+    val sort: SortGamesSetting? = null,
 )
 
 /**
@@ -275,6 +294,9 @@ internal data class EmulatorToStart(
     val name: String,
     val isInstalled: Boolean,
     val isNotChosenYet: Boolean = false,
+    /** The RetroArch core file it starts and the core's own name ("Snes9x", for "RetroArch · Snes9x"); null for an emulator without cores. */
+    val core: String? = null,
+    val coreName: String? = null,
 )
 
 /** One emulator of a system, with the package its store page opens. */
@@ -285,6 +307,8 @@ internal data class EmulatorItem(
     val packageName: String,
     /** listed with its one line, never picked automatically. */
     val isLegalRisk: Boolean,
+    /** The RetroArch core file this entry starts; null for an emulator without cores. */
+    val core: String? = null,
 )
 
 /**
@@ -304,4 +328,8 @@ internal data class EmulatorListing(
     val isAutomaticInstalled: Boolean = true,
     /** False while nothing is chosen for the system: Automatic then asks on Play ([automatic] is only the recommendation). */
     val isSystemChosen: Boolean = true,
+    /** The game is an arcade set (made for one emulator version): the core answer says so. */
+    val isArcade: Boolean = false,
+    /** The set's short name is in the pack only as an old MAME 2003-Plus name: that core is offered first. */
+    val oldArcadeName: Boolean = false,
 )

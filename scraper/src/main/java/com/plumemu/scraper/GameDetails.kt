@@ -58,6 +58,12 @@ public data class GameDetails(
     /** This value as JSON, wrapped with [JSON_FORMAT]: `{"format":1,"details":{...}}`. */
     public fun toJson(): String = GameDetailsJson.encode(this)
 
+    /**
+     * [rating] when it is a real one (1 to [MAX_RATING]); 0, below or above is none. What the
+     * details show and what the stored `scraped_game.rating` column (the Rating sort) holds.
+     */
+    public fun listedRating(): Int? = rating?.takeIf { it in 1..MAX_RATING }
+
     public companion object {
         /**
          * The version written by [toJson]. Raise it only when a field changes meaning; a field
@@ -73,6 +79,12 @@ public data class GameDetails(
          * Null only for text without a `details` object (not JSON, or not this JSON). Never throws.
          */
         public fun fromJson(text: String): GameDetails? = GameDetailsJson.decode(text)
+
+        /** ScreenScraper's ratings are out of 20; it never gives a real 0. */
+        public const val MAX_RATING: Int = 20
+
+        /** [listedRating] of the details stored as [text] ([toJson]); null when it does not read. */
+        public fun listedRatingOf(text: String): Int? = fromJson(text)?.listedRating()
 
         /**
          * The `format` written in [text], or null when there is none. A caller that wants a field

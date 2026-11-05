@@ -12,7 +12,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
+import com.plumemu.coreui.theme.CardDimens
+import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.game.GameMenuEntryId
 import com.plumemu.game.GamePanelTags
@@ -32,7 +35,7 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The game panel's measurements against design/rules.md › Settings : wide,
  * the 248 side panel inside the 24 margin (x 496 at 768); narrow, the options width `width − 48`
- * (528 at 576) from the margin. Rows 40 high, 42 apart (the list's 2 gap), text 14 in.
+ * (528 at 576) from the margin. Rows 40 high, 40 apart (the card's rows have no gap, the board's pitch), text 14 in.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -53,7 +56,7 @@ class GamePanelBoundsTest {
 
     private fun showMenu(facts: GameFacts = sampleFacts()) =
         compose.setContent {
-            PlumTheme(MediumText.Default) {
+            PlumTheme(TableText.Default) {
                 HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = OpenPanel(GameRef("snes-6", "Super Metroid"), PanelScreen.Menu(facts)))
             }
         }
@@ -61,18 +64,19 @@ class GamePanelBoundsTest {
     private fun assertRows() {
         val play = bounds(GamePanelTags.row(GameMenuEntryId.Play.name))
         val playWith = bounds(GamePanelTags.row(GameMenuEntryId.PlayWith.name))
-        val info = bounds(GamePanelTags.row(GameMenuEntryId.Info.name))
+        val hide = bounds(GamePanelTags.row(GameMenuEntryId.Hide.name))
         assertDp("row height", 40.dp, play.bottom - play.top)
-        assertDp("rows 42 apart", 42.dp, playWith.top - play.top)
-        assertDp("six rows", 42.dp * 5, info.top - play.top)
-        assertTrue("Info fits inside the panel, above the hints", info.bottom <= bounds(GamePanelTags.PANEL).bottom)
+        assertDp("rows 40 apart", 40.dp, playWith.top - play.top)
+        assertDp("six rows", 40.dp * 5, hide.top - play.top)
+        assertTrue("Hide game, the last row, fits inside the panel, above the hints", hide.bottom <= bounds(GamePanelTags.PANEL).bottom)
         val panel = bounds(GamePanelTags.PANEL)
         val title = bounds(GamePanelTags.TITLE)
-        assertDp("rows span the panel", panel.right - panel.left, play.right - play.left)
-        assertDp("title text 14 in, like the rows' text", panel.left + 14.dp, title.left)
-        // Strip top: 14 margin + 18 top bar + 10 gap; the title is the panel's first line.
-        assertDp("panel starts with the strip", 42.dp, panel.top)
-        assertDp("panel ends with the strip: 432 − 12 − 22 − 10", 388.dp, panel.bottom)
+        assertDp("rows span the panel: the slab is the card's inset from each edge", panel.right - panel.left, play.right - play.left)
+        assertDp("rows start where the panel does", panel.left, play.left)
+        assertDp("title text starts panelTitleStart in from the rows' start", panel.left + PlumDimens.panelTitleStart, title.left)
+        // Strip top: 14 margin + 18 top bar + 10 gap (the card's top edge sits there); the title is the first line, the board's top padding below it.
+        assertDp("panel column starts the card's top padding below the strip", TableText.StripTop + CardDimens.padTop, panel.top)
+        assertDp("panel ends with the strip: 432 − 9 − 22 − 9", 392.dp, panel.bottom)
     }
 
     @Test
@@ -80,9 +84,8 @@ class GamePanelBoundsTest {
     fun wideIsTheSidePanelAtTheRight() {
         showMenu()
         val panel = bounds(GamePanelTags.PANEL)
-        assertDp("panel width", 248.dp, panel.right - panel.left)
-        assertDp("24 from the right edge", 768.dp - 24.dp, panel.right)
-        assertDp("list visible up to the 24 gap: 72 + (768 − 368)", 72.dp + 400.dp + 24.dp, panel.left)
+        assertEquals("panel width: the card less its inset on both sides (pixel rounding)", (CardDimens.menuWidth - PlumDimens.panelInset * 2).value, (panel.right - panel.left).value, 1f)
+        assertDp("the card is 24 from the right edge", 768.dp - 24.dp - PlumDimens.panelInset, panel.right)
         assertRows()
     }
 
@@ -91,20 +94,19 @@ class GamePanelBoundsTest {
     fun narrowIsAStopOfTheOptionsWidth() {
         showMenu()
         val panel = bounds(GamePanelTags.PANEL)
-        assertDp("options width", 528.dp, panel.right - panel.left)
-        assertDp("from the margin", 24.dp, panel.left)
+        assertDp("options width: the page less both margins, less the card's inset", 528.dp - PlumDimens.panelInset * 2, panel.right - panel.left)
+        assertDp("from the margin", 24.dp + PlumDimens.panelInset, panel.left)
         assertRows()
     }
 
-    /** A menu opened from Recent holds a seventh row (Remove from Recent); Info, the last, still ends inside the panel. */
+    /** A menu opened from Recent holds a seventh row (Remove from Recent, before Hide game); Hide game, the last, still ends inside the panel. */
     private fun assertRecentMenuFits() {
         showMenu(sampleFacts(canRemoveFromRecent = true))
         val remove = bounds(GamePanelTags.row(GameMenuEntryId.RemoveFromRecent.name))
         val hide = bounds(GamePanelTags.row(GameMenuEntryId.Hide.name))
-        val info = bounds(GamePanelTags.row(GameMenuEntryId.Info.name))
-        assertDp("Remove from Recent is the row after Hide, 42 apart", 42.dp, remove.top - hide.top)
+        assertDp("Remove from Recent is the row before Hide, 40 apart", 40.dp, hide.top - remove.top)
         assertDp("row height", 40.dp, remove.bottom - remove.top)
-        assertTrue("Info fits inside the panel", info.bottom <= bounds(GamePanelTags.PANEL).bottom)
+        assertTrue("Hide game, the last, fits inside the panel", hide.bottom <= bounds(GamePanelTags.PANEL).bottom)
     }
 
     @Test
@@ -123,7 +125,7 @@ class GamePanelBoundsTest {
 
     private fun showPlayWith() =
         compose.setContent {
-            PlumTheme(MediumText.Default) {
+            PlumTheme(TableText.Default) {
                 val listing = sampleListing(current = Beetle.id, installed = listOf(DuckStation, Beetle), notInstalled = listOf(Epsxe))
                 HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = OpenPanel(GameRef("snes-6", "Super Metroid"), PanelScreen.PlayWith(listing)))
             }
@@ -145,13 +147,13 @@ class GamePanelBoundsTest {
 
     @Test
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
-    fun theCurrentBadgeIsInsideItsRowAndBelowTheName() {
+    fun theCurrentBadgeIsInsideItsRowOnTheNamesLine() {
         showPlayWith()
         val row = bounds(GamePanelTags.row(Beetle.id))
         val badge = compose.onNodeWithText("Current", useUnmergedTree = true).getUnclippedBoundsInRoot()
         val name = compose.onNodeWithText(Beetle.name, useUnmergedTree = true).getUnclippedBoundsInRoot()
         assertTrue("row $row holds the badge $badge", row.left <= badge.left && row.top <= badge.top && row.right >= badge.right && row.bottom >= badge.bottom)
-        assertTrue("badge $badge is under the name $name", badge.top >= name.bottom)
+        assertTrue("badge $badge is beside the name $name, on its line", badge.left >= name.right && badge.top < name.bottom && badge.bottom > name.top)
     }
 
     private companion object {

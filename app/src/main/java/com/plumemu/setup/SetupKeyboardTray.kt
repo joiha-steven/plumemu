@@ -42,9 +42,9 @@ internal fun SetupKeyboardTray(
     )
 }
 
-/** What lies under setup's body on the tray: the hint bar's gap, the hint bar and the bottom margin (as Settings' strip). */
+/** What lies under setup's body on the tray: the footer zone (as Settings' strip). */
 @Composable
-internal fun setupTrayBelowBody(): Dp = PlumDimens.barGap + PlumTheme.layout.hintBarHeight + PlumDimens.stripMarginBottom
+internal fun setupTrayBelowBody(): Dp = PlumTheme.layout.footerZone
 
 /** How much of the body's bottom the tray covers while it is up: the form's scroll ends above it. */
 @Composable

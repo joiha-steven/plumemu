@@ -48,7 +48,7 @@ internal class InfoReadThrough(
             val whole = rows.filter { (_, node) -> node.layoutInfo.isPlaced && notFullyShown(node, root) == null }.map { it.first }
             seen += whole
             firstIsWhole = rows.firstOrNull()?.first in whole
-            findTagged(root, GamePanelTags.FACTS_SCROLL)?.let { viewport -> hiddenWithoutCue(viewport, rows.map { it.second }).mapTo(problems) { "$where: $it" } }
+            findTagged(root, GamePanelTags.FACTS_SCROLL)?.let { viewport -> hiddenWithoutCue(viewport, rows.map { it.second }, findTagged(root, GamePanelTags.FADE_BOTTOM) != null, findTagged(root, GamePanelTags.FADE_TOP) != null).mapTo(problems) { "$where: $it" } }
         }
         fun press(isDown: Boolean): Boolean = compose.runOnIdle { scroll.press(isDown) }
         look("as Info opens")
@@ -84,22 +84,24 @@ internal class InfoReadThrough(
     private fun scrapedRowCount(scraped: com.plumemu.game.ScrapedFacts?): Int =
         listOfNotNull(scraped?.year?.toString(), scraped?.publisher, scraped?.developer, scraped?.genre, scraped?.players).count { it.isNotEmpty() }
 
-    /** Whether the first row hidden below the [viewport]'s bottom, and the last hidden above its top, are visibly cut there. */
+    /** Whether the first row hidden below the [viewport]'s bottom, and the last hidden above its top, are visibly cut there, or the edge fade ([fadeBelow], [fadeAbove]) says there is more. */
     private fun hiddenWithoutCue(
         viewport: SemanticsNode,
         rows: List<SemanticsNode>,
+        fadeBelow: Boolean,
+        fadeAbove: Boolean,
     ): List<String> {
         val edges = viewport.boundsInRoot
         val spans = rows.map { it.positionInRoot.y.let { top -> top to top + it.size.height } }
         val line = spans.minOfOrNull { (top, bottom) -> bottom - top } ?: return emptyList()
         val (mustShow, mustHide) = line / 3f to line / 4f
         val problems = mutableListOf<String>()
-        spans.filter { (_, bottom) -> bottom > edges.bottom + SLACK }.minByOrNull { it.first }?.let { (top, bottom) ->
+        if (!fadeBelow) spans.filter { (_, bottom) -> bottom > edges.bottom + SLACK }.minByOrNull { it.first }?.let { (top, bottom) ->
             val shown = edges.bottom - top
             val hidden = bottom - edges.bottom
             if (shown + SLACK < mustShow || hidden + SLACK < mustHide) problems += "rows are hidden below and nothing says so: the next shows $shown px and hides $hidden px (at least $mustShow / $mustHide)"
         }
-        spans.filter { (top, _) -> top < edges.top - SLACK }.maxByOrNull { it.first }?.let { (top, bottom) ->
+        if (!fadeAbove) spans.filter { (top, _) -> top < edges.top - SLACK }.maxByOrNull { it.first }?.let { (top, bottom) ->
             val shown = bottom - edges.top
             val hidden = edges.top - top
             if (shown + SLACK < mustShow || hidden + SLACK < mustHide) problems += "rows are hidden above and nothing says so: the next shows $shown px and hides $hidden px (at least $mustShow / $mustHide)"

@@ -91,12 +91,10 @@ internal data class FactsFit(
 )
 
 /**
- * How Info's scroll fits [available] px: all of it, no room, when the rows fit. Otherwise the highest
- * viewport whose bottom edge cuts a row as Info opens (not a gap after one, which would end the table
- * cleanly with rows still hidden) and from which every Down to the end, and every Up back, stops where
- * [showsMoreRows] holds; the last Down's place decides the room after the last row (the end's place is
- * set by the content's height, not by the viewport). At most two rows of [available] are given up; when
- * no height works, all of it, and the stops bring each row to the edge as best they can.
+ * How Info's scroll fits [available] px: always all of it (down to Back's gap), no room after the last row
+ * when the rows fit. Otherwise the room after the last row lets the last Down stop cut the row above it
+ * ([showsMoreRows]); the last Down's place decides it. When no place works, no room, and the stops bring
+ * each row to the edge as best they can; the edge fade says there is more.
  */
 internal fun factsFit(
     available: Int,
@@ -108,15 +106,12 @@ internal fun factsFit(
     if (end <= available) return all
     val cut = FactsCut.of(spans)
     val tallest = spans.maxOf { it.last + 1 - it.first }
-    for (viewport in available downTo maxOf(1, available - 2 * tallest)) {
-        if (!showsMoreRows(0, viewport, spans, cut)) continue
-        // Room for the last stop to go past the content's end, if it must.
-        val roomy = end - viewport + 2 * tallest
-        val bottom = lastStop(0, viewport, roomy, spans, cut, isDown = true) ?: continue
-        if (lastStop(bottom, viewport, bottom, spans, cut, isDown = false) == null) continue
-        return FactsFit(viewport, maxOf(0, bottom + viewport - end))
-    }
-    return all
+    // The scroll always fills what Back leaves: a shorter viewport would leave an empty band above Back. What does not fit is
+    // told by the edge fade; the stops still cut the row at the edge wherever a place allows it ([showsMoreRows]).
+    // Room for the last stop to go past the content's end, if it must.
+    val roomy = end - available + 2 * tallest
+    val bottom = lastStop(0, available, roomy, spans, cut, isDown = true) ?: return all
+    return FactsFit(available, maxOf(0, bottom + available - end))
 }
 
 /** Where presses from [from] that way stop at last, or null when one stops where [showsMoreRows] does not hold. */

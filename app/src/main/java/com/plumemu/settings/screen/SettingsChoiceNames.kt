@@ -47,6 +47,7 @@ import com.plumemu.language.AppLanguages
 import com.plumemu.language.languageName
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coredata.settings.GridSizeSetting
+import com.plumemu.coredata.settings.LeftEdgeSetting
 import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.SwitchSystemWithSetting
 import com.plumemu.coredata.settings.TextSizeSetting
@@ -105,7 +106,10 @@ internal fun choiceName(
             when (SortGamesSetting.entries[index]) {
                 SortGamesSetting.Name -> R.string.settings_sort_by_name
                 SortGamesSetting.LastPlayed -> R.string.settings_sort_by_last_played
+                SortGamesSetting.MostPlayed -> R.string.settings_sort_by_most_played
+                SortGamesSetting.RecentlyAdded -> R.string.settings_sort_by_recently_added
                 SortGamesSetting.Year -> R.string.settings_sort_by_year
+                SortGamesSetting.Rating -> R.string.settings_sort_by_rating
             }
         SettingsOption.RecentSize ->
             when (RecentSizeSetting.entries[index]) {
@@ -158,6 +162,7 @@ internal fun textColorName(
 
 internal fun fontName(font: FontSetting): Int =
     when (font) {
+        FontSetting.Jost -> R.string.settings_font_jost
         FontSetting.Sans -> R.string.settings_font_sans
         FontSetting.Serif -> R.string.settings_font_serif
         FontSetting.Mono -> R.string.settings_font_mono
@@ -177,9 +182,10 @@ internal fun colorName(
         is ColorSetting.Custom -> {
             // Each row is named by its own colour: the set or vivid preset whose colour it is, even when another row has moved away from that set.
             val rgb = setting.rgb and RGB_MASK
-            val ofPrevious = set?.takeIf { !isBackground && Rgb(rgb) in it.previousAccents }
+            fun ColorSet.previous() = if (isBackground) previousBackgrounds else previousAccents
+            val ofPrevious = set?.takeIf { Rgb(rgb) in it.previous() }
             val named = ofPrevious ?: set?.takeIf { (if (isBackground) it.backgroundColor else it.accentColor).value == rgb } ?: ColorSet.entries.firstOrNull { (if (isBackground) it.backgroundColor else it.accentColor).value == rgb }
-                ?: ColorSet.entries.takeUnless { isBackground }?.firstOrNull { Rgb(rgb) in it.previousAccents }
+                ?: ColorSet.entries.firstOrNull { Rgb(rgb) in it.previous() }
             val vivid = if (isBackground) ColorPages.vividBackgrounds.firstOrNull { it.color.value == rgb } else null
             when {
                 vivid != null -> stringResource(vivid.name)
@@ -233,4 +239,12 @@ internal fun accentName(preset: AccentPreset): Int =
         AccentPreset.Blue -> R.string.settings_accent_blue
         AccentPreset.Green -> R.string.settings_accent_green
         AccentPreset.Mono -> R.string.settings_accent_mono
+    }
+
+/** The name of Left edge's value [index] (`LeftEdgeSetting.entries` order). */
+internal fun leftEdgeNameRes(index: Int): Int =
+    when (LeftEdgeSetting.entries[index]) {
+        LeftEdgeSetting.Counts -> R.string.settings_left_edge_counts
+        LeftEdgeSetting.Codes -> R.string.settings_left_edge_codes
+        LeftEdgeSetting.Letters -> R.string.settings_left_edge_letters
     }

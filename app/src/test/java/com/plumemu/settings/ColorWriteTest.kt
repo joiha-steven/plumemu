@@ -6,6 +6,7 @@ import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.settings.screen.textColorName
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.TextColorSetting
+import com.plumemu.coreui.theme.BackgroundPreset
 import com.plumemu.coreui.theme.ColorRole
 import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.coreui.theme.Readability
@@ -29,10 +30,10 @@ class ColorWriteTest {
         val a = black.copy(textColor = pale)
         assertEquals(Rgb(0xC8E6C9), a.toThemeSettings(animationsOn = true).text)
         assertEquals(Rgb(0xC8E6C9), a.toThemeSettings(animationsOn = true).textColor)
-        assertEquals(TextColorSetting.Light, Rgb(0xEDEDED).toTextSetting())
-        assertEquals(TextColorSetting.Dark, Rgb(0x17181A).toTextSetting())
+        assertEquals(TextColorSetting.Light, Rgb(0xEBE7DD).toTextSetting())
+        assertEquals(TextColorSetting.Dark, Rgb(0x1C1C1E).toTextSetting())
         assertEquals(TextColorSetting.Custom(0x123456), Rgb(0x123456).toTextSetting())
-        assertEquals(Rgb(0x17181A), TextColorSetting.Dark.toRgb())
+        assertEquals(Rgb(0x1C1C1E), TextColorSetting.Dark.toRgb())
     }
 
     @Test
@@ -49,7 +50,7 @@ class ColorWriteTest {
         assertTrue(write.textAdjusted)
         val moved = write.appearance.textColor.toRgb()
         assertNotEquals(Rgb(0xC8E6C9), moved)
-        assertTrue(Readability.passes(moved, Rgb(0xF4F3EF), ColorRole.Text))
+        assertTrue(Readability.passes(moved, BackgroundPreset.Paper.color, ColorRole.Text))
         assertEquals("the accent preset is kept", black.accent, write.appearance.accent)
     }
 
@@ -115,7 +116,7 @@ class ColorWriteTest {
 
     @Test
     fun aStoredFailingComboIsDrawnAdjustedAndTheFileIsNotRewritten() {
-        val stored = black.copy(background = ColorSetting.Custom(0xCDCCC4)) // Pocket's background with Light text
+        val stored = black.copy(background = ColorSetting.Custom(0xD2D1CA)) // Pocket's background with Light text
         val theme = stored.toThemeSettings(animationsOn = true)
         assertEquals(TextMode.Dark, theme.textMode)
         assertEquals(TextColorSetting.Light, stored.textColor)

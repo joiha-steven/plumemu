@@ -17,9 +17,12 @@ import com.plumemu.coreinput.strip.StripState
 import com.plumemu.game.GameRef
 import com.plumemu.game.OpenPanel
 import com.plumemu.game.PanelScreen
+import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.LocalGlideClock
+import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumMotion
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import androidx.compose.runtime.CompositionLocalProvider
@@ -108,26 +111,37 @@ abstract class GlidingPillFramesBase {
 
     private fun listBounds(): Rect = compose.onNodeWithTag(listTag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
 
-    /** The ring's colour: the pill's top edge on the row that wears it, at rest. */
-    private fun ringColour(rowTop: Float): Color {
+    /** How far the slab is drawn above its row's box: [pillTop] reports the box, so the glide is checked in row positions. */
+    private var overhang = 0f
+
+    /** Where [pillTop] starts looking: the list's top, or the first game row's when something else (the system info band) stands above it. */
+    private var scanTop = 0f
+
+    /** The slab's hairline edge (1 dp), above its fill. */
+    private val edgePx get() = compose.density.density.toInt().coerceAtLeast(1)
+
+    /** The ring's colour: the pill's top edge on the row [rowTag] that wears it, at rest. Also takes that row's overhang. */
+    private fun ringColour(rowTag: String): Color {
         val list = listBounds()
-        return compose.onRoot().captureToImage().toPixelMap()[((list.left + list.right) / 2).toInt(), rowTop.toInt() + 1]
+        // A game row's box holds its tap gap under the row; the slab is as tall as the row.
+        overhang = compose.slabOverhangPx(rowTag, if (rowTag.startsWith("home_game")) PlumDimens.listRowGap else 0.dp)
+        // A system info band above the first game row ends in a hairline of its own: the search for the pill starts at the first row, under it.
+        scanTop = if (rowTag.startsWith("home_game")) runCatching { rowTop(HomeTags.game(0)) }.getOrDefault(list.top) else list.top
+        return compose.onRoot().captureToImage().toPixelMap()[((list.left + list.right) / 2).toInt(), rowTop(rowTag).toInt() + 1]
     }
 
-    /** The top of the pill now: the first pixel row of the list where most of its width is the ring's colour; -1 when none. */
+    /** The top of the pill's row box now (the slab's drawn top border plus its overhang); -1 when none. [ring] only marks that a row was measured. */
+    @Suppress("UNUSED_PARAMETER")
     private fun pillTop(ring: Color): Int {
         val list = listBounds()
-        val pixels = compose.onRoot().captureToImage().toPixelMap()
-        val from = (list.left + list.height / 8).toInt()
-        val to = (list.right - list.height / 8).toInt()
-        for (y in list.top.toInt() until list.bottom.toInt()) {
-            val hits = (from until to).count { x -> pixels[x, y].isNear(ring) }
-            if (hits * 2 >= to - from) return y
-        }
-        return -1
+        // A middle band, clear of the slab's rounded ends (a narrow list's are most of its width).
+        val xs = (list.left + list.width * 0.45f).toInt() until (list.left + list.width * 0.65f).toInt()
+        // The slab of a first row is drawn above the list's top, inside the list's clip bleed.
+        val y = compose.onRoot().captureToImage().slabTopRow(xs, scanTop.toInt() - overhang.toInt() - 1, list.bottom.toInt())
+        return if (y < 0) -1 else Math.round(y + overhang)
     }
 
-    private fun Color.isNear(other: Color) = abs(red - other.red) + abs(green - other.green) + abs(blue - other.blue) < 0.12f
+    private fun Color.isNear(other: Color) = abs(red - other.red) + abs(green - other.green) + abs(blue - other.blue) < 0.03f
 
     private fun rowTop(tag: String): Float = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.top
 
@@ -176,7 +190,7 @@ abstract class GlidingPillFramesBase {
             compose.waitForIdle()
         }
         val oldTop = rowTop(rowTag(first))
-        val ring = ringColour(oldTop)
+        val ring = ringColour(rowTag(first))
         val newTop = rowTop(rowTag(first + 1))
         assertEquals("at rest the pill is on the focused row", oldTop.toInt(), pillTop(ring))
         compose.mainClock.autoAdvance = false
@@ -245,7 +259,7 @@ abstract class GlidingPillFramesBase {
     @Test
     fun aMoveDuringAMoveStartsFromWherePillIsDrawnAndNeverSnapsBack() {
         show(FakeHomeContent.board(), true, HomeTags.GAMES, Column.Games, FakeHomeContent.BOARD_SNES_INDEX)
-        val ring = ringColour(rowTop(HomeTags.game(0)))
+        val ring = ringColour(HomeTags.game(0))
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { state.dispatch(Action.Move(Direction.Down)) }
         // Midway to row 1 the focus moves on to row 2.
@@ -261,7 +275,7 @@ abstract class GlidingPillFramesBase {
         val content = FakeHomeContent.large(LARGE_GAMES)
         val system = FakeHomeContent.BOARD_SNES_INDEX
         show(content, true, HomeTags.GAMES, Column.Games, system)
-        val ring = ringColour(rowTop(HomeTags.game(0)))
+        val ring = ringColour(HomeTags.game(0))
         val stride = rowTop(HomeTags.game(1)) - rowTop(HomeTags.game(0))
         compose.mainClock.autoAdvance = false
         val worst = mutableListOf<String>()
@@ -284,7 +298,7 @@ abstract class GlidingPillFramesBase {
     @Test
     fun theGlideRecomposesNothingAfterTheFrameOfTheMove() {
         show(FakeHomeContent.board(), true, HomeTags.GAMES, Column.Games, FakeHomeContent.BOARD_SNES_INDEX)
-        val ring = ringColour(rowTop(HomeTags.game(0)))
+        val ring = ringColour(HomeTags.game(0))
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { state.dispatch(Action.Move(Direction.Down)) }
         val frames = record(framesFor(PlumMotion.GLIDE_MS) + 4, ring)
@@ -309,7 +323,7 @@ abstract class GlidingPillFramesBase {
     @Test
     fun theGamesHaloIsDrawnOutsideTheListAndMovesWithThePill() {
         show(FakeHomeContent.board(), true, HomeTags.GAMES, Column.Games, FakeHomeContent.BOARD_SNES_INDEX)
-        val ring = ringColour(rowTop(HomeTags.game(0)))
+        val ring = ringColour(HomeTags.game(0))
         assertTrue("at rest some halo is left of the list", haloCentreLeftOfList() >= 0f)
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { state.dispatch(Action.Move(Direction.Down)) }
@@ -322,7 +336,10 @@ abstract class GlidingPillFramesBase {
             compose.waitForIdle()
             val top = pillTop(ring)
             val centre = haloCentreLeftOfList()
-            if (top >= 0 && centre >= 0f) {
+            // The halo reaches 2.5 sigmas above the pill: while the pill is nearer the list's top than that, the list's edge cuts the part this
+            // measurement can see, which moves the centre down without the halo leaving the pill.
+            val reach = (2.5f * SlabDimens.glowSigma.value * compose.density.density)
+            if (top >= 0 && centre >= 0f && top - listBounds().top >= reach) {
                 gaps += centre - top
                 tops += top.toFloat()
             }
@@ -341,7 +358,7 @@ abstract class GlidingPillFramesBase {
     @Test
     fun noHaloIsLeftOnTheOldPageWhileTheSystemSwitches() {
         show(FakeHomeContent.board(), true, HomeTags.GAMES, Column.Games, FakeHomeContent.BOARD_SNES_INDEX)
-        val ring = ringColour(rowTop(HomeTags.game(0)))
+        val ring = ringColour(HomeTags.game(0))
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { state.dispatch(Action.NextSystem) }
         var measured = 0

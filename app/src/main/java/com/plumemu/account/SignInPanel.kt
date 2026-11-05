@@ -5,7 +5,9 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -51,8 +53,12 @@ import com.plumemu.R
 import com.plumemu.coreinput.Action
 import com.plumemu.coreui.components.FieldRow
 import com.plumemu.coreui.components.FieldRowFrame
+import com.plumemu.coreui.components.fieldLine
+import com.plumemu.coreui.components.fieldBoxHeight
+import com.plumemu.coreui.theme.FieldDimens
 import com.plumemu.coreui.components.OptionRowLook
-import com.plumemu.coreui.components.sunkenFieldInRow
+import com.plumemu.coreui.components.CollarSize
+import com.plumemu.coreui.theme.ButtonDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.game.paste
@@ -105,9 +111,9 @@ internal fun SignInBody(
         // under the password, the message line or Sign in (a row or a button, whichever is taller) with the
         // button's focus ring's reach, which also covers its word where a large font's line is taller than the button.
         val layout = PlumTheme.layout
-        val belowUsername = PlumDimens.listRowGap + layout.rowHeight
+        val belowUsername = FieldDimens.gap + fieldBoxHeight()
         val belowPassword = gap + maxOf(layout.rowHeight, layout.setupButtonHeight) + PlumDimens.focusRingOutset
-        Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.listRowGap)) {
+        Column(verticalArrangement = Arrangement.spacedBy(FieldDimens.gap)) {
             Field(form, SignInItem.Username, usernameFocus, onTap, onAction, labelWidth, belowUsername)
             Field(form, SignInItem.Password, passwordFocus, onTap, onAction, labelWidth, belowPassword)
         }
@@ -115,8 +121,13 @@ internal fun SignInBody(
             form.isChecking -> Line(stringResource(if (form.kind == SignInKind.RetroAchievements) R.string.account_ra_checking else R.string.account_checking), SignInTags.CHECKING, isQuiet = true)
             form.message != null -> form.message?.let { Line(signInMessage(it, form.kind), SignInTags.MESSAGE, isQuiet = false) }
         }
-        Buttons(form, onTap, listOf(SignInItem.SignIn to R.string.account_sign_in, SignInItem.Leave to leaveLabel))
-        if (SignInItem.OpenKeyPage in form.items) Buttons(form, onTap, listOf(SignInItem.OpenKeyPage to R.string.settings_ra_open_key_page), isPrimary = false)
+        // Tray up over the username: the scroll shows the two fields, so the buttons under them would show as strips above the tray.
+        // They keep their room, unseen. Over the password the scroll brings Sign in whole into view; the buttons stacked
+        // under it would show their top as a strip above the tray, so they stay unseen too.
+        val overUsername = form.isTrayUp && form.focus == SignInItem.Username
+        val underSignIn = form.isTrayUp && form.stackedButtons
+        Buttons(form, onTap, listOf(SignInItem.SignIn to R.string.account_sign_in, SignInItem.Leave to leaveLabel), gap = gap, unseen = overUsername, unseenAfterFirst = underSignIn)
+        if (SignInItem.OpenKeyPage in form.items) Buttons(form, onTap, listOf(SignInItem.OpenKeyPage to R.string.settings_ra_open_key_page), isPrimary = false, unseen = overUsername || form.isTrayUp)
         below()
     }
 }
@@ -267,6 +278,8 @@ private fun OwnKeyboardField(
         }
     FieldRowFrame(
         look = if (focused) OptionRowLook.Focused else OptionRowLook.Normal,
+        label = stringResource(if (isPassword) passwordLabel(form) else R.string.account_username),
+        labelWidth = labelWidth,
         modifier =
             Modifier
                 // With the tray up: the field and the row or line under it (the scroll ends at the tray).
@@ -274,16 +287,7 @@ private fun OwnKeyboardField(
                 .pointerInput(index, onTap) { detectTapGestures { onTap(index) } }
                 .semantics { contentDescription = hint }
                 .testTag(if (isPassword) SignInTags.PASSWORD else SignInTags.USERNAME),
-        answersButton = !trayUp,
     ) { style ->
-        // The dot (drawn by the frame while focused) belongs to the label column: unfocused, its room follows the label.
-        BasicText(
-            stringResource(if (isPassword) passwordLabel(form) else R.string.account_username),
-            style = PlumTheme.type.settingsOption.copy(color = PlumTheme.colors.muted),
-            maxLines = 1,
-            modifier = Modifier.width(labelWidth),
-        )
-        Spacer(Modifier.width(PlumDimens.rowTrailingGap))
         CaretLine(
             text = text,
             caret = { keys.caret },
@@ -291,7 +295,7 @@ private fun OwnKeyboardField(
             placeholder = "",
             style = style,
             onTapAt = onTapAt,
-            modifier = Modifier.weight(1f).fillMaxHeight().sunkenFieldInRow(),
+            modifier = Modifier.fieldLine(),
             textTag = SignInTags.typedText(item),
             placeholderTag = SignInTags.placeholder(item),
             onPaste = form.typing?.let { typing -> { typing.paste() } },
@@ -370,6 +374,12 @@ private fun Buttons(
     buttons: List<Pair<SignInItem, Int>>,
     /** The first button is the main one; false for a lone secondary button. */
     isPrimary: Boolean = true,
+    /** The form's gap above the buttons: with Plumemu's tray up the collar hangs into it, down to `signInCollarFloor` from the field. */
+    gap: Dp = 0.dp,
+    /** Measured, never placed: no pixel drawn, no tap taken (see [unplaced]). */
+    unseen: Boolean = false,
+    /** Every button but the first is unseen (they are stacked under it). */
+    unseenAfterFirst: Boolean = false,
 ) {
     // On the column's left line: the host's scroll leaves room for the focus ring (setup's `bleed`).
     val place: @Composable (@Composable () -> Unit) -> Unit =
@@ -379,7 +389,7 @@ private fun Buttons(
         } else {
             { Row(horizontalArrangement = Arrangement.spacedBy(PlumDimens.setupButtonGap)) { it() } }
         }
-    place {
+    Box(if (unseen) Modifier.unplaced() else Modifier) { place {
         buttons.forEachIndexed { at, (item, label) ->
             val index = form.items.indexOf(item)
             SetupButton(
@@ -387,16 +397,22 @@ private fun Buttons(
                 isPrimary = isPrimary && at == 0,
                 isFocused = form.focus == item && !form.isChecking,
                 maxLines = if (item == SignInItem.OpenKeyPage) 2 else 1,
+                hangAbove = if (form.isTrayUp) signInCollarHang(gap) else 0.dp,
+                collarSize = if (form.isTrayUp) CollarSize.Key else CollarSize.Control,
                 modifier =
                     Modifier
+                        .then(if (unseenAfterFirst && at > 0) Modifier.unplaced() else Modifier)
                         .then(if (form.stackedButtons) Modifier.fillMaxWidth() else Modifier)
                         .bringIntoViewWhen(form.focus == item)
                         .signInTap(index, onTap)
                         .testTag(SignInTags.item(item)),
             )
         }
-    }
+    } }
 }
+
+/** Keeps the room of the content and places none of it. */
+internal fun Modifier.unplaced(): Modifier = layout { measurable, constraints -> measurable.measure(constraints).let { layout(it.width, it.height) {} } }
 
 /** A button tap that accessibility services can press too. */
 private fun Modifier.signInTap(
@@ -423,7 +439,7 @@ private fun Line(
         style = PlumTheme.type.setupNote.copy(color = if (isQuiet) colors.muted else colors.text),
         maxLines = LINE_LINES,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(horizontal = PlumDimens.gameRowPadding).testTag(tag),
+        modifier = Modifier.padding(start = PlumDimens.gameRowPadding, end = PlumDimens.panelTextEnd).testTag(tag),
     )
 }
 
@@ -443,5 +459,8 @@ internal object SignInTags {
     fun placeholder(item: SignInItem): String = "sign_in_placeholder_${item.name}"
 }
 
-/** A status or error line's most lines: 4 since the 13 sp text size makes the daily-limit line take 4 at Largest in Mono. */
-private const val LINE_LINES = 4
+/** A status or error line's most lines: 5 since the text start moved in, the daily-limit line takes 5 at Largest in Mono. */
+private const val LINE_LINES = 5
+
+/** How much of the small collar's top (tray up) hangs over the gap above the buttons: all of it, so the face stays where it sat, unless that leaves less than the floor. */
+internal fun signInCollarHang(gap: Dp): Dp = (gap - ButtonDimens.signInCollarFloor).coerceIn(0.dp, CollarSize.Key.topPadding)

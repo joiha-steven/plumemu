@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.platform.LocalDensity
 import com.plumemu.coreui.components.FAVORITE_STAR
+import com.plumemu.coreui.components.trimBeforeEllipsis
 import com.plumemu.coreui.theme.SecondScreenDimens
 import java.text.BreakIterator
 
@@ -127,7 +128,7 @@ internal fun fittedTitle(
     if (fits(title)) return build(title)
     val cuts = characterBoundaries(title)
 
-    fun cut(index: Int) = title.substring(0, cuts[index]).trimEnd() + ELLIPSIS
+    fun cut(index: Int) = title.substring(0, cuts[index]).trimBeforeEllipsis() + ELLIPSIS
     var low = 0
     var high = cuts.size - 1
     while (low < high) {

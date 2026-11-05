@@ -113,6 +113,50 @@ class NamePack private constructor(
         return out
     }
 
+    /**
+     * Releases of a disc whose track files have the sizes [sizes] (bytes, in track order; see
+     * `PACKS.md`, "Normalising a copy", for how a copy gives them). Matches the ordered list of
+     * sizes; with one size it also matches discs of two or more tracks whose sizes add up to it
+     * (a single-bin copy). A disc listed twice is returned once.
+     *
+     * More than one release is **ambiguous**: the sizes alone do not tell them apart (the same
+     * dump under several regions, or a revision with identical layout); the caller must not pick
+     * one silently. Empty when the pack has no `TRKS` section or nothing matches.
+     */
+    fun byTrackSizes(sizes: List<Long>): List<PackRelease> {
+        if (kind != PackKind.CONSOLE || sizes.isEmpty() || sizes.any { it <= 0 }) return emptyList()
+        val found = LinkedHashSet<Int>()
+        found += trackReleaseIndexes(TrackSizeKeys.ordered(sizes))
+        if (sizes.size == 1) found += trackReleaseIndexes(TrackSizeKeys.total(sizes[0]))
+        return found.sorted().map(::release)
+    }
+
+    /** Releases stored under the track key [key] ([TrackSizeKeys]); the low-level form of [byTrackSizes]. */
+    fun byTrackKey(key: Long): List<PackRelease> =
+        if (kind != PackKind.CONSOLE) emptyList() else trackReleaseIndexes(key).sorted().map(::release)
+
+    private fun trackReleaseIndexes(key: Long): List<Int> {
+        val section = sections[PackFormat.TAG_TRACKS] ?: return emptyList()
+        val count = (section.last - section.first + 1) / PackFormat.TRACK_RECORD
+        var low = 0
+        var high = count
+        while (low < high) {
+            val mid = (low + high) ushr 1
+            if (java.lang.Long.compareUnsigned(trackKeyAt(section.first + mid * PackFormat.TRACK_RECORD), key) < 0) low = mid + 1 else high = mid
+        }
+        val out = ArrayList<Int>(1)
+        var i = low
+        while (i < count) {
+            val at = section.first + i * PackFormat.TRACK_RECORD
+            if (trackKeyAt(at) != key) break
+            out += u32(at + 8).toInt()
+            i++
+        }
+        return out
+    }
+
+    private fun trackKeyAt(at: Int): Long = (u32(at + 4) shl 32) or u32(at)
+
     /** The name of title [index]; the cheap call the name matcher uses. */
     fun titleName(index: Int): String = string(buffer.getInt(titleAt(index)))
 

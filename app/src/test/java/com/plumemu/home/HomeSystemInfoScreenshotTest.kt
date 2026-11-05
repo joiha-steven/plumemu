@@ -30,13 +30,13 @@ class HomeSystemInfoScreenshotTest {
     /** The three sizes: the two of [ReferenceShots] and the Thor-like 837x471 it does not take. */
     private fun shoot(
         screen: String,
-        textSize: TextSize = TextSize.Medium,
+        textSize: TextSize = TextSize.Small,
         screenContent: @Composable () -> Unit,
     ) {
         ReferenceShots.capture(screen, textSize = textSize, content = screenContent)
         RuntimeEnvironment.setQualifiers("w837dp-h471dp-land-xhdpi")
         for (preset in ReferenceShots.Preset.entries) {
-            val suffix = if (textSize == TextSize.Medium) "" else "_${textSize.name.lowercase()}"
+            val suffix = if (textSize == TextSize.Small) "" else "_${textSize.name.lowercase()}"
             captureRoboImage(filePath = "${ReferenceShots.OUTPUT_DIR}/${screen}_837x471_${preset.label}$suffix.png") {
                 PlumTheme(preset.settings.copy(textSize = textSize)) { screenContent() }
             }

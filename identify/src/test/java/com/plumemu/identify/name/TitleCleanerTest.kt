@@ -285,4 +285,55 @@ class TitleCleanerTest {
         assertEquals(MatchKey.of("FINAL FANTASY (Japan)"), MatchKey.of(wide))
         assertEquals(MatchKey.of("Final Fantasy 7"), MatchKey.of("Final Fantasy \uFF17"))
     }
+
+    /** What [TitleCleaner.keptForms] gives for the names the cleaner shortens; `clean` itself is unchanged. */
+    @Test
+    fun keptFormsKeepWhatTheCleanerThrowsAway() {
+        fun kept(name: String) = TitleCleaner.keptForms(name)
+        assertTrue("Tool v1.0" in kept("Tool v1.0 (USA)"))
+        assertEquals("Tool", TitleCleaner.clean("Tool v1.0 (USA)").title)
+        assertTrue("Combat Core (Demo)" in kept("Combat Core (Demo) (USA)"))
+        assertTrue("(Italiano) Mega Game" in kept("(Italiano) Mega Game (Europe)"))
+        assertTrue("Wide Game(\u30c6\u30b9\u30c8)" in kept("Wide Game\uFF08\u30c6\u30b9\u30c8\uFF09 (Japan)"))
+        assertTrue("(USA) (EN)" in kept("(USA) (EN) (USA)"))
+        assertTrue("Re Mind (DLC) Cloud" in kept("Re Mind (DLC) Cloud (USA)"))
+        assertTrue("Amiga it Numero 1" in kept("Amiga.it_Numero_1_(Italy)"))
+        assertTrue("Gekikame Ninja Den" in kept("Gekikame.Ninja.Den.JPN-GRP"))
+        assertTrue("Zero: Update" in kept("Zero:.Update.EUR-GRP"))
+        assertTrue("Sheep It Up! - NTSC" in kept("Sheep.It.Up!.-.NTSC.USA-GRP"))
+        // The last scene word before the group is the region: never part of the title.
+        assertTrue(kept("Super.Mario.USA-GRP").none { "USA" in it })
+        // Region, language and dump groups alone give nothing the matcher would use: every form has the key of "Game".
+        assertTrue(kept("Game (USA) (En,Fr) [!]").all { MatchKey.of(it) == "game" })
+    }
+
+    /** A kept form never stops at a region code, wherever it sits in the scene tail. */
+    @Test
+    fun keptFormsNeverEndAtARegionCode() {
+        assertTrue(TitleCleaner.keptForms("Zork.Quest.USA.NTSC-GRP").none { it.endsWith("USA") })
+        assertTrue(TitleCleaner.keptForms("Zork.Quest.EUR.MULTi5-GRP").none { it.endsWith("EUR") })
+        assertTrue("Zork Ninja Den" in TitleCleaner.keptForms("Zork.Ninja.Den.JPN-GRP"))
+        // Two region codes in a row: the form at the first is made, NameMatcher gates it; never one at the last.
+        assertTrue(TitleCleaner.keptForms("Super.Mario.USA.EUR-GRP").none { it.endsWith("EUR") })
+    }
+
+    /** Region, language and dump groups stuck to a word are not part of the title. */
+    @Test
+    fun anAttachedRegionLanguageOrDumpGroupIsNotKept() {
+        assertTrue(TitleCleaner.keptForms("Super Mario(USA).nes").none { "USA" in it })
+        assertTrue(TitleCleaner.keptForms("Game(En,Fr)").none { MatchKey.of(it) != "game" })
+        assertTrue(TitleCleaner.keptForms("Game[!]").none { MatchKey.of(it) != "game" })
+    }
+
+    @Test
+    fun anAttachedBracketGroupIsKeptAsPartOfTheWord() {
+        assertTrue("ZORK:QUEST LIGHT(S)" in TitleCleaner.keptForms("ZORK:QUEST LIGHT(S) (USA)"))
+        assertTrue("Zork Quest" in TitleCleaner.keptForms("Zork Quest (Demo)").map { it.replace(" (Demo)", "") })
+    }
+
+    @Test
+    fun anAcuteAccentApostropheDoesNotSplitADottedName() {
+        assertEquals("Zork\u00b4s Quest", TitleCleaner.clean("Zork\u00b4s.Quest.USA-GRP").title)
+        assertEquals("Zork\u00b4s Quest", TitleCleaner.clean("Zork\u00b4s Quest (USA)").title)
+    }
 }

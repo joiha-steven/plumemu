@@ -399,11 +399,18 @@ abstract class IdentifyDao {
     fun observeUnidentified(namedByDesign: Collection<String>): Flow<List<HiddenGameRow>> =
         unidentified(namedByDesign.toList()).distinctUntilChanged()
 
-    @Query(
-        "SELECT id, title, regions, system_id FROM game WHERE name_trust = '" + NameTrustNames.FILE_NAME + "' " +
-            "AND id_method IS NOT NULL AND is_not_game = 0 AND system_id NOT IN (:namedByDesign) ORDER BY sort_name, id",
-    )
+    @Query("SELECT id, title, regions, system_id FROM game WHERE " + UNIDENTIFIED + " ORDER BY sort_name, id")
     protected abstract fun unidentified(namedByDesign: List<String>): Flow<List<HiddenGameRow>>
+
+    /**
+     * The system and stored fingerprint of every game [observeUnidentified] lists (the same rows),
+     * for the statistics' `game_unidentified`; games with no stored fingerprint are left out.
+     */
+    suspend fun unidentifiedFingerprints(namedByDesign: Collection<String>): List<UnidentifiedFingerprintRow> =
+        unidentifiedFingerprintRows(namedByDesign.toList())
+
+    @Query("SELECT system_id, fingerprint FROM game WHERE " + UNIDENTIFIED + " AND fingerprint IS NOT NULL ORDER BY id")
+    protected abstract suspend fun unidentifiedFingerprintRows(namedByDesign: List<String>): List<UnidentifiedFingerprintRow>
 
     /**
      * Settings › Library › Hidden games: games the person marked "Not a game" (on this row
@@ -427,6 +434,11 @@ abstract class IdentifyDao {
                 ScrapedGameDao.SCRAPE_KEY + " AND scraped_game.is_person_choice = 1)) AS has_scraper_choice, " +
                 "EXISTS (SELECT 1 FROM emulator_choice WHERE emulator_choice.game_id = game.id) AS has_emulator_choice " +
                 "FROM game LEFT JOIN play ON play.game_id = game.id"
+
+        /** Settings › Library › Unidentified games: named from the file only, after the identifier looked. */
+        private const val UNIDENTIFIED =
+            "name_trust = '" + NameTrustNames.FILE_NAME + "' AND id_method IS NOT NULL AND is_not_game = 0 " +
+                "AND system_id NOT IN (:namedByDesign)"
 
         /** identify's `Method.ARCADE_NAME`, as `game.id_method` stores it. */
         const val ARCADE_NAME = "ARCADE_NAME"

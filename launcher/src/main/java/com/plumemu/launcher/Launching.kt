@@ -7,6 +7,7 @@ import com.plumemu.launcher.choice.ConfirmedCores
 import com.plumemu.launcher.choice.EmulatorChoices
 import com.plumemu.launcher.choice.SharedPreferencesConfirmedCores
 import com.plumemu.launcher.detect.EmulatorDetector
+import com.plumemu.launcher.play.ForegroundTime
 import com.plumemu.launcher.play.PlayBattery
 import com.plumemu.launcher.play.PlayTimeTracker
 import com.plumemu.library.storage.AndroidStorageRoots
@@ -39,6 +40,7 @@ class Launching internal constructor(
             catalog: PlatformCatalog,
             startObserver: GameStartObserver = GameStartObserver.None,
             playBattery: PlayBattery = PlayBattery.None,
+            foregroundTime: ForegroundTime = ForegroundTime.None,
         ): Launching {
             val app = context.applicationContext
             val detector = EmulatorDetector(app)
@@ -46,7 +48,7 @@ class Launching internal constructor(
                 database.emulatorChoiceDao(), catalog, detector::isLaunchable, AndroidLauncherLog, Dispatchers.IO,
             )
             val confirmedCores = SharedPreferencesConfirmedCores(app)
-            val playTime = PlayTimeTracker(app, database.playDao(), database.gameDao(), playBattery)
+            val playTime = PlayTimeTracker(app, database.playDao(), database.gameDao(), playBattery, foregroundTime)
             val launcher = GameLauncher(
                 catalog,
                 database.gameDao(),

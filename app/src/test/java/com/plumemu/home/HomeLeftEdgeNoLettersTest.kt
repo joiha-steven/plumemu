@@ -44,7 +44,7 @@ class HomeLeftEdgeNoLettersTest {
         val content = HomeContent.of(games, emptyList(), emptyList(), listOf(SystemGames("snes", "Super Nintendo", games)), sortedByName = sortedByName, leftEdge = LeftEdgeSetting.Letters)
         val index = focusedEntry(content)
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Medium)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Small)) {
                 HomeAt(content, listOf(Action.TapItem(Column.Systems, index), Action.Enter, Action.TapItem(Column.Games, 0)))
             }
         }

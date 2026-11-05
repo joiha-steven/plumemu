@@ -25,7 +25,7 @@ internal fun rememberPanelPill(
     val index = remember { mutableIntStateOf(-1) }
     index.intValue = focusedItem
     val layout = PlumTheme.layout
-    return rememberGlidingPill(listState, glide, rowHeight = layout.rowHeight, stride = layout.rowHeight + PlumDimens.listRowGap, extraGap = layout.rowHeight * TALL_STEP_ROWS, rowsVary = true) { index.intValue }
+    return rememberGlidingPill(listState, glide, rowHeight = layout.rowHeight, stride = layout.rowHeight + PlumDimens.panelRowGap, extraGap = layout.rowHeight * TALL_STEP_ROWS, rowsVary = true) { index.intValue }
 }
 
 /** Panel rows carry notes, badges and thumbnails, so one step can be several plain rows long; the pill's lag may span it. */

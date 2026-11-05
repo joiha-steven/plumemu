@@ -32,7 +32,17 @@ internal class FitAllowance(
      * (Fix box art's "Name" at the large text sizes) is the same thing.
      */
     val slidingText: Set<String> = emptySet(),
+    /** Tags of texts that are one line with an ellipsis by design, at every size (the details' subtitle and fact lines, the emulator's name, the facts table's values). */
+    val oneLine: Set<String> = emptySet(),
+    /** Exact texts that may end in an ellipsis wherever they are: one named case of a long title at a size and font where no mechanism leaves it room. */
+    val ellipsisTexts: Set<String> = emptySet(),
 )
+
+/** Game titles the home list cuts at Largest in Serif and Mono: the list's room is about 3 dp short of the whole title there, with the year alone and nothing left to give up. */
+internal val LONG_TITLES = setOf("Donkey Kong Country 2")
+
+/** The details column's texts that hold one line and end in an ellipsis rather than grow: a late value must not move anything. */
+internal val DETAILS_ONE_LINE = setOf(HomeTags.DETAILS_SUBTITLE, HomeTags.DETAILS_FACT_LINE, HomeTags.DETAILS_EMULATOR, HomeTags.DETAILS_FACT_VALUE)
 
 private fun SemanticsNode.hasAncestorTagged(tag: String?): Boolean =
     tag != null && generateSequence(this) { it.parent }.any { SemanticsProperties.TestTag in it.config && it.config[SemanticsProperties.TestTag] == tag }
@@ -75,7 +85,7 @@ internal fun textProblems(
     val screenRight = root.boundsInRoot.right
     for ((text, node, layout) in texts) {
         val shown = node.boundsInRoot
-        val mayEllipsize = (allow.isLargest && node.hasAncestorTagged(allow.ellipsisUnder)) || node.hasAncestorTagged(allow.cutToFit)
+        val mayEllipsize = (allow.isLargest && node.hasAncestorTagged(allow.ellipsisUnder)) || node.hasAncestorTagged(allow.cutToFit) || node.isUnder(allow.oneLine) || text in allow.ellipsisTexts
         val inScrollingList = node.isUnder(allow.scrollTags)
         val inStrip = node.isUnder(allow.stripTags)
         val slides = node.isUnder(allow.slidingText)
@@ -116,15 +126,19 @@ internal fun findTagged(
     return root.children.firstNotNullOfOrNull { findTagged(it, tag) }
 }
 
-/** Why [node], the focused item, is not fully on screen; null when it is. */
+/**
+ * Why [node], the focused item, is not fully on screen; null when it is. [trailingGapPx] is a gap the node carries
+ * under its drawn part (a game row's node holds the gap after it); the last row of a list may leave that gap outside.
+ */
 internal fun notFullyShown(
     node: SemanticsNode,
     root: SemanticsNode,
+    trailingGapPx: Float = 0f,
 ): String? {
     val shown = node.boundsInRoot
     val screen = root.boundsInRoot
     return when {
-        shown.height + 1f < node.size.height || shown.width + 1f < node.size.width -> "is cut (${shown.width} x ${shown.height} of ${node.size.width} x ${node.size.height} px)"
+        shown.height + 1f < node.size.height - trailingGapPx || shown.width + 1f < node.size.width -> "is cut (${shown.width} x ${shown.height} of ${node.size.width} x ${node.size.height} px)"
         shown.top < screen.top - 1f || shown.bottom > screen.bottom + 1f -> "is off the screen (${shown.top}..${shown.bottom} of ${screen.top}..${screen.bottom})"
         else -> null
     }
@@ -132,3 +146,21 @@ internal fun notFullyShown(
 
 private const val LINE_LEADING_SLACK = 0.12f
 private const val PEEK_SLIVER = 0.25f
+
+/**
+ * Why [cell] of the facts [box] is not on show; null when it is placed and lies inside the box. A cell the box has no room for is
+ * measured but not placed, so a node that exists (even with a width) proves nothing: its place is checked.
+ */
+internal fun notShownInBox(
+    cell: SemanticsNode,
+    box: SemanticsNode,
+): String? {
+    val c = cell.boundsInRoot
+    val b = box.boundsInRoot
+    return when {
+        !cell.layoutInfo.isPlaced -> "is not placed"
+        c.width <= 0f || c.height <= 0f -> "has no size"
+        c.left < b.left - 1f || c.top < b.top - 1f || c.right > b.right + 1f || c.bottom > b.bottom + 1f -> "lies outside the box ($c in $b)"
+        else -> null
+    }
+}

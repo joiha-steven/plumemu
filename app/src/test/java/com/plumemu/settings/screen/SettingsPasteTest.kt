@@ -34,6 +34,10 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], qualifiers = "w768dp-h432dp-land-xhdpi")
 internal class SettingsPasteTest : SettingsKeyboardPathHarness() {
+    init {
+        startOnRedSans() // the accent palette's "+" is reached by walking the presets from Red
+    }
+
     override val content: SettingsContent get() = SettingsContent(account = AccountStatus.SignedOut)
 
     /** The clipboard as a test sets it; counts how often the text itself was read. */
@@ -77,12 +81,13 @@ internal class SettingsPasteTest : SettingsKeyboardPathHarness() {
 
     private val hasPasteHint get() = exists(HomeTags.hint(Action.Paste))
 
-    /** Accounts › ScreenScraper and A: the sign-in form opens with the tray up on the username. */
+    /** Accounts › ScreenScraper and A: the sign-in form opens with the keyboard down; A on the username brings the tray up. */
     private fun typeInTheUsername() {
         show()
         repeat(SettingsSection.shownIn(content).indexOf(SettingsSection.Accounts)) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
         repeat(SettingsSection.Accounts.rowsIn(content).indexOf(SettingsOption.ScraperAccount)) { send(Action.Move(Direction.Down)) }
+        send(Action.Enter)
         send(Action.Enter)
         assertTrue("the tray is up", isTrayUp)
     }

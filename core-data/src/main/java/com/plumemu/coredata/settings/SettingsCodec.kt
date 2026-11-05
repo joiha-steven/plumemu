@@ -46,6 +46,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
                 scanOnStartup = p[Keys.scanOnStartup] ?: d.library.scanOnStartup,
                 sortGames = enum(p, Keys.sortGames, d.library.sortGames),
                 boxArtRegion = decodeBoxArtRegion(p, d.library.boxArtRegion),
+                boxArtSource = decodeBoxArtSource(p),
                 boxArtPaused = p[Keys.boxArtPaused] ?: d.library.boxArtPaused,
                 systemOrder = decodeSystemOrder(p, d.library.systemOrder),
                 manualSystemOrder = p[Keys.manualSystemOrder]?.let(::decodeSystemIds) ?: d.library.manualSystemOrder,
@@ -68,6 +69,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
                 // No stored key on an install that finished setup means it ran before the default turned off: it keeps the old "on".
                 usageStatistics = p[Keys.usageStatistics] ?: (p[Keys.setupCompleted] == true || d.advanced.usageStatistics),
                 vibration = p[Keys.vibration] ?: d.advanced.vibration,
+                exactPlayTime = p[Keys.exactPlayTime] ?: d.advanced.exactPlayTime,
             ),
             updates = UpdateSettings(
                 checkDaily = p[Keys.checkUpdatesDaily] ?: d.updates.checkDaily,
@@ -75,6 +77,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
             flags = SetupFlags(
                 setupCompleted = p[Keys.setupCompleted] ?: d.flags.setupCompleted,
                 homeRoleAsked = p[Keys.homeRoleAsked] ?: d.flags.homeRoleAsked,
+                setupQuestionsSkipped = p[Keys.setupQuestionsSkipped] ?: d.flags.setupQuestionsSkipped,
                 rescanAfterReset = p[Keys.rescanAfterReset] ?: d.flags.rescanAfterReset,
                 folderMatchVersion = p[Keys.folderMatchVersion] ?: d.flags.folderMatchVersion,
                 namingRulesVersion = p[Keys.namingRulesVersion] ?: d.flags.namingRulesVersion,
@@ -116,6 +119,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
         p[Keys.scanOnStartup] = s.library.scanOnStartup
         p[Keys.sortGames] = s.library.sortGames.name
         p[Keys.boxArtRegion] = s.library.boxArtRegion.code
+        s.library.boxArtSource?.let { p[Keys.boxArtSource] = it.name } ?: p.remove(Keys.boxArtSource)
         p[Keys.boxArtPaused] = s.library.boxArtPaused
         p[Keys.systemOrder] = encodeSystemOrder(s.library.systemOrder)
         p[Keys.manualSystemOrder] = encodeSystemIds(s.library.manualSystemOrder)
@@ -136,9 +140,11 @@ internal class SettingsCodec(private val log: SettingsLog) {
         p[Keys.sounds] = s.advanced.sounds != SoundLevel.Off
         p[Keys.vibration] = s.advanced.vibration
         p[Keys.usageStatistics] = s.advanced.usageStatistics
+        p[Keys.exactPlayTime] = s.advanced.exactPlayTime
         p[Keys.checkUpdatesDaily] = s.updates.checkDaily
         p[Keys.setupCompleted] = s.flags.setupCompleted
         p[Keys.homeRoleAsked] = s.flags.homeRoleAsked
+        p[Keys.setupQuestionsSkipped] = s.flags.setupQuestionsSkipped
         p[Keys.rescanAfterReset] = s.flags.rescanAfterReset
         p[Keys.folderMatchVersion] = s.flags.folderMatchVersion
         p[Keys.namingRulesVersion] = s.flags.namingRulesVersion
@@ -187,6 +193,12 @@ internal class SettingsCodec(private val log: SettingsLog) {
     private fun decodeBoxArtRegion(p: Preferences, default: BoxArtRegionSetting): BoxArtRegionSetting {
         val stored = p[Keys.boxArtRegion] ?: return default
         return BoxArtRegionSetting.entries.firstOrNull { it.code == stored } ?: default.also { unknown(Keys.boxArtRegion) }
+    }
+
+    /** Stored by name; missing or unknown is null (not chosen). */
+    private fun decodeBoxArtSource(p: Preferences): BoxArtSourceSetting? {
+        val stored = p[Keys.boxArtSource] ?: return null
+        return BoxArtSourceSetting.entries.firstOrNull { it.name == stored } ?: null.also { unknown(Keys.boxArtSource) }
     }
 
     private fun encodeInGame(value: InGameSetting): String = value.name.lowercase(Locale.ROOT)
@@ -248,6 +260,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
         val scanOnStartup = booleanPreferencesKey("library.scan_on_startup")
         val sortGames = stringPreferencesKey("library.sort_games")
         val boxArtRegion = stringPreferencesKey("library.box_art_region")
+        val boxArtSource = stringPreferencesKey("library.box_art_source")
         val boxArtPaused = booleanPreferencesKey("library.box_art_paused")
         val systemOrder = stringPreferencesKey("library.system_order")
         /** System ids top to bottom, joined by [SYSTEM_ID_SEPARATOR] (a string set has no order). */
@@ -267,9 +280,11 @@ internal class SettingsCodec(private val log: SettingsLog) {
         val soundLevel = stringPreferencesKey("advanced.sound_level")
         val vibration = booleanPreferencesKey("advanced.vibration")
         val usageStatistics = booleanPreferencesKey("advanced.usage_statistics")
+        val exactPlayTime = booleanPreferencesKey("advanced.exact_play_time")
         val checkUpdatesDaily = booleanPreferencesKey("updates.check_daily")
         val setupCompleted = booleanPreferencesKey("flags.setup_completed")
         val homeRoleAsked = booleanPreferencesKey("flags.home_role_asked")
+        val setupQuestionsSkipped = booleanPreferencesKey("flags.setup_questions_skipped")
         val rescanAfterReset = booleanPreferencesKey("flags.rescan_after_reset")
         val folderMatchVersion = intPreferencesKey("flags.folder_match_version")
         val namingRulesVersion = intPreferencesKey("flags.naming_rules_version")

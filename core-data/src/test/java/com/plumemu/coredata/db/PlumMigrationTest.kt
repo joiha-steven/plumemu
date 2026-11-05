@@ -432,7 +432,7 @@ class PlumMigrationTest {
 
     private fun openRoom(): PlumDatabase =
         Room.databaseBuilder(ApplicationProvider.getApplicationContext(), PlumDatabase::class.java, DB_NAME)
-            .addMigrations(*PlumMigrations.ALL)
+            .addMigrations(*PlumMigrations.all(TestDetailsRating))
             .allowMainThreadQueries()
             .build()
 

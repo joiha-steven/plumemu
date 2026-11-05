@@ -3,6 +3,46 @@
 What changed in each version of Plumemu, newest first. Downloads are under
 [Releases](../../releases).
 
+## 0.1.2 (6 November 2026)
+
+A new look, a setup that fits your handheld, and box art without an account.
+
+### New
+
+- A new look on every screen: glass surfaces, the Jost font and a blue accent.
+- Setup asks which button confirms, offers a look that suits your screen and lets you choose how box art is found.
+- Box art only: box fronts with no account, downloaded on Wi-Fi from libretro's public server.
+- Settings › Library › Files not added lists every file left out of your library, with the reason.
+- When a RetroArch core is missing, Plumemu says so and offers the next one that can run the game.
+- New sorts for your games: Most played, Recently added and Rating, changed from the list.
+- Settings › Unidentified games suggests the closest official titles, one press to pick.
+- On the AYN Thor, the bottom screen has new cards for games, systems, Recent, Favorites and Android apps.
+
+### Improved
+
+- Better names: discs are matched by their track sizes and more compressed formats, so your library is named again once.
+- More discs are checked for achievements: zstd and LZ4 CHD, RVZ, WIA and CSO v2.
+- Grids fill the screen's width at every size, and each cover keeps its own shape.
+- Every text size is one step larger, and screens are laid out again to fit them.
+- The details column holds its place while a game's facts arrive, so nothing jumps as you scroll.
+- Arcade sets that do not start explain which core version they need.
+
+### Fixed
+
+- Skip in setup moves forward, Back returns to the last question, and the last step says only what is true.
+- Report a problem keeps the words you typed, and RetroAchievements Sign out asks first.
+- A game's menu notices an emulator you installed or removed while Plumemu was in the background.
+
+### Known issues
+
+- Wii games in RVZ or WIA are not checked for achievements, and 3DS, MS-DOS and Arduboy games show none yet.
+- The second screen is tested on the AYN Thor only.
+- Most translations other than French have not yet been read by a native speaker.
+
+### Not in this version
+
+- No screenshots or videos of games yet.
+
 ## 0.1.1 (2 November 2026)
 
 ### New

@@ -18,6 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import com.plumemu.coreui.components.StripeAnchor
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -231,35 +233,43 @@ internal fun EmulatorsPanel(
     val system = (if (inPanel) model.content.system(focus.systemId) else null) ?: SettingsListPages.systemAt(focus, model.content) ?: return
     val focused = if (inPanel) focus.panelIndex else -1
     val current = system.currentIndex
-    Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
-        PanelTitle(system.name)
-        PanelBody(emulatorsBody(system.name))
-        PanelLine(model, SettingsOption.SystemEmulator, null)
-        // Nothing chosen: the first game played asks; no emulator is started by itself.
-        val automatic = stringResource(if (system.installed.isNotEmpty()) R.string.settings_emulator_ask else R.string.settings_emulator_automatic_none)
-        val entries = listOf<EmulatorEntry?>(null) + system.choices
-        PanelLazyList(focused, Modifier.weight(1f, fill = false)) {
-            itemsIndexed(entries, key = { _, entry -> entry?.id ?: AUTOMATIC_KEY }, contentType = { _, _ -> "emulator" }) { index, entry ->
-                PanelItem(
-                    title = entry?.name ?: automatic,
-                    detail =
-                        when {
-                            entry == null -> null
-                            !entry.isInstalled -> stringResource(R.string.game_play_with_not_installed)
-                            entry.isLegalRisk -> stringResource(R.string.game_legal_risk_note)
-                            else -> null
-                        },
-                    isFocused = index == focused,
-                    isQuiet = !inPanel && index == current,
-                    badge = if (index == current) stringResource(R.string.settings_badge_current) else null,
-                    modifier = Modifier.tapTarget { touch.onPanelItem(index) }.testTag(SettingsTags.panelItem(index)),
-                )
+    PanelListLayout(
+        Modifier.fillMaxHeight(),
+        header =
+            listOf(
+                { PanelTitle(system.name) },
+                { PanelBody(emulatorsBody(system.name)) },
+                { PanelLine(model, SettingsOption.SystemEmulator, null) },
+            ),
+        list = {
+            // Nothing chosen: the first game played asks; no emulator is started by itself.
+            val automatic = stringResource(if (system.installed.isNotEmpty()) R.string.settings_emulator_ask else R.string.settings_emulator_automatic_none)
+            val entries = listOf<EmulatorEntry?>(null) + system.choices
+            PanelLazyList(focused, Modifier) {
+                itemsIndexed(entries, key = { _, entry -> entry?.id ?: AUTOMATIC_KEY }, contentType = { _, _ -> "emulator" }) { index, entry ->
+                    PanelItem(
+                        title = entry?.name ?: automatic,
+                        detail =
+                            when {
+                                entry == null -> null
+                                !entry.isInstalled -> stringResource(R.string.game_play_with_not_installed)
+                                entry.isLegalRisk -> stringResource(R.string.game_legal_risk_note)
+                                else -> null
+                            },
+                        isFocused = index == focused,
+                        isQuiet = !inPanel && index == current,
+                        badge = if (index == current) stringResource(R.string.settings_badge_current) else null,
+                        modifier = Modifier.tapTarget { touch.onPanelItem(index) }.testTag(SettingsTags.panelItem(index)),
+                    )
+                }
             }
-        }
-        model.content.emulatorAppCount?.let { count ->
-            PanelFact(pluralStringResource(R.plurals.settings_emulators_found, count, rememberCountFormat().format(count)))
-        }
-    }
+        },
+        footer = {
+            model.content.emulatorAppCount?.let { count ->
+                PanelFact(pluralStringResource(R.plurals.settings_emulators_found, count, rememberCountFormat().format(count)))
+            }
+        },
+    )
 }
 
 /** Detect new emulators: what it does, how many were found, and how the last run went. */
@@ -354,10 +364,13 @@ internal fun PanelItem(
     padded: Boolean = false,
     badge: String? = null,
     isChecked: Boolean = false,
+    /** Lines the detail may take before it is cut with "…" (a long folder path). */
+    detailMaxLines: Int = Int.MAX_VALUE,
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
     val shape = RoundedCornerShape(PlumDimens.cornerRow)
+    val anchor = remember { StripeAnchor() }
     val surface =
         when {
             isFocused -> Modifier
@@ -370,19 +383,31 @@ internal fun PanelItem(
             modifier
                 .fillMaxWidth()
                 .heightIn(min = PlumTheme.layout.rowHeight)
-                .focusPill(isFocused)
+                .focusPill(isFocused, stripe = if (detail != null) anchor else null)
                 .then(surface)
-                .padding(horizontal = PlumDimens.settingsPanelRowPadding, vertical = if (padded) PlumDimens.settingsFolderCardPadding else 0.dp),
+                .padding(start = PlumDimens.settingsPanelRowPadding, end = PlumDimens.panelTextEnd, top = if (padded) PlumDimens.settingsFolderCardPadding else 0.dp, bottom = if (padded) PlumDimens.settingsFolderCardPadding else 0.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PlumDimens.listRowGap)) {
             val style = if (isFocused) type.settingsPanelItemFocused.copy(color = colors.strong) else titleStyle
-            BasicText(title, style = style, maxLines = 3, overflow = TextOverflow.Ellipsis)
-            if (detail != null) BasicText(detail, style = type.smallFact.copy(color = if (isFocused) colors.meta else colors.muted))
-        }
-        if (badge != null) {
-            Spacer(Modifier.width(PlumDimens.rowTrailingGap))
-            Badge(badge)
+            // The badge shares the title's first line, so the detail below keeps the whole column.
+            Row {
+                BasicText(
+                    title,
+                    style = style,
+                    maxLines = if (PlumTheme.layout.isSettingsThreeColumns) 4 else 3,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = if (detail != null) anchor::measured else null,
+                    modifier = Modifier.weight(1f).then(if (detail != null) anchor.title() else Modifier).alignByBaseline(),
+                )
+                if (badge != null) {
+                    Spacer(Modifier.width(PlumDimens.rowTrailingGap))
+                    Badge(badge, Modifier.alignByBaseline())
+                }
+            }
+            if (detail != null) {
+                BasicText(detail, style = type.smallFact.copy(color = if (isFocused) colors.meta else colors.muted), maxLines = detailMaxLines, overflow = TextOverflow.Ellipsis)
+            }
         }
         if (isChecked) {
             Spacer(Modifier.width(PlumDimens.rowTrailingGap))

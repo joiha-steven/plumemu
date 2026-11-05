@@ -8,6 +8,7 @@ import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.theme.PlumTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -30,7 +31,7 @@ class HomeLargeLibraryTest {
         val content = FakeHomeContent.large(10_000)
         lateinit var state: StripState
         compose.setContent {
-            PlumTheme { HomeAt(content, listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX), Action.Enter), onState = { state = it }) }
+            PlumTheme(TableText.Default) { HomeAt(content, listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX), Action.Enter), onState = { state = it }) }
         }
         compose.onNodeWithTag(HomeTags.game(0), useUnmergedTree = true).assertIsDisplayed()
         // Up from the first row wraps to the last one, 555 rows down.
@@ -47,13 +48,13 @@ class HomeLargeLibraryTest {
             compose.onNodeWithTag(HomeTags.game(state.focus.row), useUnmergedTree = true).assertIsDisplayed()
         }
         assertEquals(10, state.focus.row)
-        // Scrolled just enough to keep two rows past the focus (the glide's room and one of
-        // context, design/rules.md): row 12 at the bottom, so rows 0 to 2 have left the screen
-        // (eight rows 40 apart fit at 768x432).
-        // Row 2 is still composed, out of sight: the glide keeps one row past each edge.
-        compose.onNodeWithTag(HomeTags.game(12), useUnmergedTree = true).assertIsDisplayed()
+        // Scrolled just enough to keep three rows past the focus (the glide's room and the context,
+        // design/rules.md): row 13 at the bottom, so rows 0 to 5 have left the screen (the list is exactly the
+        // eight rows 40 apart that fit at 768x432, so rows 6 to 13 show). Row 5 is still composed, out of
+        // sight: the glide keeps one row past each edge.
+        compose.onNodeWithTag(HomeTags.game(13), useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithTag(HomeTags.game(1), useUnmergedTree = true).assertDoesNotExist()
-        compose.onNodeWithTag(HomeTags.game(2), useUnmergedTree = true).assertIsNotDisplayed()
-        compose.onNodeWithTag(HomeTags.game(5), useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithTag(HomeTags.game(5), useUnmergedTree = true).assertIsNotDisplayed()
+        compose.onNodeWithTag(HomeTags.game(6), useUnmergedTree = true).assertIsDisplayed()
     }
 }

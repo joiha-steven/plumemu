@@ -1,5 +1,12 @@
 package com.plumemu.setup
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.plumemu.coredata.settings.BoxArtSourceSetting
+import com.plumemu.coredata.settings.ConfirmButtonSetting
+import com.plumemu.coredata.settings.TextSizeSetting
+import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.graph.ScanReport
 import com.plumemu.graph.ScanState
 import com.plumemu.library.scan.AddFolderResult
@@ -9,6 +16,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 
 /** Setup's source in memory: folders, systems and the scan are set by the test. */
@@ -16,7 +24,7 @@ internal class FakeSetupSource : SetupSource {
     /** The folders as the database and Android's grants say; [folders] reads them. */
     val heldFolders = MutableStateFlow<List<SetupFolder>>(emptyList())
 
-    /** Thrown by every collection of [folders] while set (a Room error). */
+    /** Thrown by every collection of [folders], and at its next change, while set (a Room error). */
     var foldersFailure: Exception? = null
     var foldersCollections = 0
 
@@ -24,13 +32,32 @@ internal class FakeSetupSource : SetupSource {
         flow {
             foldersCollections++
             foldersFailure?.let { throw it }
-            emitAll(heldFolders)
+            emitAll(heldFolders.onEach { foldersFailure?.let { throw it } })
         }
     override val systems = MutableStateFlow<List<SystemCount>>(emptyList())
     override val scan = MutableStateFlow(ScanState())
     override val scanReport = MutableStateFlow(ScanReport())
     override val usageStatistics = MutableStateFlow(false)
-    override val pushRightToPlay = MutableStateFlow(false)
+
+    /** Whether a gamepad is connected: the confirm step exists while true. Off by default so older paths stay as they were. */
+    override val hasGamepad = MutableStateFlow(false)
+    /** What [isOnline] answers. */
+    var online = true
+
+    override fun isOnline() = online
+
+    override var deviceFacts = DeviceFacts()
+    override val boxArtSource = MutableStateFlow<BoxArtSourceSetting?>(null)
+    override val currentColorSet = MutableStateFlow<ColorSet?>(null)
+
+    /** While set, [setConfirmButton] and [setBoxArtSource] wait for it: a write that is still running. */
+    var writeGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+
+    /** What [setConfirmButton] stored; null until then. */
+    var confirmButton: ConfirmButtonSetting? by mutableStateOf<ConfirmButtonSetting?>(null)
+
+    /** What [applyLook] stored; null until then. */
+    var appliedLook: Pair<ColorSet, TextSizeSetting?>? = null
 
     /** The second screen's kind while undecided; set by the test, cleared by an answer (as the store does). */
     override val secondScreenQuestion = MutableStateFlow<ScreenKind?>(null)
@@ -101,9 +128,27 @@ internal class FakeSetupSource : SetupSource {
         usageStatistics.value = isOn
     }
 
-    override suspend fun setPushRightToPlay(isOn: Boolean) {
+    override suspend fun setConfirmButton(setting: ConfirmButtonSetting) {
         saveFailure?.let { throw it }
-        pushRightToPlay.value = isOn
+        writeGate?.await()
+        confirmButton = setting
+    }
+
+    override suspend fun applyLook(
+        set: ColorSet,
+        textSize: TextSizeSetting?,
+    ) {
+        saveFailure?.let { throw it }
+        appliedLook = set to textSize
+    }
+
+    /** Thrown by [setBoxArtSource] while set. */
+    var boxArtFailure: Exception? = null
+
+    override suspend fun setBoxArtSource(source: BoxArtSourceSetting) {
+        boxArtFailure?.let { throw it }
+        writeGate?.await()
+        boxArtSource.value = source
     }
 
     override suspend fun setSecondScreenEnabled(isOn: Boolean) {
@@ -112,8 +157,12 @@ internal class FakeSetupSource : SetupSource {
         secondScreenQuestion.value = null
     }
 
-    override suspend fun completeSetup() {
+    /** What the last [completeSetup] was told: Set up later left the questions unasked. */
+    var questionsSkipped = false
+
+    override suspend fun completeSetup(questionsSkipped: Boolean) {
         saveFailure?.let { throw it }
+        this.questionsSkipped = questionsSkipped
         setupCompleted = true
         completions++
     }

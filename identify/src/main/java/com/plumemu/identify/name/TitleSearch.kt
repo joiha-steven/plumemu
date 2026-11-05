@@ -55,6 +55,95 @@ class TitleSearch(names: List<String>) {
         return hits.asSequence().take(limit).map { TitleHit(it.index, it.score) }.toList()
     }
 
+    /**
+     * Up to [limit] titles close to [query] for a person to look at, never to apply: the best of
+     * three readings of the name, each scored 0..1, a title kept only at or above [SUGGEST_FLOOR]
+     * (fewer than [limit], or none, rather than weak ones):
+     * 1. edit similarity of the keys (typos, missing letters, a roman numeral);
+     * 2. edit similarity with the spaces taken out of both (run-together names, "MagicKnightRayearth2"
+     *    is also split at case and digit changes first);
+     * 3. shared whole words, 2 * shared / (words of the name + words of the title), so a name with a
+     *    word missing finds the longer title; at least two shared words.
+     * A title whose numbers differ from the name's is never offered, in either direction and roman numerals
+     * counted ("Zork Qest" is not "Zork Quest II"; "Mega Man X3" is not "Mega Man 3"): both sides are read in the
+     * same form, the plain key, unless the title is the name run together ("FinalFantasy3").
+     * Edit similarity must also be backed by a shared word start of three letters ("mtrd fusn" and "fusion"), so
+     * two short strings that merely look alike are not offered. A title that is the same name as one already
+     * offered but for a trailing region word is dropped, and so is one more than [BAND] under the best.
+     * When a title has the name's own key, only those are offered. Best score first, then the shorter name, then pack order; a second title with the same key
+     * is dropped. A key under [SHORT_KEY] letters needs [SHORT_FLOOR]. [checkpoint] as in [find].
+     */
+    fun suggest(query: String, limit: Int = SUGGEST_LIMIT, checkpoint: () -> Unit = {}): List<TitleHit> {
+        val words = MatchKey.tokens(query)
+        if (words.isEmpty() || limit <= 0) return emptyList()
+        val key = words.joinToString(" ")
+        val splitKey = NameCandidates.splitWords(query)?.let { MatchKey.of(it) }?.takeIf { it != key }
+        val variants = listOfNotNull(key, splitKey)
+        val queryNumbers = MatchKey.numbers(key)
+        val stems = variants.flatMap { it.split(' ') }.filter { it.length >= STEM && it.all(Char::isLetter) }.map { it.substring(0, STEM) }.distinct()
+        val compacts = variants.map { it.replace(" ", "") }.distinct()
+        val floor = if (compacts.minOf { it.length } < SHORT_KEY) SHORT_FLOOR else SUGGEST_FLOOR
+        val scratch = DistanceScratch(variants.maxOf { it.length })
+        val hits = ArrayList<Ranked>()
+        for (i in keys.indices) {
+            if (i % CHECK_EVERY == 0) checkpoint()
+            val title = keys[i]
+            // A different number is a different game ("Final Fantasy VI" is not "V"), unless the title is the name run together.
+            val squeezed = title.replace(" ", "")
+            if (MatchKey.numbers(title) != queryNumbers && squeezed !in compacts) continue
+            var best = 0.0
+            for (v in variants) best = maxOf(best, boundedSimilarity(v, title, floor, scratch))
+            if (best < 1.0) {
+                for (c in compacts) best = maxOf(best, boundedSimilarity(c, squeezed, floor, scratch))
+            }
+            if (best < 1.0 && stems.isNotEmpty() && stems.none { startsAWord(title, it) }) best = 0.0
+            if (best < 1.0 && title.indexOf(' ') > 0) best = maxOf(best, sharedWords(words, title))
+            if (best >= floor) hits += Ranked(i, 0, best, lengths[i])
+        }
+        hits.sortWith(ORDER)
+        val seen = HashSet<String>()
+        val out = ArrayList<TitleHit>(limit)
+        // A title with the name's own key: nothing else is worth a look beside it.
+        val hasSame = hits.firstOrNull()?.let { it.score >= 1.0 } == true
+        for (h in hits) {
+            if (hasSame && h.score < 1.0) break
+            if (h.score < hits[0].score - BAND) break
+            if (seen.add(withoutRegion(keys[h.index]))) out += TitleHit(h.index, h.score)
+            if (out.size == limit) break
+        }
+        return out
+    }
+
+    /** [similarity] when it can reach [floor], else 0 without finishing the table. */
+    private fun boundedSimilarity(query: String, title: String, floor: Double, scratch: DistanceScratch): Double {
+        val longer = maxOf(query.length, title.length)
+        if (longer == 0) return 0.0
+        val maxDistance = ((1.0 - floor) * longer).toInt()
+        if (kotlin.math.abs(query.length - title.length) > maxDistance) return 0.0
+        val chars = title.toCharArray()
+        val distance = scratch.distance(query, chars, 0, chars.size, maxDistance)
+        return if (distance > maxDistance) 0.0 else 1.0 - distance.toDouble() / longer
+    }
+
+    private fun sharedWords(words: List<String>, title: String): Double {
+        val titleWords = title.split(' ')
+        val shared = words.distinct().count { it in titleWords }
+        if (shared < 2) return 0.0
+        val dice = 2.0 * shared / (words.size + titleWords.size)
+        // Every word of the name is in the title: it only adds words ("Advance Wars 2" in "... - Black Hole Rising").
+        return if (shared == words.distinct().size) maxOf(dice, 0.5 + 0.5 * shared / titleWords.size) else dice
+    }
+
+    /** [key] without trailing region words ("metroid fusion japan" is "metroid fusion"). */
+    private fun withoutRegion(key: String): String {
+        var end = key.length
+        while (true) {
+            val space = key.lastIndexOf(' ', end - 1)
+            if (space <= 0 || key.substring(space + 1, end) !in REGION_WORDS) return key.substring(0, end)
+            end = space
+        }
+    }
+
     private class Ranked(val index: Int, val group: Int, val score: Double, val length: Int)
 
     companion object {
@@ -62,6 +151,13 @@ class TitleSearch(names: List<String>) {
         /** Titles scanned between two checkpoints. */
         const val CHECK_EVERY = 1024
         private const val STEM = 3
+        private val REGION_WORDS = setOf("japan", "usa", "europe", "world", "asia", "korea", "australia", "brazil", "china", "germany", "france", "spain", "italy")
+        /** A suggestion this far under the best one is left out. */
+        private const val BAND = 0.2
+        const val SUGGEST_LIMIT = 3
+        const val SUGGEST_FLOOR = 0.62
+        const val SHORT_FLOOR = 0.8
+        const val SHORT_KEY = 6
         private const val FUZZY_FLOOR = 0.6
         private const val GROUP_SAME = 0
         private const val GROUP_STARTS = 1

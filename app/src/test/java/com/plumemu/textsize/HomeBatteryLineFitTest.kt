@@ -41,8 +41,9 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The picking line in the top screen's details column, under the facts table in the table's
- * value role: the text-only column ([hasBoxArt] false) and the cover column (wide at 768 and the Thor's
- * size, the narrow stop at 576). At every text size in every font, with the shortest to the longest
+ * value role: the text-only column ([hasBoxArt] false) and the narrow stop at 576. The wide cover column (768, the Thor)
+ * has no line: the time on a charge is the BATTERY cell of the details block's second row (`inBlock`): present with a measured
+ * game and absent without, never cut, inside the column, the column whole. At every text size in every font, with the shortest to the longest
  * wording ([BATTERY_LINE_SAMPLES]), nothing is ellipsized, cut ([batteryLineCut]), clipped or on top of
  * another, and the line lies inside the column, below the emulator row. Where the column runs out of
  * height the line is never cut or partly shown: the words "on this charge" give way first
@@ -54,6 +55,8 @@ abstract class HomeBatteryLineFitBase(
     /** The place's name in [HOME_WORDS_GIVE_WAY] and [HOME_LINE_LEFT_OUT]. */
     private val place: String,
     private val hasBoxArt: Boolean,
+    /** The wide cover column: the time on a charge is the block's BATTERY cell, there is no line under it. */
+    private val inBlock: Boolean = false,
 ) {
     private val compose: ComposeContentTestRule = appComposeRule()
 
@@ -92,6 +95,7 @@ abstract class HomeBatteryLineFitBase(
         val failures = mutableListOf<String>()
         val gaveWay = mutableSetOf<String>()
         val leftOut = mutableSetOf<String>()
+        val cellLeftOut = mutableSetOf<String>()
         val tableCut = mutableSetOf<String>()
         for ((eachFont, each) in combinations) {
             font = eachFont
@@ -101,6 +105,35 @@ abstract class HomeBatteryLineFitBase(
             val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
             val details = findTagged(root, HomeTags.DETAILS) ?: run { failures += "$label: no details column"; null } ?: continue
             val line = findTagged(details, PickingBatteryTags.LINE)
+            if (inBlock) {
+                if (line != null) failures += "$label: the old line is still under the block"
+                val cell = findTagged(details, HomeTags.DETAILS_BATTERY)
+                if (pace == null) {
+                    if (cell != null) failures += "$label: a battery cell for a game never measured"
+                } else if (cell == null) {
+                    failures += "$label: no battery cell"
+                } else {
+                    // A cell the box has no room for is measured but not placed: its place is what counts, not that the node exists.
+                    val box = findTagged(details, HomeTags.DETAILS_FACTS)
+                    if (box == null) {
+                        failures += "$label: no facts box"
+                        continue
+                    }
+                    if (notShownInBox(cell, box) != null) {
+                        cellLeftOut += "${each.name} ${eachFont.name}"
+                        continue
+                    }
+                    val shown = findAllTexts(cell)
+                    if (!shown.replace("\u00A0", " ").let { it.contains(" h") || it.contains(" min") }) failures += "$label: the cell has no time: '$shown'"
+                    if (cell.boundsInRoot.left < details.boundsInRoot.left - 1f || cell.boundsInRoot.right > details.boundsInRoot.right + 1f) failures += "$label: the cell leaves the column"
+                    if (sample == BATTERY_LINE_SAMPLES[0] && each == TextSize.Small && eachFont == PlumFont.Sans && "2 h" !in shown) failures += "$label: the cell does not say 2 h: '$shown'"
+                }
+                // The emulator's name ends in an ellipsis before its cell leaves (the box's floors); on the Thor at Largest in Mono the box has no room for the whole name.
+                val longName = if (place == "cover Thor" && each == TextSize.Largest && eachFont == PlumFont.Mono) setOf("RetroArch: Snes9x") else emptySet()
+                textProblems(details, FitAllowance(ellipsisTexts = longName)).mapTo(failures) { "$label: $it" }
+                notFullyShown(details, root)?.let { failures += "$label: the column $it" }
+                continue
+            }
             if (pace == null) {
                 if (line != null) failures += "$label: a line for a game never measured"
                 continue
@@ -123,11 +156,17 @@ abstract class HomeBatteryLineFitBase(
             if (text == null) { failures += "$label: no text"; continue }
             batteryLineCut(text)?.let { failures += "$label: $it" }
             if ("on this charge" !in text.config[SemanticsProperties.Text].joinToString("")) gaveWay += at
-            if (sample == BATTERY_LINE_SAMPLES[0] && each == TextSize.Medium && eachFont == PlumFont.Sans) {
+            if (sample == BATTERY_LINE_SAMPLES[0] && each == TextSize.Small && eachFont == PlumFont.Sans) {
                 assertEquals("2 h on this charge · 30%\u00A0an\u00A0hour", text.config[SemanticsProperties.Text].joinToString(""))
             }
             notFullyShown(line, root)?.let { failures += "$label: the line $it" }
             if (line.boundsInRoot.bottom > details.boundsInRoot.bottom + 1f) failures += "$label: the line runs below the column"
+        }
+        if (inBlock && pace != null) {
+            val measuredCellLeftOut = HOME_BATTERY_CELL_LEFT_OUT[place].orEmpty()
+            if (cellLeftOut != measuredCellLeftOut) failures += "the battery cell was left out at $cellLeftOut, measured at $measuredCellLeftOut"
+            // The drop policy runs only when the box really cannot hold the cells: never at Small or Medium.
+            if (cellLeftOut.any { it.startsWith("Small") || it.startsWith("Medium") }) failures += "the battery cell was left out at Small or Medium: $cellLeftOut"
         }
         if (sample != null) {
             val measuredGiveWay = HOME_WORDS_GIVE_WAY[place to sample.label].orEmpty()
@@ -139,6 +178,9 @@ abstract class HomeBatteryLineFitBase(
         }
         assertTrue(failures.size.toString() + " problems:\n" + failures.take(40).joinToString("\n"), failures.isEmpty())
     }
+
+    private fun findAllTexts(node: androidx.compose.ui.semantics.SemanticsNode): String =
+        node.children.joinToString("") { (if (SemanticsProperties.Text in it.config) it.config[SemanticsProperties.Text].joinToString("") else "") + findAllTexts(it) }
 
     @Test
     fun theShortLineFitsUnderTheTable() = check(BATTERY_LINE_SAMPLES[0])
@@ -175,12 +217,12 @@ class HomeBatteryLineFitThorTest : HomeBatteryLineFitBase("text Thor", hasBoxArt
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
-class HomeBatteryLineFitCover768Test : HomeBatteryLineFitBase("cover 768", hasBoxArt = true)
+class HomeBatteryLineFitCover768Test : HomeBatteryLineFitBase("cover 768", hasBoxArt = true, inBlock = true)
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w837dp-h471dp-land-367dpi")
-class HomeBatteryLineFitCoverThorTest : HomeBatteryLineFitBase("cover Thor", hasBoxArt = true)
+class HomeBatteryLineFitCoverThorTest : HomeBatteryLineFitBase("cover Thor", hasBoxArt = true, inBlock = true)
 
 /** The narrow stop: the cover beside the title, the table under the title's fact lines. */
 @RunWith(RobolectricTestRunner::class)
@@ -194,50 +236,45 @@ class HomeBatteryLineFitCover576Test : HomeBatteryLineFitBase("cover 576", hasBo
  */
 private val HOME_WORDS_GIVE_WAY: Map<Pair<String, String>, Set<String>> =
     mapOf(
-        ("cover 768" to "short") to setOf("Larger Sans", "Large Serif"),
-        ("cover Thor" to "short") to setOf("Largest Sans", "Larger Serif", "Huge Mono"),
-        ("cover Thor" to "longest under 1%") to setOf("Huge Sans", "Larger Mono"),
-        ("cover 576" to "longest under 1%") to setOf("Largest Mono"),
+        // The 40 dp footer zone gave the column 4 dp more: Largest Serif keeps the whole sentence now.
+        ("cover 576" to "longest under 1%") to setOf("Largest Sans", "Huge Mono", "Largest Mono"),
+        ("cover 576" to "longest") to setOf("Largest Mono"),
+        ("cover 576" to "longest two-digit pace") to setOf("Largest Mono"),
+        // At 576 x 432 the narrow stop has no height left for three lines of the short wording at Largest Serif.
+        ("cover 576" to "short") to setOf("Largest Serif"),
     )
 
-/** The cover column on 768 x 432 from Larger up: the height the cover and the table leave holds no line. */
-private val COVER_768_NO_ROOM = setOf("Larger Sans", "Huge Sans", "Largest Sans", "Large Serif", "Larger Serif", "Huge Serif", "Largest Serif", "Larger Mono", "Huge Mono", "Largest Mono")
-
-/** The cover column on the Thor (837 x 471) at its largest sizes. */
-private val COVER_THOR_NO_ROOM = setOf("Largest Sans", "Larger Serif", "Huge Serif", "Largest Serif", "Huge Mono", "Largest Mono")
-
 /**
- * Measured: where not even the short form fits the height the wide cover column has left under
- * the table, so the line is left out rather than cut or shown in part, by place and wording. Only some of
- * these are where the table itself has no room ([HOME_TABLE_CUT]); in the rest the table is whole and the
- * line still has no room (the cover keeps its height: only the title block makes it give way). The text-only
- * column and the narrow stop always show it.
+ * Where the line is left out because not even its short form fits the height left, by place and wording. None now: the wide cover
+ * column has no line (its battery is a cell of the details block, checked in [HomeBatteryLineFitBase] with `inBlock`), and the
+ * text-only column and the narrow stop always show the line.
  */
 private val HOME_LINE_LEFT_OUT: Map<Pair<String, String>, Set<String>> =
+    listOf("common long", "longest", "under 1%", "longest two-digit pace", "longest under 1%").associate { ("cover 576" to it) to setOf("Largest Serif") }
+
+/**
+ * Where the battery cell is left out of the facts box because three rows cannot hold the cells (by place, "Size Font"). The cells are placed
+ * for the widest time the cell can say, so this is the same for every time: a time that changes while a game rests moves nothing.
+ */
+private val HOME_BATTERY_CELL_LEFT_OUT: Map<String, Set<String>> =
     mapOf(
-        ("cover 768" to "short") to COVER_768_NO_ROOM - setOf("Larger Sans", "Large Serif"),
-        ("cover 768" to "common long") to COVER_768_NO_ROOM,
-        ("cover 768" to "longest") to COVER_768_NO_ROOM,
-        ("cover 768" to "under 1%") to COVER_768_NO_ROOM,
-        ("cover 768" to "longest two-digit pace") to COVER_768_NO_ROOM,
-        ("cover 768" to "longest under 1%") to COVER_768_NO_ROOM,
-        ("cover Thor" to "short") to setOf("Huge Serif", "Largest Serif", "Largest Mono"),
-        ("cover Thor" to "common long") to COVER_THOR_NO_ROOM,
-        ("cover Thor" to "longest") to COVER_THOR_NO_ROOM,
-        ("cover Thor" to "under 1%") to COVER_THOR_NO_ROOM,
-        ("cover Thor" to "longest two-digit pace") to COVER_THOR_NO_ROOM,
-        ("cover Thor" to "longest under 1%") to COVER_THOR_NO_ROOM,
+        "cover 768" to setOf("Larger Jost", "Huge Jost", "Largest Jost", "Larger Serif", "Huge Serif", "Largest Serif", "Largest Mono"),
+        "cover Thor" to setOf("Largest Jost", "Huge Serif", "Largest Serif"),
     )
 
 /**
- * Seen while measuring the line, not changed (the table's): where the facts table's own
- * rows are cut by the column, by place ("Size Font"): on 768 and the Thor the emulator's second line by
- * the height left, at the narrow stop at Largest Mono the values by the width. The table is measured
- * before the line, so the line does not cause it. 768 Larger Serif joined when Medium weight became the default.
+ * Where the facts table's own rows are cut by the column, by place ("Size Font"): on 768 and the Thor (cover columns) the cover gives
+ * way for the whole box and every value is one line with an ellipsis, so none; the text-only column and the 576 narrow stop hold a
+ * fixed room and cut at the sizes listed. The 640x480 narrow stop has no emulator and battery cells at all. The table is measured
+ * before the line, so the line does not cause it.
  */
 private val HOME_TABLE_CUT: Map<String, Set<String>> =
     mapOf(
-        "cover 768" to setOf("Largest Sans", "Larger Serif", "Huge Serif", "Largest Serif", "Largest Mono"),
-        "cover Thor" to setOf("Largest Serif"),
-        "cover 576" to setOf("Largest Mono"),
+        "cover 768" to emptySet(),
+        "cover Thor" to emptySet(),
+        // The text-only column and the narrow stop hold their table's room: each value is one line (an ellipsis ends one that is too long; the full
+        // text is in Info), so nothing moves when the values arrive. That is cut at the largest sizes.
+        "text 768" to setOf("Largest Jost", "Larger Sans", "Huge Sans", "Largest Sans", "Large Serif", "Larger Serif", "Huge Serif", "Largest Serif", "Large Mono", "Larger Mono", "Huge Mono", "Largest Mono"),
+        "text Thor" to setOf("Largest Jost", "Larger Sans", "Huge Sans", "Largest Sans", "Large Serif", "Larger Serif", "Huge Serif", "Largest Serif", "Large Mono", "Larger Mono", "Huge Mono", "Largest Mono"),
+        "cover 576" to setOf("Larger Jost", "Huge Jost", "Largest Jost", "Large Sans", "Larger Sans", "Huge Sans", "Largest Sans", "Medium Serif", "Large Serif", "Larger Serif", "Huge Serif", "Largest Serif", "Medium Mono", "Large Mono", "Larger Mono", "Huge Mono", "Largest Mono"),
     )

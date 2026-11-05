@@ -1,7 +1,7 @@
 package com.plumemu.coreui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -11,9 +11,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.IntOffset
+import kotlin.math.floor
+import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
-import kotlin.math.roundToInt
 
 /*
  * The charging mark of the top bar: a filled bolt drawn on a Canvas like the Wi-Fi glyph (no image
@@ -31,14 +31,17 @@ fun ChargingGlyph(
     color: () -> Color,
     description: String,
     modifier: Modifier = Modifier,
+    /** The font the text beside it is drawn in: the person's, unless the screen fixes its own (the in-game card draws in Plum Sans). */
+    font: PlumFont = PlumTheme.type.font,
 ) {
     val density = LocalDensity.current
-    val font = PlumTheme.type.font
     val height = with(density) { (style.fontSize.toPx() * font.digitHeightEm).toDp() }
     val width = height * WIDTH_PER_HEIGHT
     // The row centres the box on the text line; the digits' ink sits a little off that line centre.
-    val shift = with(density) { (style.fontSize.toPx() * font.digitCentreBelowLineCentreEm).roundToInt() }
-    Canvas(modifier.offset { IntOffset(0, shift) }.size(width, height).semantics { contentDescription = description }) {
+    // Whole pixels: a fractional top edge fades into an extra row of ink and the glyph reads taller and off the digits. Rounded down: the
+    // bolt's box is a row shorter than the digits' ink, so a round-to-nearest shift left it a row low at the top bar's 13.
+    val shift = with(density) { floor(style.fontSize.toPx() * font.digitCentreBelowLineCentreEm) }
+    Canvas(modifier.graphicsLayer { translationY = shift }.size(width, height).semantics { contentDescription = description }) {
         val bolt =
             Path().apply {
                 BOLT.forEachIndexed { index, (x, y) ->

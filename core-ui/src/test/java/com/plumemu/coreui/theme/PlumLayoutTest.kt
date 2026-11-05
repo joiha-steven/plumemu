@@ -41,18 +41,18 @@ class PlumLayoutTest {
         fun at(
             layout: PlumLayout,
             size: TextSize,
-        ) = layout.copy(textScale = size.heightScale)
+        ) = layout.copy(textScale = size.heightScale, hintScale = size.hintHeightScale)
         for (screen in listOf(rp5, thor, rp4Pro, nova)) {
-            assertEquals(164f, at(screen, TextSize.Medium).keyboardHeight.value, 0.001f)
-            assertEquals(204f, at(screen, TextSize.Medium).keyboardTrayHeight.value, 0.001f)
-            assertEquals(18f, at(screen, TextSize.Medium).keyboardIconSize.value, 0.001f)
-            assertEquals("the field's caret", 1.5f, at(screen, TextSize.Medium).caretWidth.value, 0.001f)
+            assertEquals(164f, at(screen, TextSize.Small).keyboardHeight.value, 0.001f)
+            assertEquals(201f, at(screen, TextSize.Small).keyboardTrayHeight.value, 0.001f)
+            assertEquals(18f, at(screen, TextSize.Small).keyboardIconSize.value, 0.001f)
+            assertEquals("the field's caret", 1.5f, at(screen, TextSize.Small).caretWidth.value, 0.001f)
             assertEquals(1.5f * TextSize.Largest.heightScale, at(screen, TextSize.Largest).caretWidth.value, 0.001f)
             for (size in TextSize.entries) {
                 val l = at(screen, size)
                 assertEquals("${screen.height} at $size", 36f, l.keyboardKeyHeight.value, 0.001f)
                 assertEquals(8f + 4 * 36f + 12f, l.keyboardHeight.value, 0.001f)
-                assertEquals(l.keyboardHeight.value + 6f + 22f * size.heightScale + 12f, l.keyboardTrayHeight.value, 0.001f)
+                assertEquals(l.keyboardHeight.value + 6f + 22f * size.hintHeightScale + 9f, l.keyboardTrayHeight.value, 0.001f)
             }
         }
         // The half-screen cap no longer binds where it used to (the pinned 0.6 and 3.9 dp overshoots on 432 high
@@ -63,7 +63,7 @@ class PlumLayoutTest {
                 assertTrue("${screen.height} at $size: ${l.keyboardTrayHeight}", l.keyboardTrayHeight.value <= screen.height.value / 2)
             }
         }
-        assertEquals(204f + 22f * (TextSize.Largest.heightScale - 1f), at(nova, TextSize.Largest).keyboardTrayHeight.value, 0.001f)
+        assertEquals(201f + 22f * (TextSize.Largest.hintHeightScale - 1f), at(nova, TextSize.Largest).keyboardTrayHeight.value, 0.001f)
     }
 
     @Test
@@ -205,20 +205,19 @@ class PlumLayoutTest {
                     for (shape in shapes) {
                         val width = layout.gridCoverWidth(shape)
                         assertTrue("${shape.coverClass} at $size on ${base.width} at $text: $width", width >= MIN_TILE_WIDTH)
-                        assertTrue("ring room", layout.gridGap(shape) >= PlumDimens.focusRingOutset * 2)
                     }
                 }
             }
         }
-        assertEquals(74.125f, thor.copy(gridSize = GridSize.Small).gridCoverWidth(CoverShape(0.73f)).value, 0.01f)
+        assertEquals(86.7917f, thor.copy(gridSize = GridSize.Small).gridCoverWidth(CoverShape(0.73f)).value, 0.01f)
     }
 
     /** The narrowest grid on the Nova (576) still shows whole rows with titles: Small tall, five 78.4 wide. */
     @Test
     fun narrowGridsStayUsable() {
         val novaSmall = nova.copy(gridSize = GridSize.Small)
-        assertEquals(78.4f, novaSmall.gridCoverWidth(CoverShape(0.73f)).value, 0.01f)
-        assertEquals(142.6667f, novaSmall.gridCoverWidth(CoverShape.Landscape).value, 0.01f)
+        assertEquals(90.6667f, novaSmall.gridCoverWidth(CoverShape(0.73f)).value, 0.01f)
+        assertEquals(155.5556f, novaSmall.gridCoverWidth(CoverShape.Landscape).value, 0.01f)
         for (size in GridSize.entries) {
             for (shape in listOf(CoverShape.Landscape, CoverShape(1.12f), CoverShape(0.575f))) {
                 assertTrue(nova.copy(gridSize = size).gridRowsThatFit(shape) >= 1)
@@ -227,55 +226,70 @@ class PlumLayoutTest {
     }
 
     @Test
-    fun gridCoversSpanTheAreaLessTheBoardsPadding() {
-        // RP5-3 / RP5-4: `width: gridW; padding: 4px; box-sizing: border-box`, so covers span gridW − 8.
-        assertEquals(listOf(664.dp, 733.dp, 563.dp, 472.dp), listOf(rp5, thor, rp4Pro, nova).map { it.gridCoversWidth })
+    fun gridCoversSpanTheWholeArea() {
+        // The requirement changed (it was the area less the board's 4 dp padding each side): covers run from where the list starts
+        // to the right margin the clock and the hint bar end on.
+        assertEquals(listOf(672.dp, 741.dp, 571.dp, 480.dp), listOf(rp5, thor, rp4Pro, nova).map { it.gridCoversWidth })
+        assertEquals(listOf(rp5, thor, rp4Pro, nova).map { it.gridAreaWidth }, listOf(rp5, thor, rp4Pro, nova).map { it.gridCoversWidth })
     }
 
     @Test
     fun gridCoverWidthSharesTheSpanAfterTheGaps() {
-        // The board's `colW = (gridW − 8 − gap × (cols − 1)) / cols`.
-        // Gaps 22 / 20 (the board's 14 / 12 gave 212 / 235 / 274.5 / 229 and 123.2 / 112.17 / 131.75 / 109).
-        val landscape = listOf(206.6667f, 229.6667f, 270.5f, 225f)
-        val portrait = listOf(116.8f, 105.5f, 125.75f, 103f)
+        // `colW = (gridW − gap × (cols − 1)) / cols`: the columns and gaps are exactly the grid's width.
+        // The gap between collars is the Covers board's 10 px, 6.67 dp, for every class.
+        val landscape = listOf(219.5556f, 242.5556f, 282.1667f, 236.6667f)
+        val portrait = listOf(129.0667f, 117.9444f, 137.75f, 115f)
         boardLandscape.zip(listOf(rp5, thor, rp4Pro, nova)).forEachIndexed { i, (large, layout) ->
             assertEquals(landscape[i], large.gridCoverWidth(CoverShape.Landscape).value, 0.01f)
             assertEquals(portrait[i], layout.gridCoverWidth(CoverShape.Portrait).value, 0.01f)
         }
-        assertEquals(listOf(22.dp, 20.dp), listOf(rp5.gridGap(CoverShape.Landscape), rp5.gridGap(CoverShape.Portrait)))
+        assertEquals(6.67f, rp5.gridGap(CoverShape.Landscape).value, 0.01f)
+        assertEquals(6.67f, rp5.gridGap(CoverShape.Portrait).value, 0.01f)
+        assertEquals(9.33f, rp5.gridRowGap(CoverShape.Portrait).value, 0.01f)
     }
 
     @Test
     fun gridRowsKeepTheCoverShape() {
-        // The board's `Math.round(colW / 1.4)` and `Math.round(colW / 0.78)`, with the gaps of 22 / 20 (
-        // at the board's 14 / 12 they were 151 / 168 / 196 / 164 and 158 / 144 / 169 / 140).
-        assertEquals(listOf(148.dp, 164.dp, 193.dp, 161.dp), boardLandscape.map { it.gridRowHeight(CoverShape.Landscape) })
-        assertEquals(listOf(150.dp, 135.dp, 161.dp, 132.dp), listOf(rp5, thor, rp4Pro, nova).map { it.gridRowHeight(CoverShape.Portrait) })
+        // At every size a row is as tall as a box (collar chrome 8 across, 8.67 down) one cover width wide is for the shape's picture:
+        // `(cover - 8) / ratio + 8.67`, not rounded, whatever the grid's height (the requirement changed: Medium and Small used to
+        // take three and four rows from the strip's height).
+        for (size in GridSize.entries) {
+            for (layout in listOf(rp5, thor, rp4Pro, nova).map { it.copy(gridSize = size) }) {
+                for (shape in listOf(CoverShape.Landscape, CoverShape.Portrait, CoverShape(1f), CoverShape(0.575f))) {
+                    val cover = layout.gridCoverWidth(shape).value
+                    assertEquals("$size ${shape.widthOverHeight} on ${layout.width}", (cover - 8f) / shape.widthOverHeight + 8.6667f, layout.gridRowHeight(shape).value, 0.01f)
+                }
+            }
+        }
     }
 
     @Test
     fun stripHeightAndGridRowsThatFit() {
-        assertEquals(listOf(346.dp, 385.dp, 289.dp, 346.dp), listOf(rp5, thor, rp4Pro, nova).map { it.stripHeight })
-        // The cover grid is 12 dp shorter (its top gap is 22: 20 before the 10 % lift): the Nova's landscape grid (two rows of 161
+        assertEquals(listOf(350.dp, 389.dp, 293.dp, 350.dp), listOf(rp5, thor, rp4Pro, nova).map { it.stripHeight })
+        // The cover grid is 12 dp shorter (its top gap is 14, 4 over the bar gap, and 8 dp stay free at the bottom, each the lifted row's reach): the Nova's landscape grid (two rows of 161
         // with a 22 gap need 344, 336 are left) shows one whole row and a second one cut, where it showed two.
-        assertEquals(listOf(334.dp, 373.dp, 277.dp, 334.dp), listOf(rp5, thor, rp4Pro, nova).map { it.gridStripHeight })
+        assertEquals(listOf(338.dp, 377.dp, 281.dp, 338.dp), listOf(rp5, thor, rp4Pro, nova).map { it.gridStripHeight })
         assertEquals(listOf(2, 2, 1, 1), boardLandscape.map { it.gridRowsThatFit(CoverShape.Landscape) })
+        // Medium (the default) follows the width: the rows are as tall as the columns make them.
         assertEquals(listOf(2, 2, 1, 2), listOf(rp5, thor, rp4Pro, nova).map { it.gridRowsThatFit(CoverShape.Portrait) })
         assertEquals(listOf(3, 2), listOf(boardLandscape[0].gridColumns(CoverShape.Landscape), boardLandscape[3].gridColumns(CoverShape.Landscape)))
         assertEquals(listOf(5, 4), listOf(rp5.gridColumns(CoverShape.Portrait), nova.gridColumns(CoverShape.Portrait)))
     }
 
-    /** The focused cover grows about its centre (half of the growth goes up) and is raised: ring outset, raise and growth of the tallest row stay inside the grid's top gap. */
+    /**
+     * The focused cover's collar halo (the cover itself does not move) reaches [PlumDimens.focusHaloReach] past its collar:
+     * it stays inside the grid's top gap; it may overlap a neighbour's gap, which is the board's 10 px across and 14 px down
+     * (6.67 and 9.33 dp) between collars, for every cover class.
+     */
     @Test
-    fun theGridTopGapHoldsTheRingAndTheGrowthOfEveryRow() {
+    fun theGridGapsHoldTheHaloAndKeepCollarsApart() {
+        val reach = PlumDimens.focusHaloReach.value
+        assertTrue("the halo ($reach dp) fits the top gap", reach <= PlumDimens.gridTopGap.value)
         for (size in GridSize.entries) {
             for (layout in at(size)) {
                 for (shape in listOf(CoverShape(0.575f), CoverShape.Portrait, CoverShape(1f), CoverShape(1.12f), CoverShape.Landscape)) {
-                    val growth = layout.gridRowHeight(shape).value * (PlumDimens.FOCUSED_COVER_SCALE - 1f) / 2f + PlumDimens.focusedLift.value
-                    val needed = PlumDimens.focusRingOutset.value + growth
-                    assertTrue("$size ${layout.width} $shape needs $needed dp above the top row", needed <= PlumDimens.gridTopGap.value)
-                    // Between rows the ring of the lifted cover must not reach the cover above it.
-                    assertTrue("$size ${layout.width} $shape needs $needed dp above its row, the gap to the row above is ${layout.gridRowGap(shape).value}", needed <= layout.gridRowGap(shape).value)
+                    assertEquals("$size ${layout.width} $shape: collars are 6.67 dp apart across", 10f / 1.5f, layout.gridGap(shape).value, 0.01f)
+                    assertEquals("$size ${layout.width} $shape: collars are 9.33 dp apart down", 14f / 1.5f, layout.gridRowGap(shape).value, 0.01f)
                 }
             }
         }
@@ -307,26 +321,31 @@ class PlumLayoutTest {
         // `floor((area + 12) / 142)` at Medium: the Thor about 5 (by design), 3 to 6 elsewhere.
         assertEquals(listOf(4, 5, 4, 3), layouts.map { it.gridColumns(CoverClass.Square) })
         assertEquals(listOf(4, 5, 4, 3), layouts.map { it.gridColumns(nds) })
-        assertEquals(20.dp, rp5.gridGap(nds))
-        val widths = listOf(151f, 130.6f, 125.75f, 144f)
+        assertEquals(6.67f, rp5.gridGap(nds).value, 0.01f)
+        val widths = listOf(163f, 142.8667f, 137.75f, 155.5556f)
         layouts.forEachIndexed { i, layout -> assertEquals(widths[i], layout.gridCoverWidth(nds).value, 0.01f) }
-        // Rows keep the system's own ratio: DS 1.12 here, Game Boy 1.0 square.
-        assertEquals(listOf(135.dp, 117.dp, 112.dp, 129.dp), layouts.map { it.gridRowHeight(nds) })
-        assertEquals(listOf(151.dp, 131.dp, 126.dp, 144.dp), layouts.map { it.gridRowHeight(CoverShape(1f)) })
-        assertEquals(listOf(2, 2, 2, 2), layouts.map { it.gridRowsThatFit(nds) })
+        // A row is as tall as its shape makes a box of that width: DS 1.12 is shorter than Game Boy 1.0.
+        layouts.forEach { assertTrue(it.gridRowHeight(nds) < it.gridRowHeight(CoverShape(1f))) }
+        assertEquals((163f - 8f) / 1.12f + 8.6667f, rp5.gridRowHeight(nds).value, 0.01f)
     }
 
     @Test
     fun tallCoversKeepTheirOwnRatioInThePortraitColumns() {
         val psp = CoverShape(0.575f)
         assertEquals(5, rp5.gridColumns(psp))
-        assertEquals(116.8f / 0.575f, rp5.gridRowHeight(psp).value, 0.5f)
+        val large = rp5.copy(gridSize = GridSize.Large)
+        // The box (collar included) of that height is exactly its column wide.
+        val box = (large.gridRowHeight(psp).value - 8.6667f) * 0.575f + 8f
+        assertEquals(large.gridCoverWidth(psp).value, box, 0.01f)
     }
 
     @Test
     fun settingsOptionsWidth() {
-        assertEquals(448.dp, rp5.settingsOptionsWidth)
-        assertEquals(517.dp, thor.settingsOptionsWidth)
+        // Two columns (where three do not fit the text size), then three columns on the wide screens.
+        assertEquals(448.dp, rp5.copy(settingsThreeFit = false).settingsOptionsWidth)
+        assertEquals(517.dp, thor.copy(settingsThreeFit = false).settingsOptionsWidth)
+        assertEquals(314.67f, rp5.settingsOptionsWidth.value, 0.01f)
+        assertEquals(383.67f, thor.settingsOptionsWidth.value, 0.01f)
         assertEquals(619.dp, rp4Pro.settingsOptionsWidth)
         assertEquals(528.dp, nova.settingsOptionsWidth)
     }
@@ -340,31 +359,48 @@ class PlumLayoutTest {
         assertEquals(8, nova.listRowsThatFit)
     }
 
+    /** Rows per screen at the board's 40 dp pitch, Medium and the default Large, on the four reference screens (before the 34 design height: the same counts, Large's pitch was 41.6; the 40 dp footer zone gave 640 x 480 a tenth row at Medium). */
+    @Test
+    fun rowsPerScreenAtTheBoardPitch() {
+        val large = TextSize.Large.heightScale
+        for ((size, rows) in listOf((576.dp to 432.dp) to (8 to 8), (640.dp to 480.dp) to (10 to 9), (768.dp to 432.dp) to (8 to 8), (832.dp to 468.dp) to (9 to 8))) {
+            val (width, height) = size
+            assertEquals("$width x $height Medium", rows.first, PlumLayout(width, height).listRowsThatFit)
+            assertEquals("$width x $height Large", rows.second, PlumLayout(width, height, textScale = large).listRowsThatFit)
+        }
+    }
+
     @Test
     fun rowsAndBarsGrowWithTheTextAndFewerRowsFit() {
         val medium = PlumLayout(768.dp, 432.dp)
         val largest = PlumLayout(768.dp, 432.dp, textScale = TextSize.Largest.heightScale)
         assertEquals(40.dp, medium.rowHeight)
-        assertEquals(58.dp, largest.rowHeight)
-        // Game rows: 36 designed, never under 38 drawn (40 with the gap, the touch minimum).
+        assertEquals(60.dp, largest.rowHeight)
+        // Game rows: 34 designed, never under 38 drawn (40 with the gap, the touch minimum and the board's pitch): Large's 40.8 is above it.
         assertEquals(38.dp, medium.gameRowHeight)
         assertEquals(38.dp, PlumLayout(768.dp, 432.dp, textScale = TextSize.Small.heightScale).gameRowHeight)
-        assertEquals(36.dp * 1.1f, PlumLayout(837.dp, 471.dp, textScale = TextSize.Large.heightScale).gameRowHeight)
-        assertEquals(36.dp * 1.45f, largest.gameRowHeight)
-        assertEquals(34.dp * 1.45f, largest.systemRowHeight)
+        assertEquals(34.dp * 1.2f, PlumLayout(837.dp, 471.dp, textScale = TextSize.Large.heightScale).gameRowHeight)
+        assertEquals(34.dp * 1.5f, largest.gameRowHeight)
+        assertEquals(34.dp * 1.5f, largest.systemRowHeight)
         // System rows: 34 designed, never under 40 drawn.
         assertEquals(40.dp, medium.systemRowHeight)
-        assertEquals(40.dp, PlumLayout(768.dp, 432.dp, textScale = TextSize.Large.heightScale).systemRowHeight)
-        assertEquals(18.dp * 1.45f, largest.topBarHeight)
-        assertEquals(22.dp * 1.45f, largest.hintBarHeight)
-        assertEquals(200.dp * 1.45f, largest.systemsColumnWidth)
+        assertEquals(34.dp * 1.2f, PlumLayout(768.dp, 432.dp, textScale = TextSize.Large.heightScale).systemRowHeight)
+        assertEquals(18.dp * 1.5f, largest.topBarHeight)
+        // The hint bar stops growing at Medium (1.1).
+        assertEquals(22.dp * 1.1f, largest.hintBarHeight)
+        assertEquals(200.dp * 1.5f, largest.systemsColumnWidth)
         // The bars take more of the screen, and each row more still.
-        assertEquals(346.dp, medium.stripHeight)
-        assertEquals(432.dp - 14.dp - 12.dp - 18.dp * 1.45f - 22.dp * 1.45f - 20.dp, largest.stripHeight)
+        assertEquals(350.dp, medium.stripHeight)
+        assertEquals(432.dp - 14.dp - 18.dp * 1.5f - 10.dp - (9.dp + 22.dp * 1.1f + 9.dp), largest.stripHeight)
         assertEquals(8, medium.listRowsThatFit)
         assertEquals(6, largest.listRowsThatFit)
-        assertEquals(9, PlumLayout(837.dp, 471.dp, textScale = TextSize.Large.heightScale).listRowsThatFit)
-        assertEquals(6, PlumLayout(837.dp, 471.dp, textScale = TextSize.Largest.heightScale).listRowsThatFit)
+        assertEquals(8, PlumLayout(837.dp, 471.dp, textScale = TextSize.Large.heightScale).listRowsThatFit)
+        // 34 x 1.5 = 51 is under the 52.2 the 36 gave, so Largest on the Thor shows 7 rows where it showed 6.
+        assertEquals(7, PlumLayout(837.dp, 471.dp, textScale = TextSize.Largest.heightScale).listRowsThatFit)
+        // On the Thor's 367 dpi a 53 dp stride rounds up to 122 px: with a taller top bar seven rows fit in dp yet overflow the strip in pixels and cut the first row.
+        val tallBar = PlumLayout(837.dp, 471.dp, textScale = TextSize.Largest.heightScale, topBarLine = 35.dp)
+        assertEquals(7, tallBar.listRowsThatFit)
+        assertEquals(6, tallBar.copy(pixelsPerDp = 367f / 160f).listRowsThatFit)
         // Smaller text never shrinks a box: its text already fits.
         assertEquals(medium.rowHeight, PlumLayout(768.dp, 432.dp, textScale = TextSize.Small.heightScale).rowHeight)
     }
@@ -373,5 +409,74 @@ class PlumLayoutTest {
     fun peekSettingShiftsTheWideList() {
         assertEquals(448.dp, PlumLayout(768.dp, 432.dp, peek = 0.dp).gamesListWidth)
         assertEquals(720.dp, PlumLayout(768.dp, 432.dp, peek = 0.dp).gridAreaWidth)
+    }
+
+    /** A size picks a column count and the columns share the width exactly, whatever the shape, screen and text size. */
+    @Test
+    fun everySizeFillsTheWidthWithItsColumnsWhateverTheShape() {
+        for (size in GridSize.entries) {
+            for ((w, h) in listOf(768 to 432, 576 to 432, 832 to 468)) {
+                for (text in TextSize.entries) {
+                    val layout = PlumLayout(w.dp, h.dp, textScale = text.heightScale, gridSize = size)
+                    for (aspect in listOf(1.4f, 0.71f, 1f, 0.575f, 1.78f)) {
+                        val shape = CoverShape(aspect)
+                        val columns = layout.gridColumns(shape)
+                        val at = "$size $w x $h $text $aspect"
+                        val spanned = layout.gridCoverWidth(shape) * columns + layout.gridGap(shape) * (columns - 1)
+                        assertEquals("$at: the columns and gaps are the grid's width", layout.gridCoversWidth.value, spanned.value, 0.01f)
+                        assertTrue("$at: at least one row fits", layout.gridRowsThatFit(shape) >= 1)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * The top bar holds the line of its place name's 16 step in every font and size: it grows past the 18 dp base, never cuts it. The
+     * 20 name's taller line reaches into the margins above and below by less than either (so the content keeps the boards' place).
+     */
+    @Test
+    fun theTopBarGrowsToHoldThePlaceNameLineInEveryFontAndSize() {
+        for (font in PlumFont.entries) {
+            for (size in TextSize.entries) {
+                val line = (TypeRole.PlaceName.lineHeightSp(font, size) * PLACE_NAME_STEP_SP / TypeRole.PlaceName.sizeSp).dp
+                val bar = PlumLayout(768.dp, 432.dp, textScale = size.heightScale, topBarLine = line).topBarHeight
+                assertTrue("$font $size: bar $bar holds the line $line", bar >= line)
+                assertTrue("$font $size: bar $bar keeps the base grown by the text", bar >= PlumDimens.topBarHeight * size.heightScale)
+                val reach = (TypeRole.PlaceName.lineHeightSp(font, size).dp - bar) / 2
+                assertTrue("$font $size: the 20 name reaches $reach past the bar", reach < PlumDimens.barGap && reach < PlumDimens.stripMarginTop)
+            }
+        }
+        // Jost at Medium: 16 sp on a 1.445 line is 23.1 dp, 5 dp over the base.
+        val step = PLACE_NAME_STEP_SP / TypeRole.PlaceName.sizeSp
+        val jost = PlumLayout(768.dp, 432.dp, topBarLine = (TypeRole.PlaceName.lineHeightSp(PlumFont.Jost, TextSize.Small) * step).dp)
+        assertEquals(23.12f, jost.topBarHeight.value, 0.01f)
+        // The default (Jost, Large): the strip starts 14 + bar + 10 down: the board's 49.3 dp (cover top, ThemePaper) was drawn at 1.1, the bar grows 2.4 dp at 1.2.
+        val large = PlumLayout(768.dp, 432.dp, textScale = TextSize.Large.heightScale, topBarLine = (TypeRole.PlaceName.lineHeightSp(PlumFont.Jost, TextSize.Large) * step).dp)
+        assertEquals(51.74f, (PlumDimens.stripMarginTop + large.topBarHeight + PlumDimens.barGap).value, 0.1f)
+    }
+
+    /** While a keyboard tray is up the top bar keeps the base height, whatever the place-name line (the field and the 36 dp keys need the room). */
+    @Test
+    fun theTopBarKeepsItsBaseHeightWhileATrayIsUp() {
+        for (font in PlumFont.entries) {
+            for (size in TextSize.entries) {
+                val line = TypeRole.PlaceName.lineHeightSp(font, size).dp
+                val layout = PlumLayout(667.dp, 375.dp, textScale = size.heightScale, topBarLine = line)
+                assertEquals("$font $size", PlumDimens.topBarHeight * size.heightScale, layout.topBarHeightTyping)
+                assertTrue("$font $size: typing bar never taller than the idle bar", layout.topBarHeightTyping <= layout.topBarHeight)
+            }
+        }
+    }
+
+    /** The games list is the rows that fit, whole, the last without its gap; at 768 x 432 that is 8 x 40 - 2. */
+    @Test
+    fun theGamesListIsAWholeNumberOfRowsTall() {
+        assertEquals(318f, rp5.listRowsHeight.value, 0.01f)
+        assertEquals(318f, nova.listRowsHeight.value, 0.01f)
+        for (layout in listOf(rp5, thor, rp4Pro, nova)) {
+            assertTrue(layout.listRowsHeight <= layout.stripHeight)
+            assertTrue(layout.listRowsHeight + PlumDimens.listRowGap + layout.gameRowHeight > layout.stripHeight)
+        }
     }
 }

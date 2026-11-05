@@ -33,10 +33,7 @@ internal val DETAILS_EACH_MISSING: List<Pair<String, GameDetails>> =
 /** Nothing to say: a result with no facts and no synopsis. */
 internal val EMPTY_DETAILS = GameDetails(year = null, publisher = "", genre = "", players = "", description = "")
 
-internal fun SecondScreenContent.Game.withDetails(
-    details: GameDetails?,
-    picture: com.plumemu.home.ArtPicture? = null,
-) = copy(scrapeKey = "crc:1", art = picture, details = details)
+internal fun SecondScreenContent.Game.withDetails(details: GameDetails?) = copy(scrapeKey = "crc:1", details = details)
 
 /** The file Play launches, as the game row holds it; the card shows it without its extension. */
 internal const val DETAILS_FILE_NAME = "Super Metroid (Japan, USA) (En,Ja).sfc"
@@ -44,9 +41,6 @@ internal const val DETAILS_FILE_NAME = "Super Metroid (Japan, USA) (En,Ja).sfc"
 /** A file name far longer than the card's line at any size: one line, cut with "…". */
 internal const val LONG_FILE_NAME =
     "Final Fantasy VII - International Edition (Japan) (Disc 1) (Rev 1) (Special Collector's Edition with the Bonus Disc, the Art Book and More).cue"
-
-/** A game signed out of ScreenScraper: its poster cover and the facts known without it (no description, year or publisher). */
-internal val POSTER_GAME = GAME_WITH_STAR.copy(fileName = DETAILS_FILE_NAME, hasNoPicture = true, systemShort = "SNES", coverAspect = 1.40f)
 
 internal val DETAILS_GAME = GAME_WITH_STAR.withDetails(FULL_DETAILS).copy(fileName = DETAILS_FILE_NAME)
 

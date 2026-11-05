@@ -9,6 +9,13 @@ import com.plumemu.library.scan.AndroidFolderPermissions
 import com.plumemu.library.scan.FolderPermissions
 import com.plumemu.library.scan.RomFolders
 import com.plumemu.secondscreen.ScreenKind
+import com.plumemu.coredata.settings.BoxArtSourceSetting
+import com.plumemu.coredata.settings.ConfirmButtonSetting
+import com.plumemu.coredata.settings.TextSizeSetting
+import com.plumemu.coreui.theme.ColorSet
+import com.plumemu.settings.colorSet
+import com.plumemu.settings.withColors
+import com.plumemu.setup.DeviceFacts
 import com.plumemu.setup.EmulatorCoverage
 import com.plumemu.setup.SetupFolder
 import com.plumemu.setup.SetupSource
@@ -61,8 +68,19 @@ internal class GraphSetupSource(
     override val usageStatistics: Flow<Boolean> =
         graph.settings.filterNotNull().map { it.advanced.usageStatistics }.distinctUntilChanged()
 
-    override val pushRightToPlay: Flow<Boolean> =
-        graph.settings.filterNotNull().map { it.controls.pushRightToPlay }.distinctUntilChanged()
+    override val hasGamepad: Flow<Boolean> = gamepadPresence(context.applicationContext)
+
+    private val connectivity = context.applicationContext.getSystemService(android.net.ConnectivityManager::class.java)
+
+    override fun isOnline(): Boolean = com.plumemu.setup.hasInternet(connectivity)
+
+    override val deviceFacts: DeviceFacts = deviceFactsOf(context.applicationContext)
+
+    override val currentColorSet: Flow<ColorSet?> =
+        graph.settings.filterNotNull().map { it.appearance.colorSet() }.distinctUntilChanged()
+
+    override val boxArtSource: Flow<BoxArtSourceSetting?> =
+        graph.settings.filterNotNull().map { it.library.boxArtSource }.distinctUntilChanged()
 
     override val secondScreenQuestion: Flow<ScreenKind?> =
         combine(graph.secondScreens.current, graph.settings.filterNotNull().map { it.secondScreen.enabled }) { screen, enabled ->
@@ -117,15 +135,27 @@ internal class GraphSetupSource(
         graph.settingsStore.update { it.copy(advanced = it.advanced.copy(usageStatistics = isOn)) }
     }
 
-    override suspend fun setPushRightToPlay(isOn: Boolean) {
-        graph.settingsStore.update { it.copy(controls = it.controls.copy(pushRightToPlay = isOn)) }
+    override suspend fun setConfirmButton(setting: ConfirmButtonSetting) {
+        graph.settingsStore.update { it.copy(controls = it.controls.copy(confirmButton = setting)) }
     }
+
+    override suspend fun applyLook(
+        set: ColorSet,
+        textSize: TextSizeSetting?,
+    ) {
+        graph.settingsStore.update {
+            val colored = it.appearance.withColors(set)
+            it.copy(appearance = if (textSize != null && colored.textSize == null) colored.copy(textSize = textSize) else colored)
+        }
+    }
+
+    override suspend fun setBoxArtSource(source: BoxArtSourceSetting) = graph.scrapes.chooseInSetup(source)
 
     override suspend fun setSecondScreenEnabled(isOn: Boolean) {
         graph.settingsStore.update { it.copy(secondScreen = it.secondScreen.copy(enabled = isOn)) }
     }
 
-    override suspend fun completeSetup() = graph.settingsStore.markSetupCompleted()
+    override suspend fun completeSetup(questionsSkipped: Boolean) = graph.settingsStore.markSetupCompleted(questionsSkipped)
 
 }
 

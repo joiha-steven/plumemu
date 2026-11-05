@@ -14,14 +14,11 @@ import com.plumemu.sound.Feel
 import com.plumemu.sound.Outcome
 
 /*
- * Setup's "Box art from ScreenScraper" step:
- * after the second screen question, while the scan runs, only in a build with developer
- * credentials. It asks first ("Use my account" / "Not now", SetupControl.UseBoxArt / SkipBoxArt);
- * only Use my account shows the sign-in form, account/SignInForm.kt, shared with Settings.
+ * Setup's box art step: three choices (two in a build without ScreenScraper's developer
+ * credentials) that write the same setting as Settings › Accounts › Box art. "Box art and game info"
+ * shows the sign-in form (account/SignInForm.kt, shared with Settings) while no usable account is
+ * stored; the form's Skip goes back to the choices.
  */
-
-/** After the second screen question: box art in a build that has it, else the scan. */
-internal fun boxArtOrScan(accounts: ScraperAccounts): SetupStep = if (accounts.isAvailable) SetupStep.BoxArt else SetupStep.Scan
 
 /**
  * A fresh form for the step. Already signed in when an account is stored and usable, or when
@@ -46,16 +43,9 @@ internal fun newBoxArtForm(
     }
 }
 
-/** The step opens on its form, not the question: signed in, or a refused account to sign in again. */
-internal fun opensOnTheForm(
-    form: SignInForm?,
-    status: AccountStatus,
-): Boolean = form != null && (form.signedInAs != null || (status as? AccountStatus.SignedIn)?.isRefused == true)
-
 /**
  * Every action but Back on the box art step's form goes to the form: Sign in asks the graph (the
- * form shows "Checking…" and then the answer), Skip and Continue call [goOn] (the scan's step
- * next).
+ * form shows "Checking…" and then the answer), Skip and Continue call [goOn].
  */
 internal fun onBoxArtAction(
     form: SignInForm,

@@ -42,7 +42,7 @@ class DatabaseGateTest {
                 runs++
                 fileExistedAtTheCheck = context.getDatabasePath(PlumDatabase.FILE_NAME).exists()
             }
-        val database = PlumDatabase.open(context, gate).also { db = it }
+        val database = PlumDatabase.open(context, TestDetailsRating, gate).also { db = it }
         assertEquals("building Room opens nothing", 0, runs)
         assertEquals(0, count(database))
         assertEquals(0, count(database))
@@ -58,7 +58,7 @@ class DatabaseGateTest {
                 runs++
                 if (runs == 1) throw IOException("the files could not be put back")
             }
-        val database = PlumDatabase.open(context, gate).also { db = it }
+        val database = PlumDatabase.open(context, TestDetailsRating, gate).also { db = it }
         try {
             count(database)
             fail("the first open must fail")
@@ -72,7 +72,7 @@ class DatabaseGateTest {
     @Test
     fun nothingOpensTheFileAfterItIsShut() {
         val gate = DatabaseGate()
-        val database = PlumDatabase.open(context, gate).also { db = it }
+        val database = PlumDatabase.open(context, TestDetailsRating, gate).also { db = it }
         assertEquals(0, count(database))
         gate.shut()
         database.close()
@@ -92,7 +92,7 @@ class DatabaseGateTest {
     @Test
     fun theCloseWaitsForAWriteInFlightOrGivesUp() {
         val gate = DatabaseGate()
-        val database = PlumDatabase.open(context, gate).also { db = it }
+        val database = PlumDatabase.open(context, TestDetailsRating, gate).also { db = it }
         assertEquals(0, count(database))
         val inTransaction = java.util.concurrent.CountDownLatch(1)
         val finish = java.util.concurrent.CountDownLatch(1)
@@ -131,7 +131,7 @@ class DatabaseGateTest {
     @Test
     fun aWriterQueuedBehindTheCloseEndsBeforeRoomCloses() {
         val gate = DatabaseGate()
-        val database = PlumDatabase.open(context, gate).also { db = it }
+        val database = PlumDatabase.open(context, TestDetailsRating, gate).also { db = it }
         assertEquals(0, count(database))
         val w = database.openHelper.writableDatabase
         val go = java.util.concurrent.CountDownLatch(1)

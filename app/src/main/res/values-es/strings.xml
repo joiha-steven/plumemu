@@ -74,6 +74,7 @@
     <string name="home_hint_unfavorite">Quitar favorito</string>
     <!-- X: open search. -->
     <string name="home_hint_search">Buscar</string>
+    <string name="home_hint_sort">Ordenar</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
          shown when no title matches. -->
@@ -83,6 +84,7 @@
     <string name="home_search_no_match">Ningún juego coincide</string>
     <string name="home_search_empty">Escribe el nombre de un juego para buscar</string>
     <string name="home_favorites_empty">Pulsa %1$s en un juego para añadirlo a Favoritos</string>
+    <string name="home_recent_empty">Los juegos a los que juegues aparecerán aquí</string>
     <!-- Search's hints while Plumemu's keyboard is up (B deletes, X types a space, Y changes the page, L1 R1 move the caret). -->
     <string name="home_hint_delete">Borrar</string>
     <string name="home_hint_space">Espacio</string>
@@ -107,9 +109,13 @@
          a year and a publisher ("1994 · Nintendo"), or a genre and a player count. The games list's
          right-hand text reuses it for a year and a region ("1994 · USA"). -->
     <string name="home_details_pair">%1$s · %2$s</string>
+    <string name="home_details_publisher_year">%1$s, %2$s</string>
     <string name="home_details_last_played">Última partida</string>
-    <string name="home_details_play_time">Tiempo de juego</string>
+    <string name="home_details_play_time">Jugado</string>
+    <string name="home_details_genre">Género</string>
+    <string name="home_details_rating_label">Valoración</string>
     <string name="home_details_emulator">Emulador</string>
+    <string name="home_details_battery">Batería</string>
     <string name="home_details_never">Nunca</string>
     <string name="home_details_today">Hoy</string>
     <string name="home_details_yesterday">Ayer</string>
@@ -126,9 +132,11 @@
 
     <!-- Main screen with no games at all. -->
     <string name="home_empty_title">Aún no hay carpeta de juegos</string>
-    <string name="home_empty_body">%1$s Añadir carpeta</string>
-    <string name="home_nogames_title">Aún no se encontraron juegos</string>
-    <string name="home_nogames_body">Comprueba que la carpeta tenga juegos.\n%1$s</string>
+    <string name="home_empty_body_folder">Elige la carpeta con tus juegos. Plumemu mostrará los juegos que haya en ella.</string>
+    <string name="home_empty_files_not_added">Archivos no añadidos</string>
+    <string name="home_empty_choose_folder">Elegir carpeta</string>
+    <string name="home_nogames_title">Aún no hay juegos aquí</string>
+    <string name="home_nogames_body_files">La carpeta no tiene archivos que abra un emulador de este dispositivo. Archivos no añadidos explica el motivo de cada uno.</string>
 
     <!-- The library could not be read (database or platform data failed); shown instead of the main screen. -->
     <string name="home_library_error_title">Plumemu no pudo abrir su biblioteca</string>
@@ -143,9 +151,9 @@
     <!-- Setup, folder step. -->
     <string name="setup_folder_title">¿Dónde están tus juegos?</string>
     <string name="setup_folder_desc">Elige la carpeta donde guardas tus ROMs. Las subcarpetas como snes o psx se asocian solas a su sistema.</string>
-    <string name="setup_folder_point_opens">El selector de carpetas de Android se abre en ROMs</string>
-    <!-- “Use this folder” is the button of Android's own folder picker: write it as Android words it in your language. -->
-    <string name="setup_folder_point_use">Toca “Usar esta carpeta” allí</string>
+    <string name="setup_folder_point_opens">Se abre el selector de carpetas de Android. Ve a tu carpeta de juegos.</string>
+    <!-- No button name: it differs by Android version. -->
+    <string name="setup_folder_point_use">Luego confirma esa carpeta allí.</string>
     <string name="setup_folder_point_private">Plumemu solo ve las carpetas que elijas</string>
     <string name="setup_choose_folder">Elegir carpeta</string>
     <string name="setup_set_up_later">Configurar después</string>
@@ -194,7 +202,10 @@
     <string name="setup_ready_title">Tu biblioteca está lista</string>
     <string name="setup_ready_desc">Los juegos aparecen por nombre, agrupados por sistema. Puedes cambiar lo que quieras más tarde en Ajustes.</string>
     <string name="setup_ready_naming">Los nombres se siguen completando · continúa en segundo plano</string>
-    <string name="setup_ready_empty_desc">Aún no se ha encontrado ningún juego. Añade una carpeta más tarde en Ajustes › Biblioteca › Carpetas de ROMs.</string>
+    <string name="setup_ready_empty_desc">Añade una carpeta más tarde en Ajustes › Biblioteca › Carpetas de ROMs.</string>
+    <string name="setup_ready_empty_title">Aún no se han encontrado juegos</string>
+    <string name="setup_ready_no_folder_title">Puedes añadir juegos más tarde</string>
+    <string name="setup_ready_no_folder_desc">Inicio te pedirá la carpeta de tus juegos cuando quieras.</string>
     <!-- %1$s and %2$s are numbers formatted for the locale. -->
     <string name="setup_emulators_some">Emuladores encontrados para %1$s de %2$s sistemas</string>
     <plurals name="setup_emulators_all">
@@ -217,8 +228,6 @@
     <string name="setup_stats_title">Enviar estadísticas de uso anónimas</string>
     <!-- The short form of settings_usage_statistics_body (Settings › About › Send usage statistics): the whole text does not fit the Ready step at 768 x 432 (TextSizeScreens*Test). -->
     <string name="setup_stats_body">Recuentos anónimos e informes de fallos. Nunca juegos, búsquedas ni cuentas. Desactivado: un último recuento y nada más.</string>
-    <string name="setup_one_hand_title">Derecha dos veces para jugar</string>
-    <string name="setup_one_hand_body">Arriba y abajo eligen un juego. A sigue funcionando. Cámbialo en Ajustes › Controles.</string>
     <string name="setup_stats_on">Activado</string>
     <string name="setup_stats_off">Desactivado</string>
     <string name="setup_start_playing">Empezar a jugar</string>
@@ -246,6 +255,8 @@
     <string name="home_role_yes">Sí</string>
     <string name="home_role_not_now">Ahora no</string>
     <string name="home_role_unavailable">Este dispositivo no tiene una pantalla para elegir la app de inicio. Elige Plumemu en los ajustes de Android › Aplicaciones › Aplicaciones predeterminadas.</string>
+    <string name="home_role_not_yet">Plumemu aún no es tu app de inicio. Elígela en los ajustes de Android.</string>
+    <string name="home_role_open_settings">Abrir ajustes</string>
     <string name="home_role_ok">Aceptar</string>
     <string name="home_role_hint_select">Elegir</string>
     <string name="home_role_hint_not_now">Ahora no</string>
@@ -290,12 +301,18 @@
     <!-- Game menu row: a verb, take the game out of Favorites. -->
     <string name="game_menu_unfavorite">Quitar de Favoritos</string>
     <!-- Game menu row: a verb, hide the game from every list (Settings › Library › Hidden games brings it back). -->
-    <string name="game_menu_hide">Ocultar</string>
+    <string name="game_menu_hide">Ocultar juego</string>
+    <!-- Game menu row: opens Info, where the achievements are. -->
+    <string name="game_menu_achievements">Logros</string>
+    <!-- Its value: earned, then total, both numbers ("12 of 40"). -->
+    <string name="game_menu_achievements_count">%1$s de %2$s</string>
     <string name="game_menu_remove_from_recent">Quitar de Recientes</string>
     <!-- Game menu row: opens the game's facts. A short noun. -->
     <string name="game_menu_info">Información</string>
     <!-- Fixing a game's name. -->
     <string name="game_menu_name">Nombre…</string>
+    <string name="game_menu_sort_by">Ordenar por…</string>
+    <string name="game_sort_title">Ordenar por</string>
     <string name="game_menu_fix_name">Corregir nombre…</string>
     <string name="game_menu_own_name">Usar mi propio nombre</string>
     <string name="game_menu_not_a_game">No es un juego</string>
@@ -304,6 +321,11 @@
     <string name="game_fix_name_prompt">Escribe parte del nombre</string>
     <string name="game_fix_name_no_match">Ningún título de la lista coincide</string>
     <string name="game_fix_name_loading">Leyendo los nombres…</string>
+    <!-- Settings › Unidentified games: the closest official titles, shown above the other results; only offered, never applied. -->
+    <string name="game_fix_name_suggestions">Títulos más cercanos</string>
+    <string name="game_fix_name_no_suggestion">No hay títulos cercanos</string>
+    <string name="game_fix_name_suggesting">Buscando títulos cercanos…</string>
+    <string name="game_fix_name_others">Otros títulos</string>
     <!-- A title's regions and year under it in Fix name: "USA, Europe · 1994". -->
     <string name="game_fix_name_release">%1$s · %2$s</string>
     <string name="game_fix_name_no_list">Plumemu aún no tiene una lista de nombres para %1$s. Aun así, puedes ponerle tu propio nombre a este juego.</string>
@@ -315,7 +337,7 @@
     <string name="game_own_name_empty">Primero escribe un nombre. No se puede guardar un nombre vacío.</string>
     <string name="game_own_name_save">Guardar nombre</string>
     <!-- Fix box art…: the game menu's entry and its panel's lines. -->
-    <string name="game_menu_fix_box_art">Corregir carátula…</string>
+    <string name="game_menu_fix_box_art">Carátula</string>
     <string name="game_fix_box_art_title">Corregir carátula</string>
     <string name="game_fix_box_art_prompt">Escribe el nombre del juego</string>
     <string name="game_fix_box_art_field_label">Nombre</string>
@@ -399,7 +421,7 @@
     <string name="game_info_play_time">Tiempo de juego</string>
     <string name="game_info_none">Ninguno</string>
     <!-- Info: nothing is chosen for the system yet; Play asks which emulator. -->
-    <string name="game_info_emulator_not_chosen">Aún sin elegir, se pregunta al jugar</string>
+    <string name="game_info_emulator_not_chosen">Se pregunta al jugar</string>
     <string name="game_info_no_emulator">Ninguno instalado</string>
     <!-- %1$s is the emulator the person chose, uninstalled since. -->
     <string name="game_info_not_installed">%1$s (no instalado)</string>
@@ -479,6 +501,11 @@
     <string name="game_action_yes">Sí</string>
     <string name="game_action_no">No</string>
     <string name="game_core_missing_body">%1$s no inició el juego: puede que su núcleo no esté instalado en RetroArch. Elige otro emulador o instala el núcleo en RetroArch.</string>
+    <string name="game_core_next_body">%1$s no inició el juego: puede que su núcleo no esté instalado en RetroArch. Puede que otro núcleo funcione.</string>
+    <string name="game_core_try_row">¿Probar %1$s?</string>
+    <string name="game_core_none_left_body">%1$s no inició el juego y no queda otro núcleo por probar. Para conseguir uno, abre RetroArch › Actualizador en línea › Descargador de núcleos y descarga %2$s.</string>
+    <string name="game_core_arcade_note">Los conjuntos arcade se hacen para una versión concreta del emulador, así que este puede necesitar otro núcleo.</string>
+    <string name="game_core_arcade_old_name_note">Los conjuntos arcade se hacen para una versión concreta del emulador. Este tiene un nombre que usa MAME 2003-Plus, así que puede necesitar ese núcleo.</string>
     <!-- A pinned shortcut (Steam, Windows, Shortcuts): listed, not startable by Plumemu yet. %1$s is the app that published it. -->
     <string name="game_error_shortcut_title">No se pudo abrir el acceso directo</string>
     <string name="game_error_shortcut_body_app">Ábrelo desde %1$s, la app de la que viene.</string>
@@ -526,6 +553,7 @@
     <string name="settings_hint_section">Sección</string>
     <!-- Hint bar label beside A in a list of choices: a verb, pick the focused one. -->
     <string name="settings_hint_choose">Elegir</string>
+    <string name="settings_hint_try_again">Reintentar</string>
     <!-- Narrow screens: opens the focused option's explanation as a further stop (the right button). -->
     <string name="settings_hint_more">Más</string>
     <!-- Option values: words only; the chevrons and check beside them are drawn (SettingsValueIcons.kt). -->
@@ -603,8 +631,11 @@
     <string name="settings_sort_games">Ordenar juegos</string>
     <string name="settings_sort_by_name">Nombre</string>
     <string name="settings_sort_by_last_played">Última partida</string>
+    <string name="settings_sort_by_most_played">Más jugados</string>
+    <string name="settings_sort_by_recently_added">Añadidos hace poco</string>
     <string name="settings_sort_by_year">Año</string>
-    <string name="settings_sort_games_body">Cómo se ordenan la lista de cada sistema y Favoritos. Recientes siempre muestra primero el último juego jugado.</string>
+    <string name="settings_sort_by_rating">Valoración</string>
+    <string name="settings_sort_games_body">Cómo se ordenan la lista de cada sistema y Favoritos. Los juegos sin dato para ordenar (nunca jugados, sin año, sin valoración) van después, por nombre. Año y Valoración aparecen cuando un juego tiene ese dato de ScreenScraper. Recientes siempre muestra primero el último juego jugado.</string>
     <string name="settings_recent_size">Tamaño de Recientes</string>
     <string name="settings_recent_size_body">Cuántos juegos guarda Recientes. Cuando está lleno, sale el juego jugado hace más tiempo. El tiempo de juego y las estadísticas no cambian.</string>
     <string name="settings_clear_recent">Vaciar Recientes…</string>
@@ -791,14 +822,7 @@
     <string name="settings_show_battery_body_two_screens">El nivel de batería, arriba a la derecha de la pantalla. También en el reloj de la segunda pantalla.</string>
     <!-- Second screen, picking cards. Top line: "Super Nintendo · USA"; the separator is also used in the facts line (quoted: Android trims the spaces of an unquoted string). -->
     <string name="second_screen_android_app">App de Android</string>
-    <!-- The game card's played line ("DuckStation · Played 3 days ago"). %1$s is a number formatted for the locale. -->
-    <string name="second_screen_played_today">Jugado hoy</string>
-    <string name="second_screen_played_yesterday">Jugado ayer</string>
-    <plurals name="second_screen_played_days_ago">
-        <item quantity="one">Jugado hace %1$s día</item>
-        <item quantity="other">Jugado hace %1$s días</item>
-    </plurals>
-    <!-- The system card: how long ago its last game was played, after the title and a " · " ("Last played Super Metroid · yesterday"). Lower case in English because it follows the title mid-line. -->
+    <string name="second_screen_app_tag">APP</string>
     <string name="second_screen_ago_today">hoy</string>
     <string name="second_screen_ago_yesterday">ayer</string>
     <plurals name="second_screen_ago_days">
@@ -806,8 +830,58 @@
         <item quantity="other">hace %1$s días</item>
     </plurals>
     <string name="second_screen_not_played">Aún sin jugar</string>
-    <!-- %1$s is a game's title. -->
-    <string name="second_screen_last_game">Última partida: %1$s</string>
+    <string name="second_game_achievements">Logros</string>
+    <string name="second_game_of_total">de %1$s</string>
+    <string name="second_game_points">%1$s / %2$s puntos</string>
+    <string name="second_game_latest">Último: %1$s</string>
+    <string name="second_game_play_label">Tiempo de juego · últimas 8 semanas</string>
+    <plurals name="second_game_sessions">
+        <item quantity="one">%1$s sesión</item>
+        <item quantity="other">%1$s sesiones</item>
+    </plurals>
+    <string name="second_game_about_session">Unos %1$s por sesión</string>
+    <string name="second_game_this_week">esta sem.</string>
+    <string name="second_screen_last_played">Últimos jugados</string>
+    <string name="second_screen_play_time">Tiempo de juego</string>
+    <string name="second_screen_played">Jugados</string>
+    <string name="second_screen_achievements">Logros</string>
+    <string name="second_screen_on_system">en %1$s</string>
+    <string name="second_screen_games_played">juegos jugados</string>
+    <string name="second_screen_mastered">dominados</string>
+    <plurals name="second_screen_points">
+        <item quantity="one">%1$s punto</item>
+        <item quantity="other">%1$s puntos</item>
+    </plurals>
+    <plurals name="second_screen_games_with_progress">
+        <item quantity="one">%1$s juego con progreso</item>
+        <item quantity="other">%1$s juegos con progreso</item>
+    </plurals>
+    <plurals name="second_screen_new_this_week">
+        <item quantity="one">%1$s nuevo esta semana</item>
+        <item quantity="other">%1$s nuevos esta semana</item>
+    </plurals>
+    <string name="second_screen_opens_in">Se abre en %1$s</string>
+    <plurals name="second_screen_files_not_added">
+        <item quantity="one">%1$s archivo sin añadir</item>
+        <item quantity="other">%1$s archivos sin añadir</item>
+    </plurals>
+    <string name="second_screen_last_week">Semana pasada %1$s</string>
+    <string name="second_screen_shown_of">%1$s mostrados de %2$s</string>
+    <plurals name="second_screen_on_systems">
+        <item quantity="one">en %1$s sistema</item>
+        <item quantity="other">en %1$s sistemas</item>
+    </plurals>
+    <string name="second_screen_when_now">ahora mismo</string>
+    <plurals name="second_screen_when_minutes">
+        <item quantity="one">hace %1$s min</item>
+        <item quantity="other">hace %1$s min</item>
+    </plurals>
+    <string name="second_screen_when_hours_short">hace %1$s h</string>
+    <plurals name="second_screen_when_hours">
+        <item quantity="one">hace %1$s hora</item>
+        <item quantity="other">hace %1$s horas</item>
+    </plurals>
+    <string name="second_screen_when_last_week">la semana pasada</string>
     <!-- The second screen's in-game card: the battery line while charging ("Charging · 82%"). -->
     <string name="second_screen_charging">Cargando · %1$s</string>
     <!-- The in-game card's battery part. The time left is drawn in two sizes: the numbers
@@ -975,7 +1049,7 @@
     <string name="settings_color_adjusted_accent">Color de énfasis cambiado para que se vea bien</string>
     <string name="settings_color_adjusted_both">Colores del texto y de énfasis cambiados para que se lean bien</string>
     <string name="settings_accent_body">Marca el sistema actual, el punto de foco, los interruptores y los botones. Por sistema da a cada sistema su propio color.</string>
-    <string name="settings_font_body">Tres fuentes Plum, cada una ajustada para verse igual de grande en una pantalla pequeña.</string>
+    <string name="settings_font_body">La fuente de todo el texto de Plumemu.</string>
     <string name="settings_text_size_body">Cambia todo el texto de Plumemu. Además, se aplica el tamaño de fuente de Android.</string>
     <string name="settings_text_weight_body">Cambia lo gruesas que se dibujan todas las letras de Plumemu.</string>
     <string name="settings_left_edge_body">Qué muestra la franja estrecha del borde izquierdo mientras estás en una lista de juegos: cuántos juegos tiene cada sistema, un código corto por sistema o las letras de la lista en la que estás.</string>
@@ -1155,6 +1229,10 @@
     <string name="settings_statistics_with_box_art">Con carátula</string>
     <!-- Settings › Statistics' last line: these figures stay on the device, unlike Advanced › Send usage statistics. -->
     <string name="settings_statistics_kept_here">Solo se guarda en esta portátil</string>
+    <string name="settings_exact_play_time">Tiempo de juego exacto</string>
+    <string name="settings_exact_play_time_body">Cuenta solo el tiempo que un juego está en pantalla; sin esto, el tiempo en otras apps también cuenta (hasta 4 h). Necesita el acceso de uso de Android, que se abre al activarlo. Plumemu solo mira sus propios juegos y no envía nada.</string>
+    <string name="settings_exact_play_time_needs_access">Necesita acceso de uso</string>
+    <string name="settings_exact_play_time_unavailable">Esta consola no tiene pantalla de acceso de uso; no se puede activar el tiempo de juego exacto</string>
     <!-- Statistics, under the total play time. %1$s is a number already formatted for the locale. -->
     <plurals name="settings_statistics_across_games">
         <item quantity="one">en %1$s juego</item>
@@ -1170,7 +1248,9 @@
     <!-- "38 of 412": games played, or games with box art, out of the games in the library; numbers formatted for the locale. -->
     <string name="settings_statistics_count_of">%1$s de %2$s</string>
     <string name="settings_statistics_nothing_played">Aún no hay partidas</string>
-    <string name="settings_statistics_no_games">Aún no hay juegos en la biblioteca</string>
+    <string name="settings_statistics_no_plays_title">Aún sin tiempo de juego</string>
+    <string name="settings_statistics_no_games_title">Aún no hay juegos</string>
+    <string name="settings_statistics_no_games_body">El tiempo de juego se cuenta cuando Plumemu encuentre tus juegos</string>
     <string name="settings_statistics_unreadable">No se pudieron leer las estadísticas de juego</string>
     <string name="settings_statistics_unreadable_detail">Cierra y vuelve a abrir Ajustes para intentarlo de nuevo.</string>
     <string name="settings_version">Versión</string>
@@ -1216,7 +1296,7 @@
     <string name="report_error_refused">El servidor no aceptó este informe. Revisa la dirección de correo. Tu texto se conserva, así que puedes volver a intentarlo.</string>
     <string name="report_error_unavailable">Esta versión no puede enviar informes. Usa Exportar registros y envía el archivo por tu cuenta.</string>
     <string name="report_error_not_saved">No se pudo guardar el informe en este dispositivo.</string>
-    <string name="settings_privacy_body">Tu biblioteca, tus ajustes y tu tiempo de juego se quedan en el almacenamiento propio de Plumemu en este dispositivo y nunca se envían. Solo si lo activas (Ajustes › Acerca de › Estadísticas de uso), Plumemu envía al desarrollador recuentos de uso anónimos e informes de fallos: país, modelo del dispositivo, versiones de Android y de la app, qué pantallas y ajustes usas y cuánto tiempo juegas por sistema. Nunca títulos de juegos, búsquedas ni tu cuenta de ScreenScraper. Los informes de fallos pueden incluir rutas de archivos. Al desactivarlo se envía un único recuento anónimo de “desactivado” y nada más. Los informes de problemas solo se envían cuando pulsas Enviar en Informar de un problema, y pueden incluir el registro que decidas adjuntar, con rutas de archivos. Lo que se envía se conserva sin límite de tiempo. Una vez al día, con Wi-Fi, Plumemu pregunta a plumemu-app.stevensdesk.com si hay una versión más reciente; Cloudflare, que aloja ese servidor, ve tu dirección IP. Puedes desactivarlo con Buscar a diario, más arriba. Esa misma comprobación diaria también descarga datos de plataformas actualizados (la lista de sistemas y emuladores) del mismo servidor; no se envía nada más. Con una cuenta de ScreenScraper, Plumemu envía a ScreenScraper el nombre, el tamaño y las sumas de comprobación del archivo de cada juego, y su título cuando con eso no encuentra nada, para buscar carátulas. Con una cuenta de RetroAchievements, Plumemu envía a retroachievements.org tu nombre de usuario, tu clave y el número de RetroAchievements de cada juego, al abrir la información de un juego, después de jugar y una vez al día con Wi-Fi; las imágenes de las insignias vienen de media.retroachievements.org. La clave se guarda cifrada en este dispositivo, nunca en una copia de seguridad ni en un registro. Al cerrar sesión, deja de enviarse.</string>
+    <string name="settings_privacy_body">Tu biblioteca, tus ajustes y tu tiempo de juego se quedan en el almacenamiento propio de Plumemu en este dispositivo y nunca se envían. Solo si lo activas (Ajustes › Acerca de › Estadísticas de uso), Plumemu envía al desarrollador recuentos de uso anónimos e informes de fallos: país, modelo del dispositivo, versiones de Android y de la app, qué pantallas y ajustes usas y cuánto tiempo juegas por sistema. Nunca títulos de juegos, búsquedas ni tu cuenta de ScreenScraper. Los informes de fallos pueden incluir rutas de archivos. Al desactivarlo se envía un único recuento anónimo de “desactivado” y nada más. Los informes de problemas solo se envían cuando pulsas Enviar en Informar de un problema, y pueden incluir el registro que decidas adjuntar, con rutas de archivos. Lo que se envía se conserva sin límite de tiempo. Una vez al día, con Wi-Fi, Plumemu pregunta a plumemu-app.stevensdesk.com si hay una versión más reciente; Cloudflare, que aloja ese servidor, ve tu dirección IP. Puedes desactivarlo con Buscar a diario, más arriba. Esa misma comprobación diaria también descarga datos de plataformas actualizados (la lista de sistemas y emuladores) del mismo servidor; no se envía nada más. Con una cuenta de ScreenScraper, Plumemu envía a ScreenScraper el nombre, el tamaño y las sumas de comprobación del archivo de cada juego, y su título cuando con eso no encuentra nada, para buscar carátulas. Con una cuenta de RetroAchievements, Plumemu envía a retroachievements.org tu nombre de usuario, tu clave y el número de RetroAchievements de cada juego, al abrir la información de un juego, después de jugar y una vez al día con Wi-Fi; las imágenes de las insignias vienen de media.retroachievements.org. La clave se guarda cifrada en este dispositivo, nunca en una copia de seguridad ni en un registro. Al cerrar sesión, deja de enviarse. El tiempo de juego exacto, si lo activas en Ajustes \u203A Estadísticas, pide al acceso de uso de Android los eventos de la franja de tiempo de la partida y conserva solo los del juego o app que iniciaste desde Plumemu y los de la pantalla; no se guarda nada más que la duración de la partida y nunca se envía.</string>
     <!-- Updates -->
     <string name="settings_update_available">Actualización disponible</string>
     <string name="settings_update_value_downloading">Descargando…</string>
@@ -1279,11 +1359,20 @@
     <string name="setup_box_art_desc">Las carátulas y la información de los juegos vienen de ScreenScraper, con tu propia cuenta gratuita de screenscraper.fr. También puedes iniciar sesión más tarde en Ajustes › Cuentas › ScreenScraper.</string>
     <string name="setup_box_art_skip">Omitir</string>
     <!-- The question before the sign-in form. -->
-    <string name="setup_box_art_question_title">¿Carátulas de ScreenScraper?</string>
-    <string name="setup_box_art_question_desc">Las carátulas se obtienen con una cuenta gratuita de screenscraper.fr. Puedes configurarla más tarde en Ajustes › Cuentas › ScreenScraper.</string>
-    <string name="setup_box_art_use">Usar mi cuenta</string>
-    <string name="setup_box_art_not_now">Ahora no</string>
+    <string name="setup_confirm_title">¿Qué botón confirma?</string>
+    <string name="setup_confirm_desc">A confirma y B vuelve atrás. ¿Prefieres al revés? Elige Usar B.</string>
+    <string name="setup_confirm_keep">Usar A</string>
+    <string name="setup_confirm_use_b">Usar B</string>
+    <string name="setup_confirm_active_a">Botón de confirmar: A</string>
+    <string name="setup_confirm_active_b">Botón de confirmar: B</string>
+    <string name="setup_confirm_again_desc">Elige con la cruceta el botón que usas. Elegir el que ya está en uso continúa.</string>
+    <string name="setup_look_title">Elige un aspecto</string>
+    <string name="setup_look_desc">Elige tus colores. Puedes cambiarlos cuando quieras en Ajustes › Apariencia.</string>
+    <string name="setup_box_art_question_title">Carátulas</string>
+    <string name="setup_box_art_question_desc">De dónde saca Plumemu las carátulas de tus juegos. Puedes cambiarlo en Ajustes › Cuentas › Carátulas.</string>
     <string name="setup_ready_box_art">Carátulas: descargando en segundo plano</string>
+    <string name="setup_ready_box_art_offline">Carátulas: se descargarán cuando tengas conexión</string>
+    <string name="setup_ready_box_art_sign_in">Carátulas: vuelve a iniciar sesión en Ajustes › Cuentas</string>
     <string name="account_username">Usuario</string>
     <string name="account_password">Contraseña</string>
     <!-- What the keyboard shows as the field's name (EditorInfo.hintText), even in a full-screen editor. -->
@@ -1317,12 +1406,14 @@
     <!-- Sign out's confirm: what happens to box art. -->
     <string name="settings_sign_out_confirm_title">¿Cerrar sesión en ScreenScraper?</string>
     <string name="settings_sign_out_confirm_body">Las carátulas dejan de mostrarse y se detienen las descargas. Las imágenes ya guardadas se quedan en este dispositivo y vuelven al iniciar sesión de nuevo.</string>
+    <string name="settings_ra_sign_out_confirm_title">¿Cerrar sesión en RetroAchievements?</string>
+    <string name="settings_ra_sign_out_confirm_body">Tu nombre de usuario, tu clave y el progreso mostrado aquí se borran de este dispositivo. Tus logros se quedan en retroachievements.org. Inicia sesión de nuevo con tu clave para verlos.</string>
     <string name="settings_account_not_available">Carátulas: no disponibles en esta versión</string>
     <string name="settings_account_not_available_body">Esta versión de Plumemu se creó sin acceso a ScreenScraper, así que no muestra carátulas ni información de los juegos. Todo lo demás funciona.</string>
     <string name="settings_account_refused">Contraseña incorrecta: vuelve a iniciar sesión</string>
     <string name="settings_account_daily_limit">Límite diario. Se reanuda a las %1$s.</string>
-    <string name="settings_box_art_running">Descargando carátulas %1$s de %2$s</string>
-    <string name="settings_box_art_running_left">Descargando carátulas %1$s de %2$s · %3$s</string>
+    <string name="settings_box_art_running">Descargando carátulas · %1$s de %2$s</string>
+    <string name="settings_box_art_running_left">Descargando carátulas · %1$s de %2$s · %3$s</string>
     <string name="settings_box_art_running_no_counts">Descargando carátulas</string>
     <string name="settings_box_art_left_under_a_minute">queda menos de un minuto</string>
     <string name="settings_box_art_left_minutes">quedan aprox. %1$s min</string>
@@ -1338,10 +1429,14 @@
     <string name="settings_box_art_retrying_at">Sin conexión; se volverá a intentar a las %1$s</string>
     <string name="settings_box_art_retrying">Sin conexión; se volverá a intentar pronto</string>
     <string name="settings_box_art_starting">Iniciando…</string>
-    <string name="settings_box_art_done">Listo: %1$s de %2$s juegos tienen carátula</string>
+    <string name="settings_box_art_done">Carátulas de %1$s de %2$s juegos</string>
     <string name="settings_box_art_some">%1$s de %2$s juegos tienen carátula</string>
     <string name="settings_box_art_empty">Aún no hay juegos: las carátulas llegarán cuando Plumemu encuentre tus juegos.</string>
     <string name="settings_box_art_unreadable">Plumemu no pudo leer el progreso de las carátulas.</string>
+    <string name="settings_box_art_none_found">No se encontraron carátulas para estos juegos</string>
+    <string name="settings_box_art_failed_offline">Sin red: no se pudieron descargar las carátulas</string>
+    <string name="settings_box_art_failed_server">El servidor de carátulas no respondió</string>
+    <string name="settings_box_art_short_no_answer">Sin respuesta</string>
     <string name="settings_box_art_fact_requests">Solicitudes hoy: %1$s de %2$s</string>
     <string name="settings_box_art_fact_requests_used_up">Solicitudes hoy: %1$s de %2$s · límite diario alcanzado</string>
     <string name="settings_box_art_fact_requests_only">Solicitudes hoy: %1$s</string>
@@ -1425,6 +1520,20 @@
     <string name="settings_unknown_folder_body_none">Elige el sistema al que pertenece esta carpeta.</string>
     <string name="settings_unknown_folder_body_answered">Elige otro sistema para cambiar tu respuesta.</string>
     <string name="settings_unknown_folder_failed">No se pudo guardar esa respuesta. No se cambió nada.</string>
+    <string name="settings_files_not_added_title">Archivos no añadidos</string>
+    <string name="settings_files_not_added_body">Archivos de tus carpetas que no están en la biblioteca, y por qué.</string>
+    <string name="settings_files_not_added_none">Todos los archivos están en la biblioteca</string>
+    <string name="settings_files_not_added_no_system">Fuera de la carpeta de un sistema</string>
+    <string name="settings_files_not_added_unmatched_system">Ningún emulador de %1$s abre estos</string>
+    <string name="settings_files_not_added_unmatched">Ningún emulador abre estos</string>
+    <string name="settings_files_not_added_bios">BIOS y firmware</string>
+    <string name="settings_files_not_added_saves">Partidas guardadas y estados</string>
+    <string name="settings_files_not_added_junk">Notas, imágenes y archivos ocultos</string>
+    <string name="settings_files_not_added_folder">%1$s · %2$s</string>
+    <plurals name="settings_files_not_added_more">
+        <item quantity="one">y %1$s archivo más</item>
+        <item quantity="other">y %1$s archivos más</item>
+    </plurals>
     <plurals name="home_notice_unknown_folders">
         <item quantity="one">%1$s carpeta desconocida</item>
         <item quantity="other">%1$s carpetas desconocidas</item>
@@ -1499,4 +1608,15 @@
         <item quantity="other">+%1$s logros</item>
     </plurals>
     <string name="achievement_mastered">Completado</string>
+
+    <!-- Settings › Accounts › Box art: where box art comes from. -->
+    <string name="settings_box_art_source">Carátulas</string>
+    <string name="settings_box_art_source_body">De dónde obtiene Plumemu las carátulas. Pulsa A para elegir.</string>
+    <string name="settings_box_art_source_screenscraper">Carátulas e info de los juegos</string>
+    <string name="settings_box_art_source_screenscraper_line">Carátula, año, valoración, género, editor y descripción. Requiere una cuenta gratuita de ScreenScraper.</string>
+    <string name="settings_box_art_source_libretro">Solo carátulas</string>
+    <string name="settings_box_art_source_libretro_line">Frentes de caja de libretro por Wi-Fi. Sin detalles. Sin cuenta.</string>
+    <string name="settings_box_art_source_own">Portadas propias de Plumemu</string>
+    <string name="settings_box_art_source_own_line">Sin red. Plumemu dibuja una portada para cada juego.</string>
+    <string name="settings_box_art_source_failed">Plumemu no pudo guardarlo. Inténtalo de nuevo.</string>
 </resources>

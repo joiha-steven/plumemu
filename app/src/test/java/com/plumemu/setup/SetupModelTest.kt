@@ -41,6 +41,14 @@ class SetupModelTest {
         runCurrent()
     }
 
+    /** Continue on the folders, then the look step's tile and the box art step's first choice: the scan. */
+    private fun TestScope.continueToScan(model: SetupModel) {
+        repeat(3) {
+            model.onAction(Action.Enter)
+            runCurrent()
+        }
+    }
+
     @Test
     fun opensOnChooseFolderAndEnterAsksForThePicker() = runTest {
         val model = model()
@@ -129,8 +137,7 @@ class SetupModelTest {
         source.endScan()
         runCurrent()
         assertEquals(SetupControl.Continue, model.state.value.focus)
-        model.onAction(Action.Enter)
-        runCurrent()
+        continueToScan(model)
         assertEquals(SetupStep.Scan, model.state.value.step)
     }
 
@@ -151,8 +158,7 @@ class SetupModelTest {
         source.endScan()
         runCurrent()
 
-        model.onAction(Action.Enter) // Continue
-        runCurrent()
+        continueToScan(model)
         assertEquals(SetupStep.Scan, model.state.value.step)
         assertTrue(model.state.value.isScanning)
         assertNull("nothing to choose while it runs", model.state.value.focus)
@@ -174,8 +180,7 @@ class SetupModelTest {
         val model = model()
         pick(model)
         source.endScan()
-        model.onAction(Action.Enter) // Continue
-        runCurrent()
+        continueToScan(model)
         source.systems.value = listOf(SystemCount("Super Nintendo", 248))
         source.endScan()
         runCurrent()
@@ -192,8 +197,7 @@ class SetupModelTest {
         val model = model()
         pick(model)
         source.endScan()
-        model.onAction(Action.Enter) // Continue
-        runCurrent()
+        continueToScan(model)
         source.systems.value = listOf(SystemCount("Super Nintendo", 248))
         source.endScan()
         runCurrent()
@@ -213,8 +217,7 @@ class SetupModelTest {
         val model = model()
         pick(model)
         source.endScan()
-        model.onAction(Action.Enter) // Continue
-        runCurrent()
+        continueToScan(model)
         source.systems.value = listOf(SystemCount("Super Nintendo", 248))
 
         source.scanReport.value = ScanReport(phase = ScanPhase.Reading, filesSeen = 900)
@@ -237,8 +240,7 @@ class SetupModelTest {
         val model = model()
         pick(model) // folder 1 is shown; the scan also walks folder 99, whose access was revoked (not shown)
         source.endScan()
-        model.onAction(Action.Enter)
-        runCurrent()
+        continueToScan(model)
         source.systems.value = listOf(SystemCount("Super Nintendo", 248))
         source.scanReport.value = ScanReport(phase = ScanPhase.Reading, walkedFolderIds = setOf(99L))
         runCurrent()
@@ -254,8 +256,7 @@ class SetupModelTest {
         val model = model()
         pick(model)
         source.endScan()
-        model.onAction(Action.Enter)
-        runCurrent()
+        continueToScan(model)
         // The walk has ended but the database flow behind the count has not shown the games yet.
         source.scanReport.value = ScanReport(phase = ScanPhase.Naming, walkedFolderIds = setOf(1L))
         runCurrent()
@@ -270,8 +271,7 @@ class SetupModelTest {
         val model = model()
         pick(model)
         source.endScan()
-        model.onAction(Action.Enter)
-        runCurrent()
+        continueToScan(model)
         source.systems.value = listOf(SystemCount("Super Nintendo", 248))
         source.scanReport.value = ScanReport(phase = ScanPhase.Naming, walkedFolderIds = setOf(1L), gamesNamed = 10, gamesToName = 100)
         runCurrent()
@@ -289,8 +289,7 @@ class SetupModelTest {
         val model = model()
         pick(model)
         source.endScan()
-        model.onAction(Action.Enter)
-        runCurrent()
+        continueToScan(model)
         // Two folders, one walked: still on the scan step, naming is not final.
         source.heldFolders.value = source.heldFolders.value + SetupFolder(2, "content://x/tree/2", "SD", 0, 0, isCounted = false)
         source.scanReport.value = ScanReport(phase = ScanPhase.Naming, walkedFolderIds = setOf(1L), gamesNamed = 640, gamesToName = 1837)
@@ -308,8 +307,7 @@ class SetupModelTest {
         val model = model()
         pick(model)
         source.endScan()
-        model.onAction(Action.Enter)
-        runCurrent()
+        continueToScan(model)
         source.endScan(failed = true)
         runCurrent()
         assertEquals(SetupStep.Scan, model.state.value.step)
@@ -321,8 +319,7 @@ class SetupModelTest {
     fun aFailedScanSaysSoAndTryAgainScansAgain() = runTest {
         val model = model()
         pick(model)
-        model.onAction(Action.Enter)
-        runCurrent()
+        continueToScan(model)
         source.endScan(failed = true)
         runCurrent()
         assertTrue(model.state.value.hasScanFailed)
@@ -336,22 +333,20 @@ class SetupModelTest {
     }
 
     @Test
-    fun backDuringTheScanReturnsToTheFoldersAndLeavesTheScanRunning() = runTest {
+    fun backDuringTheScanReturnsToTheLastQuestionAndLeavesTheScanRunning() = runTest {
         val model = model()
         pick(model)
-        model.onAction(Action.Enter)
-        runCurrent()
+        continueToScan(model)
 
         model.onAction(Action.Back)
         runCurrent()
-        assertEquals(SetupStep.Folders, model.state.value.step)
-        assertEquals(SetupControl.Continue, model.state.value.focus)
+        assertEquals("the box art question, asked just before", SetupStep.BoxArt, model.state.value.step)
         assertTrue("the scan goes on", model.state.value.isScanning)
 
-        // The scan ending while the person is on the folder step does not jump ahead.
+        // The scan ending while the person is on the question does not jump ahead.
         source.endScan()
         runCurrent()
-        assertEquals(SetupStep.Folders, model.state.value.step)
+        assertEquals(SetupStep.BoxArt, model.state.value.step)
     }
 
     @Test
@@ -377,9 +372,6 @@ class SetupModelTest {
         val model = readyModel()
         model.onAction(Action.Move(Direction.Up))
         runCurrent()
-        assertEquals(SetupControl.PushRightToPlay, model.state.value.focus)
-        model.onAction(Action.Move(Direction.Up))
-        runCurrent()
         assertEquals(SetupControl.UsageStatistics, model.state.value.focus)
         assertFalse("off until the person switches it on", model.state.value.usageStatistics)
         model.onAction(Action.Enter)
@@ -390,24 +382,6 @@ class SetupModelTest {
         model.onAction(Action.TapItem(Column.Games, 0))
         runCurrent()
         assertFalse("off again by a tap", source.usageStatistics.value)
-    }
-
-    @Test
-    fun theOneHandOptionIsUncheckedAndTheSwitchStoresItByButtonAndByTap() = runTest {
-        val model = readyModel()
-        assertFalse("unchecked by default", model.state.value.pushRightToPlay)
-        assertFalse(source.pushRightToPlay.value)
-        model.onAction(Action.Move(Direction.Up))
-        runCurrent()
-        assertEquals(SetupControl.PushRightToPlay, model.state.value.focus)
-        model.onAction(Action.Enter)
-        runCurrent()
-        assertTrue("checked by the button", source.pushRightToPlay.value)
-        assertTrue(model.state.value.pushRightToPlay)
-        model.onAction(Action.TapItem(Column.Games, 1))
-        runCurrent()
-        assertFalse("unchecked again by a tap", source.pushRightToPlay.value)
-        assertFalse("the question did not finish setup", source.setupCompleted)
     }
 
     @Test
@@ -430,7 +404,7 @@ class SetupModelTest {
         // A second press on the same model does nothing (twoPresses...), so the tap gets a model of its own.
         source.setupCompleted = false
         val tapped = readyModel()
-        tapped.onAction(Action.TapItem(Column.Games, 2))
+        tapped.onAction(Action.TapItem(Column.Games, 1))
         runCurrent()
         assertTrue(source.setupCompleted)
     }
@@ -456,11 +430,11 @@ class SetupModelTest {
     }
 
     @Test
-    fun backFromTheLibraryReturnsToTheFolders() = runTest {
+    fun backFromTheLibraryReturnsToTheLastQuestion() = runTest {
         val model = readyModel()
         model.onAction(Action.Back)
         runCurrent()
-        assertEquals(SetupStep.Folders, model.state.value.step)
+        assertEquals(SetupStep.BoxArt, model.state.value.step)
     }
 
     @Test
@@ -582,8 +556,7 @@ class SetupModelTest {
     private fun TestScope.readyModel(): SetupModel {
         val model = model()
         pick(model)
-        model.onAction(Action.Enter)
-        runCurrent()
+        continueToScan(model)
         source.endScan()
         runCurrent()
         return model

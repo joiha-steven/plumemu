@@ -77,6 +77,9 @@ internal object ReleaseTags {
         "swe" to Region.SWEDEN, "rus" to Region.RUSSIA, "nor" to null, "den" to null, "fin" to null, "pol" to null,
     )
 
+    /** True for a scene region code ("USA", "EUR", "DEN"), whether or not it names a [Region]. */
+    fun isSceneRegionCode(word: String): Boolean = word.lowercase(Locale.ROOT) in SCENE_REGIONS
+
     /** The regions of a scene region code ("USA", "EUR", "FRA"); null for anything else. */
     fun sceneRegion(word: String): List<Region>? = SCENE_REGIONS[word.lowercase(Locale.ROOT)]?.let { listOf(it) }
 }

@@ -40,6 +40,7 @@ internal object ScrapedRows {
         publisher = result.info.publisher?.let(HtmlEntities::encode) ?: result.details.publisher?.name?.takeIf { it.isNotBlank() },
         players = result.info.players?.let(HtmlEntities::encode),
         genre = mainGenreInEnglish(result.details),
+        rating = result.details.listedRating(),
         pictures = ScrapedPictures.encode(media.map { ScrapedPicture(kindName(it.kind), it.sizeName, it.path, it.width, it.height) }),
         hasBoxFront = media.any { it.kind == MediaKind.BoxFront },
         // The run's main pass delivers the box front only; its disc pass, a failed disc or cartridge without it.

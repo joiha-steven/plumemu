@@ -1,6 +1,6 @@
 # Privacy
 
-Last updated: 2 November 2026.
+Last updated: 6 November 2026.
 
 ## Builds you make yourself
 
@@ -20,6 +20,9 @@ had it on, keep the choice they have; the same switch turns it off.)
   install number that is not linked to you, which screens and settings are used, how often and how
   long Plumemu is used, and how long you play, by system and emulator. Crash reports hold what
   went wrong and where in the app, and may contain file and folder names.
+- **Games Plumemu could not name**: from 0.1.2, once per install, the game's system, how the file
+  is stored (zip, chd and so on), its size and checksum (CRC32), and a product code or disc serial
+  read from the game itself. Never its file name. This is how I teach Plumemu to name more games.
 - **What is never sent**: game titles, the words you search for, your ScreenScraper or RetroAchievements account, the
   other apps on your device, your advertising ID. Your IP address reaches the server with any
   connection; it is used only to tell the country and is not kept.
@@ -36,7 +39,8 @@ Send. Settings › Advanced › Export logs only shares the log file where you c
 nothing itself. Reports are kept by the developer, with no time limit.
 
 Two other things go over the network: the update check, below, which carries nothing about you,
-and box art and achievements, only if you sign in to ScreenScraper or RetroAchievements.
+box art, if you choose Box art only or sign in to ScreenScraper, and achievements, if you sign in
+to RetroAchievements.
 
 ## Update check
 
@@ -61,10 +65,17 @@ Settings › About › Check for updates.
 - **Turn it off** with Settings › About › Check for updates daily. Check for updates then runs only
   when you press it.
 
-## Box art (only if you sign in to ScreenScraper)
+## Box art (only if you choose it)
 
 Box art and game details come from [ScreenScraper](https://www.screenscraper.fr), using your own
 ScreenScraper account. Without an account Plumemu does not contact ScreenScraper at all.
+
+**With no account**, if you choose Box art only in the setup or in Settings, Plumemu downloads box
+fronts on Wi-Fi from the libretro thumbnail server (`thumbnails.libretro.com`). Each download has
+the game's name in its address; no account and nothing else is sent. The server sees your IP
+address, as for any web request. Choose Plumemu's own covers and no box art server is contacted.
+
+**With a ScreenScraper account:**
 
 - **What is sent to ScreenScraper**: your ScreenScraper user name and password, and for each
   game its system, its file name and size, and, when Plumemu knows them, the file's checksum

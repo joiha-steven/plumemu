@@ -22,8 +22,7 @@ internal class SettingsRaKeyPageTest : SettingsModelHarness() {
         press(Action.Enter)
         val form = requireNotNull(model.signIn.form)
         assertEquals(SignInItem.Username, form.focus)
-        assertTrue("the form opens typing, the tray up", form.isTyping && form.isTrayUp)
-        press(Action.Back)
+        assertFalse("the form opens with the keyboard down", form.isTyping || form.isTrayUp)
         assertSame("B puts the tray away and the form stays", form, model.signIn.form)
         assertFalse(form.isTyping)
     }

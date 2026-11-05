@@ -1,6 +1,8 @@
 // Disc containers read as one flat byte range. rcheevos: MIT licence; `.cso` is not in rcheevos.
 package com.plumemu.achievements.hash
 
+import com.plumemu.identify.codec.lz4.Lz4
+import com.plumemu.identify.codec.lz4.Lz4Exception
 import java.io.IOException
 import java.util.zip.DataFormatException
 import java.util.zip.Inflater
@@ -39,9 +41,10 @@ internal class RawDiscFile(source: RaRomSource, check: () -> Unit) : DiscFile {
 }
 
 /**
- * A `.cso` (CISO v1; v2 is read the same way when its blocks are deflate): a 24-byte header, an
- * index of 4-byte block offsets (bit 31 set = stored raw, offsets shifted left by `align`), then
- * raw-deflate blocks. The block read last stays decoded, because a sector read touches one block.
+ * A `.cso` (CISO v1, v2) or `.zso`: a 24-byte header, an index of 4-byte block offsets (shifted left by
+ * `align`), then the blocks; what index bit 31 means depends on [Kind]. The block read last stays decoded,
+ * because a sector read touches one block. Largest buffers: one block (at most 1 MiB), one stored block
+ * (a block plus padding) and the index (an int array of at most 32 MiB, read in 64 KiB chunks).
  */
 internal class CsoDiscFile private constructor(
     private val reader: RangeReader,
@@ -50,7 +53,11 @@ internal class CsoDiscFile private constructor(
     private val align: Int,
     private val index: IntArray,
     override val size: Long,
+    private val kind: Kind,
 ) : DiscFile {
+    /** v1: deflate, bit 31 = raw. v2: bit 31 = LZ4, else deflate, or raw when the block did not shrink. ZSO: LZ4, bit 31 = raw. */
+    enum class Kind { V1, V2, ZSO }
+
     private var cachedBlock = -1
     private val block = ByteArray(blockSize)
     private var blockLength = 0
@@ -80,12 +87,22 @@ internal class CsoDiscFile private constructor(
         // A stored block is at most a block plus the alignment padding; anything larger is a bad index, not data to allocate.
         if (stored <= 0 || end > fileSize || stored > blockSize + (1L shl align)) throw corrupt("block $n points outside the file")
         val expected = minOf(blockSize.toLong(), size - n.toLong() * blockSize).toInt()
-        val raw = index[n] < 0
+        val flagged = index[n] < 0
+        // v2: a block stored at full size is raw whatever bit 31 says; below that, bit 31 means LZ4 (maxcso, PPSSPP). Others: bit 31 = raw (ZSO: LZ4 otherwise).
+        val v2Raw = stored >= blockSize
+        val raw = if (kind == Kind.V2) v2Raw else flagged
+        val lz4 = (kind == Kind.V2 && !v2Raw && flagged) || (kind == Kind.ZSO && !flagged)
         val data = ByteArray(stored.toInt())
         if (reader.readAt(start, data) < data.size) throw corrupt("block $n is cut short")
         if (raw) {
             if (data.size < expected) throw corrupt("block $n is shorter than a block")
             System.arraycopy(data, 0, block, 0, expected)
+        } else if (lz4) {
+            try {
+                Lz4.decode(data, 0, data.size, block, expected)
+            } catch (e: Lz4Exception) {
+                throw corrupt("block $n cannot be decompressed (${e.message})")
+            }
         } else {
             inflate(n, data, expected)
         }
@@ -120,6 +137,7 @@ internal class CsoDiscFile private constructor(
         private const val MAX_BLOCK_BYTES = 1 shl 20
         private const val MIN_BLOCK_BYTES = 2048
         private const val MAX_INDEX_BYTES = 32L shl 20
+        private const val INDEX_CHUNK_BYTES = 64 shl 10
 
         @Throws(IOException::class, DiscFormatException::class)
         fun open(source: RaRomSource, check: () -> Unit): CsoDiscFile {
@@ -136,11 +154,10 @@ internal class CsoDiscFile private constructor(
             val header = ByteArray(HEADER_BYTES)
             if (reader.readAt(0, header) < HEADER_BYTES) throw DiscFormatException(RaCannotHashReason.BadImage, "The .cso header is cut short")
             val magic = String(header, 0, 4, Charsets.ISO_8859_1)
-            if (magic == "ZISO") throw DiscFormatException(RaCannotHashReason.NeedsDecoder, "A .zso file holds LZ4 blocks")
-            if (magic != "CISO") throw DiscFormatException(RaCannotHashReason.BadImage, "Not a .cso file (no CISO header)")
+            if (magic != "CISO" && magic != "ZISO") throw DiscFormatException(RaCannotHashReason.BadImage, "Not a .cso file (no CISO header)")
             val version = header[20].toInt() and 0xFF
-            // v2 changes what the index bits mean (bit 31 marks LZ4, raw is told by size); deflate-only reading would be wrong.
-            if (version >= 2) throw DiscFormatException(RaCannotHashReason.NeedsDecoder, "A .cso v$version file may hold LZ4 blocks")
+            if (magic == "CISO" && version > 2) throw DiscFormatException(RaCannotHashReason.NeedsDecoder, "A .cso v$version file is newer than this reader")
+            val kind = if (magic == "ZISO") Kind.ZSO else if (version == 2) Kind.V2 else Kind.V1
             val total = le64(header, 8)
             val blockSize = le32(header, 16)
             val align = header[21].toInt() and 0xFF
@@ -149,10 +166,17 @@ internal class CsoDiscFile private constructor(
             }
             val blocks = (total + blockSize - 1) / blockSize
             if ((blocks + 1) * 4 > MAX_INDEX_BYTES || (blocks + 1) * 4 + HEADER_BYTES > fileSize) throw DiscFormatException(RaCannotHashReason.BadImage, "The .cso index is cut short")
-            val raw = ByteArray(((blocks + 1) * 4).toInt())
-            if (reader.readAt(HEADER_BYTES.toLong(), raw) < raw.size) throw DiscFormatException(RaCannotHashReason.BadImage, "The .cso index is cut short")
-            val index = IntArray((blocks + 1).toInt()) { le32(raw, it * 4) }
-            return CsoDiscFile(reader, fileSize, blockSize, align, index, total)
+            // Read in chunks straight into the int array, so the peak is the index once, not twice.
+            val index = IntArray((blocks + 1).toInt())
+            val chunk = ByteArray(INDEX_CHUNK_BYTES)
+            var done = 0
+            while (done < index.size) {
+                val take = minOf(index.size - done, INDEX_CHUNK_BYTES / 4)
+                if (reader.readAt(HEADER_BYTES.toLong() + done * 4L, chunk, 0, take * 4) < take * 4) throw DiscFormatException(RaCannotHashReason.BadImage, "The .cso index is cut short")
+                for (i in 0 until take) index[done + i] = le32(chunk, i * 4)
+                done += take
+            }
+            return CsoDiscFile(reader, fileSize, blockSize, align, index, total, kind)
         }
 
         private fun le32(b: ByteArray, at: Int): Int =

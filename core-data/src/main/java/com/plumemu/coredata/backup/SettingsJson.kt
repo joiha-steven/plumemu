@@ -3,6 +3,7 @@ package com.plumemu.coredata.backup
 import com.plumemu.coredata.settings.AdvancedSettings
 import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.BoxArtRegionSetting
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.ControlsSettings
 import com.plumemu.coredata.settings.HomeScreenSettings
@@ -77,6 +78,8 @@ object SettingsJson {
                     .put("scanOnStartup", s.library.scanOnStartup)
                     .put("sortGames", s.library.sortGames.name)
                     .put("boxArtRegion", s.library.boxArtRegion.code)
+                    // Left out until chosen, so a restore keeps "decide from the account".
+                    .apply { s.library.boxArtSource?.let { put("boxArtSource", it.name) } }
                     .put("boxArtPaused", s.library.boxArtPaused)
                     .put("systemOrder", s.library.systemOrder.name.lowercase(Locale.ROOT))
                     .put("manualSystemOrder", JSONArray(s.library.manualSystemOrder))
@@ -101,7 +104,8 @@ object SettingsJson {
                     .put("animations", s.advanced.animations)
                     .put("sounds", s.advanced.sounds.name.lowercase(Locale.ROOT))
                     .put("usageStatistics", s.advanced.usageStatistics)
-                    .put("vibration", s.advanced.vibration),
+                    .put("vibration", s.advanced.vibration)
+                    .put("exactPlayTime", s.advanced.exactPlayTime),
             ).put(
                 UPDATES,
                 JSONObject()
@@ -111,6 +115,7 @@ object SettingsJson {
                 JSONObject()
                     .put("setupCompleted", s.flags.setupCompleted)
                     .put("homeRoleAsked", s.flags.homeRoleAsked)
+                    .put("setupQuestionsSkipped", s.flags.setupQuestionsSkipped)
                     .put("rescanAfterReset", s.flags.rescanAfterReset)
                     .put("folderMatchVersion", s.flags.folderMatchVersion)
                     .put("namingRulesVersion", s.flags.namingRulesVersion)
@@ -193,6 +198,9 @@ object SettingsJson {
                             scanOnStartup = bool(l, LIBRARY, "scanOnStartup", d.library.scanOnStartup),
                             sortGames = enum(l, LIBRARY, "sortGames", d.library.sortGames),
                             boxArtRegion = coded(l, LIBRARY, "boxArtRegion", BoxArtRegionSetting.entries, { it.code }, d.library.boxArtRegion),
+                            boxArtSource = string(l, LIBRARY, "boxArtSource")?.let { stored ->
+                                BoxArtSourceSetting.entries.firstOrNull { it.name == stored } ?: null.also { unknown += "$LIBRARY.boxArtSource" }
+                            },
                             boxArtPaused = bool(l, LIBRARY, "boxArtPaused", d.library.boxArtPaused),
                             systemOrder = coded(l, LIBRARY, "systemOrder", SystemOrderSetting.entries, { it.name.lowercase(Locale.ROOT) }, d.library.systemOrder),
                             // Blank and repeated ids dropped, as the DataStore file's reader does.
@@ -219,12 +227,14 @@ object SettingsJson {
                             sounds = sounds(v, d.advanced.sounds),
                             usageStatistics = bool(v, ADVANCED, "usageStatistics", d.advanced.usageStatistics),
                             vibration = bool(v, ADVANCED, "vibration", d.advanced.vibration),
+                            exactPlayTime = bool(v, ADVANCED, "exactPlayTime", d.advanced.exactPlayTime),
                         ),
                     updates = UpdateSettings(checkDaily = bool(u, UPDATES, "checkDaily", d.updates.checkDaily)),
                     flags =
                         SetupFlags(
                             setupCompleted = bool(f, FLAGS, "setupCompleted", d.flags.setupCompleted),
                             homeRoleAsked = bool(f, FLAGS, "homeRoleAsked", d.flags.homeRoleAsked),
+                            setupQuestionsSkipped = bool(f, FLAGS, "setupQuestionsSkipped", d.flags.setupQuestionsSkipped),
                             rescanAfterReset = bool(f, FLAGS, "rescanAfterReset", d.flags.rescanAfterReset),
                             folderMatchVersion = int(f, FLAGS, "folderMatchVersion", d.flags.folderMatchVersion),
                             namingRulesVersion = int(f, FLAGS, "namingRulesVersion", d.flags.namingRulesVersion),

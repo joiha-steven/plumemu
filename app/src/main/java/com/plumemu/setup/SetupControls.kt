@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,44 +18,50 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import com.plumemu.coreui.components.StripeAnchor
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
 import com.plumemu.coreui.components.drawFlatFace
-import com.plumemu.coreui.components.flatKey
 import com.plumemu.coreui.components.KeyState
 import com.plumemu.coreui.components.keyDrive
 import com.plumemu.coreui.components.rememberKeyState
 import com.plumemu.coreui.components.drawFocusRing
 import com.plumemu.coreui.components.drawSunken
 import com.plumemu.coreui.components.focusPill
-import com.plumemu.coreui.components.pressFeel
+import com.plumemu.coreui.components.ButtonKind
+import com.plumemu.coreui.components.CollarSize
+import com.plumemu.coreui.components.PlumButton
+import com.plumemu.coreui.components.PlumSwitch
+import com.plumemu.coreui.components.raisedCard
+import com.plumemu.coreui.theme.CardDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 
 /*
- * Setup's building blocks, drawn as the board's RP5-O1 draws them: filled and outlined buttons,
- * choices and folder cards, the emulator and statistics rows, the switch and the step dots.
- * Focus follows docs/design/rules.md › Focus and current: a focused button gets the 2.5 dp accent
- * ring inside the soft focus halo; a focused choice or row gets the `sel` fill.
+ * Setup's building blocks: collar buttons, choices and folder cards, the emulator and statistics
+ * rows, the switch and the step dots. Focus follows docs/design/rules.md › Focus and current: a
+ * focused button lights its collar's groove; a focused choice or row is the slab.
  */
 
 /**
@@ -94,18 +99,25 @@ internal fun Modifier.focusRing(
 internal fun Modifier.bleed(
     by: Dp,
     bottom: Dp = by,
+    /** More room past the top, past each side and past the bottom (a soft shadow's reach); the padding of the content is the same. */
+    top: Dp = 0.dp,
+    sides: Dp = 0.dp,
+    below: Dp = 0.dp,
 ): Modifier =
     layout { measurable, constraints ->
         val px = by.roundToPx()
-        val below = bottom.roundToPx()
-        val placeable = measurable.measure(constraints.offset(px * 2, px + below))
-        layout(placeable.width - px * 2, placeable.height - px - below) { placeable.place(-px, -px) }
+        val side = px + sides.roundToPx()
+        val up = px + top.roundToPx()
+        val down = bottom.roundToPx() + below.roundToPx()
+        val placeable = measurable.measure(constraints.offset(side * 2, up + down))
+        layout(placeable.width - side * 2, placeable.height - up - down) { placeable.place(-side, -up) }
     }
 
 /**
- * Pill button with a flat face, 40 high: the main one in the accent, the others as keys; the touch area grows to Android's minimum by itself.
- * [maxLines] 2 lets a label wrap in a narrow column (Settings' 248 dp panel at the largest text
- * sizes); two lines still fit the height, which grows with the text size.
+ * The setup button: a [PlumButton] (collar, the main one in the accent, the others as keys). Its bounds include the collar
+ * ([CollarSize.Control]'s lip and groove), so the collar's outer edge lines up with the column and keeps the column's gap from the
+ * part above; the cap inside is `setupButtonHeight` high. The shadow below and the focus halo reach past the bounds: leave that
+ * unclipped. [maxLines] 2 lets a label wrap in a narrow column (Settings' 248 dp panel at the largest text sizes); the cap grows with it.
  */
 @Composable
 internal fun SetupButton(
@@ -114,31 +126,35 @@ internal fun SetupButton(
     isFocused: Boolean,
     modifier: Modifier = Modifier,
     maxLines: Int = 1,
+    /** How much of the collar's top hangs above the bounds instead of inside them (a form short of room, Plumemu's tray up); 0 keeps the collar inside. */
+    hangAbove: Dp = 0.dp,
+    /** The collar's size: the small one where the room is short. */
+    collarSize: CollarSize = CollarSize.Control,
 ) {
-    val colors = PlumTheme.colors
-    val type = PlumTheme.type
-    val pill = PlumTheme.layout.setupButtonHeight / 2
-    // A flat face that stands off the background (design/rules.md › Controls): the main button in the accent, the others as keys.
-    // It goes down into its edge while pressed, sits higher while focused or hovered, and stays put when animations are off.
-    val key = rememberKeyState()
-    Box(
-        modifier =
-            modifier
-                // Outside the face, so the ring stays where the button rests.
-                .focusRing(isFocused, pill, colors.accent, colors.focusGlow)
-                .semantics { role = Role.Button }
-                .then(if (maxLines > 1) Modifier.heightIn(min = PlumTheme.layout.setupButtonHeight) else Modifier.height(PlumTheme.layout.setupButtonHeight))
-                .flatKey(key, isFocused, { if (isPrimary) it.accentFace() else it.keyFace }, pill, colors)
-                .padding(horizontal = PlumDimens.setupButtonPadding, vertical = if (maxLines > 1) PlumDimens.titleLineGap else 0.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        val style = if (isPrimary) type.setupButton.copy(color = colors.onAccent) else type.setupButtonQuiet.copy(color = colors.text2)
-        BasicText(text = text, style = if (maxLines > 1) style.copy(textAlign = TextAlign.Center) else style, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
-    }
+    PlumButton(
+        label = text,
+        kind = if (isPrimary) ButtonKind.Primary else ButtonKind.Secondary,
+        focused = isFocused,
+        modifier = modifier.then(if (hangAbove > 0.dp) Modifier.hangAbove(hangAbove) else Modifier),
+        maxLines = maxLines,
+        collarSize = collarSize,
+    )
 }
 
-/** How a choice or card looks: the focused choice is filled, a chosen folder is a quiet filled card. */
-internal enum class ChoiceLook { Focused, Plain, Chosen }
+/** Reports the part [by] shorter and draws it [by] higher: its top hangs over the gap above, the face stays where the rest of the layout puts it. */
+private fun Modifier.hangAbove(by: Dp): Modifier =
+    layout { measurable, constraints ->
+        val up = by.roundToPx()
+        val placeable = measurable.measure(constraints)
+        layout(placeable.width, placeable.height - up) { placeable.place(0, -up) }
+    }
+
+/**
+ * How a choice or card looks: the focused choice is the slab, a folder's card a raised card ([Chosen]), a plain one an outline.
+ * [Current] is the choice in force while the cursor is elsewhere (the box art source): the outline with accent text at weight
+ * 600 and no fill, as every "current, not focused" item (docs/design/rules.md), so it is never mistaken for the slab.
+ */
+internal enum class ChoiceLook { Focused, Plain, Chosen, Current }
 
 /** A choice ("+ Add another folder") or a chosen folder's card: label, a small line under it. */
 @Composable
@@ -148,36 +164,48 @@ internal fun SetupChoice(
     look: ChoiceLook,
     modifier: Modifier = Modifier,
     subColor: Color = PlumTheme.colors.muted,
+    /** Lines the small line may take; the box art choices carry a long one. */
+    subMaxLines: Int = 2,
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
-    val shape = RoundedCornerShape(PlumDimens.cornerSetupChoice)
-    val fill = if (look == ChoiceLook.Plain) Modifier.border(PlumDimens.setupChoiceRing, colors.sel, shape) else Modifier
-    val restFill = if (look == ChoiceLook.Chosen) colors.sel2 else null
+    val shape = RoundedCornerShape(CardDimens.corner)
+    // The accent stripe stands beside the title, not beside the middle of a long line under it.
+    val anchor = remember { StripeAnchor() }
+    val rest =
+        when (look) {
+            ChoiceLook.Plain, ChoiceLook.Current -> Modifier.border(PlumDimens.setupChoiceRing, colors.sel, shape)
+            ChoiceLook.Chosen -> Modifier.raisedCard()
+            ChoiceLook.Focused -> Modifier
+        }
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = PlumTheme.layout.setupChoiceMinHeight)
-                .focusPill(look == ChoiceLook.Focused, rest = { restFill }, shape = shape)
-                .then(fill)
-                .padding(horizontal = PlumDimens.setupChoicePaddingHorizontal, vertical = PlumDimens.setupChoicePaddingVertical),
+                .then(rest)
+                .focusPill(look == ChoiceLook.Focused, shape = shape, stripe = anchor)
+                .padding(start = PlumDimens.slabTextStart, end = PlumDimens.setupChoicePaddingHorizontal, top = PlumDimens.setupChoicePaddingVertical, bottom = PlumDimens.setupChoicePaddingVertical),
         horizontalArrangement = Arrangement.spacedBy(PlumDimens.setupChoiceDotGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.setupChoiceLineGap)) {
             val labelStyle =
-                if (look == ChoiceLook.Focused) type.setupChoiceFocused.copy(color = colors.strong) else type.setupChoice.copy(color = colors.text2)
-            BasicText(text = label, style = labelStyle, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            BasicText(text = sub, style = type.smallFact.copy(color = subColor), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                when (look) {
+                    ChoiceLook.Focused -> type.setupChoiceFocused.copy(color = colors.strong)
+                    ChoiceLook.Current -> type.setupChoiceCurrent.copy(color = colors.accent)
+                    else -> type.setupChoice.copy(color = colors.text2)
+                }
+            BasicText(text = label, style = labelStyle, maxLines = 2, overflow = TextOverflow.Ellipsis, onTextLayout = anchor::measured, modifier = anchor.title())
+            BasicText(text = sub, style = type.smallFact.copy(color = subColor), maxLines = subMaxLines, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
 /**
- * The emulators and usage statistics rows: `sel2` panel, title, line, trailing item. One that can take the focus
- * ([isFocusable]), focused, wears the row focus language (docs/design/rules.md › Focus and current): the accent pill
- * with its ring, `strong` title at weight 500.
+ * The emulators, box art and usage statistics rows: a raised card, title, line, trailing item, text at the slab start. Focused,
+ * it wears the row focus language (docs/design/rules.md › Focus and current): the slab,
+ * `strong` title at weight 500.
  */
 @Composable
 internal fun SetupInfoRow(
@@ -185,17 +213,18 @@ internal fun SetupInfoRow(
     body: String?,
     isFocused: Boolean,
     modifier: Modifier = Modifier,
-    isFocusable: Boolean = false,
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
+    val anchor = remember { StripeAnchor() }
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .focusPill(isFocused, rest = { colors.sel2 }, shape = RoundedCornerShape(PlumDimens.cornerSetupChoice))
-                .padding(horizontal = PlumDimens.setupRowPaddingHorizontal, vertical = PlumDimens.setupRowPaddingVertical),
+                .then(if (isFocused) Modifier else Modifier.raisedCard())
+                .focusPill(isFocused, shape = RoundedCornerShape(CardDimens.corner), stripe = if (body != null) anchor else null)
+                .padding(start = PlumDimens.slabTextStart, end = PlumDimens.setupRowPaddingHorizontal, top = PlumDimens.setupRowPaddingVertical, bottom = PlumDimens.setupRowPaddingVertical),
         horizontalArrangement = Arrangement.spacedBy(PlumDimens.setupRowGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -206,7 +235,7 @@ internal fun SetupInfoRow(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.setupRowLineGap)) {
                 val titleStyle = if (isFocused) type.setupRowTitleFocused.copy(color = colors.strong) else type.setupRowTitle.copy(color = colors.text)
-                BasicText(text = title, style = titleStyle, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                BasicText(text = title, style = titleStyle, maxLines = 2, overflow = TextOverflow.Ellipsis, onTextLayout = if (body != null) anchor::measured else null, modifier = if (body != null) anchor.title() else Modifier)
                 if (body != null) BasicText(text = body, style = type.setupNote.copy(color = colors.muted), maxLines = 4, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -215,9 +244,9 @@ internal fun SetupInfoRow(
 }
 
 /**
- * On: sunken accent track, flat `onAccent` knob at the end. Off: sunken `chip` track, pale knob at the start. The knob
- * slides between the ends and squeezes wider while the switch is pressed (a finger, or the confirm button while
- * [isFocused]); with animations off it jumps and the squeeze is instant.
+ * The collar switch ([PlumSwitch]): on is the accent track, off the plain one, the knob a cap face. It always sits in a row or card,
+ * and the row's slab is the focus, so the switch never lights its own groove: [isFocused] only lets the confirm button press it
+ * through [key], the press state a row feeds (a finger on the row, or the confirm button).
  */
 @Composable
 internal fun SetupSwitch(
@@ -225,42 +254,14 @@ internal fun SetupSwitch(
     stateText: String,
     modifier: Modifier = Modifier,
     isFocused: Boolean = false,
-    /** The knob's state; a row that wants a tap anywhere on it to widen the knob passes its own and feeds it. */
+    /** The press state; a row that wants a tap anywhere on it to press the switch passes its own and feeds it. */
     key: KeyState = rememberKeyState(),
 ) {
-    val colors = PlumTheme.colors
-    val motion = PlumTheme.motion
-    // The knob slides by transform only, or jumps when motion is off.
-    val travel by animateFloatAsState(
-        targetValue = if (isOn) 1f else 0f,
-        animationSpec = motion.slideSpec(),
-        label = "switch knob",
+    PlumSwitch(
+        on = isOn,
+        focused = false,
+        modifier = modifier.semantics { stateDescription = stateText }.keyDrive(key, isFocused),
     )
-    Box(
-        modifier =
-            modifier
-                .semantics { stateDescription = stateText }
-                .size(PlumDimens.switchWidth, PlumDimens.switchHeight)
-                .keyDrive(key, isFocused)
-                .drawBehind { drawSunken(if (isOn) colors.accent else colors.chip, colors.inset) },
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        val knobInset = (PlumDimens.switchHeight - PlumDimens.switchKnob) / 2
-        Box(
-            Modifier
-                .padding(start = knobInset)
-                .graphicsLayer { translationX = travel * (PlumDimens.switchWidth - PlumDimens.switchHeight).toPx() }
-                .size(PlumDimens.switchKnob)
-                .drawBehind {
-                    // Squeezed: wider by a quarter of the knob toward the middle of the track, the face down into its edge.
-                    val grow = size.width * PlumDimens.SWITCH_SQUEEZE * key.press
-                    val atEnd = travel > 0.5f
-                    inset(if (atEnd) -grow else 0f, 0f, if (atEnd) 0f else -grow, 0f) {
-                        drawFlatFace(if (isOn) colors.knobOnFace() else colors.knobFace, press = key.press, raise = 0f)
-                    }
-                },
-        )
-    }
 }
 
 /** The step dots on the top bar: the current one 16 wide, done and current in accent. */
@@ -296,5 +297,26 @@ internal fun SetupProgressBar(
         if (fraction > 0f) {
             Box(Modifier.fillMaxWidth(fraction.coerceAtMost(1f)).height(PlumDimens.setupProgressHeight).drawBehind { drawSunken(colors.accent, colors.inset) })
         }
+    }
+}
+
+/** Clips what is laid out to this box (semantics and text checks read that) but what is drawn only to [reach] past it. */
+internal fun Modifier.clipsLayoutToWindow(reach: Dp): Modifier =
+    graphicsLayer {
+        clip = true
+        shape = PastWindowShape(reach)
+    }
+
+/** A rectangle [reach] past the box on every side: the room a soft shadow draws in. */
+private class PastWindowShape(
+    private val reach: Dp,
+) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline {
+        val out = with(density) { reach.toPx() }
+        return Outline.Rectangle(Rect(-out, -out, size.width + out, size.height + out))
     }
 }

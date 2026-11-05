@@ -71,6 +71,9 @@ JVM test `ConverterTest` runs the converter and compares with the committed asse
    `mamearcade` (all RetroArch cores on purpose), psx DuckStation, psp PPSSPP, ps2 NetherSX2, gc
    Dolphin. n64 and nds get their first standalone (Mupen64Plus FZ, melonDS). The plan's "ready to
    play wins over a first-run step" among standalones has no data yet, so source order decides.
+   Among the RetroArch cores of a system, `RETROARCH_CORE_ORDER` (hand-kept) puts the cores players most often
+   have installed right after the default core (gba: mGBA, gpSP, VBA-M ...); the app offers them in that order after a "No" to "Did the game start?".
+   Unnamed cores keep source order after them; the system's first core stays first (`first_cores.json`, guarded by a test); the table runs before `FIRST_EMULATOR`; a name that is no core fails.
 6. **Same id, different launch.** The second definition gets `-2`, `-3`, ... (APS3E and the
    Dolphin forks have per-system differences).
 7. **Cover.** `landscape` when Daijishō's `boxArtAspectRatioId` is 1, 3 or 4 (N64, NES, SNES

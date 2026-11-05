@@ -67,6 +67,9 @@ internal class SettingsSignInOwnKeyboardTest : SettingsKeyboardPathHarness() {
         repeat(SettingsSection.Accounts.rowsIn(content).indexOf(SettingsOption.ScraperAccount)) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
         assertTrue("the sign-in panel is open", isFormOpen)
+        assertFalse("the form opens with the tray down", isTrayUp)
+        // A on the user name brings the keyboard up (the form no longer opens typing).
+        send(Action.Enter)
     }
 
     private fun assertNoAndroidKeyboard(where: String) {
@@ -92,7 +95,7 @@ internal class SettingsSignInOwnKeyboardTest : SettingsKeyboardPathHarness() {
     }
 
     @Test
-    fun theFormOpensWithTheTrayUpOnTheUsernameAndNoAndroidKeyboard() {
+    fun aOnTheUsernameBringsTheTrayUpWithNoAndroidKeyboard() {
         openTheForm()
         assertTrue("the tray is up when the form opens", isTrayUp)
         assertNoAndroidKeyboard("when the form opens")

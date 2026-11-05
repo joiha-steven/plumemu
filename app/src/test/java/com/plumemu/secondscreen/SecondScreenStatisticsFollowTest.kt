@@ -97,7 +97,7 @@ class SecondScreenStatisticsFollowTest {
         }
         compose.waitForIdle()
         // The main screen's game index is built off the main thread before its first card.
-        if (withSecondScreen) compose.waitUntil(WAIT_MS) { shown() is SecondScreenContent.System }
+        if (withSecondScreen) compose.waitUntil(WAIT_MS) { shown() is EntryContent }
     }
 
     @Composable
@@ -145,7 +145,7 @@ class SecondScreenStatisticsFollowTest {
         assertEquals(statisticsOf(SecondScreenStatisticsSamples.withCovers), shown())
         assertEquals("the second screen read nothing of its own", 1, source.reads)
         // From the main screen's card: the calm mark, then the figures, nothing in between and nothing twice.
-        val sinceSettings = seen.drop(seen.indexOfLast { it is SecondScreenContent.System } + 1)
+        val sinceSettings = seen.drop(seen.indexOfLast { it is EntryContent } + 1)
         assertEquals(listOf(SecondScreenContent.Calm, statisticsOf(SecondScreenStatisticsSamples.withCovers)), sinceSettings)
     }
 
@@ -181,7 +181,7 @@ class SecondScreenStatisticsFollowTest {
         assertTrue(shown() is SecondScreenContent.Statistics)
         send(Action.Back)
         // Which entry: whatever the main screen's focus is after Settings (its own tests cover that).
-        compose.waitUntil(WAIT_MS) { shown() is SecondScreenContent.System }
+        compose.waitUntil(WAIT_MS) { shown() is EntryContent }
         send(Action.Menu)
         assertEquals("opened again: read again, shown again", 2, source.reads)
         assertTrue(shown() is SecondScreenContent.Statistics)
@@ -194,7 +194,7 @@ class SecondScreenStatisticsFollowTest {
         send(Action.Menu)
         assertEquals("failed", SecondScreenContent.Calm, shown())
         send(Action.Back)
-        compose.waitUntil(WAIT_MS) { shown() is SecondScreenContent.System }
+        compose.waitUntil(WAIT_MS) { shown() is EntryContent }
         source.answer = StatisticsState.Read(PlayStatistics())
         send(Action.Menu)
         assertEquals("empty library", SecondScreenContent.Calm, shown())

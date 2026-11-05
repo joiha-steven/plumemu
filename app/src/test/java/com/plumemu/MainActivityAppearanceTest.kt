@@ -41,7 +41,7 @@ class MainActivityAppearanceTest {
 
         controller.recreate()
 
-        assertEquals("#F4F3EF", "#%06X".format(windowBackground(controller.get()) and 0xFFFFFF))
+        assertEquals("#ECE8DF", "#%06X".format(windowBackground(controller.get()) and 0xFFFFFF))
         assertEquals(paper, windowBackground(controller.get()))
         assertEquals(true, graph.appearanceCache.read().isTextDark)
     }

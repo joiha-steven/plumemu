@@ -8,6 +8,7 @@ import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coreinput.Direction
 import com.plumemu.report.ProblemReportActions
+import com.plumemu.report.ReportDraft
 
 /** What Settings asks of the app. Writes apply at once: the theme and the router follow the store. */
 internal interface SettingsActions {
@@ -81,7 +82,10 @@ internal interface SettingsActions {
      * Home screen › Use as home screen: Android's home-app question, or its home settings when
      * Plumemu already is the home app (to switch back). False when this device offers neither.
      */
-    fun openHomeSettings(): Boolean
+    fun openHomeSettings(onNotHome: () -> Unit = {}): Boolean
+
+    /** Statistics › Exact play time: Android's Usage access screen; false when this device has none. */
+    fun openUsageAccess(): Boolean = false
 
     /** Advanced › Export logs: Android's share sheet with the log file; [onDone] gets false when it could not open. */
     fun exportLogs(onDone: (Boolean) -> Unit) = onDone(false)
@@ -112,6 +116,9 @@ internal interface SettingsActions {
 
     /** About › Report a problem: queues the report and tries to send it. */
     val problemReports: ProblemReportActions get() = ProblemReportActions.None
+
+    /** About › Report a problem: the unsent words, kept while the process lives; null keeps nothing. */
+    val reportDraft: ReportDraft? get() = null
 
     /** Library › Clear Recent…. */
     val recent: SettingsRecentActions get() = SettingsRecentActions.None
@@ -219,6 +226,7 @@ internal data class PanelGrid(
                 PanelPage.Language -> PanelGrid(AppLanguages.all.size + 1, 1)
                 PanelPage.Folders -> PanelGrid(content.folders.size + 1, 1)
                 PanelPage.HiddenGames -> PanelGrid(content.hiddenGames.size, 1)
+                PanelPage.FilesNotAdded -> content.notAdded.takeIf { it.isNotEmpty() }?.let { PanelGrid(it.size, 1) }
                 PanelPage.UnidentifiedGames -> PanelGrid(content.unidentifiedGames.size, 1)
                 PanelPage.RemoveFolder -> PanelGrid(2, 2)
                 PanelPage.Folder -> PanelGrid(folderPageItems(content, focus.folderId).size, 1)
@@ -233,11 +241,12 @@ internal data class PanelGrid(
                 PanelPage.Restore -> PanelGrid(restorePanelItems(content.restore).size, 1)
                 PanelPage.UndoRestore -> PanelGrid(undoPanelItems(content, focus.undoAsk).size, 1)
                 PanelPage.Licenses -> PanelGrid(LicenseNotices.all.size, 1)
+                PanelPage.BoxArtSource -> PanelGrid(boxArtSourceChoices(content.account).size, 1)
                 PanelPage.ScraperAccount -> PanelGrid(accountPageItems(content).size, 1)
                 PanelPage.RaAccount -> PanelGrid(raPageItems(content).size, 1)
                 PanelPage.ScraperSystems -> PanelGrid(systemsPickCount(content, focus), 1)
                 PanelPage.ScraperConfirm -> PanelGrid(BoxArtConfirmItem.entries.size, 1)
-                PanelPage.ScraperSignOutConfirm -> PanelGrid(SignOutConfirmItem.entries.size, 1)
+                PanelPage.ScraperSignOutConfirm, PanelPage.RaSignOutConfirm -> PanelGrid(SignOutConfirmItem.entries.size, 1)
                 PanelPage.ScraperClearConfirm -> PanelGrid(ClearConfirmItem.entries.size, 1)
                 PanelPage.Systems -> PanelGrid(content.librarySystems.size, 1)
                 PanelPage.UnknownFolder -> PanelGrid(1 + content.folderSystemChoices.size, 1)

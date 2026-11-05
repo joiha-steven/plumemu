@@ -86,7 +86,7 @@ class GameMenuControllerTest {
             menu.onAction(Action.Move(Direction.Up, isRepeat = true))
             assertEquals("a held move stops at the top", "Play", menu.focusedKey())
             menu.onAction(Action.Move(Direction.Up))
-            assertEquals("a fresh press wraps", "Info", menu.focusedKey())
+            assertEquals("a fresh press wraps", "Hide", menu.focusedKey())
             menu.down()
             assertEquals("Play", menu.focusedKey())
         }
@@ -121,8 +121,8 @@ class GameMenuControllerTest {
             assertEquals("the first row has the focus, not the current one", AUTOMATIC_KEY, menu.focusedKey())
             menu.onAction(Action.Back)
             assertEquals("PlayWith", menu.focusedKey())
-            // Past Favorite, Hide and Name….
-            menu.down(4)
+            // Past Favorite and Name….
+            menu.down(3)
             menu.onAction(Action.Enter)
             assertTrue(menu.panel!!.screen is PanelScreen.Info)
             assertEquals("Info's one row, Back, has the focus", INFO_BACK_KEY, menu.focusedKey())
@@ -139,8 +139,8 @@ class GameMenuControllerTest {
         runMenu {
             val menu = controller(FakeGameActions())
             menu.openMenu(game)
-            // Past Play with, Favorite, Hide and Name….
-            menu.down(5)
+            // Past Play with, Favorite and Name….
+            menu.down(4)
             menu.onAction(Action.Enter)
             val info = menu.panel!!.screen as PanelScreen.Info
             // What InfoFacts does while it shows: here, a scroll that always has room.
@@ -175,7 +175,7 @@ class GameMenuControllerTest {
             menu.onAction(Action.Enter)
             assertEquals(listOf("7" to true, "7" to false), actions.favorites)
             menu.openMenu(game)
-            menu.down(3)
+            menu.down(5)
             menu.onAction(Action.Enter)
             assertEquals(listOf("7"), actions.hidden)
             assertEquals("Hide says where the game went", UiText.Res(R.string.game_hidden_title), menu.panel!!.content.title)
@@ -190,7 +190,7 @@ class GameMenuControllerTest {
             val actions = FakeGameActions().apply { writeError = IllegalStateException("disk") }
             val menu = controller(actions)
             menu.openMenu(game)
-            menu.down(3)
+            menu.down(5)
             menu.onAction(Action.Enter)
             assertEquals(UiText.Res(R.string.game_error_save_title), menu.panel!!.content.title)
         }
@@ -245,11 +245,11 @@ class GameMenuControllerTest {
             menu.openMenu(game)
             menu.onAction(Action.TapItem(Column.Games, 3))
             assertTrue("a strip tap does nothing while the panel is open", menu.panel!!.screen is PanelScreen.Menu)
-            menu.onAction(Action.TapItem(Column.Details, 3))
+            menu.onAction(Action.TapItem(Column.Details, 5))
             assertEquals(listOf("7"), actions.hidden)
             menu.close() // the Hidden message that replaced the menu
             menu.openMenu(game)
-            menu.onAction(Action.LongPressItem(Column.Details, 5))
+            menu.onAction(Action.LongPressItem(Column.Details, 4))
             assertTrue(menu.panel!!.screen is PanelScreen.Info)
         }
 
@@ -309,7 +309,7 @@ class GameMenuControllerTest {
             val actions = FakeGameActions().apply { writeError = IOException("disk I/O error /storage/emulated/0/ROMs/x.sfc") }
             val menu = controller(actions)
             menu.openMenu(game)
-            menu.down(3)
+            menu.down(5)
             menu.onAction(Action.Enter)
             assertEquals(UiText.Res(R.string.game_error_save_title), menu.panel!!.content.title)
             menu.close()
@@ -579,7 +579,7 @@ class GameMenuControllerTest {
                     }
                 }
             menu.openMenu(game)
-            menu.down(3)
+            menu.down(5)
             menu.onAction(Action.Enter)
             assertEquals(listOf("7"), actions.hidden)
             assertEquals(listOf("7"), hidden)

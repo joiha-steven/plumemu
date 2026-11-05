@@ -62,7 +62,7 @@ internal fun AchievementsSection(
     val colors = PlumTheme.colors
     val type = PlumTheme.type
     Column(
-        modifier = Modifier.padding(start = PlumDimens.gameRowPadding, end = PlumDimens.gameRowPadding, top = PlumDimens.panelBlockGap).testTag(GamePanelTags.ACHIEVEMENTS),
+        modifier = Modifier.padding(start = PlumDimens.panelTitleStart, end = PlumDimens.panelTitleStart, top = PlumDimens.panelBlockGap).testTag(GamePanelTags.ACHIEVEMENTS),
         verticalArrangement = Arrangement.spacedBy(PlumDimens.achievementRowGap),
     ) {
         val quiet = quietLineOf(state)

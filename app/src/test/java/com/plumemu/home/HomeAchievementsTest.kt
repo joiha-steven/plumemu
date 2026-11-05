@@ -5,6 +5,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasAnyAncestor
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreui.components.MASTERED_MARK_TAG
 import com.plumemu.coreui.testing.ReferenceShots
@@ -87,10 +89,11 @@ class HomeAchievementsTest {
     @Test
     fun afterAGameTheHeaderSaysHowManyUnlockedThenReadsAsUsualAgain() {
         showHome()
-        compose.onNodeWithText("+3 achievements · Super Metroid", substring = true, useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithText("+3 achievements", useUnmergedTree = true).assertDoesNotExist()
         unlocks.tryEmit(gameLine)
         compose.mainClock.advanceTimeBy(400)
-        compose.onNodeWithText("+3 achievements · Super Metroid", substring = true, useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("+3 achievements", useUnmergedTree = true).assertExists()
+        compose.onNode(hasText("Super Metroid") and hasAnyAncestor(hasTestTag(HomeTags.TOP_BAR)), useUnmergedTree = true).assertExists()
         compose.mainClock.advanceTimeBy(ACHIEVEMENTS_LINE_SHOWN_MS + 600)
         compose.onNodeWithText("+3 achievements", substring = true, useUnmergedTree = true).assertDoesNotExist()
         compose.onNodeWithText("systems", substring = true, useUnmergedTree = true).assertExists()
@@ -101,7 +104,8 @@ class HomeAchievementsTest {
         showHome()
         unlocks.tryEmit(gameLine.copy(count = 1))
         compose.mainClock.advanceTimeBy(400)
-        compose.onNodeWithText("+1 achievement · Super Metroid", substring = true, useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("+1 achievement", useUnmergedTree = true).assertExists()
+        compose.onNode(hasText("Super Metroid") and hasAnyAncestor(hasTestTag(HomeTags.TOP_BAR)), useUnmergedTree = true).assertExists()
     }
 
 }

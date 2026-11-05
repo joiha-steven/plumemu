@@ -104,7 +104,12 @@ internal class FixNameState(
     initialQuery: String,
     finder: TitleFinder?,
     override val keyboardKind: KeyboardChoice = KeyboardChoice.Plumemu,
+    /** Settings' Unidentified games: also offer the closest titles to [initialQuery] ([suggestions]). */
+    val suggests: Boolean = false,
 ) : TypingState {
+    /** The name the page opened with: what [suggestions] answer. */
+    val firstQuery = initialQuery
+
     var finder: TitleFinder? by mutableStateOf(finder)
         private set
 
@@ -119,6 +124,33 @@ internal class FixNameState(
 
     var results: List<TitleChoice> by mutableStateOf(emptyList())
         private set
+
+    /**
+     * The closest titles to the name the page opened with, at most three; null while they are being
+     * worked out. Only shown, never applied: the person picks one. Meaningful only when [suggests].
+     */
+    var suggestions: List<TitleChoice>? by mutableStateOf(null)
+        private set
+
+    fun showSuggestions(hits: List<TitleChoice>) {
+        // The cursor may already be on a result: it stays on that result when rows are added above it.
+        val focused = if (inField) null else choices.getOrNull(row)
+        suggestions = hits
+        if (focused != null) row = choices.indexOf(focused).coerceAtLeast(0)
+    }
+
+    /** Whether the suggestions block is up: Settings' page, the name not yet edited. */
+    val showsSuggestions: Boolean get() = suggests && query == firstQuery
+
+    /** The suggestions on screen (none while editing, loading or when none are close). */
+    val shownSuggestions: List<TitleChoice> get() = if (showsSuggestions) suggestions.orEmpty() else emptyList()
+
+    /** What the cursor moves over and A picks: the shown suggestions, then the other [results]. */
+    val choices: List<TitleChoice>
+        get() {
+            val first = shownSuggestions
+            return if (first.isEmpty()) results else first + results.filter { it !in first }
+        }
 
     /** Whether [results] answer [query] (the "no match" line waits for it). */
     var isAnswered: Boolean by mutableStateOf(false)
@@ -166,23 +198,24 @@ internal class FixNameState(
         if (forQuery != query) return
         results = hits
         isAnswered = true
-        if (hits.isEmpty()) {
+        val all = choices
+        if (all.isEmpty()) {
             inField = true
             row = 0
         } else {
-            row = row.coerceIn(0, hits.lastIndex)
+            row = row.coerceIn(0, all.lastIndex)
         }
     }
 
     /** Whether there is a result to go to with Down, or to pick with A. */
-    val canChoose: Boolean get() = results.isNotEmpty()
+    val canChoose: Boolean get() = choices.isNotEmpty()
 
     override fun onAction(action: Action): TypingOutcome {
         ownKeyboardOutcome(action)?.let { return it }
         when (action) {
             is Action.Move -> return move(action)
             Action.Enter, Action.Play -> {
-                val focused = results.getOrNull(row)
+                val focused = choices.getOrNull(row)
                 when {
                     // A on the field opens the keyboard; D-pad Down goes to the results.
                     inField -> focusField()
@@ -202,10 +235,10 @@ internal class FixNameState(
     private fun pickAt(
         column: Column,
         index: Int,
-    ): TypingOutcome? = results.getOrNull(index)?.takeIf { column == Column.Details }?.let { TypingOutcome.Run(PanelCommand.PickTitle(it)) }
+    ): TypingOutcome? = choices.getOrNull(index)?.takeIf { column == Column.Details }?.let { TypingOutcome.Run(PanelCommand.PickTitle(it)) }
 
     private fun toResults() {
-        if (results.isEmpty()) return
+        if (choices.isEmpty()) return
         row = 0
         inField = false
         keyboard.stop()
@@ -216,7 +249,7 @@ internal class FixNameState(
             Direction.Down ->
                 when {
                     inField -> toResults()
-                    row < results.lastIndex -> row += 1
+                    row < choices.lastIndex -> row += 1
                 }
             // From the first result a fresh press goes back to the field; a held one stops there.
             Direction.Up ->

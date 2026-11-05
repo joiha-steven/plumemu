@@ -55,7 +55,8 @@ class SettingsSystemsCarriedLookTest {
             return image.toPixelMap()[image.width / 2, FILL_Y]
         }
         val focused = fillPixel()
-        assertTrue("focused: the pill", focused.near(colors.pill))
+        // The slab is a gradient now: ten px under its top the fill is still close to the first stop.
+        assertTrue("focused: the slab", focused.near(colors.slab.stops.first()))
         compose.runOnUiThread { presses!!.press(Action.Enter) }
         compose.waitForIdle()
         val carried = fillPixel()

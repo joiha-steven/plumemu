@@ -34,7 +34,7 @@ class SettingsWriterTest {
         writer.submit { it.copy(appearance = it.appearance.copy(font = FontSetting.Serif)) }
         writer.submit { it.copy(appearance = it.appearance.copy(font = FontSetting.Mono)) }
         runCurrent()
-        assertEquals("the second waits for the first", FontSetting.Sans, stored.appearance.font)
+        assertEquals("the second waits for the first", FontSetting.Jost, stored.appearance.font)
         gate.complete(Unit)
         runCurrent()
         assertEquals("the last change wins", FontSetting.Mono, stored.appearance.font)

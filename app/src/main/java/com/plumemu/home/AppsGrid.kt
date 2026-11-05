@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.produceState
@@ -52,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.strip.StripState
@@ -68,6 +70,7 @@ import com.plumemu.coreui.components.rememberTouchPressScale
 import com.plumemu.coreui.components.listEdgeFadeMask
 import com.plumemu.coreui.theme.CoverClass
 import com.plumemu.coreui.theme.ListGlide
+import com.plumemu.coreui.theme.AppsGridDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumLayout
 import com.plumemu.coreui.theme.PlumTheme
@@ -79,13 +82,13 @@ import kotlin.math.floor
 
 /*
  * Apps as a grid of icons (Apps has a grid too, but its size cannot be
- * changed). One fixed size: the icon is PlumDimens.appsGridIcon whatever Settings › Grid size says, and
+ * changed). One fixed size: the icon is AppsGridDimens.appsGridIcon whatever Settings › Grid size says, and
  * L1 / R1 do nothing in this grid (GridSizeKeys takes them; the system is switched with L2 / R2). No box art is needed: the icons come
  * from Android (HomeAppIcons). Focus, scroll and the ring are a game grid's (HomeGrid.kt).
  */
 
 /**
- * Columns of the Apps grid on [layout]: as many tiles of [PlumDimens.appsGridTileMinWidth] (wider with the
+ * Columns of the Apps grid on [layout]: as many tiles of [AppsGridDimens.appsGridTileMinWidth] (wider with the
  * text size, so names keep their words) as fit across the grid's span with the gap the cover grid's column
  * table was cut with ([PlumDimens.gridColumnsGapPortrait], as `PlumLayout.gridColumns` counts): the drawn gap
  * is wider, so a tile is a little narrower than the minimum but every column count is the one before the
@@ -93,7 +96,7 @@ import kotlin.math.floor
  * Medium text; 5 / 3 / 5 at Largest.
  */
 internal fun appsGridColumns(layout: PlumLayout): Int {
-    val tile = PlumDimens.appsGridTileMinWidth * layout.textScale
+    val tile = AppsGridDimens.appsGridTileMinWidth * layout.textScale
     val gap = PlumDimens.gridColumnsGapPortrait
     return floor((layout.gridCoversWidth + gap) / (tile + gap)).toInt().coerceAtLeast(1)
 }
@@ -103,7 +106,7 @@ internal fun appsGridColumns(layout: PlumLayout): Int {
  * rounded up to a whole dp so every row is the same height.
  */
 internal fun appsGridRowHeight(nameLineHeight: Dp): Dp =
-    Dp(ceil((PlumDimens.appsGridTilePadding * 2 + PlumDimens.appsGridIcon + PlumDimens.appsGridNameGap + nameLineHeight * 2).value))
+    Dp(ceil((AppsGridDimens.appsGridTilePadding * 2 + AppsGridDimens.appsGridIcon + AppsGridDimens.appsGridNameGap + nameLineHeight * 2).value))
 
 /** The name under an app's icon: the meta size (13 at Medium), following the text size and font. */
 @Composable
@@ -121,7 +124,7 @@ internal fun appsGridNameLine(
 /**
  * The Apps entry as a grid, with the cover grid's gaps and lift but no card (apps are not put inside a frame):
  * icons and names stand on the background; the focused tile glows in its icon's colour, grows [PlumDimens.FOCUSED_ICON_SCALE], rises and gets one light sweep. Tiles
- * start where the list starts and span the grid's width less its padding, as a game grid's covers do. The focused
+ * start where the list starts and span the grid's whole width, as a game grid's covers do. The focused
  * tile is drawn by the grid over its clip, with its ring ([appsFocusRing], the cover grid's [CoverLift] and
  * [FocusSweep]), so a move recomposes no tile and reloads no icon.
  */
@@ -140,8 +143,11 @@ internal fun AppsGrid(
     val gap = layout.gridGap(CoverClass.Square)
     val nameStyle = appsGridNameStyle()
     val rowHeight = appsGridRowHeight(appsGridNameLine(nameStyle, density))
-    val fit = floor((layout.gridStripHeight + gap) / (rowHeight + gap)).toInt().coerceAtLeast(1)
-    val iconPx = with(density) { PlumDimens.appsGridIcon.roundToPx() }
+    val rowCount = (entry.rows.size + columns - 1) / columns
+    // Every row one height: where each stands in px, for the scroll rules (the cover grid's rows may differ).
+    val spans = remember(rowCount, rowHeight, gap, density) { derivedStateOf { RowSpans.uniform(rowCount, with(density) { rowHeight.roundToPx() }, with(density) { gap.roundToPx() }) } }
+    val stripPx = with(density) { layout.appsStripHeight.roundToPx() }
+    val iconPx = with(density) { AppsGridDimens.appsGridIcon.roundToPx() }
     val icons = LocalHomeAppIcons.current
     // Raised after a package change: the tiles on screen ask for their icons again (read here, not per tile).
     val generation by icons.generation.collectAsState()
@@ -151,8 +157,9 @@ internal fun AppsGrid(
     key(entry.id, columns) {
         // Read once without observing: the grid must not recompose on every move.
         val opening = Snapshot.withoutReadObservation { state.focus.rowOf(entry.id) }
-        val gridState = rememberLazyGridState(initialFirstVisibleItemIndex = firstIndexShowing(opening / columns, fit) * columns)
-        val glide = rememberListGlide(stride = rowHeight + gap)
+        val gridState = rememberLazyGridState(initialFirstVisibleItemIndex = spans.value.firstShowing(opening / columns, stripPx) * columns)
+        val viewport = rememberGridViewportPx(gridState, layout.appsStripHeight)
+        val glide = rememberListGlide(stride = rowHeight + gap, slabRoom = false)
         val touch = rememberTouchPressScale()
         val confirmScale = rememberConfirmPressScale { if (state.focus.column == Column.Games && !panelOpen.value) state.focus.rowOf(entry.id) else null }
         // The tile focused as the grid opens is lifted in the first frame (no grow, no sweep), as in the cover grid.
@@ -165,13 +172,13 @@ internal fun AppsGrid(
         val travel = rememberFocusTravel()
         val ring = appsFocusRing(state, entry, gridState, glide, lift, panelOpen, touch, confirmScale, shadow, glowColors, motionOn, travel)
         // Under the ring: the focused cover is drawn over the mask (it never stands in a fade), the rows cut at an edge fade.
-        val fades = remember(gridState, glide, state, entry.id) { GridEdgeFades(gridState, glide) { state.focus.rowOf(entry.id) } }
+        val fades = remember(gridState, glide, state, entry.id) { GridEdgeFades(gridState, glide, minShown = CUT_ROW_MIN_SHOWN) { state.focus.rowOf(entry.id) } }
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
             state = gridState,
             flingBehavior = rememberRowSnapFling(gridState),
-            modifier = modifier.padding(top = PlumDimens.gridTopGap - PlumDimens.barGap).fadingIn(fade).then(ring).listEdgeFadeMask(fades, PlumTheme.edgeFadeOn).testTag(HomeTags.GRID).then(glide.modifier),
-            contentPadding = PaddingValues(top = glide.extra, bottom = glide.extra + rememberGridLeftover(gridState, layout.gridStripHeight, rowHeight, gap, fit), end = PlumDimens.gridPadding * 2),
+            modifier = modifier.padding(top = PlumDimens.appsGridTopGap - PlumDimens.barGap).fadingIn(fade).then(ring).listEdgeFadeMask(fades, PlumTheme.edgeFadeOn).testTag(HomeTags.GRID).then(glide.modifier),
+            contentPadding = PaddingValues(top = glide.extra, bottom = glide.extra + rememberGridLeftover(spans, viewport)),
             horizontalArrangement = Arrangement.spacedBy(gap),
             verticalArrangement = Arrangement.spacedBy(gap),
         ) {
@@ -201,7 +208,7 @@ internal fun AppsGrid(
                 AppTile(row, icons, generation, iconPx, rowHeight, nameStyle, glowColors, { lift.slotOf(index)?.isFocused == true }, tap.then(look))
             }
         }
-        KeepFocusedCellVisible(gridState, columns, fit, glide) { state.focus.rowOf(entry.id) }
+        KeepFocusedCellVisible(gridState, columns, spans, viewport, glide) { state.focus.rowOf(entry.id) }
     }
 }
 
@@ -338,16 +345,16 @@ internal fun AppTile(
     // The glow's colour is the icon's average, found once per icon that lands.
     (icon as? TileIcon.Picture)?.let { shown -> if (glowColors != null) LaunchedEffect(row.id, shown) { glowColors.learn(row.id, shown.image, replace = true) } }
     Column(
-        modifier = modifier.height(height).padding(vertical = PlumDimens.appsGridTilePadding),
+        modifier = modifier.height(height).padding(vertical = AppsGridDimens.appsGridTilePadding),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        val iconModifier = Modifier.size(PlumDimens.appsGridIcon)
+        val iconModifier = Modifier.size(AppsGridDimens.appsGridIcon)
         when (val shown = icon) {
             is TileIcon.Picture -> Image(shown.image, contentDescription = null, modifier = iconModifier.testTag(HomeTags.APP_ICON))
             TileIcon.Missing -> AppIconStandIn(row.title, iconModifier)
             TileIcon.Loading -> Spacer(iconModifier)
         }
-        Spacer(Modifier.height(PlumDimens.appsGridNameGap))
+        Spacer(Modifier.height(AppsGridDimens.appsGridNameGap))
         // Two names in one place: the resting one and the focused one (strong colour, weight 500). Which one draws
         // is read while drawing (the lift slot's focus), so a move redraws and recomposes nothing; the other draws nothing.
         Box(Modifier.fillMaxWidth()) {
@@ -386,11 +393,14 @@ private fun AppName(
 internal fun AppIconStandIn(
     title: String,
     modifier: Modifier,
+    /** The letter's size in dp (a large disc); null keeps the message title's. */
+    letterSize: Float? = null,
 ) {
     val colors = PlumTheme.colors
     val shape = CircleShape
     Box(modifier.background(colors.sel, shape).testTag(HomeTags.APP_ICON_STAND_IN), contentAlignment = Alignment.Center) {
-        BasicText(text = firstLetterOf(title), style = PlumTheme.type.messageTitle.copy(color = colors.text2), maxLines = 1)
+        val base = PlumTheme.type.messageTitle.copy(color = colors.text2)
+        BasicText(text = firstLetterOf(title), style = if (letterSize == null) base else base.copy(fontSize = letterSize.sp, lineHeight = letterSize.sp), maxLines = 1)
     }
 }
 
@@ -402,3 +412,6 @@ internal fun firstLetterOf(title: String): String {
 
 /** The focused app's name is this much heavier than the others': 400 to 500 at the default text weight. */
 private const val FOCUSED_NAME_WEIGHT_STEP = 100
+
+/** A row of the Apps grid cut by an edge stays (faded) only while this share of it shows; less is left out whole, as no sliver of an icon or a name may stand there. */
+private const val CUT_ROW_MIN_SHOWN = 0.75f

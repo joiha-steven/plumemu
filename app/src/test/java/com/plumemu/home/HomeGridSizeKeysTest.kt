@@ -117,6 +117,7 @@ class HomeGridSizeKeysTest {
         assertEquals("the same game, still in the grid", "snes-4", focusedGame())
         send(Action.PreviousSystem, Action.PreviousSystem)
         assertEquals(listOf(GridSize.Large, GridSize.Medium, GridSize.Small), written)
+        // Small takes five landscape columns on the RP5 (the table), so its boxes are smaller.
         assertEquals("Small has 5 columns", 5, firstCoverColumns())
         assertEquals("snes-4", focusedGame())
         assertEquals("still the same system's grid", 1, count(HomeTags.GRID))

@@ -1,7 +1,7 @@
 package com.plumemu.coredata.settings
 
 /**
- * Every stored setting the alpha uses, immutable. Defaults are the product's defaults: Black, light text, Red accent, Plum Sans,
+ * Every stored setting the alpha uses, immutable. Defaults are the product's defaults: Black, light text, accent #3E7BE0, Jost,
  * Medium text, scan on startup, usage statistics on.
  *
  * Plain values only: this module does not know the theme or the input types. The app maps
@@ -74,7 +74,8 @@ sealed interface TextColorSetting {
     }
 }
 
-enum class FontSetting { Sans, Serif, Mono }
+/** Stored by name: Jost is the default for a person who never picked, a stored Sans, Serif or Mono is kept as it is. */
+enum class FontSetting { Jost, Sans, Serif, Mono }
 
 /**
  * The six text sizes, smallest first. The names are what `appearance.text_size` stores; Small,
@@ -161,8 +162,8 @@ enum class SwitchSystemWithSetting { Triggers, Bumpers }
 data class AppearanceSettings(
     val background: ColorSetting = ColorSetting.Preset(DEFAULT_BACKGROUND),
     val textColor: TextColorSetting = TextColorSetting.Light,
-    val accent: ColorSetting = ColorSetting.Preset(DEFAULT_ACCENT),
-    val font: FontSetting = FontSetting.Sans,
+    val accent: ColorSetting = DEFAULT_ACCENT,
+    val font: FontSetting = FontSetting.Jost,
     /** Null until the person picks a size: the app then uses [TextSizeSetting.Default], Large. */
     val textSize: TextSizeSetting? = null,
     /** The main screen's grid, one size for every system (Medium by default). */
@@ -204,7 +205,8 @@ data class AppearanceSettings(
         const val BUTTONS_NONE = "None"
 
         const val DEFAULT_BACKGROUND = "Black"
-        const val DEFAULT_ACCENT = "Red"
+        /** The default accent: #3E7BE0, the Plumemu colour set's (a test holds the two together). */
+        val DEFAULT_ACCENT: ColorSetting = ColorSetting.Custom(0x3E7BE0)
     }
 }
 
@@ -233,6 +235,12 @@ data class LibrarySettings(
     val scanOnStartup: Boolean = true,
     val sortGames: SortGamesSetting = SortGamesSetting.Name,
     val boxArtRegion: BoxArtRegionSetting = BoxArtRegionSetting.Usa,
+    /**
+     * Where box art comes from (Settings › Accounts). Null until the person (or setup) chooses: then
+     * [effectiveBoxArtSource] decides from whether a ScreenScraper account is signed in, so an install
+     * from before this setting behaves as it did.
+     */
+    val boxArtSource: BoxArtSourceSetting? = null,
     /**
      * The person paused box art in Settings › Library › ScreenScraper: no run starts
      * or goes on until they resume. Off by default.
@@ -273,6 +281,20 @@ enum class RecentSizeSetting(val games: Int) {
 enum class SystemOrderSetting { Name, Maker, Manual }
 
 /**
+ * Where box art comes from. Stored by name (`ScreenScraper`, `LibretroOnly`, `OwnCovers`); an unknown
+ * value reads as not chosen. [ScreenScraper]: box art and game details, needs the person's free
+ * account. [LibretroOnly]: box fronts from libretro's public thumbnail server, no account, no details.
+ * [OwnCovers]: Plumemu's own poster covers, no network.
+ */
+enum class BoxArtSourceSetting { ScreenScraper, LibretroOnly, OwnCovers }
+
+/** The source in force: the chosen one, else ScreenScraper with a usable account and Plumemu's own covers without. */
+fun effectiveBoxArtSource(chosen: BoxArtSourceSetting?, accountUsable: Boolean): BoxArtSourceSetting =
+    chosen ?: if (accountUsable) BoxArtSourceSetting.ScreenScraper else BoxArtSourceSetting.OwnCovers
+
+fun LibrarySettings.effectiveBoxArtSource(accountSignedIn: Boolean): BoxArtSourceSetting = effectiveBoxArtSource(boxArtSource, accountSignedIn)
+
+/**
  * Settings › Accounts › ScreenScraper › Box art region: whose box to show when the game file's
  * own region has none. [code] is ScreenScraper's region code; the file stores [code] too.
  */
@@ -286,9 +308,12 @@ enum class BoxArtRegionSetting(val code: String) {
 /**
  * Settings › Library › Sort games, for every system's list and Favorites (Recent is always newest
  * first). By year is oldest first, from the years ScreenScraper gave; games without a year come after, by name.
- * Values are stored by name and picked by position: Year stays last.
+ * Most played puts the most play time first, Recently added the newest library entry first. A game
+ * with no value for the sort (never played, no year, no rating) comes after the others, by name.
+ * By rating is highest first, from the ratings ScreenScraper gave (out of 20).
+ * Values are stored by name; the declaration order is the order the choices are listed in.
  */
-enum class SortGamesSetting { Name, LastPlayed, Year }
+enum class SortGamesSetting { Name, LastPlayed, MostPlayed, RecentlyAdded, Year, Rating }
 
 /** Settings › Home screen. */
 data class HomeScreenSettings(
@@ -326,13 +351,15 @@ enum class InGameSetting { Clock, Black }
  * Send usage statistics in About. [sounds] is how loud the soft interface clicks are ([SoundLevel]; Loud by default, as the old
  * switch was on by default). [vibration] is the light haptic tick on every move and a stronger one on confirm (on by
  * default). [usageStatistics] is off by default, the person switches it on; the
- * telemetry module follows it (app `graph/GraphTelemetry.kt`).
+ * telemetry module follows it (app `graph/GraphTelemetry.kt`). [exactPlayTime] (Settings › Statistics, off by default) makes a play count
+ * only the time its game was on the screen; it also needs Android's Usage access, which is not stored here.
  */
 data class AdvancedSettings(
     val animations: Boolean = true,
     val sounds: SoundLevel = SoundLevel.Loud,
     val usageStatistics: Boolean = false,
     val vibration: Boolean = true,
+    val exactPlayTime: Boolean = false,
 )
 
 /**
@@ -364,6 +391,11 @@ data class UpdateSettings(
 data class SetupFlags(
     val setupCompleted: Boolean = false,
     val homeRoleAsked: Boolean = false,
+    /**
+     * "Set up later" left setup before its questions (Confirm, Look, Box art, Second screen) were
+     * asked: they are asked when the first folder is added. Cleared when setup finishes.
+     */
+    val setupQuestionsSkipped: Boolean = false,
     /**
      * Settings › Reset library forgot the games and the scan that reads the folders again has not
      * ended yet: the next start scans whatever Scan on startup says, so a process death between

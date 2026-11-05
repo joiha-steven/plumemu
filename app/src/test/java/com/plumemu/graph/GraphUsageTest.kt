@@ -3,6 +3,7 @@ package com.plumemu.graph
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.plumemu.coredata.db.GameEntity
+import com.plumemu.coredata.db.NameTrustNames
 import com.plumemu.coredata.db.NewPinnedShortcut
 import com.plumemu.coredata.db.RomFolderEntity
 import com.plumemu.coredata.db.ScanBatch
@@ -22,6 +23,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -199,6 +201,41 @@ class GraphUsageTest {
         graph.trackUpdateInstalled()
         runBlocking { delay(300) }
         assertEquals("the same version again is no update", 1, sink.events.size)
+    }
+
+    @Test
+    fun anUnidentifiedGamesFingerprintGoesAfterAScanOnlyWithStatisticsOnAndNeverItsName() {
+        val secret = "Secret Game (USA)"
+        val unidentified = addGame("$secret.zip", "nes")
+        val named = addGame("Zork Quest (USA).nes", "nes")
+        // As library's FingerprintCodec stores them: an inner file name and a header title that must never go.
+        val stored = """{"v":1,"size":30000,"container":"ZIP","inner":"$secret.nes","contentSize":40960,"crc":169552957,""" +
+            """"crcSource":"ZIP_ENTRY_CONTENT","header":16,"title":"$secret"}"""
+        runBlocking {
+            val identify = graph.database.identifyDao()
+            for ((id, trust) in listOf(unidentified to NameTrustNames.FILE_NAME, named to "IDENTIFIER_EXACT")) {
+                val file = graph.database.gameDao().game(id)!!.fileName
+                assertEquals(1, identify.recordIdentification(id, 1, 1, file, stored, 1, 1, "", "CRC", "EXACT", packVersion = 1))
+                identify.setShownName(id, "t", "t", "USA", trust, isNotGame = false)
+            }
+        }
+        val ended = ScanEnded(ScanTrigger.Manual, isOk = true, hasFolderLost = false, millis = 1_000)
+
+        graph.trackScan(ended) // statistics off (a fresh install)
+        awaitEvents(1)
+        runBlocking { delay(300) }
+        assertEquals("nothing is handed over while statistics are off", emptyList<Any>(), sink.unidentified.toList())
+
+        runBlocking { graph.settingsStore.update { it.copy(advanced = it.advanced.copy(usageStatistics = true)) } }
+        graph.trackScan(ended)
+        val games = runBlocking { withTimeout(TIMEOUT_MS) { while (sink.unidentified.isEmpty()) delay(10) }; sink.unidentified.single() }
+        assertEquals(
+            "the unidentified game only, by its fingerprint",
+            listOf(mapOf("system_id" to "nes", "container" to "zip", "size" to "40960", "crc" to "0a1b2c3d")),
+            games.map { it.wireFields() },
+        )
+        assertFalse(games.joinToString { it.wireFields().toString() }.contains("Secret"))
+        assertNoFreeText(games)
     }
 
     private companion object {

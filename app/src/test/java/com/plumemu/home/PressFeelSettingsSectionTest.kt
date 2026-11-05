@@ -35,9 +35,13 @@ class PressFeelSettingsSectionTest {
 
     private val held = mutableStateOf<Set<String>>(emptySet())
 
-    private fun pixels(section: SettingsSection): List<Int> {
+    /** [skipTop] leaves out the top band the focused row above overhangs with its slab (it dips with that row, not with this one). */
+    private fun pixels(
+        section: SettingsSection,
+        skipTop: Int = 0,
+    ): List<Int> {
         val map = compose.onNodeWithTag(SettingsTags.section(section), useUnmergedTree = true).captureToImage().toPixelMap()
-        return buildList { for (y in 0 until map.height) for (x in 0 until map.width) add(map[x, y].hashCode()) }
+        return buildList { for (y in skipTop until map.height) for (x in 0 until map.width) add(map[x, y].hashCode()) }
     }
 
     @Test
@@ -48,11 +52,12 @@ class PressFeelSettingsSectionTest {
         compose.waitForIdle()
         compose.mainClock.autoAdvance = false
         val restingFocused = pixels(focused)
-        val restingOther = pixels(other)
+        val skip = compose.slabOverhangPx(SettingsTags.section(other)).toInt() + 1
+        val restingOther = pixels(other, skip)
         held.value = setOf("A")
         Snapshot.sendApplyNotifications()
         compose.mainClock.advanceTimeBy(300)
         assertNotEquals("the focused section dips", restingFocused, pixels(focused))
-        assertEquals("another section does not", restingOther, pixels(other))
+        assertEquals("another section does not", restingOther, pixels(other, skip))
     }
 }

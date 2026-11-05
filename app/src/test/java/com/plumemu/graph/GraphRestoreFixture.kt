@@ -114,7 +114,7 @@ internal abstract class GraphRestoreFixture {
                 storedSettings = transform(storedSettings)
             },
             accounts = accounts,
-            prepareDatabase = { file, from, to -> RestoredDatabase.prepare(context, file, from, to) },
+            prepareDatabase = { file, from, to -> RestoredDatabase.prepare(context, file, from, to, GraphDetailsRating) },
             closeDatabase = {
                 closes++
                 // The app's own close: waits for a write in flight, else refuses. A "restarted" process has none open.
@@ -173,7 +173,7 @@ internal abstract class GraphRestoreFixture {
     protected fun deviceLibrary() {
         places.databaseFile.parentFile?.mkdirs()
         val gate = DatabaseGate()
-        val db = PlumDatabase.open(context, gate, places.databaseFile.path)
+        val db = PlumDatabase.open(context, GraphDetailsRating, gate, places.databaseFile.path)
         deviceGate = gate
         deviceDb = db
         runBlocking(Dispatchers.IO) {

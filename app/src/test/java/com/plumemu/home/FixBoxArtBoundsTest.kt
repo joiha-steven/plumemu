@@ -1,5 +1,6 @@
 package com.plumemu.home
 
+import com.plumemu.coreui.theme.PlumDimens
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -11,7 +12,9 @@ import androidx.compose.ui.unit.dp
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
+import com.plumemu.coreui.theme.FieldDimens
+import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.game.BOX_ART_SEARCH_KEY
 import com.plumemu.game.FixBoxArtState
@@ -51,6 +54,8 @@ class FixBoxArtBoundsTest {
     @get:Rule
     val rules = rulesAround(compose)
 
+    private val FIELD_ROW = FieldDimens.wellHeight + CollarSize.Field.topPadding + CollarSize.Field.bottomPadding
+
     private fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot()
 
     private fun assertDp(
@@ -59,27 +64,27 @@ class FixBoxArtBoundsTest {
         actual: Dp,
     ) = assertEquals(what, expected.value, actual.value, 0.5f)
 
-    private fun show(panel: OpenPanel) = compose.setContent { PlumTheme(MediumText.Default) { BoxArtPanelFixtures.Screen(panel) } }
+    private fun show(panel: OpenPanel) = compose.setContent { PlumTheme(TableText.Default) { BoxArtPanelFixtures.Screen(panel) } }
 
     private fun assertLayout() {
         val panel = bounds(GamePanelTags.PANEL)
         val field = bounds(FixBoxArtTags.FIELD)
         val search = bounds(GamePanelTags.row(BOX_ART_SEARCH_KEY))
-        assertDp("field row 40 high, as Fix name's", 40.dp, field.bottom - field.top)
+        assertDp("field row is the well and its collar high (board 74 px)", FIELD_ROW, field.bottom - field.top)
         assertDp("Search row 40 high", 40.dp, search.bottom - search.top)
-        assertDp("field spans the panel", panel.right - panel.left, field.right - field.left)
+        assertDp("field spans the panel and the reach past its start", panel.right - panel.left, field.right - field.left)
         assertDp("Search on the field's left edge", field.left, search.left)
         assertDp("Search on the field's right edge", field.right, search.right)
-        assertDp("Search one list gap (2) under the field", field.bottom + 2.dp, search.top)
+        assertDp("Search the board gap under the field", field.bottom + FieldDimens.gap, search.top)
         val first = bounds(GamePanelTags.row(boxArtHitKey(BoxArtPanelFixtures.portrait)))
         val second = bounds(GamePanelTags.row(boxArtHitKey(BoxArtPanelFixtures.landscape)))
         for ((what, row) in listOf("first game" to first, "second game" to second)) {
             assertDp("$what on the field's left edge", field.left, row.left)
             assertDp("$what on the field's right edge", field.right, row.right)
-            assertTrue("$what inside the panel", row.right <= panel.right && row.left >= panel.left)
+            assertTrue("$what inside the panel", row.right <= panel.right && row.left >= panel.left - 0.5.dp)
         }
-        assertDp("first game one list gap under Search", search.bottom + 2.dp, first.top)
-        assertTrue("the second game sits under the first one's note line", second.top > first.bottom)
+        assertDp("first game the card's row gap (none) under Search", search.bottom + PlumDimens.panelRowGap, first.top)
+        assertTrue("the second game sits under the first one's note line", second.top >= first.bottom)
     }
 
     @Test
@@ -96,17 +101,18 @@ class FixBoxArtBoundsTest {
         assertLayout()
     }
 
-    /** The field is Fix name's field to the pixel: same row, same place, same width. */
+    /** The field is on Fix name's row: same place and height (Fix name's, without a label, is inset to the rows' text line; this one has its label there). */
     @Test
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
     fun theFieldIsFixNamesField() {
         var panel by mutableStateOf(OpenPanel(game, PanelScreen.FixName(FixNameState("super metroid", finder = null))))
-        compose.setContent { PlumTheme(MediumText.Default) { BoxArtPanelFixtures.Screen(panel) } }
+        compose.setContent { PlumTheme(TableText.Default) { BoxArtPanelFixtures.Screen(panel) } }
         val fixName = bounds(FixNameTags.FIELD)
         panel = BoxArtPanelFixtures.panel(BoxArtPanelFixtures.results())
         compose.waitForIdle()
         val fixBoxArt = bounds(FixBoxArtTags.FIELD)
-        assertEquals(fixName, fixBoxArt)
+        assertEquals(fixName.top, fixBoxArt.top)
+        assertEquals(fixName.bottom, fixBoxArt.bottom)
     }
 
     private fun assertSlots(state: FixBoxArtState) {
@@ -148,7 +154,7 @@ class FixBoxArtBoundsTest {
             it.showSearch("super metroid", com.plumemu.game.BoxArtSearchOutcome.Found(BoxArtPanelFixtures.hits))
         }
         var shown by mutableStateOf(late)
-        compose.setContent { PlumTheme(MediumText.Default) { BoxArtPanelFixtures.Screen(BoxArtPanelFixtures.panel(shown)) } }
+        compose.setContent { PlumTheme(TableText.Default) { BoxArtPanelFixtures.Screen(BoxArtPanelFixtures.panel(shown)) } }
         val rowTags = BoxArtPanelFixtures.hits.take(3).map { GamePanelTags.row(boxArtHitKey(it)) }
         val before = rowTags.map(::bounds)
         val slotsBefore = BoxArtPanelFixtures.hits.take(3).map { bounds(FixBoxArtTags.thumbnail(it.id)) }
@@ -173,7 +179,7 @@ class FixBoxArtBoundsTest {
 
     private fun assertMenuRowVisible(focus: Int, entry: GameMenuEntryId) {
         val menu = OpenPanel(game, PanelScreen.Menu(sampleFacts(title = "Super Metroid", canFixBoxArt = true)), focus = focus)
-        compose.setContent { PlumTheme(MediumText.Default) { BoxArtPanelFixtures.Screen(menu) } }
+        compose.setContent { PlumTheme(TableText.Default) { BoxArtPanelFixtures.Screen(menu) } }
         val panel = bounds(GamePanelTags.PANEL)
         val row = bounds(GamePanelTags.row(entry.name))
         assertDp("${entry.name}: 40 high", 40.dp, row.bottom - row.top)

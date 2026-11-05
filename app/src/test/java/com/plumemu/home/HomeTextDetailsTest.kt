@@ -10,6 +10,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
@@ -19,7 +20,7 @@ import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumLayout
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.game.EmulatorToStart
@@ -36,8 +37,7 @@ import org.robolectric.shadows.ShadowLog
 
 /**
  * The details column's play facts (read once the focus rests, with or without box art) and the
- * text-only column without box art: wide screens with no
- * second-screen window only; Apps never; the narrow screen unchanged.
+ * text-only column without box art: wide screens only; Apps never; the narrow screen unchanged.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -49,7 +49,6 @@ class HomeTextDetailsTest {
     val rules = rulesAround(compose)
 
     private val source = FakePlayFacts()
-    private var windowUp by mutableStateOf(false)
     private lateinit var state: StripState
     private lateinit var layout: PlumLayout
 
@@ -59,10 +58,10 @@ class HomeTextDetailsTest {
         facts: HomePlayFactsSource = source,
     ) {
         compose.setContent {
-            PlumTheme(MediumText.Default) {
+            PlumTheme(TableText.Default) {
                 layout = PlumTheme.layout
                 CompositionLocalProvider(LocalHomePlayFacts provides facts) {
-                    HomeAt(content, actions, onState = { state = it }, detailsOnSecondScreen = { windowUp })
+                    HomeAt(content, actions, onState = { state = it })
                 }
             }
         }
@@ -96,7 +95,7 @@ class HomeTextDetailsTest {
         assertEquals("Super Metroid", text(HomeTags.DETAILS_TITLE))
         assertEquals("Super Nintendo · USA", text(HomeTags.DETAILS_SYSTEM))
         assertEquals("the facts table", 1, count(HomeTags.DETAILS_FACTS))
-        listOf("Last played", "Play time", "Emulator", "2 days ago", "4\u00A0h 12\u00A0min", "RetroArch: Snes9x").forEach {
+        listOf("Last played", "Played", "Emulator", "2 days ago", "4\u00A0h 12\u00A0min", "RetroArch: Snes9x").forEach {
             compose.onNodeWithText(it, useUnmergedTree = true).assertExists()
         }
         // Signed out the poster cover stands where box art would: one cover, no picture.
@@ -105,7 +104,7 @@ class HomeTextDetailsTest {
         assertEquals("no synopsis", 0, count(HomeTags.DETAILS_SYNOPSIS))
         val list = bounds(HomeTags.GAMES)
         val details = bounds(HomeTags.DETAILS)
-        assertDp("the list is width − 368", 768.dp - 368.dp, list.right - list.left)
+        assertDp("the list is width − 368, plus the 8 it reaches into the gap", 768.dp - 368.dp + PlumDimens.gamesListBleed, list.right - list.left)
         assertDp("the column 24 after the list", list.right + 24.dp, details.left)
         assertDp("the column 248 wide", 248.dp, details.right - details.left)
         assertDp("its right edge at the 24 dp margin", 768.dp - 24.dp, details.right)
@@ -151,7 +150,7 @@ class HomeTextDetailsTest {
     fun newContentForTheSameGameKeepsTheSystemLine() {
         var content by mutableStateOf(LibraryLikeContent.of())
         compose.setContent {
-            PlumTheme(MediumText.Default) {
+            PlumTheme(TableText.Default) {
                 CompositionLocalProvider(LocalHomePlayFacts provides source) {
                     HomeAt(content, listOf(Action.TapItem(Column.Systems, 1), Action.Enter), onState = { state = it })
                 }
@@ -172,18 +171,9 @@ class HomeTextDetailsTest {
     }
 
     @Test
-    fun appsHasNoColumn() {
+    fun appsHasItsOwnColumn() {
         show(listOf(Action.TapItem(Column.Systems, 2), Action.Enter))
-        assertEquals(0, count(HomeTags.DETAILS))
-    }
-
-    @Test
-    fun withTheSecondScreensWindowUpThereIsNoColumnAndTheListTakesTheFullWidth() {
-        windowUp = true
-        show(LibraryLikeContent.gamesFocused(LibraryLikeContent.SUPER_METROID))
-        assertEquals("no details column", 0, count(HomeTags.DETAILS))
-        val list = bounds(HomeTags.GAMES)
-        assertDp("the full no-details width, width − 96", 768.dp - 96.dp, list.right - list.left)
+        assertEquals(1, count(HomeTags.DETAILS_APP_PACKAGE))
     }
 
     // The play facts read.
@@ -228,7 +218,7 @@ class HomeTextDetailsTest {
         assertEquals("the column", 1, count(HomeTags.DETAILS))
         assertEquals("Super Metroid", text(HomeTags.DETAILS_TITLE))
         assertEquals("no table", 0, count(HomeTags.DETAILS_FACTS))
-        assertEquals("no room kept for it", 0, count(HomeTags.DETAILS_FACTS_PENDING))
+        assertEquals("its room is kept, so the poster and the title do not move", 1, count(HomeTags.DETAILS_FACTS_PENDING))
         val logged = ShadowLog.getLogsForTag(TAG).filter { "could not be read" in it.msg }
         assertEquals("the cause logged once: ${ShadowLog.getLogsForTag(TAG).map { it.msg }}", 1, logged.size)
         assertTrue("with the exception's class", "IllegalStateException" in logged.single().msg)
@@ -244,7 +234,7 @@ class HomeTextDetailsTest {
             }
         show(LibraryLikeContent.gamesFocused(LibraryLikeContent.SUPER_METROID), facts = closed)
         assertEquals("no table", 0, count(HomeTags.DETAILS_FACTS))
-        assertEquals("no room kept for it", 0, count(HomeTags.DETAILS_FACTS_PENDING))
+        assertEquals("its room is kept, so the poster and the title do not move", 1, count(HomeTags.DETAILS_FACTS_PENDING))
         assertEquals("logged", 1, ShadowLog.getLogsForTag(TAG).count { "could not be read" in it.msg })
     }
 
@@ -285,32 +275,58 @@ class HomeTextDetailsTest {
         compose.onNodeWithText("RetroArch: Snes9x", useUnmergedTree = true).assertExists()
     }
 
-    // An empty library: without box art its Apps list keeps the full width (as before the text-only
-    // column), with box art it stays width − 368 as on HEAD.
+    // An empty library: its Apps list has the details column, so it takes the width of any list with one
+    // (width − 368 with the bleed) and the column is on screen; narrow, it is the no-column width.
 
     @Test
-    fun anEmptyLibraryWithoutBoxArtKeepsItsAppsListFullWidth() = assertEmptyLibraryAppsWidth(hasBoxArt = false, 768.dp - 96.dp)
+    fun anEmptyLibraryWithoutBoxArtShrinksItsAppsListForTheColumn() = assertEmptyLibraryAppsWidth(hasBoxArt = false, 400.dp, hasColumn = true)
 
     @Test
-    fun anEmptyLibraryWithBoxArtKeepsItsAppsListBesideTheDetails() = assertEmptyLibraryAppsWidth(hasBoxArt = true, 768.dp - 368.dp)
-
-    @Test
-    @Config(qualifiers = NARROW_576)
-    fun anEmptyLibraryWithoutBoxArtOnANarrowScreen() = assertEmptyLibraryAppsWidth(hasBoxArt = false, 576.dp - 96.dp)
+    fun anEmptyLibraryWithBoxArtKeepsItsAppsListBesideTheDetails() = assertEmptyLibraryAppsWidth(hasBoxArt = true, 768.dp - 368.dp, hasColumn = true)
 
     @Test
     @Config(qualifiers = NARROW_576)
-    fun anEmptyLibraryWithBoxArtOnANarrowScreen() = assertEmptyLibraryAppsWidth(hasBoxArt = true, 400.dp)
+    fun anEmptyLibraryWithoutBoxArtOnANarrowScreen() = assertEmptyLibraryAppsWidth(hasBoxArt = false, 576.dp - 96.dp, hasColumn = false)
+
+    @Test
+    @Config(qualifiers = NARROW_576)
+    fun anEmptyLibraryWithBoxArtOnANarrowScreen() = assertEmptyLibraryAppsWidth(hasBoxArt = true, 480.dp, hasColumn = false)
 
     private fun assertEmptyLibraryAppsWidth(
         hasBoxArt: Boolean,
         expected: Dp,
+        hasColumn: Boolean,
     ) {
         val empty = HomeContent.of(emptyList(), emptyList(), List(APPS) { GameRowModel("app-$it", "App $it", "") }, emptyList(), hasBoxArt = hasBoxArt)
         show(listOf(Action.TapItem(Column.Systems, 2), Action.Enter), empty)
         val list = bounds(HomeTags.GAMES)
-        assertDp("the Apps list's width (box art: $hasBoxArt)", expected, list.right - list.left)
-        assertEquals("no details column", 0, count(HomeTags.DETAILS))
+        assertDp("the Apps list's width (box art: $hasBoxArt; with a column plus the 8 bleed)", if (hasBoxArt || hasColumn) expected + PlumDimens.gamesListBleed else expected, list.right - list.left)
+        assertEquals("the apps' details column only where the list leaves room for it", if (hasColumn) 1 else 0, count(HomeTags.DETAILS))
+        if (hasColumn) {
+            val column = bounds(HomeTags.DETAILS)
+            val screen = compose.onRoot().getUnclippedBoundsInRoot()
+            assertTrue("the details column starts on screen: ${column.left} of ${screen.right}", column.left < screen.right - 96.dp)
+            assertTrue("the details column ends inside the screen: ${column.right} of ${screen.right}", column.right <= screen.right)
+        }
+    }
+
+    // An empty library without box art keeps the no-details width for Recent and Favorites (their message is centred in the full list width).
+
+    @Test
+    fun anEmptyLibraryKeepsRecentFullWidth() = assertEmptyLibraryFullWidth(systemRow = 0)
+
+    @Test
+    fun anEmptyLibraryKeepsFavoritesFullWidth() = assertEmptyLibraryFullWidth(systemRow = 1)
+
+    private fun assertEmptyLibraryFullWidth(systemRow: Int) {
+        val empty = HomeContent.of(emptyList(), emptyList(), List(APPS) { GameRowModel("app-$it", "App $it", "") }, emptyList(), hasBoxArt = false)
+        show(listOf(Action.TapItem(Column.Systems, systemRow), Action.Enter), empty)
+        // The message is centred in the width the list is given (the full width, no bleed); a narrower list pulls its centre left.
+        val message = bounds(HomeTags.EMPTY_MESSAGE)
+        val onScreen = layout.width - PlumDimens.stripMarginSide * 2 - layout.systemsColumnWidth - PlumDimens.columnGap
+        val centre = (message.left + message.right) / 2
+        assertDp("the message is centred on the list's full width (it ends at the right margin)", layout.width - PlumDimens.stripMarginSide - onScreen / 2, centre)
+        assertEquals("no details column beside it", 0, count(HomeTags.DETAILS))
     }
 
     // Narrow without box art: unchanged.
@@ -321,7 +337,7 @@ class HomeTextDetailsTest {
         show(LibraryLikeContent.gamesFocused(LibraryLikeContent.SUPER_METROID))
         assertEquals("no details column", 0, count(HomeTags.DETAILS))
         val list = bounds(HomeTags.GAMES)
-        assertDp("the list unchanged, width − 96", 576.dp - 96.dp, list.right - list.left)
+        assertDp("the list unchanged, width − 96, plus the 8 bleed", 576.dp - 96.dp + PlumDimens.gamesListBleed, list.right - list.left)
         val before = state.focus
         act(Action.Move(Direction.Right))
         assertEquals("Right does nothing new: no details stop", before, state.focus)
@@ -363,10 +379,11 @@ internal object LibraryLikeContent {
         hasBoxArt: Boolean = false,
         metroidDetails: GameDetails? = null,
         favoriteMarked: Boolean = true,
+        metroidTitle: String = "Super Metroid",
     ): HomeContent {
         val snes =
             snesTitles.mapIndexed { i, (title, region) ->
-                GameRowModel(idAt(i).toString(), title, region, systemAbbr = "SNES", details = if (i == SUPER_METROID) metroidDetails else null)
+                GameRowModel(idAt(i).toString(), if (i == SUPER_METROID) metroidTitle else title, region, systemAbbr = "SNES", details = if (i == SUPER_METROID) metroidDetails else null)
             }
         val sonic = GameRowModel("201", "Sonic the Hedgehog", "EUR", systemAbbr = "MD")
         return HomeContent.of(

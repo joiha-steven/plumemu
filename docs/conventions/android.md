@@ -22,6 +22,7 @@ file index) and a map file listing where to find things and what to watch for.
 | `WAKE_LOCK`, `RECEIVE_BOOT_COMPLETED` | WorkManager's two normal permissions (granted at install, no prompt): box-art downloads keep going with the screen off and start again after a restart. `FOREGROUND_SERVICE` is removed (`tools:node="remove"` in the app manifest): no background work with a notification |
 | `REQUEST_INSTALL_PACKAGES` | In-app updates install Plumemu's own update through a `PackageInstaller` session, only after the person chose Update |
 | `REQUEST_DELETE_PACKAGES` | Uninstall from Apps: the app menu's Uninstall starts Android's own confirmation (`ACTION_DELETE`), which needs this normal permission from Android 9 |
+| `PACKAGE_USAGE_STATS` | Exact play time: Settings › Statistics, off by default; a play counts only the time its game was in front. A special access the person grants in Android's Usage access screen (nothing is asked at install); `tools:ignore="ProtectedPermissions"` in the manifest |
 | `VIBRATE` | Haptics: a light tick on each cursor move and a click on confirm, Settings › Controls › Vibration (on by default); a normal permission, Android asks nobody |
 | `<queries>` for emulator packages and `MAIN`/`LAUNCHER` | Detect emulators; list apps for "Apps" |
 

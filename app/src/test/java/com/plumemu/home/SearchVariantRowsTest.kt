@@ -2,7 +2,7 @@ package com.plumemu.home
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.home.search.SearchIndex
@@ -58,7 +58,7 @@ class SearchVariantRowsTest {
                 showResults("mario", SearchIndex.of(content).find("mario"))
                 toResults()
             }
-        compose.setContent { PlumTheme(MediumText.Default) { HomeAt(content, BoardGamesFocused, search = search) } }
+        compose.setContent { PlumTheme(TableText.Default) { HomeAt(content, BoardGamesFocused, search = search) } }
         compose.waitForIdle()
         compose.onAllNodesWithText("Rev 1", substring = true, useUnmergedTree = true).assertCountEquals(1)
     }

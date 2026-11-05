@@ -31,6 +31,7 @@ import com.plumemu.settings.screen.SettingsContent
 import com.plumemu.settings.screen.SettingsGame
 import com.plumemu.settings.screen.SettingsLibraryActions
 import com.plumemu.settings.screen.SystemEmulators
+import com.plumemu.settings.screen.notAddedItems
 import com.plumemu.setup.SetupFolder
 import com.plumemu.setup.folderNameOf
 import kotlinx.coroutines.CancellationException
@@ -172,22 +173,27 @@ internal class GraphSettingsLibrary(
                     isDetecting = checking,
                 )
             }
+        // Which sorts have values (Year, Rating): Sort games lists those only.
+        val sortValues = combine(games.observeHasYear(), games.observeHasRating()) { hasYear, hasRating -> hasYear to hasRating }
         // Hidden games and Unidentified games, with each game's system named as the platform data names it.
         val withNames =
-            combine(shown, names.hiddenGames(), names.unidentifiedGames(), graph.startup.scanReport) { content, hidden, unidentified, report ->
-                content.copy(hiddenGames = hidden, unidentifiedGames = unidentified, scan = report)
+            combine(shown, names.hiddenGames(), names.unidentifiedGames(), graph.startup.scanReport, sortValues) { content, hidden, unidentified, report, (hasYear, hasRating) ->
+                content.copy(hiddenGames = hidden, unidentifiedGames = unidentified, scan = report, hasYear = hasYear, hasRating = hasRating)
             }
         val folderSystems = graph.database.folderSystemDao()
         val unknown = combine(folderSystems.observeUnknownFolders(), folderSystems.observeAnsweredFolders(), folderAnswers.saving) { open, answered, saving -> Triple(open, answered, saving) }
         val skipped = combine(graph.database.skippedSubfolderDao().observeAll(), skips.saving) { rows, saving -> rows to saving }
-        return combine(withNames, unknown, skipped) { content, (open, answered, saving), (skippedRows, skipSaving) ->
+        return combine(withNames, unknown, skipped, graph.database.leftOutFileDao().observeAll()) { content, (open, answered, saving), (skippedRows, skipSaving), leftOut ->
             val catalog = graph.catalog()
+            val unknownFolders = settingsUnknownFolders(open, answered, catalog, ::warnStaleAnswer)
             content.copy(
                 skippedSubfolders = skippedRows.groupBy({ it.folderId }, { it.relativePath }),
                 skippingFolders = skipSaving,
-                unknownFolders = settingsUnknownFolders(open, answered, catalog, ::warnStaleAnswer),
+                unknownFolders = unknownFolders,
                 folderSystemChoices = folderSystemChoicesOf(catalog),
                 answeringFolders = saving,
+                // Library › Files not added, grouped here off the main thread (up to 2,000 rows per folder).
+                notAdded = notAddedItems(leftOut, unknownFolders),
             )
         }
     }

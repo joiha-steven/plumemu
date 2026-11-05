@@ -7,15 +7,15 @@ a starting point for your own.
 
 | Set | Background | Text | Accent | A / B / X / Y keys |
 |---|---|---|---|---|
-| Plumemu (default) | `#000000` | light `#EDEDED` | `#DA4655` | usual |
-| Paper | `#F4F3EF` | dark `#17181A` | `#9E2A3A` | usual |
-| Pocket | `#CDCCC4` | dark | `#8C1D4E` | all four `#8C1D4E` |
-| Dot matrix | `#B4DB11` | dark | `#2E5E2E` | usual |
+| Plumemu (default) | `#000000` | light `#EDEDED` | `#3E7BE0` | usual |
+| Paper | `#ECE8DF` | dark `#17181A` | `#9E2A3A` | usual |
+| Pocket | `#D2D1CA` | dark | `#8C1D4E` | all four `#8C1D4E` |
+| Dot matrix | `#B8E011` | dark | `#2E5E2E` | usual |
 | Super | `#D9D8D3` | dark | `#AA2924` | `#C8302B` / `#D9A400` / `#2B54B5` / `#2E8B4A` |
 | Indigo | `#262158` | light | `#A79CF5` | usual |
 | Charcoal | `#2A2B2E` | light | `#5FD38D` | `#3E6FD8` / `#2E9A47` / `#D9A400` / `#D9A400` |
 | Ivory | `#F3EAD0` | dark | `#127087` | `#CF3A3A` / `#D9A400` / `#2F6FDB` / `#2E9A47` |
-| Banana | `#F2CD3C` | dark | `#1F45A8` | `#C8302B` / `#0E7C7C` / `#926B00` / `#926B00` |
+| Banana | `#F2CF43` | dark | `#1F45A8` | `#C8302B` / `#0E7C7C` / `#926B00` / `#926B00` |
 | Cream | `#E9DFC8` | dark | `#9A1F2B` | usual |
 
 ## Suggest a color set

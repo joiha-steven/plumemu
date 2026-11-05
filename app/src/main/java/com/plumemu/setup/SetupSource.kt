@@ -1,5 +1,9 @@
 package com.plumemu.setup
 
+import com.plumemu.coredata.settings.BoxArtSourceSetting
+import com.plumemu.coredata.settings.ConfirmButtonSetting
+import com.plumemu.coredata.settings.TextSizeSetting
+import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.graph.ScanReport
 import com.plumemu.graph.ScanState
 import com.plumemu.library.scan.AddFolderResult
@@ -22,14 +26,23 @@ internal interface SetupSource {
 
     val usageStatistics: Flow<Boolean>
 
-    /** Settings › Controls › Push right to play, asked on the last step. */
-    val pushRightToPlay: Flow<Boolean>
+    /** A gamepad is connected (the confirm step exists while one is). */
+    val hasGamepad: Flow<Boolean>
+
+    /** What the look step may suggest for this device. */
+    val deviceFacts: DeviceFacts
+
+    /** `library.box_art_source` as stored; null until chosen. */
+    val boxArtSource: Flow<BoxArtSourceSetting?>
 
     /**
      * The second screen's kind while setup should ask about it (a screen is there and
      * `second_screen.enabled` was never written); null otherwise.
      */
     val secondScreenQuestion: Flow<ScreenKind?>
+
+    /** The device can reach the internet now (any network kind); read once when Ready opens. */
+    fun isOnline(): Boolean
 
     /** Keeps the picker's grant and records the folder. May throw (provider or database error). */
     suspend fun addFolder(treeUri: String): AddFolderResult
@@ -45,9 +58,23 @@ internal interface SetupSource {
 
     suspend fun setUsageStatistics(isOn: Boolean)
 
-    suspend fun setPushRightToPlay(isOn: Boolean)
+    /** Settings › Controls › Confirm with B: [ConfirmButtonSetting.Bottom] when B confirms. */
+    suspend fun setConfirmButton(setting: ConfirmButtonSetting)
+
+    /** Picks [set] as the colours (what Settings › Appearance › Colors writes), and [textSize] when none was picked before. */
+    suspend fun applyLook(
+        set: ColorSet,
+        textSize: TextSizeSetting?,
+    )
+
+    /** The colour set in force when it is one of the sets; null for own colours. The look step opens on it. */
+    val currentColorSet: Flow<ColorSet?>
+
+    /** Stores the box art source (what Settings › Accounts › Box art writes); throws when it could not. */
+    suspend fun setBoxArtSource(source: BoxArtSourceSetting)
 
     suspend fun setSecondScreenEnabled(isOn: Boolean)
 
-    suspend fun completeSetup()
+    /** Stores that setup is done; [questionsSkipped] when Set up later left the questions unasked (they come with the first folder). */
+    suspend fun completeSetup(questionsSkipped: Boolean)
 }

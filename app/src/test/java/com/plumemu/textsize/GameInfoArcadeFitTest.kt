@@ -110,7 +110,7 @@ abstract class GameInfoArcadeFitBase(
     /** The set that tells "Cadillacs and Dinosaurs" apart is whole, never ellipsized, at the default size. */
     @Test
     fun dinouIsShownWholeAtMedium() {
-        val failures = problems("game_info_dinou", arcadeFacts("Cadillacs and Dinosaurs", ArcadeSetFacts("dinou", listOf("USA 930201"))), listOf(PlumFont.Sans to TextSize.Medium)) { false }
+        val failures = problems("game_info_dinou", arcadeFacts("Cadillacs and Dinosaurs", ArcadeSetFacts("dinou", listOf("USA 930201"))), listOf(PlumFont.Sans to TextSize.Small)) { false }
         compose.onNodeWithText("dinou · USA 930201", useUnmergedTree = true).assertExists()
         assertNone(failures)
     }
@@ -159,7 +159,7 @@ abstract class GameInfoArcadeFitBase(
     /** A description without brackets ("Gauntlet II"): the short name alone. */
     @Test
     fun noBracketsShowsTheShortNameAlone() {
-        val failures = problems("game_info_gaunt2", arcadeFacts("Gauntlet II", ArcadeSetFacts("gaunt2", emptyList())), listOf(PlumFont.Sans to TextSize.Medium)) { false }
+        val failures = problems("game_info_gaunt2", arcadeFacts("Gauntlet II", ArcadeSetFacts("gaunt2", emptyList())), listOf(PlumFont.Sans to TextSize.Small)) { false }
         compose.onNodeWithText("gaunt2", useUnmergedTree = true).assertExists()
         assertNone(failures)
     }

@@ -8,6 +8,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.theme.ListGlide
 import com.plumemu.coreui.theme.PlumTheme
@@ -21,7 +23,7 @@ import com.plumemu.coreui.theme.PlumTheme
 internal const val GLIDE_CONTEXT_ROWS = 3
 
 /** Rows kept in view past the focused one towards each edge while the list can scroll that way (the focus never rides the edge): [GLIDE_CONTEXT_ROWS] with a glide, one row without (animations off). */
-internal fun contextRowsFor(glide: ListGlide?): Int = if (glide != null && glide.extra > 0.dp) GLIDE_CONTEXT_ROWS else 1
+internal fun contextRowsFor(glide: ListGlide?): Int = if (glide != null && glide.motionOn) GLIDE_CONTEXT_ROWS else 1
 
 /**
  * Keeps the focused item of a lazy column on screen (docs/design/rules.md › Focus and current):
@@ -40,6 +42,14 @@ internal fun KeepFocusedVisible(
     glide: ListGlide? = null,
     /** What the rows' heights depend on besides their text (a line that comes and goes above the focus): when it changes, the focus is brought into view again. */
     contentKey: Any? = null,
+    /** The gap each item carries after itself (a games row is its pitch tall): the last row needs the room without it, as `PlumLayout.listRowsThatFit` counts. */
+    trailingGap: Dp = 0.dp,
+    /** The list draws a gliding pill: a move that scrolls nothing still counts as a step of a held key ([ListGlide.stepped]). */
+    countsSteps: Boolean = false,
+    /** A list of whole rows (Settings' panels): a scroll ends with a row's top at the window's top, never with a cut row there (see [keepVisible]). */
+    snapsToRows: Boolean = false,
+    /** Keep the context rows from the first scroll on, however the focus got there (the game menu's slab keeps its room below it when the menu opens on a row). */
+    keepsContextAtOpen: Boolean = false,
     focusedIndex: () -> Int,
 ) {
     val latest = rememberUpdatedState(focusedIndex)
@@ -51,8 +61,9 @@ internal fun KeepFocusedVisible(
     val type = PlumTheme.type
     val openedWith = remember(listState) { type }
     val openedKey = remember(listState) { contentKey }
-    val keeper = remember(listState, textScale, type, contentKey) { ScrollKeeper(isAfterResize = type !== openedWith || contentKey != openedKey) }
+    val keeper = remember(listState, textScale, type, contentKey) { ScrollKeeper(isAfterResize = type !== openedWith || contentKey != openedKey, keepsContextAtOpen = keepsContextAtOpen) }
     val context = contextRowsFor(glide)
+    val gapPx = with(LocalDensity.current) { trailingGap.roundToPx() }
     val target = index
     var kept: KeptScroll? = null
     // Read without observing: a scroll must not recompose this.
@@ -64,12 +75,15 @@ internal fun KeepFocusedVisible(
             val wanted = (target - rows).coerceAtLeast(0)..(target + rows).coerceAtMost(info.totalItemsCount - 1)
             val isLaidOut = items.any { it.index == wanted.first } && items.any { it.index == wanted.last }
             keeper.update(target, hasLayout = items.isNotEmpty(), isLaidOut = isLaidOut) {
-                listState.keepVisible(target, rows).also { kept = it }.moved
+                listState.keepVisible(target, rows, gapPx, snapsToRows).also { kept = it }.moved
             }
         }
     // Also when nothing scrolled: a glide still running from the last jump must leave the row past
     // the new focus whole.
-    kept?.let { glide?.jumped(moved.toFloat(), it.roomAbove, it.roomBelow) }
+    kept?.let {
+        glide?.jumped(moved.toFloat(), it.roomAbove, it.roomBelow)
+        if (countsSteps && moved == 0) glide?.stepped()
+    }
     // Waiting for a layout (the list's first, or the one that places an estimated row): observe
     // it, so this runs again once it exists.
     if (keeper.isWaiting) listState.layoutInfo
@@ -88,6 +102,7 @@ internal class ScrollKeeper(
      * composition, so the first scroll is checked twice more against that layout.
      */
     isAfterResize: Boolean = false,
+    private val keepsContextAtOpen: Boolean = false,
 ) {
     private var rechecks = if (isAfterResize) 2 else 0
     private var handled = NONE
@@ -105,7 +120,13 @@ internal class ScrollKeeper(
     fun contextFor(
         target: Int,
         context: Int,
-    ): Int = if (!hasMoved && (handled == NONE || target == handled)) 0 else context
+    ): Int =
+        if (!hasMoved && (handled == NONE || target == handled)) {
+            // A list that keeps its room from the start keeps one row, not the glide's three: it opens where it always did unless that row is cut.
+            if (keepsContextAtOpen) minOf(context, 1) else 0
+        } else {
+            context
+        }
 
     /**
      * Brings [target] into view with [scroll] when it is new or awaited; returns how far the rows
@@ -167,12 +188,19 @@ internal data class KeptScroll(
 internal fun LazyListState.keepVisible(
     index: Int,
     context: Int = 0,
+    trailingGap: Int = 0,
+    /**
+     * Scroll to a row's top rather than by the pixels needed, and back to the top of a first row that is cut, when a row ends up whole at the window's top and the item
+     * and its context stay whole: a list of whole rows hides a row cut at its top, which left a blank band there. Not when the
+     * list ends first (the scroll is then clamped and the band stays; nothing can be done).
+     */
+    snapsToRows: Boolean = false,
 ): KeptScroll {
     val info = layoutInfo
     val count = info.totalItemsCount
     if (info.visibleItemsInfo.isEmpty() || index !in 0 until count) return KeptScroll(0, Float.MAX_VALUE, Float.MAX_VALUE)
     val rows = LaidOutRows(info)
-    val windowEnd = info.viewportEndOffset - info.afterContentPadding
+    val windowEnd = info.viewportEndOffset - info.afterContentPadding + trailingGap
     var before = minOf(context, index)
     var after = minOf(context, count - 1 - index)
     // Less context where the item and its context do not fit (tall rows, a short list window).
@@ -190,9 +218,23 @@ internal fun LazyListState.keepVisible(
             // Never past the item's own top: an item taller than the window (a typing panel's
             // list above the keyboard tray at the largest sizes) shows its first line, not its last.
             bottom > windowEnd && rows.topOf(index) > 0 -> {
-                val by = minOf(bottom - windowEnd, rows.topOf(index))
-                requestScrollToItem(firstVisibleItemIndex, firstVisibleItemScrollOffset + by)
-                -by
+                val needed = minOf(bottom - windowEnd, rows.topOf(index))
+                val pad = info.beforeContentPadding
+                val snapped = if (snapsToRows) rows.firstTopAtLeast(bottom - windowEnd + pad, rows.topOf(index - before)) else null
+                if (snapped != null) {
+                    requestScrollToItem(snapped.first, 0)
+                    -(snapped.second - pad)
+                } else {
+                    requestScrollToItem(firstVisibleItemIndex, firstVisibleItemScrollOffset + needed)
+                    -needed
+                }
+            }
+            // A list of whole rows opened or clamped with its first row cut at the top (a short list that fits but for one row): that row is hidden, a
+            // blank band. Back to its top when the item and its context stay whole; the room left then is at the bottom, as the games list ends.
+            snapsToRows && firstVisibleItemScrollOffset > 0 && bottom + firstVisibleItemScrollOffset <= windowEnd -> {
+                val back = firstVisibleItemScrollOffset
+                requestScrollToItem(firstVisibleItemIndex, 0)
+                back
             }
             else -> 0
         }
@@ -210,6 +252,12 @@ private class LaidOutRows(
     private val first = items.first()
     private val last = items.last()
     private val stride = if (last.index > first.index) (last.offset - first.offset) / (last.index - first.index) else first.size + info.mainAxisItemSpacing
+
+    /** The first laid-out row whose top is [from] or more and at most [upTo] (its index and top), or null. */
+    fun firstTopAtLeast(
+        from: Int,
+        upTo: Int,
+    ): Pair<Int, Int>? = items.firstOrNull { it.offset >= from && it.offset <= upTo }?.let { it.index to it.offset }
 
     fun topOf(i: Int): Int {
         items.firstOrNull { it.index == i }?.let { return it.offset }

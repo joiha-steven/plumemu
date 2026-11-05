@@ -44,11 +44,10 @@ internal fun HomeWithArt(
     content: HomeContent = CoverArtLibrary,
     gridIds: Set<String> = emptySet(),
     onState: (com.plumemu.coreinput.strip.StripState) -> Unit = {},
-    detailsOnSecondScreen: Boolean = false,
     charging: Boolean = false,
 ) {
     ProvideHomeArt(source, content.hasBoxArt) {
-        HomeAt(content, actions, gridIds = gridIds, onState = onState, detailsOnSecondScreen = { detailsOnSecondScreen }, charging = { charging })
+        HomeAt(content, actions, gridIds = gridIds, onState = onState, charging = { charging })
     }
 }
 

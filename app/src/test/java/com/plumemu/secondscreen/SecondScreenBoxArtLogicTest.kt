@@ -53,17 +53,10 @@ class SecondScreenBoxArtLogicTest {
     }
 
     @Test
-    fun signedInAGameWithNoKeyIsMarkedAsHavingNoPictureAsTheGridShowsItsPoster() {
+    fun signedInAGameWithNoKeyCarriesNoKey() {
         val keyless = metroid.copy(scrapeKey = null)
         val on = HomeContent.of(listOf(keyless), emptyList(), emptyList(), listOf(SystemGames("snes", "Super Nintendo", listOf(keyless))), hasBoxArt = true)
-        val card = onTheGame(on) as SecondScreenContent.Game
-        assertEquals(true, card.hasNoPicture)
-        assertNull(card.scrapeKey)
-    }
-
-    @Test
-    fun signedInAGameWithAKeyWaitsForItsResultBeforeHavingAPoster() {
-        assertEquals(false, (onTheGame(content(hasBoxArt = true)) as SecondScreenContent.Game).hasNoPicture)
+        assertNull((onTheGame(on) as SecondScreenContent.Game).scrapeKey)
     }
 
     private fun contentWithRowDetails(hasBoxArt: Boolean): HomeContent {
@@ -83,9 +76,9 @@ class SecondScreenBoxArtLogicTest {
     private fun card(key: String? = "crc:1") = SecondScreenContent.Game("Super Metroid", "Super Nintendo", gameId = null, isPlayKnown = false, scrapeKey = key)
 
     @Test
-    fun theFillReadsThePictureAndTheDetailsOfTheKeyAndLeavesTheRestAlone() =
+    fun theFillReadsTheDetailsOfTheKeyAndLeavesTheRestAlone() =
         runBlocking {
-            assertEquals(card().copy(art = picture, details = facts), noDatabase.fill(card()))
+            assertEquals(card().copy(details = facts), noDatabase.fill(card()))
         }
 
     @Test
@@ -95,16 +88,10 @@ class SecondScreenBoxArtLogicTest {
         }
 
     @Test
-    fun aGameWithoutAKeyOrWithoutAResultReadsNoPicture() =
+    fun aGameWithoutAKeyOrWithoutAResultReadsNoDetails() =
         runBlocking {
             assertNull("no key: nothing to read", noDatabase.fill(card(key = null)))
-            assertEquals("a key with no saved front: the card stays without art, and is marked as having no picture for good (its poster)", card("crc:9").copy(hasNoPicture = true), noDatabase.fill(card("crc:9")))
-        }
-
-    @Test
-    fun aCardThatHasItsPictureIsNotReadAgain() =
-        runBlocking {
-            assertNull(noDatabase.fill(card().copy(art = picture)))
+            assertEquals("a key with no saved result: the card stays without details", card("crc:9"), noDatabase.fill(card("crc:9")))
         }
 
     @Test

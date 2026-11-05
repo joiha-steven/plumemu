@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -36,12 +37,22 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import com.plumemu.coreui.theme.MaskOpaque
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -69,6 +80,7 @@ import com.plumemu.coreui.components.ScanPulseLine
 import com.plumemu.coreui.components.WifiStatus
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.WidthClass
 import com.plumemu.home.rememberBatteryCharging
 import com.plumemu.home.rememberBatteryReading
@@ -153,17 +165,18 @@ internal fun SetupLayout(
     Column(
         modifier
             .fillMaxSize()
-            .padding(top = PlumDimens.stripMarginTop, bottom = PlumDimens.stripMarginBottom)
+            .padding(top = PlumDimens.stripMarginTop, bottom = PlumDimens.footerBelow)
             .testTag(SetupTags.SCREEN),
     ) {
-        SetupTopBar(stepIndex = state.stepDotIndex, stepCount = state.stepDots, clock, battery, wifi, charging)
+        SetupTopBar(stepIndex = state.stepDotIndex, stepCount = state.stepDots, clock, battery, wifi, charging, typing = { state.boxArt?.isTrayUp == true })
         Spacer(Modifier.height(PlumDimens.barGap))
         Box(Modifier.weight(1f).fillMaxWidth()) {
             Body(state, onAction)
             // Plumemu's keyboard for the sign-in form, down to the screen's bottom; the hint bar is drawn on it.
             SetupKeyboardTray(state.boxArt, onTrayKey, belowContent = setupTrayBelowBody())
         }
-        Spacer(Modifier.height(PlumDimens.barGap))
+        // The scroll's own gap (bleed, last spacer, reveal) is measured from this body's bottom, so it follows.
+        Spacer(Modifier.height(PlumDimens.footerGap))
         SetupHints(state, letters, onAction)
     }
 }
@@ -177,25 +190,28 @@ private fun Body(
     val covers = setupKeyboardCovers()
     val trayCut = Modifier.aboveTray({ state.boxArt?.isTrayUp == true }, covers)
     Box(Modifier.fillMaxSize().padding(horizontal = PlumDimens.stripMarginSide)) {
-        val title = stepTitle(state)
+        val title = stepTitle(state).let { if (state.boxArt?.isTrayUp == true) it.copy(description = null) else it }
         val content: @Composable ColumnScope.() -> Unit = {
             when {
                 state.hasLoadFailed -> LoadFailedContent(state, onAction)
                 state.step == SetupStep.Folders -> FolderStepContent(state, onAction)
+                state.step == SetupStep.Confirm -> ConfirmStepContent(state, onAction)
+                state.step == SetupStep.Look -> LookStepContent(state, onAction)
                 state.step == SetupStep.SecondScreen -> SecondScreenStepContent(state, onAction)
                 state.step == SetupStep.BoxArt -> BoxArtStepContent(state, onAction)
                 else -> LibraryStepContent(state, onAction)
             }
         }
-        // The box art step keeps the ring's reach only: its scroll ends at Plumemu's tray, which covers the bar gap.
-        val bleedBottom = if (state.step == SetupStep.BoxArt) PlumDimens.focusRingOutset else PlumDimens.barGap
-        // The box art step's scroll ends at Plumemu's tray, where its fields are placed by `aboveTray`: no resting on lines there.
-        if (PlumTheme.layout.widthClass == WidthClass.Wide) WideBody(title, trayCut, bleedBottom, content) else NarrowBody(title, trayCut, bleedBottom, state.step != SetupStep.BoxArt, content)
+        // The sign-in form keeps the ring's reach only: its scroll ends at Plumemu's tray, which covers the bar gap.
+        val hasForm = state.boxArt != null
+        val bleedBottom = if (hasForm) PlumDimens.focusRingOutset else PlumDimens.footerGap
+        // The form's scroll ends at Plumemu's tray, where its fields are placed by `aboveTray`: no resting on lines there.
+        if (PlumTheme.layout.widthClass == WidthClass.Wide) WideBody(title, trayCut, bleedBottom, content) else NarrowBody(title, trayCut, bleedBottom, !hasForm, content)
     }
 }
 
 /** [status] is a quiet line of the step under the description (the games are still being named); null when there is none. */
-private data class StepTitle(val title: String, val description: String, val status: String? = null)
+private data class StepTitle(val title: String, val description: String?, val status: String? = null)
 
 @Composable
 private fun stepTitle(state: SetupUiState): StepTitle =
@@ -209,6 +225,9 @@ private fun stepTitle(state: SetupUiState): StepTitle =
 private fun stepTitleOf(state: SetupUiState): StepTitle =
     when (state.step) {
         SetupStep.Folders -> StepTitle(stringResource(R.string.setup_folder_title), stringResource(R.string.setup_folder_desc))
+        SetupStep.Confirm ->
+            StepTitle(stringResource(R.string.setup_confirm_title), stringResource(if (state.confirmAnswer == null) R.string.setup_confirm_desc else R.string.setup_confirm_again_desc))
+        SetupStep.Look -> StepTitle(stringResource(R.string.setup_look_title), stringResource(R.string.setup_look_desc))
         SetupStep.SecondScreen -> StepTitle(stringResource(R.string.setup_second_screen_title), stringResource(R.string.setup_second_screen_desc))
         SetupStep.BoxArt ->
             if (state.boxArt == null) {
@@ -222,12 +241,7 @@ private fun stepTitleOf(state: SetupUiState): StepTitle =
             } else {
                 StepTitle(stringResource(R.string.setup_scan_title), stringResource(R.string.setup_scan_desc))
             }
-        SetupStep.Ready ->
-            StepTitle(
-                stringResource(R.string.setup_ready_title),
-                stringResource(if (state.gameCount == 0) R.string.setup_ready_empty_desc else R.string.setup_ready_desc),
-                status = if (state.isNaming) stringResource(R.string.setup_ready_naming) else null,
-            )
+        SetupStep.Ready -> readyTitleOf(state).let { StepTitle(it.title, it.description, it.status) }
     }
 
 /** Title column 260 wide, 48 before the content; the content scrolls on its own if it runs long. */
@@ -308,22 +322,44 @@ private fun ScrollingColumn(
         }
     }
     val density = LocalDensity.current
-    val reveal = remember(scroll, snaps) { if (snaps == null) InstantReveal else LineSnapReveal(scroll, snaps) }
+    val baseReveal = remember(scroll, snaps) { if (snaps == null) InstantReveal else LineSnapReveal(scroll, snaps) }
+    // The scroll's frame reaches `room` past the window on every side, the content padded by the same room: nothing moves and the scroll
+    // range is the same, but a focused slab's shadow and glow fade out instead of ending flat at the clip. Where the scroll is in the
+    // middle that extra frame is cut back (the rows beyond would show under the hint bar): only an end that rests keeps its room.
+    val room = SlabDimens.listEndRoom
+    val roomPx = with(density) { room.toPx() }
+    val fadePx = with(density) { PlumDimens.listEdgeFade.toPx() }
+    // A reveal measures the window as it was without the room.
+    val reveal = remember(baseReveal, roomPx) { WithoutRoom(baseReveal) { roomPx } }
     CompositionLocalProvider(LocalBringIntoViewSpec provides reveal) {
         Column(
             modifier
                 .bleed(PlumDimens.focusRingOutset, bottom = bleedBottom)
+                .clipsLayoutToWindow(reach = room)
+                .bleed(0.dp, bottom = 0.dp, top = room, sides = room, below = room)
+                .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                .drawWithContent {
+                    // Read at draw time: a scroll never recomposes for its position.
+                    // At rest on a line the ring's reach above the window is cut too: it would keep the bottom of the line above (faint specks).
+                    val onLine = scroll.value > 0 && snaps?.isRest(scroll.value, ring) == true
+                    val cutTop = if (onLine) roomPx + ring else if (scroll.value > 0) roomPx else 0f
+                    val cutBottom = if (scroll.value < scroll.maxValue) roomPx else 0f
+                    clipRect(top = cutTop, bottom = size.height - cutBottom) { this@drawWithContent.drawContent() }
+                    // A cut edge fades out (the rows and their shadows are erased towards it) instead of ending flat.
+                    if (cutTop > 0f && !onLine) drawFade(cutTop, cutTop + fadePx, fromTop = true)
+                    if (cutBottom > 0f) drawFade(size.height - cutBottom - fadePx, size.height - cutBottom, fromTop = false)
+                }
                 .testTag(SetupTags.SCROLL)
-                .onSizeChanged { viewport.intValue = it.height }
+                .onSizeChanged { viewport.intValue = it.height - (roomPx * 2).toInt() } // the room is outside the window the extra room is worked out from
                 .verticalScroll(scroll)
-                .padding(PlumDimens.focusRingOutset),
+                .padding(PlumDimens.focusRingOutset + room),
         ) {
             Column(Modifier.onSizeChanged { sizes.value = it }) {
                 content()
                 // Always: scrolled to its end, the last button sits the bar gap above the hint bar, not the ring's reach (4.5).
                 // Only when the content ran long it used to be there; a Ready step that fitted by a few dp kept its Start playing
                 // 5.6 above the bar, and one that came after a shorter step kept the shorter step's range of 0.
-                Spacer(Modifier.height(PlumDimens.barGap - PlumDimens.focusRingOutset))
+                Spacer(Modifier.height(PlumDimens.footerGap - PlumDimens.focusRingOutset))
             }
             Spacer(Modifier.height(with(density) { extra.intValue.toDp() }))
         }
@@ -357,12 +393,15 @@ private fun TitleBlock(
             modifier = Modifier.testTag(SetupTags.TITLE).then(if (snaps == null) Modifier else with(snaps) { Modifier.textPart(0) }),
             onTextLayout = { snaps?.layoutOf(0, it) },
         )
-        BasicText(
-            text = title.description,
-            style = type.description.copy(color = colors.muted),
-            modifier = Modifier.testTag(SetupTags.DESCRIPTION).then(if (snaps == null) Modifier else with(snaps) { Modifier.textPart(1) }),
-            onTextLayout = { snaps?.layoutOf(1, it) },
-        )
+        // Null while the tray is up over the sign-in form: the paragraph is read before typing, and the tray would cut it mid-line.
+        if (title.description != null) {
+            BasicText(
+                text = title.description,
+                style = type.description.copy(color = colors.muted),
+                modifier = Modifier.testTag(SetupTags.DESCRIPTION).then(if (snaps == null) Modifier else with(snaps) { Modifier.textPart(1) }),
+                onTextLayout = { snaps?.layoutOf(1, it) },
+            )
+        }
         if (title.status != null) {
             ScanPulseLine(
                 text = title.status,
@@ -386,11 +425,12 @@ private fun SetupTopBar(
     battery: () -> String?,
     wifi: () -> Boolean,
     charging: () -> Boolean,
+    typing: () -> Boolean,
 ) {
     val colors = PlumTheme.colors
     val style = PlumTheme.type.topBar.copy(color = colors.muted)
     Row(
-        Modifier.fillMaxWidth().height(PlumTheme.layout.topBarHeight).padding(horizontal = PlumDimens.stripMarginSide),
+        Modifier.fillMaxWidth().height(if (typing()) PlumTheme.layout.topBarHeightTyping else PlumTheme.layout.topBarHeight).padding(horizontal = PlumDimens.stripMarginSide),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(PlumDimens.setupDotsGap), verticalAlignment = Alignment.CenterVertically) {
@@ -432,14 +472,18 @@ private fun SetupHints(
             -> R.string.setup_hint_remove
             SetupControl.AddFolder -> R.string.setup_hint_add_folder
             SetupControl.Continue -> R.string.setup_hint_continue
-            SetupControl.UseSecondScreen, SetupControl.SkipSecondScreen, SetupControl.UseBoxArt, SetupControl.SkipBoxArt -> R.string.setup_hint_select
+            SetupControl.UseSecondScreen, SetupControl.SkipSecondScreen, SetupControl.UseBoxArt, SetupControl.BoxArtLibretro, SetupControl.BoxArtOwnCovers,
+            SetupControl.Look0, SetupControl.Look1, SetupControl.Look2, SetupControl.Look3, SetupControl.Look4, SetupControl.Look5,
+            -> R.string.setup_hint_select
+            SetupControl.ConfirmKeep, SetupControl.ConfirmUseB -> R.string.setup_hint_select
             SetupControl.TryAgain -> R.string.setup_hint_try_again
-            SetupControl.UsageStatistics, SetupControl.PushRightToPlay -> R.string.setup_hint_switch
+            SetupControl.UsageStatistics -> R.string.setup_hint_switch
             SetupControl.StartPlaying -> R.string.setup_hint_start_playing
             null -> null
         }
-    // Every step after the folders goes back to them with B; the failed load has no step to go back from.
+    // Every step after the folders goes back with B (Scan and Ready to the last question asked); the failed load has no step to go back from.
     val showsBack = state.step != SetupStep.Folders && !state.hasLoadFailed
+    val backCap = stringResource(letters.back)
     HintBar(Modifier.testTag(SetupTags.HINTS)) {
         if (confirmLabel != null) {
             Hint(
@@ -450,7 +494,7 @@ private fun SetupHints(
         }
         if (showsBack) {
             Hint(
-                keyCap = stringResource(letters.back),
+                keyCap = backCap,
                 label = stringResource(R.string.setup_hint_back),
                 modifier = Modifier.hint(Action.Back, onAction).testTag(SetupTags.HINT_BACK),
             )
@@ -474,7 +518,7 @@ internal fun Modifier.setupControl(
         // With its focus ring: on 576 x 432 the Ready step's rows at 13 push Start
         // playing to the scroll's edge, where the ring was cut by the hint bar's gap.
         // Down to the bar gap, not only the ring: the focused last button keeps the gap above the hint bar (10), not 5.5.
-        .bringIntoViewWhen(state.focus == control, ring = PlumDimens.focusRingOutset, below = PlumDimens.barGap - PlumDimens.focusRingOutset)
+        .bringIntoViewWhen(state.focus == control, above = state.aboveLastButton, ring = PlumDimens.focusRingOutset, below = PlumDimens.footerGap - PlumDimens.focusRingOutset)
         .then(if (index >= 0) Modifier.tapItem(StripColumn.Games, index, onAction) else Modifier)
         .testTag(SetupTags.control(control))
 }
@@ -524,14 +568,30 @@ internal object SetupTags {
     const val NAMING_LINE = "setup_naming_line"
     const val NAMING_PULSE = "setup_naming_pulse"
     const val EMULATORS = "setup_emulators"
+    const val USAGE_SWITCH = "setup_usage_switch"
     const val FOUND = "setup_found"
     const val DOT = "setup_dot"
     const val BOX_ART = "setup_box_art"
-    const val BOX_ART_QUESTION = "setup_box_art_question"
+    const val LOOK_TILE = "setup_look_tile"
     const val BOX_ART_COMING = "setup_box_art_coming"
     const val NOTE = "setup_note"
     const val TRAY = "setup_keyboard_tray"
     const val TYPING_HINTS = "setup_typing_hints"
 
     fun control(control: SetupControl): String = "setup_control_${control.name}"
+}
+
+/** Erases what is drawn from [from] to [to] (px), fully at the cut end, to nothing at the other: the fade of a scroll's cut edge. */
+private fun DrawScope.drawFade(
+    from: Float,
+    to: Float,
+    fromTop: Boolean,
+) {
+    val clear = MaskOpaque.copy(alpha = 0f)
+    drawRect(
+        Brush.verticalGradient(if (fromTop) listOf(MaskOpaque, clear) else listOf(clear, MaskOpaque), startY = from, endY = to),
+        topLeft = Offset(0f, from),
+        size = Size(size.width, to - from),
+        blendMode = BlendMode.DstOut,
+    )
 }

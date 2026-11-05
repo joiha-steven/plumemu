@@ -6,7 +6,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
@@ -53,13 +53,13 @@ class AppGamesHaloTest {
 
     @Test
     fun theFocusedAndroidGameTileHasTheHaloOnGraphite() {
-        val halo = haloBesideTile(MediumText.Graphite, ANDROID_GAMES_ENTRY, focused = 0)
+        val halo = haloBesideTile(TableText.Graphite, ANDROID_GAMES_ENTRY, focused = 0)
         assertTrue("beside the ring the focused tile has a halo (was $halo)", halo >= HALO_MIN)
     }
 
     @Test
     fun theFocusedAndroidGameTileHasNoHaloOnPaper() {
-        val halo = haloBesideTile(MediumText.Paper, ANDROID_GAMES_ENTRY, focused = 0)
+        val halo = haloBesideTile(TableText.Paper, ANDROID_GAMES_ENTRY, focused = 0)
         assertTrue("beside the ring the focused tile has no halo (was $halo)", halo <= NO_HALO_MAX)
     }
 

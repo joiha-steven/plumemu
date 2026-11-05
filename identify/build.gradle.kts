@@ -15,6 +15,10 @@ android {
             // The 10,000-file measurement runs only with
             // -Pidentify.measure=true; otherwise IdentifyMeasurementTest is skipped at once.
             test.systemProperty("identify.measure", providers.gradleProperty("identify.measure").getOrElse("false"))
+            // The name round trip: -Proundtrip.update=true rewrites src/test/resources/roundtrip/scores.txt;
+            // -Proundtrip.cap=N tries fewer titles per system (report only).
+            test.systemProperty("roundtrip.update", providers.gradleProperty("roundtrip.update").getOrElse("false"))
+            providers.gradleProperty("roundtrip.cap").orNull?.let { test.systemProperty("roundtrip.cap", it) }
             // Some tests read the bundled packs from the source tree, so a change to them must rerun the
             // tests (and a build cache hit must not stand in for a run without them). The public source
             // copy has no packs: then the tests skip and there is nothing to track.

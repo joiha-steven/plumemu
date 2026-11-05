@@ -11,6 +11,7 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.captureToImage
@@ -22,6 +23,9 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.up
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumMotion
+import com.plumemu.coreui.theme.FocusSlab
+import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.PlumColors
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumTheme
@@ -62,7 +66,19 @@ class PressFeelTest {
     private var focusedLook by mutableStateOf(GameRowLook.Focused)
     private val settings = PlumThemeSettings.Graphite
     private val colors = PlumComposeColors.from(PlumColors.derive(settings.backgroundColor, settings.textMode, settings.accentColor))
-    private val pressedFill = lerp(colors.pill, colors.text, PlumMotion.PRESS_FILL_MIX)
+
+    /** The slab's gradient ([com.plumemu.coreui.theme.SlabLook.stops]) at pixel row [y] of the focused row (the slab starts its overhang above the row). */
+    private fun restFill(y: Int = FILL_Y): Color {
+        val density = compose.density.density
+        val slab = SlabDimens.height.value * density
+        val over = (slab - PlumDimens.gameRowHeight.value * density) / 2f
+        val t = (y + 0.5f + over) / slab
+        val stops = colors.slab.stops
+        val mid = FocusSlab.MID_AT
+        return if (t <= mid) lerp(stops[0], stops[1], t / mid) else lerp(stops[1], stops[2], (t - mid) / (1f - mid))
+    }
+
+    private fun pressedFill(y: Int = FILL_Y) = lerp(restFill(y), colors.text, PlumMotion.PRESS_FILL_MIX)
 
     private fun show(confirmCap: String = "A", themeSettings: PlumThemeSettings = settings) {
         compose.setContent {
@@ -81,7 +97,7 @@ class PressFeelTest {
 
     private fun Color.near(other: Color) = abs(red - other.red) < 0.02f && abs(green - other.green) < 0.02f && abs(blue - other.blue) < 0.02f
 
-    /** Below the ring (2 dp, drawn inside the pill's edge), inside the fill. */
+    /** Inside the fill, below the slab edge (1 dp). */
     private val FILL_Y = 10
 
     private fun fillAt(tag: String, y: Int): Color {
@@ -89,9 +105,10 @@ class PressFeelTest {
         return image.toPixelMap()[image.width / 2, y]
     }
 
-    private fun wholeRow(tag: String): List<Int> {
+    /** The row's pixels; [fromY] skips the top band the focused row above overhangs with its slab (it dips with that row, not with this one). */
+    private fun wholeRow(tag: String, fromY: Int = 0): List<Int> {
         val map = compose.onNodeWithTag(tag).captureToImage().toPixelMap()
-        return buildList { for (y in 0 until map.height step 2) for (x in 0 until map.width step 3) add(map[x, y].hashCode()) }
+        return buildList { for (y in fromY until map.height step 2) for (x in 0 until map.width step 3) add(map[x, y].hashCode()) }
     }
 
     private fun hold(vararg keys: String) {
@@ -110,11 +127,11 @@ class PressFeelTest {
     fun holdingConfirmOnTheFocusedRowPressesItAndLettingGoReturnsToRest() {
         show()
         val resting = wholeRow(FOCUSED)
-        assertTrue("rest: the focus fill", fillAt(FOCUSED, FILL_Y).near(colors.pill))
+        assertTrue("rest: the focus fill", fillAt(FOCUSED, FILL_Y).near(restFill()))
         hold("A")
-        assertTrue("pressed: the fill moved a step toward the text colour", fillAt(FOCUSED, FILL_Y).near(pressedFill))
+        assertTrue("pressed: the fill moved a step toward the text colour", fillAt(FOCUSED, FILL_Y).near(pressedFill()))
         release()
-        assertTrue("released: the fill is back", fillAt(FOCUSED, FILL_Y).near(colors.pill))
+        assertTrue("released: the fill is back", fillAt(FOCUSED, FILL_Y).near(restFill()))
         assertEquals("and the whole row is as it was", resting, wholeRow(FOCUSED))
     }
 
@@ -125,7 +142,7 @@ class PressFeelTest {
         held.value = setOf("A")
         Snapshot.sendApplyNotifications()
         compose.mainClock.advanceTimeBy(20)
-        assertTrue("pressed at once", fillAt(FOCUSED, FILL_Y).near(pressedFill))
+        assertTrue("pressed at once", fillAt(FOCUSED, FILL_Y).near(pressedFill()))
         held.value = emptySet()
         Snapshot.sendApplyNotifications()
         compose.mainClock.advanceTimeBy(16) // one frame; with motion on the dip would stay until 100 ms
@@ -145,9 +162,10 @@ class PressFeelTest {
     @Test
     fun anUnfocusedRowDoesNotReactToTheButton() {
         show()
-        val resting = wholeRow(OTHER)
+        val skip = with(compose.density) { 8.dp.roundToPx() }
+        val resting = wholeRow(OTHER, skip)
         hold("A")
-        assertEquals(resting, wholeRow(OTHER))
+        assertEquals(resting, wholeRow(OTHER, skip))
     }
 
     @Test
@@ -166,7 +184,7 @@ class PressFeelTest {
         assertEquals("A does not press when B confirms", resting, wholeRow(FOCUSED))
         release()
         hold("B")
-        assertTrue("B presses", fillAt(FOCUSED, FILL_Y).near(pressedFill))
+        assertTrue("B presses", fillAt(FOCUSED, FILL_Y).near(pressedFill()))
     }
 
     @Test
@@ -192,9 +210,9 @@ class PressFeelTest {
         held.value = emptySet()
         Snapshot.sendApplyNotifications()
         compose.mainClock.advanceTimeBy(30)
-        assertTrue("still pressed 100 ms after the press began", fillAt(FOCUSED, FILL_Y).near(pressedFill))
+        assertTrue("still pressed 100 ms after the press began", fillAt(FOCUSED, FILL_Y).near(pressedFill()))
         compose.mainClock.advanceTimeBy(500)
-        assertTrue("then released", fillAt(FOCUSED, FILL_Y).near(colors.pill))
+        assertTrue("then released", fillAt(FOCUSED, FILL_Y).near(restFill()))
     }
 
     @Test
@@ -202,8 +220,9 @@ class PressFeelTest {
         Settings.Global.putFloat(RuntimeEnvironment.getApplication().contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 0f)
         show()
         hold("A")
-        assertTrue("the fill changed", fillAt(FOCUSED, FILL_Y).near(pressedFill))
-        assertTrue("and the row did not shrink: the top edge pixel is still the ring", fillAt(FOCUSED, 0).near(colors.accent))
+        assertTrue("the fill changed", fillAt(FOCUSED, FILL_Y).near(pressedFill()))
+        // The slab's top edge lies above the row (it overhangs by [slabOverhang]): the row's own top pixel is inside the fill and stays there.
+        assertTrue("and the row did not shrink: the top pixel is still the fill", fillAt(FOCUSED, 0).near(pressedFill(0)))
     }
 
     @Test
@@ -266,10 +285,10 @@ class PressFeelTest {
         focusedLook = GameRowLook.Focused
         Snapshot.sendApplyNotifications()
         compose.mainClock.advanceTimeBy(300)
-        assertTrue("A is still down from before the focus: the fill is the plain focus fill", fillAt(FOCUSED, FILL_Y).near(colors.pill))
+        assertTrue("A is still down from before the focus: the fill is the plain focus fill", fillAt(FOCUSED, FILL_Y).near(restFill()))
         release()
         hold("A")
-        assertTrue("a new press shows", fillAt(FOCUSED, FILL_Y).near(pressedFill))
+        assertTrue("a new press shows", fillAt(FOCUSED, FILL_Y).near(pressedFill()))
     }
 
     @Test
@@ -304,7 +323,7 @@ class PressFeelTest {
         compose.mainClock.advanceTimeBy(20)
         hold("A") // the button's driver takes the dip over mid-tap
         release()
-        assertTrue("back at rest after A is let go", fillAt(FOCUSED, FILL_Y).near(colors.pill))
+        assertTrue("back at rest after A is let go", fillAt(FOCUSED, FILL_Y).near(restFill()))
     }
 
     private companion object {

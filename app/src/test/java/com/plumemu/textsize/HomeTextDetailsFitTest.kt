@@ -72,8 +72,8 @@ class HomeTextDetailsFitTest {
                 continue
             }
             if (findTagged(details, HomeTags.DETAILS_FACTS) == null) failures += "$label: no facts table"
-            textProblems(details, FitAllowance()).mapTo(failures) { "$label: $it" }
-            // The one-line texts are also checked by width alone; the emulator may wrap to its second line by design.
+            textProblems(details, FitAllowance(oneLine = DETAILS_ONE_LINE)).mapTo(failures) { "$label: $it" }
+            // The one-line texts are also checked by width alone; the emulator ends in an ellipsis by design (one line: a long name must not grow the table).
             for (tag in listOf(HomeTags.DETAILS_TITLE, HomeTags.DETAILS_SYSTEM)) {
                 val node = findTagged(details, tag)
                 if (node == null) failures += "$label: no $tag" else runCatching { assertNoTextCut(node, label) }.exceptionOrNull()?.let { failures += it.message.orEmpty() }

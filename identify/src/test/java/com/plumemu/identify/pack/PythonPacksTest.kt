@@ -49,6 +49,8 @@ class PythonPacksTest {
         val psx = packs.getValue("psx")
         assertEquals("Disc 2", psx.byCode("SLUS-99902").single().variant)
         assertEquals("Zork Station", psx.byCode("SLPS-99903").single().title)
+        // Both fixture discs list one 1,000,000-byte track: the same key, so the lookup reports both.
+        assertEquals(listOf("Disc 1", "Disc 2"), psx.byTrackSizes(listOf(1000000L)).map { it.variant })
         assertEquals("Zork Racing", packs.getValue("wii").byCode("RZZE01").single().title)
         assertEquals("Zork Cube", packs.getValue("gc").byCode("GZZP01").single().title)
 

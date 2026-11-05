@@ -37,6 +37,10 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], qualifiers = "w768dp-h432dp-land-xhdpi")
 internal class SettingsHexKeyboardTest : SettingsModelHarness() {
+    init {
+        startOnRedSans() // the "+" is reached by walking the accent presets from Red
+    }
+
     private val compose = appComposeRule()
 
     @get:Rule
@@ -153,7 +157,8 @@ internal class SettingsHexKeyboardTest : SettingsModelHarness() {
         val use = compose.onNodeWithTag(SettingsTags.HEX_USE).getUnclippedBoundsInRoot()
         assertEquals("same left edge", row.left.value, use.left.value, 0.5f)
         assertEquals("same right edge", row.right.value, use.right.value, 0.5f)
-        assertEquals("same height", (row.bottom - row.top).value, (use.bottom - use.top).value, 0.5f)
+        // The hex row holds the typed code's well now, so it is the taller of the two.
+        assertTrue("the hex row is at least as high", (row.bottom - row.top).value >= (use.bottom - use.top).value - 0.5f)
         assertEquals("one title-line gap under the hex row", (row.bottom + PlumDimens.titleLineGap).value, use.top.value, 0.5f)
     }
 

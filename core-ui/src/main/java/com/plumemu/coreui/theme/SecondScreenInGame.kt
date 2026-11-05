@@ -88,7 +88,7 @@ enum class InGameDimens(
         textSize: TextSize,
         density: Density,
     ): TextStyle {
-        val size = fixedSp(role.scaledSizeSp(font, textSize).dp, density)
+        val size = fixedSp(role.scaledSizeSp(font, textSize, secondScreen = true).dp, density)
         return TextStyle(
             fontFamily = PlumFonts.familyOf(font),
             fontSize = size,

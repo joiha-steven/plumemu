@@ -34,7 +34,7 @@ class DefaultTextSizeTest {
         compose.waitForIdle()
         assertEquals(TextSize.Large, seen)
         assertEquals(TextSize.Large.heightScale, scale, 0f)
-        assertEquals(1.1f, scale, 1e-6f)
+        assertEquals(1.2f, scale, 1e-6f)
     }
 
     @Test

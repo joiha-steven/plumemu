@@ -8,7 +8,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithTag
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
 import kotlinx.coroutines.awaitCancellation
@@ -36,7 +36,7 @@ class HomePosterCoversTest {
     @get:Rule
     val rules = rulesAround(compose)
 
-    private fun show(content: @Composable () -> Unit) = compose.setContent { PlumTheme(MediumText.Default) { content() } }
+    private fun show(content: @Composable () -> Unit) = compose.setContent { PlumTheme(TableText.Default) { content() } }
 
     private fun cellsWithPoster(): Set<Int> =
         (0 until CELLS).filter { index ->

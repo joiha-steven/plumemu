@@ -77,7 +77,7 @@ class SecondScreenFollowsLookTest : SecondScreenHostTestBase() {
         for ((text, style) in medium) {
             val grown = largest[text]?.fontSize?.value ?: continue
             val ratio = grown / style.fontSize.value
-            assertTrue("'$text' grows with Largest (x$ratio)", abs(ratio - TextSize.Largest.factor) < 0.02f)
+            assertTrue("'$text' grows with Largest (x$ratio)", abs(ratio - TextSize.Largest.secondScreenFactor / TextSize.Medium.secondScreenFactor) < 0.02f)
             compared++
         }
         assertTrue("the same texts at Medium and Largest: ${medium.keys} / ${largest.keys}", compared > 0)

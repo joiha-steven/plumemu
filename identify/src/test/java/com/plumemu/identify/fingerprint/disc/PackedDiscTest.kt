@@ -40,15 +40,16 @@ class PackedDiscTest {
     }
 
     @Test
-    fun zsoAndCsoV2AreNotRead() {
-        val zso = PackedImages.cso(DiscImages.pspIso()).also { it[0] = 'Z'.code.toByte() }
+    fun aCsoOfALaterVersionIsANote() {
+        val (v3, _) = read(PackedImages.cso(DiscImages.pspIso(), version = 3), "game.cso", "psp")
+        assertEquals(Container.CSO, v3.container)
+        assertNull(v3.productCode)
+        assertTrue(v3.notes.toString(), v3.notes.any { it.contains("version 3 not read") })
+        // A ZSO has only version 1.
+        val zso = PackedImages.zso(DiscImages.pspIso()).also { it[0x14] = 2 }
         val (z, _) = read(zso, "game.zso", "psp")
-        assertEquals(Container.ZSO, z.container)
-        assertTrue(z.notes.toString(), z.notes.any { it.contains("LZ4") })
-        val (v2, _) = read(PackedImages.cso(DiscImages.pspIso(), version = 2), "game.cso", "psp")
-        assertEquals(Container.CSO, v2.container)
-        assertNull(v2.productCode)
-        assertTrue(v2.notes.toString(), v2.notes.any { it.contains("version 2") })
+        assertNull(z.productCode)
+        assertTrue(z.notes.toString(), z.notes.any { it.contains("version 2 not read") })
     }
 
     private fun cdChd(raw: ByteArray, codecs: List<String> = listOf("cdzl"), plan: (Int) -> HunkPlan = { HunkPlan(0) }, ecc: Set<Int> = emptySet()) =
@@ -190,7 +191,9 @@ class PackedDiscTest {
         assertEquals(Container.M3U, f.container)
         assertEquals("disc1/game.cue", f.innerName)
         assertEquals("SLUS-99999", f.productCode)
-        assertEquals(listOf("disc1/game.cue", "disc1/game.bin"), siblings.opened)
+        // The serial read opens the cue and its data track; the track key opens them again for their sizes. Never disc 2.
+        assertEquals(listOf("disc1/game.cue", "disc1/game.bin"), siblings.opened.take(2))
+        assertTrue(siblings.opened.toString(), siblings.opened.none { it.startsWith("disc2") })
         val (loop, _) = read("loop.m3u\n".toByteArray(), "loop.m3u", "psx", DiscImages.Siblings(files))
         assertNull(loop.productCode)
         assertTrue(loop.notes.toString(), loop.notes.any { it.contains("playlist inside a playlist") })
@@ -206,7 +209,8 @@ class PackedDiscTest {
         assertEquals(CodeKind.DREAMCAST, f.codeKind)
         assertEquals("T-99999N", f.productCode)
         assertEquals("TEST GAME DC", f.internalTitle)
-        assertEquals(listOf("track 03.bin"), siblings.opened)
+        // IP.BIN comes from track 3 first; the other track files are then only sized (and not found here).
+        assertEquals("track 03.bin", siblings.opened.first())
         assertTrue("read $bytes", bytes < 2048)
     }
 

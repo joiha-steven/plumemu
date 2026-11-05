@@ -21,9 +21,9 @@ class PlumColorsTest {
     fun graphiteMatchesTheDesignTable() {
         val expected =
             mapOf(
-                "bg" to "#0E0F11", "text" to "#EDEDED", "strong" to "#FFFFFF", "sel" to "#242527",
-                "sel2" to "#191A1C", "text2" to "#C5C5C5", "meta" to "#A6A6A7", "muted" to "#8F9091",
-                "chip" to "#636365", "accent" to "#DA4655", "onAccent" to "#0E0F11",
+                "bg" to "#111214", "text" to "#EBE7DD", "strong" to "#FFFFFF", "sel" to "#272728",
+                "sel2" to "#1C1D1E", "text2" to "#CCC9C1", "meta" to "#AAA7A1", "muted" to "#94928D",
+                "chip" to "#646360", "accent" to "#DA4655", "onAccent" to "#000000",
             )
         assertEquals(expected, hexes(graphite))
     }
@@ -32,11 +32,26 @@ class PlumColorsTest {
     fun paperMatchesTheDesignTable() {
         val expected =
             mapOf(
-                "bg" to "#F4F3EF", "text" to "#17181A", "strong" to "#000000", "sel" to "#E0DFDC",
-                "sel2" to "#E9E8E4", "text2" to "#323234", "meta" to "#4C4D4D", "muted" to "#5E5E5E",
-                "chip" to "#8A8A89", "accent" to "#9E2A3A", "onAccent" to "#F4F3EF",
+                "bg" to "#ECE8DF", "text" to "#1C1C1E", "strong" to "#0F0F10", "sel" to "#D9D6CE",
+                "sel2" to "#E2DED5", "text2" to "#2D2C2D", "meta" to "#4A4948", "muted" to "#5A5958",
+                "chip" to "#84827E", "accent" to "#9E2A3A", "onAccent" to "#ECE8DF",
             )
         assertEquals(expected, hexes(paper))
+    }
+
+    /** The info line's subtitle is the boards' `text2`: #C9C5BB on Graphite, #4A4740 on Paper (within 5 per channel), and readable on every preset. */
+    @Test
+    fun infoMetaIsTheBoardsText2() {
+        fun near(what: String, want: Int, got: Rgb) {
+            val w = Rgb(want)
+            for ((a, b) in listOf(w.red to got.red, w.green to got.green, w.blue to got.blue)) assertTrue("$what ${got.toHex()} vs ${w.toHex()}", kotlin.math.abs(a - b) <= 5)
+        }
+        near("graphite", 0xC9C5BB, graphite.infoMeta)
+        near("paper", 0x4A4740, paper.infoMeta)
+        for (preset in BackgroundPreset.entries) {
+            val c = PlumColors.derive(preset.color, TextMode.bestOn(preset.color))
+            assertTrue("$preset infoMeta on the page", ColorMath.contrast(c.infoMeta, c.bg) >= 4.5)
+        }
     }
 
     /**
@@ -46,10 +61,10 @@ class PlumColorsTest {
     @Test
     fun keyboardTrayTokensMatchTheBoard() {
         fun tray(c: PlumColors) = listOf(c.tray, c.trayKey, c.trayEdge).map { it.toHex() }
-        assertEquals(listOf("#1B1C1E", "#292A2B", "#2D2E30"), tray(graphite))
-        assertEquals(listOf("#E7E6E2", "#D9D9D5", "#D5D4D1"), tray(paper))
-        assertEquals(listOf("#0E0E0E", "#1C1C1C", "#212121"), tray(PlumColors.derive(BackgroundPreset.Black.color, TextMode.Light)))
-        assertEquals(listOf("#191F2C", "#262C39", "#2B313D"), tray(PlumColors.derive(BackgroundPreset.Midnight.color, TextMode.Light)))
+        assertEquals(listOf("#18191C", "#2B2C2C", "#313438"), tray(graphite))
+        assertEquals(listOf("#E0DCD3", "#D3D0C8", "#CFCBC4"), tray(paper))
+        assertEquals(listOf("#070808", "#1C1C1B", "#232528"), tray(PlumColors.derive(BackgroundPreset.Black.color, TextMode.Light)))
+        assertEquals(listOf("#121927", "#262C37", "#2C3443"), tray(PlumColors.derive(BackgroundPreset.Midnight.color, TextMode.Light)))
     }
 
     /** Mixed towards the text: lighter than a dark background, darker than a light one. */
@@ -119,8 +134,8 @@ class PlumColorsTest {
     }
 
     @Test
-    fun defaultRedIsAbout456To1OnGraphite() {
-        assertEquals(4.56, ColorMath.contrast(Rgb(0xDA4655), BackgroundPreset.Graphite.color), 0.01)
+    fun defaultRedIsAbout445To1OnGraphite() {
+        assertEquals(4.45, ColorMath.contrast(Rgb(0xDA4655), BackgroundPreset.Graphite.color), 0.01)
     }
 
     @Test
@@ -143,9 +158,9 @@ class PlumColorsTest {
         val plum = PlumColors.derive(BackgroundPreset.Plum.color, TextMode.Light)
         assertNotEquals(graphite.sel, plum.sel)
         // Values from the board's reference code with bg #1A1020.
-        assertEquals("#2F2635", plum.sel.toHex())
-        assertEquals("#CBCACC", plum.text2.toHex())
-        assertEquals("#949097", plum.muted.toHex())
+        assertEquals("#2F2633", plum.sel.toHex())
+        assertEquals("#CEC9C3", plum.text2.toHex())
+        assertEquals("#979191", plum.muted.toHex())
         // Tinted: red and blue above green, like the plum background.
         assertTrue(plum.sel.red > plum.sel.green && plum.sel.blue > plum.sel.green)
     }
@@ -181,19 +196,19 @@ class PlumColorsTest {
         // Black: the background is already black and reaches it, so nothing falls back (the same colour either way).
         val black = PlumColors.derive(BackgroundPreset.Black.color, TextMode.Light, red)
         assertEquals(black.bg, black.onAccent)
-        // Graphite reaches 4.56 with its own background, which stays the word.
+        // Graphite (#111214, the board's) reaches 4.45 with its own background, so it falls back to black like Midnight.
         val graphite = PlumColors.derive(BackgroundPreset.Graphite.color, TextMode.Light, red)
-        assertEquals(graphite.bg, graphite.onAccent)
+        assertEquals(Rgb(0x000000), graphite.onAccent)
     }
 
     @Test
     fun accentPresetsMatchTheDesign() {
         assertEquals(
-            listOf("#DA4655", "#E8A13A", "#B583E8", "#6FA8FF", "#5FD38D", "#EDEDED"),
+            listOf("#DA4655", "#E8A13A", "#B583E8", "#6FA8FF", "#5FD38D", "#EBE7DD"),
             AccentPreset.entries.map { it.colorFor(TextMode.Light).toHex() },
         )
         assertEquals(
-            listOf("#9E2A3A", "#8F5500", "#7A3FC0", "#1F5FBF", "#1A6B3B", "#17181A"),
+            listOf("#9E2A3A", "#8F5500", "#7A3FC0", "#1F5FBF", "#1A6B3B", "#1C1C1E"),
             AccentPreset.entries.map { it.colorFor(TextMode.Dark).toHex() },
         )
         assertEquals(AccentPreset.Red, AccentPreset.Default)
@@ -202,7 +217,7 @@ class PlumColorsTest {
     @Test
     fun backgroundPresetsMatchTheDesign() {
         assertEquals(
-            listOf("#0E0F11", "#000000", "#0B1220", "#1A1020", "#0E1A14", "#F4F3EF", "#EEE6D6", "#E8ECF0"),
+            listOf("#111214", "#000000", "#0B1220", "#1A1020", "#0E1A14", "#ECE8DF", "#EEE6D6", "#E8ECF0"),
             BackgroundPreset.entries.map { it.color.toHex() },
         )
     }

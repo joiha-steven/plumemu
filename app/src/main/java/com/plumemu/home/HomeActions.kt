@@ -11,6 +11,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.plumemu.coreinput.Action
+import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreinput.strip.StripFocus
 import com.plumemu.coreinput.strip.StripIntent
@@ -68,11 +69,10 @@ internal fun FollowRouterActions(
                     val read = shoulders().read(action)
                     // L1 / R1 in a game grid is its size, in Apps' grid nothing.
                     if (gridSizeKeys.handle(read, state.focus, content(), feel)) return@collect
-                    // An empty library: A asks for a folder (the same picker as Settings › Library › Add folder).
-                    if (read == Action.Enter && content().asksForFolderAt(content().entries.getOrNull(state.focus.systemIndex))) {
-                        feel.emit(Outcome.Activated)
-                        callbacks().onAddFolder()
-                        return@collect
+                    // An empty library: Left and Right move between the empty state's buttons, A presses the focused one
+                    // (Add folder and Choose folder open the folder picker, as Settings › Library › Add folder does).
+                    if (content().asksForFolderAt(content().entries.getOrNull(state.focus.systemIndex))) {
+                        if (onEmptyState(read, targets)) return@collect
                     }
                     val homeAction = homeAction(read)
                     feel.act {
@@ -85,6 +85,54 @@ internal fun FollowRouterActions(
             }
         }
     }
+}
+
+/**
+ * The empty state's own reading of [read]; true when it took the action. A presses the focused button, or the primary one
+ * from the column row (the shortcut; the Apps row has games, so it is not here). Right enters the buttons, Left from the first
+ * one goes back to the column, Back and Up/Down too.
+ */
+private fun onEmptyState(
+    read: Action,
+    targets: HomeActionTargets,
+): Boolean {
+    val notices = targets.callbacks().notices
+    val focus = notices.emptyFocus
+    val count = buttonsFor(notices.emptyLibrary.value).size
+    val feel = targets.feel
+    val direction = (read as? Action.Move)?.direction
+    when {
+        // While no button is shown (reading the folders) A does nothing: it must not open the picker unseen.
+        read == Action.Enter -> {
+            val button = notices.focusedEmptyButton() ?: return true
+            feel.emit(Outcome.Activated)
+            if (button == EmptyButton.FilesNotAdded) targets.callbacks().onFilesNotAdded() else targets.callbacks().onAddFolder()
+        }
+        direction == Direction.Right && count > 0 -> {
+            if (focus.inButtons) {
+                if (focus.move(1, count)) feel.emit(Outcome.Moved)
+            } else {
+                focus.index = 0
+                focus.inButtons = true
+                feel.emit(Outcome.Moved)
+            }
+        }
+        direction == Direction.Left && focus.inButtons -> {
+            if (focus.indexIn(count) == 0) focus.inButtons = false else focus.move(-1, count)
+            feel.emit(Outcome.Moved)
+        }
+        read == Action.Back && focus.inButtons -> {
+            focus.inButtons = false
+            feel.emit(Outcome.WentBack)
+        }
+        // Up and Down leave the buttons and move the column as usual.
+        (direction == Direction.Up || direction == Direction.Down) && focus.inButtons -> {
+            focus.inButtons = false
+            return false
+        }
+        else -> return false
+    }
+    return true
 }
 
 private fun handleIntent(
@@ -112,9 +160,12 @@ private fun handleIntent(
             if (entry.kind == EntryKind.Apps) {
                 entry.gameAt(intent.index)?.let(menu::openAppMenu) == true
             } else {
-                entry.gameAt(intent.index)?.let { menu.openMenu(it, fromRecent = entry.kind == EntryKind.Recent) } == true
+                entry.gameAt(intent.index)?.let { menu.openMenu(it, fromRecent = entry.kind == EntryKind.Recent, canSort = entry.kind.followsSort) } == true
             }
         } == true
+    // R3 on a game of a list the sort orders: the sort choices alone, without the game menu.
+    is StripIntent.OpenSortMenu ->
+        content.entry(intent.systemId)?.takeIf { it.kind.followsSort }?.gameAt(intent.index)?.let(menu::openSortMenu) == true
     StripIntent.OpenSettings -> {
         callbacks.onSettings()
         true

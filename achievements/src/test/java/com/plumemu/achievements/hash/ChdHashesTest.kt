@@ -105,7 +105,7 @@ class ChdHashesTest {
     fun theTracksReadBackByteForByteLikeTheBin() {
         val bin = ps1Bin()
         val dataBytes = 27 * 2352
-        for (name in listOf("ps1-cdlz.chd", "ps1-cdzl.chd")) {
+        for (name in listOf("ps1-cdlz.chd", "ps1-cdzl.chd", "ps1-cdzs.chd")) {
             ChdImage.open(MemorySource(name, fixture(name)), {}).use { image ->
                 val tracks = checkNotNull(image.cdTracks)
                 assertEquals(listOf(1 to 27, 2 to 12), tracks.map { it.number to it.frames })
@@ -124,12 +124,14 @@ class ChdHashesTest {
     @Test
     fun aMode1ChdGetsItsErrorCorrectionBytesBack() {
         val bin = mode1Bin()
-        val chd = fixture("ps1-mode1-cdlz.chd")
-        assertEquals(RaHashResult.Hashed(ps1Md5), hash(RaConsoles.PLAYSTATION, "ps1.chd", chd))
-        ChdImage.open(MemorySource("ps1.chd", chd), {}).use { image ->
-            val data = ByteArray(bin.size)
-            assertEquals(bin.size, ChdTrackFile(image, checkNotNull(image.cdTracks)[0]).readAt(0, data, 0, data.size))
-            assertArrayEquals(bin, data)
+        for (name in listOf("ps1-mode1-cdlz.chd", "ps1-mode1-cdzs.chd")) {
+            val chd = fixture(name)
+            assertEquals(name, RaHashResult.Hashed(ps1Md5), hash(RaConsoles.PLAYSTATION, "ps1.chd", chd))
+            ChdImage.open(MemorySource("ps1.chd", chd), {}).use { image ->
+                val data = ByteArray(bin.size)
+                assertEquals(bin.size, ChdTrackFile(image, checkNotNull(image.cdTracks)[0]).readAt(0, data, 0, data.size))
+                assertArrayEquals(name, bin, data)
+            }
         }
     }
 
@@ -170,13 +172,30 @@ class ChdHashesTest {
         val (flac, flacMessage) = reasonOf(hash(RaConsoles.PLAYSTATION, "ps1.chd", fixture("ps1-cdfl.chd")))
         assertEquals(NeedsDecoder, flac)
         assertEquals("cdfl hunks need a decoder", flacMessage)
-        val (zstd, zstdMessage) = reasonOf(hash(RaConsoles.PLAYSTATION, "ps1.chd", fixture("ps1-cdzs.chd")))
-        assertEquals(NeedsDecoder, zstd)
-        assertEquals("cdzs hunks need a decoder", zstdMessage)
         // The header names its compressors; one renamed to a codec that is not here is the same answer.
         val patched = fixture("ps1-cdlz.chd")
+        "huff".toByteArray().copyInto(patched, 16)
+        assertEquals(NeedsDecoder to "huff hunks need a decoder", reasonOf(hash(RaConsoles.PLAYSTATION, "ps1.chd", patched)))
+    }
+
+    @Test
+    fun aCdzsChdHashesLikeItsBinAndCue() {
+        assertEquals(RaHashResult.Hashed(ps1Md5), hash(RaConsoles.PLAYSTATION, "ps1.chd", fixture("ps1-cdzs.chd")))
+    }
+
+    @Test
+    fun aZstdRawChdHashesLikeTheIsoItHolds() {
+        assertEquals(RaHashResult.Hashed(segaMd5), hash(RaConsoles.SEGA_CD, "sega-zstd.chd", fixture("sega-zstd.chd")))
+    }
+
+    @Test
+    fun aZstdHunkThatIsNotValidZstdIsBadImageNotAHash() {
+        // The cdlz fixture with its codec renamed to zstd: its hunks are LZMA data, which is no zstd frame.
+        val patched = fixture("ps1-cdlz.chd")
         "zstd".toByteArray().copyInto(patched, 16)
-        assertEquals(NeedsDecoder to "zstd hunks need a decoder", reasonOf(hash(RaConsoles.PLAYSTATION, "ps1.chd", patched)))
+        val (reason, message) = reasonOf(hash(RaConsoles.PLAYSTATION, "ps1.chd", patched))
+        assertEquals(BadImage, reason)
+        assertTrue(message, message!!.contains("cannot be decompressed"))
     }
 
     @Test

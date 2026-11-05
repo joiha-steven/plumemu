@@ -12,7 +12,12 @@ internal const val TARGET_PACKAGE = "com.plumemu"
 internal const val EXTRA_LARGE_LIBRARY = "com.plumemu.benchmark.LARGE_LIBRARY"
 
 /** Shows the second screen's window on an Unsure screen (the emulator's overlay); benchmark builds only (`SecondScreenHost`). */
+internal const val EXTRA_DETAILS = "com.plumemu.benchmark.DETAILS"
+internal const val EXTRA_COVERS = "com.plumemu.benchmark.COVERS"
 internal const val EXTRA_SECOND_SCREEN = "com.plumemu.benchmark.SECOND_SCREEN"
+
+/** Drawing families to skip, from the run argument `plumemu.skip` (`glow`, `collar`, `bands`, comma separated): isolates what each costs. */
+internal const val EXTRA_SKIP_DRAWING = "com.plumemu.benchmark.SKIP_DRAWING"
 
 /** A system name on the first screen of both contents: the main screen has drawn. */
 private const val FIRST_SCREEN_TEXT = "Super Nintendo"
@@ -25,11 +30,16 @@ private const val MOVES_TO_FIRST_SYSTEM = 3
 internal fun MacrobenchmarkScope.startHome(
     largeLibrary: Boolean = false,
     secondScreen: Boolean = false,
+    details: Boolean = false,
+    covers: Boolean = false,
 ) {
     pressHome()
     startActivityAndWait { intent ->
         intent.putExtra(EXTRA_LARGE_LIBRARY, largeLibrary)
         intent.putExtra(EXTRA_SECOND_SCREEN, secondScreen)
+        intent.putExtra(EXTRA_DETAILS, details)
+        intent.putExtra(EXTRA_COVERS, covers)
+        intent.putExtra(EXTRA_SKIP_DRAWING, InstrumentationRegistry.getArguments().getString("plumemu.skip"))
     }
     check(device.wait(Until.hasObject(By.text(FIRST_SCREEN_TEXT)), FIRST_SCREEN_TIMEOUT_MS)) {
         "The main screen did not show \"$FIRST_SCREEN_TEXT\" within $FIRST_SCREEN_TIMEOUT_MS ms"
@@ -166,3 +176,27 @@ private const val SETTINGS_SECTIONS = 6
 private const val ROWS_PER_SECTION = 4
 private const val MAX_BACKS = 6
 private val SEARCH_KEYS = listOf(KeyEvent.KEYCODE_M, KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_R, KeyEvent.KEYCODE_I, KeyEvent.KEYCODE_O)
+
+/** Systems with games on the board with covers; every one is made a grid by [openGridOnDs]. */
+private const val BOARD_SYSTEMS = 18
+
+/** Nintendo DS sits fifth among the systems, under Recent, Favorites and Apps. */
+private const val SYSTEMS_BEFORE_DS = 4
+
+/**
+ * From the system column of the board with covers: SELECT turns every system into a grid, then the
+ * focus goes to Nintendo DS (88 games) and into its games. Covers are given time to land.
+ */
+internal fun MacrobenchmarkScope.openGridOnDs() {
+    repeat(MOVES_TO_FIRST_SYSTEM) { device.pressDPadDown() }
+    repeat(BOARD_SYSTEMS) {
+        device.pressKeyCode(KeyEvent.KEYCODE_BUTTON_SELECT)
+        device.pressDPadDown()
+    }
+    repeat(BOARD_SYSTEMS - 1 - SYSTEMS_BEFORE_DS) { device.pressDPadUp() }
+    device.pressDPadRight()
+    device.waitForIdle()
+    SystemClock.sleep(COVERS_LAND_MS)
+}
+
+private const val COVERS_LAND_MS = 1_500L

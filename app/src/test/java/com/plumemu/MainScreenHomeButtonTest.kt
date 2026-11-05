@@ -228,7 +228,7 @@ class MainScreenHomeButtonTest {
             object : HomeRoleActions {
                 override fun isHomeApp() = false
 
-                override fun requestHomeRole() = false
+                override fun requestHomeRole(onAnswered: (Boolean) -> Unit) = false
 
                 override fun markAsked() = Unit
             }
@@ -258,7 +258,7 @@ class MainScreenHomeButtonTest {
             object : HomeRoleActions {
                 override fun isHomeApp() = false
 
-                override fun requestHomeRole() = false
+                override fun requestHomeRole(onAnswered: (Boolean) -> Unit) = false
 
                 override fun markAsked() = Unit
             }

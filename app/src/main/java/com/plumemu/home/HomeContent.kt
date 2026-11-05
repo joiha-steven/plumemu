@@ -51,6 +51,8 @@ data class GameRowModel(
      * Apps entry's rows. Such a row has no box art: the grid, the details and the second screen draw its Android icon.
      */
     val appPackage: String? = null,
+    /** The saved box front's width over height as stored with the game; null while it is not known. Sizes its cover before the picture's result is read. */
+    val artAspect: Float? = null,
 ) {
     /** What the icons are asked by: an app game's package, else the row's id (the Apps entry's `package/activity`). */
     val iconKey: String get() = appPackage ?: id
@@ -85,6 +87,31 @@ data class GameRowModel(
         if (year == null) return region
         return if (joinPlace != null && region.isNotEmpty()) joinPlace(year.toString(), region) else year.toString()
     }
+
+    /**
+     * The row's year and region for the board's two columns (a wide single system's list with room): the year (from
+     * [details], else ScreenScraper's; empty without box art, while the result is being read or when none is known) and
+     * the [region], which may be empty. An empty year leaves its cell empty, so the region never moves. Null only in a
+     * list that mixes systems ([showsSystem] with a short name): the row then shows [trailing] as one text.
+     */
+    fun yearAndRegion(
+        hasBoxArt: Boolean,
+        art: ArtSlot = ArtSlot.Absent,
+        showsSystem: Boolean = false,
+    ): Pair<String, String>? {
+        if (showsSystem && systemAbbr.isNotEmpty()) return null
+        val year =
+            if (!hasBoxArt) {
+                null
+            } else {
+                details?.year
+                    ?: when (art) {
+                        ArtSlot.Unknown, ArtSlot.Absent -> null
+                        is ArtSlot.Found -> art.art.details.year
+                    }
+            }
+        return year?.toString().orEmpty() to region
+    }
 }
 
 /**
@@ -116,6 +143,9 @@ data class PlayFacts(
     val lastPlayedDaysAgo: Int?,
     val playTimeMinutes: Int,
     val emulator: String,
+    /** The game's usual time on a charge and its drain (the fakes'; a read game has its own pace): both null shows no battery cell. */
+    val batteryMinutesOnCharge: Double? = null,
+    val batteryPercentPerHour: Double? = null,
 )
 
 /** The entries of the system column: three fixed ones, then each system with games. */
@@ -128,6 +158,9 @@ enum class EntryKind {
 
     /** Recent and Favorites hold games of many systems, so their rows show the system's short name in place of the year. */
     val mixesSystems: Boolean get() = this == Recent || this == Favorites
+
+    /** A system's list and Favorites follow Settings › Library › Sort games; Recent is newest first and Apps are listed by Android. */
+    val followsSort: Boolean get() = this == System || this == Favorites
 }
 
 /**
@@ -148,6 +181,8 @@ data class SystemGames(
     val info: SystemInfo? = null,
     /** The system's three-character code (platform data `code`) for the peek's System codes; empty where the data has none ([entryCode] then spells one from the name). */
     val code: String = "",
+    /** The platform data's short name ("SNES", "Mega Drive"), for the second screen's captions; empty where the data has none. */
+    val shortName: String = "",
 )
 
 /**
@@ -173,6 +208,8 @@ data class HomeEntry(
     val systemShapes: Map<String, CoverShape> = emptyMap(),
     /** The same ids' display names ("Super Nintendo"), for the poster cover's band in a mixed grid; empty for a system's own entry (its [name] is the one). */
     val systemNames: Map<String, String> = emptyMap(),
+    /** The same ids' short names ([SystemGames.shortName]), for the second screen's captions under the covers. */
+    val systemShortNames: Map<String, String> = emptyMap(),
     /** A system's badge and facts for the band over its list ([SystemInfo]); null for the fixed entries and unknown systems. */
     val info: SystemInfo? = null,
     /** The rows are in name order; false for a list sorted by last played (Settings › Library › Sort games). */
@@ -214,8 +251,8 @@ data class HomeEntry(
      */
     val isAppGamesGrid: Boolean by lazy(LazyThreadSafetyMode.PUBLICATION) { kind == EntryKind.System && rows.isNotEmpty() && rows.all { it.appPackage != null } }
 
-    /** Apps never has a details column or details stop: apps have no art. */
-    val hasDetails: Boolean get() = kind != EntryKind.Apps
+    /** Every entry has a details column or stop; Apps shows its icon and package there ([AppDetails]), in its list only (see [HomeContent.systemEntryOf]). */
+    val hasDetails: Boolean get() = true
 }
 
 /**
@@ -281,7 +318,7 @@ class HomeContent private constructor(
     private fun systemEntryOf(
         entry: HomeEntry,
         columns: Int,
-    ) = SystemEntry(entry.id, entry.count, columns, entry.hasDetails, entry.rowIds)
+    ) = SystemEntry(entry.id, entry.count, columns, entry.hasDetails && !(entry.kind == EntryKind.Apps && columns > 1), entry.rowIds)
 
     /** The same screen with [entries] in place of these (Favorites marks, FavoriteMarks). */
     internal fun withEntries(
@@ -319,17 +356,18 @@ class HomeContent private constructor(
             showApps: Boolean = true,
             /** Library › Systems: systems left out of the column, still searched. */
             hiddenSystems: List<SystemGames> = emptyList(),
-            /** Sort games by name (false: by last played), which decides whether the lists have a letter rail. */
+            /** Sort games by name (false: any other sort), which decides whether the lists have a letter rail. */
             sortedByName: Boolean = true,
             /** Settings › Home screen › Left edge. */
             leftEdge: LeftEdgeSetting = LeftEdgeSetting.Default,
         ): HomeContent {
             val shapes = (systems + hiddenSystems).associate { it.id to it.coverShape }
             val names = (systems + hiddenSystems).associate { it.id to it.name }
+            val shortNames = (systems + hiddenSystems).filter { it.shortName.isNotEmpty() }.associate { it.id to it.shortName }
             val fixed =
                 listOfNotNull(
-                    HomeEntry(RECENT_ID, EntryKind.Recent, null, recent, MixedGridShape, systemShapes = shapes, systemNames = names),
-                    HomeEntry(FAVORITES_ID, EntryKind.Favorites, null, favorites, MixedGridShape, systemShapes = shapes, systemNames = names, sortedByName = sortedByName),
+                    HomeEntry(RECENT_ID, EntryKind.Recent, null, recent, MixedGridShape, systemShapes = shapes, systemNames = names, systemShortNames = shortNames),
+                    HomeEntry(FAVORITES_ID, EntryKind.Favorites, null, favorites, MixedGridShape, systemShapes = shapes, systemNames = names, systemShortNames = shortNames, sortedByName = sortedByName),
                     if (showApps) HomeEntry(APPS_ID, EntryKind.Apps, null, apps) else null,
                 )
             fun entriesOf(list: List<SystemGames>) =

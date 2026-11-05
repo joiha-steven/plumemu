@@ -2,9 +2,11 @@ package com.plumemu.game
 
 import com.plumemu.coredata.db.AppKind
 import com.plumemu.graph.CoreQuestion
+import com.plumemu.launcher.LaunchOutcome
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import com.plumemu.coredata.settings.SortGamesSetting
 import androidx.compose.ui.res.stringResource
 import com.plumemu.R
 import com.plumemu.account.clockTime
@@ -73,6 +75,12 @@ internal sealed interface PanelCommand {
     data class PlayWith(val emulatorId: String?, val forSystem: Boolean = false) : PanelCommand
 
     data class GetEmulator(val packageName: String, val name: String) : PanelCommand
+
+    /** Sort by…: the sorts of the games list, the one in use marked. */
+    data object OpenSortMenu : PanelCommand
+
+    /** Stores [sort] as the sort of every games list (Settings › Library › Sort games) and closes the panel. */
+    data class SetSort(val sort: SortGamesSetting) : PanelCommand
 
     data object RescanLibrary : PanelCommand
 
@@ -163,10 +171,24 @@ internal data class PanelContent(
     val title: UiText,
     val body: List<UiText> = emptyList(),
     val items: List<PanelItem> = emptyList(),
+    /**
+     * The rows are buttons side by side under the body, the first row (the one focused first) at the right: Left and Right
+     * move between them. Only the core question; every other panel lists its rows.
+     */
+    val isButtonRow: Boolean = false,
 ) {
     /** The rows the cursor can stand on, in order; the panel's focus is an index into this. */
     val focusableRows: List<PanelRow> = items.mapNotNull { (it as? PanelItem.Row)?.row?.takeIf(PanelRow::isEnabled) }
 }
+
+/** The row opens another page or list (the menu draws a chevron after it). */
+internal val PanelCommand.opensSomething: Boolean
+    get() = when (this) {
+        PanelCommand.OpenPlayWith, PanelCommand.OpenVersions, PanelCommand.OpenSortMenu, PanelCommand.OpenNameMenu,
+        PanelCommand.OpenFixName, PanelCommand.OpenOwnName, PanelCommand.OpenFixBoxArt, PanelCommand.OpenInfo,
+        -> true
+        else -> false
+    }
 
 /** Which panel is open. */
 @Immutable
@@ -193,11 +215,18 @@ internal sealed interface PanelScreen {
         val scroll: InfoScroll = InfoScroll(),
     ) : PanelScreen
 
+    /** Sort by…: the sorts on offer, in the menu's place (or alone, from the list's R3 hint). */
+    data class SortMenu(val choices: SortChoices) : PanelScreen
+
     /** Name…: the naming entries, in the menu's place. */
     data class NameMenu(val facts: GameFacts) : PanelScreen
 
     /** A launch error, or another failure the person must hear about. */
-    data class Message(val content: PanelContent) : PanelScreen
+    data class Message(
+        val content: PanelContent,
+        /** The launch outcome this message tells of, when it talks about emulators to get: re-read when packages change ([refreshedEmulators]). */
+        val about: LaunchOutcome? = null,
+    ) : PanelScreen
 
     /** Fix name…: a field and the ranked titles of the system's name list. */
     data class FixName(override val typing: FixNameState) : PanelScreen, TypingScreen
@@ -243,6 +272,7 @@ internal fun contentOf(
         is PanelScreen.Menu -> gameMenuContent(game, screen.facts)
         is PanelScreen.AppMenu -> appMenuContent(game, screen.canUninstall, screen.canChooseKind)
         is PanelScreen.NameMenu -> nameMenuContent(game, screen.facts)
+        is PanelScreen.SortMenu -> sortMenuContent(screen.choices)
         is PanelScreen.PlayWith -> playWithContent(screen.listing)
         is PanelScreen.Versions -> versionsContent(screen.listing)
         // Read-only facts, then one "Back" row so something is always focused.
@@ -253,5 +283,8 @@ internal fun contentOf(
         is PanelScreen.OwnName -> PanelContent(UiText.Res(R.string.game_own_name_title))
         is PanelScreen.FixBoxArt -> PanelContent(UiText.Res(R.string.game_fix_box_art_title))
     }
+
+/** The card is as tall as its content (up to the room there is): a question or a message, never a menu or a list. */
+internal val OpenPanel.hugsContent: Boolean get() = content.isButtonRow || screen is PanelScreen.Message
 
 internal const val INFO_BACK_KEY = "back"

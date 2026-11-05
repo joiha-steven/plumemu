@@ -78,6 +78,10 @@ internal class EventQueue(
         }
     }
 
+    /** Every queued event, oldest first. */
+    @Synchronized
+    fun all(): List<Entry> = entries().toList()
+
     /** The oldest events, at most [maxCount] and [maxBytes] together (at least one if any). */
     @Synchronized
     fun peek(

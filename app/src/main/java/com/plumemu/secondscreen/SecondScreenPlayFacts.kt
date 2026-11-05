@@ -5,7 +5,7 @@ import com.plumemu.coredata.db.GameDao
 import com.plumemu.coredata.db.PlayDao
 import com.plumemu.game.EmulatorToStart
 import com.plumemu.game.daysAgo
-import com.plumemu.graph.AchievementCount
+import com.plumemu.graph.StoredAchievements
 import com.plumemu.home.GameArt
 import java.util.concurrent.TimeUnit
 
@@ -20,8 +20,8 @@ internal class SecondScreenPlayFacts(
     private val plays: () -> PlayDao,
     private val now: () -> Long = System::currentTimeMillis,
     /**
-     * The saved result under a scrape key (its large box front, facts and description; [cardResult]),
-     * or null (read off the main thread); null: cards carry no art and no details.
+     * The saved result under a scrape key (its facts and description; [cardResult]),
+     * or null (read off the main thread); null: cards carry no details.
      */
     private val resultOf: (suspend (String) -> GameArt?)? = null,
     /**
@@ -41,11 +41,13 @@ internal class SecondScreenPlayFacts(
      */
     private val paceOf: (suspend (Long) -> BatteryPace?)? = null,
     /**
-     * A game id's stored RetroAchievements progress (`GraphAchievements.storedCountOf`: the database only, never the network), read
-     * with the play facts; null: no line.
+     * A game id's stored RetroAchievements progress, points and latest unlocks (`GraphAchievements.storedFactsOf`: the database only,
+     * never the network), read with the play facts; null: no achievements tile.
      */
-    private val achievementsOf: (suspend (Long) -> AchievementCount?)? = null,
-    /** Whether the window has room for art; false never opens the result read. */
+    private val achievementsOf: (suspend (Long) -> StoredAchievements?)? = null,
+    /** The figures of the system column's cards (a system, Recent, Favorites); null: those cards show their header only. */
+    private val entries: SecondScreenEntryReads? = null,
+    /** Whether the window has room for the card's description; false never opens the result read. */
     private val isArtShown: () -> Boolean = { true },
 ) {
     /** [content] with its facts filled in; null when it has none to read (it is shown as it is). Throws what the database throws. */
@@ -57,11 +59,12 @@ internal class SecondScreenPlayFacts(
                 val needsPlay = id != null && !content.isPlayKnown
                 val readArt = resultOf
                 // A card with its details (the fakes' rows, or the same card again) has nothing left to read.
-                val needsArt = key != null && readArt != null && content.art == null && content.details == null && isArtShown()
-                if (!needsPlay && !needsArt) {
+                val needsResult = key != null && readArt != null && content.details == null && isArtShown()
+                if (!needsPlay && !needsResult) {
                     null
                 } else {
                     val play = if (needsPlay && id != null) plays().play(id) else null
+                    val stored = if (needsPlay) achievementsOf?.let { read -> read(requireNotNull(id)) } else null
                     val withPlay =
                         if (needsPlay) {
                             content.copy(
@@ -71,29 +74,22 @@ internal class SecondScreenPlayFacts(
                                 emulator = emulatorOf?.let { read -> EmulatorFact(read(requireNotNull(id))) },
                                 fileName = fileNameOf?.let { read -> read(requireNotNull(id)) },
                                 batteryPace = paceOf?.let { read -> read(requireNotNull(id)) },
-                                achievements = achievementsOf?.let { read -> read(requireNotNull(id)) },
+                                achievements = stored?.count,
+                                ra = stored,
+                                raLatestDaysAgo = stored?.recent?.firstOrNull()?.let { daysAgo(it.earnedAt, now()) },
+                                weeks = playWeeksOf(plays().sessions(requireNotNull(id)), now()),
                             )
                         } else {
                             content
                         }
-                    if (needsArt && key != null && readArt != null) {
-                        val result = readArt(key)
-                        withPlay.copy(art = result?.large, details = result?.details, hasNoPicture = result?.large == null)
+                    if (needsResult && key != null && readArt != null) {
+                        withPlay.copy(details = readArt(key)?.details)
                     } else {
                         withPlay
                     }
                 }
             }
-            is SecondScreenContent.System -> {
-                val last =
-                    when (val from = content.lastPlayFrom) {
-                        null -> null
-                        is LastPlayLookup.FirstGame -> plays().play(from.gameId)?.let { from.title to it.lastPlayedAt }
-                        is LastPlayLookup.InSystem -> plays().newestPlayInSystem(from.systemId)?.let { it.title to it.lastPlayedAt }
-                        LastPlayLookup.AmongFavorites -> plays().newestFavoritePlay()?.let { it.title to it.lastPlayedAt }
-                    }
-                last?.let { (title, at) -> content.copy(lastGameTitle = title, lastPlayedDaysAgo = daysAgo(at, now())) }
-            }
+            is EntryContent -> entries?.fill(content)
             else -> null
         }
 }

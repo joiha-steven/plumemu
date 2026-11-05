@@ -105,7 +105,7 @@ abstract class GameRowAbbrAlignBase {
         var widest = ""
         val longTitle = "The Legend of Zelda: A Link to the Past and Four Swords, Special Anniversary Collector's Edition " +
                 "with the Complete Soundtrack, Strategy Guide and Behind the Scenes Documentary Disc"
-        var size by mutableStateOf(TextSize.Medium)
+        var size by mutableStateOf(TextSize.Small)
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 widest = widestAbbreviation()
@@ -117,7 +117,7 @@ abstract class GameRowAbbrAlignBase {
             }
         }
         val problems = mutableListOf<String>()
-        for (each in listOf(TextSize.Medium, TextSize.Largest)) {
+        for (each in listOf(TextSize.Small, TextSize.Largest)) {
             size = each
             compose.waitForIdle()
             val at = "$label ${each.name}"

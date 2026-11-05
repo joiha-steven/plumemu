@@ -7,6 +7,8 @@ import android.os.BatteryManager
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.plumemu.coredata.db.PlumDatabase
+import com.plumemu.coredata.settings.BoxArtSourceSetting
+import com.plumemu.coredata.settings.effectiveBoxArtSource
 import com.plumemu.coredata.db.ScrapedGameDao
 import com.plumemu.library.scrape.AskAgain
 import com.plumemu.library.scrape.LibraryScrapeSource
@@ -18,6 +20,7 @@ import com.plumemu.settings.screen.SettingsBoxArtActions
 import com.plumemu.scraper.ScrapeResult
 import com.plumemu.scraper.UnavailableReason
 import com.plumemu.account.AccountStatus
+import com.plumemu.scraper.PictureFailure
 import com.plumemu.scraper.work.ScrapeRunEnd
 import com.plumemu.scraper.work.ScrapeScheduler
 import com.plumemu.scraper.work.forgetNetworkFailures
@@ -36,6 +39,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -54,8 +58,11 @@ import kotlinx.coroutines.withContext
  * [com.plumemu.scraper.work.ScraperHost]), when one is asked for ([requestRun]: after a scan, after
  * a sign-in), and the run's state for Settings ([status]).
  *
- * - Nothing runs without a usable account: signed in, not refused, a build with developer
- *   credentials ([GraphScraperAccounts.scraper] is null otherwise), so no request goes out.
+ * - What runs depends on the box art source ([source]): ScreenScraper needs a usable account: signed
+ *   in, not refused, a build with developer credentials ([GraphScraperAccounts.scraper] is null
+ *   otherwise); "Box art only" runs with [libretroScraper] and no account, and never calls
+ *   ScreenScraper; Plumemu's own covers make no request. Not chosen yet: ScreenScraper when an
+ *   account is usable, else Plumemu's own covers.
  * - A run that meets a refused password marks the account ([GraphScraperAccounts.markRefused]),
  *   so Settings says "sign in again" and no later run asks with it.
  * - Signing out stops a run going or waiting ([cancelRuns]): nothing more is asked with the
@@ -89,7 +96,17 @@ internal class GraphScrapes(
     private val clearBoxArt: (onDone: (BoxArtClearResult) -> Unit) -> Unit = { onDone -> onDone(BoxArtClearResult.Failed) },
     /** True while a game is played: a run stops between games and goes on at the return (`HeldForPlay`). */
     private val holdForPlay: suspend () -> Boolean = { false },
+    /** The box art source the person chose (`library.box_art_source`); null until chosen. */
+    private val chosenSource: suspend () -> BoxArtSourceSetting? = { null },
+    /** Stores the person's box art source; throws when it could not be written. */
+    private val writeSource: suspend (BoxArtSourceSetting) -> Unit = {},
+    /** The scraper of "Box art only"; made at the first run that needs it, one for the process (it remembers failures). */
+    makeLibretroScraper: () -> Scraper = { error("no libretro scraper in this graph") },
+    /** The stored box art source (null: not chosen), as it changes: the status follows the source in force. */
+    private val sourceChanges: Flow<BoxArtSourceSetting?> = flowOf(null),
 ) {
+    private val libretroScraper: Scraper by lazy(makeLibretroScraper)
+
     /** The system the home screen shows, or null; read at every page of a run. */
     val viewedSystem: MutableStateFlow<String?> = MutableStateFlow(null)
 
@@ -114,7 +131,7 @@ internal class GraphScrapes(
             log("Box art is paused by the person: no work")
             return null
         }
-        val scraper = accounts.scraper() ?: return null
+        val scraper = activeScraper() ?: return null
         val library = guarded("library scrape source") { librarySource() } ?: return null
         val folder = guarded("media folder") { mediaDir() } ?: return null
         // A run starts: an earlier retry is over (a stop for a lost constraint later is no retry).
@@ -149,12 +166,96 @@ internal class GraphScrapes(
      */
     fun requestRun(): Job =
         scope.launch(io) {
-            if (isPaused() || !accounts.hasUsableAccount()) return@launch
+            if (isPaused() || !canScrape()) return@launch
             guarded("box art run") { enqueue() }
         }
 
-    /** Signed out: a run going or waiting stops (the current game is not delivered). */
+    /** The source in force: the person's choice, else from whether a usable account is signed in. */
+    private suspend fun source(): BoxArtSourceSetting =
+        effectiveBoxArtSource(guarded("box art source") { chosenSource() }, accounts.hasUsableAccount())
+
+    /** Whether a run could do anything now: the chosen source is ScreenScraper with a usable account, or libretro only. */
+    private suspend fun canScrape(): Boolean =
+        when (source()) {
+            BoxArtSourceSetting.ScreenScraper -> accounts.hasUsableAccount()
+            BoxArtSourceSetting.LibretroOnly -> true
+            BoxArtSourceSetting.OwnCovers -> false
+        }
+
+    /** The scraper of the source in force; null when it makes no request (own covers, or no usable account). */
+    private suspend fun activeScraper(): Scraper? =
+        when (source()) {
+            BoxArtSourceSetting.ScreenScraper -> accounts.scraper()
+            BoxArtSourceSetting.LibretroOnly -> libretroScraper
+            BoxArtSourceSetting.OwnCovers -> null
+        }
+
+    /**
+     * Settings' choice of where box art comes from: stored, then the run follows it. A run going is
+     * stopped (nothing more is asked of the old source); ScreenScraper marks the games without a box
+     * front to be asked again (a no-match under "Box art only" was not asked of ScreenScraper) and
+     * starts a run, "Box art only" starts one, Plumemu's own covers leave it stopped. Pictures
+     * already saved stay (Clear box art removes them). [onDone] gets, on the main thread, whether it was stored.
+     */
+    fun setSource(
+        source: BoxArtSourceSetting,
+        onDone: (Boolean) -> Unit,
+    ): Job =
+        scope.launch(io) {
+            val before = guarded("box art source") { chosenSource() }
+            val stored = guarded("box art source write") { writeSource(source) } != null
+            if (stored && source != before) {
+                guarded("box art run") { cancel() }
+                when {
+                    isPaused() -> Unit
+                    source == BoxArtSourceSetting.ScreenScraper && canScrape() -> {
+                        val marked = guarded("box art ask again") { librarySource().askAgain(AskAgain.MissingAndDetails, null) } != null
+                        if (marked) guarded("box art run") { enqueue() }
+                    }
+                    source == BoxArtSourceSetting.LibretroOnly -> guarded("box art run") { enqueue() }
+                }
+            }
+            withContext(main) { onDone(stored) }
+        }
+
+    /**
+     * Setup's box art choice: stores the source and, for "Box art only", asks for a run. Setup's scan
+     * starts before its questions, so it can end before this choice; its end then found no source and
+     * asked for none. ScreenScraper's run starts at its sign-in, own covers need none. A failed
+     * store throws to setup, which says so; an earlier run still waiting is kept by [requestRun].
+     */
+    suspend fun chooseInSetup(source: BoxArtSourceSetting) {
+        writeSource(source)
+        if (source == BoxArtSourceSetting.LibretroOnly) requestRun().join()
+    }
+
+    /** Stops a run going or waiting (the current game is not delivered); Clear box art and the sweep call it. */
     fun cancelRuns() = cancel()
+
+    /**
+     * Signed out: the ScreenScraper run stops. "Box art only" needs no account, so its run goes on
+     * (an effective change to own covers is stopped by [stopWhenOwnCovers]).
+     */
+    fun signedOut(): Job =
+        scope.launch(io) {
+            if (source() != BoxArtSourceSetting.LibretroOnly) guarded("box art run") { cancel() }
+        }
+
+    /**
+     * Stops the run each time the source in force becomes Plumemu's own covers, by any path
+     * (a choice, Reset all settings, sign-out with nothing chosen). [chosen] and [signedIn] are the
+     * stored choice and whether an account is stored; the first value only sets the baseline.
+     */
+    fun stopWhenOwnCovers(
+        chosen: Flow<BoxArtSourceSetting?>,
+        signedIn: Flow<Boolean>,
+    ): Job =
+        scope.launch(io) {
+            combine(chosen, signedIn) { c, account -> effectiveBoxArtSource(c, account) }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { if (it == BoxArtSourceSetting.OwnCovers) guarded("box art run") { cancel() } }
+        }
 
     /**
      * Settings' Download missing and Re-download ([AskAgain.Missing], [AskAgain.All]) for
@@ -170,9 +271,9 @@ internal class GraphScrapes(
     ): Job =
         scope.launch(io) {
             val marked = guarded("box art ask again") { librarySource().askAgain(which, systemIds) } != null
-            if (marked && !isPaused() && accounts.hasUsableAccount()) {
+            if (marked && !isPaused() && canScrape()) {
                 // Games dropped after network errors in three runs are asked again too.
-                guarded("box art network failures") { accounts.scraper()?.forgetNetworkFailures() }
+                guarded("box art network failures") { activeScraper()?.forgetNetworkFailures() }
                 guarded("box art run") {
                     cancel()
                     enqueue()
@@ -195,7 +296,7 @@ internal class GraphScrapes(
             if (stored) {
                 if (isPaused) {
                     guarded("box art run") { cancel() }
-                } else if (accounts.hasUsableAccount()) {
+                } else if (canScrape()) {
                     guarded("box art run") { enqueue() }
                 }
             }
@@ -220,6 +321,13 @@ internal class GraphScrapes(
                 this@GraphScrapes.setPaused(isPaused, onDone)
             }
 
+            override fun setSource(
+                source: BoxArtSourceSetting,
+                onDone: (Boolean) -> Unit,
+            ) {
+                this@GraphScrapes.setSource(source, onDone)
+            }
+
             override fun clearBoxArt(onDone: (BoxArtClearResult) -> Unit) = clearBoxArt.invoke(onDone)
         }
 
@@ -234,9 +342,15 @@ internal class GraphScrapes(
      * until Settings looks.
      */
     val status: Flow<ScrapeStatus> =
-        accounts.status.distinctUntilChanged().flatMapLatest { account ->
-            accountOnlyStatus(account)?.let { flowOf(it) } ?: runStatus(account)
-        }
+        combine(accounts.status.distinctUntilChanged(), sourceChanges.distinctUntilChanged()) { account, chosen -> account to chosen }
+            .flatMapLatest { (account, chosen) ->
+                if (effectiveBoxArtSource(chosen, account is AccountStatus.SignedIn && !account.isRefused) == BoxArtSourceSetting.LibretroOnly) {
+                    // No account needed: the run's own state, and why its pictures failed.
+                    runStatus(account, usesAccount = false, failure = libretroScraper.pictureFailure)
+                } else {
+                    accountOnlyStatus(account)?.let { flowOf(it) } ?: runStatus(account, usesAccount = true, failure = flowOf(null))
+                }
+            }
 
     /** The scraper [askLimitsOnce] last asked; one ask per scraper, so a second Settings visit asks nothing. */
     private var limitsAskedOf: Scraper? = null
@@ -279,6 +393,8 @@ internal class GraphScrapes(
         account: AccountStatus.SignedIn,
     ) {
         if (scraper.accountLimits.value != null) return
+        // "Box art only" and own covers never ask ScreenScraper, not even for the limits.
+        if (source() != BoxArtSourceSetting.ScreenScraper) return
         // Pause means no request, not even this one.
         if (isPaused()) return
         val now = clock()
@@ -299,7 +415,11 @@ internal class GraphScrapes(
         }
     }
 
-    private fun runStatus(account: AccountStatus): Flow<ScrapeStatus> =
+    private fun runStatus(
+        account: AccountStatus,
+        usesAccount: Boolean,
+        failure: Flow<PictureFailure?>,
+    ): Flow<ScrapeStatus> =
         combine(
             flow { emitAll(inputs.runs) }.catch { e ->
                 log("Box art run state failed (${e.javaClass.simpleName})")
@@ -314,8 +434,9 @@ internal class GraphScrapes(
                 log("Box art pause failed (${e.javaClass.simpleName})")
                 emit(false)
             },
-        ) { infos, _, _, isPaused -> infos to isPaused }
-            .mapLatest { (infos, isPaused) ->
+            failure,
+        ) { infos, _, _, isPaused, why -> Triple(infos, isPaused, why) }
+            .mapLatest { (infos, isPaused, why) ->
                 withContext(io) {
                     val retried = guarded("box art retry mark") { retryMark().get() }
                     scrapeStatusOf(
@@ -327,7 +448,9 @@ internal class GraphScrapes(
                         gamesPerMinute = pace.gamesPerMinute(),
                         now = clock(),
                         pausedByPerson = isPaused,
-                    )
+                        usesAccount = usesAccount,
+                        pictureFailure = why,
+                    ).also { if (it is ScrapeStatus.Failed) log("Box art: the last pictures failed (${it.why.name})") }
                 }
             }
 

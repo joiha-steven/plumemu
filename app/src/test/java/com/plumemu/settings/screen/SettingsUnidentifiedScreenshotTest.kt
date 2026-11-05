@@ -40,6 +40,15 @@ class SettingsUnidentifiedScreenshotTest {
     fun unidentifiedGames() =
         ReferenceShots.capture("settings_unidentified_games") { SettingsAt(focusOn(SettingsOption.UnidentifiedGames, PanelPage.UnidentifiedGames), settingsForShot(), content) }
 
+    // Fix name… for "mtrd fusn": three close titles over the other results, and the line when none is close.
+    @Test
+    fun fixNameSuggestions() =
+        ReferenceShots.capture("settings_fix_name_suggestions") { NameFixTypingSettings(android = true, suggestions = fixtureSuggestions) }
+
+    @Test
+    fun fixNameNoSuggestion() =
+        ReferenceShots.capture("settings_fix_name_no_suggestion") { NameFixTypingSettings(android = true, suggestions = emptyList()) }
+
     @Test
     fun hiddenWithNotAGame() =
         ReferenceShots.capture("settings_hidden_not_a_game") { SettingsAt(focusOn(SettingsOption.HiddenGames, PanelPage.HiddenGames), settingsForShot(), content) }

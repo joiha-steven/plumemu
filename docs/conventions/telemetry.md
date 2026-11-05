@@ -51,9 +51,10 @@ private things. `system_id` and `emulator_id` are the platform data's ids.
 | `error_shown` | `where` (screen id), `code` (the app's error code, never its message) |
 | `queue_overflow` | `dropped` (count) |
 | `stats_switched_on` | `where` (setup / settings) |
+| `game_unidentified` | `system_id`, `container` (how the file is stored, for example zip, cue, chd), `size` (bytes the CRC covers, else the file's), `crc` (CRC-32 as 8 hex digits, of the file or of the game inside a zip, any copier header left out), `code_kind` (which numbering the code is, for example ps1), `code` (cartridge product code or disc serial read from the game itself), `track_key` (16 hex digits: the disc's track sizes); a game the identifier could not name (Settings, Library, Unidentified games), once per fingerprint per install, at most 100 queued per scan; needs a CRC, a code or a track key; stored apart from the other events |
 
 Events tied to a system or emulator (`view_changed`, `favorite_changed`, `game_launched`,
-`game_session`, `emulator_picked`) are sent only for the platform data's systems and emulators:
+`game_session`, `emulator_picked`, `game_unidentified`) are sent only for the platform data's systems and emulators:
 Android apps of the Apps entry, pinned shortcuts and anything without a platform-data system send
 none of them (`screen_opened` with `apps` still goes). A started pinned shortcut keeps its app's
 package where an emulator id would be, for Recent and play time on the device; that package is never
@@ -76,8 +77,10 @@ Sent through their own endpoints (plan › API):
 
 ## Never sent
 
-Game titles, search text, the ScreenScraper username or password, other installed apps, the
-advertising id, IP addresses. File and folder paths only inside crash and problem reports.
+Game titles, file names (also the name of a file inside a zip), anything taken from a file name
+(a Switch title id written in it is never sent as `code`; neither is a code stored before its
+origin was recorded), search text, the ScreenScraper
+username or password, other installed apps, the advertising id, IP addresses. File and folder paths only inside crash and problem reports.
 
 ## Delivery
 

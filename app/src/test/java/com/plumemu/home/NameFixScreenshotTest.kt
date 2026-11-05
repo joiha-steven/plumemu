@@ -43,7 +43,7 @@ class NameFixScreenshotTest {
         )
 
     private fun shot(name: String, panel: OpenPanel) =
-        ReferenceShots.capture(name) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = panel) }
+        ReferenceShots.capture(name, sizes = ReferenceShots.Size.Original + ReferenceShots.Size.FourThree) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = panel) }
 
     private fun fixName(query: String, onResults: Boolean): OpenPanel {
         val state = FixNameState(query, finder)

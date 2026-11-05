@@ -17,7 +17,6 @@ import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,9 +25,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The sign-in field rows and Plumemu's own keyboard (design/rules.md > Shapes and motion > Pressed): while the
- * tray is up A types a key, so the focused field row does not dip; with the tray put away it answers A again.
- * Read from the drawn pixels of the row.
+ * The sign-in field rows and Plumemu's own keyboard (design/rules.md > Shapes and motion > Pressed): a field row has no
+ * pill (the board's field is a collar and a well), so A never dips it, tray up or put away. Read from the drawn pixels of the row.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -59,7 +57,7 @@ class SignInPressFeelTest {
     }
 
     @Test
-    fun aSignInFieldRowDoesNotDipWhileTheOwnKeyboardIsUpAndDipsAgainWhenItCloses() {
+    fun aSignInFieldRowNeverDipsWhateverTheKeyboardDoes() {
         val form = SignInTypingShots.form(SignInTypingShots.State.Username)
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite) {
@@ -82,6 +80,6 @@ class SignInPressFeelTest {
         check(!form.isTrayUp) { "the tray did not close" }
         val closedRest = pixels(SignInTags.USERNAME)
         setHeld(setOf("A"), 300)
-        assertNotEquals("with the tray closed the row dips again", closedRest, pixels(SignInTags.USERNAME))
+        assertEquals("with the tray closed the row still does not dip", closedRest, pixels(SignInTags.USERNAME))
     }
 }

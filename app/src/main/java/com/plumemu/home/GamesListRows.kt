@@ -19,6 +19,7 @@ import com.plumemu.coreinput.tapItem
 import com.plumemu.coreui.components.GameRow
 import com.plumemu.coreui.components.GameRowLook
 import com.plumemu.coreui.components.composedAs
+import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.identify.name.VariantTag
 
 /*
@@ -57,15 +58,26 @@ internal fun GamesListItem(
     // Not at the narrow details stop: the list is slid out to 56 dp there, the right-hand text has 42 dp, and a
     // wide short name (SCUMM, WASM4) would be cut at the left. A derived state, so only a change of stop recomposes.
     val showsSystem by remember(state, mixesSystems) { derivedStateOf { mixesSystems && state.focus.column != Column.Details } }
-    // Year · region only in a single system's list that has the room (listShowsPlace); the narrow details stop needs
+    // Year and region (two columns) only in a single system's list that has the room (listShowsPlace); the narrow details stop needs
     // no case of its own there: a narrow list never shows it beside the details, so no row reads the stop.
     val resources = LocalContext.current.resources
-    val joinPlace = remember(resources) { { year: String, region: String -> resources.getString(R.string.home_details_pair, year, region) } }
-    val trailing = row.trailing(hasBoxArt, LocalHomeArt.current.slot(row.scrapeKey), showsSystem, joinPlace.takeUnless { mixesSystems || !showsPlace })
+    val artSlot = LocalHomeArt.current.slot(row.scrapeKey)
+    // Year and region in the board's two columns where the list shows both (an unknown year leaves its cell empty);
+    // otherwise one text: the year, or a region or system code in the region's caps.
+    val columns = if (mixesSystems || !showsPlace) null else row.yearAndRegion(hasBoxArt, artSlot, showsSystem)
+    val trailing = columns?.first ?: row.trailing(hasBoxArt, artSlot, showsSystem, null)
+    val trailingIsCode = columns == null && !isYearText(trailing)
     // Only a row whose title another row of the list shares has tags (withVariantTags), so the others read no string.
     val subtitle = remember(resources, row.variantTags, row.variantRegion) { variantSubtitle(resources, row.variantTags, row.variantRegion) }
-    GameRow(title = row.title, trailing = trailing, look = form.look, modifier = tap, isFavorite = row.isFavorite, drawnLook = drawnLook, subtitle = subtitle, masteredLabel = masteredLabel(row.id))
+    // At the narrow details stop only the year of a slid-out row shows: a smaller right inset keeps it whole at every text size.
+    // A game card open over the list would cut the year and region by its edge: they are not drawn while it is open (read while drawing).
+    val endHidden = remember(panelOpen) { { panelOpen.value } }
+    val endPadding = remember(state) { { if (state.focus.column == Column.Details) PlumDimens.gameRowPeekEndPadding else PlumDimens.gameRowEndPadding } }
+    GameRow(title = row.title, trailing = trailing, look = form.look, modifier = tap, isFavorite = row.isFavorite, drawnLook = drawnLook, subtitle = subtitle, masteredLabel = masteredLabel(row.id), region = columns?.second, endPadding = endPadding, trailingIsCode = trailingIsCode, endHidden = endHidden)
 }
+
+/** Whether a row's one trailing text is its year ([GameRowModel.trailing] writes it in ASCII digits), not a region or system code. */
+internal fun isYearText(text: String): Boolean = text.isNotEmpty() && text.all { it in '0'..'9' }
 
 /** "· Rev 1" for a row with variant tags, "· Rev 1, EUR" when [region] is given too; empty when neither has a word. */
 internal fun variantSubtitle(

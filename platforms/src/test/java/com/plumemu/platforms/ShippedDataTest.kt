@@ -30,6 +30,20 @@ class ShippedDataTest {
     }
 
     @Test
+    fun everyCoreEmulatorIsNamedAppColonCoreAndSoHasACoreName() {
+        val all = loadShipped().emulators
+        val withCore = all.filter { it.core != null }
+        assertTrue("no emulator with a core", withCore.isNotEmpty())
+        for (emulator in withCore) {
+            assertTrue("${emulator.id} is named '${emulator.name}'", emulator.name.startsWith("RetroArch: "))
+            assertEquals(emulator.name.removePrefix("RetroArch: "), emulator.coreName)
+            assertTrue("${emulator.id} core name is empty", emulator.coreName!!.isNotBlank())
+        }
+        assertEquals("Snes9x 2010", withCore.first { it.name == "RetroArch: Snes9x 2010" }.coreName)
+        assertEquals(null, all.first { it.core == null }.coreName)
+    }
+
+    @Test
     fun theTwelveTestedSystemsAreMarkedTestedAndHaveEmulators() {
         val catalog = loadShipped()
         for (id in testedSystemIds) {

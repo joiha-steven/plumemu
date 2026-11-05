@@ -3,6 +3,7 @@ package com.plumemu.graph
 import androidx.work.WorkInfo
 import com.plumemu.account.AccountStatus
 import com.plumemu.scraper.PauseReason
+import com.plumemu.scraper.PictureFailure
 import com.plumemu.scraper.ScrapeResult
 import java.util.UUID
 
@@ -36,6 +37,9 @@ internal sealed interface ScrapeStatus {
      * enough games were delivered in a row ([ScrapePace]).
      */
     data class Running(val counts: ScrapeCounts?, val gamesPerMinute: Double?) : ScrapeStatus
+
+    /** "Box art only": the last pictures asked for could not be had, and no run waits; [why] is what to tell the person. */
+    data class Failed(val counts: ScrapeCounts?, val why: PictureFailure) : ScrapeStatus
 
     /** Asked for, every condition met: WorkManager starts it in a moment. */
     data class Starting(val counts: ScrapeCounts?) : ScrapeStatus
@@ -94,12 +98,15 @@ internal fun scrapeStatusOf(
     gamesPerMinute: Double?,
     now: Long,
     pausedByPerson: Boolean = false,
+    usesAccount: Boolean = true,
+    pictureFailure: PictureFailure? = null,
 ): ScrapeStatus {
-    accountOnlyStatus(account)?.let { return it }
+    // "Box art only" needs no account: its state comes from the run alone.
+    if (usesAccount) accountOnlyStatus(account)?.let { return it }
     if (pausedByPerson) return ScrapeStatus.PausedByPerson(counts)
     if (pause != null && pause.resumeAtMillis > now) return ScrapeStatus.Paused(counts, pause.resumeAtMillis, pause.reason)
     return when (run?.state) {
-        null -> ScrapeStatus.Idle(counts)
+        null -> if (pictureFailure != null) ScrapeStatus.Failed(counts, pictureFailure) else ScrapeStatus.Idle(counts)
         RunSnapshot.State.Running -> ScrapeStatus.Running(counts, gamesPerMinute)
         // A follow-up chained after a run that is no longer listed as running: about to start.
         RunSnapshot.State.Enqueued, RunSnapshot.State.Blocked ->

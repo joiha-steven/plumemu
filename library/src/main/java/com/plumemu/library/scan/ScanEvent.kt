@@ -13,6 +13,13 @@ sealed interface ScanEvent {
     data class FolderFinished(val folderId: Long, val outcome: FolderOutcome) : ScanEvent
 
     /**
+     * Sent once per folder whose scan stamped `added_at`, after its games were named: what the lists show of the games
+     * this scan added, by system ([ScanStats.listedAddedBySystem]). Naming groups arcade copies and marks "Not a game",
+     * so the count is final only now. Fold it into the folder's stats with [ScanStats.withListed].
+     */
+    data class AddedListed(val folderId: Long, val bySystem: Map<String, Int>) : ScanEvent
+
+    /**
      * Sent after each page of names the identification pass wrote ([IdentifyPass]), after every
      * folder's walk; the lists already show the new names.
      */
@@ -58,7 +65,7 @@ data class ScanStats(
      * [FolderScan.RECENT_FILE_MS] of the scan: possibly still being copied. Their directories are read again by the next scan.
      */
     val filesStillWriting: Int = 0,
-    /** [gamesAdded] by system id: what the home's "+24 games · Nintendo 64" notice says. Empty when nothing was added. */
+    /** [gamesAdded] by system id: the rows this scan inserted. Not what the home notice says: see [listedAddedBySystem]. */
     val addedBySystem: Map<String, Int> = emptyMap(),
     /** [gamesRemoved] by system id; empty when nothing was removed. */
     val removedBySystem: Map<String, Int> = emptyMap(),
@@ -68,7 +75,20 @@ data class ScanStats(
      * Empty when the scan wrote nothing (a directory failed to list).
      */
     val newUnknownFolders: List<UnknownFolder> = emptyList(),
-)
+    /**
+     * True when this scan stamped `game.added_at` on its new games (setup done and the library already held scanned games).
+     * It is the one rule for "news": the home's "+N games" notice and the second screen's "N new this week" both count only such scans.
+     */
+    val stampedAddedAt: Boolean = false,
+    /**
+     * What the home's "+24 games · Nintendo 64" notice says, by system id: the games this scan inserted that a list
+     * shows once naming is done (primary copies, not hidden, pending or "not a game": what the second screen's
+     * "new this week" counts). Filled from [ScanEvent.AddedListed]; empty until then and when the scan stamped nothing.
+     */
+    val listedAddedBySystem: Map<String, Int> = emptyMap(),
+) {
+    fun withListed(event: ScanEvent.AddedListed) = copy(listedAddedBySystem = event.bySystem)
+}
 
 /** A folder right below a picked folder whose name matches no system: its [relativePath] and how many [files] some system could open. */
 data class UnknownFolder(val relativePath: String, val files: Int)

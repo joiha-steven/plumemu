@@ -128,11 +128,11 @@ class PanelOwnKeyboardPathTest {
         compose.waitUntil(TIMEOUT_MS) { exists(SearchTags.result(0)) }
         press(KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_BUTTON_START)
         compose.waitUntil(TIMEOUT_MS) { exists(GamePanelTags.PANEL) }
-        // Play, Play with, Favorite, Hide, Name…, Fix box art…, Info.
+        // Play, Play with, Favorite, Name…, Box art, Info, Hide (Hide game is always last).
         when (field) {
-            Field.FixBoxArt -> press(*IntArray(5) { KeyEvent.KEYCODE_DPAD_DOWN }, confirm)
-            Field.FixName -> press(*IntArray(4) { KeyEvent.KEYCODE_DPAD_DOWN }, confirm, confirm)
-            Field.OwnName -> press(*IntArray(4) { KeyEvent.KEYCODE_DPAD_DOWN }, confirm, KeyEvent.KEYCODE_DPAD_DOWN, confirm)
+            Field.FixBoxArt -> press(*IntArray(4) { KeyEvent.KEYCODE_DPAD_DOWN }, confirm)
+            Field.FixName -> press(*IntArray(3) { KeyEvent.KEYCODE_DPAD_DOWN }, confirm, confirm)
+            Field.OwnName -> press(*IntArray(3) { KeyEvent.KEYCODE_DPAD_DOWN }, confirm, KeyEvent.KEYCODE_DPAD_DOWN, confirm)
         }
         compose.waitUntil(TIMEOUT_MS) { exists(field.tag) }
     }
@@ -389,7 +389,7 @@ class PanelOwnKeyboardPathTest {
         compose.waitUntil(TIMEOUT_MS) { exists(SearchTags.result(0)) }
         press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_BUTTON_START)
         compose.waitUntil(TIMEOUT_MS) { exists(GamePanelTags.PANEL) }
-        press(*IntArray(4) { KeyEvent.KEYCODE_DPAD_DOWN }, confirm, confirm)
+        press(*IntArray(3) { KeyEvent.KEYCODE_DPAD_DOWN }, confirm, confirm)
         compose.waitUntil(TIMEOUT_MS) { exists(FixNameTags.FIELD) }
         ime.settle()
         assertFalse("the panel opens with the keyboard down", ime.keyboardShows)

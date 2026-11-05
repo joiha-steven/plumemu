@@ -107,10 +107,10 @@ class TextEntryRouterTest {
             h.press(KeyEvent.KEYCODE_BUTTON_THUMBR)
             h.router.textEntry = TextEntry.Field
             h.press(KeyEvent.KEYCODE_BUTTON_THUMBR)
-            assertEquals("no action off the keyboard", emptyList<Action>(), h.actions)
+            assertEquals("off the keyboard R3 is Sort (a screen with a field ignores it), never Paste", listOf<Action>(Action.Sort, Action.Sort), h.actions)
             h.router.textEntry = TextEntry.Keyboard
             h.press(KeyEvent.KEYCODE_BUTTON_THUMBR)
-            assertEquals(listOf<Action>(Action.Paste), h.actions)
+            assertEquals(listOf<Action>(Action.Sort, Action.Sort, Action.Paste), h.actions)
         }
 
     @Test

@@ -32,7 +32,9 @@ class CorpusTest {
         val systemIds = rules.mapTo(HashSet()) { it.id }
         val scores = corpora.map { file ->
             val corpus = CorpusReader.read(file, systemIds)
-            CorpusScorer.score(corpus, CorpusRun.run(corpus, temp.newFolder(corpus.name), rules))
+            val scan = CorpusRun.run(corpus, temp.newFolder(corpus.name), rules)
+            println("corpus ${corpus.name}: left out ${scan.leftOut.toSortedMap()} (each file once, with one reason)")
+            CorpusScorer.score(corpus, scan)
         }
         scores.flatMap(CorpusReport::summary).forEach(::println)
         CorpusReport.write(RealData.REPORT_DIR, scores)

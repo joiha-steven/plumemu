@@ -65,12 +65,12 @@ abstract class SettingsColorSliderAlignBase {
 
     @Test
     fun rowsShareTheHexRowsEdgesAndTheirTextIsOnTheRowTextLines() {
-        var size by mutableStateOf(TextSize.Medium)
+        var size by mutableStateOf(TextSize.Small)
         var theme by mutableStateOf(PlumThemeSettings.Graphite)
         compose.setContent { PlumTheme(theme.copy(textSize = size)) { Page() } }
         val first = backgroundGrid.size
         val failures = mutableListOf<String>()
-        for ((name, each, look) in listOf(Triple("Graphite", TextSize.Medium, PlumThemeSettings.Graphite), Triple("Graphite", TextSize.Largest, PlumThemeSettings.Graphite), Triple("Paper", TextSize.Largest, PlumThemeSettings.Paper))) {
+        for ((name, each, look) in listOf(Triple("Graphite", TextSize.Small, PlumThemeSettings.Graphite), Triple("Graphite", TextSize.Largest, PlumThemeSettings.Graphite), Triple("Paper", TextSize.Largest, PlumThemeSettings.Paper))) {
             size = each
             theme = look
             compose.waitForIdle()

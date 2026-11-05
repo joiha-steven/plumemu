@@ -261,6 +261,21 @@ class ScrapedGameDaoTest {
     }
 
     @Test
+    fun picturesOfAnotherSourceAreAskedAgainForDetailsButScreenScraperMatchesAndChoicesAreNot() = runTest {
+        val ids = libraryForAskingAgain()
+        dao.insertOrReplace(row("crc:b:1").copy(screenScraperId = "libretro_ab12cd34"))
+        dao.insertOrReplace(row("crc:c:1").copy(screenScraperId = "steam_620"))
+        dao.insertOrReplace(row("crc:e:1").copy(screenScraperId = "libretro_ff", isPersonChoice = true))
+        assertEquals("the libretro and the Steam row", 2, dao.markPictureOnlyToAskAgain())
+        assertEquals(true, dao.get("crc:b:1")?.askAgain)
+        assertEquals(true, dao.get("crc:c:1")?.askAgain)
+        assertEquals("a ScreenScraper id is digits", false, dao.get("crc:a:1")?.askAgain)
+        assertEquals("a person's choice is never marked", false, dao.get("crc:e:1")?.askAgain)
+        assertEquals("the picture row stays until replaced", true, dao.get("crc:c:1")?.hasBoxFront)
+        assertTrue(ids[1] in pendingIds() && ids[2] in pendingIds())
+    }
+
+    @Test
     fun reDownloadAsksAgainEveryStoredGameButNeverAPersonsChoiceAndKeepsThePictures() = runTest {
         val ids = libraryForAskingAgain()
         val match = ids[0]

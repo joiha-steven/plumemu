@@ -40,6 +40,7 @@ import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.SlabDimens
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -57,6 +58,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  * the usual "A".
  */
 val LocalConfirmCap = staticCompositionLocalOf { "A" }
+
+/** True inside a raised card (the game menu's): a focused row's slab is then [com.plumemu.coreui.theme.SlabLook.onCard], lighter than the card, not the fill meant for the page. */
+val LocalSlabOnCard = staticCompositionLocalOf { false }
 
 /**
  * A finger must stay down this long, without moving past touch slop, before an item shows the press (as
@@ -252,24 +256,31 @@ internal fun Modifier.pressFeelWith(
     shape: Shape,
     answersButton: Boolean,
     ring: ((PlumComposeColors) -> Color?)?,
-    /** The focus halo outside the pill (null: none); a transparent colour (a light theme) draws none. */
-    halo: ((PlumComposeColors) -> Color?)? = null,
-    /** A focused row of a home list: the list draws the pill ([rememberGlidingPill]), so this row draws no fill or ring and hands over its press dip. */
+    /** The row wears the focus slab: its shadow and glow outside the fill, its edge and accent bar over it ([drawSlabOutside], [drawSlabFace]). */
+    slab: Boolean = false,
+    /** A focused row of a home list: the list draws the slab ([rememberGlidingPill]), so this row draws no fill or ring and hands over its press dip. */
     listDrawsPill: Boolean = false,
     /** A key inside the row (a switch's knob) that is pressed with every finger press on the row. */
     mirror: KeyState? = null,
+    /** The accent bar's place on a card with a line under its title ([StripeAnchor]); null centres it. */
+    stripe: StripeAnchor? = null,
 ): Modifier =
     composed {
         val dip = remember { PressDip() }
         val list = if (listDrawsPill && focused) LocalGlidingPill.current else null
         val haloOutside = LocalHaloDrawnOutside.current
+        val onCard = LocalSlabOnCard.current
         if (list != null) {
-            SideEffect { list.press = dip }
+            SideEffect {
+                list.press = dip
+                list.stripe = stripe
+            }
             DisposableEffect(list, dip) {
                 onDispose {
                     // No longer the focused row: the list has no row to draw its pill on until the next one reports.
                     if (list.press === dip) {
                         list.press = null
+                        list.stripe = null
                         list.rowBox = null
                     }
                 }
@@ -299,18 +310,23 @@ internal fun Modifier.pressFeelWith(
             )
             .drawWithContent {
                 val p = dip.progress.value
-                val fill = if (list != null) null else fill(colors)
+                val fill = if (list != null) null else if (slab) (if (onCard) colors.slab.onCard else colors.slab.fill) else fill(colors)
+                val outsideHere = fill != null && slab && !(haloOutside && listDrawsPill)
                 if (p == 0f) {
-                    if (fill != null && halo != null && !(haloOutside && listDrawsPill)) halo(colors)?.let { drawHaloOutside(shape.createOutline(size, layoutDirection, this), it) }
-                    if (fill != null) drawOutline(shape.createOutline(size, layoutDirection, this), fill)
+                    if (outsideHere) drawSlabOutside(shape.createOutline(size, layoutDirection, this), colors.slab, colors.slabGlow, under = if (onCard) colors.card.fill else colors.bg)
+                    if (fill != null && slab) drawSlabFill(shape.createOutline(size, layoutDirection, this), colors.slab, onCard)
+                    if (fill != null && !slab) drawOutline(shape.createOutline(size, layoutDirection, this), fill)
+                    if (fill != null && slab) drawSlabFace(shape.createOutline(size, layoutDirection, this), colors, barShift = stripe?.shiftY ?: 0f, barInset = (shape as? InsetFocusPillShape)?.barInset ?: SlabDimens.barInset)
                     if (fill != null && ring != null) ring(colors)?.let { drawRingInside(shape.createOutline(size, layoutDirection, this), it) }
                     drawContent()
                 } else {
                     val scale = if (motionOn) 1f - (1f - PlumMotion.PRESS_SCALE) * p else 1f
-                    // The halo stays at the resting size: it does not dip with the pill, so a press never repaints the neighbours it reaches over.
-                    if (fill != null && halo != null && !(haloOutside && listDrawsPill)) halo(colors)?.let { drawHaloOutside(shape.createOutline(size, layoutDirection, this), it) }
+                    // The shadow and glow stay at the resting size: they do not dip with the slab, so a press never repaints the neighbours they reach over.
+                    if (outsideHere) drawSlabOutside(shape.createOutline(size, layoutDirection, this), colors.slab, colors.slabGlow, under = if (onCard) colors.card.fill else colors.bg)
                     withTransform({ scale(scale, scale, center) }) {
-                        if (fill != null) drawOutline(shape.createOutline(size, layoutDirection, this), lerp(fill, colors.text, PlumMotion.PRESS_FILL_MIX * p))
+                        if (fill != null && slab) drawSlabFill(shape.createOutline(size, layoutDirection, this), colors.slab, onCard, PlumMotion.PRESS_FILL_MIX * p, colors.text)
+                        if (fill != null && !slab) drawOutline(shape.createOutline(size, layoutDirection, this), lerp(fill, colors.text, PlumMotion.PRESS_FILL_MIX * p))
+                        if (fill != null && slab) drawSlabFace(shape.createOutline(size, layoutDirection, this), colors, barShift = stripe?.shiftY ?: 0f, barInset = (shape as? InsetFocusPillShape)?.barInset ?: SlabDimens.barInset)
                         if (fill != null && ring != null) ring(colors)?.let { drawRingInside(shape.createOutline(size, layoutDirection, this), it) }
                         this@drawWithContent.drawContent()
                     }
@@ -322,8 +338,8 @@ internal fun Modifier.pressFeelWith(
 internal fun DrawScope.drawRingInside(
     outline: Outline,
     color: Color,
+    width: Float = PlumDimens.focusPillRing.toPx(),
 ) {
-    val width = PlumDimens.focusPillRing.toPx()
     if (outline is Outline.Rounded) {
         val box = outline.roundRect
         val radius = (box.topLeftCornerRadius.x - width / 2).coerceAtLeast(0f)

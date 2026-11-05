@@ -5,6 +5,7 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.TextEntry
 import com.plumemu.keyboard.KeyboardChoice
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -14,9 +15,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Setup's "Use my account" opens the ScreenScraper form typing in the user name, Plumemu's tray up
- * (or Android's keyboard asked for); B puts only the tray away and the form stays; Use my account
- * again after going back to the question opens typing again. Through the real router.
+ * Setup's "Use my account" opens the ScreenScraper form on the user name with the keyboard down (Sign in and Skip in view);
+ * A on the field brings Plumemu's tray up (or asks for Android's keyboard); B puts only the tray away and the form stays;
+ * Use my account again after going back to the question opens the form with the keyboard down again. Through the real router.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], qualifiers = "w768dp-h432dp-land-xhdpi")
@@ -29,9 +30,13 @@ internal class SetupSignInOpensTypingTest : SetupKeyboardPathHarness() {
     }
 
     @Test
-    fun useMyAccountOpensTypingTheUsername() {
-        showTheForm()
-        assertTypingTheUsername("as the form opens")
+    fun useMyAccountOpensTheFormWithTheTrayDownAndAOnTheUsernameBringsItUp() {
+        showTheForm(startTyping = false)
+        assertEquals("the cursor on the user name", SignInItem.Username, form.focus)
+        assertNoTray("as the form opens")
+        assertFalse(form.isTyping)
+        press(confirm)
+        assertTypingTheUsername("after A on the user name")
         typeOnKeyboard("plum")
         assertEquals("plum", form.username)
     }
@@ -47,17 +52,21 @@ internal class SetupSignInOpensTypingTest : SetupKeyboardPathHarness() {
     }
 
     @Test
-    fun backToTheQuestionThenUseMyAccountOpensTypingAgain() {
+    fun backToTheChoicesThenTheFirstChoiceOpensTypingAgain() {
         showTheForm()
         press(back, back)
-        assertNull("the question", model.state.value.boxArt)
+        assertNull("the choices", model.state.value.boxArt)
         press(confirm)
-        assertTypingTheUsername("when the form opens again")
+        assertNoTray("when the form opens again")
+        press(confirm)
+        assertTypingTheUsername("after A on the user name again")
     }
 
     @Test
-    fun androidsKeyboardIsAskedForAsTheFormOpens() {
-        showTheForm(keyboard = KeyboardChoice.Android)
+    fun androidsKeyboardIsAskedForWhenAOpensTheUsername() {
+        showTheForm(keyboard = KeyboardChoice.Android, startTyping = false)
+        assertFalse("the form opens with the keyboard down", form.isTyping)
+        press(confirm)
         assertNoTray("on Android's path")
         assertTrue("the user name field asks for the keyboard", form.inField)
         assertEquals(SignInItem.Username, form.focus)

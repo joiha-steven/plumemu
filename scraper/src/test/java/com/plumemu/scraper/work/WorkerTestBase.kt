@@ -120,10 +120,18 @@ internal abstract class WorkerTestBase {
         holdOff: suspend () -> Boolean = { false },
         /** Real-time read timeout of the client; null keeps OkHttp's 10 s. A test whose server never finishes an answer sets it short. */
         readTimeoutMillis: Long? = null,
+        /** The scraper of "Box art only": libretro's server and nothing else ([com.plumemu.scraper.Scraper.createLibretroOnly]). */
+        libretroOnly: Boolean = false,
+        user: com.plumemu.scraper.UserCredentials? = ScraperFixture.USER,
     ): ScraperWork {
         val pauses = SharedPreferencesPauseStore(app()) { fx.logLines += it }
-        val scraper = fx.scraper(fx.config(clock = clock, developer = developer, pauseStore = pauses, timingLog = timingLog)) {
-            if (readTimeoutMillis != null) readTimeout(readTimeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+        val config = fx.config(clock = clock, developer = developer, user = user, pauseStore = pauses, timingLog = timingLog)
+        val scraper = if (libretroOnly) {
+            com.plumemu.scraper.Scraper.createLibretroOnly(config)
+        } else {
+            fx.scraper(config) {
+                if (readTimeoutMillis != null) readTimeout(readTimeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+            }
         }
         return ScraperWork(
             scraper, source, mediaDir, sizes, lowRamDevice = false, runClock,

@@ -82,7 +82,9 @@ class SettingsRepository internal constructor(
 
     suspend fun setAdvanced(advanced: AdvancedSettings) = update { it.copy(advanced = advanced) }
 
-    suspend fun markSetupCompleted() = update { it.copy(flags = it.flags.copy(setupCompleted = true)) }
+    /** [questionsSkipped]: Set up later left Confirm, Look, Box art and Second screen unasked; setup asks them when a folder exists. */
+    suspend fun markSetupCompleted(questionsSkipped: Boolean = false) =
+        update { it.copy(flags = it.flags.copy(setupCompleted = true, setupQuestionsSkipped = questionsSkipped)) }
 
     suspend fun markHomeRoleAsked() = update { it.copy(flags = it.flags.copy(homeRoleAsked = true)) }
 

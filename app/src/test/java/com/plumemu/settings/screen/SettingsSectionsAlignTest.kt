@@ -19,9 +19,12 @@ import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.components.SystemRowTags
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.LeftColumnDimens
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.SettingsThreeDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
+import com.plumemu.coreui.theme.SettingsColumns
 import com.plumemu.coreui.theme.TextSize
 import com.plumemu.home.BOARD_BATTERY
 import com.plumemu.home.BOARD_CLOCK
@@ -38,9 +41,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The Settings sections column lines up with the page, like the home systems column:
- * every section label starts on the left line of the title text and the first hint key cap (the page
- * margin), focused or not; the focus dot sits in the margin, inside the selector; the selector starts at
- * x = 0 (square left corners, rounded right ones) and ends where it always did (margin + 200); the option
+ * every section label starts a game row's padding inside the page margin (where the title text and the first hint key cap start), focused
+ * or not; the selector starts at the margin (never at the screen edge) and ends where it always did (margin + 200); the option
  * panel on the right has not moved. At the four reference sizes and all six text sizes.
  */
 abstract class SettingsSectionsAlignBase {
@@ -77,15 +79,20 @@ abstract class SettingsSectionsAlignBase {
             val pill = unclipped(inFocusedRow(SystemRowTags.PILL))
             val labelBox = unclipped(inFocusedRow(SystemRowTags.LABEL))
             val panelLeft = unclipped(hasTestTag(SettingsTags.PANEL)).left.value
-            val pinned = PANEL_LEFT[label]
+            // Three columns (wide screens up to Large text): the pill ends at the divider and the right column ends at the margin; else as before.
+            val width = label.substringBefore("x").toFloat()
+            val isThree = width >= 768f && SettingsColumns.fits(each, PlumThemeSettings.Graphite.font)
+            val pinned = if (isThree) width - PlumDimens.stripMarginSide.value - SettingsThreeDimens.panelWidth.value else PANEL_LEFT[label]
+            val pillRight = if (isThree) SettingsThreeDimens.sectionsWidth.value else (PlumDimens.stripMarginSide + PlumDimens.settingsSectionsWidth).value
             expect("header = hint key cap", near(header, hint), "header $header, hint $hint")
             expect("every section's label", lefts.size == shownSections.size, "${lefts.size} of ${shownSections.size}")
-            expect("every label = header", lefts.all { near(it, header) }, "header $header, labels ${lefts.distinct()}")
-            expect("focused label = header", near(focusedLabel, header), "focused $focusedLabel, header $header")
-            val inset = (PlumDimens.stripMarginSide - PlumDimens.gameRowPadding).value
-            expect("pill inset from the screen edge", near(pill.left.value, inset), "pill left ${pill.left.value}, inset $inset")
-            expect("pill right = margin + 200", near(pill.right.value, (PlumDimens.stripMarginSide + PlumDimens.settingsSectionsWidth).value), "pill right ${pill.right.value}")
-            expect("label is a game row's padding from the pill's left", near(focusedLabel - pill.left.value, PlumDimens.gameRowPadding.value), "${focusedLabel - pill.left.value}")
+            val labelStart = LeftColumnDimens.sectionLabelStart.value
+            expect("every label a row padding inside the header", lefts.all { near(it, labelStart) }, "header $header, labels ${lefts.distinct()}")
+            expect("focused label a row padding inside the header", near(focusedLabel, labelStart), "focused $focusedLabel, header $header")
+            val inset = LeftColumnDimens.systemPillStart.value
+            expect("pill starts at the systems pill start (16 from the screen edge)", near(pill.left.value, inset), "pill left ${pill.left.value}, inset $inset")
+            expect("pill right = margin + 200 (the divider in three columns)", near(pill.right.value, pillRight), "pill right ${pill.right.value}")
+            expect("label is the label inset from the pill left", near(focusedLabel - pill.left.value, PlumDimens.gameRowPadding.value), "${focusedLabel - pill.left.value}")
             expect("label centred on the pill (baseline as unfocused)", near((labelBox.top.value + labelBox.bottom.value) / 2, (pill.top.value + pill.bottom.value) / 2), "label ${labelBox.top.value}..${labelBox.bottom.value}, pill ${pill.top.value}..${pill.bottom.value}")
             expect("option panel has not moved", pinned != null && near(panelLeft, pinned), "panel left $panelLeft, pinned $pinned")
         }

@@ -40,6 +40,19 @@ internal class CoilBadgeImages(
     override suspend fun load(
         url: String,
         sizePx: Int,
+    ): ImageBitmap? = fetch(url, sizePx, CachePolicy.ENABLED)
+
+    override suspend fun loadCached(
+        url: String,
+        sizePx: Int,
+    ): ImageBitmap? = fetch(url, sizePx, CachePolicy.DISABLED, quiet = true)
+
+    /** [networkPolicy] DISABLED answers from the memory and disk caches only; a miss is then an ordinary answer, not logged when [quiet]. */
+    private suspend fun fetch(
+        url: String,
+        sizePx: Int,
+        networkPolicy: CachePolicy,
+        quiet: Boolean = false,
     ): ImageBitmap? {
         val request =
             ImageRequest.Builder(context)
@@ -49,10 +62,12 @@ internal class CoilBadgeImages(
                 .precision(Precision.INEXACT)
                 .memoryCacheKey(memoryKey(url, sizePx))
                 .diskCachePolicy(CachePolicy.ENABLED)
+                .networkCachePolicy(networkPolicy)
                 .build()
         return when (val result = loader.execute(request)) {
             is SuccessResult -> (result.drawable as? BitmapDrawable)?.bitmap?.asImageBitmap()
             is ErrorResult -> {
+                if (quiet) return null
                 val error = result.throwable
                 val cause = error.cause?.let { " caused by ${it.javaClass.simpleName}" }.orEmpty()
                 log("An achievement badge could not be loaded (${error.javaClass.simpleName}$cause)")

@@ -1,7 +1,6 @@
 package com.plumemu.setup
 
 import com.plumemu.telemetry.SetupAction
-import com.plumemu.telemetry.TelemetryEvent
 import com.plumemu.telemetry.TelemetrySink
 import android.util.Log
 import com.plumemu.account.AccountStatus
@@ -9,8 +8,12 @@ import com.plumemu.account.ScraperAccounts
 import com.plumemu.account.SignInForm
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
+import com.plumemu.coredata.settings.BoxArtSourceSetting
+import com.plumemu.coredata.settings.ConfirmButtonSetting
+import com.plumemu.coredata.settings.effectiveBoxArtSource
 import com.plumemu.coreinput.TextEntry
 import com.plumemu.coreui.components.keyboard.KeyboardEvent
+import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.keyboard.KeyboardChoice
 import com.plumemu.graph.BuildFeatures
 import com.plumemu.graph.ScanPhase
@@ -27,40 +30,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-/** The settings setup shows or asks about, read together. */
-private data class SetupChoices(
-    val usageStatistics: Boolean,
-    val pushRightToPlay: Boolean,
-    /** The second screen's kind while it should be asked about; null otherwise. */
-    val secondScreen: ScreenKind?,
-    /** A ScreenScraper account is stored and not refused: box art will download. */
-    val hasAccount: Boolean,
-)
-
-/** What came back from Android's folder picker. */
-internal sealed interface PickResult {
-    data class Picked(val treeUri: String) : PickResult
-
-    /** The person backed out of the picker: nothing changes. */
-    data object Cancelled : PickResult
-
-    /** No app answers the picker intent. */
-    data object NoPicker : PickResult
-}
-
-/** What the screen must do for the model: only opening the picker needs the Activity. */
-internal enum class SetupEffect { OpenFolderPicker }
 
 /**
  * First-run setup's state and rules, one per process (`AppGraph.setup`), so leaving the app and
@@ -68,7 +47,6 @@ internal enum class SetupEffect { OpenFolderPicker }
  * the folders still granted. The scan itself belongs to `StartupWork` (one at a time) and goes on
  * when the person steps back.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 internal class SetupModel(
     private val scope: CoroutineScope,
     private val source: SetupSource,
@@ -83,105 +61,51 @@ internal class SetupModel(
     // Last: callers pass the log as a trailing lambda.
     private val log: (String) -> Unit = { Log.w(TAG, it) },
 ) {
-    /** When this setup began, and when the step shown now began (statistics only). */
-    private val setupSince = clock()
-    private var stepSince = setupSince
+    /** The steps' times for the statistics. */
+    private val times = SetupTimes(telemetry, clock)
 
-    private data class Local(
-        val step: SetupStep = SetupStep.Folders,
-        val message: SetupMessage? = null,
-        val requestedFocus: SetupControl? = null,
-        val emulators: EmulatorCoverage? = null,
-        /** The second screen question was answered in this setup: its dot stays. */
-        val hasAnsweredSecondScreen: Boolean = false,
-        /**
-         * The question was skipped because the screen went away: its dot stays gone until the next
-         * Continue, even if the screen comes back during that scan (it is not asked then).
-         */
-        val hasSkippedSecondScreen: Boolean = false,
-        /** The box art step's form, made each time the step opens. */
-        val boxArt: SignInForm? = null,
-        /** "Use my account" was chosen (or the step opened signed in): the step shows [boxArt], not the question. */
-        val isBoxArtFormOpen: Boolean = false,
-        /** The name of a sign-in this setup saw succeed: the step stays signed in even before the stored status says so. */
-        val signedInHere: String? = null,
-        /** Folders whose removal was asked and has not landed yet (it waits for a running scan). */
-        val removing: Set<Long> = emptySet(),
-    )
-
-    private val local = MutableStateFlow(Local())
+    private val local = MutableStateFlow(SetupLocal())
 
     /** The stored account, so the box art step opens signed in when an account is there (the store is read only in a build that has the step). */
     private val accountStatus: StateFlow<AccountStatus> = accounts.status.stateIn(scope, SharingStarted.Eagerly, AccountStatus.SignedOut)
     private var scanWait: Job? = null
+
+    /** An answer is being stored: a second press or tap on the same step is ignored until it lands. */
+    private var isStoring = false
+
+    /** The colour set in force, when it is one of the look tiles; the look step opens on it. */
+    private var currentSet: ColorSet? = null
+
+    /** What the look step suggests for this device, worked out once. */
+    private val deviceLook = deviceLookOf(source.deviceFacts)
 
     /** Bumped by Try again after a read error: the database flows are collected anew. */
     private val attempts = MutableStateFlow(0)
 
     private var hasPressedStartPlaying = false
 
+    /** A reopened setup: the statistics counted this person's setup at its first end. */
+    private var wasCounted = false
+
+    private val leftReopened = MutableStateFlow(false)
+
     val state: StateFlow<SetupUiState> =
-        attempts
-            .flatMapLatest {
-                val hasAccount = accountStatus.map { (it as? AccountStatus.SignedIn)?.isRefused == false }
-                val choices = combine(source.usageStatistics, source.pushRightToPlay, source.secondScreenQuestion, hasAccount, ::SetupChoices)
-                combine(local, source.folders, source.systems, combine(source.scan, source.scanReport, ::Scanning), choices, ::uiState).catch { e ->
-                    // Caught inside, so the outer flow lives on for Try again: an uncaught Room error
-                    // would end the shared flow for the life of the process and freeze setup silently.
-                    log("Setup could not read the library (${e.javaClass.simpleName})")
-                    // Still driven by `local`, so the focus can move between Try again and Set up later.
-                    emitAll(local.map { SetupUiState(
-                        hasLoadFailed = true,
-                        focus = it.requestedFocus?.takeIf { control -> control in LOAD_FAILED_CONTROLS } ?: SetupControl.TryAgain,
-                        // A refused save (Set up later) must be seen, or the button looks dead.
-                        message = it.message,
-                    )
-                })
-                }
-            }.stateIn(scope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), SetupUiState())
+        setupStateFlow(attempts, local, source, accountStatus, asksAboutStatistics, accounts.isAvailable, deviceLook, log)
+            .stateIn(scope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), SetupUiState())
 
     init {
         scope.launch { scanFoldersNeverCounted() }
-    }
-
-    private fun uiState(
-        l: Local,
-        folders: List<SetupFolder>,
-        systems: List<SystemCount>,
-        scanning: Scanning,
-        choices: SetupChoices,
-    ): SetupUiState {
-        val scan = scanning.state
-        val report = scanning.report
-        val shownFolders = folders.map { it.copy(isUnavailable = it.id in scan.unavailableFolderIds, isRemoving = it.id in l.removing) }
-        val scanEndedInFailure = !scan.isBusy && scan.hasFailed
-        // The screen went away (or was decided elsewhere) while asked about: the scan shows at once.
-        val step = if (l.step == SetupStep.SecondScreen && choices.secondScreen == null) boxArtOrScan(accounts) else l.step
-        val failed = step == SetupStep.Scan && scanEndedInFailure
-        val controls = controlsOf(step, shownFolders.size, failed, asksAboutStatistics)
-        // A scan started from the folder step (a folder was added) that failed says so there too.
-        val scanMessage = if (step == SetupStep.Folders && scanEndedInFailure) SetupMessage.ScanFailed else null
-        return SetupUiState(
-            step = step,
-            folders = shownFolders,
-            message = l.message ?: scanMessage,
-            systems = systems,
-            isScanning = scan.isBusy,
-            scanProgress = SetupScanProgress(report.phase, report.gamesNamed, report.gamesToName),
-            isNaming = scan.isBusy && (report.phase == ScanPhase.Naming || walkEnded(report, folders.map { it.id })),
-            hasScanFailed = failed,
-            emulators = l.emulators,
-            usageStatistics = choices.usageStatistics,
-            asksAboutStatistics = asksAboutStatistics,
-            pushRightToPlay = choices.pushRightToPlay,
-            focus = focusIn(controls, l.requestedFocus),
-            secondScreenKind = choices.secondScreen,
-            hasSecondScreenStep = !l.hasSkippedSecondScreen && (choices.secondScreen != null || l.hasAnsweredSecondScreen),
-            hasBoxArtStep = accounts.isAvailable,
-            boxArt = l.boxArt.takeIf { step == SetupStep.BoxArt && l.isBoxArtFormOpen },
-            // Whatever button left the step: an account stored now means box art is coming.
-            isBoxArtComing = accounts.isAvailable && (choices.hasAccount || l.signedInHere != null),
-        )
+        scope.launch { source.currentColorSet.collect { currentSet = it } }
+        // The Scan step shows without a move into it when the second screen goes away while asked about: its wait must be alive then.
+        scope.launch {
+            local.map { it.step == SetupStep.SecondScreen }.distinctUntilChanged().collectLatest { isAsked ->
+                if (!isAsked) return@collectLatest
+                // The sources, not `state`: what `state` holds now was worked out before this step began.
+                val isGone = combine(source.secondScreenQuestion, local) { question, l -> question == null && l.askedSecondScreen == null }
+                isGone.catch { log("Setup could not read the second screen (${it.javaClass.simpleName})") }.firstOrNull { it } ?: return@collectLatest
+                if (scanWait?.isActive != true) resumeScanWait()
+            }
+        }
     }
 
     /**
@@ -202,6 +126,34 @@ internal class SetupModel(
         if (folders.any { !it.isCounted } && !source.scan.value.isBusy) source.requestScan()
     }
 
+    /** A folder is recorded and granted: what a reopened setup (`SetupFlags.setupQuestionsSkipped`) waits for. */
+    val hasFolder: Flow<Boolean> =
+        source.folders
+            .map { it.isNotEmpty() }
+            .catch {
+                // The reopened setup shows the read error; on Home it just waits.
+                log("Setup could not read the folders (${it.javaClass.simpleName})")
+                emit(false)
+            }
+
+    /** A reopened setup was left and stored: it goes whatever the stored mark says, and comes back at the next start at the earliest. */
+    val hasLeftReopened: StateFlow<Boolean> get() = leftReopened
+
+    /**
+     * Setup shown again after Set up later, once a folder exists: the process-death path (the folder step with its folder),
+     * then Continue's own move, so the questions and the scan follow and Ready counts the games. Suspends until the folder is read.
+     */
+    suspend fun reopenForSkippedQuestions() {
+        if (wasCounted) return // already open: a recreated Activity keeps its place
+        scanWait?.cancel()
+        hasPressedStartPlaying = false
+        isStoring = false
+        wasCounted = true
+        local.value = SetupLocal()
+        state.first { it.step == SetupStep.Folders && it.folders.isNotEmpty() && !it.hasLoadFailed }
+        scanAndWait()
+    }
+
     /** Says what each action did, for the sounds (set by the screen). */
     val feel = Feel()
 
@@ -220,10 +172,23 @@ internal class SetupModel(
             val now = state.value
             val form = now.boxArt ?: return@act
             if (now.hasLoadFailed) return@act
-            onBoxArtKey(form, event, accounts, feel, onSignedIn = ::signedInHere)
+            onBoxArtKey(form, event, accounts, feel, onSignedIn = { name -> signedInHere(form, name) })
         }
 
-    private fun signedInHere(name: String) = local.update { it.copy(signedInHere = name) }
+    /**
+     * A sign-in worked: signing in to ScreenScraper is choosing it (what Settings does too), but only while [form] is still
+     * the open one. Left meanwhile (B, then another choice), the answer is dropped so it cannot overwrite that choice; the
+     * account layer has stored the account anyway.
+     */
+    private fun signedInHere(
+        form: SignInForm,
+        name: String,
+    ) {
+        val l = local.value
+        if (l.boxArt !== form || !l.isBoxArtFormOpen || l.step != SetupStep.BoxArt) return
+        local.update { it.copy(signedInHere = name) }
+        save { source.setBoxArtSource(BoxArtSourceSetting.ScreenScraper) }
+    }
 
     /** A gamepad press or a tap, already turned into an action by core-input. */
     fun onAction(action: Action): SetupEffect? =
@@ -232,7 +197,7 @@ internal class SetupModel(
             val form = now.boxArt
             // Back is the form's only while Plumemu's tray is up (it puts the tray away); otherwise the step's own.
             if (form != null && !now.hasLoadFailed && (action != Action.Back || form.isTrayUp)) {
-                return@act onBoxArtAction(form, action, accounts, feel, onSignedIn = { name -> local.update { it.copy(signedInHere = name) } }) { leaveBoxArt(SetupAction.Next) }
+                return@act onBoxArtAction(form, action, accounts, feel, onSignedIn = { name -> signedInHere(form, name) }, goOn = ::leaveBoxArtForm)
             }
             when (action) {
                 is Action.Move -> {
@@ -242,19 +207,18 @@ internal class SetupModel(
                 Action.Enter -> now.focus?.let(::activate)
                 Action.Back -> {
                     if (form != null && form.signedInAs == null) {
-                        // The sign-in form goes back to its question; the keyboard goes with the form.
-                        // Once signed in (here or before setup) the question is not asked again: Back goes to the folders.
-                        form.stopTyping()
-                        local.update { if (it.step == SetupStep.BoxArt) it.copy(isBoxArtFormOpen = false, requestedFocus = SetupControl.UseBoxArt) else it }
+                        closeBoxArtForm(form)
                         feel.report(Outcome.WentBack)
-                    } else if (now.step != SetupStep.Folders) {
-                        backToFolders()
-                        feel.report(Outcome.WentBack)
+                    } else {
+                        previousStepOf(now.step, now.hasConfirmStep, local.value.lastQuestion)?.let {
+                            goBackTo(it, now)
+                            feel.report(Outcome.WentBack)
+                        }
                     }
                     null
                 }
-                is Action.TapItem -> now.controls.getOrNull(action.index)?.let(::focusAndActivate)
-                is Action.LongPressItem -> now.controls.getOrNull(action.index)?.let(::focusAndActivate)
+                is Action.TapItem -> now.controls.getOrNull(action.index)?.let { tapped(now, it) }
+                is Action.LongPressItem -> now.controls.getOrNull(action.index)?.let { tapped(now, it) }
                 else -> null
             }
         }
@@ -268,36 +232,7 @@ internal class SetupModel(
     }
 
     private suspend fun addPicked(treeUri: String) {
-        val before = state.value.folders
-        val message =
-            try {
-                when (val added = source.addFolder(treeUri)) {
-                    is AddFolderResult.Added -> {
-                        // Counting starts at once: the card fills in while the person decides.
-                        source.requestScan()
-                        null
-                    }
-                    is AddFolderResult.AlreadyAdded -> {
-                        val card = before.firstOrNull { it.id == added.folderId }
-                        if (card != null && !card.isUnavailable) {
-                            SetupMessage.FolderAlreadyAdded
-                        } else {
-                            // Picked again as its card asked (unreadable, or its grant was revoked
-                            // and is held again now): read it again instead of "already there".
-                            source.requestScan()
-                            null
-                        }
-                    }
-                    AddFolderResult.PermissionNotGranted -> SetupMessage.FolderNotKept
-                    AddFolderResult.NotRecorded -> SetupMessage.FolderCouldNotOpen
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // Class only: provider exceptions carry the folder's URI.
-                log("Picked folder could not be added (${e.javaClass.simpleName})")
-                SetupMessage.FolderCouldNotOpen
-            }
+        val message = addPickedFolder(source, state.value.folders, treeUri, log)
         local.update { it.copy(message = message, requestedFocus = SetupControl.Continue) }
     }
 
@@ -306,18 +241,7 @@ internal class SetupModel(
         now: SetupUiState,
         direction: Direction,
     ): Boolean {
-        val controls = now.controls
-        val at = controls.indexOf(now.focus)
-        if (at < 0) return false
-        val next =
-            when (direction) {
-                Direction.Up -> at - 1
-                Direction.Down -> at + 1
-                // The second screen's and the box art question's buttons sit side by side; elsewhere setup is one column.
-                Direction.Left -> if (now.step.hasSideBySideButtons || now.hasLoadFailed) at - 1 else return false
-                Direction.Right -> if (now.step.hasSideBySideButtons || now.hasLoadFailed) at + 1 else return false
-            }
-        val target = controls.getOrNull(next) ?: return false
+        val target = focusTargetAfter(now, direction) ?: return false
         local.update { it.copy(requestedFocus = target) }
         return true
     }
@@ -325,6 +249,19 @@ internal class SetupModel(
     private fun focusAndActivate(control: SetupControl): SetupEffect? {
         local.update { it.copy(requestedFocus = control) }
         return activate(control)
+    }
+
+    /**
+     * A tap: on a folder card that is not focused it only focuses it (its line then offers "Remove this
+     * folder"), as a gamepad's first move onto it does; a tap on the focused card removes it, as A does.
+     */
+    private fun tapped(
+        now: SetupUiState,
+        control: SetupControl,
+    ): SetupEffect? {
+        if (control.folderIndex == null || now.focus == control) return focusAndActivate(control)
+        local.update { it.copy(requestedFocus = control) }
+        return null
     }
 
     private fun activate(control: SetupControl): SetupEffect? {
@@ -347,19 +284,14 @@ internal class SetupModel(
             SetupControl.Continue -> if (scanAndWait()) feel.report(Outcome.Activated)
             SetupControl.UseSecondScreen -> answerSecondScreen(isOn = true)
             SetupControl.SkipSecondScreen -> answerSecondScreen(isOn = false)
-            SetupControl.UseBoxArt -> openBoxArtForm()
-            SetupControl.SkipBoxArt -> {
-                if (state.value.step == SetupStep.BoxArt) {
-                    leaveBoxArt(SetupAction.Skip)
-                    feel.report(Outcome.Activated)
-                }
-            }
+            SetupControl.ConfirmKeep -> if (state.value.step == SetupStep.Confirm) chooseConfirmRow(ConfirmButtonSetting.Right)
+            SetupControl.ConfirmUseB -> if (state.value.step == SetupStep.Confirm) chooseConfirmRow(ConfirmButtonSetting.Bottom)
+            SetupControl.Look0, SetupControl.Look1, SetupControl.Look2, SetupControl.Look3, SetupControl.Look4, SetupControl.Look5 -> answerLook(control)
+            SetupControl.UseBoxArt -> chooseScreenScraper()
+            SetupControl.BoxArtLibretro -> goOnAfter(SetupStep.BoxArt) { source.setBoxArtSource(BoxArtSourceSetting.LibretroOnly) }
+            SetupControl.BoxArtOwnCovers -> goOnAfter(SetupStep.BoxArt) { source.setBoxArtSource(BoxArtSourceSetting.OwnCovers) }
             SetupControl.UsageStatistics -> {
                 save { source.setUsageStatistics(!state.value.usageStatistics) }
-                feel.report(Outcome.Activated)
-            }
-            SetupControl.PushRightToPlay -> {
-                save { source.setPushRightToPlay(!state.value.pushRightToPlay) }
                 feel.report(Outcome.Activated)
             }
             SetupControl.StartPlaying -> finishSetup()
@@ -372,7 +304,7 @@ internal class SetupModel(
         val now = state.value
         if (now.step != SetupStep.Folders || now.folders.isNotEmpty()) return
         stepLeft(SetupStep.Folders, SetupAction.Skip)
-        local.update { it.copy(step = SetupStep.Ready, message = null, requestedFocus = SetupControl.StartPlaying, emulators = null) }
+        local.update { it.copy(step = SetupStep.Ready, message = null, requestedFocus = SetupControl.StartPlaying, emulators = null, lastQuestion = null, skippedQuestions = true) }
         feel.report(Outcome.Activated)
     }
 
@@ -388,10 +320,12 @@ internal class SetupModel(
         hasPressedStartPlaying = true
         // Set up later on a failed load: the step the failure happened on is recorded as skipped, once.
         leftStep?.let { stepLeft(it, SetupAction.Skip) }
-        setupCompleted(state.value)
+        if (!wasCounted) times.completed(state.value)
         save {
             try {
-                source.completeSetup()
+                // A failed load left a reopened setup's questions unasked again.
+                source.completeSetup(questionsSkipped = local.value.skippedQuestions || (wasCounted && leftStep != null))
+                if (wasCounted) leftReopened.value = true
             } catch (e: Exception) {
                 hasPressedStartPlaying = false // stored nothing: the message shows, and it may be pressed again
                 throw e
@@ -438,64 +372,55 @@ internal class SetupModel(
         if (now.folders.isEmpty()) return false
         // A folder being removed would be scanned as it goes: Continue waits until the removal lands.
         if (now.folders.any { it.isRemoving }) return false
-        // Try again on the scan step stays on it: only the folder step is left here.
-        if (now.step == SetupStep.Folders) stepLeft(SetupStep.Folders, SetupAction.Next)
+        // Try again on the scan step stays on it: only the folder step is left here, for the questions.
+        val fromFolders = now.step == SetupStep.Folders
+        if (fromFolders) stepLeft(SetupStep.Folders, SetupAction.Next)
         // Ask first: requestScan marks the scan busy at once, so the Scan step never shows the
         // previous scan's failure for a frame.
         source.requestScan()
-        val question = now.secondScreenKind
-        val step = if (question != null) SetupStep.SecondScreen else boxArtOrScan(accounts)
-        val focus = question?.let(::secondScreenFocusFor)
-        val status = accountStatus.value
-        val form = newBoxArtForm(accounts, status, local.value.signedInHere, keyboardChoice)
-        // A stored account needs no question: the step opens on "Signed in as …" and Continue, or,
-        // when its password was refused, on the form with the name filled in (B: the question).
-        val opensOnForm = opensOnTheForm(form, status)
-        if (opensOnForm) form?.startTyping()
         local.update {
-            it.copy(
-                step = step,
-                message = null,
-                requestedFocus = focus,
-                emulators = null,
-                hasSkippedSecondScreen = false,
-                boxArt = form,
-                isBoxArtFormOpen = opensOnForm,
-            )
+            val to = if (fromFolders) stepAfter(SetupStep.Folders, now.hasConfirmStep, now.secondScreenKind != null) else SetupStep.Scan
+            val fresh = if (fromFolders) it.copy(lastQuestion = null, askedSecondScreen = null, skippedQuestions = false) else it
+            enter(fresh, to, now).copy(emulators = null, hasSkippedSecondScreen = false)
         }
+        startScanWait()
+        return true
+    }
+
+    /** Shows the library once the questions are answered and the walk has ended; one at a time. */
+    private fun startScanWait() {
         scanWait?.cancel()
         scanWait =
             scope.launch {
-                if (question != null) waitForTheSecondScreenAnswer()
-                // Signed in or skipped: the scan's own step (or the library, if it has ended) comes next.
-                local.first { it.step != SetupStep.BoxArt }
+                waitForTheQuestions()
                 val ended = source.untilTheWalkEnds()
                 if (!ended.isBusy && ended.hasFailed) {
                     local.update { it.copy(requestedFocus = SetupControl.TryAgain) }
                     return@launch
                 }
                 if (local.value.step == SetupStep.Scan) stepLeft(SetupStep.Scan, SetupAction.Next)
-                local.update { it.copy(step = SetupStep.Ready, requestedFocus = SetupControl.StartPlaying) }
-                val coverage =
-                    try {
-                        source.emulatorCoverage()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        log("Emulators could not be checked (${e.javaClass.simpleName})")
-                        null
-                    }
-                local.update { it.copy(emulators = coverage) }
+                local.update { it.copy(step = SetupStep.Ready, requestedFocus = SetupControl.StartPlaying, isOnline = source.isOnline()) }
+                local.update { it.copy(emulators = source.coverageOrNull(log)) }
             }
-        return true
     }
 
-    /** Until the question is answered, or skipped because the screen went away (then its dot goes too). */
-    private suspend fun waitForTheSecondScreenAnswer() {
+    /**
+     * Into the scan after a question was answered again by Back (its wait was stopped then): waits anew, and asks
+     * for a scan only when the last one failed, so a running or finished scan is left as it is.
+     */
+    private fun resumeScanWait() {
+        if (scanWait?.isActive == true) return
+        if (source.scan.value.let { !it.isBusy && it.hasFailed }) source.requestScan()
+        local.update { it.copy(emulators = null) }
+        startScanWait()
+    }
+
+    /** Until the questions are answered, or the second screen's skipped because the screen went away (then its dot goes too). */
+    private suspend fun waitForTheQuestions() {
         // From the model's own state and the source, not [state]: that may not show the step yet.
-        combine(local, source.secondScreenQuestion) { l, question -> l.step != SetupStep.SecondScreen || question == null }.first { it }
+        combine(local, source.secondScreenQuestion) { l, question -> l.step == SetupStep.Scan || (l.step == SetupStep.SecondScreen && question == null) }.first { it }
         local.update {
-            if (it.step == SetupStep.SecondScreen) it.copy(step = boxArtOrScan(accounts), requestedFocus = null, hasSkippedSecondScreen = true) else it
+            if (it.step == SetupStep.SecondScreen) it.copy(step = SetupStep.Scan, requestedFocus = null, hasSkippedSecondScreen = true) else it
         }
     }
 
@@ -503,56 +428,145 @@ internal class SetupModel(
     private fun answerSecondScreen(isOn: Boolean) {
         if (state.value.step != SetupStep.SecondScreen) return
         stepLeft(SetupStep.SecondScreen, if (isOn) SetupAction.Next else SetupAction.Skip)
+        val kind = state.value.secondScreenKind
         save { source.setSecondScreenEnabled(isOn) }
-        local.update { it.copy(step = boxArtOrScan(accounts), requestedFocus = null, hasAnsweredSecondScreen = true) }
+        local.update {
+            it.copy(step = SetupStep.Scan, requestedFocus = null, hasAnsweredSecondScreen = true, lastQuestion = SetupStep.SecondScreen, askedSecondScreen = kind ?: it.askedSecondScreen)
+        }
+        resumeScanWait()
         feel.report(Outcome.Activated)
     }
 
-    /** "Use my account": the sign-in form, typing in its first empty field. */
-    private fun openBoxArtForm() {
+    /** "Box art and game info": a usable account is the choice at once; otherwise the sign-in form, opened with the tray down on the username so Sign in and Skip are seen at once (A on a field opens the tray). */
+    private fun chooseScreenScraper() {
         if (state.value.step != SetupStep.BoxArt) return
-        local.value.boxArt?.startTyping()
+        val usable = (accountStatus.value as? AccountStatus.SignedIn)?.isRefused == false || local.value.signedInHere != null
+        if (usable) {
+            goOnAfter(SetupStep.BoxArt) { source.setBoxArtSource(BoxArtSourceSetting.ScreenScraper) }
+            return
+        }
+        local.value.boxArt?.focusFirstEmpty()
         local.update { if (it.step == SetupStep.BoxArt) it.copy(isBoxArtFormOpen = true) else it }
         feel.report(Outcome.Activated)
     }
 
-    /** Not now, Skip or Continue: the scan's step (or the library, if the scan has ended). */
-    private fun leaveBoxArt(action: SetupAction) {
-        if (local.value.step == SetupStep.BoxArt) stepLeft(SetupStep.BoxArt, action)
-        local.update { if (it.step == SetupStep.BoxArt) it.copy(step = SetupStep.Scan, requestedFocus = null) else it }
+    /** Skip goes on storing nothing (`effectiveBoxArtSource`: own covers until an account is usable), as Continue after "Signed in as …"; B goes back ([closeBoxArtForm]). */
+    private fun leaveBoxArtForm() {
+        val form = local.value.boxArt ?: return
+        form.stopTyping()
+        goForward(SetupStep.BoxArt, if (form.signedInAs != null) SetupAction.Next else SetupAction.Skip)
     }
 
-    private fun backToFolders() {
-        scanWait?.cancel()
+    /** The sign-in form goes back to the choices; the keyboard goes with it. */
+    private fun closeBoxArtForm(form: SignInForm) {
+        form.stopTyping()
+        local.update { if (it.step == SetupStep.BoxArt) it.copy(isBoxArtFormOpen = false, requestedFocus = SetupControl.UseBoxArt) else it }
+    }
+
+    /**
+     * A row of the confirm step. First visit: either row stores its answer and goes on. Reached again by Back: the row of the
+     * stored answer goes on, the other row stores its answer and stays, so the hints change in front of the person.
+     */
+    private fun chooseConfirmRow(setting: ConfirmButtonSetting) {
+        val stored = state.value.confirmAnswer
+        if (stored == null || stored == setting) {
+            goOnAfter(SetupStep.Confirm) {
+                // First visit: either row is the answer and is stored; the stored row on a revisit has it already.
+                if (stored == null) source.setConfirmButton(setting)
+                local.update { it.copy(confirmAnswer = setting) }
+            }
+            return
+        }
+        feel.report(Outcome.Activated)
+        save {
+            source.setConfirmButton(setting)
+            local.update { it.copy(confirmAnswer = setting) }
+        }
+    }
+
+    /** A tile of the look step: its colours, and the text size this device suggests, then on. */
+    private fun answerLook(control: SetupControl) {
+        val set = control.lookIndex?.let(SetupLooks.sets::getOrNull) ?: return
+        goOnAfter(SetupStep.Look) {
+            source.applyLook(set, deviceLook.textSize)
+            local.update { it.copy(pickedLook = control) }
+        }
+    }
+
+    /** Stores what [write] stores, then goes on from [from]; a failed write says so and stays. */
+    private fun goOnAfter(
+        from: SetupStep,
+        write: suspend () -> Unit,
+    ) {
+        if (local.value.step != from || isStoring) return
+        isStoring = true
+        feel.report(Outcome.Activated)
+        scope.launch {
+            try {
+                write()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log("Setup could not store a setting (${e.javaClass.simpleName})")
+                local.update { it.copy(message = SetupMessage.SaveFailed) }
+                return@launch
+            } finally {
+                isStoring = false
+            }
+            goForward(from, SetupAction.Next)
+        }
+    }
+
+    private fun goForward(
+        from: SetupStep,
+        action: SetupAction,
+    ) {
+        val now = state.value
+        if (local.value.step != from) return
+        stepLeft(from, action)
+        val to = stepAfter(from, now.hasConfirmStep, now.secondScreenKind != null)
+        local.update {
+            if (it.step != from) return@update it
+            val left = if (from == SetupStep.BoxArt) it.copy(lastQuestion = SetupStep.BoxArt) else it
+            enter(left, to, now)
+        }
+        if (to == SetupStep.Scan) resumeScanWait()
+    }
+
+    private fun goBackTo(
+        to: SetupStep,
+        now: SetupUiState,
+    ) {
+        // The scan itself goes on; only its wait stops, so the library does not replace a question being answered.
+        if (to == SetupStep.Folders || local.value.step == SetupStep.Scan || local.value.step == SetupStep.Ready) scanWait?.cancel()
         stepLeft(local.value.step, SetupAction.Back)
-        local.update { it.copy(step = SetupStep.Folders, requestedFocus = SetupControl.Continue, message = null) }
+        local.update { enter(it, to, now) }
     }
 
-    /** `setup_step`: [step] was left by [action] after the time since the last step was left. */
+    /** [l] on entering [to]: its focus, no old message, and the box art step with a fresh form and its choices. */
+    private fun enter(
+        l: SetupLocal,
+        to: SetupStep,
+        now: SetupUiState,
+    ): SetupLocal {
+        val focus =
+            when (to) {
+                SetupStep.Folders -> SetupControl.Continue
+                SetupStep.Confirm -> if (l.confirmAnswer == ConfirmButtonSetting.Bottom) SetupControl.ConfirmUseB else SetupControl.ConfirmKeep
+                // First visit: what the device suggests; once a look was answered: the tile picked.
+                SetupStep.Look -> l.pickedLook ?: SetupControl.lookTile(SetupLooks.sets.indexOf(deviceLook.colorSet ?: currentSet).coerceAtLeast(0))
+                SetupStep.BoxArt -> boxArtFocus(now)
+                SetupStep.SecondScreen -> (now.secondScreenKind ?: l.askedSecondScreen)?.let(::secondScreenFocusFor)
+                SetupStep.Scan, SetupStep.Ready -> null
+            }
+        val form = if (to == SetupStep.BoxArt) newBoxArtForm(accounts, accountStatus.value, l.signedInHere, keyboardChoice) else l.boxArt
+        return l.copy(step = to, message = null, requestedFocus = focus, boxArt = form, isBoxArtFormOpen = false)
+    }
+
     private fun stepLeft(
         step: SetupStep,
         action: SetupAction,
-    ) {
-        val now = clock()
-        val seconds = ((now - stepSince) / MILLIS_PER_SECOND).coerceAtLeast(0)
-        stepSince = now
-        telemetry?.track(TelemetryEvent.SetupStep(setupStepIdOf(step), seconds, action))
-    }
-
-    /** Start playing: the last step and `setup_completed` (counts only, never a folder's or a system's name). */
-    private fun setupCompleted(now: SetupUiState) {
-        stepLeft(SetupStep.Ready, SetupAction.Next)
-        val seconds = ((clock() - setupSince) / MILLIS_PER_SECOND).coerceAtLeast(0)
-        telemetry?.track(
-            TelemetryEvent.SetupCompleted(
-                seconds = seconds,
-                artwork = now.isBoxArtComing,
-                folders = now.folders.size,
-                systemsFound = now.systems.size,
-                emulatorsPicked = now.emulators?.systemsWithEmulator ?: 0,
-            ),
-        )
-    }
+    ) = times.stepLeft(step, action)
 
     private fun save(write: suspend () -> Unit) {
         scope.launch {
@@ -570,9 +584,7 @@ internal class SetupModel(
 
     private companion object {
         const val TAG = "PlumSetup"
-        val LOAD_FAILED_CONTROLS = listOf(SetupControl.TryAgain, SetupControl.SetUpLater)
         const val STOP_TIMEOUT_MS = 5_000L
-        const val MILLIS_PER_SECOND = 1_000L
         const val NANOS_PER_MILLI = 1_000_000L
     }
 }

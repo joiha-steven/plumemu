@@ -38,7 +38,7 @@ class HomeHintGlyphsScreenshotTest {
                 val name = "home_glyphs_${size.label}_${set.name.lowercase()}$suffix.png"
                 try {
                     captureRoboImage(filePath = "${ReferenceShots.OUTPUT_DIR}/$name") {
-                        PlumTheme(PlumThemeSettings(background = set.background, text = set.textMode.color, accent = set.accent, buttonSet = set, textSize = TextSize.Medium)) {
+                        PlumTheme(PlumThemeSettings(background = set.background, text = set.textMode.color, accent = set.accent, buttonSet = set, textSize = TextSize.Small)) {
                             CompositionLocalProvider(LocalButtonLetters provides ButtonLetters.of(confirm)) {
                                 HomeAt(FakeHomeContent.board(), BoardGamesFocused)
                             }

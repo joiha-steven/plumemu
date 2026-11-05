@@ -37,6 +37,11 @@ import org.robolectric.annotation.GraphicsMode
  * the row-text line and the buttons on the panel's edge.
  */
 abstract class SettingsRaAccountAlignBase {
+    /** True in the classes of a wide screen, where small sizes show three columns and a panel's title starts on its edge (the board). */
+    protected open val wide = false
+
+    private fun titleStart(at: String) = panelTextStartAt(at, wide)
+
     protected val compose = appComposeRule()
 
     @get:Rule
@@ -107,10 +112,10 @@ abstract class SettingsRaAccountAlignBase {
             val panel = bounds(SettingsTags.PANEL)
             val title = textIn("RetroAchievements", SettingsTags.PANEL)
             val button = bounds(SettingsTags.panelItem(0))
-            // At the two largest sizes the refused page is taller than the panel and scrolls to keep the focused button whole: the title is then above the top by design.
-            val scrolls = status.isKeyRefused && each.name in listOf("Largest", "Huge")
+            // At the largest size every page, and at the two largest the refused page, is taller than the panel and scrolls to keep the focused button whole: the title is then above the top by design.
+            val scrolls = each.name == "Largest" || (status.isKeyRefused && each.name == "Huge")
             if (!scrolls && !near(title.top.value, panel.top.value)) problems += "$at: title's top at ${title.top}, the panel's at ${panel.top}"
-            if (!near(title.left.value - panel.left.value, PlumDimens.gameRowPadding.value)) problems += "$at: title at ${title.left}, not on the row-text line"
+            if (!near(title.left.value - panel.left.value, titleStart(at))) problems += "$at: title at ${title.left}, not on the row-text line"
             if (!status.isKeyRefused) {
                 val line = bounds(SettingsPanelTags.STATUS)
                 if (!near(line.left.value, title.left.value)) problems += "$at: the signed-in line at ${line.left}, the title at ${title.left}"
@@ -141,6 +146,8 @@ abstract class SettingsRaAccountAlignBase {
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
 class SettingsRaAccountAlign768Test : SettingsRaAccountAlignBase() {
+    override val wide = true
+
     @Test fun theFormLinesUpInThePanel() = formLinesUp("768x432")
 
     @Test fun theSignedInPageLinesUp() = signedInLinesUp("768x432", RaAccountStatus.SignedIn("plumtester", 1234))

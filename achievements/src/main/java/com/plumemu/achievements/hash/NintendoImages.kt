@@ -13,12 +13,13 @@ private fun le32(b: ByteArray, at: Int): Long =
 
 private fun le64(b: ByteArray, at: Int): Long = le32(b, at) or (le32(b, at + 4) shl 32)
 
-/** Opens a GameCube or Wii image by its extension: `.gcz`, `.wbfs`, or the plain image. */
+/** Opens a GameCube or Wii image by its extension: `.gcz`, `.wbfs`, `.rvz`, `.wia`, or the plain image. */
 internal object NintendoImages {
     @Throws(IOException::class, DiscFormatException::class)
     fun open(rom: RaRomSource, extension: String, check: () -> Unit): DiscFile = when (extension) {
         "gcz" -> GczDiscFile.open(rom, check)
         "wbfs" -> WbfsDiscFile.open(rom, check)
+        "rvz", "wia" -> WiaDiscFile.open(rom, check)
         else -> RawDiscFile(rom, check)
     }
 }

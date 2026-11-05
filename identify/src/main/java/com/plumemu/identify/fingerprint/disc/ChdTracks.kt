@@ -23,8 +23,8 @@ internal data class ChdDataTrack(val frame: Long, val type: String)
  * an 8-byte subheader), MODE1_RAW and MODE2_RAW whole 2352-byte sectors.
  */
 internal object ChdTracks {
-    private val TAGS = setOf("CHTR", "CHT2", "CHGD")
-    private const val GD_ROM_TAG = "CHGD"
+    private val TAGS = setOf("CHTR", "CHT2", "CHGD", "CHGT")
+    private val GD_ROM_TAGS = setOf("CHGD", "CHGT")
     private const val ENTRY_HEADER = 16
     private const val MAX_ENTRIES = 128
     private const val MAX_TEXT = 256
@@ -32,9 +32,11 @@ internal object ChdTracks {
     private const val DREAMCAST_DATA_TRACK = 3
     private val FIELD = Regex("([A-Z]+):(\\S+)")
 
-    /** The data track, or null when the CHD lists no tracks (then frame 0 is taken). */
+    /** The track entries of the metadata (fields by name, in the order listed) and whether they are a GD-ROM's. */
+    private class TrackEntries(val tracks: List<Map<String, String>>, val gdRom: Boolean)
+
     @Throws(IOException::class)
-    fun dataTrack(file: RandomAccessSource, metaOffset: Long): ChdDataTrack? {
+    private fun entries(file: RandomAccessSource, metaOffset: Long): TrackEntries {
         var gdRom = false
         val tracks = ArrayList<Map<String, String>>()
         var next = metaOffset
@@ -47,12 +49,33 @@ internal object ChdTracks {
             if (tag in TAGS && length <= MAX_TEXT) {
                 val text = String(file.readFully(next + ENTRY_HEADER, length), Charsets.ISO_8859_1)
                 tracks += FIELD.findAll(text).associate { it.groupValues[1] to it.groupValues[2] }
-                gdRom = gdRom || tag == GD_ROM_TAG
+                gdRom = gdRom || tag in GD_ROM_TAGS
             }
             val following = head.u64be(8)
             if (following != 0L && following <= next) break
             next = following
         }
+        return TrackEntries(tracks, gdRom)
+    }
+
+    /**
+     * Frames of every track, in track-number order: the `FRAMES` field less its `PAD` (the frames a
+     * GD-ROM track gets so the next one starts on a boundary; Redump's file does not hold them),
+     * never the padded hunk layout. Empty when the CHD lists no tracks.
+     */
+    @Throws(IOException::class)
+    fun trackFrames(file: RandomAccessSource, metaOffset: Long): List<ChdTrackFrames> =
+        entries(file, metaOffset).tracks.sortedBy { it["TRACK"]?.toIntOrNull() ?: Int.MAX_VALUE }.map {
+            val frames = count(it, "FRAMES") ?: throw NotRead("chd: track list has no frame count")
+            ChdTrackFrames(frames - (count(it, "PAD") ?: 0L), it["TYPE"] ?: "")
+        }
+
+    /** The data track, or null when the CHD lists no tracks (then frame 0 is taken). */
+    @Throws(IOException::class)
+    fun dataTrack(file: RandomAccessSource, metaOffset: Long): ChdDataTrack? {
+        val found = entries(file, metaOffset)
+        val tracks = found.tracks
+        val gdRom = found.gdRom
         if (tracks.isEmpty()) return null
         var frame = 0L
         for (track in tracks.sortedBy { it["TRACK"]?.toIntOrNull() ?: Int.MAX_VALUE }) {
@@ -82,3 +105,6 @@ internal object ChdTracks {
     /** Bytes of user data skipped at the start of a cooked sector of [type] (no sync header). */
     fun cookedDataOffset(type: String): Int = if (type == "MODE2" || type == "MODE2_FORM_MIX") 8 else 0
 }
+
+/** One track of a CHD's track list: its frames (without `PAD`) and its `TYPE` (`MODE1`, `AUDIO` ...). */
+internal class ChdTrackFrames(val frames: Long, val type: String)

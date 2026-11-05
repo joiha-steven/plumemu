@@ -6,8 +6,10 @@ import com.plumemu.identify.fingerprint.CrcSource
 import com.plumemu.identify.fingerprint.FingerprintReader
 import com.plumemu.identify.fingerprint.Fingerprints
 import com.plumemu.identify.fingerprint.TitleKind
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.util.Locale
 
 /**
  * `game.fingerprint`: the [Fingerprints] the identifier read, as a small JSON object, so a rescan
@@ -19,7 +21,8 @@ internal object FingerprintCodec {
     /**
      * Bumped when a field changes meaning; older values are then read again from the file. Not
      * for a new field: the scrape hints decode these values too, and a bump would leave every
-     * row not named again without hints. `titleId` and `titleKind` are optional.
+     * row not named again without hints. `titleId`, `titleKind` and the track keys (`trk`) are optional.
+     * `trkFix`, written by test builds only, is ignored: track keys are never a fix key.
      * A reader that learns to read more for one system raises `FingerprintReader.readerVersion`
      * instead: stored as `rv`, it makes [isCurrent] false for that system's older values only.
      */
@@ -49,11 +52,16 @@ internal object FingerprintCodec {
         putOpt("archiveCrc", fingerprints.archiveCrc32)
         putOpt("titleId", fingerprints.titleId)
         putOpt("titleKind", fingerprints.titleKind?.name)
+        if (fingerprints.productCode != null || fingerprints.titleId != null) {
+            put(CODE_FROM, if (fingerprints.codeFromFileName) CODE_FROM_NAME else CODE_FROM_CONTENT)
+        }
+        // Track-size keys as hex strings (a JSON number would lose bits); `[]` means "looked at, none".
+        fingerprints.trackKeys?.let { keys -> put("trk", JSONArray(keys.map { String.format(Locale.ROOT, "%016x", it) })) }
     }.toString()
 
     /**
-     * False when [stored] was read by an older reader of [systemId] than this app's (a Switch or
-     * 3DS file cached by an older version): the file is then read again, once. Unreadable values
+     * False when [stored] was read by an older reader of [systemId] than this app's (a Switch, 3DS or
+     * disc file cached by an older version): the file is then read again, once. Unreadable values
      * count as current here; [decode] rejects them.
      */
     fun isCurrent(stored: String, systemId: String): Boolean {
@@ -73,6 +81,15 @@ internal object FingerprintCodec {
      */
     private const val CONTENT_READ = "full"
     private const val CONTENT_READ_DONE = "done"
+
+    /**
+     * Where `code` and `titleId` came from (`Fingerprints.codeFromFileName`): `content` or `name`.
+     * Optional, no version bump: a value without it decodes as taken from the name, so the usage
+     * statistics leave its code out until the file is read again; naming uses the code as before.
+     */
+    private const val CODE_FROM = "codeFrom"
+    private const val CODE_FROM_CONTENT = "content"
+    private const val CODE_FROM_NAME = "name"
 
     /** What the content pass's SQL looks for in a stored value (core-data `ContentReadFilter`). */
     const val LOOSE_MARK = "\"container\":\"NONE\""
@@ -102,6 +119,8 @@ internal object FingerprintCodec {
         return try {
             val json = JSONObject(stored)
             if (json.optInt("v") != VERSION) return null
+            val productCode = json.optStringOrNull("code")
+            val titleId = json.optStringOrNull("titleId")
             Fingerprints(
                 size = json.getLong("size"),
                 container = Container.valueOf(json.getString("container")),
@@ -111,19 +130,22 @@ internal object FingerprintCodec {
                 crc32 = json.optLongOrNull("crc"),
                 crcSource = json.optStringOrNull("crcSource")?.let { CrcSource.valueOf(it) },
                 headerBytesSkipped = json.optInt("header", 0),
-                productCode = json.optStringOrNull("code"),
+                productCode = productCode,
                 codeKind = json.optStringOrNull("codeKind")?.let { CodeKind.valueOf(it) },
                 internalTitle = json.optStringOrNull("title"),
                 titleIsCanonical = json.optBoolean("canonical", false),
                 chdSha1 = json.optStringOrNull("chd"),
                 archiveCrc32 = json.optLongOrNull("archiveCrc"),
-                titleId = json.optStringOrNull("titleId"),
+                titleId = titleId,
                 titleKind = json.optStringOrNull("titleKind")?.let { TitleKind.valueOf(it) },
+                trackKeys = json.optJSONArray("trk")?.let { array -> (0 until array.length()).map { java.lang.Long.parseUnsignedLong(array.getString(it), 16) } },
+                // Only a value that says "content" is known to be: one stored before the origin was is not.
+                codeFromFileName = (productCode != null || titleId != null) && json.optStringOrNull(CODE_FROM) != CODE_FROM_CONTENT,
             )
         } catch (e: JSONException) {
             null
         } catch (e: IllegalArgumentException) {
-            // An enum name this version does not know.
+            // An enum name this version does not know, or a track key that is not hex (a NumberFormatException).
             null
         }
     }

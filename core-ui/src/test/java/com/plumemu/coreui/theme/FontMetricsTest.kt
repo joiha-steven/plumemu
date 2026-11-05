@@ -44,6 +44,13 @@ class FontMetricsTest {
         }
 
     @Test
+    fun jostMetricsMatchTheTuning() {
+        val m = read("jost_400.ttf")
+        assertEquals(Metrics(1000, 460, 1070, -375), m)
+        assertEquals(PlumFont.Jost.lineHeightEm, (m.ascent - m.descent) / m.unitsPerEm.toFloat(), 1e-6f)
+    }
+
+    @Test
     fun sansMetricsMatchTheTuning() {
         val m = read("plum_sans_400.ttf")
         assertEquals(Metrics(2048, 1118, 1984, -494), m)

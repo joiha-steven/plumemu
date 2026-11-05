@@ -26,6 +26,11 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.layout.LocalPinnableContainer
 import androidx.compose.ui.layout.PinnableContainer
@@ -39,7 +44,6 @@ import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.components.GameRowLook
 import com.plumemu.coreui.components.GlidingPillHost
 import com.plumemu.coreui.components.rememberGlidingPill
-import com.plumemu.coreui.components.listEdgeFadeMask
 import com.plumemu.coreui.theme.rememberListGlide
 import kotlin.math.abs
 
@@ -160,6 +164,9 @@ private fun Modifier.placedOnlyWhen(
         layout(placeable.width, placeable.height) { if (shown()) placeable.place(0, 0) }
     }
 
+/** The games list's width in px as the strip lays it out; 0 when not known (a screen that builds the pages itself). */
+internal val LocalGamesListWidthPx = compositionLocalOf { 0 }
+
 /** The pages' gliding pills by entry id, for the halo pass of [GamesPages]; plain, read only while drawing. */
 internal class PageHalos {
     val hosts = HashMap<String, GlidingPillHost>()
@@ -223,14 +230,17 @@ private fun EntryGames(
         positions.attach(entry.id, listState)
         onDispose { positions.detach(entry.id, listState) }
     }
-    val glide = rememberListGlide(stride = PlumTheme.layout.gameRowHeight + PlumDimens.listRowGap)
+    val glide = rememberListGlide(stride = PlumTheme.layout.gameRowHeight + PlumDimens.listRowGap, glowRoom = true)
     val forms = remember { RowForms() }
     FollowRowForms(forms, state, entry.id, panelOpen)
     val layout = PlumTheme.layout
     val visibleWidth = layout.width - PlumDimens.stripMarginSide * 2 - layout.systemsColumnWidth - PlumDimens.columnGap
+    // The list's width as the strip lays it out (its own width and the bleed, narrow preview and full-width cases included), known before the page is shown.
+    val density = LocalDensity.current
+    val listPillWidthPx = LocalGamesListWidthPx.current.takeIf { it > 0 } ?: with(density) { homeGamesWidth(layout, hasBoxArt, showsGrid = false).roundToPx() + PlumDimens.gamesListBleed.roundToPx() }
     // The focus pill is drawn by the list, so it glides from row to row; read while drawing.
     val pill =
-        rememberGlidingPill(listState, glide, rowHeight = layout.gameRowHeight, stride = layout.gameRowHeight + PlumDimens.listRowGap, haloOutside = true) {
+        rememberGlidingPill(listState, glide, rowHeight = layout.gameRowHeight, stride = layout.gameRowHeight + PlumDimens.listRowGap, haloOutside = true, blob = true, warmWidthPx = listPillWidthPx) {
             val row = state.focus.rowOf(entry.id)
             if (gameLook(state.focus, entry.id, row, panelOpen.value) == GameRowLook.Focused) row + bandItems else -1
         }
@@ -238,22 +248,23 @@ private fun EntryGames(
         halos.hosts[entry.id] = pill
         onDispose { if (halos.hosts[entry.id] === pill) halos.hosts.remove(entry.id) }
     }
-    val fades = remember(listState, glide, state, entry.id, bandItems) { ListEdgeFades(listState, glide) { state.focus.rowOf(entry.id) + bandItems } }
+    val rowStridePx = with(LocalDensity.current) { (layout.gameRowHeight + PlumDimens.listRowGap).toPx() }
+    val fades = remember(listState, glide, state, entry.id, bandItems, rowStridePx) { gamesListFades(listState, glide, rowStridePx) { state.focus.rowOf(entry.id) + bandItems } }
     pill.Provide {
         LazyColumn(
             state = listState,
-            modifier = modifier.listEdgeFadeMask(fades, PlumTheme.edgeFadeOn).then(pill.modifier).then(glide.modifier),
+            modifier = modifier.listHeightAtMost(PlumTheme.layout.listRowsHeightPx(LocalDensity.current)).then(pill.modifier).then(glide.withFadeMask(fades, PlumTheme.edgeFadeOn)),
             contentPadding = PaddingValues(vertical = glide.extra),
             // No spacing: each game row carries its own gap (its tap area).
         ) {
-            if (info != null) item(key = SYSTEM_BAND_KEY, contentType = SYSTEM_BAND_KEY) { SystemInfoBand(info, visibleWidth) }
+            if (info != null) item(key = SYSTEM_BAND_KEY, contentType = SYSTEM_BAND_KEY) { SystemInfoBand(info, visibleWidth, isPeeking = { state.focus.column == com.plumemu.coreinput.Column.Details }) }
             itemsIndexed(entry.rows, key = { _, row -> row.id }) { index, row ->
                 GamesListItem(index, row, entry.id, hasBoxArt, entry.kind.mixesSystems, showsPlace, isShown, forms, state, onAction, panelOpen)
             }
         }
     }
     // The first row is brought in with the band above it, so the list shows its top.
-    KeepFocusedVisible(listState, glide) { state.focus.rowOf(entry.id).let { if (it == 0) 0 else it + bandItems } }
+    KeepFocusedVisible(listState, glide, trailingGap = PlumDimens.listRowGap, countsSteps = true) { state.focus.rowOf(entry.id).let { if (it == 0) 0 else it + bandItems } }
     FollowArt(entry.rows) { listState.firstVisibleItemIndex - bandItems }
 }
 
@@ -431,3 +442,14 @@ internal class GamesPagesProbe(
  * SystemSwitchBenchmark measures the frames on a device.
  */
 internal val GamesPagesInfo = SemanticsPropertyKey<GamesPagesProbe>("GamesPagesInfo")
+
+/**
+ * Measures the content [maxPx] tall at most while the node keeps the size it was given (the page fills its parent): the list ends on a whole
+ * row, and the room left under it stays empty. Placed after the page's own size, before the glide's clip.
+ */
+internal fun Modifier.listHeightAtMost(maxPx: Int): Modifier =
+    layout { measurable, constraints ->
+        val height = minOf(constraints.maxHeight, maxPx)
+        val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
+        layout(constraints.constrainWidth(placeable.width), constraints.constrainHeight(height)) { placeable.place(0, 0) }
+    }

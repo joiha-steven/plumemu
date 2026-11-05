@@ -283,9 +283,14 @@ internal class SignInForm(
      * as after "Sign in again") and its keyboard comes up. Nothing on a signed-in form or during a check.
      */
     fun startTyping() {
-        if (signedInAs != null || isChecking) return
+        if (focusFirstEmpty()) askForKeyboard()
+    }
+
+    /** The cursor goes to the first empty field with the keyboard left down; false on a signed-in form or during a check. */
+    fun focusFirstEmpty(): Boolean {
+        if (signedInAs != null || isChecking) return false
         focus = if (username.isEmpty()) SignInItem.Username else SignInItem.Password
-        askForKeyboard()
+        return true
     }
 
     private fun askForKeyboard() {

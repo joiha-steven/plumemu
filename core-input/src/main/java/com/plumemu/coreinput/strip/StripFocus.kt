@@ -7,9 +7,11 @@ import com.plumemu.coreinput.Column
  * One entry of the system column, in screen order: Recent, Favorites, Apps, then each system
  * with games. [itemCount] is its games (or apps);
  * [gridColumns] is 1 for the list view, else the grid's column count. [hasDetails] false: the
- * entry never has a details column or a details stop, even with box art (Apps: apps have no art).
+ * entry never has a details column or a details stop (the app shell sets it false for Apps' grid).
  * [itemIds] are the items' ids in screen order (empty: rows are kept by index only); with them the
  * focused row follows its game when the list is re-sorted (names arriving during a scan).
+ * [packed]: the grid's rows as drawn (set by the grid through `StripState.setPackedRows`); with it
+ * Up and Down go to the nearest centre in the next row and rows are [PackedRows]', else by [gridColumns].
  */
 @Immutable
 data class SystemEntry(
@@ -18,6 +20,7 @@ data class SystemEntry(
     val gridColumns: Int = 1,
     val hasDetails: Boolean = true,
     val itemIds: List<String> = emptyList(),
+    val packed: PackedRows? = null,
 )
 
 /** What the strip shows; [hasBoxArt] false means no details stop (grids do not depend on it) (wide screens show a text-only details column, which is not a stop). */

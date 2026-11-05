@@ -207,6 +207,17 @@ class IdentifyDaoTest {
     }
 
     @Test
+    fun unidentifiedFingerprintsAreThoseOfTheUnidentifiedListOnly() = runTest {
+        // a: named from the file; b: identified; c: not looked at yet. Only a is listed, and only a's fingerprint goes.
+        val (a, b) = insert("a.sfc", "b.sfc", "c.sfc")
+        identify(a, emptyList(), "a.sfc", trust = NameTrustNames.FILE_NAME)
+        identify(b, listOf("crc:0000abcd:1024"), "Zork Quest")
+        assertEquals(listOf(a), dao.observeUnidentified(emptySet()).first().map { it.id })
+        assertEquals(listOf(UnidentifiedFingerprintRow("snes", "fp")), dao.unidentifiedFingerprints(emptySet()))
+        assertEquals(emptyList<UnidentifiedFingerprintRow>(), dao.unidentifiedFingerprints(setOf("snes")))
+    }
+
+    @Test
     fun gamesOfSystemsNamedByDesignAreNeverUnidentified() = runTest {
         val (a, b) = insert("a.sfc", "b.sfc")
         identify(a, emptyList(), "a", trust = NameTrustNames.FILE_NAME)

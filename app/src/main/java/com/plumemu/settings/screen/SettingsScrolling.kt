@@ -16,17 +16,29 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Density
+import com.plumemu.coreui.components.slabOverhang
+import com.plumemu.home.ListEdgeFades
 import com.plumemu.coreui.components.FocusPillShape
 import com.plumemu.coreui.components.rememberGlidingPill
+import com.plumemu.coreui.theme.CollarDimens
 import com.plumemu.coreui.theme.ListGlide
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumMotionState
@@ -38,8 +50,10 @@ import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.home.GLIDE_CONTEXT_ROWS
 import com.plumemu.home.KeepFocusedVisible
 import kotlinx.coroutines.CoroutineScope
@@ -69,11 +83,17 @@ internal fun KeepFocusedColumn(
     fadeTag: String? = null,
     pillShape: Shape = FocusPillShape,
     pillIndex: (() -> Int)? = null,
+    /**
+     * The column ends this far above its box: the clip of the list's window reaches that far past the column (the focused slab's overhang), so a
+     * row the column cuts would show inside it. Settings' columns end above the hint keys' gap and pass [SlabDimens.listEndRoom] (the overhang and the
+     * glow around it, as the home lists keep), so nothing draws past the box and a focused end row's glow is never cut flat.
+     */
+    endRoom: Dp = 0.dp,
     content: @Composable ColumnScope.(place: (Int) -> Modifier) -> Unit,
 ) {
     val scroll = rememberScrollState()
     val layout = PlumTheme.layout
-    val glide = rememberListGlide(stride = layout.rowHeight + gap)
+    val glide = rememberListGlide(stride = layout.rowHeight + gap, glowRoom = endRoom >= SlabDimens.listEndRoom)
     // Each row's top and bottom inside the column (px).
     val spans = remember { HashMap<Int, IntRange>() }
     val scope = rememberCoroutineScope()
@@ -84,8 +104,14 @@ internal fun KeepFocusedColumn(
     // The glide makes the scroll's viewport [extra] taller at each end: the visible window is what is left.
     val extraPx = with(LocalDensity.current) { glide.extra.roundToPx() }
     follower.extraPx = extraPx
+    follower.density = LocalDensity.current
     follower.glide = glide
-    FollowFocusedRow(follower, focusedIndex, glide.extra > 0.dp)
+    val clipShapes = remember { EndsClipCache() }
+    val endReach = with(LocalDensity.current) { EndReach(SlabDimens.listEndRoom.toPx(), ROW_SHADOW_ABOVE.toPx(), SlabDimens.maxOverhang.toPx()) }
+    FollowFocusedRow(follower, focusedIndex, glide.motionOn)
+    // A window that changes size with no row or focus change (the top bar grew with the text size) would leave the focused row past its end.
+    val latestFocus = rememberUpdatedState(focusedIndex)
+    LaunchedEffect(scroll, follower) { snapshotFlow { scroll.viewportSize }.collect { follower.refit(latestFocus.value()) } }
     val pill =
         rememberGlidingPill(scroll, glide, stride = layout.rowHeight + gap, extraGap = layout.rowHeight * TALL_STEP_ROWS, shape = pillShape, focusedIndex = pillIndex ?: focusedIndex)
     // One modifier per row, kept: a move creates none.
@@ -99,6 +125,7 @@ internal fun KeepFocusedColumn(
                         val before = spans[index]
                         val span = top until top + it.size.height
                         spans[index] = span
+                        if (before != span) follower.placedCount++
                         if (before != span && index == focusedIndex()) {
                             val target = keepVisible(scroll.value, follower.visible(), span)
                             if (target != scroll.value) {
@@ -122,7 +149,7 @@ internal fun KeepFocusedColumn(
         @Composable {
             pill.Provide {
                 Column(
-                    modifier.then(pill.modifier).then(glide.modifier).verticalScroll(scroll),
+                    modifier.padding(bottom = endRoom).clipEnds(scroll, clipShapes, { follower.hiddenAbove(endReach, focusedIndex()) }) { follower.bleedBelow(endReach, focusedIndex()) }.then(pill.modifier).then(glide.modifier).verticalScroll(scroll),
                 ) {
                     // The glide's room above and below the rows; the rows themselves are spaced by [gap].
                     Column(Modifier.padding(vertical = glide.extra).then(pill.contentModifier), verticalArrangement = Arrangement.spacedBy(gap), content = rows)
@@ -140,10 +167,64 @@ internal fun KeepFocusedColumn(
     val reachAbove = remember(follower, fadePx) { { follower.roomPast(focused(), below = false) / fadePx } }
     Box {
         column()
-        if (scroll.canScrollForward) ListEdgeFade(atBottom = true, Modifier.align(Alignment.BottomCenter).testTag(fadeTag + FADE_BOTTOM_SUFFIX), reachBelow)
-        if (scroll.canScrollBackward) ListEdgeFade(atBottom = false, Modifier.align(Alignment.TopCenter).testTag(fadeTag + FADE_TOP_SUFFIX), reachAbove)
+        // Over the column's box (a bare `fillMaxWidth` here was 0 wide), less [endRoom]: the rows are clipped there, so the bottom fade must lie above that cut.
+        Box(Modifier.matchParentSize().padding(bottom = endRoom)) {
+            if (scroll.canScrollForward) ListEdgeFade(atBottom = true, Modifier.align(Alignment.BottomCenter).testTag(fadeTag + FADE_BOTTOM_SUFFIX), reachBelow)
+            if (scroll.canScrollBackward) ListEdgeFade(atBottom = false, Modifier.align(Alignment.TopCenter).testTag(fadeTag + FADE_TOP_SUFFIX), reachAbove)
+        }
     }
 }
+
+/**
+ * The list's own window clip, tightened at draw time: once it has scrolled, a row it cuts at its top is hidden whole ([ColumnFollower.hiddenAbove]: a
+ * sliver of its label or dot under the title bar looked like a fault; nothing of it shows in the gap between the top bar and the strip either: the strip's
+ * own clip leaves that room for the first row's slab overhang, which is only needed while the list is at rest); at the bottom it lets [bleedBelow] px past the window through, so a row that does not fit never shows a fragment (see [ColumnFollower.bleedBelow]).
+ */
+private fun Modifier.clipEnds(
+    scroll: ScrollState,
+    shapes: EndsClipCache,
+    hiddenAbove: () -> Float,
+    bleedBelow: () -> Float,
+): Modifier =
+    graphicsLayer {
+        clip = true
+        shape = shapes.of(if (scroll.value > 0) -hiddenAbove() else Float.MAX_VALUE / 4, bleedBelow())
+    }
+
+/** One clip shape, replaced only when its two reaches change: a scroll frame that changes neither allocates nothing. */
+private class EndsClipCache {
+    private var shape = EndsClip(0f, 0f)
+
+    fun of(
+        top: Float,
+        bottom: Float,
+    ): Shape {
+        if (shape.top != top || shape.bottom != bottom) shape = EndsClip(top, bottom)
+        return shape
+    }
+}
+
+private class EndsClip(
+    val top: Float,
+    val bottom: Float,
+) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline =
+        Outline.Rectangle(Rect(-HUGE, -top.coerceAtMost(HUGE), size.width + HUGE, size.height + bottom.coerceAtMost(HUGE)))
+
+    private companion object {
+        const val HUGE = 100_000f
+    }
+}
+
+/** What a row draws past its own box above it, at most: a control's glow ([CollarDimens.grooveGlowBlur]) is the widest. */
+private val ROW_SHADOW_ABOVE = CollarDimens.grooveGlowBlur
+
+/** The reaches [ColumnFollower.bleedBelow] works with, in px. */
+internal class EndReach(
+    val room: Float,
+    val shadowAbove: Float,
+    val overhang: Float,
+)
 
 /** A step of a list's pill may be this many plain rows long (a heading or a tall row between two rows): its lag may span it. */
 private const val TALL_STEP_ROWS = 6
@@ -179,6 +260,9 @@ private class ColumnFollower(
 ) {
     private var followed = NONE
 
+    /** Bumped when a row is placed anew: what the clip works out from the rows' places is redone at the next draw (the spans are not state). */
+    var placedCount by mutableIntStateOf(0)
+
     /** The column's rows now; set while composing, before the focus is followed. */
     var rowCount = 0
 
@@ -187,6 +271,9 @@ private class ColumnFollower(
 
     /** The column's glide; set while composing. */
     var glide: ListGlide? = null
+
+    /** For the slab's overhang, set while composing. */
+    var density: Density = Density(1f)
 
     /** The height of what is shown: the scroll's viewport without the glide's room. */
     fun visible(): Int = (scroll.viewportSize - 2 * extraPx).coerceAtLeast(0)
@@ -198,7 +285,61 @@ private class ColumnFollower(
     ): Float {
         val own = spans[index] ?: return Float.MAX_VALUE
         val now = scroll.value
-        return (if (below) now + visible() - (own.last + 1) else own.first - now).coerceAtLeast(0).toFloat()
+        // The focused row's slab is drawn past the row: a fade stops short of it, not of the row.
+        val slab = slabOverhang((own.last + 1 - own.first).toFloat(), density)
+        return ((if (below) now + visible() - (own.last + 1) else own.first - now) - slab).coerceAtLeast(0f)
+    }
+
+    /**
+     * How far (px) below the window's top edge the clip starts once the list has scrolled: the part of a row the edge cuts is hidden with the row, so no
+     * sliver of it shows under the fade. The focused row right below the hidden one keeps its slab's overhang.
+     */
+    fun hiddenAbove(
+        reach: EndReach,
+        focused: Int,
+    ): Float {
+        if (placedCount < 0) return 0f
+        val start = scroll.value
+        for (i in 0 until rowCount) {
+            val span = spans[i] ?: continue
+            if (span.first < start && span.last + 1 > start) {
+                val hidden = (span.last + 1 - start).toFloat()
+                val next = spans[i + 1]
+                val focusedBelow = focused == i + 1 && next != null && next.first - (span.last + 1) <= reach.overhang
+                return if (focusedBelow) (hidden - reach.overhang).coerceAtLeast(0f) else hidden
+            }
+        }
+        return 0f
+    }
+
+    /**
+     * How far (px) the clip lets drawing past the window's bottom edge through. A row cut by the edge stays cut there, under the fade. With a row wholly
+     * below the edge nothing of it may show (its glow reaches [EndReach.shadowAbove] above its top), so only the room before that is open; the focused
+     * row ending at the edge keeps its slab's overhang. With no row below, the whole [EndReach.room] is open for the last row's slab and glow.
+     */
+    fun bleedBelow(
+        reach: EndReach,
+        focused: Int,
+    ): Float {
+        if (placedCount < 0) return 0f
+        val end = scroll.value + visible()
+        var next = Int.MAX_VALUE
+        for (i in 0 until rowCount) {
+            val span = spans[i] ?: continue
+            if (span.first < end && span.last + 1 > end) return 0f
+            if (span.first >= end && span.first < next) next = span.first
+        }
+        if (next == Int.MAX_VALUE) return reach.room
+        val own = spans[focused]
+        val slab = if (own != null && own.last + 1 <= end && end - (own.last + 1) < next - end) reach.overhang else 0f
+        return maxOf(slab, next - end - reach.shadowAbove).coerceIn(0f, reach.room)
+    }
+
+    /** Keeps row [index] whole after the window changed size. */
+    suspend fun refit(index: Int) {
+        val own = spans[index] ?: return
+        val target = keepVisible(scroll.value, visible(), own)
+        if (target != scroll.value) scroll.scrollTo(target)
     }
 
     fun follow(
@@ -270,16 +411,19 @@ internal fun PanelLazyList(
     // Panel rows differ in height (a card with a detail line): the focused row's own box is the pill's.
     val pill =
         rememberGlidingPill(state, glide, rowHeight = layout.rowHeight, stride = layout.rowHeight + PlumDimens.listRowGap, extraGap = layout.rowHeight * TALL_STEP_ROWS, rowsVary = true) { latest.value }
+    // Whole options only: an option cut by the top or bottom edge is hidden, never left as a body without its title. The ramp is always on (a panel's
+    // option list is not a home list: the Fade list edges setting does not turn it off) and shows where rows continue past an edge, short of the focused row.
+    val fades = remember(state, glide) { ListEdgeFades(state, glide, wholeRowsOnly = true) { latest.value } }
     pill.Provide {
         LazyColumn(
             state = state,
-            modifier = modifier.testTag(SettingsTags.PANEL_LIST).then(pill.modifier).then(glide.modifier).then(pill.contentModifier),
+            modifier = modifier.testTag(SettingsTags.PANEL_LIST).then(pill.modifier).then(glide.withFadeMask(fades, isOn = true, hidesCutRows = true)).then(pill.contentModifier),
             contentPadding = PaddingValues(vertical = glide.extra),
             verticalArrangement = Arrangement.spacedBy(PlumDimens.listRowGap),
             content = content,
         )
     }
-    KeepFocusedVisible(state, glide) {
+    KeepFocusedVisible(state, glide, snapsToRows = true) {
         val index = latest.value
         if (index >= 0) lastEntered[0] = index
         lastEntered[0]

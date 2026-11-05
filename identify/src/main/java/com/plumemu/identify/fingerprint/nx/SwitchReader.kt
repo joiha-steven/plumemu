@@ -76,6 +76,8 @@ internal object SwitchReader {
         val container: Container,
         val titleId: String?,
         val notes: List<String>,
+        /** True when [titleId] came from the file name, not from the NSP's file table. */
+        val fromFileName: Boolean = false,
     ) {
         /** The base application id for the pack lookup, or null. */
         val baseId: String? get() = titleId?.let(::baseOf)
@@ -111,7 +113,7 @@ internal object SwitchReader {
         if (fromContent != null && fromName != null && fromContent != fromName) {
             notes += "switch: file name says $fromName, the content says $fromContent; the content's id is used"
         }
-        return SwitchIds(container, fromContent ?: fromName, notes)
+        return SwitchIds(container, fromContent ?: fromName, notes, fromFileName = fromContent == null && fromName != null)
     }
 
     /** The first Switch title id in [fileName] (upper case), or null. */

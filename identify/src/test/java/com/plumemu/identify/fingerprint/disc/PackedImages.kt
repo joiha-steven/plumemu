@@ -1,5 +1,6 @@
 package com.plumemu.identify.fingerprint.disc
 
+import com.plumemu.identify.codec.cd.CdEcc
 import com.plumemu.identify.fingerprint.disc.DiscImages.putAscii
 import com.plumemu.identify.fingerprint.disc.DiscImages.putU32be
 import com.plumemu.identify.fingerprint.disc.DiscImages.putU32le
@@ -28,10 +29,36 @@ internal object PackedImages {
      * CSO v1 of [image]; blocks in [stored] are kept as is (index bit 31). With [shift] > 0 every
      * block starts on a 2^shift boundary (the index holds offset >> shift) and is zero-padded.
      */
-    fun cso(image: ByteArray, blockSize: Int = 2048, stored: Set<Int> = emptySet(), version: Int = 1, shift: Int = 0): ByteArray {
+    fun cso(image: ByteArray, blockSize: Int = 2048, stored: Set<Int> = emptySet(), version: Int = 1, shift: Int = 0): ByteArray =
+        csoOf(image, "CISO", blockSize, version, shift) { b, block ->
+            if (b in stored) block to true else deflate(block, raw = true) to false
+        }
+
+    /**
+     * CSO v2 of [image]: blocks cycle LZ4 (flagged), stored whole (full block size, flagged on every
+     * other one: readers ignore the flag there), raw deflate. A block that does not shrink below the
+     * block size is stored.
+     */
+    fun csoV2(image: ByteArray, blockSize: Int = 2048, shift: Int = 0): ByteArray =
+        csoOf(image, "CISO", blockSize, 2, shift) { b, block ->
+            when (b % 3) {
+                0 -> PackedCodecs.lz4Compress(block).let { if (it.size < blockSize) it to true else block to false }
+                1 -> block to (b % 2 == 1)
+                else -> deflate(block, raw = true).let { if (it.size < blockSize) it to false else block to false }
+            }
+        }
+
+    /** ZSO of [image]: LZ4 blocks, or stored whole and flagged when LZ4 does not shrink them. */
+    fun zso(image: ByteArray, blockSize: Int = 2048, shift: Int = 0): ByteArray =
+        csoOf(image, "ZISO", blockSize, 1, shift) { _, block ->
+            PackedCodecs.lz4Compress(block).let { if (it.size < blockSize) it to false else block to true }
+        }
+
+    /** The CSO / ZSO layout; [pack] gives a block's stored bytes and its index bit 31. */
+    private fun csoOf(image: ByteArray, magic: String, blockSize: Int, version: Int, shift: Int, pack: (Int, ByteArray) -> Pair<ByteArray, Boolean>): ByteArray {
         val blocks = (image.size + blockSize - 1) / blockSize
         val header = ByteArray(0x18)
-        header.putAscii(0, "CISO")
+        header.putAscii(0, magic)
         header.putU32le(4, 0x18)
         header.putU64le(8, image.size.toLong())
         header.putU32le(0x10, blockSize.toLong())
@@ -44,11 +71,14 @@ internal object PackedImages {
         val lead = dataStart - 0x18 - index.size
         for (b in 0..blocks) {
             val offset = (dataStart + data.size()).toLong()
-            val flag = if (b in stored) 1L shl 31 else 0L
-            index.putU32le(b * 4, (offset shr shift) or flag)
-            if (b == blocks) break
+            if (b == blocks) {
+                index.putU32le(b * 4, offset shr shift)
+                break
+            }
             val block = image.copyOfRange(b * blockSize, minOf(image.size, (b + 1) * blockSize)).copyOf(blockSize)
-            data.write(if (b in stored) block else deflate(block, raw = true))
+            val (body, flagged) = pack(b, block)
+            index.putU32le(b * 4, (offset shr shift) or if (flagged) 1L shl 31 else 0L)
+            data.write(body)
             while (data.size() % align != 0) data.write(0)
         }
         return header + index + ByteArray(lead) + data.toByteArray()
@@ -87,7 +117,10 @@ internal object PackedImages {
      * [metadata] entries are (tag, text). [eccFrames] are CD frames whose sync is cleared before
      * compression and flagged in the cdzl bitmap, as chdman does when it can rebuild them.
      * [encoded] holds hunks already compressed elsewhere (the `cdlz` / `lzma` fixtures of
-     * `containers/make_fixtures.py`), written as they are for a codec-slot plan.
+     * `containers/make_fixtures.py`), written as they are for a codec-slot plan, with the
+     * CRC-16 of the decoded hunk in [encodedCrc16]. The map of every other codec hunk keeps the
+     * CRC-16 of the hunk as the reader must rebuild it (flagged ECC frames get their parity);
+     * [crcFlip] lists hunks whose map CRC is made wrong.
      */
     fun chd(
         logical: ByteArray,
@@ -100,6 +133,8 @@ internal object PackedImages {
         eccFrames: Set<Int> = emptySet(),
         rawSha1: ByteArray = ByteArray(20) { (0x11 + it).toByte() },
         encoded: Map<Int, ByteArray> = emptyMap(),
+        encodedCrc16: Map<Int, Int> = emptyMap(),
+        crcFlip: Set<Int> = emptySet(),
     ): ByteArray {
         val hunks = (logical.size + hunkBytes - 1) / hunkBytes
         val header = ByteArray(124)
@@ -128,7 +163,11 @@ internal object PackedImages {
         val stored = plans.mapIndexed { h, p ->
             encoded[h]?.takeIf { p.type < 4 } ?: encodeHunk(hunkData[h], p, codecs, h, eccFrames, hunkBytes)
         }
-        val bits = mapBits(plans, stored, hunks)
+        val crcs = plans.indices.map { h ->
+            val crc = encodedCrc16[h] ?: ChdCd.crc16(expectedHunk(hunkData[h], h, eccFrames, hunkBytes, unitBytes))
+            if (h in crcFlip) crc xor 1 else crc
+        }
+        val bits = mapBits(plans, stored, crcs, hunks)
         val mapHeader = ByteArray(16)
         mapHeader.putU32be(0, bits.size.toLong())
         val firstOffset = mapOffset + 16 + bits.size
@@ -147,12 +186,23 @@ internal object PackedImages {
             5, 6 -> ByteArray(0)
             else -> when (codecs[plan.type]) {
                 "zlib" -> deflate(hunk, raw = true)
-                "cdzl" -> cdzl(hunk, h, ecc, hunkBytes)
+                "cdzl" -> cdHunk(hunk, h, ecc, hunkBytes) { deflate(it, raw = true) }
+                "zstd" -> PackedCodecs.zstdFrame(hunk)
+                "cdzs" -> cdHunk(hunk, h, ecc, hunkBytes) { PackedCodecs.zstdFrame(it) }
                 else -> ByteArray(100) { 0x5A }
             }
         }
 
-    private fun cdzl(hunk: ByteArray, h: Int, ecc: Set<Int>, hunkBytes: Int): ByteArray {
+    /** The hunk as a reader gives it back: flagged CD frames have their sync and parity rebuilt. */
+    private fun expectedHunk(hunk: ByteArray, h: Int, ecc: Set<Int>, hunkBytes: Int, unitBytes: Int): ByteArray {
+        if (unitBytes != CD_FRAME) return hunk
+        val out = hunk.copyOf()
+        for (f in 0 until hunkBytes / CD_FRAME) if (h * (hunkBytes / CD_FRAME) + f in ecc) CdEcc.rebuild(out, f * CD_FRAME)
+        return out
+    }
+
+    /** A CD hunk (`cdzl`, `cdzs`): the sector part and the subcode part each packed by [pack]. */
+    private fun cdHunk(hunk: ByteArray, h: Int, ecc: Set<Int>, hunkBytes: Int, pack: (ByteArray) -> ByteArray): ByteArray {
         val frames = hunkBytes / CD_FRAME
         val bitmap = ByteArray((frames + 7) / 8)
         val sectors = ByteArray(frames * 2352)
@@ -165,18 +215,18 @@ internal object PackedImages {
                 for (i in 0 until 12) sectors[f * 2352 + i] = 0
             }
         }
-        val base = deflate(sectors, raw = true)
+        val base = pack(sectors)
         // The base length takes 3 bytes when the hunk is 64 KB or more.
         val length = if (hunkBytes < 65536) {
             byteArrayOf((base.size ushr 8).toByte(), base.size.toByte())
         } else {
             byteArrayOf((base.size ushr 16).toByte(), (base.size ushr 8).toByte(), base.size.toByte())
         }
-        return bitmap + length + base + deflate(subcode, raw = true)
+        return bitmap + length + base + pack(subcode)
     }
 
     /** Tree: all 16 symbols 4 bits long (code = symbol); types with run-length symbol 7; then lengths. */
-    private fun mapBits(plans: List<HunkPlan>, stored: List<ByteArray>, hunks: Int): ByteArray {
+    private fun mapBits(plans: List<HunkPlan>, stored: List<ByteArray>, crcs: List<Int>, hunks: Int): ByteArray {
         val w = BitWriter()
         repeat(16) { w.write(4, 4) }
         var last = 0
@@ -201,7 +251,7 @@ internal object PackedImages {
                 5, 6 -> w.write(plans[i].selfOf.toLong(), 16)
                 else -> {
                     w.write(stored[i].size.toLong(), 24)
-                    w.write(0, 16)
+                    w.write(crcs[i].toLong(), 16)
                 }
             }
         }
@@ -292,13 +342,25 @@ internal object PackedImages {
         return out
     }
 
-    /** RVZ or WIA: file header 1 (0x48 bytes), then file header 2 with the disc header at 0x58. */
-    fun rvz(discHeader: ByteArray, magic: String = "RVZ", size: Int = 1 shl 16): ByteArray {
+    /**
+     * RVZ or WIA: file header 1 (0x48 bytes, ends with its own SHA-1 and holds the size and SHA-1 of
+     * file header 2), then file header 2 (0xDC bytes) with the disc header at 0x58. The groups are not
+     * written. [fixSums] false leaves the two SHA-1 sums empty.
+     */
+    fun rvz(discHeader: ByteArray, magic: String = "RVZ", size: Int = 1 shl 16, fixSums: Boolean = true): ByteArray {
         val out = ByteArray(size)
         out.putAscii(0, magic)
         out[3] = 1
+        out.putU32be(0x0C, 0xDC)
         out.putU32be(0x48, 1)
         discHeader.copyInto(out, 0x58, 0, 0x80)
+        if (fixSums) {
+            sha1(out, 0x48, 0xDC).copyInto(out, 0x10)
+            sha1(out, 0, 0x34).copyInto(out, 0x34)
+        }
         return out
     }
+
+    private fun sha1(data: ByteArray, from: Int, length: Int): ByteArray =
+        java.security.MessageDigest.getInstance("SHA-1").also { it.update(data, from, length) }.digest()
 }

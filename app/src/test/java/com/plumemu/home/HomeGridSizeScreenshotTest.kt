@@ -48,7 +48,7 @@ class HomeGridSizeScreenshotTest {
         val preset = ReferenceShots.Preset.Graphite
         RuntimeEnvironment.setQualifiers("w${size.widthDp}dp-h${size.heightDp}dp-land-xhdpi")
         captureRoboImage(filePath = "${ReferenceShots.OUTPUT_DIR}/${ReferenceShots.fileName(screen, size, preset)}") {
-            PlumTheme(preset.settings.copy(textSize = TextSize.Medium)) { content() }
+            PlumTheme(preset.settings.copy(textSize = TextSize.Small)) { content() }
         }
     }
 }

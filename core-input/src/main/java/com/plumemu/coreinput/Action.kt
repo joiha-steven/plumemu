@@ -82,6 +82,12 @@ sealed interface Action {
     ) : Action
 
     /**
+     * R3 (the right stick pressed in) outside a text field, or the "R3 Sort" hint: the sort choices
+     * of the games list (the main screen only; other screens ignore it).
+     */
+    data object Sort : Action
+
+    /**
      * R3 (the right stick pressed in) while Plumemu's keyboard is up, or the "R3 Paste" hint: insert
      * what the clipboard holds at the caret. Every other button is already taken while typing.
      */

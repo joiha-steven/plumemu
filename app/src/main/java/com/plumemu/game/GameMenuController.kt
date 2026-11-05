@@ -43,6 +43,7 @@ internal class GameMenuController(
     private val scope: CoroutineScope,
     /** The Apps entry's rows: opened through [openApp], which shares the one-launch-at-a-time rule and the messages. */
     private val apps: AppActions = AppActions.None,
+    private val sorts: SortActions = SortActions.None,
     /** How long a start may take before the person is told it did not start and A works again. */
     private val startLimit: Duration = GameStarts.START_LIMIT,
     private val log: (String) -> Unit = { Log.w(TAG, it) },
@@ -139,18 +140,22 @@ internal class GameMenuController(
     }
 
     /** Opens the menu of [game] once its details are read. Ignored while a panel is open or opening. */
-    fun openMenu(game: GameRef, fromRecent: Boolean = false): Boolean {
+    fun openMenu(game: GameRef, fromRecent: Boolean = false, canSort: Boolean = false): Boolean {
         if (isOpen || opening?.isActive == true) return false
         forgetVersions()
         opening =
             scope.launch {
                 val read = readOrFail("menu", game, origin = null) { actions.facts(game.key) } ?: return@launch
-                val facts = if (fromRecent) read.copy(canRemoveFromRecent = true) else read
+                val facts = read.copy(canRemoveFromRecent = fromRecent, canSort = canSort, sort = if (canSort) readOrNull("sort", game) { sorts.choices().current } else null)
                 showIfStill(null, OpenPanel(game, PanelScreen.Menu(facts)))
                 if (facts.versionsPending && panel != null) readVersions(game)
             }
         return true
     }
+
+    /** R3 on a game of a list the sort orders: the choices alone, unless a panel is open or opening. */
+    fun openSortMenu(game: GameRef): Boolean = (!isOpen && opening?.isActive != true).also { if (it) opening = readSort(game, null) }
+    private fun readSort(game: GameRef, from: OpenPanel?) = scope.launch { readOrFail("sort", game, from) { sorts.choices() }?.let { showIfStill(from, it.panel(game, from)) } }
 
     /**
      * Other versions of an arcade set: its sets are found in the arcade pack, which the menu does
@@ -197,12 +202,13 @@ internal class GameMenuController(
                         } else {
                             moveFocus(open, action.direction == Direction.Down, action.isRepeat)
                         }
-                    Direction.Left -> back()
-                    Direction.Right -> Unit
+                    Direction.Left, Direction.Right ->
+                        if (open.content.isButtonRow) moveFocus(open, forward = action.direction == Direction.Left, isRepeat = true) else if (action.direction == Direction.Left) back()
                 }
             Action.Enter, Action.Play -> choose(open, open.focus)
             Action.Back -> back()
-            Action.Menu -> close().also { feel.report(Outcome.WentBack) }
+            // START on a typed field with its keyboard away does nothing (it would throw the typed text away); B still goes back.
+            Action.Menu -> if (open.screen !is TypingScreen || (open.screen as TypingScreen).typing.keyboardUp) close().also { feel.report(Outcome.WentBack) }
             // Panel rows are the panel column (core-input's Details, Settings' "panel").
             is Action.TapItem -> if (action.column == Column.Details) choose(open, action.index)
             is Action.LongPressItem -> if (action.column == Column.Details) choose(open, action.index)
@@ -241,9 +247,20 @@ internal class GameMenuController(
         }
     }
 
+    private val emulatorRefresh = EmulatorRefresh(scope, actions, log)
+
+    /** Packages may have changed (back from the store): the panel open shows the emulators as they are now, or closes ([EmulatorRefresh]). */
+    fun emulatorsMayHaveChanged() {
+        val open = panel ?: return
+        if (work?.isActive == true || isLaunching || opening?.isActive == true) return
+        // The cursor may move while the read runs: the answer goes to the panel open then, never to one a row's work started on.
+        emulatorRefresh.run(open, { panel?.takeUnless { work?.isActive == true || isLaunching } }) { next -> if (next == null) close() else panel = next }
+    }
+
     /** Back: from Play with or Info to the menu (its focus kept), from the menu or a message to the list. */
     fun back() {
         work?.cancel()
+        emulatorRefresh.cancel()
         achievementsRead?.cancel()
         endBoxArt()
         val parent = panel?.parent
@@ -255,6 +272,7 @@ internal class GameMenuController(
 
     fun close() {
         work?.cancel()
+        emulatorRefresh.cancel()
         achievementsRead?.cancel()
         opening?.cancel()
         forgetVersions()
@@ -318,6 +336,8 @@ internal class GameMenuController(
                         val listing = readOrFail("emulators", game, open) { actions.emulators(game.key) } ?: return@launch
                         showIfStill(open, OpenPanel(game, PanelScreen.PlayWith(listing), parent = open))
                     }
+            PanelCommand.OpenSortMenu -> work = readSort(game, open)
+            is PanelCommand.SetSort -> work = keptWrite { write("sort", game, open) { sorts.set(command.sort) } }
             PanelCommand.OpenVersions -> (open.screen as? PanelScreen.Menu)?.facts?.versions?.let { panel = versionsPanel(game, it, open) }
             is PanelCommand.PlayVersion -> playVersion(open, command.copyKey)
             is PanelCommand.SetFavorite -> work = setFavorite(game, command.isFavorite, open)
@@ -485,21 +505,6 @@ internal class GameMenuController(
                 if (source == null && set == null) return@launch
                 patchInfo(info) { read -> read.copy(name = source?.let { name?.copy(source = it) } ?: read.name, arcadeSet = set ?: read.arcadeSet) }
             }
-    }
-
-    /**
-     * Changes the facts of the Info panel [info] stands for, if it is still on screen: several reads (the name's
-     * source, the arcade set, the achievements) land on the same panel, each on what the others left. The same
-     * InfoScroll stays, so the facts stay where Up and Down left them.
-     */
-    private fun patchInfo(
-        info: OpenPanel,
-        change: (GameFacts) -> GameFacts,
-    ) {
-        val shown = panel ?: return
-        val screen = shown.screen as? PanelScreen.Info ?: return
-        if (shown.parent !== info.parent || shown.game != info.game) return
-        panel = shown.copy(screen = screen.copy(facts = change(screen.facts)))
     }
 
     /** Started at once (not cancellable before it begins), then not cancellable at all. */

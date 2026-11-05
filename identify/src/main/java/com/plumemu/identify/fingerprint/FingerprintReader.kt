@@ -6,6 +6,7 @@ import com.plumemu.identify.fingerprint.cart.CartridgeReaders
 import com.plumemu.identify.fingerprint.cart.ContentLayout
 import com.plumemu.identify.fingerprint.cart.Nintendo64Reader
 import com.plumemu.identify.fingerprint.disc.DiscReader
+import com.plumemu.identify.fingerprint.disc.TrackSizes
 import com.plumemu.identify.fingerprint.nx.SwitchReader
 import com.plumemu.identify.source.RandomAccessSource
 import com.plumemu.identify.source.SiblingOpener
@@ -88,7 +89,8 @@ class FingerprintReader(
             else -> DiscReader.containerOf(start, extension, systemId) ?: Container.NONE
         }
         DiscReader.skipNote(extension, systemId)?.let { note ->
-            if (container != Container.ZIP && container != Container.SEVEN_ZIP && container != Container.CHD) {
+            // A disc of such a system has no serial to read, but its track sizes still name it.
+            if (container != Container.ZIP && container != Container.SEVEN_ZIP && !TrackSizes.reads(container)) {
                 return Fingerprints(size = source.size, container = container, notes = listOf(note))
             }
         }
@@ -234,6 +236,7 @@ class FingerprintReader(
             codeKind = ids.codeKind,
             titleId = ids.titleId,
             titleKind = ids.kind,
+            codeFromFileName = ids.fromFileName,
             notes = ids.notes + loose.notes,
         )
     }
@@ -277,10 +280,35 @@ class FingerprintReader(
 
     companion object {
         /**
+         * True when [known] is a disc read before track-size keys existed (a cue sheet, `.gdi`,
+         * playlist, CHD, CSO or image whose [Fingerprints.trackKeys] is null): [withTrackKeys] can
+         * add them without reading its content.
+         */
+        fun needsTrackKeys(known: Fingerprints): Boolean = known.trackKeys == null && TrackSizes.reads(known.container)
+
+        /**
+         * [known] with the track-size keys of the disc in [source] added, from file sizes and a CHD's
+         * metadata only (a cue sheet's track files are opened through [siblings] for their length).
+         * For a row named from its cached fingerprints, which is never read again. A disc that gives
+         * no key still gets an empty list, so it is not looked at again; one whose keys are
+         * incomplete (a track file missing) keeps null and is asked again at its next naming.
+         * Anything else is returned as is.
+         *
+         * @throws IOException when [source] or a sibling fails to read.
+         */
+        @Throws(IOException::class)
+        fun withTrackKeys(known: Fingerprints, source: RandomAccessSource, systemId: String?, siblings: SiblingOpener?): Fingerprints {
+            if (!needsTrackKeys(known)) return known
+            val tracks = TrackSizes.read(source, known.container, systemId, siblings)
+            return known.copy(trackKeys = tracks.keys)
+        }
+
+        /**
          * Version of what this reader reads for files of [systemId]: raised for a system when its
          * reader learns to read more, so fingerprints cached by an older version are read again
          * once (library's `FingerprintCodec`), and those of other systems stay cached. 2: Switch
-         * title ids and 3DS game codes. 1 for every other system.
+         * title ids and 3DS game codes; PlayStation, PSP, Sega CD, Saturn and Dreamcast: CHD `zstd` /
+         * `cdzs` hunks, CSO v2 and ZSO. 1 for every other system.
          */
         fun readerVersion(systemId: String?): Int =
             READER_VERSIONS[systemId?.trim()?.lowercase(java.util.Locale.ROOT)] ?: 1
@@ -288,7 +316,7 @@ class FingerprintReader(
         private val READER_VERSIONS: Map<String, Int> = mapOf(
             "switch" to 2, "nintendoswitch" to 2, "nsw" to 2,
             "n3ds" to 2, "3ds" to 2,
-        )
+        ) + DiscReader.RE_READ_SYSTEMS.associateWith { 2 }
 
         /**
          * The system ids whose files a [Depth.FULL] read gives a content CRC a QUICK read does not:

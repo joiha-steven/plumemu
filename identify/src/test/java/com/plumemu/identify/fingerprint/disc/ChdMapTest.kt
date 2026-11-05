@@ -59,7 +59,7 @@ class ChdMapTest {
     fun handWrittenMapGivesHandComputedOffsets() {
         val map = CompressedChdMap.open(ByteArraySource(handMap()), 0, hunkCount = 34, hunkBytes = 4096, unitBytes = 2048)
         val expected = listOf(
-            ChdHunk(0, 100, 1000),
+            ChdHunk(0, 100, 1000, 0),
             ChdHunk(4, 4096, 1100),
             ChdHunk(5, 0, 0),
             ChdHunk(5, 0, 1), // SELF_1: last self + 1
@@ -68,12 +68,12 @@ class ChdMapTest {
             ChdHunk(6, 0, 12), // PARENT_1: last parent + 4096 / 2048
             ChdHunk(6, 0, 12), // PARENT_0
             ChdHunk(6, 0, 40),
-            ChdHunk(0, 200, 5196),
-            ChdHunk(0, 50, 5396),
-            ChdHunk(0, 50, 5446),
+            ChdHunk(0, 200, 5196, 0),
+            ChdHunk(0, 50, 5396, 0),
+            ChdHunk(0, 50, 5446, 0),
         )
         for ((i, hunk) in expected.withIndex()) assertEquals("hunk $i", hunk, map.hunk(i.toLong()))
-        assertEquals(ChdHunk(0, 50, 6496), map.hunk(32))
+        assertEquals(ChdHunk(0, 50, 6496, 0), map.hunk(32))
         assertEquals(ChdHunk(4, 4096, 6546), map.hunk(33))
         val past = runCatching { map.hunk(34) }.exceptionOrNull()
         assertTrue("$past", past is NotRead)

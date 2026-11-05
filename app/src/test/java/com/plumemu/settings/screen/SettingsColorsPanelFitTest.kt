@@ -23,6 +23,7 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.SettingsThreeDimens
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
 import com.plumemu.settings.toThemeSettings
@@ -46,6 +47,11 @@ import kotlin.math.abs
  *   nothing sits nearer the panel's edge than the ring's room.
  */
 abstract class SettingsColorsPanelFitBase {
+    /** True in the classes of a wide screen, where small sizes show three columns and a panel's title starts on its edge (the board). */
+    protected open val wide = false
+
+    private fun titleStart(at: String) = panelTextStartAt(at, wide)
+
     private val compose = appComposeRule()
 
     @get:Rule
@@ -86,7 +92,7 @@ abstract class SettingsColorsPanelFitBase {
     ): List<String> {
         val problems = mutableListOf<String>()
         val panel = bounds(SettingsTags.PANEL)
-        val textLine = panel.left.value + PlumDimens.settingsPanelRowPadding.value
+        val textLine = panel.left.value + titleStart(at)
         val textEnd = panel.right.value - PlumDimens.settingsPanelRowPadding.value
         val tiles = (0 until count).map { bounds(SettingsTags.panelItem(it)) }
         val pictures = compose.onAllNodesWithTag(SettingsTags.COLOR_TILE, useUnmergedTree = true).fetchSemanticsNodes().map { it.size }
@@ -113,7 +119,9 @@ abstract class SettingsColorsPanelFitBase {
         // The focused (last) tile with its ring inside the panel, which scrolled to it.
         val ring = PlumDimens.focusRingOutset.value
         val focused = tiles.last()
-        if (focused.left.value - ring < panel.left.value - TOLERANCE || focused.right.value + ring > panel.right.value + TOLERANCE) problems += "$at: the focused ring leaves the panel across"
+        // The first column starts on the panel's edge in three columns: its ring reaches into the gap to the options (nothing clips there).
+        val leftRoom = if (titleStart(at) == 0f) SettingsThreeDimens.panelGap.value else 0f
+        if (focused.left.value - ring < panel.left.value - leftRoom - TOLERANCE || focused.right.value + ring > panel.right.value + TOLERANCE) problems += "$at: the focused ring leaves the panel across"
         if (focused.bottom.value > panel.bottom.value + TOLERANCE) problems += "$at: the focused tile ends at ${focused.bottom}, the panel at ${panel.bottom}"
         // Names: at most two lines, broken between words only, never cut.
         val pictureWidth = pictures.firstOrNull()?.width ?: 0
@@ -156,6 +164,8 @@ internal fun nameProblem(
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
 class SettingsColorsPanelFit768Test : SettingsColorsPanelFitBase() {
+    override val wide = true
+
     @Test fun tilesFitAndLineUp() = tilesFitAndLineUp("768x432")
 }
 
@@ -170,5 +180,7 @@ class SettingsColorsPanelFit576Test : SettingsColorsPanelFitBase() {
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w960dp-h540dp-land-xhdpi")
 class SettingsColorsPanelFitThorTest : SettingsColorsPanelFitBase() {
+    override val wide = true
+
     @Test fun tilesFitAndLineUp() = tilesFitAndLineUp("960x540")
 }

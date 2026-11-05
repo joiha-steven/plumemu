@@ -130,6 +130,10 @@ internal class IdentifyPass(
     /** Time spent opening files and reading their headers, summed over the readers. */
     private val openAndReadNanos = AtomicLong()
 
+    /** Disc rows cached before track-size keys existed that got them this pass, and the time that took (summed). */
+    private val trackKeyRows = AtomicInteger()
+    private val trackKeyNanos = AtomicLong()
+
     /** This pass wrote the name of at least one arcade row: its folder's clashes are looked at again. */
     private var arcadeNamed = false
 
@@ -148,7 +152,7 @@ internal class IdentifyPass(
                 System.nanoTime() - started,
                 handled,
                 "${read.get()} opened, open and read ${ScanPhaseLog.millis(openAndReadNanos.get())} ms summed over $readers at a time, " +
-                    "${fromCache.get()} from cache",
+                    "${fromCache.get()} from cache, ${trackKeyRows.get()} track keys added in ${ScanPhaseLog.millis(trackKeyNanos.get())} ms",
             )
         }
         val regrouped = groupArcadeCopies(leftOutBefore)
@@ -379,7 +383,7 @@ internal class IdentifyPass(
                 return null
             }
         }
-        val cached = cachedFingerprints(game)
+        val cached = cachedFingerprints(game)?.let { withTrackKeys(game, it) }
         val request = IdentifyRequest(
             systemId = game.systemId,
             fileName = game.fileName,
@@ -453,6 +457,32 @@ internal class IdentifyPass(
             TreeResult.Missing -> throw FolderGone("folder missing")
         }
         return null
+    }
+
+    /**
+     * A disc cached before track-size keys existed is never reopened by the pass, so it would never
+     * get one: its keys are made once, from file sizes and a CHD's metadata (no content is read), and
+     * stored with it. A file that cannot be opened now, or a sheet whose track file is missing, keeps
+     * no keys and is asked again at its next naming (never on an unchanged rescan). The keys only look
+     * a title up: the row's fix keys, and so its fixes and ScreenScraper key, stay as they were.
+     */
+    private fun withTrackKeys(game: GameToIdentify, known: Fingerprints): Fingerprints {
+        if (!FingerprintReader.needsTrackKeys(known)) return known
+        val started = System.nanoTime()
+        try {
+            val opened = (tree.open(game.documentId) as? TreeResult.Found)?.value ?: return known
+            return opened.use { file ->
+                FileSource(file.channel).use { source ->
+                    FingerprintReader.withTrackKeys(known, source, game.systemId, siblings.openerFor(game.parentDocumentId))
+                }
+            }
+        } catch (e: IOException) {
+            Log.w(LOG_TAG, "Folder ${folder.id}: game ${game.id} track sizes not read (${e.javaClass.simpleName})")
+            return known
+        } finally {
+            trackKeyRows.incrementAndGet()
+            trackKeyNanos.addAndGet(System.nanoTime() - started)
+        }
     }
 
     private fun cachedFingerprints(game: GameToIdentify): Fingerprints? {

@@ -28,12 +28,12 @@ class GameMenuRemoveFromRecentTest {
     private fun GameMenuController.down(times: Int) = repeat(times) { onAction(Action.Move(Direction.Down)) }
 
     @Test
-    fun theEntryFollowsHideInAMenuOpenedFromRecent() =
+    fun theEntryPrecedesHideInAMenuOpenedFromRecent() =
         run {
             val menu = controller(FakeGameActions())
             menu.openMenu(game, fromRecent = true)
             val keys = menu.keys()
-            assertEquals(GameMenuEntryId.Hide.name, keys[keys.indexOf(GameMenuEntryId.RemoveFromRecent.name) - 1])
+            assertEquals(GameMenuEntryId.Hide.name, keys[keys.indexOf(GameMenuEntryId.RemoveFromRecent.name) + 1])
             assertEquals(UiText.Res(R.string.game_menu_remove_from_recent), menu.panel!!.content.focusableRows.first { it.key == GameMenuEntryId.RemoveFromRecent.name }.label)
         }
 

@@ -16,8 +16,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.theme.POSTER_PALETTE
-import com.plumemu.coreui.theme.PosterLook
 import com.plumemu.coreui.theme.PlumTheme
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,7 +49,7 @@ internal object PosterEdgeCases {
         )
 }
 
-/** The poster cover on the screen background: every look of the palette, then the hard cases. Graphite and Paper at 768x432 and 576x432. */
+/** The drawn box front on the screen background: a wall of the sample titles, then the hard cases. Graphite and Paper at 768x432 and 576x432. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
@@ -59,22 +57,22 @@ class PosterCoverScreenshotTest {
     @Composable
     private fun Cover(
         title: String,
-        look: PosterLook,
         width: Dp,
         height: Dp,
         system: String = "Super Nintendo",
-    ) = PosterCover(title, system, "SNES", look, Modifier.size(width, height).clip(RoundedCornerShape(6.dp)))
+        line: String = "",
+    ) = PosterCover(title, system, "SNES", Modifier.size(width, height).clip(RoundedCornerShape(6.dp)), line)
 
     @Test
-    fun allLooks() =
-        ReferenceShots.capture("poster_cover_looks") {
+    fun wall() =
+        ReferenceShots.capture("poster_cover_wall") {
             BoxWithConstraints(Modifier.fillMaxSize().background(PlumTheme.colors.bg).padding(12.dp)) {
                 val gap = 6.dp
                 val width = (maxWidth - gap * 7) / 8
                 Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-                    POSTER_PALETTE.chunked(8).forEachIndexed { row, looks ->
+                    PosterEdgeCases.sampleTitles.chunked(8).forEachIndexed { row, titles ->
                         Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                            looks.forEachIndexed { i, look -> Cover(PosterEdgeCases.sampleTitles[row * 8 + i], look, width, width * 1.4f) }
+                            titles.forEachIndexed { i, title -> Cover(title, width, width * 1.4f, line = if (i % 2 == 0) "Publisher \u00B7 199$i" else "") }
                         }
                     }
                 }
@@ -98,7 +96,7 @@ class PosterCoverScreenshotTest {
         Column(Modifier.fillMaxSize().background(PlumTheme.colors.bg).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             for (shape in listOf(landscape, tall)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
-                    titles.forEachIndexed { i, title -> Cover(title, POSTER_PALETTE[(i * 7) % 23], shape.first.dp, shape.second.dp, system) }
+                    titles.forEachIndexed { i, title -> Cover(title, shape.first.dp, shape.second.dp, system, "Publisher \u00B7 1994") }
                 }
             }
         }

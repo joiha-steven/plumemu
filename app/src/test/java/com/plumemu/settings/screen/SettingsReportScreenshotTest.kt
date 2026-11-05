@@ -29,7 +29,7 @@ class SettingsReportScreenshotTest {
         name: String,
         state: ReportShots.State,
         statisticsOn: Boolean = true,
-    ) = ReferenceShots.capture(name) { ReportSettings(state, statisticsOn) }
+    ) = ReferenceShots.capture(name, sizes = ReferenceShots.Size.Original + ReferenceShots.Size.FourThree) { ReportSettings(state, statisticsOn) }
 
     @Test fun empty() = shot("settings_report_empty", ReportShots.State.Empty)
 

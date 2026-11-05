@@ -45,6 +45,8 @@ import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -65,6 +67,9 @@ internal class AppGameActions(
 ) : GameActions {
     private val app = context.applicationContext
     private val recent by lazy { GraphRecent(graph.database) }
+
+    // The first value is the count so far: only the changes after it count.
+    override val emulatorChanges: kotlinx.coroutines.flow.Flow<Unit> get() = graph.startup.packageChangeFlow.drop(1).map { }
 
     override suspend fun launch(
         gameKey: String,
@@ -163,7 +168,7 @@ internal class AppGameActions(
         val answer =
             try {
                 // Noted and started as one step a cancel cannot split (PlayTimeTracker.handOff).
-                playTime.handOff(id, emulatorId = shortcut.packageName) {
+                playTime.handOff(id, emulatorId = shortcut.packageName, packageName = shortcut.packageName) {
                     (shortcutHost ?: graph.pinnedShortcuts.host).startShortcut(shortcut.packageName, shortcut.shortcutId, shortcut.userSerial)
                 }
             } catch (e: CancellationException) {
@@ -201,7 +206,7 @@ internal class AppGameActions(
         val answer =
             try {
                 // Noted and started as one step a cancel cannot split (PlayTimeTracker.handOff).
-                launching.playTime.handOff(id, emulatorId = packageName) { (appGameStarter ?: launching.apps::startGameApp)(packageName) }
+                launching.playTime.handOff(id, emulatorId = packageName, packageName = packageName) { (appGameStarter ?: launching.apps::startGameApp)(packageName) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: RuntimeException) {
@@ -264,6 +269,7 @@ internal class AppGameActions(
                 totalPlaySeconds = play?.totalSeconds ?: 0,
                 isFavorite = game.isFavorite,
                 batteryPace = graph.batteryPaceOf(id),
+                achievementCount = if (isShortcut || isAppGame) null else graph.achievements.storedCountOf(id),
                 name = graph.nameFixes.nameFacts(id),
                 canFixBoxArt = canFixBoxArt,
                 isShortcut = isShortcut,
@@ -293,7 +299,8 @@ internal class AppGameActions(
             val systemChoice = choices.systemChoice(system.id)?.takeIf { it.isPersonChoice }?.emulatorId
             // Only emulators that can open the file A really opens (a chosen copy may be another file type).
             val fileName = graph.fileNameForEmulator(id, system, game.fileName)
-            emulatorListingOf(catalog, system, fileName, installed, systemChoice, choices.gameChoice(id)?.emulatorId)
+            val listing = emulatorListingOf(catalog, system, fileName, installed, systemChoice, choices.gameChoice(id)?.emulatorId)
+            if (!ArcadeSystems.isArcade(game.systemId)) listing else listing.copy(isArcade = true, oldArcadeName = graph.nameFixes.isOldArcadeName(id))
         }
 
     override suspend fun setFavorite(gameKey: String, isFavorite: Boolean) {
@@ -362,6 +369,10 @@ internal class AppGameActions(
             val system = checkNotNull(graph.catalog()?.system(game.systemId)) { "system of game $id is unknown" }
             launching.choices.forgetChoicesOf(id, system, emulatorId)
         }
+    }
+
+    override suspend fun expectCoreTry(gameKey: String, emulatorId: String, tried: Set<String>) {
+        withContext(io) { graph.libraryNotices.expectCoreTry(gameKey, emulatorId, tried) }
     }
 
     override fun openStorePage(packageName: String): Boolean = openStorePage(packageName) { app.startActivity(it) }
@@ -440,7 +451,7 @@ internal class AppGameActions(
     private fun requireId(gameKey: String): Long = requireNotNull(gameKey.toLongOrNull()) { "row $gameKey is not a game of the library" }
 }
 
-private fun itemOf(emulator: Emulator) = EmulatorItem(emulator.id, emulator.name, emulator.primary.packageName, emulator.legalRisk)
+private fun itemOf(emulator: Emulator) = EmulatorItem(emulator.id, emulator.name, emulator.primary.packageName, emulator.legalRisk, emulator.core)
 
 /**
  * "Play with" for the game [fileName] of [system]: only the emulators that can open the file (the
@@ -487,13 +498,17 @@ internal suspend fun AppGraph.emulatorToStart(
     fileName: String? = null,
 ): EmulatorToStart? {
     val launching = launching() ?: return null
-    return when (val pick = launching.choices.resolve(gameId, system, fileName)) {
-        is EmulatorPick.Ready -> EmulatorToStart(pick.emulator.name, isInstalled = true)
-        is EmulatorPick.ChosenMissing -> EmulatorToStart(pick.emulator?.name ?: pick.emulatorId, isInstalled = false)
+    return emulatorToStartOf(launching.choices.resolve(gameId, system, fileName))
+}
+
+/** What a launch's [pick] would start, as the cards word it; null when no emulator is installed. */
+internal fun emulatorToStartOf(pick: EmulatorPick): EmulatorToStart? =
+    when (pick) {
+        is EmulatorPick.Ready -> EmulatorToStart(pick.emulator.name, isInstalled = true, core = pick.emulator.core, coreName = pick.emulator.coreName)
+        is EmulatorPick.ChosenMissing -> EmulatorToStart(pick.emulator?.name ?: pick.emulatorId, isInstalled = false, core = pick.emulator?.core, coreName = pick.emulator?.coreName)
         is EmulatorPick.NotChosen -> EmulatorToStart("", isInstalled = true, isNotChosenYet = true)
         is EmulatorPick.NoneInstalled -> null
     }
-}
 
 /**
  * The emulator Play would start for the library's game [gameId] (its system read from the

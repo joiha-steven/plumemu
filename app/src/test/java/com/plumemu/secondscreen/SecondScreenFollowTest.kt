@@ -58,20 +58,20 @@ class SecondScreenFollowTest {
     @Test
     fun aGameInItsSystem() {
         assertEquals(
-            SecondScreenContent.Game("Super Metroid", "Super Nintendo", "USA", isFavorite = true, gameId = 1, isPlayKnown = false, hasNoPicture = true),
+            SecondScreenContent.Game("Super Metroid", "Super Nintendo", "USA", isFavorite = true, gameId = 1, isPlayKnown = false),
             derive(at(3, Column.Games, 0)),
         )
     }
 
     @Test
     fun aGameWithNoRegionAndNoDetails() {
-        assertEquals(SecondScreenContent.Game("Zelda", "Super Nintendo", region = null, gameId = 2, isPlayKnown = false, hasNoPicture = true), derive(at(3, Column.Games, 1)))
+        assertEquals(SecondScreenContent.Game("Zelda", "Super Nintendo", region = null, gameId = 2, isPlayKnown = false), derive(at(3, Column.Games, 1)))
     }
 
     @Test
     fun aGameWhoseIdIsNotTheDatabasesHasNothingToRead() {
         val fake = HomeContent.of(emptyList(), emptyList(), emptyList(), listOf(SystemGames("gb", "Game Boy", listOf(GameRowModel("gb-1", "Tetris", "")))))
-        assertEquals(SecondScreenContent.Game("Tetris", "Game Boy", gameId = null, isPlayKnown = false, hasNoPicture = true), derive(at(3, Column.Games, 0), on = fake))
+        assertEquals(SecondScreenContent.Game("Tetris", "Game Boy", gameId = null, isPlayKnown = false), derive(at(3, Column.Games, 0), on = fake))
     }
 
     @Test
@@ -89,48 +89,52 @@ class SecondScreenFollowTest {
         assertEquals("its facts are read after the settle", false, card.isPlayKnown)
     }
 
-    /** The last game is read from the play history after the settle: no last game before that. */
+    /** The figures are read after the settle: a card derived at the cursor is its header only. */
     @Test
-    fun aSystemReadsItsLastGameFromItsOwnPlays() {
-        assertEquals(SecondScreenContent.System("Super Nintendo", 2, lastPlayFrom = LastPlayLookup.InSystem("snes")), derive(at(3)))
-        assertEquals(SecondScreenContent.System("Mega Drive", 1, lastPlayFrom = LastPlayLookup.InSystem("md")), derive(at(4)))
+    fun aSystemIsItsHeaderUntilItsFiguresAreRead() {
+        val snes = derive(at(3)) as SystemEntry
+        assertEquals("snes", snes.systemId)
+        assertEquals("Super Nintendo", snes.name)
+        assertEquals(2, snes.gameCount)
+        assertEquals(null, snes.figures)
+        assertEquals("Mega Drive", (derive(at(4)) as SystemEntry).name)
     }
 
-    /** A system's card carries its badge and facts; Recent, Favorites and a system without info carry none. */
+    /** A system's card carries its badge and facts; a system without info carries none. */
     @Test
-    fun aSystemCarriesItsInfoAndRecentAndFavoritesDoNot() {
-        val withInfo = content.withEntries(content.entries.map { if (it.id == "snes" || it.kind != com.plumemu.home.EntryKind.System) it.copy(info = SnesInfo) else it })
-        assertEquals(SnesInfo, (derive(at(3), on = withInfo) as SecondScreenContent.System).info)
-        assertEquals(null, (derive(at(0), on = withInfo) as SecondScreenContent.System).info)
-        assertEquals(null, (derive(at(4), on = withInfo) as SecondScreenContent.System).info)
-    }
-
-    @Test
-    fun recentReadsItsFirstGameAndFavoritesTheNewestFavourite() {
-        assertEquals(SecondScreenContent.System("Recent", 2, lastPlayFrom = LastPlayLookup.FirstGame(3, "Sonic")), derive(at(0)))
-        assertEquals(SecondScreenContent.System("Favorites", 1, lastPlayFrom = LastPlayLookup.AmongFavorites), derive(at(1)))
+    fun aSystemCarriesItsInfo() {
+        val withInfo = content.withEntries(content.entries.map { if (it.id == "snes") it.copy(info = SnesInfo) else it })
+        assertEquals(SnesInfo, (derive(at(3), on = withInfo) as SystemEntry).info)
+        assertEquals(null, (derive(at(4), on = withInfo) as SystemEntry).info)
     }
 
     @Test
-    fun anEmptyRecentOrFavoritesHasNothingToRead() {
+    fun recentCarriesItsCountAndFavoritesItsFavouritesInOrder() {
+        val recent = derive(at(0)) as RecentEntry
+        assertEquals("Recent", recent.name)
+        assertEquals(2, recent.gameCount)
+        assertEquals(null, recent.figures)
+        val favorites = derive(at(1)) as FavoritesEntry
+        assertEquals("Favorites", favorites.name)
+        assertEquals(1, favorites.gameCount)
+        assertEquals(listOf(1L), favorites.games.map { it.id })
+        assertEquals(1, favorites.systemCount)
+        assertEquals("no art to read while box art is off", true, favorites.isArtRead)
+    }
+
+    @Test
+    fun anEmptyRecentOrFavoritesHasNoGames() {
         val none = HomeContent.of(emptyList(), emptyList(), emptyList(), listOf(SystemGames("gb", "Game Boy", listOf(zelda))))
-        assertEquals(SecondScreenContent.System("Recent", 0), derive(at(0), on = none))
-        assertEquals(SecondScreenContent.System("Favorites", 0), derive(at(1), on = none))
+        assertEquals(0, (derive(at(0), on = none) as RecentEntry).gameCount)
+        val favorites = derive(at(1), on = none) as FavoritesEntry
+        assertEquals(0, favorites.gameCount)
+        assertEquals(emptyList<EntryGame>(), favorites.games)
     }
 
     @Test
     fun appsAndAnApp() {
         assertEquals(SecondScreenContent.Apps(1, listOf(AppIconRef("org.app/.Main", "Files"))), derive(at(2)))
         assertEquals(SecondScreenContent.App("Files", "org.app/.Main"), derive(at(2, Column.Games, 0)))
-    }
-
-    /** Apps' grid of icons: the focused app's card is the list's, never a game's cover. */
-    @Test
-    fun anAppInAppsGridShowsTheSameCardAsInItsList() {
-        val apps = content.entries[2]
-        assertEquals("Apps is a grid without box art too", true, content.showsGrid(apps, setOf(apps.id)))
-        assertEquals(SecondScreenContent.App("Files", "org.app/.Main"), derive(at(2, Column.Games, 0).copy(isCoverOnTopScreen = true)))
-        assertEquals(SecondScreenContent.Apps(1, listOf(AppIconRef("org.app/.Main", "Files"))), derive(at(2).copy(isCoverOnTopScreen = true)))
     }
 
     @Test
@@ -142,7 +146,7 @@ class SecondScreenFollowTest {
     @Test
     fun searchWithAResultFocusedShowsTheGame() {
         val look = at(3).copy(isSearchOpen = true, searchHit = SearchHit(sonic, "md"))
-        assertEquals(SecondScreenContent.Game("Sonic", "Mega Drive", "EUR", gameId = 3, isPlayKnown = false, hasNoPicture = true), derive(look))
+        assertEquals(SecondScreenContent.Game("Sonic", "Mega Drive", "EUR", gameId = 3, isPlayKnown = false), derive(look))
     }
 
     @Test
@@ -160,5 +164,13 @@ class SecondScreenFollowTest {
     @Test
     fun aFocusPastTheEntriesIsCalm() {
         assertEquals(SecondScreenContent.Calm, derive(HomeLook(StripFocus(systemIndex = 99))))
+    }
+
+    @Test
+    fun aCoverCaptionIsTheDisplayNameUnlessItIsLong() {
+        // The board's labels: SNES, GBA, Mega Drive, PlayStation, Game Boy (the platform data's short names are SNES, GBA, Mega Drive, PS1, GB).
+        val captions = listOf("Super Nintendo" to "SNES", "Game Boy Advance" to "GBA", "Mega Drive" to "Mega Drive", "PlayStation" to "PS1", "Game Boy" to "GB").map { (name, short) -> coverCaptionOf(name, short) }
+        assertEquals(listOf("SNES", "GBA", "Mega Drive", "PlayStation", "Game Boy"), captions)
+        assertEquals("a long name without a short one keeps its name", "Game Boy Advance", coverCaptionOf("Game Boy Advance", ""))
     }
 }

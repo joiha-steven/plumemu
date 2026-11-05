@@ -7,15 +7,15 @@ import org.junit.Test
 class PlumThemeSettingsTest {
     @Test
     fun presetAccentFollowsTheTextMode() {
-        assertEquals(Rgb(0x9E2A3A), PlumThemeSettings.Paper.accentColor)
-        assertEquals(Rgb(0xDA4655), PlumThemeSettings.Graphite.accentColor)
+        assertEquals(Rgb(0x9E2A3A), PlumThemeSettings.Paper.copy(accent = AccentChoice.Preset(AccentPreset.Red)).accentColor)
+        assertEquals(Rgb(0xDA4655), PlumThemeSettings.Graphite.copy(accent = AccentChoice.Preset(AccentPreset.Red)).accentColor)
     }
 
     @Test
     fun monoIsAlwaysTheCurrentTextColour() {
         val mono = PlumThemeSettings(accent = AccentChoice.Preset(AccentPreset.Mono))
-        assertEquals(Rgb(0xEDEDED), mono.accentColor)
-        assertEquals(Rgb(0x17181A), PlumThemeSettings.Paper.copy(accent = AccentChoice.Preset(AccentPreset.Mono)).accentColor)
+        assertEquals(Rgb(0xEBE7DD), mono.accentColor)
+        assertEquals(Rgb(0x1C1C1E), PlumThemeSettings.Paper.copy(accent = AccentChoice.Preset(AccentPreset.Mono)).accentColor)
     }
 
     @Test
@@ -28,8 +28,8 @@ class PlumThemeSettingsTest {
 
     @Test
     fun backgroundIsAPresetOrThePersonsOwnColour() {
-        assertEquals(Rgb(0x0E0F11), PlumThemeSettings.Graphite.backgroundColor)
-        assertEquals(Rgb(0xF4F3EF), PlumThemeSettings.Paper.backgroundColor)
+        assertEquals(Rgb(0x111214), PlumThemeSettings.Graphite.backgroundColor)
+        assertEquals(Rgb(0xECE8DF), PlumThemeSettings.Paper.backgroundColor)
         val own = PlumThemeSettings(background = BackgroundChoice.Custom(CustomPalette.backgroundSwatches[9]))
         assertEquals(Rgb(0xF5A9A6), own.backgroundColor)
     }
@@ -39,7 +39,7 @@ class PlumThemeSettingsTest {
         // Android 6.0–7.1 draws white navigation buttons on this fill when the text is dark.
         val scrim = PlumThemeSettings.Paper.legacyNavigationBarScrim
         assertTrue(ColorMath.contrast(Rgb(0xFFFFFF), scrim) >= 4.5)
-        assertEquals(0xFF17181A.toInt(), scrim.toArgb())
+        assertEquals(0xFF1C1C1E.toInt(), scrim.toArgb())
     }
 
     @Test
@@ -53,9 +53,9 @@ class PlumThemeSettingsTest {
     }
 
     @Test
-    fun theDefaultLookIsBlackWithLightTextAndRed() {
+    fun theDefaultLookIsBlackWithLightTextAndBlue() {
         assertEquals(Rgb(0x000000), PlumThemeSettings.Default.backgroundColor)
         assertEquals(TextMode.Light, PlumThemeSettings.Default.textMode)
-        assertEquals(Rgb(0xDA4655), PlumThemeSettings.Default.accentColor)
+        assertEquals(Rgb(0x3E7BE0), PlumThemeSettings.Default.accentColor)
     }
 }

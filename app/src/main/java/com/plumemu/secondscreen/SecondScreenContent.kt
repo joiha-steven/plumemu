@@ -2,13 +2,11 @@ package com.plumemu.secondscreen
 
 import androidx.compose.runtime.Immutable
 import com.plumemu.battery.BatteryPace
-import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.coreui.theme.SecondScreenDimens
 import com.plumemu.game.EmulatorToStart
 import com.plumemu.graph.AchievementCount
-import com.plumemu.home.ArtPicture
+import com.plumemu.graph.StoredAchievements
 import com.plumemu.home.GameDetails
-import com.plumemu.home.SystemInfo
 import com.plumemu.settings.screen.PlayStatistics
 
 /**
@@ -37,12 +35,9 @@ internal sealed interface SecondScreenContent {
          * (the home screen's gate, `HomeContent.hasBoxArt`), so the card reads art for nobody else.
          */
         val scrapeKey: String? = null,
-        /** The saved box front, read with the play facts after the settle; null: none, or not read yet (the card without art). */
-        val art: ArtPicture? = null,
         /**
          * Its ScreenScraper facts and description (the top screen's details column shows the same):
-         * from the row when it carries them (the fakes), else read with the cover after the settle.
-         * A game with any of them, or with [art], gets the details card (layout C); null: not
+         * from the row when it carries them (the fakes), else read after the settle; null: not
          * read yet, or no result.
          */
         val details: GameDetails? = null,
@@ -58,44 +53,26 @@ internal sealed interface SecondScreenContent {
          */
         val fileName: String? = null,
         /**
-         * The top screen shows this game in its system's grid, cover and all:
-         * the details card leaves its cover out (nothing decoded for it) and gives the description
-         * the room ([SecondScreenDimens.descriptionMaxLinesBesideGrid]). False in a list.
-         */
-        val isCoverOnTopScreen: Boolean = false,
-        /**
          * The game's usual battery pace, read with the play facts; the line under the
          * played line. Null: never measured, or not read (no line).
          */
         val batteryPace: BatteryPace? = null,
-        /**
-         * The game has no picture for good (signed out, or ScreenScraper's result has none): the card wears its poster
-         * cover where the picture would show (layout C, no description). False while a result is still to be read.
-         */
-        val hasNoPicture: Boolean = false,
-        /** Its system's short name ("SNES") for the poster's band; empty when unknown ([systemName] stands in). */
+        /** Its system's short name ("SNES") for the card's header; empty when unknown ([systemName] stands in). */
         val systemShort: String = "",
-        /** Its system's cover shape, width over height: the poster's shape. */
-        val coverAspect: Float = CoverShape.Landscape.widthOverHeight,
-        /** The package of an installed app listed as a game: layout C shows its Android icon where the poster would stand; null for a file game. */
-        val appPackage: String? = null,
         /**
          * The game's RetroAchievements progress as last stored, read with the play facts (one database read, no network); null: signed
          * out, not matched, nothing stored, or not read yet (no line, no gap).
          */
         val achievements: AchievementCount? = null,
-    ) : SecondScreenContent
-
-    /** A system, Recent or Favorites: its name, its size, and the last game played in it. */
-    data class System(
-        val name: String,
-        val gameCount: Int,
-        val lastGameTitle: String? = null,
-        val lastPlayedDaysAgo: Int? = null,
-        /** Where its last game is read from after the settle; null: nothing to read (no facts line). */
-        val lastPlayFrom: LastPlayLookup? = null,
-        /** The system's badge and facts line; null for Recent, Favorites and a system with no short name. */
-        val info: SystemInfo? = null,
+        /** The game card's play tile: the last 8 weeks of its sessions, read with the play facts; null: not read yet. */
+        val weeks: PlayWeeks? = null,
+        /**
+         * The game card's achievements tile: counts, points and the latest unlocks as last stored (database only), read with the play
+         * facts; null: signed out, not matched, nothing stored, or not read yet (the card then takes the whole width for play time).
+         */
+        val ra: StoredAchievements? = null,
+        /** Calendar days since the newest of [ra]'s unlocks ("Latest: … · 2 days ago"); null with none. */
+        val raLatestDaysAgo: Int? = null,
     ) : SecondScreenContent
 
     /** The Apps entry. */
@@ -133,24 +110,6 @@ internal sealed interface SecondScreenContent {
 internal data class EmulatorFact(
     val toStart: EmulatorToStart?,
 )
-
-/** Where a [SecondScreenContent.System] card's last game comes from. */
-@Immutable
-sealed interface LastPlayLookup {
-    /** Recent: its first game, already known; only its play is read. */
-    data class FirstGame(
-        val gameId: Long,
-        val title: String,
-    ) : LastPlayLookup
-
-    /** A system: the newest play among the games its list shows. */
-    data class InSystem(
-        val systemId: String,
-    ) : LastPlayLookup
-
-    /** Favorites: the newest play among the favourites. */
-    data object AmongFavorites : LastPlayLookup
-}
 
 /** An app's icon key and name (the name is the icon's description and its stand-in letter). */
 @Immutable

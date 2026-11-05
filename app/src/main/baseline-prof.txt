@@ -1,0 +1,6 @@
+# Kept by hand, merged with generated/baselineProfiles: the home screen's drawing and image building, which the generated profile
+# predates (a fresh install ran them interpreted: tens of ms in the first frames). Regenerate the profile, then drop what it covers.
+HSPLcom/plumemu/coreui/components/**;->**(**)**
+HSPLcom/plumemu/home/**;->**(**)**
+Lcom/plumemu/coreui/components/**;
+Lcom/plumemu/home/**;

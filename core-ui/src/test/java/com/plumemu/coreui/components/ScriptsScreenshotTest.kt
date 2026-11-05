@@ -65,7 +65,7 @@ class ScriptsScreenshotTest {
 
     private fun capture(
         script: Script,
-        fonts: List<PlumFont> = listOf(PlumFont.Sans),
+        fonts: List<PlumFont> = listOf(PlumFont.Default),
     ) {
         Locale.setDefault(Locale.forLanguageTag(script.tag))
         ReferenceShots.capture(script.shot, fonts) { Rows(script) }

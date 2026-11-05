@@ -34,10 +34,10 @@ internal fun discSystemOf(consoleId: Int): DiscSystem? = when (consoleId) {
 }
 
 /** Containers that need a decoder Android lacks (or a library the app does not carry). */
-private val DISC_DECODER_EXTENSIONS = setOf("rvz", "wia", "wbfs", "gcz", "pbp", "ecm", "zso", "nrg", "mds", "mdf")
+private val DISC_DECODER_EXTENSIONS = setOf("rvz", "wia", "wbfs", "gcz", "pbp", "ecm", "nrg", "mds", "mdf")
 
-/** GameCube and Wii images read here (`.gcz`, `.wbfs`) are not in the list; their other layouts (`.ciso`, and `.chd`, which is not read as one) are. */
-private val NINTENDO_DECODER_EXTENSIONS = DISC_DECODER_EXTENSIONS - setOf("wbfs", "gcz") + setOf("ciso", "chd")
+/** GameCube and Wii images read here (`.gcz`, `.wbfs`, `.rvz`, `.wia`) are not in the list; their other layouts (`.ciso`, and `.chd`, which is not read as one) are. */
+private val NINTENDO_DECODER_EXTENSIONS = DISC_DECODER_EXTENSIONS - setOf("wbfs", "gcz", "rvz", "wia") + setOf("ciso", "chd", "zso")
 
 private const val FM_TOWNS_FLOPPY_LIMIT = 2L * 1024 * 1024
 

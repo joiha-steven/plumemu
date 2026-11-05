@@ -2,7 +2,12 @@ package com.plumemu.game
 
 import androidx.compose.runtime.Composable
 import com.plumemu.keyboard.KeyboardChoice
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 
@@ -31,9 +36,18 @@ internal fun rememberGameMenuController(
     actions: GameActions,
     apps: AppActions = AppActions.None,
     keyboard: KeyboardChoice = KeyboardChoice.Plumemu,
+    sorts: SortActions = SortActions.None,
 ): GameMenuController {
     val scope = rememberCoroutineScope()
-    val controller = remember(actions, apps, scope) { GameMenuController(actions, scope, apps) }
+    val controller = remember(actions, apps, sorts, scope) { GameMenuController(actions, scope, apps, sorts) }
     SideEffect { controller.keyboardKind = keyboard }
+    // Back from the store (or a package change meanwhile): a panel about emulators shows what is installed now.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, controller) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) controller.emulatorsMayHaveChanged() }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(actions, controller) { actions.emulatorChanges.collect { controller.emulatorsMayHaveChanged() } }
     return controller
 }

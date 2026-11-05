@@ -187,7 +187,7 @@ class GameLauncher internal constructor(
             // The note and the start are one step a cancel cannot split (a caller giving up on a slow
             // start must leave no half-recorded play): see PlayTimeTracker.handOff. Failures are mapped
             // inside it, so the outcome carries the very exception thrown.
-            playTime.handOff(gameId, pick.emulator.id, core) {
+            playTime.handOff(gameId, pick.emulator.id, core, pick.packageName) {
                 try {
                     withContext(io) { starter.start(intent) }
                     null

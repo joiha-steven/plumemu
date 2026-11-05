@@ -16,6 +16,7 @@ import com.plumemu.keyboard.KeyboardChoice
 import com.plumemu.keyboard.aboveTray
 import com.plumemu.report.ProblemReportBody
 import com.plumemu.report.ProblemReportForm
+import com.plumemu.report.ReportDraft
 
 /*
  * Settings › About › Report a problem: the row and its panel. The form
@@ -24,12 +25,15 @@ import com.plumemu.report.ProblemReportForm
 
 /** The report form open in the panel, if any; the model routes every action to it while [PanelPage.ProblemReport] has the focus. */
 @Stable
-internal class SettingsProblemReport {
+internal class SettingsProblemReport(
+    /** The words typed and not yet sent, kept above Settings; null keeps nothing. */
+    var draft: ReportDraft? = null,
+) {
     var form: ProblemReportForm? by mutableStateOf(null)
         private set
 
     /** A fresh form typed with [keyboard] (Settings › Controls › Keyboard when it opens). */
-    fun open(keyboard: KeyboardChoice): ProblemReportForm = ProblemReportForm(keyboard).also { form = it }
+    fun open(keyboard: KeyboardChoice): ProblemReportForm = ProblemReportForm(keyboard, draft).also { form = it }
 
     /** Shows [opened], a form already made (tests and shots). */
     fun openWith(opened: ProblemReportForm) {

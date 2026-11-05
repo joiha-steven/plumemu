@@ -31,6 +31,7 @@ internal class SettingsSectionRowsTest {
                     SettingsOption.ScanOnStartup,
                     SettingsOption.SortGames,
                     SettingsOption.SystemOrder,
+                    SettingsOption.FilesNotAdded,
                     SettingsOption.RecentSize,
                     SettingsOption.ClearRecent,
                 ),
@@ -69,7 +70,7 @@ internal class SettingsSectionRowsTest {
                     SettingsOption.Vibration,
                 ),
             SettingsSection.Statistics to emptyList(),
-            SettingsSection.Accounts to listOf(SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount),
+            SettingsSection.Accounts to listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount),
             SettingsSection.Advanced to
                 listOf(
                     SettingsOption.Animations,

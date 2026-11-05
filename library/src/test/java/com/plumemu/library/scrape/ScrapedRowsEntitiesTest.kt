@@ -39,4 +39,23 @@ class ScrapedRowsEntitiesTest {
         assertEquals("1 & 2", HtmlEntities.decode(row.players!!))
         assertEquals(shown, HtmlEntities.decode(GameDetails.fromJson(row.detailsJson!!)!!.synopses.single().text))
     }
+
+    private fun rowRated(rating: Int?) =
+        ScrapedRows.matched(
+            "crc:a",
+            null,
+            ScrapeResult.Matched(GameMatch("1", MatchedBy.Hash), GameInfo("Zelda", "Zelda", null, null, null, null, null, null), emptyList(), GameDetails(rating = rating)),
+            null,
+            emptyList(),
+            now = 1,
+        )
+
+    @Test fun `the rating column is written with the details, as the details read back`() {
+        val row = rowRated(16)
+        assertEquals(16, row.rating)
+        assertEquals("the same value a migration reads from the stored details", GameDetails.listedRatingOf(row.detailsJson!!), row.rating)
+        assertEquals("ScreenScraper's 0 is no rating", null, rowRated(0).rating)
+        assertEquals(null, rowRated(null).rating)
+        assertEquals("a no-match has none", null, ScrapedRows.noMatch("crc:a", null, now = 1).rating)
+    }
 }

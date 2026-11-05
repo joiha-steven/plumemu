@@ -2,6 +2,8 @@ package com.plumemu.setup
 
 import androidx.compose.runtime.Immutable
 import com.plumemu.account.SignInForm
+import com.plumemu.coredata.settings.BoxArtSourceSetting
+import com.plumemu.coredata.settings.ConfirmButtonSetting
 import com.plumemu.coreinput.TextEntry
 import com.plumemu.graph.ScanPhase
 import com.plumemu.graph.ScanReport
@@ -9,25 +11,27 @@ import com.plumemu.secondscreen.ScreenKind
 import com.plumemu.telemetry.SetupStepId
 
 /**
- * First-run setup: where the games are, the second screen question (only on a device with one,
- * while the scan runs), box art from ScreenScraper (only in a build with developer credentials,
- * while the scan runs; skippable), the scan, the library ready.
+ * First-run setup, in order: where the games are; which button confirms (only with a gamepad);
+ * a look; where box art comes from; the second screen question (only on a device with one);
+ * then the scan and the library ready. The scan runs behind the questions.
  */
 internal enum class SetupStep {
     Folders,
-    SecondScreen,
+    Confirm,
+    Look,
     BoxArt,
+    SecondScreen,
     Scan,
     Ready,
     ;
 
-    /** Its two buttons sit side by side (the second screen's, the box art question's): left / right move too. */
-    val hasSideBySideButtons: Boolean get() = this == SecondScreen || this == BoxArt
+    /** The second screen's two buttons sit side by side: left / right move too (the folder step's pair: [focusTargetAfter]). */
+    val hasSideBySideButtons: Boolean get() = this == SecondScreen
 }
 
 /**
- * What a person can focus in setup: one column of controls, top to bottom; the second screen's
- * two buttons, and the box art question's, sit side by side and left / right move between them too.
+ * What a person can focus in setup: one column of controls, top to bottom; a pair of buttons side by side
+ * (the second screen's, Choose folder and Set up later, Try again and Set up later) also moves with left / right.
  */
 internal enum class SetupControl {
     ChooseFolder,
@@ -49,18 +53,35 @@ internal enum class SetupControl {
     UseSecondScreen,
     SkipSecondScreen,
 
-    /** "Use my account": the box art question's yes, it opens the sign-in form. */
+    /** "Use A": the confirm step's first row. */
+    ConfirmKeep,
+
+    /** "Use B": the confirm step's second row. */
+    ConfirmUseB,
+
+    /** The look step's tiles, in [SetupLooks.sets] order (a grid of [SetupLooks.COLUMNS] columns). */
+    Look0,
+    Look1,
+    Look2,
+    Look3,
+    Look4,
+    Look5,
+
+    /** "Box art and game info": ScreenScraper; without a usable account it opens the sign-in form. */
     UseBoxArt,
 
-    /** "Not now": no box art, on to the scan. */
-    SkipBoxArt,
+    /** "Box art only": libretro's box fronts, no account. */
+    BoxArtLibretro,
+
+    /** "Plumemu's own covers": no network. */
+    BoxArtOwnCovers,
     TryAgain,
     UsageStatistics,
-
-    /** "Play with one hand": the unchecked switch on the last step (Settings › Controls › Push right to play). */
-    PushRightToPlay,
     StartPlaying,
     ;
+
+    /** The index of the look tile this is; null for every other control. */
+    val lookIndex: Int? get() = if (this in lookTiles) lookTiles.indexOf(this) else null
 
     /** The index of the folder this card stands for; null for every other control. */
     val folderIndex: Int? get() = if (this in folderCards) folderCards.indexOf(this) else null
@@ -68,6 +89,10 @@ internal enum class SetupControl {
     companion object {
         private val folderCards =
             listOf(FolderCard0, FolderCard1, FolderCard2, FolderCard3, FolderCard4, FolderCard5, FolderCard6, FolderCard7)
+        private val lookTiles = listOf(Look0, Look1, Look2, Look3, Look4, Look5)
+
+        /** The control of the look tile at [index]. */
+        fun lookTile(index: Int): SetupControl? = lookTiles.getOrNull(index)
 
         /** The card control of the folder at [index]; null past the eighth (removed in Settings › Library). */
         fun folderCard(index: Int): SetupControl? = folderCards.getOrNull(index)
@@ -173,8 +198,6 @@ internal data class SetupUiState(
     val usageStatistics: Boolean = false,
     /** The build names a statistics server: Ready asks about usage statistics. A build from source has no such question. */
     val asksAboutStatistics: Boolean = true,
-    /** Push right to play; off until the person turns it on. */
-    val pushRightToPlay: Boolean = false,
     /** The folders or systems could not be read (database error, logged): message and Try again. */
     val hasLoadFailed: Boolean = false,
     /** Null only while the scan runs: that step has nothing to choose. */
@@ -186,33 +209,53 @@ internal data class SetupUiState(
      * decided (or answered in this setup). Without it the step and its dot do not exist.
      */
     val hasSecondScreenStep: Boolean = false,
-    /** The build can fetch box art (developer credentials): the ScreenScraper step and its dot exist. */
-    val hasBoxArtStep: Boolean = false,
+    /** The build can use ScreenScraper (developer credentials): the box art step has three choices, else two. */
+    val hasScreenScraper: Boolean = false,
     /**
-     * The sign-in form once the person chose "Use my account" on the box art step (or the step
-     * opened signed in); it holds its own focus ([SignInForm.focus]). Null while the step asks.
+     * The sign-in form once the person chose "Box art and game info" without a usable account (or a refused
+     * one); it holds its own focus ([SignInForm.focus]). Null while the step shows its choices.
      */
     val boxArt: SignInForm? = null,
-    /** A ScreenScraper account is stored (signed in during setup or before): the library step says box art is coming. */
+    /** The box art source in force (the stored choice, else from the account); the step marks it. Null before the first read. */
+    val boxArtSource: BoxArtSourceSetting? = null,
+    /** Box art will download: a ScreenScraper account is usable, or "Box art only" is chosen (what the statistics count). */
     val isBoxArtComing: Boolean = false,
+    /** What Ready says about box art: only what is true now ([boxArtLineOf]). */
+    val boxArtLine: BoxArtLine = BoxArtLine.None,
+    /** A gamepad is connected: the confirm step exists. */
+    val hasConfirmStep: Boolean = false,
+    /** The confirm answer this setup stored; null on the first visit to the step. Set, the step says which button is active. */
+    val confirmAnswer: ConfirmButtonSetting? = null,
+    /** What this device suggests for the look step (the tile it opens on, the text size it applies). */
+    val deviceLook: DeviceLook = DeviceLook.None,
 ) {
-    /** The top bar's dots: folder, the second screen when asked, box art when the build has it, library. */
-    val stepDots: Int get() = 2 + (if (hasSecondScreenStep) 1 else 0) + (if (hasBoxArtStep) 1 else 0)
+    /** The top bar's dots: folders, confirm with a gamepad, look, box art, the second screen when asked, library. */
+    val stepDots: Int get() = 4 + (if (hasConfirmStep) 1 else 0) + (if (hasSecondScreenStep) 1 else 0)
 
     /** The lit dot; the scan shares the library's. */
     val stepDotIndex: Int
-        get() =
-            when (step) {
+        get() {
+            val confirm = if (hasConfirmStep) 1 else 0
+            return when (step) {
                 SetupStep.Folders -> 0
-                SetupStep.SecondScreen -> 1
-                SetupStep.BoxArt -> stepDots - 2
+                SetupStep.Confirm -> 1
+                SetupStep.Look -> 1 + confirm
+                SetupStep.BoxArt -> 2 + confirm
+                SetupStep.SecondScreen -> 3 + confirm
                 SetupStep.Scan, SetupStep.Ready -> stepDots - 1
             }
+        }
+
+    /**
+     * What sits above the last button of the Ready step and may change after the step opened (the emulator check
+     * answers, the box art line comes, names are still filled in): a change asks the scroll to show the button again.
+     */
+    val aboveLastButton: Any get() = Triple(emulators, boxArtLine, isNaming)
 
     val gameCount: Int get() = systems.sumOf { it.gameCount }
     val systemCount: Int get() = systems.size
     val controls: List<SetupControl>
-        get() = if (hasLoadFailed) listOf(SetupControl.TryAgain, SetupControl.SetUpLater) else controlsOf(step, folders.size, hasScanFailed, asksAboutStatistics)
+        get() = if (hasLoadFailed) listOf(SetupControl.TryAgain, SetupControl.SetUpLater) else controlsOf(step, folders.size, hasScanFailed, asksAboutStatistics, hasScreenScraper)
 
     /**
      * What the input router must send: the form's typing keys while it types
@@ -227,6 +270,7 @@ internal fun controlsOf(
     folderCount: Int,
     hasScanFailed: Boolean,
     asksAboutStatistics: Boolean = true,
+    hasScreenScraper: Boolean = true,
 ): List<SetupControl> =
     when (step) {
         SetupStep.Folders ->
@@ -236,16 +280,19 @@ internal fun controlsOf(
                 listOf(SetupControl.ChooseFolder, SetupControl.SetUpLater)
             }
         SetupStep.SecondScreen -> listOf(SetupControl.UseSecondScreen, SetupControl.SkipSecondScreen)
-        // The question; the sign-in form after it has its own items and focus (account/SignInForm.kt).
-        SetupStep.BoxArt -> listOf(SetupControl.UseBoxArt, SetupControl.SkipBoxArt)
+        SetupStep.Confirm -> listOf(SetupControl.ConfirmKeep, SetupControl.ConfirmUseB)
+        SetupStep.Look -> List(SetupLooks.sets.size) { SetupControl.lookTile(it) }.filterNotNull()
+        // The three choices (two without ScreenScraper); the sign-in form has its own items and focus (account/SignInForm.kt).
+        SetupStep.BoxArt ->
+            listOfNotNull(SetupControl.UseBoxArt.takeIf { hasScreenScraper }, SetupControl.BoxArtLibretro, SetupControl.BoxArtOwnCovers)
         SetupStep.Scan -> if (hasScanFailed) listOf(SetupControl.TryAgain) else emptyList()
-        SetupStep.Ready -> listOfNotNull(SetupControl.UsageStatistics.takeIf { asksAboutStatistics }, SetupControl.PushRightToPlay, SetupControl.StartPlaying)
+        SetupStep.Ready -> listOfNotNull(SetupControl.UsageStatistics.takeIf { asksAboutStatistics }, SetupControl.StartPlaying)
     }
 
 /**
  * The focus a step opens with: its main button, which is always last (Continue, Start playing);
- * the second screen step asks for its own ([secondScreenFocusFor]); the box art question opens on
- * Use my account, the main button on the left like the second screen's Use it.
+ * the second screen, look and box art steps ask for their own; without ScreenScraper the box art
+ * step opens on "Box art only".
  */
 internal fun focusIn(
     controls: List<SetupControl>,
@@ -253,6 +300,8 @@ internal fun focusIn(
 ): SetupControl? =
     requested?.takeIf { it in controls }
         ?: SetupControl.UseBoxArt.takeIf { it in controls }
+        ?: SetupControl.BoxArtLibretro.takeIf { it in controls }
+        ?: SetupControl.ConfirmKeep.takeIf { it in controls }
         ?: SetupControl.ChooseFolder.takeIf { it in controls }
         ?: controls.lastOrNull()
 
@@ -276,12 +325,34 @@ internal fun emulatorCoverageOf(
     return EmulatorCoverage(systemsWithEmulator = systems.size - missing.size, systems = systems.size, missing = missing)
 }
 
-/** `setup_step.step` of a setup step (docs/conventions/telemetry.md). */
-internal fun setupStepIdOf(step: SetupStep): SetupStepId =
+/** `setup_step.step` of a setup step (docs/conventions/telemetry.md); null for the confirm and look steps, which have no wire value. */
+internal fun setupStepIdOf(step: SetupStep): SetupStepId? =
     when (step) {
         SetupStep.Folders -> SetupStepId.Folders
+        SetupStep.Confirm, SetupStep.Look -> null
         SetupStep.SecondScreen -> SetupStepId.SecondScreen
         SetupStep.BoxArt -> SetupStepId.Artwork
         SetupStep.Scan -> SetupStepId.Scan
         SetupStep.Ready -> SetupStepId.Ready
+    }
+
+/** Ready's box art line: none, coming, waiting for a network, or an account to sign in to again. */
+internal enum class BoxArtLine { None, Coming, WaitsForNetwork, SignInAgain }
+
+/**
+ * Own covers or no games: no line. A refused ScreenScraper account: sign in again (online or not). Else it comes
+ * when the device is online and waits when it is not.
+ */
+internal fun boxArtLineOf(
+    source: BoxArtSourceSetting,
+    account: AccountUse,
+    isOnline: Boolean,
+    gameCount: Int,
+): BoxArtLine =
+    when {
+        gameCount == 0 || source == BoxArtSourceSetting.OwnCovers -> BoxArtLine.None
+        source == BoxArtSourceSetting.ScreenScraper && account == AccountUse.Refused -> BoxArtLine.SignInAgain
+        source == BoxArtSourceSetting.ScreenScraper && account == AccountUse.None -> BoxArtLine.None
+        isOnline -> BoxArtLine.Coming
+        else -> BoxArtLine.WaitsForNetwork
     }

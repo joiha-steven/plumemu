@@ -123,7 +123,7 @@ internal class SettingsCustomColor(
     private var baseText: TextColorSetting = TextColorSetting.Light
 
     /** Likewise the accent the panel opened with: a preview that moves it to read is settled from this, and cancelling puts it back. */
-    internal var baseAccent: ColorSetting = ColorSetting.Preset(AppearanceSettings.DEFAULT_ACCENT)
+    internal var baseAccent: ColorSetting = AppearanceSettings.DEFAULT_ACCENT
         private set
 
     /** The background the Text and Accent palettes read on, taken when the panel opened. */

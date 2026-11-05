@@ -17,8 +17,8 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class SetupSignInTypingScreenshotTest {
     @Test
-    fun username() = ReferenceShots.capture("setup_sign_in_typing_username") { SetupSignInTypingAt(SignInTypingShots.State.Username) }
+    fun username() = ReferenceShots.capture("setup_sign_in_typing_username", sizes = ReferenceShots.Size.Original + ReferenceShots.Size.FourThree) { SetupSignInTypingAt(SignInTypingShots.State.Username) }
 
     @Test
-    fun password() = ReferenceShots.capture("setup_sign_in_typing_password") { SetupSignInTypingAt(SignInTypingShots.State.Password) }
+    fun password() = ReferenceShots.capture("setup_sign_in_typing_password", sizes = ReferenceShots.Size.Original + ReferenceShots.Size.FourThree) { SetupSignInTypingAt(SignInTypingShots.State.Password) }
 }

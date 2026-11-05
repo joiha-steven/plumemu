@@ -5,6 +5,9 @@ import java.util.Locale
 /** The data track a track list points to: its file (as written, relative), layout and first sector in the file. */
 internal data class TrackFile(val fileName: String, val layout: SectorLayout, val firstSector: Long = 0)
 
+/** A file a cue sheet or track list names, and how its sectors are stored (null: audio). */
+internal data class SheetFile(val name: String, val layout: SectorLayout?)
+
 /**
  * Text lists that name other files: cue sheets, Dreamcast `.gdi` track lists and `.m3u`
  * playlists. Names may be quoted (with spaces inside) or bare.
@@ -90,6 +93,26 @@ internal object TrackLists {
     /** The first entry of a playlist: the first line that is not blank or a `#` comment. */
     fun m3uFirstEntry(text: String): String? =
         text.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() && !it.startsWith("#") }
+
+    /**
+     * The files of a cue sheet in the order its tracks use them, each once, with the layout of
+     * the first data track in it (null for an audio-only file). Null when a track comes before any
+     * `FILE` line or the sheet names no file.
+     */
+    fun cueTrackFiles(text: String): List<SheetFile>? {
+        val tracks = cueTracks(text)
+        if (tracks.isEmpty() || tracks.any { it.file == null }) return null
+        val names = tracks.mapNotNull { it.file }.distinct()
+        return names.map { name -> SheetFile(name, tracks.firstOrNull { it.file == name && it.layout != null }?.layout) }
+    }
+
+    /** The track files of a `.gdi` in its order, with each track's sector layout; null when it lists none. */
+    fun gdiTrackFiles(text: String): List<SheetFile>? {
+        val files = text.lineSequence().drop(1).map { words(it) }.filter { it.size >= 5 && it[0].toIntOrNull() != null }.map { w ->
+            SheetFile(w[4], if (w[3] == "2048") SectorLayout.COOKED_2048 else SectorLayout.RAW_2352)
+        }.toList()
+        return files.ifEmpty { null }
+    }
 
     private data class GdiTrack(val number: Int, val lba: Long, val type: Int, val file: TrackFile)
 

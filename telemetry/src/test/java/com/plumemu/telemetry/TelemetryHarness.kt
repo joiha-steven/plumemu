@@ -52,6 +52,9 @@ internal class TelemetryHarness(
     @Volatile
     var storedSwitch: Boolean? = true
 
+    /** False: an instance made next waits for a call that starts it (it has not read its state yet). */
+    var startOnMake = true
+
     /** The log text a problem report attaches. */
     @Volatile
     var logText: String? = "log line one\nlog line two"
@@ -78,7 +81,7 @@ internal class TelemetryHarness(
             storedSwitch = { storedSwitch },
             readExits = { exits },
             readLog = { logText },
-        ).also { it.start() }
+        ).also { if (startOnMake) it.start() }
 
     fun restart() {
         stop()

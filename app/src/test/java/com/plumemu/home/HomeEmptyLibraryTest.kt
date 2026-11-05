@@ -59,8 +59,9 @@ class HomeEmptyLibraryTest {
     @Test
     fun withFoldersReadAndNoGamesTheMessageAsksToCheckTheFolder() {
         show(FakeHomeContent.noGames(), HomeNotices(emptyLibrary = MutableStateFlow(EmptyLibrary.NoGames)))
-        assertTrue(hasText("No games found yet"))
-        assertTrue(hasText("Check that the folder holds games."))
+        assertTrue(hasText("No games here yet"))
+        assertTrue(hasText("The folder has no files an emulator on this device opens."))
+        assertTrue(hasText("Files not added says why for each one."))
         assertFalse(hasText("No game folder yet"))
     }
 

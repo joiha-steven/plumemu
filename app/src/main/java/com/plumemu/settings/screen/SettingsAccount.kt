@@ -54,8 +54,8 @@ import kotlin.math.roundToInt
  */
 internal fun accountRowsIn(content: SettingsContent): List<SettingsOption> =
     when (content.account) {
-        AccountStatus.NotInThisBuild -> listOf(SettingsOption.ScraperStatus)
-        AccountStatus.SignedOut, is AccountStatus.SignedIn -> listOf(SettingsOption.ScraperAccount)
+        AccountStatus.NotInThisBuild -> listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperStatus)
+        AccountStatus.SignedOut, is AccountStatus.SignedIn -> listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount)
     }
 
 /** ScreenScraper refused the stored password: Settings offers to sign in again. */

@@ -36,6 +36,12 @@ public interface Scraper {
      */
     public val accountLimits: StateFlow<AccountLimits?> get() = NO_LIMITS
 
+    /**
+     * Why the picture source of "Box art only" last failed (no network, or the server did not answer); null until it
+     * did, and again after its next success. Never stored: the status line reads it while the process lives.
+     */
+    public val pictureFailure: StateFlow<PictureFailure?> get() = NO_PICTURE_FAILURE
+
     public suspend fun scrape(request: ScrapeRequest): ScrapeResult
 
     /**
@@ -115,11 +121,22 @@ public interface Scraper {
     public companion object {
         public fun create(config: ScraperConfig): Scraper =
             if (config.developer.isBlank) UnavailableScraper else ScreenScraperScraper(config)
+
+        /**
+         * The scraper of "Box art only" (no account): libretro's thumbnail server only, never ScreenScraper
+         * and never a credential, whatever [config] holds. Works in a build without developer credentials.
+         */
+        public fun createLibretroOnly(config: ScraperConfig): Scraper = LibretroOnlyScraper(config)
     }
 }
 
 /** [Scraper.accountLimits] of a scraper that never learns more. */
 private val NO_LIMITS: StateFlow<AccountLimits?> = MutableStateFlow<AccountLimits?>(null).asStateFlow()
+
+private val NO_PICTURE_FAILURE: StateFlow<PictureFailure?> = MutableStateFlow<PictureFailure?>(null).asStateFlow()
+
+/** Why a picture source failed, in the person's terms. */
+public enum class PictureFailure { NoNetwork, ServerDidNotAnswer }
 
 /** [Scraper.requestSlots] of a scraper that never learns more. */
 private val ONE_REQUEST_SLOT: StateFlow<Int> = MutableStateFlow(1).asStateFlow()

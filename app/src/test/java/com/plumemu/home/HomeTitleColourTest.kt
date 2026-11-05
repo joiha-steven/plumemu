@@ -57,7 +57,10 @@ class HomeTitleColourTest {
         compose.waitForIdle()
     }
 
-    /** The colour of row [row]'s title on the shown page of [entry]: the ink farthest from the background. */
+    /**
+     * The colour of row [row]'s title on the shown page of [entry]: the title colour (muted, text2 or strong) with the most solid pixels in
+     * the title's box. The focused row's slab is a gradient with a text shadow, so "the ink farthest from the background" finds the shadow there.
+     */
     private fun titleColour(
         entry: Int,
         row: Int,
@@ -65,8 +68,7 @@ class HomeTitleColourTest {
         val title = content.entries[entry].rows[row].title
         val pixels = compose.onNode(hasText(title) and hasAnyAncestor(hasTestTag(HomeTags.game(row))), useUnmergedTree = true).captureToImage().toPixelMap()
         val all = buildList { for (x in 0 until pixels.width) for (y in 0 until pixels.height) add(pixels[x, y]) }
-        val background = all.groupingBy { it }.eachCount().maxBy { it.value }.key
-        return all.maxBy { distance(it, background) }
+        return listOf(colors.muted, colors.text2, colors.strong).maxBy { title -> all.count { distance(it, title) < SOLID } }
     }
 
     /** Which title colour [colour] is: the nearest of muted (preview), text2 (games) and strong (the focused row). */
@@ -106,5 +108,8 @@ class HomeTitleColourTest {
     private companion object {
         /** A row that is not the remembered one (row 0): only its title's colour changes. */
         const val ROW = 2
+
+        /** Squared RGB distance under which a pixel is the glyph's own colour (anti-aliased edges are not). */
+        const val SOLID = 0.002f
     }
 }

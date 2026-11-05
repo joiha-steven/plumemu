@@ -230,6 +230,15 @@ enum class CodeKind(
  *   [productCode] (Switch: the base id), an update keeps its own id here, so files can be
  *   grouped by [productCode] and the base file told from its update and DLC by [titleKind].
  * @property titleKind what [titleId] is.
+ * @property trackKeys for a disc, the keys of its track sizes ([com.plumemu.identify.pack.TrackSizeKeys]),
+ *   strongest first, which a name pack's `TRKS` section answers (`NamePack.byTrackKey`); computed
+ *   from file sizes and CHD metadata, never from content. They only look a title up and are never
+ *   one of [fixKeys]: different games can share a layout (one GD-ROM layout, a padded length).
+ *   Empty: the disc was looked at and gives none (a format with no track list). Null: not looked
+ *   at, or incomplete (a track file missing or unreadable), so a later naming asks again.
+ * @property codeFromFileName true when [productCode] and [titleId] were taken from the file's name
+ *   (a Switch id written in it), not read from its content. They name the game as well, but come
+ *   from what a person typed, so the usage statistics never send them.
  */
 data class Fingerprints(
     val size: Long,
@@ -249,6 +258,8 @@ data class Fingerprints(
     val archiveCrc32: Long? = null,
     val titleId: String? = null,
     val titleKind: TitleKind? = null,
+    val trackKeys: List<Long>? = null,
+    val codeFromFileName: Boolean = false,
 ) {
     /**
      * Every key a person's name fix can be stored under, strongest first, so the fix survives
@@ -276,7 +287,8 @@ data class Fingerprints(
      *. The keys also depend on how the file is stored: zipping or unzipping a ROM that
      * carries a header (an iNES file, a SNES file with a copier header) changes the QUICK key;
      * at FULL the content key is the same zipped or loose. Arcade
-     * keys (`arcade:<shortname>`) are added with the arcade lookup.
+     * keys (`arcade:<shortname>`) are added with the arcade lookup. [trackKeys] are never a fix
+     * key: two games can share track sizes, and the first key is also the ScreenScraper key.
      */
     fun fixKeys(): List<String> {
         val keys = ArrayList<String>(4)

@@ -13,7 +13,9 @@ import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreui.components.GAME_ROW_DRAWN_TAG
 import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.HintKeyDimens
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.theme.PlumTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -50,13 +52,13 @@ class HomeBoundsTest {
         actual: Dp,
     ) = assertEquals(what, expected.value, actual.value, TOLERANCE)
 
-    private fun showSystemsFocused() = compose.setContent { PlumTheme(MediumText.Default) { HomeAt(FakeHomeContent.board(), BoardSystemsFocused) } }
+    private fun showSystemsFocused() = compose.setContent { PlumTheme(TableText.Default) { HomeAt(FakeHomeContent.board(), BoardSystemsFocused) } }
 
     /** Super Nintendo focused on the system column with motion on, then A: the strip slides and settles. */
     private fun slideToGames() {
         lateinit var state: StripState
         compose.setContent {
-            PlumTheme(MediumText.Default) {
+            PlumTheme(TableText.Default) {
                 HomeAt(
                     FakeHomeContent.board(),
                     listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX)),
@@ -74,13 +76,13 @@ class HomeBoundsTest {
     private fun assertBars(height: Dp) {
         val top = bounds(HomeTags.TOP_BAR)
         assertDp("top bar y = margin 14", 14.dp, top.top)
-        assertDp("top bar height 18", 18.dp, top.bottom - top.top)
+        assertDp("top bar height: the place name's line", TableText.TopBarHeight, top.bottom - top.top)
         val strip = bounds(HomeTags.STRIP)
-        assertDp("content starts at 14 + 18 + 10", 42.dp, strip.top)
-        assertDp("content ends 10 above the hint bar", height - 12.dp - 22.dp - 10.dp, strip.bottom)
+        assertDp("content starts at 14 + the bar + 10", 14.dp + TableText.TopBarHeight + 10.dp, strip.top)
+        assertDp("content ends the footer gap above the hint bar", height - PlumDimens.footerBelow - 22.dp - PlumDimens.footerGap, strip.bottom)
         val hints = bounds(HomeTags.HINT_BAR)
         assertDp("hint bar height 22", 22.dp, hints.bottom - hints.top)
-        assertDp("hint bar bottom at height − 12", height - 12.dp, hints.bottom)
+        assertDp("hint bar bottom at height − 9", height - PlumDimens.footerBelow, hints.bottom)
     }
 
     private fun assertSystemsFocused(
@@ -91,20 +93,20 @@ class HomeBoundsTest {
         assertBars(height)
         val recent = bounds(HomeTags.system(0))
         assertDp("selector column starts at the screen edge, margin 24 inside", 0.dp, recent.left)
-        assertDp("first row at 42", 42.dp, recent.top)
+        assertDp("first row at the strip top", TableText.StripTop, recent.top)
         assertDp("system column 224 = margin 24 + 200", 224.dp, recent.right - recent.left)
         assertDp("system rows 40 (34 designed, min 40)", 40.dp, recent.bottom - recent.top)
-        assertDp("Super Nintendo after three rows and the 4 dp gap", 42.dp + 40.dp * 3 + 4.dp, bounds(HomeTags.system(3)).top)
+        assertDp("Super Nintendo after three rows and the 4 dp gap", TableText.StripTop + 40.dp * 3 + 4.dp, bounds(HomeTags.system(3)).top)
         val first = bounds(HomeTags.game(0))
-        assertDp("preview list after column and gap 24", 248.dp, first.left)
-        assertDp("first game row at 42", 42.dp, first.top)
+        assertDp("preview list after column and gap 24, less the 8 it reaches into the gap", 248.dp - PlumDimens.gamesListBleed, first.left)
+        assertDp("first game row at the strip top", TableText.StripTop, first.top)
         assertDp("a game row's tap area is the row and its gap, 40", 40.dp, first.bottom - first.top)
         val drawn = compose.onAllNodesWithTag(GAME_ROW_DRAWN_TAG, useUnmergedTree = true)[0].getUnclippedBoundsInRoot()
         assertDp("game rows drawn 38", 38.dp, drawn.bottom - drawn.top)
         assertDp("the drawn row starts with its tap area", first.top, drawn.top)
         val listWidth = if (width >= WIDE_MIN) width - 368.dp else width - 96.dp
-        assertDp("no-art list: width − 368 beside the text-only details (wide), width − 96 (narrow)", listWidth, first.right - first.left)
-        assertDp("rows 40 apart (38 and the 2 gap)", 82.dp, bounds(HomeTags.game(1)).top)
+        assertDp("no-art list: width − 368 beside the text-only details (wide), width − 96 (narrow), plus the 8 it reaches into the gap", listWidth + PlumDimens.gamesListBleed, first.right - first.left)
+        assertDp("rows 40 apart (38 and the 2 gap)", TableText.StripTop + 40.dp, bounds(HomeTags.game(1)).top)
         assertDp("hint starts at the margin", 24.dp, bounds(HomeTags.hint(Action.Enter)).left)
     }
 
@@ -115,9 +117,9 @@ class HomeBoundsTest {
         val snesVisible = visible(HomeTags.system(3))
         assertDp("48 dp of it on screen", 48.dp, snesVisible.right - snesVisible.left)
         val first = bounds(HomeTags.game(0))
-        assertDp("list after peek and gap", 72.dp, first.left)
+        assertDp("list after peek and gap, less the 8 it reaches into the gap", 72.dp - PlumDimens.gamesListBleed, first.left)
         if (width >= WIDE_MIN) {
-            assertDp("list: width − 368", width - 368.dp, first.right - first.left)
+            assertDp("list: width − 368, plus the 8 it reaches into the gap", width - 368.dp + PlumDimens.gamesListBleed, first.right - first.left)
             val details = bounds(HomeTags.DETAILS)
             assertDp("text-only details 24 after the list", first.right + 24.dp, details.left)
             assertDp("details end at the right margin", width - 24.dp, details.right)
@@ -135,29 +137,31 @@ class HomeBoundsTest {
     ) {
         val hintLeft = bounds(HomeTags.hint(hint)).left
         val labelLeft = compose.onNodeWithText(label, useUnmergedTree = true).getUnclippedBoundsInRoot().left
-        assertDp("$label: cap width (label − hint − gap 6)", width, labelLeft - hintLeft - 6.dp)
+        assertDp("$label: cap width (label − hint − collar padding − gap 6)", width, labelLeft - hintLeft - HintKeyDimens.collarSide * 2 - 6.dp)
     }
 
     @Test
     @Config(qualifiers = WIDE)
     fun wideKeyCapsMatchTheBoard() {
         showSystemsFocused()
-        assertKeyCap(Action.OpenSettings, "Settings", 46.dp)
-        assertKeyCap(Action.Enter, "Select", 20.dp)
-        assertKeyCap(Action.Search, "Search", 20.dp)
-        // The next hint starts 20 after the label of the one before (RP5-1: A Select, X Search, START Settings).
+        // START is as wide as its letters in the font in use plus the cap's 17.33 (the board's 13 px padding each side at 1.5 px per dp).
+        val startText = compose.onNodeWithText("START", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertKeyCap(Action.OpenSettings, "Settings", startText.right - startText.left + 17.33.dp)
+        assertKeyCap(Action.Enter, "Select", 22.67.dp)
+        assertKeyCap(Action.Search, "Search", 22.67.dp)
+        // The next hint starts the board's footer gap (28 px = 18.67 dp) after the label of the one before, as all three fit with it (RP5-1: A Select, X Search, START Settings).
         val selectRight = compose.onNodeWithText("Select", useUnmergedTree = true).getUnclippedBoundsInRoot().right
-        assertDp("hint gap 20", selectRight + 20.dp, bounds(HomeTags.hint(Action.Search)).left)
+        assertDp("hint gap 17.33", selectRight + PlumDimens.hintGapBoard, bounds(HomeTags.hint(Action.Search)).left)
         val searchRight = compose.onNodeWithText("Search", useUnmergedTree = true).getUnclippedBoundsInRoot().right
-        assertDp("hint gap 20", searchRight + 20.dp, bounds(HomeTags.hint(Action.OpenSettings)).left)
+        assertDp("hint gap 17.33", searchRight + PlumDimens.hintGapBoard, bounds(HomeTags.hint(Action.OpenSettings)).left)
     }
 
     @Test
-    @Config(qualifiers = WIDE)
+    @Config(qualifiers = "w1024dp-h432dp-land-xhdpi")
     fun wideTwoKeyCapMatchesTheBoard() {
-        // In a grid the bar has five hints and Switch system stays; in a list with SELECT it gives way at 768 (HINT_DROP_ORDER).
-        compose.setContent { PlumTheme(MediumText.Default) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, gridIds = setOf("snes")) } }
-        assertKeyCap(Action.JumpLetterNext, "Switch system", 40.5.dp)
+        // A grid's bar has six hints (Favorite joined): at 768 Switch system gives way first (GRID_HINT_DROP_ORDER), so this is measured at 1024.
+        compose.setContent { PlumTheme(TableText.Default) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, gridIds = setOf("snes")) } }
+        assertKeyCap(Action.JumpLetterNext, "Switch system", 45.33.dp)
     }
 
     @Test

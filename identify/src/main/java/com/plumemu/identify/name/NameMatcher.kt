@@ -11,9 +11,10 @@ data class NameMatch(val titleIndex: Int, val score: Double, val isExact: Boolea
  * Finds the title of a console pack that a cleaned file name means (layer 4 of identification).
  *
  * 1. Equal [MatchKey]s match ("Zork Quest II" and "the zork quest 2").
- * 2. A name written as one word ("ZorkQuestTwo") matches a title whose words, run together, are
- *    the same ([MatchKey.compact]), for it or any of its other cleanings: a camel split cannot
- *    find the small words such names run in ("PantsandFriends").
+ * 2. A name written as one word ("ZorkQuestTwo"), or with its spaces lost or "&" dropped, matches a
+ *    title whose words, run together, are the same ([MatchKey.runTogether]), for it or any of its
+ *    other cleanings, when every title with that form has one key; two keys give no answer
+ *    (also not a fuzzy one).
  * 3. Otherwise the titles sharing the rarest words of the name are scored with the
  *    Damerau-Levenshtein similarity of the keys (optimal string alignment: insert, delete,
  *    substitute, swap two neighbours; similarity = 1 - distance / longer length). The best wins
@@ -62,27 +63,118 @@ class NameMatcher(
      * The best title for the first of [candidates] (conservative cleanings first, see
      * `NameCandidates`) that matches: every candidate is tried for an equal key (then a
      * run-together one) before any is scored fuzzily, so an aggressive cleaning that names a game
-     * exactly beats a near miss of the conservative one. [regions] (pack spelling, "USA") break a
+     * exactly beats a near miss of the conservative one. [keptForms] are tried for an equal key before all of them ([ungatedForms] among them skip the region gate). [droppingSubtitle] (a dump-style name: region, no hack or other variant tag) allows the last-resort [subtitleless] reading. [regions] (pack spelling, "USA") break a
      * tie between titles with the same key.
      */
-    fun match(candidates: List<String>, regions: List<String> = emptyList()): NameMatch? {
+    fun match(candidates: List<String>, regions: List<String> = emptyList(), keptForms: List<String> = emptyList(), ungatedForms: Set<String> = emptySet(), droppingSubtitle: Boolean = false): NameMatch? {
         if (pack.kind != PackKind.CONSOLE || pack.titleCount == 0 || candidates.isEmpty()) return null
         val idx = index
+        // The spellings that keep a version or a bracket group of the file ([TitleCleaner.keptForms])
+        // are the title the file says when a pack title has them: exact keys only, and before the
+        // cleaned name, which would take the title without the version or group.
+        val cleanedKey = if (keptForms.isEmpty()) "" else MatchKey.of(candidates[0])
+        for (form in keptForms) {
+            val words = MatchKey.tokens(form)
+            if (words.isEmpty()) continue
+            val key = words.joinToString(" ")
+            // Same key as the cleaned title: nothing kept, and its spelling must not steer the pick.
+            if (key == cleanedKey) continue
+            // A form ending at a region code ("Super Mario USA" from "Super.Mario.USA.EUR-GRP") may be the
+            // title's own word or the region: it is taken only when the plain title is not in the pack.
+            if (form !in ungatedForms && ReleaseTags.sceneRegion(words.last()) != null && exactTitles(idx, cleanedKey).isNotEmpty()) continue
+            val same = exactTitles(idx, key)
+            if (same.isNotEmpty()) return NameMatch(pickSpelling(same, form, regions), 1.0, isExact = true)
+        }
         val tokens = candidates.map(MatchKey::tokens)
+        // A run-together name that names titles of two different keys has no answer: neither a later
+        // candidate's run-together form nor a fuzzy match may guess between them.
+        var blocked = false
         for ((i, words) in tokens.withIndex()) {
             if (words.isEmpty()) continue
             var same = exactTitles(idx, words.joinToString(" "))
             // A name written as one word: its run-together form, before any split of it is tried.
-            if (same.isEmpty() && i == 0 && words.size == 1) same = compactTitles(idx, MatchKey.compact(candidates[0]))
+            if (same.isEmpty() && i == 0 && words.size == 1) {
+                val together = runTogetherTitles(idx, candidates[0])
+                if (together == null) blocked = true else same = together
+            }
             if (same.isNotEmpty()) return NameMatch(pickSpelling(same, candidates[i], regions), 1.0, isExact = true)
         }
+        // Spaces lost or punctuation dropped in a name of several words ("Aqua World - Umi" as
+        // "aquaworld-umi"): the title whose words run together are the same.
+        // A split of a name has the same letters: its run-together form is looked up once.
+        val tried = HashSet<String>()
+        if (tokens[0].size == 1) tried += candidates[0].filter(Char::isLetterOrDigit).lowercase()
+        for ((i, words) in tokens.withIndex()) {
+            if (words.isEmpty() || !tried.add(candidates[i].filter(Char::isLetterOrDigit).lowercase())) continue
+            val together = runTogetherTitles(idx, candidates[i])
+            if (together == null) blocked = true else if (together.isNotEmpty()) {
+                return NameMatch(pickSpelling(together, candidates[i], regions), 1.0, isExact = true)
+            }
+        }
+        if (blocked) return null
         for ((i, words) in tokens.withIndex()) {
             if (words.isEmpty()) continue
             val found = fuzzyMatch(idx, words.joinToString(" "), words) ?: continue
             val same = exactTitles(idx, keyOf(idx, found.titleIndex))
             return found.copy(titleIndex = pickSpelling(same, candidates[i], regions))
         }
-        return null
+        return if (droppingSubtitle) subtitleless(idx, candidates[0], regions) else null
+    }
+
+    /**
+     * Last resort: "Speedball 2 - Brutal Deluxe" for a pack that holds "Speedball 2". The part before
+     * the first " - " (two words or more) must be a title's whole key, and no title of another key may
+     * begin with those words ("Castlevania - Dracula X" never becomes "Castlevania" while the pack has
+     * other Castlevania titles).
+     */
+    private fun subtitleless(idx: Index, cleanedTitle: String, regions: List<String>): NameMatch? {
+        val cut = cleanedTitle.indexOf(" - ")
+        if (cut <= 0) return null
+        val prefix = cleanedTitle.substring(0, cut)
+        // Only an edition label may be dropped: any other subtitle names another game ("Bionic Commando - Elite Forces").
+        // "Game of the Year" counts only as that whole phrase; "the" and "game" alone are title words.
+        val subtitle = MatchKey.words(cleanedTitle.substring(cut + 3), dropArticles = false).joinToString(" ")
+            .replace("game of the year", "goty").split(' ').filter { it.isNotEmpty() }
+        if (subtitle.isEmpty() || !subtitle.all { it in EDITION_LABEL_WORDS || ORDINAL.matches(it) }) return null
+        val key = MatchKey.of(prefix)
+        if (' ' !in key) return null
+        val same = exactTitles(idx, key)
+        if (same.isEmpty()) return null
+        for (t in 0 until pack.titleCount) {
+            val start = idx.keyStart[t]
+            val end = idx.keyStart[t + 1]
+            if (end - start <= key.length || idx.keyChars[start + key.length] != ' ') continue
+            if (key.indices.all { idx.keyChars[start + it] == key[it] }) return null
+        }
+        return NameMatch(pickSpelling(same, prefix, regions), SUBTITLELESS_SCORE, isExact = false)
+    }
+
+    /**
+     * The titles whose run-together form is one of [name]'s ([MatchKey.runTogether]): empty when
+     * none, null when they differ in key (no answer). Titles of one key are one game.
+     */
+    private fun runTogetherTitles(idx: Index, name: String): IntArray? {
+        var found = IntArray(0)
+        for (form in MatchKey.runTogether(name)) {
+            for (t in runTogetherForm(idx, form)) if (t !in found) found += t
+        }
+        // Digits the name keeps apart stay apart ("20-02" is not "2002"); digits the name ran together
+        // may be the title's separate numbers ("Ran21999" for "Ran2 1999").
+        if (found.isNotEmpty()) {
+            val runs = MatchKey.digitRuns(name)
+            found = found.filter { MatchKey.sameDigits(runs, MatchKey.digitRuns(pack.titleName(it))) }.toIntArray()
+        }
+        if (found.size > 1 && (1 until found.size).any { !sameKey(idx, found[0], found[it]) }) {
+            // Titles of different keys: only a spelling that is one title exactly, spaces aside (case
+            // and punctuation included), tells them apart ("SpaceHarrier3D" for "Space Harrier 3D", not
+            // "Space Harrier 3-D"); a lower-case or punctuation-free name does not.
+            val bare = name.replace(" ", "")
+            val same = found.filter { pack.titleName(it).replace(" ", "") == bare }
+            // Only for a name with no spaces: "Dragon Warrior I II" is not "Dragon Warrior III".
+            return if (' ' !in name && same.size == 1) same.toIntArray() else null
+        }
+        found.sort()
+        return found
     }
 
     /** Bytes the index holds in its arrays (object headers left out); built on first call. */
@@ -103,11 +195,10 @@ class NameMatcher(
         var pairCount = 0
         for (t in 0 until count) {
             val name = pack.titleName(t)
-            val raw = MatchKey.words(name)
-            val words = raw.map(MatchKey::normaliseWord)
+            val raw = MatchKey.words(name, dropArticles = false)
+            val words = MatchKey.withoutArticles(raw).map(MatchKey::normaliseWord)
             val key = words.joinToString(" ")
-            val forms = if ('&' in name) MatchKey.compactForms(name) else listOf(raw.joinToString(""))
-            for (form in forms) {
+            for (form in MatchKey.runTogether(name, raw)) {
                 if (compactCount == compact.size) compact = compact.copyOf(compact.size * 2 + 1)
                 compact[compactCount++] = (form.hashCode().toLong() shl 32) or t.toLong()
             }
@@ -155,11 +246,9 @@ class NameMatcher(
     private fun exactTitles(idx: Index, key: String): IntArray =
         titlesWithHash(idx.exact, key.hashCode()) { keyEquals(idx, it, key) }
 
-    /** Every title whose run-together key is [compact], in index order; empty for an empty one. */
-    private fun compactTitles(idx: Index, compact: String): IntArray {
-        if (compact.isEmpty()) return IntArray(0)
-        return titlesWithHash(idx.compact, compact.hashCode()) { compact in MatchKey.compactForms(pack.titleName(it)) }
-    }
+    /** Every title with the run-together form [form], in index order. */
+    private fun runTogetherForm(idx: Index, form: String): IntArray =
+        titlesWithHash(idx.compact, form.hashCode()) { form in MatchKey.runTogether(pack.titleName(it)) }
 
     private inline fun titlesWithHash(table: LongArray, hashCode: Int, equal: (Int) -> Boolean): IntArray {
         val hash = hashCode.toLong()
@@ -343,6 +432,14 @@ class NameMatcher(
 
         /** Titles scored per lookup at most: keeps a name made of common words under a millisecond. */
         internal const val MAX_CANDIDATES = 512
+        private const val SUBTITLELESS_SCORE = 0.9
+        private val ORDINAL = Regex("""\d+(?:st|nd|rd|th)""")
+
+        /** Words of an edition label, as [MatchKey] writes them (apostrophes dropped). */
+        private val EDITION_LABEL_WORDS = setOf(
+            "edition", "anniversary", "deluxe", "special", "remastered", "remaster", "collectors", "directors", "cut",
+            "limited", "complete", "definitive", "ultimate", "gold", "platinum", "greatest", "hits", "goty",
+        )
         private const val AVERAGE_KEY = 24
     }
 }

@@ -109,33 +109,34 @@ class HomeMixedGridScreenTest {
     @Test
     fun theRecentGridsBarStartsWithTheSystemThenYearAndPublisher() {
         showGrid(0, 0, HomeContent.RECENT_ID)
-        assertTrue(hasText("Chrono Trigger · SNES · 1995 · Square"))
+        assertTrue(hasText("Chrono Trigger SNES · 1995 · Square"))
     }
 
     @Test
     fun theFavoritesGridsBarNamesTheSystemToo() {
         showGrid(1, 0, HomeContent.FAVORITES_ID)
-        assertTrue(hasText("Chrono Trigger · SNES · 1995 · Square"))
+        assertTrue(hasText("Chrono Trigger SNES · 1995 · Square"))
     }
 
     @Test
     fun aMissingYearLeavesNoStrayDot() {
         showGrid(0, 1, HomeContent.RECENT_ID)
-        assertTrue("system and publisher", hasText("Daxter · PSP · Ready at Dawn"))
+        assertTrue("system and publisher", hasText("Daxter PSP · Ready at Dawn"))
         assertFalse(hasText("PSP ·  ·"))
         assertFalse(hasText("· · "))
+        assertFalse(hasText("Daxter · "))
     }
 
     @Test
     fun aGameWhoseSystemIsUnknownShowsYearAndPublisherOnly() {
         showGrid(0, 2, HomeContent.RECENT_ID)
-        assertTrue(hasText("Link · 2001 · Fan"))
+        assertTrue(hasText("Link 2001 · Fan"))
     }
 
     @Test
     fun aSystemsOwnGridKeepsYearAndPublisherWithoutTheSystem() {
         showGrid(3, 0, "snes")
-        assertTrue(hasText("Chrono Trigger · 1995 · Square"))
+        assertTrue(hasText("Chrono Trigger 1995 · Square"))
         assertFalse(hasText("SNES"))
     }
 

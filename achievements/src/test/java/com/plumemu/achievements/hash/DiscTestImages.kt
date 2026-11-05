@@ -205,7 +205,65 @@ internal fun discCases(cooked: ByteArray, label: String = "game", isoLayout: Boo
     add("cso", MemorySource("$label.cso", csoOf(cooked)))
     add("cso, aligned index", MemorySource("$label.cso", csoOf(cooked, align = 2)))
     add("cso, 8 KiB blocks", MemorySource("$label.cso", csoOf(cooked, blockSize = 8192)))
+    add("zso", MemorySource("$label.zso", lz4ImageOf(cooked, zso = true)))
+    add("zso, aligned index, padded last block", MemorySource("$label.zso", lz4ImageOf(cooked, zso = true, align = 2, padLast = true)))
+    add("cso v2", MemorySource("$label.cso", lz4ImageOf(cooked, zso = false)))
+    add("cso v2, aligned index, 8 KiB blocks", MemorySource("$label.cso", lz4ImageOf(cooked, zso = false, blockSize = 8192, align = 3)))
     return cases
+}
+
+/**
+ * A `.zso` (LZ4 blocks, bit 31 = stored raw) or a CSO v2 (bit 31 = LZ4; deflate otherwise; a raw block is
+ * stored at full block size). Blocks cycle LZ4, raw, deflate (v2) so every kind is read; [padLast] gives the
+ * last block to the encoder as a full block of zero-filled bytes.
+ */
+internal fun lz4ImageOf(cooked: ByteArray, zso: Boolean, blockSize: Int = 2048, align: Int = 0, padLast: Boolean = false): ByteArray {
+    val blocks = (cooked.size + blockSize - 1) / blockSize
+    val step = 1 shl align
+    fun roundUp(n: Int) = (n + step - 1) / step * step
+    val bodies = ArrayList<ByteArray>()
+    val flags = ArrayList<Boolean>()
+    for (n in 0 until blocks) {
+        val plain = cooked.copyOfRange(n * blockSize, minOf(cooked.size, (n + 1) * blockSize))
+        val last = n == blocks - 1
+        val input = if (last && padLast) plain.copyOf(blockSize) else plain
+        // A short last block cannot be raw in v2 (raw is told by size), so it takes LZ4 or deflate.
+        val rawWanted = n % 3 == 1 && (zso || !last || plain.size == blockSize)
+        if (rawWanted) {
+            // v2 stores a raw block whole; ZSO flags it.
+            bodies += if (zso) plain else plain.copyOf(blockSize)
+            // v2: bit 31 on a full-size block is ignored by readers (maxcso, PPSSPP), so set it on every other raw block.
+            flags += zso || n % 2 == 1
+        } else if (zso || n % 3 == 0) {
+            val packed = lz4Compress(input)
+            if (zso && packed.size >= plain.size) { bodies += plain; flags += true } else { bodies += packed; flags += !zso }
+        } else {
+            bodies += deflateRaw(plain)
+            flags += false
+        }
+    }
+    val header = ByteArrayOutputStream()
+    header.write((if (zso) "ZISO" else "CISO").toByteArray())
+    header.write(le(24, 4)); header.write(le(cooked.size.toLong(), 8)); header.write(le(blockSize.toLong(), 4))
+    header.write(if (zso) 1 else 2); header.write(align); header.write(0); header.write(0)
+    val indexBytes = 24 + 4 * (blocks + 1)
+    var position = roundUp(indexBytes)
+    val index = ByteArrayOutputStream()
+    val data = ByteArrayOutputStream()
+    for (n in 0 until blocks) {
+        // ZSO: bit 31 marks raw. v2: bit 31 marks LZ4. Both are the `flags` entry.
+        index.write(le((position / step).toLong() or (if (flags[n]) 0x80000000L else 0L), 4))
+        data.write(bodies[n])
+        val padded = roundUp(bodies[n].size)
+        data.write(ByteArray(padded - bodies[n].size))
+        position += padded
+    }
+    index.write(le((position / step).toLong(), 4))
+    val out = ByteArrayOutputStream()
+    out.write(header.toByteArray()); out.write(index.toByteArray())
+    out.write(ByteArray(roundUp(indexBytes) - indexBytes))
+    out.write(data.toByteArray())
+    return out.toByteArray()
 }
 
 /** A `.cso`: [blockSize]-byte blocks, even ones deflated, odd ones stored raw, offsets shifted left by [align]. */

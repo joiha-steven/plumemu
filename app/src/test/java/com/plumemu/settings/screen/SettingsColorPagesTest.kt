@@ -22,6 +22,10 @@ import org.junit.Test
 
 /** The colour pages of Settings: presets, the custom palette's preview and choice, the hex code field. */
 internal class SettingsColorPagesTest : SettingsModelHarness() {
+    init {
+        startOnRedSans() // these tests walk the accent presets from Red
+    }
+
     @Test
     fun backgroundPresetsApplyAsTheCursorReachesThem() {
         openSection(SettingsSection.Appearance)

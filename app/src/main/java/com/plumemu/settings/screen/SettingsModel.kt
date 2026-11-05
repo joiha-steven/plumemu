@@ -237,7 +237,7 @@ internal class SettingsModel(
         val wasFocused = focus.column == SettingsColumn.Options && optionIndex == index
         focusOnly(index)
         // Switches, Use as home screen drawn as one and Statistics' games (shown only once the page is entered) act on the first tap.
-        if (wasFocused || option.kind == OptionKind.Switch || option == SettingsOption.UseAsHome || option == SettingsOption.Statistic) activate(option, settings, geometry)
+        if (wasFocused || option.kind == OptionKind.Switch || option == SettingsOption.UseAsHome || option == SettingsOption.Statistic || canTryBoxArtAgain(option)) activate(option, settings, geometry)
     }
 
     fun onTapValue(
@@ -443,15 +443,15 @@ internal class SettingsModel(
         when (action) {
             is Action.Move ->
                 when (action.direction) {
-                    Direction.Up -> if (option == SettingsOption.Statistic && (at == 0 || statisticsScroll.isPastFocus)) statisticsScroll.scroll(down = false) else if (at > 0) focusOption(at - 1)
-                    Direction.Down -> if (at < rows().lastIndex) focusOption(at + 1) else if (option == SettingsOption.Statistic) statisticsScroll.scroll(down = true)
+                    Direction.Up -> if (option.isOnStatisticsPage && (at == 0 || statisticsScroll.isPastFocus)) statisticsScroll.scroll(down = false) else if (at > 0) focusOption(at - 1)
+                    Direction.Down -> if (at < rows().lastIndex) focusOption(at + 1) else if (option.isOnStatisticsPage) statisticsScroll.scroll(down = true)
                     Direction.Left -> if (option.kind == OptionKind.Choice) stepChoice(option, -1, wrap = false, settings, geometry) else backToSections()
                     Direction.Right ->
                         when (option.kind) {
                             OptionKind.Choice -> stepChoice(option, +1, wrap = false, settings, geometry)
                             OptionKind.Swatch, OptionKind.Opens -> openPanel(option, settings, geometry)
                             // The explanation, as a further stop on narrow screens (wide shows it already).
-                            OptionKind.Switch, OptionKind.Info, OptionKind.Action -> if (geometry.isNarrow && option != SettingsOption.Statistic) openPanel(option, settings, geometry)
+                            OptionKind.Switch, OptionKind.Info, OptionKind.Action -> if (geometry.isNarrow && !option.isOnStatisticsPage) openPanel(option, settings, geometry)
                         }
                 }
             Action.Enter -> activate(option, settings, geometry)
@@ -469,8 +469,7 @@ internal class SettingsModel(
     val statisticsScroll = StatisticsScroll()
 
     /** The focused row when it is one of Statistics' most-played games; null for every other row. */
-    val focusedStatisticGame: TopGame?
-        get() = if (focusedOption == SettingsOption.Statistic) content.statistics.gameAt(optionIndex) else null
+    val focusedStatisticGame: TopGame? get() = if (focusedOption == SettingsOption.Statistic) content.statistics.gameAt(optionIndex) else null
 
     /** A, a second tap or a tap on the value. */
     private fun activate(
@@ -478,6 +477,8 @@ internal class SettingsModel(
         settings: PlumSettings,
         geometry: SettingsGeometry,
     ) {
+        if (canTryBoxArtAgain(option)) return tryBoxArtAgain()
+        if (option == SettingsOption.ExactPlayTime) return work.toggleExactPlayTime(settings.advanced.exactPlayTime, content.hasUsageAccess).also { feel.report(Outcome.Activated) }
         when (option.kind) {
             // Colors' A opens its preview panel; left / right still step.
             OptionKind.Choice -> if (option == SettingsOption.Colors) openPanel(option, settings, geometry) else stepChoice(option, +1, wrap = true, settings, geometry)
@@ -531,8 +532,8 @@ internal class SettingsModel(
         settings: PlumSettings,
         geometry: SettingsGeometry,
     ) {
-        val count = option.choiceCount(settings)
-        val raw = option.choiceIndex(settings, geometry.defaultTextSize) + step
+        val count = option.choiceCount(settings, content.sortValues)
+        val raw = option.choiceIndex(settings, geometry.defaultTextSize, content.sortValues) + step
         // At the end of a list a press changes nothing, and says nothing. The Sounds row is silent itself: Off must not
         // click, and the screen plays one confirm at the new volume once the level is stored (SettingsScreen).
         if (option == SettingsOption.Sounds) {
@@ -544,10 +545,10 @@ internal class SettingsModel(
         if (option == SettingsOption.Colors) custom.forgetWritten()
         // From the stored value inside the write: presses faster than the store answers each count.
         actions.update { stored ->
-            val raw = option.choiceIndex(stored, geometry.defaultTextSize) + step
+            val raw = option.choiceIndex(stored, geometry.defaultTextSize, content.sortValues) + step
             // Colors has one value more while there is a custom look: count what is stored too.
-            val storedCount = option.choiceCount(stored)
-            option.withChoice(stored, if (wrap) Math.floorMod(raw, storedCount) else raw.coerceIn(0, storedCount - 1))
+            val storedCount = option.choiceCount(stored, content.sortValues)
+            option.withChoice(stored, if (wrap) Math.floorMod(raw, storedCount) else raw.coerceIn(0, storedCount - 1), content.sortValues)
         }
     }
 
@@ -570,13 +571,12 @@ internal class SettingsModel(
                 SettingsOption.Language -> PanelPage.Language to languagePanelIndex(settings.appearance.language)
                 SettingsOption.ReportProblem -> return openReport().let { true }
                 SettingsOption.RomFolders -> PanelPage.Folders to 0
-                SettingsOption.HiddenGames -> PanelPage.HiddenGames to 0
-                SettingsOption.UnidentifiedGames -> PanelPage.UnidentifiedGames to 0
+                SettingsOption.HiddenGames, SettingsOption.UnidentifiedGames, SettingsOption.FilesNotAdded -> SettingsListPages.listPageOf.getValue(option) to 0
                 SettingsOption.SystemEmulator -> PanelPage.Emulators to (systemAtFocus()?.currentIndex ?: 0)
                 SettingsOption.Systems -> PanelPage.Systems to 0
                 SettingsOption.UnknownFolder -> PanelPage.UnknownFolder to (SettingsListPages.unknownFolderAt(focus, content)?.let { SettingsListPages.answerIndex(it, content) } ?: 0)
-                SettingsOption.ScraperAccount ->
-                    if (content.account is AccountStatus.SignedIn) PanelPage.ScraperAccount to 0 else return openSignIn().let { true }
+                SettingsOption.BoxArtSource -> PanelPage.BoxArtSource to boxArtSourceChoices(content.account).indexOf(boxArtSourceIn(settings, content.account)).coerceAtLeast(0)
+                SettingsOption.ScraperAccount -> if (content.account is AccountStatus.SignedIn) PanelPage.ScraperAccount to 0 else return openSignIn().let { true }
                 SettingsOption.RetroAchievementsAccount -> if (raIsSignedIn(content)) PanelPage.RaAccount to 0 else return openRaSignIn().let { true }
                 else -> if (geometry.isNarrow) PanelPage.ReadOnly to 0 else return false
             }

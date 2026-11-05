@@ -41,6 +41,8 @@ private class StepClock(var wall: Long = 1_700_000_000_000, var realtime: Long =
 
     override fun realtimeMs() = realtime
 
+    override fun uptimeMs() = realtime
+
     override fun bootCount() = 7
 
     fun advance(ms: Long) {

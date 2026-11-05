@@ -74,6 +74,23 @@ class SecondScreenFeedTest {
         }
 
     @Test
+    fun aSteadyPressEveryQuarterSecondNeverReachesTheWindowUntilTheLast() =
+        runTest {
+            val feed = feed()
+            val seen = mutableListOf<SecondScreenContent>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { feed.content.collect { seen += it } }
+            // The benchmark's pace: a settle of exactly 250 ms put the card into the next press's frame.
+            for (n in 1..40) {
+                feed.offer(game(n))
+                after(250)
+            }
+            assertEquals("no card change in any press's frame while the person keeps pressing", listOf<SecondScreenContent>(SecondScreenContent.Calm), seen)
+            after(SETTLE_MS)
+            assertEquals("the card settles to the game under the cursor", game(40), feed.content.value)
+            assertEquals(listOf(SecondScreenContent.Calm, game(40)), seen)
+        }
+
+    @Test
     fun aHeldDirectionWaitsUntilTheCursorRests() =
         runTest {
             val feed = feed()
@@ -151,24 +168,22 @@ class SecondScreenFeedTest {
         }
 
     @Test
-    fun aQuickReadMakesTheCardAppearOnceWithItsFactsAndCover() =
+    fun aQuickReadMakesTheCardAppearOnceWithItsFactsAndDetails() =
         runTest {
-            val front = com.plumemu.home.ArtPicture("/media/1/front.webp", 1240, 886)
-            val feed = feed { (it as SecondScreenContent.Game).copy(isPlayKnown = true, lastPlayedDaysAgo = 1, playTimeMinutes = 30, art = front) }
+            val feed = feed { (it as SecondScreenContent.Game).copy(isPlayKnown = true, lastPlayedDaysAgo = 1, playTimeMinutes = 30, details = FULL_DETAILS) }
             val seen = mutableListOf<SecondScreenContent>()
             val watching = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { feed.content.collect { seen += it } }
             feed.offer(game(1).copy(scrapeKey = "crc:1"))
             after(SETTLE_MS)
             watching.cancel()
             assertEquals("Calm, then the one complete card: $seen", 2, seen.size)
-            assertEquals(front, (seen.last() as SecondScreenContent.Game).art)
+            assertEquals(FULL_DETAILS, (seen.last() as SecondScreenContent.Game).details)
             assertTrue((seen.last() as SecondScreenContent.Game).isPlayKnown)
         }
 
     @Test
     fun aSlowReadShowsTheCardAtTheCapAndTheFactsWhenTheyCome() =
         runTest {
-            val front = com.plumemu.home.ArtPicture("/media/1/front.webp", 1240, 886)
             val answer = CompletableDeferred<SecondScreenContent?>()
             val feed = feed { answer.await() }
             val offered = game(1).copy(scrapeKey = "crc:1")
@@ -176,10 +191,10 @@ class SecondScreenFeedTest {
             after(SETTLE_MS + FILL_WAIT_MS - 1)
             assertEquals("still Calm just before the cap", SecondScreenContent.Calm, feed.content.value)
             after(1)
-            assertEquals("the card without facts or cover at the cap", offered, feed.content.value)
-            answer.complete((offered).copy(isPlayKnown = true, art = front))
+            assertEquals("the card without facts or details at the cap", offered, feed.content.value)
+            answer.complete((offered).copy(isPlayKnown = true, details = FULL_DETAILS))
             runCurrent()
-            assertEquals(front, (feed.content.value as SecondScreenContent.Game).art)
+            assertEquals(FULL_DETAILS, (feed.content.value as SecondScreenContent.Game).details)
         }
 
     @Test
@@ -200,49 +215,43 @@ class SecondScreenFeedTest {
         }
 
     @Test
-    fun aCoverOrDetailsAreNeverCarriedToAnotherResultKey() =
+    fun aResultsDetailsAreNeverCarriedToAnotherResultKey() =
         runTest {
-            val front = com.plumemu.home.ArtPicture("/media/1/front.webp", 1240, 886)
             val answer = CompletableDeferred<SecondScreenContent?>()
             var reads = 0
-            val feed = feed { if (++reads == 1) (it as SecondScreenContent.Game).copy(isPlayKnown = true, art = front, details = FULL_DETAILS) else answer.await() }
+            val feed = feed { if (++reads == 1) (it as SecondScreenContent.Game).copy(isPlayKnown = true, details = FULL_DETAILS) else answer.await() }
             feed.offer(game(1).copy(scrapeKey = "crc:1"))
             after(SETTLE_MS)
             // Signed out now: the same game, no key.
             feed.offer(game(1).copy(scrapeKey = null, isFavorite = true))
             after(SETTLE_MS + FILL_WAIT_MS)
-            assertNull((feed.content.value as SecondScreenContent.Game).art)
-            assertNull("nor its details", (feed.content.value as SecondScreenContent.Game).details)
+            assertNull("no details of another key", (feed.content.value as SecondScreenContent.Game).details)
         }
 
     @Test
-    fun aGameOfferedAgainKeepsItsCoverAndDetailsUntilTheNewAnswer() =
+    fun aGameOfferedAgainKeepsItsDetailsUntilTheNewAnswer() =
         runTest {
-            val front = com.plumemu.home.ArtPicture("/media/1/front.webp", 1240, 886)
             val answer = CompletableDeferred<SecondScreenContent?>()
             var reads = 0
             val feed =
                 feed {
-                    if (++reads == 1) (it as SecondScreenContent.Game).copy(isPlayKnown = true, art = front, details = FULL_DETAILS) else answer.await()
+                    if (++reads == 1) (it as SecondScreenContent.Game).copy(isPlayKnown = true, details = FULL_DETAILS) else answer.await()
                 }
             feed.offer(game(1).copy(scrapeKey = "crc:1"))
             after(SETTLE_MS)
-            assertEquals(front, (feed.content.value as SecondScreenContent.Game).art)
+            assertEquals(FULL_DETAILS, (feed.content.value as SecondScreenContent.Game).details)
             // The same game offered again (a favourite toggled), its second read slow: shown without waiting
-            // for it, with the cover and details it had, never without them in between.
+            // for it, with the details it had, never without them in between.
             val seen = mutableListOf<SecondScreenContent>()
             val watching = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { feed.content.collect { seen += it } }
             feed.offer(game(1).copy(scrapeKey = "crc:1", isFavorite = true))
             after(SETTLE_MS + FILL_WAIT_MS)
             val kept = feed.content.value as SecondScreenContent.Game
             assertTrue("shown again before the answer", kept.isFavorite)
-            assertEquals("its cover kept", front, kept.art)
             assertEquals("its details kept", FULL_DETAILS, kept.details)
             answer.complete(kept)
             runCurrent()
             watching.cancel()
-            assertTrue("never shown without its cover in between: $seen", seen.filterIsInstance<SecondScreenContent.Game>().none { it.art == null })
-            // Nor without its details: the details card never falls back to the picking card for a moment.
             assertTrue("never shown without its details in between: $seen", seen.filterIsInstance<SecondScreenContent.Game>().none { it.details == null })
         }
 
@@ -293,17 +302,18 @@ class SecondScreenFeedTest {
         }
 
     @Test
-    fun aListWithAnotherCountKeepsItsLastGameUntilTheNewAnswer() =
+    fun aListWithAnotherCountKeepsItsFiguresUntilTheNewAnswer() =
         runTest {
-            val favorites = SecondScreenContent.System("Favorites", 3, lastPlayFrom = LastPlayLookup.AmongFavorites)
+            val favorites = SystemEntry("snes", "Super Nintendo", 3)
+            val read = SystemFigures(emptyList(), 600, 2, null, 0, 0, null, 1L)
             val answer = CompletableDeferred<SecondScreenContent?>()
             var reads = 0
-            val feed = feed { content -> if (++reads == 1) (content as SecondScreenContent.System).copy(lastGameTitle = "Zelda", lastPlayedDaysAgo = 2) else answer.await() }
+            val feed = feed { content -> if (++reads == 1) (content as SystemEntry).copy(figures = read) else answer.await() }
             feed.offer(favorites)
             after(SETTLE_MS)
             feed.offer(favorites.copy(gameCount = 4))
             after(SETTLE_MS + FILL_WAIT_MS)
-            assertEquals(favorites.copy(gameCount = 4, lastGameTitle = "Zelda", lastPlayedDaysAgo = 2), feed.content.value)
+            assertEquals(favorites.copy(gameCount = 4, figures = read), feed.content.value)
         }
 
     @Test

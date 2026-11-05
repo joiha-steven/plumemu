@@ -46,7 +46,7 @@ class OtherVersionsMenuTest {
         assertFalse(GameMenuEntryId.OtherVersions.name in keys(sampleFacts()))
         assertFalse("one copy: nothing to choose", GameMenuEntryId.OtherVersions.name in keys(sampleFacts(versions = single)))
         assertEquals(
-            listOf("Play", "PlayWith", "OtherVersions", "Favorite", "Hide", "Name", "Info"),
+            listOf("Play", "PlayWith", "OtherVersions", "Favorite", "Name", "Info", "Hide"),
             keys(sampleFacts(versions = sampleVersions())),
         )
         assertTrue("arcade sets too", GameMenuEntryId.OtherVersions.name in keys(sampleFacts(isArcade = true, versions = sampleArcadeVersions())))
@@ -206,7 +206,7 @@ class OtherVersionsMenuTest {
             assertEquals("Favorite", menu.focusedKey())
             actions.versionsGate!!.complete(Unit)
             assertEquals("the entry is added, the focus stays on Favorite", "Favorite", menu.focusedKey())
-            assertEquals(listOf("Play", "PlayWith", "OtherVersions", "Favorite", "Hide", "Name", "Info"), menu.panel!!.content.focusableRows.map { it.key })
+            assertEquals(listOf("Play", "PlayWith", "OtherVersions", "Favorite", "Name", "Info", "Hide"), menu.panel!!.content.focusableRows.map { it.key })
             assertEquals(UiText.Plain("World 930201"), menu.panel!!.content.focusableRows.single { it.key == "OtherVersions" }.value)
         }
 

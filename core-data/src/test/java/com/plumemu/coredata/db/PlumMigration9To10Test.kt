@@ -72,7 +72,7 @@ class PlumMigration9To10Test {
         helper.createDatabase(DB_NAME, 9).use(::fill)
         val room =
             Room.databaseBuilder(ApplicationProvider.getApplicationContext(), PlumDatabase::class.java, DB_NAME)
-                .addMigrations(*PlumMigrations.ALL)
+                .addMigrations(*PlumMigrations.all(TestDetailsRating))
                 .allowMainThreadQueries()
                 .build()
         assertEquals("Zork Quest", room.scrapedGameDao().get("crc:1234")?.title)

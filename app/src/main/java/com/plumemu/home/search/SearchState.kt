@@ -288,7 +288,7 @@ internal class SearchState(
             is Action.TapItem -> if (action.column == Column.Games) tapResult(action.index)
             is Action.LongPressItem -> return longPress(action)
             // No shift in Search (it ignores case); Settings belongs to the strip.
-            Action.ToggleView, Action.OpenSettings -> Unit
+            Action.ToggleView, Action.OpenSettings, Action.Sort -> Unit
         }
         return null
     }
@@ -305,7 +305,7 @@ internal class SearchState(
             is Action.TapItem -> if (action.column == Column.Games) tapResult(action.index)
             is Action.LongPressItem -> return longPress(action)
             Action.NextSystem, Action.PreviousSystem, Action.JumpLetterNext, Action.JumpLetterPrevious,
-            Action.ToggleView, Action.OpenSettings, Action.ToggleFavorite,
+            Action.ToggleView, Action.OpenSettings, Action.ToggleFavorite, Action.Sort,
             -> Unit
         }
         return null
@@ -336,7 +336,7 @@ internal class SearchState(
             is Action.TapItem -> if (action.column == Column.Games) return tap(action.index)
             is Action.LongPressItem -> return longPress(action)
             is Action.Typed, Action.NextSystem, Action.PreviousSystem, Action.JumpLetterNext, Action.JumpLetterPrevious,
-            Action.ToggleView, Action.OpenSettings, Action.Paste,
+            Action.ToggleView, Action.OpenSettings, Action.Paste, Action.Sort,
             -> Unit
         }
         return null
@@ -435,7 +435,7 @@ internal class SearchState(
             // Systems, letters, view and Settings belong to the strip, which waits underneath; the
             // router sends no erase or typed key with Android's keyboard (textEntry stays None).
             Action.NextSystem, Action.PreviousSystem, Action.JumpLetterNext, Action.JumpLetterPrevious,
-            Action.ToggleView, Action.OpenSettings, is Action.Erase, is Action.Typed, Action.Paste,
+            Action.ToggleView, Action.OpenSettings, is Action.Erase, is Action.Typed, Action.Paste, Action.Sort,
             -> Unit
         }
         if (isOpen && cursor != (row to inField)) feel.report(Outcome.Moved)

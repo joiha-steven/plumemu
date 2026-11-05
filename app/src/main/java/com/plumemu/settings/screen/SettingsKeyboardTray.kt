@@ -57,7 +57,7 @@ internal fun SettingsKeyboardTray(
 
 /** What lies under Settings' strip on the tray: the hint bar's gap, the hint bar and the bottom margin. */
 @Composable
-internal fun settingsTrayBelowStrip(): Dp = PlumDimens.barGap + PlumTheme.layout.hintBarHeight + PlumDimens.stripMarginBottom
+internal fun settingsTrayBelowStrip(): Dp = PlumTheme.layout.footerZone
 
 /** How much of the strip's bottom the tray covers while it is up: a page with a field is laid out above it. */
 @Composable

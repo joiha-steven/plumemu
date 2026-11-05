@@ -184,8 +184,10 @@ internal abstract class SettingsKeyboardPathHarness : SettingsModelHarness() {
         send(Action.Enter)
         repeat(SettingsSection.Appearance.rowsIn(content).indexOf(SettingsOption.Accent)) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
+        // The "+" tile is the last one of the presets: down to the last row, then right to its end (the columns depend on the width).
+        repeat(12) { send(Action.Move(Direction.Down)) }
         repeat(6) { send(Action.Move(Direction.Right)) }
-        send(Action.Move(Direction.Down), Action.Enter)
+        send(Action.Enter)
         repeat(7) { send(Action.Move(Direction.Down)) } // the hex code is the last row, below the swatches
         assertTrue("on the accent palette's hex row", exists(SettingsTags.HEX_ROW))
     }

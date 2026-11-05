@@ -13,6 +13,12 @@ internal interface BadgeImages {
 
     suspend fun load(url: String, sizePx: Int): ImageBitmap?
 
+    /**
+     * [load] from the disk cache only: never the network, so a card that follows the cursor may ask. Null when the picture was never
+     * downloaded (the caller draws its empty badge).
+     */
+    suspend fun loadCached(url: String, sizePx: Int): ImageBitmap? = null
+
     data object None : BadgeImages {
         override fun cached(url: String, sizePx: Int): ImageBitmap? = null
 

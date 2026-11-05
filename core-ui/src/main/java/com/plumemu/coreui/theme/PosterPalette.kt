@@ -2,6 +2,7 @@ package com.plumemu.coreui.theme
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import java.text.Normalizer
 import java.util.Locale
 
@@ -19,27 +20,26 @@ val POSTER_INK_WHITE = Color.White
 private val INK_WHITE = POSTER_INK_WHITE
 private val INK_DARK = Color(0xFF14142B)
 
-/** The inner frame of a poster cover. */
+/** The inner frame of an app game's card. */
 val POSTER_FRAME_COLOR = Color.White.copy(alpha = 0.35f)
 
-/** The soft shadow under a white title. */
+/** The soft shadow under an app card's icon. */
 val POSTER_SHADOW_COLOR = Color.Black.copy(alpha = 0.4f)
 
-/** The smallest title size of a poster cover, in sp: below it the title ends in an ellipsis. */
-const val POSTER_TITLE_FLOOR_SP = 8f
+/** The smallest title size of a drawn box front, in sp: a cover too small for it shows no title. */
+const val POSTER_TITLE_FLOOR_SP = 6f
 
-/** The smallest size of the system name on the band, in sp. */
+/** The smallest size of the system name on an app game card's band, in sp. */
 const val POSTER_BAND_FLOOR_SP = 6f
 
-/** Letter spacing of the system name on the band, in em. */
+/** Letter spacing of the system name on an app game card's band, in em. */
 const val POSTER_BAND_SPACING_EM = 0.12f
 
 /**
- * The 23 poster looks (contrast measured, lowest 4.66:1).
+ * The 23 looks (contrast measured, lowest 4.66:1): a drawn box front's field and the colours of its shapes.
  * Hand-tuned in OKLCH, from a bright hue to a deeper neighbour 10-25 degrees away; 12 deep ones with a
  * white title, 11 light ones with a near-black title, the ink passing 4.5:1 against both gradient ends
- * and the band. 23 is prime, so titles differing in one character never share a look ([posterLookIndex]).
- * How often neighbours in a list share or nearly share a colour was measured on a real library.
+ * and the band. A title's hash ([PosterDice]) picks them, so one character apart gives an unrelated look.
  */
 val POSTER_PALETTE: List<PosterLook> =
     listOf(
@@ -82,19 +82,68 @@ fun posterTitleKey(title: String): String {
     return key.toString()
 }
 
-/**
- * Index into [POSTER_PALETTE] for [title]: the same game gets the same look on every screen and device.
- * A polynomial hash (times 37, modulo 23) over the key's code points from the last to the first.
- */
-fun posterLookIndex(title: String): Int {
+/** The title's mixed 64-bit hash: FNV-1a over the code points of [posterTitleKey], so the same game gets the same value on every screen and device. */
+fun posterHash(title: String): Long {
     val key = posterTitleKey(title)
-    val size = POSTER_PALETTE.size.toLong()
-    var h = 0L
-    var end = key.length
-    while (end > 0) {
-        val codePoint = key.codePointBefore(end)
-        end -= Character.charCount(codePoint)
-        h = (h * 37 + codePoint) % size
+    var h = -3750763034362895579L // FNV offset basis
+    var i = 0
+    while (i < key.length) {
+        val codePoint = key.codePointAt(i)
+        i += Character.charCount(codePoint)
+        h = (h xor codePoint.toLong()) * 1099511628211L
     }
-    return h.toInt()
+    return h
+}
+
+/**
+ * A stream of choices that depends only on its seed (SplitMix64: every step mixes all bits, so titles one character apart get
+ * unrelated looks). The drawn box front takes its field colour, its shapes and their places from one stream per title.
+ */
+class PosterDice(
+    seed: Long,
+) {
+    private var state = seed
+
+    /** The next choice in `0 until bound`. */
+    fun next(bound: Int): Int {
+        state += -7046029254386353131L
+        var z = state
+        z = (z xor (z ushr 30)) * -4658895280553007687L
+        z = (z xor (z ushr 27)) * -7723592293110705685L
+        z = z xor (z ushr 31)
+        return ((z ushr 1) % bound).toInt()
+    }
+}
+
+/** Index into [POSTER_PALETTE] for [title]: the first choice of its [PosterDice], so the same game wears the same field everywhere. */
+fun posterLookIndex(title: String): Int = PosterDice(posterHash(title)).next(POSTER_PALETTE.size)
+
+/** The lit centre of a shape's soft shading: [colour] 40 % toward white (the board's sun goes from #F4BA34 to #FFE08A). */
+fun boxHighlight(colour: Color): Color = androidx.compose.ui.graphics.lerp(colour, Color.White, 0.4f)
+
+/** The board's drawn box front: band, dots and band text (the parts that never change), as colours. */
+val BOX_BAND_TOP = Color(0xFFD9D9D6)
+val BOX_BAND_BOTTOM = Color(0xFFBDBDB9)
+val BOX_BAND_TEXT = Color(0xFF3A3A3A)
+val BOX_DOTS = listOf(Color(0xFFD23A2C), Color(0xFFF2B630), Color(0xFF2F6BD0))
+
+/**
+ * Opacity of [look]'s small line under the band: the board's 0.8 where that still passes 4.5:1 on all three field colours, else
+ * the first step above that does (the ruby's white line needs 1.0).
+ */
+fun boxCapsAlpha(look: PosterLook): Float {
+    fun ratio(
+        a: Color,
+        b: Color,
+    ) = (maxOf(a.luminance(), b.luminance()) + 0.05f) / (minOf(a.luminance(), b.luminance()) + 0.05f)
+    var alpha = 0.8f
+    while (alpha < 1f) {
+        val passes =
+            listOf(look.top, look.bottom, look.band).all { field ->
+                ratio(Color(look.ink.red * alpha + field.red * (1 - alpha), look.ink.green * alpha + field.green * (1 - alpha), look.ink.blue * alpha + field.blue * (1 - alpha)), field) >= 4.5f
+            }
+        if (passes) return alpha
+        alpha += 0.05f
+    }
+    return 1f
 }

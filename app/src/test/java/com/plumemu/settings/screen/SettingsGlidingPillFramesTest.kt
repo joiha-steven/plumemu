@@ -26,6 +26,8 @@ import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.home.FakeHomeContent
 import com.plumemu.home.HomeCallbacks
 import com.plumemu.home.appComposeRule
+import com.plumemu.home.slabOverhangPx
+import com.plumemu.home.slabTopRow
 import com.plumemu.home.rulesAround
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
@@ -43,7 +45,7 @@ import kotlin.math.abs
  * [PlumMotion.GLIDE_MS] on a decelerating curve and the rows glide when the list scrolls, in the sections column, the options
  * column and a panel list ([PanelLazyList]); a held key keeps the pill with the focus; with animations off everything jumps.
  * The pill is a draw, not a node, so it is found in the pixels the screen draws: the first pixel row of the list's middle
- * that is the ring's colour is its top edge. Frame by frame on the test clock.
+ * that is the slab's top border is its top edge. Frame by frame on the test clock.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -94,25 +96,24 @@ abstract class SettingsGlidingPillFramesBase {
 
     private fun rowTop(tag: String): Float = bounds(tag).top
 
-    private fun ringColour(rowTop: Float, listTag: String): Color {
-        val list = bounds(listTag)
-        return compose.onRoot().captureToImage().toPixelMap()[(list.left + list.width * 0.55f).toInt(), rowTop.toInt() + 1]
+    /** How far the slab is drawn above its row's box: [pillTop] reports the box, so the glide is checked in row positions. */
+    private var overhang = 0f
+
+    /** Takes the overhang of the row [rowTag] that wears the pill, at rest. */
+    private fun takeOverhang(rowTag: String) {
+        overhang = compose.slabOverhangPx(rowTag)
     }
 
-    /** The top of the pill now: the first pixel row of the list where most of a middle band is the ring's colour; -1 when none. */
-    private fun pillTop(ring: Color, listTag: String): Int {
+    /** The top of the pill's row box now (the slab's top edge plus its overhang), found by the slab's bright top border ([slabTopRow]); -1 when none. */
+    private fun pillTop(listTag: String): Int {
         val list = bounds(listTag)
-        val pixels = compose.onRoot().captureToImage().toPixelMap()
-        val from = (list.left + list.width * 0.45f).toInt()
-        val to = (list.left + list.width * 0.65f).toInt()
-        for (y in list.top.toInt() until list.bottom.toInt()) {
-            val hits = (from until to).count { x -> pixels[x, y].isNear(ring) }
-            if (hits * 2 >= to - from) return y
-        }
-        return -1
+        // A middle band, clear of the slab's rounded ends; the sections' is further right, past their labels (a row padding in from the slab).
+        val (from, to) = if (listTag == SettingsTags.SECTIONS) 0.72f to 0.82f else 0.45f to 0.65f
+        val xs = (list.left + list.width * from).toInt() until (list.left + list.width * to).toInt()
+        // The slab of a first row is drawn above the list's top, inside the list's clip bleed.
+        val y = compose.onRoot().captureToImage().slabTopRow(xs, list.top.toInt() - overhang.toInt() - 1, list.bottom.toInt())
+        return if (y < 0) -1 else Math.round(y + overhang)
     }
-
-    private fun Color.isNear(other: Color) = abs(red - other.red) + abs(green - other.green) + abs(blue - other.blue) < 0.12f
 
     /** One drawn frame: the pill's top, and the tops of the rows [follow] names. */
     private class Frame(
@@ -122,7 +123,6 @@ abstract class SettingsGlidingPillFramesBase {
 
     private fun record(
         frames: Int,
-        ring: Color,
         listTag: String,
         follow: List<String>,
         before: (Int) -> Unit = {},
@@ -132,7 +132,7 @@ abstract class SettingsGlidingPillFramesBase {
             before(i)
             compose.mainClock.advanceTimeByFrame()
             compose.waitForIdle()
-            Frame(pillTop(ring, listTag), follow.map { rowTop(it) })
+            Frame(pillTop(listTag), follow.map { rowTop(it) })
         }
     }
 
@@ -146,14 +146,12 @@ abstract class SettingsGlidingPillFramesBase {
     ): Triple<List<Frame>, Float, Float> {
         val oldTop = rowTop(rowTag(from))
         val newTop = rowTop(rowTag(from + 1))
-        val ring = ringColour(oldTop, listTag)
-        val background = compose.onRoot().captureToImage().toPixelMap()[(bounds(listTag).left + bounds(listTag).width * 0.55f).toInt(), (oldTop - 2).toInt()]
-        assertTrue("the focused row wears a pill (its top edge is not the background): $ring on $background", !ring.isNear(background))
-        assertEquals("at rest the pill is on the focused row", oldTop.toInt(), pillTop(ring, listTag))
+        takeOverhang(rowTag(from))
+        assertEquals("at rest the pill is on the focused row", oldTop.toInt(), pillTop(listTag))
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { router.send(Action.Move(Direction.Down)) }
         compose.mainClock.autoAdvance = true
-        val frames = record(glideFrames() + 4, ring, listTag, listOf(rowTag(from + 1)))
+        val frames = record(glideFrames() + 4, listTag, listOf(rowTag(from + 1)))
         return Triple(frames, oldTop, newTop)
     }
 
@@ -237,12 +235,12 @@ abstract class SettingsGlidingPillFramesBase {
         rowTag: (Int) -> String,
         from: Int,
     ) {
-        val ring = ringColour(rowTop(rowTag(from)), listTag)
+        takeOverhang(rowTag(from))
         val list = bounds(listTag)
         val before = rowTop(rowTag(from + 1))
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { router.send(Action.Move(Direction.Down)) }
-        val frames = record(glideFrames() + 4, ring, listTag, listOf(rowTag(from + 1), rowTag(from)))
+        val frames = record(glideFrames() + 4, listTag, listOf(rowTag(from + 1), rowTag(from)))
         val tops = frames.map { it.rows[0] }
         val last = tops.last()
         println("$what scroll: new row tops $tops, pill ${frames.map { it.pill }}")
@@ -261,13 +259,13 @@ abstract class SettingsGlidingPillFramesBase {
         val tag = openEmulators(true)
         val first = rowTop(tag(0))
         val stride = rowTop(tag(1)) - first
-        val ring = ringColour(first, SettingsTags.OPTION_LIST)
+        takeOverhang(tag(0))
         compose.mainClock.autoAdvance = false
         var focus = 0
         val worst = mutableListOf<String>()
         var last = -1
         val frames =
-            record(80, ring, SettingsTags.OPTION_LIST, emptyList()) { i ->
+            record(80, SettingsTags.OPTION_LIST, emptyList()) { i ->
                 if (i % HOLD_REPEAT_FRAMES == 0 && focus < 14) {
                     compose.runOnIdle { router.send(Action.Move(Direction.Down)) }
                     focus++
@@ -309,32 +307,32 @@ abstract class SettingsGlidingPillFramesBase {
     @Test
     fun onlyTheFocusedColumnWearsAPillFromSectionsToOptions() {
         show(true)
-        val ring = ringColour(rowTop(sectionTag(0)), SettingsTags.SECTIONS)
-        assertTrue("the sections wear a pill while they have the focus", pillTop(ring, SettingsTags.SECTIONS) >= 0)
+        takeOverhang(sectionTag(0))
+        assertTrue("the sections wear a pill while they have the focus", pillTop(SettingsTags.SECTIONS) >= 0)
         send(Action.Move(Direction.Right))
         compose.mainClock.advanceTimeBy(600)
         compose.waitForIdle()
-        assertEquals("no pill colour is left in the sections column", -1, pillTop(ring, SettingsTags.SECTIONS))
-        assertTrue("the options column wears one", pillTop(ring, SettingsTags.OPTION_LIST) >= 0)
+        assertEquals("no pill colour is left in the sections column", -1, pillTop(SettingsTags.SECTIONS))
+        assertTrue("the options column wears one", pillTop(SettingsTags.OPTION_LIST) >= 0)
     }
 
     /** Opening a panel from an option row: the panel wears the pill; the options keep none. */
     @Test
     fun onlyTheFocusedColumnWearsAPillFromOptionsToPanel() {
         show(true)
-        val ring = ringColour(rowTop(sectionTag(0)), SettingsTags.SECTIONS)
+        takeOverhang(sectionTag(0))
         down(SettingsSection.Appearance.shownIndex)
         send(Action.Enter)
         down(SettingsSection.Appearance.options.indexOf(SettingsOption.Language))
         compose.mainClock.advanceTimeBy(600)
         compose.waitForIdle()
-        assertTrue("the options wear a pill while they have the focus", pillTop(ring, SettingsTags.OPTION_LIST) >= 0)
+        assertTrue("the options wear a pill while they have the focus", pillTop(SettingsTags.OPTION_LIST) >= 0)
         send(Action.Enter)
         Thread.sleep(400)
         compose.mainClock.advanceTimeBy(600)
         compose.waitForIdle()
-        assertEquals("no pill colour is left in the options column", -1, pillTop(ring, SettingsTags.OPTION_LIST))
-        assertTrue("the panel wears one", pillTop(ring, SettingsTags.PANEL_LIST) >= 0)
+        assertEquals("no pill colour is left in the options column", -1, pillTop(SettingsTags.OPTION_LIST))
+        assertTrue("the panel wears one", pillTop(SettingsTags.PANEL_LIST) >= 0)
     }
 
     @Test
@@ -348,10 +346,10 @@ abstract class SettingsGlidingPillFramesBase {
     fun withAnimationsOffAScrollingOptionsListJumps() {
         val tag = openEmulators(false)
         down(10)
-        val ring = ringColour(rowTop(tag(10)), SettingsTags.OPTION_LIST)
+        takeOverhang(tag(10))
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { router.send(Action.Move(Direction.Down)) }
-        val frames = record(6, ring, SettingsTags.OPTION_LIST, listOf(tag(11)))
+        val frames = record(6, SettingsTags.OPTION_LIST, listOf(tag(11)))
         val tops = frames.map { it.rows[0] }
         println("animations off options scroll: row tops $tops, pill ${frames.map { it.pill }}")
         assertTrue("the row is at its place from the first frame: $tops", tops.all { it == tops.first() })

@@ -46,6 +46,20 @@ class ArcadeLookupTest {
         assertFalse(other?.isDevice ?: true)
     }
 
+    @Test fun anAliasRecordIsAnOldMame2003PlusNameACurrentNameIsNot() {
+        val b = ArcadePackBuilder("arcade", 1)
+        val current = b.source("MAME", "0.289")
+        val old = b.source(ArcadeSystems.OLD_NAME_SOURCE, "2026-10-22")
+        b.set("xmen2pa", "X-Men (2 Players ver AAA)", source = current)
+        b.set("xmen2p", "X-Men (2 Players ver AAA)", source = old)
+        b.set("nosource", "No Source Set")
+        val found = ArcadeLookup(TestPacks.open(b.build()))
+        assertTrue(found.find("xmen2p.zip")!!.oldName2003Plus)
+        assertFalse(found.find("xmen2pa.zip")!!.oldName2003Plus)
+        assertFalse("a set with no recorded source is not an old name", found.find("nosource.zip")!!.oldName2003Plus)
+        assertFalse(lookup.find("zorkfght.zip")!!.oldName2003Plus)
+    }
+
     @Test fun unknownAndOddNames() {
         assertNull(lookup.find("nosuchset.zip"))
         assertNull(lookup.find(".zip"))

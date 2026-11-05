@@ -139,7 +139,8 @@ class HomeArtBehaviourTest {
         gridSize = GridSize.Small
         compose.waitForIdle()
         send(Action.Move(Direction.Down), Action.Play)
-        assertEquals("Large: down 3 (3); then Small: down 5 more (8)", listOf("snes-3", "snes-8"), games.launched)
+        // Small has five boxes to a row (the table), so the nearest box below game 3 is game 8.
+        assertEquals("Large: down 3 (3); then Small: down to the nearest box of the next row (8)", listOf("snes-3", "snes-8"), games.launched)
     }
 
     /** Recent, Favorites and Apps switch like a system. */
@@ -201,23 +202,49 @@ class HomeArtBehaviourTest {
     private fun openApps() = send(Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Enter)
 
     @Test
-    fun appsHasNoDetailsColumnOnAWideScreen() {
+    fun appsHasItsOwnDetailsColumnOnAWideScreen() {
         show(FakeHomeContent.withArtwork())
         openApps()
-        assertEquals("no details beside the apps list", 0, count(HomeTags.DETAILS))
+        assertEquals("the app's details beside the apps list", 1, count(HomeTags.DETAILS))
+        assertEquals("with its package", 1, count(HomeTags.DETAILS_APP_PACKAGE))
         openSnesFromApps()
         assertEquals("a system has them", 1, count(HomeTags.DETAILS))
     }
 
     @Test
     @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
-    fun appsHasNoDetailsStopOnANarrowScreen() {
+    fun appsHasADetailsStopOnANarrowScreen() {
         show(FakeHomeContent.withArtwork())
         openApps()
-        assertEquals("no details column after the apps list", 0, count(HomeTags.DETAILS))
-        send(Action.Move(Direction.Right), Action.Play)
-        assertEquals("Right does nothing: A still opens the focused app (the Apps entry's first row) from the list", listOf("app-0"), apps.opened)
-        assertEquals("no details appeared", 0, count(HomeTags.DETAILS))
+        send(Action.Move(Direction.Right))
+        assertEquals("Right reaches the details stop after the apps list", 1, count(HomeTags.DETAILS_APP_PACKAGE))
+        send(Action.Play)
+        assertEquals("A opens the focused app (the Apps entry's first row)", listOf("app-0"), apps.opened)
+    }
+
+    @Test
+    @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
+    fun aTapInTheAppsDetailsStopOpensTheApp() {
+        show(FakeHomeContent.withArtwork())
+        openApps()
+        send(Action.Move(Direction.Right))
+        compose.onNodeWithTag(HomeTags.DETAILS, useUnmergedTree = true).performTouchInput { click() }
+        compose.waitForIdle()
+        assertEquals("a tap in the details stop opens the focused app", listOf("app-0"), apps.opened)
+    }
+
+    @Test
+    @Config(qualifiers = "w720dp-h432dp-land-xhdpi")
+    fun aTapInTheAppsColumnAtTheGamesStopOpensTheDetailsStop() {
+        show(FakeHomeContent.withArtwork())
+        openApps()
+        assertEquals("the column shows at the games stop here", 1, count(HomeTags.DETAILS))
+        compose.onNodeWithTag(HomeTags.DETAILS, useUnmergedTree = true).performTouchInput { click() }
+        compose.waitForIdle()
+        assertEquals("nothing opened yet", emptyList<String>(), apps.opened)
+        // B from the details stop goes back to the list (A then opens the app); from the games stop it would go to the systems.
+        send(Action.Back, Action.Play)
+        assertEquals("the tap reached the details stop", listOf("app-0"), apps.opened)
     }
 
     private fun openSnesFromApps() = send(Action.JumpLetterNext)

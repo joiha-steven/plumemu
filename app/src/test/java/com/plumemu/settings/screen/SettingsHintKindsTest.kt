@@ -38,7 +38,7 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
     fun rowsThatOpenAPageOrTheSignInSayOpen() {
         model.content = model.content.copy(account = AccountStatus.SignedOut)
         assertEquals(R.string.settings_hint_open, hintOn(SettingsSection.Library, SettingsOption.RomFolders))
-        for (option in listOf(SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount)) {
+        for (option in listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount)) {
             assertEquals(option.name, R.string.settings_hint_open, hintOn(SettingsSection.Accounts, option))
         }
         for (option in listOf(SettingsOption.Backup, SettingsOption.Restore, SettingsOption.ResetAll, SettingsOption.ResetLibrary)) {
@@ -82,6 +82,28 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
         // Version first: the focus only walks down, and About opens on the row it was left on.
         assertNull(hintOn(SettingsSection.About, SettingsOption.Version))
         assertNull(hintOn(SettingsSection.About, SettingsOption.Privacy))
+    }
+
+    @Test
+    fun filesNotAddedSaysChooseOnlyOnAnUnknownFoldersLine() {
+        val folder = FolderKey(1, "Xbox 360")
+        val items =
+            listOf(
+                NotAddedItem.Heading(NotAddedGroup.NoSystem, null),
+                NotAddedItem.Folder(folder, 3),
+                NotAddedItem.File(1, "", "Mystery.iso"),
+                NotAddedItem.More(NotAddedGroup.NoSystem, null, 340),
+            )
+        model.content = SettingsContent(unknownFolders = listOf(SettingsFolderRow(folder, 3, FolderAnswer.Unanswered)), notAdded = items)
+        assertEquals(R.string.settings_hint_open, hintOn(SettingsSection.Library, SettingsOption.FilesNotAdded))
+        press(Action.Enter)
+        assertEquals(PanelPage.FilesNotAdded, model.focus.page)
+        val hints = items.indices.map { index ->
+            if (index > 0) move(Direction.Down)
+            assertEquals(index, model.focus.panelIndex)
+            confirmHint(model)
+        }
+        assertEquals("A Choose only where A goes somewhere", listOf(null, R.string.settings_hint_choose, null, null), hints)
     }
 
     /**
@@ -139,6 +161,7 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 // A choice of emulators, like Colors' panel: "Change".
                 SettingsOption.SystemEmulator to change,
                 SettingsOption.UnknownFolder to open,
+                SettingsOption.FilesNotAdded to open,
                 SettingsOption.DetectEmulators to select,
                 SettingsOption.HoldToScrollFaster to change,
                 SettingsOption.PushRightToPlay to change,
@@ -152,11 +175,13 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 SettingsOption.SystemInfo to change,
                 SettingsOption.SecondScreen to change,
                 SettingsOption.SecondScreenInGame to change,
+                SettingsOption.BoxArtSource to open,
                 SettingsOption.ScraperAccount to open,
                 SettingsOption.RetroAchievementsAccount to open,
                 SettingsOption.ScraperStatus to none,
                 SettingsOption.BoxArtRegion to change,
                 SettingsOption.Statistic to none,
+                SettingsOption.ExactPlayTime to change,
             )
         assertEquals("every row has its expected hint", SettingsOption.entries.toSet(), expected.keys)
         for ((option, hint) in expected) assertEquals(option.name, hint, rowConfirmHint(option))

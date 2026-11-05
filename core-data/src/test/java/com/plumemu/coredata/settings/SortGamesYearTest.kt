@@ -29,4 +29,14 @@ class SortGamesYearTest {
         assertEquals(SortGamesSetting.Year, open(second).settings.first().library.sortGames)
         second.cancelAndJoin()
     }
+
+    @Test
+    fun sortByRatingIsKeptAcrossARestart() = runBlocking {
+        val first = Job()
+        open(first).update { it.copy(library = it.library.copy(sortGames = SortGamesSetting.Rating)) }
+        first.cancelAndJoin()
+        val second = Job()
+        assertEquals(SortGamesSetting.Rating, open(second).settings.first().library.sortGames)
+        second.cancelAndJoin()
+    }
 }

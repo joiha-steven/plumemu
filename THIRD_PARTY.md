@@ -2,11 +2,12 @@
 
 Fonts, libraries and data inside the Plumemu app, with their licences. The same list, with the
 full licence texts, is in the app under Settings › About › Open-source licenses. Updated with each
-release; this list matches 0.1.1.
+release; this list matches 0.1.2.
 
 | What | Licence |
 |---|---|
 | Plum Sans, Plum Serif, Plum Mono (drawn from Inter, Literata and JetBrains Mono) | SIL Open Font License 1.1 |
+| Jost, by Owen Earl (Indestructible Type), with Vietnamese, arrows and a check mark added | SIL Open Font License 1.1 |
 | Jetpack Compose, AndroidX libraries (Activity, Room, SQLite, DataStore, WorkManager, ProfileInstaller and their dependencies) | Apache License 2.0 |
 | Kotlin standard library, kotlinx.coroutines, kotlinx.serialization | Apache License 2.0 |
 | Coil (box art decoding), OkHttp and Okio | Apache License 2.0 |
@@ -23,6 +24,8 @@ release; this list matches 0.1.1.
 | LZMA SDK decoder by Igor Pavlov, ported to Kotlin | Public domain |
 | XZ for Java (`org.tukaani:xz`; decodes the LZMA parts of `.chd` disc images) | 0BSD |
 | RetroAchievements' file-hash rules (rcheevos `rc_hash`), rewritten in Kotlin | MIT |
+| Zstandard decoder, written in Kotlin from RFC 8878 and the reference decoder | BSD 3-Clause |
+| LZ4 block format, Plumemu's own decoder written from its description | BSD 2-Clause (format text; no code copied) |
 
 "MAME" is a trademark of Gregory Ember; Plumemu is not affiliated with the MAME project. Box art
 and game details are not inside the app: they come from [ScreenScraper](https://www.screenscraper.fr)

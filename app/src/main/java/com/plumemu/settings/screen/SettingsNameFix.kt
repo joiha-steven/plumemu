@@ -118,7 +118,7 @@ internal class SettingsNameFix {
         keyboard: KeyboardChoice,
     ): OpenNameFix {
         this.keyboard = keyboard
-        return OpenNameFix(game.id, listIndex, PanelScreen.FixName(FixNameState(game.title, finder = null, keyboard))).also { open = it }
+        return OpenNameFix(game.id, listIndex, PanelScreen.FixName(FixNameState(game.title, finder = null, keyboard, suggests = true))).also { open = it }
     }
 
     /** The game's list arrived: its titles in Fix name…, or Use my own name when its system has no list. */
@@ -132,7 +132,7 @@ internal class SettingsNameFix {
         open =
             when {
                 list is TitleList.Ready && page != null && loading != null -> page.also { loading.listReady(list.finder) }
-                list is TitleList.Ready -> OpenNameFix(game.id, listIndex, PanelScreen.FixName(FixNameState(game.title, list.finder, keyboard)))
+                list is TitleList.Ready -> OpenNameFix(game.id, listIndex, PanelScreen.FixName(FixNameState(game.title, list.finder, keyboard, suggests = true)))
                 else -> OpenNameFix(game.id, listIndex, PanelScreen.OwnName(OwnNameState(game.title, keyboard)), noList = list)
             }
     }

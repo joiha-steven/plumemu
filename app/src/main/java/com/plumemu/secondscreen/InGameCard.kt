@@ -41,6 +41,7 @@ import com.plumemu.R
 import com.plumemu.coreui.components.WifiGlyph
 import com.plumemu.coreui.theme.InGameColors
 import com.plumemu.coreui.theme.InGameDimens
+import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.home.BatteryReading
 import com.plumemu.home.currentLocale
@@ -225,7 +226,7 @@ private fun BatteryLine(
     val text = if (battery.isCharging) stringResource(R.string.second_screen_charging, percent) else percent
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
         if (wifi) {
-            WifiGlyph(style, color, stringResource(R.string.wifi_connected), Modifier.testTag(InGameTags.WIFI))
+            WifiGlyph(style, color, stringResource(R.string.wifi_connected), Modifier.testTag(InGameTags.WIFI), font = PlumFont.Sans)
             if (showLevel) Spacer(Modifier.width(InGameDimens.wifiGap))
         }
         if (showLevel) {

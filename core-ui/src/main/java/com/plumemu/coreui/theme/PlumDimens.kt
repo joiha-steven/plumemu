@@ -14,6 +14,9 @@ object PlumDimens {
     val topBarHeight = 18.dp
     val hintBarHeight = 22.dp
 
+    val footerGap = 9.dp // footer zone: content bottom to the hint bar
+    val footerBelow = 9.dp // footer zone: hint bar to the screen bottom
+
     /** Between the top bar, the content and the hint bar. */
     val barGap = 10.dp
     val systemsColumnWidth = 200.dp
@@ -48,18 +51,28 @@ object PlumDimens {
 
     /** The wide details column's cover: the column's 248 wide, 178 high. */
     val detailsCoverHeightWide = 178.dp
+    /** The least it keeps when the text needs room: the facts give way first. */
+    val detailsCoverMinWide = 140.dp
 
-    /** Between the cover, the title block and the facts in the wide details column. */
-    val detailsBlockGapWide = 12.dp
+    /** Between the cover, the title block and the facts in the wide details column (the Depth board's column `gap: 24px`). */
+    val detailsBlockGapWide = 16.dp
 
     /** Facts table (Last played, Play time, Emulator): label to value, and between lines. */
     val factsColumnGap = 12.dp
     val factsRowGap = 4.dp
+    /** A row with a note line (a result's year), one slab: [noteInset] above the title and under the note, [noteGap] between them, [noteBelowGap] to the next pair. */
+    val noteInset = 8.dp
+    val noteGap = 2.dp
+    val noteBelowGap = 6.dp
+
     /** Settings rows, option rows, field rows and the game menu's rows. Game rows use [gameRowHeight]. */
     val rowHeight = 40.dp
 
-    /** A game row's design height before the text size scales it (denser than the 40 it had). */
-    val gameRowHeight = 36.dp
+    /**
+     * A game row's design height before the text size scales it. With [gameRowMinHeight] and [listRowGap] rows sit the board's
+     * 40 dp apart (its 60 px) at Small (34 is under the minimum); bigger text grows them.
+     */
+    val gameRowHeight = 34.dp
 
     /**
      * What a game row is drawn at least, at any text size: with the [listRowGap] under it that is the
@@ -73,8 +86,51 @@ object PlumDimens {
     /** Between game rows (the board's list `gap: 2px`) and part of the row above's tap area: rows sit 40 apart at the minimum. */
     val listRowGap = 2.dp
 
-    /** Inside a game row, left and right. */
-    val gameRowPadding = 14.dp
+    /** A wide single-system list, right-aligned columns: the year (the board's 64 px), then the region (the board's 48 px, 6 dp wider for the raised tag). */
+    val rowYearColumn = 42.67.dp
+    val rowRegionColumn = 38.dp
+
+    /**
+     * How far the games list reaches left into the gap beside the systems (and is wider by): the board's list starts 64 dp from the
+     * edge and is 408 wide, our strip's list box 72 and 400, ending at the same place.
+     */
+    val gamesListBleed = 8.dp
+
+    /** The hairline between the systems' numbers and the list: its x from the list box's left (the board's 56 against 72), width (1 px = 0.67 dp), and its inset from the strip's top and bottom. */
+    val listDividerOffset = 16.dp
+    val listDividerWidth = 0.67.dp
+    val listDividerInset = 5.33.dp
+
+    /** The details block under the title (GENRE, RATING, PLAYED): label to value, the divider to the block, the title to its line. */
+    val detailsLabelGap = 2.67.dp
+    val detailsDividerGap = 9.33.dp
+
+    /** The least the facts block's gaps shrink to when the height left cannot hold all its rows (a large text on a short screen). */
+    val detailsDividerGapTight = 3.dp
+    val detailsSubtitleGap = 2.67.dp
+
+    /** The rating's five dots (6 px = 4 dp, 3 px apart) and the gap from the number (8 px). */
+    val ratingDotSize = 4.dp
+    val ratingDotGap = 2.dp
+    val ratingNumberGap = 5.33.dp
+
+    /** Between the top bar's place name and its count (the Covers bar's 16 px). */
+    val placeCountGap = 10.67.dp
+
+    /** Inside a game row, left and right: the board's text start, 35 px (23.33 dp) in from the slab's left edge. */
+    /** A game row's right inset: its year and region end here; only the text start moved to [gameRowPadding] (the slab's bar is inset from the left). */
+    val gameRowEndPadding = 14.dp
+
+    /**
+     * The game row's right inset at the narrow details stop, where the list is slid out to its last 56 dp and the year is all that shows:
+     * 5 keeps a year at the largest text size (about 50 dp, Sans and Bold) whole inside the 56 dp that show.
+     */
+    val gameRowPeekEndPadding = 5.dp
+
+    val gameRowPadding = 23.33.dp
+
+    /** Right inset of a panel's running text (title, body): it has no slab to clear, so it keeps the 14 dp it had before the text start moved to [gameRowPadding]. */
+    val panelTextEnd = 14.dp
 
     /** System column entries as the board draws them (34 high); drawn at least [systemRowMinHeight]. */
     val systemRowHeight = 34.dp
@@ -129,15 +185,21 @@ object PlumDimens {
     /** Between the charging bolt and the battery percentage it stands before. */
     val topBarChargingGap = 3.dp
 
-    /** Between hints on the bottom bar. */
-    val hintGap = 20.dp
+    /**
+     * Between hints on the bottom bar when they are tight: from a label to the next key's collar. The board's wide keys
+     * (13 px padding each side) are 4 dp wider than before; 9 keeps A, Y, X, START and SELECT on a 576 bar.
+     */
+    val hintGap = 9.dp
 
-    /** Between a key cap and its label. */
-    val hintKeyGap = 6.dp
+    /** The Covers board's hint gap (26 px at 1.5 px per dp), used wherever every hint fits with it; the bar shrinks toward [hintGap] only when they do not. */
+    val hintGapBoard = (26f / 1.5f).dp
+
+    /** Between a key's collar and its label (the Covers board's 8 px). */
+    val hintKeyGap = (16f / 3f).dp
 
     /** The accent dot after a hint's label (an update found, on START Settings), as the focus dot; [hintKeyGap] before it. */
     val hintDot = 6.dp
-    val keyCapMinWidth = 20.dp
+    val keyCapMinWidth = 22.67.dp
     val keyCapPadding = 5.dp
     val keyCapBorder = 1.5.dp
 
@@ -162,11 +224,19 @@ object PlumDimens {
     val panelCorner = 10.dp
 
     /**
-     * The game panel's card reaches [panelOutset] past the panel's column at its sides and top, [panelOutsetBottom] below it, and its
-     * shadow [panelShadowBottom] below that: the strip ends 10 dp above the hint keys, so the bottom stays tight (at least 8 dp clear).
+     * The game panel's card sits on the page's outer margin at the right, from the top bar's gap down to the hint bar's gap (its shadow
+     * [panelShadowBottom] below that: the strip ends 10 dp above the hint keys, so the bottom stays tight, at least 8 dp clear).
+     * Everything inside it, a row's slab included, is [panelInset] from its edge on both sides (the board's 2.7 dp on the left).
+     * Rows in the card are 40 apart, not [listRowGap] more (the board's 40 dp pitch).
      */
-    val panelOutset = 6.dp
-    val panelOutsetBottom = 0.dp
+    val panelInset = 2.67.dp
+
+    /**
+     * The inner padding of a card's title: its text, and the text, value and chevron of every row and fact under it, start and end this far
+     * inside the slab (or the inset), so one line is 23.33 dp from the card's edge on each side.
+     */
+    val panelTitleStart = 20.67.dp
+    val panelRowGap = 0.dp
     val panelShadowBottom = 2.dp
 
     /** The accent dot by a panel's title: the hint dot's size, sitting at the title's end inside the panel's padding. */
@@ -181,7 +251,7 @@ object PlumDimens {
 
     /** The same for Search's field in the 18 dp top bar, which has less room. */
     val searchFieldInsetX = 6.dp
-    val searchFieldInsetY = 3.dp
+    val searchFieldInsetY = 0.dp
 
     // Settings and setup
     val settingsSectionsWidth = 200.dp
@@ -235,6 +305,9 @@ object PlumDimens {
     val settingsColorTileGap = 12.dp
     val settingsColorTileNameGap = 4.dp
     const val SETTINGS_COLOR_TILE_ASPECT = 1.6f
+
+    /** Setup's look tiles under the title (Narrow): lower than Settings' so two rows and the title fit a 4:3 screen. */
+    const val SETUP_LOOK_TILE_ASPECT_NARROW = 1.85f
     const val SETTINGS_COLOR_TILE_MAX_COLUMNS = 5
 
     /** The hex code row of the custom palette: 36 high. */
@@ -312,8 +385,8 @@ object PlumDimens {
     val setupPointHeight = 32.dp
     val setupPointGap = 12.dp
 
-    /** Setup's buttons: 40 high, 20 inside left and right, 10 apart. */
-    val setupButtonHeight = 40.dp
+    /** Setup's buttons: 38 high (the board's 57 px), 20 inside left and right, 10 apart. */
+    val setupButtonHeight = 38.dp
     val setupButtonPadding = 20.dp
     val setupButtonGap = 10.dp
 
@@ -328,6 +401,9 @@ object PlumDimens {
     val setupChoiceMinHeight = 56.dp
     val setupChoicePaddingVertical = 8.dp
     val setupChoicePaddingHorizontal = 16.dp
+
+    /** The text start of every row that wears the focus slab: after its accent bar and the gap a game row has ([gameRowPadding]). */
+    val slabTextStart = gameRowPadding
     val setupChoiceDotGap = 12.dp
     val setupChoiceLineGap = 3.dp
     val setupChoiceRing = 1.dp
@@ -357,45 +433,23 @@ object PlumDimens {
     val homeRolePromptPadding = 24.dp
 
     // Grid
+    /** Between collars of a file game's grid, drawn at the board's 1.5 px per dp: 10 px across, 14 px down. */
+    val gridGapAcross = (10f / 1.5f).dp
+    val gridGapDown = (14f / 1.5f).dp
+
+    /** Apps' grid (its focused tile still grows and rises) keeps its wider gaps. */
     val gridGapLandscape = 22.dp
     val gridGapPortrait = 20.dp
-
-    /** The gap between rows of tall covers (PSP: 263 dp rows, the lifted cover's ring reaches 21.2 dp above its row, so it must not meet the cover above; `PlumLayoutTest`). */
-    val gridGapTall = 22.dp
 
     /** The gaps the column table of; `PlumLayout.gridColumns` counts with them so the wider drawn gap keeps every column count. */
     val gridColumnsGapLandscape = 14.dp
     val gridColumnsGapPortrait = 12.dp
 
-    /** The board's padding around the grid (covers span the grid area minus 4 on each side). */
-    val gridPadding = 4.dp
+    /** Between hints, and between the focused title and the hints, on the grid's bottom bar: 16 to a key cap, less the collar's 7 dp of side room. */
+    val gridHintGap = 9.dp
 
-    /** Between hints, and between the focused title and the hints, on the grid's bottom bar. */
-    val gridHintGap = 16.dp
-
-    // Apps grid (one fixed size; Settings › Grid size and L1 / R1 never change it)
-    /**
-     * An app's icon in the Apps grid: 56, the size Android's own launchers draw on a phone, small enough
-     * that 7 tiles fit across the RP5's 664 dp of grid at Medium text ([appsGridTileMinWidth]).
-     */
-    val appsGridIcon = 56.dp
-
-    /** An app game's icon in the details column and on the second screen's card (it has no cover; Apps has no details column). */
-    val appGameDetailsIcon = 96.dp
-
-    /**
-     * The narrowest Apps tile at Medium text: the icon and 12 on each side, wide enough for a 9-letter name
-     * ("Calculator") on one line. It grows with the text size (`PlumLayout.textScale`), so a larger text
-     * gets fewer, wider tiles: 7 / 5 / 8 columns at 768 / 576 / 837 dp at Medium (7 on the Thor at its
-     * default Large), 5 / 3 / 5 at Largest.
-     */
-    val appsGridTileMinWidth = 80.dp
-
-    /** Inside an Apps tile, above the icon and below the name: the focus ring stands this far clear of both. */
-    val appsGridTilePadding = 6.dp
-
-    /** Between an app's icon and its name. */
-    val appsGridNameGap = 4.dp
+    /** Between the focused title and the text after it on the grid's info line (the Covers board's 14 px flex gap; no separator dot). */
+    val infoLineGap = 9.33.dp
 
     /** Inside a stand-in cover, around its title: landscape 12, portrait 10, details 14. */
     val coverPaddingLandscape = 12.dp
@@ -410,7 +464,7 @@ object PlumDimens {
     val cornerCoverPortrait = 6.dp
 
     /** Key caps are fully round: corner = height / 2. */
-    val keyCapHeight = 20.dp
+    val keyCapHeight = 20.67.dp
     val switchWidth = 34.dp
     val switchHeight = 20.dp
     val switchKnob = 16.dp
@@ -419,15 +473,13 @@ object PlumDimens {
     val switchOffRing = 1.5.dp
 
     /**
-     * A system's text badge at least 72 x 48, growing with its
-     * text; `chip` ring, corners [cornerRow], 5 dp accent dot 6 in from the top left corner.
+     * A system's tag, the RAISED chip: [systemBadgeHeight] tall (times the text size's height scale), 12 padding each side, corners 8,
+     * its name tracked [SYSTEM_BADGE_TRACKING] em; wider with the text.
      */
-    val systemBadgeMinWidth = 72.dp
-    val systemBadgeMinHeight = 48.dp
-    val systemBadgeRing = 1.5.dp
-    val systemBadgePaddingHorizontal = 14.dp
-    val systemBadgeDot = 5.dp
-    val systemBadgeDotInset = 6.dp
+    val systemBadgeHeight = 34.dp
+    val systemBadgeCorner = 8.dp
+    val systemBadgePaddingHorizontal = 12.dp
+    const val SYSTEM_BADGE_TRACKING = 0.09f
 
     /** The band over a games list: the facts line 14 right of the badge, a hairline 8 under it. */
     val systemBandBadgeGap = 14.dp
@@ -440,34 +492,35 @@ object PlumDimens {
     /** Between the focus dot and the row's text. */
     val focusDotGap = 10.dp
     val focusRingWidth = 2.5.dp
-
-    /** The focused row's pill ( > Focus and current): ring width, drawn inside its edge; corner radius cap (half the row height up to this, so rows up to 40 dp are full pills). */
+    /** The carried row's ring, drawn inside its edge (a focused row has none). */
     val focusPillRing = 2.dp
-    val cornerFocusPill = 20.dp
+
+    /** The focused row's slab corner (the board's 20 px / 1.5): half the row's height up to this. */
+    val cornerFocusPill = 13.33.dp
 
     /** Gap between the focused item and its ring. */
     val focusRingGap = 3.dp
 
-    /**
-     * How much larger the focused cover is drawn, about its centre
-     * and lifted [focusedLift] up, drawn by the grid over its clip, never by layout. The bound is the top row: the cover
-     * grows upward by 5 % of a row and is lifted, which with the ring's 5.5 dp outset has to stay inside the gap to the
-     * top bar: [gridTopGap] (`PlumLayoutTest`, `GridFocusBoundsTest`).
-     */
-    const val FOCUSED_COVER_SCALE = 1.10f
-
-    /** The same for a focused Apps tile (icon and name). */
+    /** How much larger a focused Apps tile (icon and name) is drawn, about its centre, lifted [focusedLift] up, by the grid over its clip, never by layout (`PlumLayoutTest`, `GridFocusBoundsTest`). */
     const val FOCUSED_ICON_SCALE = 1.13f
+
+    /** How much larger a focused grid cover (its whole collar) is drawn, about its centre, over its neighbours, never by layout (`GridCoverFocusTest`). */
+    const val FOCUSED_COVER_SCALE = 1.08f
 
     /** How far a focused grid item rises, at full growth. */
     val focusedLift = 2.5.dp
 
     /**
-     * The gap between the top bar and the cover grid (the other screens keep [barGap]): the ring's 5.5 dp
-     * outset, the 2.5 dp rise and the upward half of the 10 % growth of the tallest row (263 dp, PSP at Large on 768: 13.2)
-     * is 21.2; 22 leaves room (was 20 with the 5 % lift).
+     * The gap between the top bar and the cover grid (the other screens keep [barGap]): the lifted tallest row's upward half of
+     * the 8 % growth (263 dp, PSP at Large on 768: 10.5) plus the ring's 5.5 dp outset is 16.0, so the lift and its ring clear the top bar.
      */
-    val gridTopGap = 22.dp
+    val gridTopGap = 14.dp
+
+    /** What the cover grid leaves above the [barGap] over the hint bar: the lifted ring of a bottom row stays clear of the hint keys. Taken from the grid's height. */
+    val gridBottomRoom = 8.dp
+
+    /** The Apps grid's gap under the top bar: its tiles grow 13 % and rise, so the ring needs more room than a cover's; it keeps no extra room at the bottom. */
+    val appsGridTopGap = 22.dp
 
     /**
      * The soft shadow under every grid cover:
@@ -533,60 +586,13 @@ object PlumDimens {
     /** How far the focus halo reaches past the ring (rules.md > Focus and current); drawn as [FOCUS_HALO_STEPS] bands, never blurred. Strength and colour: `FocusHalo`. */
     val focusHaloReach = 10.dp
     const val FOCUS_HALO_STEPS = 7
-
-    /** How far a focus ring reaches past its item (gap + width): space a grid keeps clear around covers. */
+    /** Focus ring reach past its item (gap + width): space a grid keeps clear around covers. */
     val focusRingOutset = focusRingGap + focusRingWidth
-
-    // On-screen keyboard (design/rules.md › Keyboard): 10 columns of 44, centred, 4 rows of 36.
-    /** A key's height, the same at every text size (labels grow, keys do not); [PlumLayout.keyboardKeyHeight] holds the half-screen cap. */
-    val keyboardKeyHeight = 36.dp
-
-    /** A key's width on a screen wide enough; narrower screens shrink the block to `width − 2 × 24`. */
-    val keyboardColumnWidth = 44.dp
-
-    /** Between keys, across and down; half of it on each side belongs to a key's touch area. */
-    val keyboardKeyGap = 4.dp
-
-    /** The tray above the first row of keys. */
-    val keyboardTopPadding = 8.dp
-
-    /** Between the last row of keys and the hint bar the caller draws on the tray. */
-    val keyboardHintGap = 6.dp
-
-    /** The accent ring drawn just outside the focused key (no gap, no glow: the 4 dp gaps have no room for more). */
-    val keyboardFocusRing = 2.dp
-
-    /** The focused action key's second ring (`onAccent`, as wide as the focus ring): this far inside its accent fill. */
-    val keyboardActionRingInset = 3.dp
-
-    /** The tray's top hairline. */
-    val keyboardEdge = 1.dp
+    /** A band of the screen colour just outside a lifted cover's ring: what the ring's contrast is measured against, whatever the halo or a neighbour is. */
+    val focusRingKeyline = 2.dp
 
     /** The grid cover's hairline, drawn just inside its edge (`PlumColors.coverEdge`): no layout change. */
     val coverEdge = 1.dp
-
-    /** The tray's upward shadow, the board's `box-shadow: 0 -6px 12px -4px`: offset, blur, spread (inwards). */
-    val keyboardShadowOffset = 6.dp
-    val keyboardShadowBlur = 12.dp
-    val keyboardShadowSpread = 4.dp
-
-    /** Shift, delete and hide icons at Medium ([PlumLayout.keyboardIconSize] grows them with the text). */
-    val keyboardIconSize = 18.dp
-
-    /** Locked shift: the bar under the arrow (thickness; the arrow's stroke is the same). */
-    val keyboardIconStroke = 1.8.dp
-
     /** The static caret of a field typed with the keyboard, at Medium ([PlumLayout.caretWidth] grows it with the text). */
     val caretWidth = 1.5.dp
-
-    const val KEYBOARD_COLUMNS = 10
-    const val KEYBOARD_ROWS = 4
-
-    // Colour swatches (background palette)
-    val swatchWide = 24.dp
-    val swatchGapWide = 6.dp
-
-    /** In the narrow panel stop. */
-    val swatchNarrow = 32.dp
-    val swatchGapNarrow = 8.dp
 }

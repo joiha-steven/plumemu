@@ -32,6 +32,8 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
         SkippedSubfolderEntity::class,
         RaMatchEntity::class,
         RaProgressEntity::class,
+        LeftOutFileEntity::class,
+        RaAchievementEntity::class,
     ],
     version = PlumDatabase.SCHEMA_VERSION,
     exportSchema = true,
@@ -49,6 +51,8 @@ abstract class PlumDatabase : RoomDatabase() {
 
     abstract fun scrapedGameDao(): ScrapedGameDao
 
+    abstract fun artAspectDao(): ArtAspectDao
+
     abstract fun pinnedShortcutDao(): PinnedShortcutDao
 
     abstract fun copyChoiceDao(): CopyChoiceDao
@@ -61,11 +65,13 @@ abstract class PlumDatabase : RoomDatabase() {
 
     abstract fun raDao(): RaDao
 
+    abstract fun leftOutFileDao(): LeftOutFileDao
+
     companion object {
         const val FILE_NAME = "plumemu.db"
 
         /** The schema version above; a restore refuses a database newer than this. */
-        const val SCHEMA_VERSION = 14
+        const val SCHEMA_VERSION = 18
 
         /**
          * Opens the app's database file; call once and keep the instance for the process. With a
@@ -75,12 +81,14 @@ abstract class PlumDatabase : RoomDatabase() {
          */
         fun open(
             context: Context,
+            /** Reads a stored details JSON for the schema 16 migration ([PlumMigrations.migration15To16]). */
+            rating: DetailsRating,
             gate: DatabaseGate? = null,
             /** The app's file; tests give a path of their own. */
             name: String = FILE_NAME,
         ): PlumDatabase =
             Room.databaseBuilder(context.applicationContext, PlumDatabase::class.java, name)
-                .addMigrations(*PlumMigrations.ALL)
+                .addMigrations(*PlumMigrations.all(rating))
                 .apply { if (gate != null) openHelperFactory(gate.around(FrameworkSQLiteOpenHelperFactory())) }
                 .build()
     }

@@ -31,11 +31,20 @@ internal class CoilCoverImages(
     // Built when the first cover is drawn, not at start (it asks the system for its memory).
     private val loader by lazy(makeLoader)
 
+    // One entry per picture shown lately (a screenful of covers and the neighbours it can step to), never more than [SIZES_KEPT].
+    private val sizes = LastSizes(SIZES_KEPT)
+
     override fun cached(
         picture: ArtPicture,
         widthPx: Int,
         heightPx: Int,
-    ): ImageBitmap? = loader.memoryCache?.get(MemoryCache.Key(cacheKey(picture, widthPx, heightPx)))?.bitmap?.asImageBitmap()
+    ): ImageBitmap? =
+        loader.memoryCache?.get(MemoryCache.Key(cacheKey(picture, widthPx, heightPx)))?.bitmap?.asImageBitmap()?.also { sizes.record(pictureId(picture), widthPx, heightPx) }
+
+    override fun cachedAnySize(picture: ArtPicture): ImageBitmap? {
+        val (w, h) = sizes.last(pictureId(picture)) ?: return null
+        return loader.memoryCache?.get(MemoryCache.Key(cacheKey(picture, w, h)))?.bitmap?.asImageBitmap()
+    }
 
     override suspend fun load(
         picture: ArtPicture,
@@ -52,7 +61,14 @@ internal class CoilCoverImages(
                 .memoryCacheKey(cacheKey(picture, widthPx, heightPx))
                 .build()
         return when (val result = loader.execute(request)) {
-            is SuccessResult -> (result.drawable as? BitmapDrawable)?.bitmap?.asImageBitmap()
+            is SuccessResult ->
+                (result.drawable as? BitmapDrawable)?.bitmap?.let { bitmap ->
+                    // A software bitmap (Android 7 and older, or a failed hardware decode) is uploaded to the GPU on its first draw, in the frame that
+                    // shows it; asking now lets the render thread do it before that frame. For a hardware bitmap the call changes nothing.
+                    bitmap.prepareToDraw()
+                    sizes.record(pictureId(picture), widthPx, heightPx)
+                    bitmap.asImageBitmap()
+                }
             is ErrorResult -> {
                 // The reason by class (and its cause's), with the sizes; never the path (a game's name).
                 val error = result.throwable
@@ -65,6 +81,10 @@ internal class CoilCoverImages(
 
     companion object {
         private const val TAG = "PlumCovers"
+        private const val SIZES_KEPT = 1024
+
+        /** The picture's identity without its drawn size: [cacheKey] minus the size. */
+        private fun pictureId(picture: ArtPicture): String = "${picture.path}#${picture.width}x${picture.height}@${picture.version}"
 
         /** Share of the app's memory class the decoded covers may keep (under 100 MB in all). */
         private const val CACHE_SHARE = 0.15

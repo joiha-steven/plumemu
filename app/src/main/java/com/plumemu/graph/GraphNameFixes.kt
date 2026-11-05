@@ -16,6 +16,7 @@ import com.plumemu.game.TitleList
 import com.plumemu.identify.Confidence
 import com.plumemu.identify.Method
 import com.plumemu.identify.arcade.ArcadeLookup
+import com.plumemu.identify.arcade.ArcadeName
 import com.plumemu.identify.arcade.ArcadeSystems
 import com.plumemu.identify.arcade.ArcadeTitles
 import com.plumemu.identify.name.TitleCleaner
@@ -106,6 +107,15 @@ internal class GraphNameFixes(
      * MAME 2003-Plus name shows the record of its alias), or a pack that cannot be read.
      */
     suspend fun arcadeSet(gameId: Long): ArcadeSetFacts? =
+        arcadeNameOf(gameId)?.let { ArcadeSetFacts(it.shortName, ArcadeTitles.details(it.title)) }
+
+    /**
+     * Whether [gameId]'s short name is in the arcade pack only as an old MAME 2003-Plus name
+     * ([ArcadeName.oldName2003Plus]); false for any other game or a pack that cannot be read.
+     */
+    suspend fun isOldArcadeName(gameId: Long): Boolean = oldNameOrFalse(gameId, log) { arcadeNameOf(gameId) }
+
+    private suspend fun arcadeNameOf(gameId: Long): ArcadeName? =
         withContext(io) {
             val game = graph.database.gameDao().game(gameId) ?: return@withContext null
             if (!ArcadeSystems.isArcade(game.systemId)) return@withContext null
@@ -113,7 +123,7 @@ internal class GraphNameFixes(
             var pack: NamePack? = null
             try {
                 pack = packs.packFor(ArcadeSystems.PACK_ID)?.takeIf { it.kind == PackKind.ARCADE }
-                pack?.let { ArcadeLookup(it).find(game.fileName) }?.let { ArcadeSetFacts(it.shortName, ArcadeTitles.details(it.title)) }
+                pack?.let { ArcadeLookup(it).find(game.fileName) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IllegalStateException) {
@@ -284,7 +294,7 @@ internal fun factsOf(
     }
     val origin = when (method) {
         Method.ARCADE_NAME -> NameOrigin.ArcadeName
-        Method.CRC -> NameOrigin.FileContents
+        Method.CRC, Method.TRACK_SIZES -> NameOrigin.FileContents
         Method.PRODUCT_CODE -> NameOrigin.GameCode
         Method.HEADER_TITLE -> NameOrigin.TitleInFile
         Method.NAME_MATCH -> NameOrigin.NameMatch
@@ -298,3 +308,17 @@ internal fun factsOf(
     val fromPack = origin != NameOrigin.TitleInFile && origin != NameOrigin.FileName
     return NameFacts(origin, certainty, null, hasFix, sourceInPack = fromPack)
 }
+
+/**
+ * [lookup]'s set is an old MAME 2003-Plus name; any failure gives false (a hint must never break the core
+ * list) and is logged by class name only. A cancellation goes on.
+ */
+internal suspend fun oldNameOrFalse(gameId: Long, log: (String) -> Unit, lookup: suspend () -> ArcadeName?): Boolean =
+    try {
+        lookup()?.oldName2003Plus == true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log("core check: old arcade name of game $gameId not read (${e.javaClass.simpleName})")
+        false
+    }

@@ -22,6 +22,7 @@ import com.plumemu.secondscreen.SecondScreen
 import com.plumemu.secondscreen.isSecondScreenOn
 import com.plumemu.setup.SetupFolder
 import com.plumemu.game.RenameBoxArtNotice
+import com.plumemu.game.SortChoices
 
 /*
  * What Settings shows besides the stored settings: the picked folders, the scan, the
@@ -48,12 +49,18 @@ internal data class SettingsContent(
     val emulatorAppCount: Int? = null,
     /** Plumemu is the home app now (asked again whenever Settings comes back to the front). */
     val isHomeApp: Boolean = false,
+    /** Android's Usage access is granted to Plumemu (asked by the screen each time it comes back, like [isHomeApp]). */
+    val hasUsageAccess: Boolean = false,
     /** Folders whose removal runs in the process (it may have been asked for in an earlier Settings). */
     val removingFolderIds: Set<Long> = emptySet(),
     /** A detection runs in the process. */
     val isDetecting: Boolean = false,
     /** Folders and emulators could not be read; Settings says so (opening it again reads anew). */
     val loadFailed: Boolean = false,
+    /** Some listed game has a year from ScreenScraper: Sort games lists Year only then (or while it is the sort in use). */
+    val hasYear: Boolean = false,
+    /** Some listed game has a rating from ScreenScraper: Sort games lists Rating only then (or while it is the sort in use). */
+    val hasRating: Boolean = false,
     /** Library › Hidden games, by sort name (the row shows only when there are some). */
     val hiddenGames: List<SettingsGame> = emptyList(),
     /** Library › Unidentified games: named only from the file, by sort name. */
@@ -110,9 +117,13 @@ internal data class SettingsContent(
     val skippedSubfolders: Map<Long, List<String>> = emptyMap(),
     /** Skips and un-skips whose write waits for a running scan or runs now; they stay in the process when Settings closes. */
     val skippingFolders: Set<FolderKey> = emptySet(),
+    /** Library › Files not added: what the scans left out, as the page lists it ([notAddedItems]). */
+    val notAdded: List<NotAddedItem> = emptyList(),
     /** Statistics' figures, read once when Settings opens ([rememberStatistics]); no rows until they arrive. */
     val statistics: StatisticsState = StatisticsState.NotRead,
 ) {
+    /** Which of Year and Rating Sort games lists now ([hasYear], [hasRating]). */
+    val sortValues: SortChoices.Values get() = SortChoices.Values(hasYear, hasRating)
 
     /** False for a row that needs a statistics server or an update manifest this build does not have. */
     fun isInThisBuild(option: SettingsOption): Boolean =
@@ -245,6 +256,12 @@ internal enum class SettingsNotice(
     DetectFailed(R.string.settings_detect_failed),
     HomeRoleUnavailable(R.string.settings_home_unavailable),
 
+    /** Use as home screen: Android's question closed and Plumemu is still not the home app. */
+    HomeRoleNotYet(R.string.home_role_not_yet),
+
+    /** Statistics › Exact play time: the device has no Usage access screen, so the switch stays off. */
+    UsageAccessUnavailable(R.string.settings_exact_play_time_unavailable),
+
     /** Advanced › Export logs: no log yet, the file could not be written or nothing can share it. */
     ExportLogsFailed(R.string.settings_export_logs_failed),
     UnhideFailed(R.string.settings_unhide_failed),
@@ -253,6 +270,7 @@ internal enum class SettingsNotice(
     SignOutFailed(R.string.settings_account_sign_out_failed),
     BoxArtAskFailed(R.string.settings_box_art_ask_failed),
     BoxArtPauseFailed(R.string.settings_box_art_pause_failed),
+    BoxArtSourceFailed(R.string.settings_box_art_source_failed),
     BoxArtClearFailed(R.string.settings_box_art_clear_failed),
     BoxArtClearInUse(R.string.settings_box_art_clear_in_use),
     BoxArtClearRunGoing(R.string.settings_box_art_clear_run_going),

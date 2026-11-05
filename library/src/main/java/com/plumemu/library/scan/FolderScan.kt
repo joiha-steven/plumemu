@@ -57,6 +57,8 @@ internal class FolderScan(
     private val cataloguer: DirectoryCataloguer,
     private val batchSize: Int,
     private val clock: () -> Long,
+    /** False in the first scan of a library: its games get no added time ([ScanBatch.addedAt]). */
+    private val stampAddedAt: Boolean,
     private val emit: suspend (ScanEvent) -> Unit,
 ) {
     private class FolderUnavailable(val reason: UnavailableReason) : Exception()
@@ -90,6 +92,9 @@ internal class FolderScan(
 
     private val directoryRecords = ArrayList<ScannedDirectoryEntity>()
 
+    /** What the listed directories left out, from the catalogue's own answer (no second walk); written with [directoryRecords]. */
+    private val leftOut = LeftOutCollector(folder.id)
+
     /** The directory records the scan started with; with [directoryRecords], every directory after it. */
     private var knownDirectories: List<ScannedDirectoryEntity> = emptyList()
 
@@ -105,6 +110,10 @@ internal class FolderScan(
     private var updated = 0
     private var removed = 0
     private var addedBySystem: Map<String, Int> = emptyMap()
+
+    /** Ids of the rows this scan inserted and kept (not moves): what the notice counts once naming is done. */
+    var addedGameIds: Set<Long> = emptySet()
+        private set
 
     /** Paths below the picked folder the person gave a system ([FolderSystemDao.choose]); Ignore is left out (scanned as before). */
     private var chosenSystems: Map<String, SystemRule> = emptyMap()
@@ -170,6 +179,7 @@ internal class FolderScan(
             ScanStats(
                 listed, unchanged, filesSeen, added, updated, removed, junk, unmatched, stillWriting, addedBySystem, removedBySystem,
                 newUnknownFolders.map { UnknownFolder(it.relativePath, it.files) },
+                stampedAddedAt = stampAddedAt,
             ),
         )
     }
@@ -271,6 +281,7 @@ internal class FolderScan(
         val catalogue = cataloguer.catalogue(match, files, directoryName, sheetParts.bySheet)
         junk += catalogue.skippedJunk
         unmatched += catalogue.skippedUnmatched
+        leftOut.add(path, catalogue.leftOut)
         val stored = dao.gamesInDirectory(folder.id, parentDocumentId).associateBy { it.fields.documentId }
         // Which copy of an arcade game the pack knows shows is the naming pass's (ArcadeCopies, by
         // the pack and the person's marks): the walk, which sees file names only, keeps it. Sets the
@@ -350,6 +361,7 @@ internal class FolderScan(
                     .map { SystemEntity(it, it) },
                 newGames = chunk,
                 changedGames = changed,
+                addedAt = if (stampAddedAt) clock() else null,
             )
             val inserted = timedWrite { dao.applyBatch(batch) }
             insertedThisScan += inserted
@@ -372,6 +384,7 @@ internal class FolderScan(
             Log.w(LOG_TAG, "Folder ${folder.id}: $failedDirectories directories unreadable; deletions deferred to the next scan")
             // The rows added so far are real (counted in `added`); nothing is removed, so the per-system counts agree with them.
             addedBySystem = insertedThisScan.groupingBy { it.fields.systemId }.eachCount()
+            addedGameIds = insertedThisScan.mapTo(HashSet()) { it.id }
             return false
         }
         // A row whose document id was seen again (a move under a stable id) is not gone.
@@ -393,6 +406,9 @@ internal class FolderScan(
                     removedGameIds = removedIds,
                     removedDirectoryPaths = removedPaths.toList(),
                     directories = directoryRecords.filter { !isRemoved(it.relativePath) },
+                    // A directory replaced by a new one at the same path (another document id) is both
+                    // removed and listed: its old rows go with the subtree, the new listing's are kept.
+                    leftOut = leftOut.write(replacesAll = knownDirectories.isEmpty(), listedPaths = visitedPaths.toList()) { isRemoved(it) && it !in visitedPaths },
                 ),
             )
         }
@@ -408,6 +424,7 @@ internal class FolderScan(
         // Moves are not additions: the kept row already counted (see `added` above).
         val keptInserted = moves.mapTo(HashSet()) { it.inserted.id }
         addedBySystem = insertedThisScan.filter { it.id !in keptInserted }.groupingBy { it.fields.systemId }.eachCount()
+        addedGameIds = insertedThisScan.filter { it.id !in keptInserted }.mapTo(HashSet()) { it.id }
         removedBySystem = gone.filter { it.id in removedIds || it.id in foldedIds }.groupingBy { it.fields.systemId }.eachCount()
         if (moves.isNotEmpty()) Log.i(LOG_TAG, "Folder ${folder.id}: ${moves.size} moved or renamed games kept their rows")
         if (folds.isNotEmpty()) Log.i(LOG_TAG, "Folder ${folder.id}: ${folds.size} rows folded into the games they are now part of")

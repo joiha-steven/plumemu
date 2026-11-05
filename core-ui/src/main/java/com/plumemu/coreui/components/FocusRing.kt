@@ -53,6 +53,34 @@ fun DrawScope.drawGridFocusRing(
     drawRing(topLeft, itemSize, corner, ring)
 }
 
+/**
+ * The focus mark of a lifted grid cover whose collar's outer edge is the rounded rectangle at [topLeft] of [size] with corner [corner]
+ * (px), faded in by [strength] (0..1): a [PlumDimens.focusRingGap] band of the screen's [gap] colour, the [ring]
+ * ([PlumDimens.focusRingWidth]), a [PlumDimens.focusRingKeyline] band of [gap] again so the ring's outside is always the screen colour
+ * (its contrast never depends on what lies beyond), then the soft halo: the [ring] colour at [FocusHalo.COVER_PEAK] fading out over
+ * [PlumDimens.focusHaloReach]. Only strokes outside the shape: never laid out, no image to build, so a focus move costs a handful of
+ * strokes. Colours are values, read by the caller while drawing. The ring reaches [PlumDimens.focusRingOutset] past the collar.
+ */
+fun DrawScope.drawCoverFocusMark(
+    topLeft: Offset,
+    size: Size,
+    corner: Float,
+    ring: Color,
+    gap: Color,
+    strength: Float,
+) {
+    if (strength <= 0f) return
+    val outset = PlumDimens.focusRingOutset.toPx()
+    val keyline = PlumDimens.focusRingKeyline.toPx()
+    val halo = ring.copy(alpha = FocusHalo.COVER_PEAK * ring.alpha * strength)
+    drawFocusHalo(topLeft, size, corner, outset + keyline, halo)
+    drawOutline(topLeft, size, outset + keyline / 2, corner, gap.copy(alpha = gap.alpha * strength), keyline)
+    val gapWidth = PlumDimens.focusRingGap.toPx()
+    drawOutline(topLeft, size, gapWidth / 2, corner, gap.copy(alpha = gap.alpha * strength), gapWidth)
+    val width = PlumDimens.focusRingWidth.toPx()
+    drawOutline(topLeft, size, gapWidth + width / 2, corner, ring.copy(alpha = ring.alpha * strength), width)
+}
+
 private fun DrawScope.drawRing(
     topLeft: Offset,
     itemSize: Size,
@@ -76,10 +104,12 @@ fun DrawScope.drawFocusHalo(
     corner: Float,
     start: Float,
     halo: Color,
+    /** How far the bands reach (px); the halo's own by default. */
+    reach: Float = PlumDimens.focusHaloReach.toPx(),
 ) {
     if (halo.alpha <= 0f) return
     val steps = PlumDimens.FOCUS_HALO_STEPS
-    val band = PlumDimens.focusHaloReach.toPx() / steps
+    val band = reach / steps
     for (i in 0 until steps) {
         val inflate = start + (i + 0.5f) * band
         drawOutline(topLeft, itemSize, inflate, corner, halo.copy(alpha = FocusHalo.bandAlpha(halo.alpha, i, steps)), band)
@@ -110,6 +140,25 @@ private fun DrawScope.drawOutline(
         topLeft = Offset(topLeft.x - inflate, topLeft.y - inflate),
         size = Size(itemSize.width + inflate * 2, itemSize.height + inflate * 2),
         cornerRadius = CornerRadius(corner + inflate),
-        style = Stroke(width = width),
+        style = strokeOf(width),
     )
+}
+
+@Volatile private var strokeA = Stroke(width = 0f)
+
+@Volatile private var strokeB = Stroke(width = 0f)
+
+/**
+ * A [Stroke] of [width] px from the last two used (the halo's band width and a ring's), so a frame allocates none. Strokes are immutable and each cell is
+ * read once into a local, so the main thread and the image-build thread may both call this: the worst a race does is allocate one.
+ */
+internal fun strokeOf(width: Float): Stroke {
+    val a = strokeA
+    if (a.width == width) return a
+    val b = strokeB
+    if (b.width == width) return b
+    val made = Stroke(width = width)
+    strokeB = a
+    strokeA = made
+    return made
 }

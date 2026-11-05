@@ -6,7 +6,9 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.KeyboardDimens
 import com.plumemu.coreui.theme.PlumColors
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumDimens
@@ -47,9 +49,12 @@ class KeyboardFocusLookTest {
         compose.setContent { PlumTheme(settings) { KeyboardOnScreen(state, spec) } }
         compose.waitForIdle()
         val px = compose.density.density
-        // On the inner ring's line: half a gap, the 3 dp inset and half the ring's width below the
-        // cell's top, 20 dp in from its left (past the rounded corner, left of the word).
-        val y = ((PlumDimens.keyboardKeyGap.value / 2 + PlumDimens.keyboardActionRingInset.value + PlumDimens.keyboardFocusRing.value / 2) * px).toInt()
+        // On the inner ring's line: half a gap, the key collar's lip and groove, the 3 dp inset and half the
+        // ring's width below the cell's top, 20 dp in from its left (past the rounded corner, left of the word).
+        val collar = CollarSize.Well
+        val y =
+            ((KeyboardDimens.keyboardKeyGap.value / 2 + collar.lip.value + collar.groove.value + KeyboardDimens.keyboardActionRingInset.value +
+                KeyboardDimens.keyboardFocusRing.value / 2) * px).toInt()
         val x = (20f * px).toInt()
         val focused = actionImage().toPixelMap()
         assertTrue("focused: ${focused[x, y]} is not onAccent ${colors.onAccent}", focused[x, y].near(colors.onAccent))
@@ -57,7 +62,12 @@ class KeyboardFocusLookTest {
         compose.runOnIdle { state.move(KeyboardDirection.Left) }
         compose.waitForIdle()
         val plain = actionImage().toPixelMap()
-        assertTrue("unfocused: ${plain[x, y]} is not the accent fill ${colors.accent}", plain[x, y].near(colors.accent))
+        // Unfocused: the ACCENT CAP's gradient, between accentLight (top) and the accent.
+        val light = com.plumemu.coreui.theme.SeatLook.accentLight(colors.accent)
+        val c = plain[x, y]
+        fun between(v: Float, a: Float, b: Float) = v >= minOf(a, b) - 0.02f && v <= maxOf(a, b) + 0.02f
+        assertTrue("unfocused: $c is not on the accent cap", between(c.red, colors.accent.red, light.red) && between(c.green, colors.accent.green, light.green) && between(c.blue, colors.accent.blue, light.blue))
+        assertTrue("unfocused: $c must not be onAccent", !c.near(colors.onAccent))
         // And the two looks differ along the whole ring, not in one pixel.
         var differing = 0
         for (i in 0 until plain.width) for (j in 0 until plain.height) if (!plain[i, j].near(focused[i, j])) differing++

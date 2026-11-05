@@ -79,6 +79,8 @@ class PressFeelHomeTest {
             if (nodes[index].size.width == 0 || nodes[index].size.height == 0) return@map Color.Unspecified
             // A row clipped away entirely (outside the window) captures as an empty image: nothing to read.
             val image = runCatching { rows[index].captureToImage() }.getOrNull() ?: return@map Color.Unspecified
+            // A row only a few pixels of which show (the glide's room under the list's end) has no fill to read.
+            if (image.height <= FILL_Y) return@map Color.Unspecified
             image.toPixelMap()[image.width / 2, FILL_Y]
         }
     }

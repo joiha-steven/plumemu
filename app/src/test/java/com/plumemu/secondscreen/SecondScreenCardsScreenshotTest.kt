@@ -1,6 +1,6 @@
 package com.plumemu.secondscreen
 
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.SecondScreenText
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,7 +39,7 @@ abstract class SecondScreenCardsScreenshotBase(
     @get:Rule
     val rules = rulesAround(compose)
 
-    private var settings by mutableStateOf(MediumText.Default)
+    private var settings by mutableStateOf(SecondScreenText.Default)
     private var content by mutableStateOf<SecondScreenContent>(SecondScreenContent.Calm)
 
     @Before
@@ -53,14 +53,16 @@ abstract class SecondScreenCardsScreenshotBase(
     fun everyCardOnBothBackgrounds() {
         val mismatches = mutableListOf<String>()
         val label = size.name.lowercase()
-        for ((look, base) in listOf("black" to MediumText.Default, "paper" to MediumText.Paper)) {
+        for ((look, base) in listOf("black" to SecondScreenText.Default, "paper" to SecondScreenText.Paper)) {
             for ((name, each) in ALL_SAMPLES) shoot("second_screen_${name}_${label}_$look", base, each, mismatches)
             val largest = base.copy(textSize = TextSize.Largest)
             shoot("second_screen_game_star_largest_${label}_$look", largest, GAME_WITH_STAR, mismatches)
             shoot("second_screen_game_long_title_largest_${label}_$look", largest, GAME_LONG_TITLE, mismatches)
             shoot("second_screen_system_long_name_largest_${label}_$look", largest, SYSTEM_LONG_NAME, mismatches)
+            shoot("second_screen_system_played_largest_${label}_$look", largest, SYSTEM_WITH_LAST, mismatches)
+            shoot("second_screen_recent_full_largest_${label}_$look", largest, RECENT_FULL, mismatches)
+            shoot("second_screen_favorites_many_largest_${label}_$look", largest, FAVORITES_MANY, mismatches)
         }
-        shoot("second_screen_system_long_last_game_${label}_black", MediumText.Default, SYSTEM_LONG_LAST_GAME, mismatches)
         if (mismatches.isNotEmpty()) fail("${mismatches.size} screenshot(s) differ:\n" + mismatches.joinToString("\n"))
     }
 

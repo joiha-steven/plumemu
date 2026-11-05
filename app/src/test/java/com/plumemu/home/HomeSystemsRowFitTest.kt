@@ -164,7 +164,7 @@ class HomeSystemsRowFit768Test : HomeSystemsRowFitBase() {
 
     @Test fun openRowsAreEvenAtLarge() = rowsAreEvenAndClearOfTheHintBar(TextSize.Large, open = true)
 
-    @Test fun openRowsAreEvenAtMedium() = rowsAreEvenAndClearOfTheHintBar(TextSize.Medium, open = true)
+    @Test fun openRowsAreEvenAtMedium() = rowsAreEvenAndClearOfTheHintBar(TextSize.Small, open = true)
 
     @Test fun openRowsAreEvenAtLargest() = rowsAreEvenAndClearOfTheHintBar(TextSize.Largest, open = true)
 
@@ -172,7 +172,7 @@ class HomeSystemsRowFit768Test : HomeSystemsRowFitBase() {
 
     @Test fun lastRowKeepsOutOfTheHintBarWithTheColumnOpen() = rowsAreEvenAndClearOfTheHintBar(TextSize.Large, open = true, system = LAST)
 
-    @Test fun namesAreCutOnlyWhenTheyMustBeAtMedium() = namesAreCutOnlyWhenTheyMustBe(TextSize.Medium)
+    @Test fun namesAreCutOnlyWhenTheyMustBeAtMedium() = namesAreCutOnlyWhenTheyMustBe(TextSize.Small)
 
     @Test fun namesAreCutOnlyWhenTheyMustBeAtLarge() = namesAreCutOnlyWhenTheyMustBe(TextSize.Large)
 
@@ -191,7 +191,7 @@ class HomeSystemsRowFit576Test : HomeSystemsRowFitBase() {
 
     @Test fun openRowsAreEvenAtLarge() = rowsAreEvenAndClearOfTheHintBar(TextSize.Large, open = true)
 
-    @Test fun openRowsAreEvenAtMedium() = rowsAreEvenAndClearOfTheHintBar(TextSize.Medium, open = true)
+    @Test fun openRowsAreEvenAtMedium() = rowsAreEvenAndClearOfTheHintBar(TextSize.Small, open = true)
 
     @Test fun openRowsAreEvenAtLargest() = rowsAreEvenAndClearOfTheHintBar(TextSize.Largest, open = true)
 
@@ -199,7 +199,7 @@ class HomeSystemsRowFit576Test : HomeSystemsRowFitBase() {
 
     @Test fun lastRowKeepsOutOfTheHintBarWithTheColumnOpen() = rowsAreEvenAndClearOfTheHintBar(TextSize.Large, open = true, system = LAST)
 
-    @Test fun namesAreCutOnlyWhenTheyMustBeAtMedium() = namesAreCutOnlyWhenTheyMustBe(TextSize.Medium)
+    @Test fun namesAreCutOnlyWhenTheyMustBeAtMedium() = namesAreCutOnlyWhenTheyMustBe(TextSize.Small)
 
     @Test fun namesAreCutOnlyWhenTheyMustBeAtLarge() = namesAreCutOnlyWhenTheyMustBe(TextSize.Large)
 

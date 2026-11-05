@@ -22,8 +22,8 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.theme.PlumTheme
-import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
 import org.junit.Assert.assertEquals
@@ -56,7 +56,7 @@ abstract class SettingsStatisticsPageInputBase(
         compose.setContent {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope, onDebug = {}) }
-            PlumTheme(PlumThemeSettings.Graphite) {
+            PlumTheme(TableText.Graphite) {
                 StatisticsShots.WithCovers {
                     SettingsScreen(
                         PlumSettings(flags = SetupFlags(setupCompleted = true)), router, NoActions, TEST_VERSION,
@@ -113,9 +113,9 @@ abstract class SettingsStatisticsPageInputBase(
         // Narrow screens stack Systems under the games, taller than the window: the D-pad still reaches the footer.
         assertTrue("the footer came into view after $presses presses on the last game", footerInView())
         assertTrue("the page scrolled off its top", !tilesAtTop())
-        send(Action.Enter)
-        assertEquals("the cursor is still on the last game", "gba" to 5L, shown.last())
-        var ups = 0
+        // Down past the last game went to the Exact play time switch, then scrolled on; Up goes back to the last game.
+        send(Action.Move(Direction.Up))
+        var ups = 1
         while (!lastGameWhole() && ups < MAX_PRESSES) {
             send(Action.Move(Direction.Up))
             ups++
@@ -148,14 +148,14 @@ abstract class SettingsStatisticsPageInputBase(
     }
 
     @Test
-    fun withNothingPlayedNoGameTakesTheCursorAndAChangesNothing() {
+    fun withNothingPlayedNoGameTakesTheCursorAndAShowsNoGame() {
         open(StatisticsShots.nothingPlayed)
         down(2)
         up(2)
         send(Action.Enter)
         assertEquals(emptyList<Pair<String, Long>>(), shown)
         compose.onNodeWithTag(StatisticsTags.game(0), useUnmergedTree = true).assertDoesNotExist()
-        compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertDoesNotExist()
+        compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed() // A changes the Exact play time switch
         compose.onNodeWithTag(StatisticsTags.INVITE, useUnmergedTree = true).assertIsDisplayed()
     }
 

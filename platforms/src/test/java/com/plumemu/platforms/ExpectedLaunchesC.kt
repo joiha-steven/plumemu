@@ -349,13 +349,13 @@ internal val EXPECTED_C: List<ExpectedSystem> = listOf(
             flags = setOf(),
             extras = emptyMap(),
         )
-        retroArch("mame2010_libretro_android.so")
+        retroArch("fbneo_libretro_android.so")
         retroArch("mame2003_plus_libretro_android.so")
+        retroArch("mame2010_libretro_android.so")
         retroArch("mame2003_libretro_android.so")
+        retroArch("fbalpha2012_libretro_android.so")
         retroArch("mame2000_libretro_android.so")
         retroArch("hbmame_libretro_android.so")
-        retroArch("fbneo_libretro_android.so")
-        retroArch("fbalpha2012_libretro_android.so")
         retroArch("geolith_libretro_android.so")
         retroArch("flycast_libretro_android.so")
         retroArch("dice_libretro_android.so")

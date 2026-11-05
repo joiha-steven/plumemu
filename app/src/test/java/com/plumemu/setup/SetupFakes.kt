@@ -46,6 +46,30 @@ internal object SetupFakes {
             focus = null,
         )
 
+    /** The confirm step reached again by Back: the same two rows and a line naming the stored answer (A). */
+    val confirmAgain get() = confirm.copy(confirmAnswer = com.plumemu.coredata.settings.ConfirmButtonSetting.Right)
+
+    val confirm =
+        SetupUiState(
+            step = SetupStep.Confirm,
+            folders = listOf(romsFolder.copy(isCounted = false)),
+            systems = boardSystems,
+            isScanning = true,
+            focus = SetupControl.ConfirmKeep,
+            hasConfirmStep = true,
+        )
+
+    /** Pick a look: the first tile focused (the suggestion of a device with nothing to suggest). */
+    val look =
+        SetupUiState(
+            step = SetupStep.Look,
+            folders = listOf(romsFolder.copy(isCounted = false)),
+            systems = boardSystems,
+            isScanning = true,
+            focus = SetupControl.Look0,
+            hasConfirmStep = true,
+        )
+
     /** The second screen question on a device whose screen is built in (Use it focused). */
     val secondScreen =
         SetupUiState(
@@ -66,7 +90,7 @@ internal object SetupFakes {
             systems = boardSystems,
             isScanning = true,
             focus = SetupControl.UseBoxArt,
-            hasBoxArtStep = true,
+            hasScreenScraper = true,
         )
 
     /** The box art step while the scan runs, its form in [form]'s state (account/AccountShots.kt). */
@@ -77,7 +101,7 @@ internal object SetupFakes {
             systems = boardSystems,
             isScanning = true,
             focus = null,
-            hasBoxArtStep = true,
+            hasScreenScraper = true,
             boxArt = form,
         )
 
@@ -102,7 +126,7 @@ internal object SetupFakes {
         ready.copy(isScanning = true, isNaming = true, scanProgress = SetupScanProgress(com.plumemu.graph.ScanPhase.Naming, gamesNamed = 640, gamesToName = 1837))
 
     /** The library ready after a sign-in on the box art step: its box art line (three dots: folder, box art, library). */
-    val readyWithBoxArt = ready.copy(hasBoxArtStep = true, isBoxArtComing = true)
+    val readyWithBoxArt = ready.copy(hasScreenScraper = true, isBoxArtComing = true, boxArtLine = BoxArtLine.Coming)
 }
 
 private const val PINNED_PULSE_PHASE = 0.5f
@@ -126,9 +150,12 @@ internal fun SetupAt(
 
 /** The home screen question over the board's main screen. */
 @Composable
-internal fun HomeRolePromptAt(showsUnavailable: Boolean = false) {
+internal fun HomeRolePromptAt(
+    showsUnavailable: Boolean = false,
+    showsNotYet: Boolean = false,
+) {
     Box(Modifier.fillMaxSize().background(PlumTheme.colors.bg)) {
         HomeAt(FakeHomeContent.board(), BoardSystemsFocused)
-        HomeRolePromptLayout(showsUnavailable, focus = 0, letters = ButtonLetters.Default, onAction = {})
+        HomeRolePromptLayout(showsUnavailable, focus = 0, letters = ButtonLetters.Default, onAction = {}, showsNotYet = showsNotYet)
     }
 }

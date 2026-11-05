@@ -21,6 +21,10 @@ import org.junit.Test
  * picking any other accent, counted as "by_system" and matching no ready-made set.
  */
 internal class SettingsAccentBySystemTest : SettingsModelHarness() {
+    init {
+        startOnRedSans() // these tests walk the accent presets from Red
+    }
+
     private val bySystemIndex = ColorPages.bySystemIndex
 
     private fun useAccent(accent: ColorSetting) {
@@ -131,7 +135,7 @@ internal class SettingsAccentBySystemTest : SettingsModelHarness() {
 
     @Test
     fun bySystemIsCountedAsByUnderscoreSystemNeverAColour() {
-        val before = PlumSettings()
+        val before = PlumSettings().let { it.copy(appearance = it.appearance.copy(accent = ColorSetting.Preset("Red"))) }
         val after = before.copy(appearance = before.appearance.copy(accent = ColorSetting.BySystem(ColorSetting.Custom(0x336699))))
         fun accentEvents(from: PlumSettings, to: PlumSettings) = settingChanges(from, to).filter { it.key == "accent" }
         assertEquals("by_system", accentEvents(before, after).single().value)
@@ -145,7 +149,7 @@ internal class SettingsAccentBySystemTest : SettingsModelHarness() {
     fun bySystemMatchesNoReadyMadeSetSoTheColorsRowReadsCustom() {
         val plumemu = AppearanceSettings()
         assertEquals(com.plumemu.coreui.theme.ColorSet.Plumemu, plumemu.colorSet())
-        val bySystem = plumemu.copy(accent = ColorSetting.BySystem(ColorSetting.Preset(AppearanceSettings.DEFAULT_ACCENT)))
+        val bySystem = plumemu.copy(accent = ColorSetting.BySystem(AppearanceSettings.DEFAULT_ACCENT))
         assertNull(bySystem.colorSet())
         assertTrue(bySystem.toThemeSettings(animationsOn = true).accent is AccentChoice.BySystem)
     }

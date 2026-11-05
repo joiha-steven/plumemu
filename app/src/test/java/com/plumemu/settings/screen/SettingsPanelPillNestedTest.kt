@@ -22,6 +22,8 @@ import com.plumemu.coreui.theme.LocalGlideClock
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.home.appComposeRule
+import com.plumemu.home.slabOverhangPx
+import com.plumemu.home.slabTopRow
 import com.plumemu.home.rulesAround
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -68,15 +70,12 @@ abstract class SettingsPanelPillNestedBase {
         }
         compose.waitForIdle()
         val list = compose.onNodeWithTag(SettingsTags.PANEL_LIST, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-        val ring = compose.onRoot().captureToImage().toPixelMap()[(list.left + list.width * 0.55f).toInt(), top(inner(0)).toInt() + 1]
+        // The slab is drawn this far above its row; the pill's place is reported as the row's box.
+        val overhang = compose.slabOverhangPx(inner(0))
         fun pillTop(): Int {
-            val pixels = compose.onRoot().captureToImage().toPixelMap()
-            val from = (list.left + list.width * 0.45f).toInt()
-            val to = (list.left + list.width * 0.65f).toInt()
-            for (y in list.top.toInt() until list.bottom.toInt()) {
-                if ((from until to).count { x -> pixels[x, y].let { c -> abs(c.red - ring.red) + abs(c.green - ring.green) + abs(c.blue - ring.blue) < 0.12f } } * 2 >= to - from) return y
-            }
-            return -1
+            val xs = (list.left + list.width * 0.45f).toInt() until (list.left + list.width * 0.65f).toInt()
+            val y = compose.onRoot().captureToImage().slabTopRow(xs, list.top.toInt() - overhang.toInt() - 1, list.bottom.toInt())
+            return if (y < 0) -1 else Math.round(y + overhang)
         }
         assertEquals("at rest the pill is on the first row", top(inner(0)).toInt(), pillTop())
         val stride = top(inner(1)) - top(inner(0))

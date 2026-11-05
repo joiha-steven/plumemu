@@ -33,6 +33,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.plumemu.coreui.components.focusPill
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -47,6 +49,7 @@ import com.plumemu.R
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.tapItem
 import com.plumemu.coreui.components.OptionRowLook
+import com.plumemu.coreui.theme.FieldDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.TextSize
@@ -85,13 +88,13 @@ internal fun FixBoxArtBody(
         tag = FixBoxArtTags.FIELD,
         label = stringResource(R.string.game_fix_box_art_field_label),
     )
-    Spacer(Modifier.height(PlumDimens.listRowGap))
+    Spacer(Modifier.height(FieldDimens.gap))
     // Search is usable again once the daily limit's time passes with the panel open: one delayed effect, no polling.
     LaunchedEffect(state.phase) { state.millisUntilSearchAllowed()?.let { delay(it); state.limitEnded() } }
     val line = fixBoxArtLine(state)
     val rows = fixBoxArtRows(state)
     val listState = rememberLazyListState()
-    val glide = rememberListGlide(stride = PlumTheme.layout.rowHeight + PlumDimens.listRowGap)
+    val glide = rememberListGlide(stride = PlumTheme.layout.rowHeight + PlumDimens.panelRowGap)
     // What a store (a pick or No box art) says is drawn under the picked row, inside its list item,
     // so the focused row keeps it on screen: an error must be seen, however deep the row is. The
     // search phases' line is the list's first item (the cursor is on Search then, at the top, and
@@ -108,7 +111,7 @@ internal fun FixBoxArtBody(
         state = listState,
         modifier = Modifier.fillMaxWidth().testTag(FixBoxArtTags.ROWS).then(pill.modifier).then(glide.modifier),
         contentPadding = PaddingValues(vertical = glide.extra),
-        verticalArrangement = Arrangement.spacedBy(PlumDimens.listRowGap),
+        verticalArrangement = Arrangement.spacedBy(PlumDimens.panelRowGap),
     ) {
         if (topLine != null) item(key = "line") { StatusLine(topLine, Modifier) }
         itemsIndexed(rows, key = { _, row -> row.key }) { index, row ->
@@ -140,7 +143,7 @@ private fun StatusLine(
     BasicText(
         text = line.resolve(),
         style = PlumTheme.type.smallFact.copy(color = PlumTheme.colors.muted),
-        modifier = modifier.fillMaxWidth().padding(horizontal = PlumDimens.gameRowPadding, vertical = PlumDimens.factsRowGap).testTag(FixBoxArtTags.LINE),
+        modifier = modifier.fillMaxWidth().padding(horizontal = PlumDimens.panelTitleStart, vertical = PlumDimens.factsRowGap).testTag(FixBoxArtTags.LINE),
     )
 }
 
@@ -178,19 +181,31 @@ private fun BoxArtHitRow(
                     .heightIn(min = maxOf(PlumTheme.layout.rowHeight, THUMBNAIL_SLOT + PlumDimens.factsRowGap * 2))
                     .focusPill(focused)
                     .testTag(FixBoxArtTags.fill(row.key))
-                    .padding(horizontal = PlumDimens.gameRowPadding, vertical = PlumDimens.factsRowGap),
+                    .padding(horizontal = PlumDimens.panelTitleStart, vertical = PlumDimens.factsRowGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             HitThumbnail(state.thumbnailOf(hit.id), pictures, Modifier.testTag(FixBoxArtTags.thumbnail(hit.id)))
             Spacer(Modifier.width(THUMBNAIL_GAP))
             Column(Modifier.weight(1f)) {
-                BasicText(
-                    text = row.label.resolve(),
-                    style = (if (focused) type.settingsOptionFocused else type.settingsOption).copy(color = labelColor),
-                    // As every option row: up to three lines, then cut; two while a line is shown, to leave it room.
-                    maxLines = if (storeLine == null) 3 else 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                val label = row.label.resolve()
+                // As every option row: up to three lines, then cut; two while a line is shown, to leave it room.
+                val labelLines = if (storeLine == null) 3 else 2
+                // The focused weight is wider: an unseen copy in it sets the label's lines, so the row keeps its height when the cursor arrives or leaves.
+                Box {
+                    BasicText(
+                        text = label,
+                        style = type.settingsOptionFocused.copy(color = Color.Transparent),
+                        maxLines = labelLines,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.clearAndSetSemantics { },
+                    )
+                    BasicText(
+                        text = label,
+                        style = (if (focused) type.settingsOptionFocused else type.settingsOption).copy(color = labelColor),
+                        maxLines = labelLines,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 // The system, then "year · publisher" on its own line: both inside the fill, so the whole result is in it.
                 // Each is one line, ellipsized when it cannot fit. The layout checks fail an ellipsis at every size unless a screen allows it, so at the Largest size it may wrap to two lines instead. The note is dropped while the store line shows: the room is the line's.
                 row.value?.let { BasicText(text = it.resolve(), style = type.meta.copy(color = valueColor), maxLines = metaLines, overflow = TextOverflow.Ellipsis) }
@@ -221,6 +236,8 @@ private fun HitThumbnail(
         if (file != null && file.path !in pictures) withContext(reading) { pictureOf(file) }?.let { pictures[file.path] = it }
     }
     val picture = known
+    // The outer slot is the fixed square, whatever the picture's shape, so nothing around it moves when the read ends; the picture (the
+    // placeholder's portrait tile until then) is fitted inside the square.
     val shape = picture?.aspect ?: PLACEHOLDER_ASPECT
     val drawn = fitInside(shape, DpSize(THUMBNAIL_SLOT, THUMBNAIL_SLOT))
     val widthPx = with(density) { drawn.width.roundToPx() }.coerceAtLeast(1)

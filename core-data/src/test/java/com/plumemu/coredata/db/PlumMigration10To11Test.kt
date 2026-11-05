@@ -91,7 +91,7 @@ class PlumMigration10To11Test {
         helper.createDatabase(DB_NAME, 10).use(::fill)
         val room =
             Room.databaseBuilder(ApplicationProvider.getApplicationContext(), PlumDatabase::class.java, DB_NAME)
-                .addMigrations(*PlumMigrations.ALL)
+                .addMigrations(*PlumMigrations.all(TestDetailsRating))
                 .allowMainThreadQueries()
                 .build()
         val sync = room.appGameDao().sync(listOf(NewAppGame("com.example.game", "Example", "example", "android", "Android games")), now = 90)

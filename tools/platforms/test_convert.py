@@ -587,6 +587,10 @@ class DisplayNameTests(unittest.TestCase):
             del tables.COVER_RATIOS["nosuchsystem"]
 
 
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "first_cores.json")) as _f:
+    FIRST_CORES = json.load(_f)
+
+
 class EmulatorOrderTests(unittest.TestCase):
     def setUp(self):
         sources = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources")
@@ -601,6 +605,46 @@ class EmulatorOrderTests(unittest.TestCase):
             rest = emulators[1:] if system_id in tables.FIRST_EMULATOR else emulators
             kinds = [e in self.cores for e in rest]
             self.assertEqual(sorted(kinds), kinds, f"{system_id}: {rest}")
+
+    def test_retroarch_cores_follow_the_hand_kept_order(self):
+        """The named cores come first in the table's order (after a FIRST_EMULATOR one), the rest after them."""
+        for system_id, named in tables.RETROARCH_CORE_ORDER.items():
+            cores = [e for e in self.systems[system_id] if e in self.cores]
+            wanted = [f"retroarch-{c}" for c in named if f"retroarch-{c}" in cores]
+            first = tables.FIRST_EMULATOR.get(system_id)
+            if first in cores:
+                wanted = [first] + [c for c in wanted if c != first]
+            else:
+                # The system's first core stays first; the table orders the cores after it.
+                head = FIRST_CORES[system_id]
+                wanted = [head] + [c for c in wanted if c != head]
+            self.assertEqual(wanted, cores[:len(wanted)], system_id)
+
+    def test_the_first_core_of_every_system_is_the_one_of_dataversion_2(self):
+        """Play starts a system's first core (EmulatorChoices): only an owner decision changes it. The list is
+        first_cores.json, the first core per system of the data as it was before RETROARCH_CORE_ORDER."""
+        now = {s: next((e for e in ids if e in self.cores), None) for s, ids in self.systems.items()}
+        now = {s: e for s, e in now.items() if e}
+        self.assertEqual(FIRST_CORES, now)
+
+    def test_psx_keeps_its_default_core_and_orders_the_rest(self):
+        cores = [e for e in self.systems["psx"] if e in self.cores]
+        self.assertEqual("retroarch-mednafen-psx", cores[0])
+        self.assertEqual(["retroarch-swanstation", "retroarch-pcsx-rearmed", "retroarch-mednafen-psx-hw"], cores[1:4])
+
+    def test_gba_prefers_mgba_then_gpsp_then_vbam(self):
+        cores = [e for e in self.systems["gba"] if e in self.cores]
+        self.assertEqual(["retroarch-mgba", "retroarch-gpsp", "retroarch-vbam"], cores[:3])
+
+    def test_a_core_order_naming_no_core_fails(self):
+        original = tables.RETROARCH_CORE_ORDER["gba"]
+        sources = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources")
+        try:
+            tables.RETROARCH_CORE_ORDER["gba"] = ["mgba", "no-such-core"]
+            with self.assertRaises(convert.ConvertError):
+                convert.convert(sources)
+        finally:
+            tables.RETROARCH_CORE_ORDER["gba"] = original
 
     def test_first_emulator_table_still_wins(self):
         for system_id, first in tables.FIRST_EMULATOR.items():

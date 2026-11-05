@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.KeyboardDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
@@ -68,7 +69,7 @@ abstract class KeyboardFitTest {
     fun theKeysAre36AndTheTrayStaysWithinHalfTheScreen() {
         show()
         val px = pxPerDp()
-        val halfGap = PlumDimens.keyboardKeyGap.value / 2 * px
+        val halfGap = KeyboardDimens.keyboardKeyGap.value / 2 * px
         for (size in TextSize.entries) {
             compose.runOnIdle { settings = settings.copy(textSize = size) }
             compose.waitForIdle()
@@ -110,7 +111,7 @@ abstract class KeyboardFitTest {
     @Test
     fun noLabelIsCutAtTheLargestTextInAnyFont() {
         show()
-        val halfGap = PlumDimens.keyboardKeyGap.value / 2 * pxPerDp()
+        val halfGap = KeyboardDimens.keyboardKeyGap.value / 2 * pxPerDp()
         val problems = mutableListOf<String>()
         for (font in PlumFont.entries) {
             for (action in listOf("Search", "Sign in", "Next", "Done")) {
@@ -138,7 +139,7 @@ abstract class KeyboardFitTest {
         assertEquals(root.right, keyboard.right, 0.5f)
         assertEquals(root.bottom, keyboard.bottom, 0.5f)
         // The block of 10 columns: 476 wide, centred (the first cell starts half a gap before its key).
-        val gap = PlumDimens.keyboardKeyGap.value * pxPerDp()
+        val gap = KeyboardDimens.keyboardKeyGap.value * pxPerDp()
         val cells = compose.onAllNodes(isKeyCell).fetchSemanticsNodes()
         val blockLeft = cells.minOf { it.boundsInRoot.left } + gap / 2
         val blockRight = cells.maxOf { it.boundsInRoot.right } - gap / 2

@@ -58,7 +58,7 @@ class NameFixMenuTest {
 
     @Test
     fun theMenuHasOneNameRowAndItsSubPanelOffersBackToAutomaticOnlyWithAFix() {
-        assertEquals(listOf("Play", "PlayWith", "Favorite", "Hide", "Name", "Info"), gameMenuEntries(sampleFacts()).map { it.key })
+        assertEquals(listOf("Play", "PlayWith", "Favorite", "Name", "Info", "Hide"), gameMenuEntries(sampleFacts()).map { it.key })
         val plain = keys(sampleFacts(name = NameFacts(NameOrigin.NameMatch, NameCertainty.Likely, null, hasFix = false)))
         assertEquals(listOf("FixName", "OwnName", "NotAGame"), plain)
         val fixed = keys(sampleFacts(name = NameFacts(NameOrigin.OwnName, null, null, hasFix = true)))
@@ -71,7 +71,7 @@ class NameFixMenuTest {
         runMenu {
             val menu = controller(FakeGameActions())
             menu.openMenu(game)
-            repeat(4) { menu.onAction(Action.Move(Direction.Down)) }
+            repeat(3) { menu.onAction(Action.Move(Direction.Down)) }
             menu.onAction(Action.Enter)
             assertTrue(menu.panel!!.screen is PanelScreen.NameMenu)
             assertEquals("Fix name… has the focus", "FixName", menu.panel!!.content.focusableRows[menu.panel!!.focus].key)

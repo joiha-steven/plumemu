@@ -53,4 +53,22 @@ class FocusHaloTest {
         assertTrue(alphas.first() < 0.32f && alphas.first() > 0.25f)
         assertTrue(alphas.last() < 0.01f)
     }
+
+    @Test
+    fun aCollarPartGlowsOnPaperToo() {
+        val accent = Rgb.fromHexOrNull("#9E2A3A")!!
+        val part = FocusHalo.partLook(accent, paper)
+        assertEquals(accent, part.colour)
+        assertEquals(FocusHalo.LIGHT_PART_PEAK, part.peak, 1e-9)
+        assertNull(FocusHalo.look(accent, paper))
+    }
+
+    @Test
+    fun aCollarPartGlowOnADarkThemeIsTheHaloUnchanged() {
+        val accent = Rgb.fromHexOrNull("#DA4655")!!
+        val dark = FocusHalo.look(accent, graphite)!!
+        val part = FocusHalo.partLook(accent, graphite)
+        assertEquals(dark.colour, part.colour)
+        assertEquals(dark.peak, part.peak, 1e-9)
+    }
 }

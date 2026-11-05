@@ -16,6 +16,7 @@ import com.plumemu.account.AccountShots
 import com.plumemu.account.SignInItem
 import com.plumemu.account.SignInTags
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.FieldDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
@@ -78,7 +79,7 @@ class SetupBoxArtBoundsTest {
             val skip = bounds(SignInTags.item(SignInItem.Leave))
             expect("the field's left", field.left.value, columnLeft)
             expect("the password field's left", password.left.value, columnLeft)
-            expect("the fields' gap", password.top.value - field.bottom.value, PlumDimens.listRowGap.value)
+            expect("the fields' gap", password.top.value - field.bottom.value, FieldDimens.gap.value)
             val label = textIn(SignInTags.USERNAME, "Username")
             val passwordLabel = textIn(SignInTags.PASSWORD, "Password")
             val passwordText = compose.onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag(SignInTags.PASSWORD)), useUnmergedTree = true).getUnclippedBoundsInRoot()
@@ -96,7 +97,7 @@ class SetupBoxArtBoundsTest {
             if (isWide) expect("the form level with the title", field.top.value, title.top.value)
         }
         assertTrue(problems.size.toString() + " problems:\n" + problems.joinToString("\n"), problems.isEmpty())
-        assertEquals("folder, box art, library", 3, compose.onAllNodesWithTag(SetupTags.DOT, useUnmergedTree = true).fetchSemanticsNodes().size)
+        assertEquals("folder, look, box art, library", 4, compose.onAllNodesWithTag(SetupTags.DOT, useUnmergedTree = true).fetchSemanticsNodes().size)
     }
 
     @Test

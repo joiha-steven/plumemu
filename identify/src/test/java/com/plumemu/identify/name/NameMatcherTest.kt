@@ -4,6 +4,7 @@ import com.plumemu.identify.pack.ConsolePackBuilder
 import com.plumemu.identify.pack.TestPacks
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -172,8 +173,8 @@ class NameMatcherTest {
         assertEquals("Zork Quest III", named("zorkquestiii"))
         assertEquals("Tom & Zork", named("TomZork"))
         assertEquals("Tom & Zork", named("TomAndZork"))
-        // The run-together form of the name itself comes before a split of it.
-        assertEquals("Flash ZorkSaturn Vol. 10", named("FlashZorkSaturnVol10"))
+        // Both titles run together the same: no guess between them, the split name's own key decides.
+        assertEquals("Flash Zork Saturn Vol. 10", named("FlashZorkSaturnVol10"))
         assertEquals(null, named("ZorkQuestIV"))
         assertEquals(null, named("ZorkQuestXtreme"))
         // A spaced name is never run together: "Zork Quest III Plus" is not "Zork Quest III".
@@ -221,6 +222,50 @@ class NameMatcherTest {
         assertEquals(null, named())
     }
 
+    /** A kept form wins only on an equal key, and before the cleaned name that would take the shorter title. */
+    @Test fun keptFormsNeedAnEqualKeyAndComeFirst() {
+        val b = ConsolePackBuilder("nds", 1)
+        listOf("Combat Core", "Combat Core (Demo)", "Tool v1.0", "Tool", "Plain Game").forEach { b.release(b.title(it)) }
+        val packed = TestPacks.open(b.build())
+        val m = NameMatcher(packed)
+        fun named(cleaned: String, vararg kept: String) =
+            m.match(listOf(cleaned), keptForms = kept.toList())?.let { packed.titleName(it.titleIndex) }
+        assertEquals("Combat Core (Demo)", named("Combat Core", "Combat Core (Demo)"))
+        assertEquals("Tool v1.0", named("Tool", "Tool v1.0"))
+        assertEquals("Combat Core", named("Combat Core", "Combat Core (Beta)"))
+        // A kept form is never scored fuzzily: "Plain Gamee (X)" is not near-matched.
+        assertEquals("Plain Game", named("Plain Game", "Plain Gamee (X)"))
+        assertEquals("Tool", named("Tool", "Tool"))
+    }
+
+    /** A region tail must not turn into a title word: "Super Mario" stays "Super Mario" next to "Super Mario USA". */
+    @Test fun regionTailsNeverJoinTheTitle() {
+        val b = ConsolePackBuilder("nds", 1)
+        listOf("Super Mario", "Super Mario USA").forEach { b.release(b.title(it)) }
+        val packed = TestPacks.open(b.build())
+        val m = NameMatcher(packed)
+        for (base in listOf("Super Mario(USA)", "Super.Mario.USA.EUR-GRP", "Super Mario(En,Fr)")) {
+            val got = m.match(listOf(TitleCleaner.clean(base).title), keptForms = TitleCleaner.keptForms(base))
+                ?.let { packed.titleName(it.titleIndex) }
+            assertEquals(base, "Super Mario", got)
+        }
+    }
+
+    /** A form ending at a region code is the title only when the plain title is not in the pack. */
+    @Test fun aRegionEndingFormYieldsToThePlainTitle() {
+        val b = ConsolePackBuilder("nds", 1)
+        listOf("Drag Racer USA", "Super Mario", "Super Mario USA").forEach { b.release(b.title(it)) }
+        val packed = TestPacks.open(b.build())
+        val m = NameMatcher(packed)
+        fun named(base: String) = TitleCleaner.keptFormsWithGate(base).let { kept ->
+            m.match(listOf(TitleCleaner.clean(base).title), keptForms = kept.forms, ungatedForms = kept.ungated)
+        }?.let { packed.titleName(it.titleIndex) }
+        assertEquals("Drag Racer USA", named("Drag.Racer.USA.EUR-GRP"))
+        assertEquals("Super Mario", named("Super.Mario.USA.EUR-GRP"))
+        // A region named twice: the first is the title's own word.
+        assertEquals("Super Mario USA", named("Super.Mario.USA.USA-GRP"))
+    }
+
     @Test fun emptyPackMatchesNothing() {
         val empty = TestPacks.open(ConsolePackBuilder("test", 1).build())
         assertEquals(null, NameMatcher(empty).match("Zork Quest"))
@@ -241,5 +286,67 @@ class NameMatcherTest {
         )
         keys.forEach { (title, key) -> assertEquals(title, key, MatchKey.of(title)) }
         assertEquals(listOf("2", "98"), MatchKey.numbers("zork 2 golf 98 x9"))
+    }
+
+    /** Spaces lost or punctuation dropped: the run-together form names one game, or nothing. */
+    @Test fun runTogetherNamesAnswerOnlyWhenTheyNameOneGame() {
+        val b = ConsolePackBuilder("nds", 1)
+        listOf(
+            "A Long Quest on the Ranch", "Zork & Quest Trilogy", "Aqua World - Umi Tale", "Mine Sweeper", "Minesweeper Plus",
+            "Mine Sweeper Plus", "Space Dash 3D", "Space Dash 3-D", "Lumtor Golf '98", "Zork\u00b4s Quest",
+            "Zork Blitz 2002",
+        ).forEach { b.release(b.title(it)) }
+        val packed = TestPacks.open(b.build())
+        val m = NameMatcher(packed)
+        fun named(vararg candidates: String) = m.match(candidates.toList())?.let { packed.titleName(it.titleIndex) }
+        assertEquals("A Long Quest on the Ranch", named("alongquestontheranch")) // article kept
+        assertEquals("A Long Quest on the Ranch", named("longquestontheranch"))
+        assertEquals("Zork & Quest Trilogy", named("Zork Quest Trilogy")) // "&" dropped
+        assertEquals("Zork & Quest Trilogy", named("ZorkQuestTrilogy"))
+        assertEquals("Aqua World - Umi Tale", named("aquaworld-umitale"))
+        assertEquals("Lumtor Golf '98", named("LumtorGolf98"))
+        // Numbers the name keeps apart are not joined: "Blitz 20-02" is not "Blitz 2002".
+        assertEquals("Zork Blitz 2002", named("ZorkBlitz2002"))
+        assertNull(named("Zork-Blitz-20-02"))
+        assertEquals("Zork\u00b4s Quest", named("Zork's Quest"))
+        // Two titles, one run-together form: no answer, also not by a near match.
+        assertNull(named("minesweeperplus"))
+        assertNull(named("spacedash3d"))
+        // A spelling that is one title exactly, spaces aside, still tells them apart.
+        assertEquals("Space Dash 3D", named("SpaceDash3D"))
+        assertEquals("Space Dash 3-D", named("SpaceDash3-D"))
+    }
+
+    /** A maker's own spelling: a hyphenated year, "-0" for "-O", "A ~ B", "A in A's Title", a dropped subtitle. */
+    @Test fun makersSpellingsNameTheirOfficialTitle() {
+        val b = ConsolePackBuilder("gba", 1)
+        listOf(
+            "Blitz Arena 2002", "Blitz Arena 2003", "Ninja Five-O", "Speedball 2", "Lock n' Chase", "Yogi Bear's Gold Rush",
+            "Castlevania", "Castlevania Legends", "Mario Kart", "Mario Kart Circuit Run", "Final Fantasy II",
+            "Bionic Commando", "Earthworm Jim", "The Lion King", "Star Trek", "Paper Mario",
+        ).forEach { b.release(b.title(it)) }
+        val packed = TestPacks.open(b.build())
+        val m = NameMatcher(packed)
+        fun named(base: String) = m.match(NameCandidates.of(TitleCleaner.clean(base).title, "gba"), droppingSubtitle = true)?.let { packed.titleName(it.titleIndex) }
+        assertEquals("Blitz Arena 2002", named("Blitz Arena 20-02 (USA)"))
+        assertEquals("Ninja Five-O", named("Ninja Five-0 (USA)"))
+        assertEquals("Lock n' Chase", named("Lock n' Chase ~ Lock 'n' Chase (World)"))
+        assertEquals("Yogi Bear's Gold Rush", named("Yogi Bear in Yogi Bear's Goldrush (USA)"))
+        assertNull(named("Speedball 2 - Brutal Deluxe (Europe)")) // "Brutal" is not an edition word
+        assertEquals("Final Fantasy II", named("Final Fantasy II - 20th Anniversary Edition (USA)"))
+        // Not joined: another title begins with the words before the dash; a year that is not one; a number the title lacks.
+        for (other in listOf(
+            "Bionic Commando - Elite Forces (USA, Australia)", "Earthworm Jim - Menace 2 the Galaxy (USA)",
+            "The Lion King - Simba's Mighty Adventure (USA, Europe)", "Star Trek - The Next Generation (USA, Europe)",
+            "Paper Mario - The Thousand-Year Door (USA)",
+            "Bionic Commando - The Game (USA)", "Earthworm Jim - The Year (USA)", "Star Trek - Game of the Gold (USA)",
+        )) assertNull(other, named(other))
+        assertNull(named("Castlevania - Dracula X (USA)"))
+        assertNull(named("Mario Kart - Super Circuit (USA)"))
+        assertNull(named("Blitz Arena 30-02 (USA)"))
+        assertNull(named("Blitz Arena 20-04 (USA)"))
+        assertNull(named("Ninja Five-1 (USA)"))
+        assertNull(named("Zork in Quest (USA)"))
+        assertNull(named("Final - Something Else (USA)")) // one word before the dash is not enough
     }
 }

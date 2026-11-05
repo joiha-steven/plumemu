@@ -57,6 +57,12 @@ class LibraryScanner(
     private val namingReaders: Int = NAMING_READERS,
     /** Proves a folder that no longer answers was deleted, so the scan forgets it ([FolderOutcome.Deleted]). */
     private val presence: FolderPresence = FolderPresence.NEVER_PROVEN,
+    /**
+     * Whether first-run setup is finished (the app's `SetupFlags.setupCompleted`). Until it is,
+     * no scan writes `added_at`: setup scans each chosen folder on its own, and all of them are
+     * the first library, not new games.
+     */
+    private val isSetupDone: suspend () -> Boolean = { true },
 ) {
     private val matcher = SystemMatcher(rules)
     private val cataloguer = DirectoryCataloguer(matcher, settings)
@@ -86,7 +92,6 @@ class LibraryScanner(
     suspend fun changedFolders(onlyFolderIds: Set<Long>? = null): FolderChanges = withContext(ioDispatcher) {
         val startedNanos = System.nanoTime()
         val changed = LinkedHashSet<Long>()
-        val neverScanned = LinkedHashSet<Long>()
         val unavailable = LinkedHashMap<Long, UnavailableReason>()
         var asked = 0
         val folders = database.scanDao().folders().filter { onlyFolderIds == null || it.id in onlyFolderIds }
@@ -98,10 +103,7 @@ class LibraryScanner(
             val check = FolderChangeCheck(folder, openTree(folder), database.scanDao())
             when (val state = check.run()) {
                 FolderChangeState.Changed -> changed += folder.id
-                FolderChangeState.NeverScanned -> {
-                    changed += folder.id
-                    neverScanned += folder.id
-                }
+                FolderChangeState.NeverScanned -> changed += folder.id
                 FolderChangeState.Unchanged -> Unit
                 is FolderChangeState.Unavailable -> unavailable[folder.id] = state.reason
             }
@@ -113,7 +115,7 @@ class LibraryScanner(
             "Change check: ${folders.size} folders, changed ${changed.toList()}$unavailableText; " +
                 "$asked directories asked in ${(System.nanoTime() - startedNanos) / 1_000_000} ms",
         )
-        FolderChanges(changed, unavailable, foldersChecked = folders.size, directoriesAsked = asked, neverScannedFolderIds = neverScanned)
+        FolderChanges(changed, unavailable, foldersChecked = folders.size, directoriesAsked = asked)
     }
 
     /**
@@ -294,9 +296,27 @@ class LibraryScanner(
     /** Every picked folder, or only those in [onlyFolderIds]. */
     private suspend fun FlowCollector<ScanEvent>.scanAll(onlyFolderIds: Set<Long>? = null) {
         val folders = database.scanDao().folders().filter { onlyFolderIds == null || it.id in onlyFolderIds }
-        val scanned = folders.mapNotNull { folder -> scanFolder(folder)?.let { folder to it } }
-        val naming = naming ?: return
-        for ((folder, stats) in scanned) nameFolder(folder, naming, gamesRemoved = stats.gamesRemoved > 0)
+        // Decided once per run: the scans of setup (one per chosen folder, Try again) and the first
+        // scan after Reset library are the library itself, so none of their games is "new"; any
+        // scan after setup into a library that has games stamps them.
+        val stampAddedAt = isSetupDone() && database.scanDao().hasScannedGames()
+        val scanned = folders.mapNotNull { folder -> scanFolder(folder, stampAddedAt)?.let { Scanned(folder, it.first, it.second) } }
+        for ((folder, stats, addedIds) in scanned) {
+            naming?.let { nameFolder(folder, it, gamesRemoved = stats.gamesRemoved > 0) }
+            // After naming: it groups arcade copies and marks "Not a game", which decides what the lists show.
+            if (stats.stampedAddedAt) emit(ScanEvent.AddedListed(folder.id, listedAmong(addedIds)))
+        }
+    }
+
+    private data class Scanned(val folder: RomFolderEntity, val stats: ScanStats, val addedIds: Set<Long>)
+
+    /** Of the games [ids] those a list shows, per system (the filter of the second screen's "new this week"). */
+    private suspend fun listedAmong(ids: Set<Long>): Map<String, Int> {
+        val total = HashMap<String, Int>()
+        for (chunk in ids.chunked(LISTED_CHUNK)) {
+            for (row in database.scanDao().listedAmong(chunk)) total[row.systemId] = (total[row.systemId] ?: 0) + row.count
+        }
+        return total
     }
 
     private suspend fun FlowCollector<ScanEvent>.nameFolder(folder: RomFolderEntity, naming: GameNaming, gamesRemoved: Boolean = false) {
@@ -311,13 +331,13 @@ class LibraryScanner(
     }
 
     /** Walks one folder; its stats when it was scanned (its games may be named next), else null. */
-    private suspend fun FlowCollector<ScanEvent>.scanFolder(folder: RomFolderEntity): ScanStats? {
+    private suspend fun FlowCollector<ScanEvent>.scanFolder(folder: RomFolderEntity, stampAddedAt: Boolean): Pair<ScanStats, Set<Long>>? {
         if (!permissions.isHeld(folder.treeUri)) {
             Log.w(LOG_TAG, "Folder ${folder.id}: access no longer held; the person must pick it again")
             emit(ScanEvent.FolderFinished(folder.id, forgetIfProvenGone(folder, UnavailableReason.PERMISSION_REVOKED)))
             return null
         }
-        val scan = FolderScan(folder, openTree(folder), database.scanDao(), matcher, database.folderSystemDao(), database.skippedSubfolderDao(), cataloguer, batchSize, clock) { emit(it) }
+        val scan = FolderScan(folder, openTree(folder), database.scanDao(), matcher, database.folderSystemDao(), database.skippedSubfolderDao(), cataloguer, batchSize, clock, stampAddedAt) { emit(it) }
         val outcome = scan.run().let { if (it is FolderOutcome.Unavailable) forgetIfProvenGone(folder, it.reason) else it }
         if (outcome is FolderOutcome.Scanned) {
             database.scanDao().markScanFinished(folder.id, clock())
@@ -337,7 +357,7 @@ class LibraryScanner(
             )
         }
         emit(ScanEvent.FolderFinished(folder.id, outcome))
-        return (outcome as? FolderOutcome.Scanned)?.stats
+        return (outcome as? FolderOutcome.Scanned)?.let { it.stats to scan.addedGameIds }
     }
 
     /**
@@ -366,6 +386,9 @@ class LibraryScanner(
     companion object {
         const val DEFAULT_BATCH_SIZE = 500
 
+        /** Ids per `IN` list: SQLite on Android 6 allows 999 variables. */
+        private const val LISTED_CHUNK = 500
+
         // Process-wide, not per instance: two scanners (a WorkManager job and a screen) must not
         // walk and delete in the same folders at once.
         private val processWideScanLock = Mutex()
@@ -377,6 +400,8 @@ class LibraryScanner(
             rules: List<SystemRule>,
             settings: CatalogSettings = CatalogSettings(),
             naming: GameNaming? = null,
+            /** See the constructor's `isSetupDone`; no default, so the app always says. */
+            isSetupDone: suspend () -> Boolean,
         ): LibraryScanner {
             val resolver = context.applicationContext.contentResolver
             return LibraryScanner(
@@ -387,6 +412,7 @@ class LibraryScanner(
                 settings = settings,
                 naming = naming,
                 presence = ExternalStorageFolderPresence(),
+                isSetupDone = isSetupDone,
             )
         }
     }

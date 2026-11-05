@@ -29,6 +29,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLog
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * The scan names games with the identify module, over a small tree of generated files:
@@ -295,8 +296,10 @@ class LibraryIdentifyTest {
         assertTrue(events.none { it is ScanEvent.Named })
         assertEquals(6, fx.games().size)
         fx.tree.isPermissionRevoked = false
-        var opens = 0
-        fx.tree.beforeQuery = { if (it.startsWith("fs:snes/")) fx.tree.isPermissionRevoked = ++opens > 1 }
+        // The pass opens files on several threads: count atomically and only ever revoke, or a slow
+        // first opener writing "not revoked" late undoes a later revocation before its check.
+        val opens = AtomicInteger()
+        fx.tree.beforeQuery = { if (it.startsWith("fs:snes/") && opens.incrementAndGet() > 1) fx.tree.isPermissionRevoked = true }
         scan()
         fx.tree.beforeQuery = {}
         fx.tree.isPermissionRevoked = false
@@ -363,7 +366,7 @@ class LibraryIdentifyTest {
         assertTrue("named rows wait for nothing", fx.games().none { it.needsIdentify })
 
         val scanner = fx.scanner(naming = naming)
-        assertEquals("every named row is marked", fx.games().size, scanner.nameAgainForNewRules(storedVersion = 2))
+        assertEquals("every named row of the released version 3 is marked", fx.games().size, scanner.nameAgainForNewRules(storedVersion = 3))
         assertTrue(fx.games().all { it.needsIdentify })
         assertEquals("a library already at the current version", 0, scanner.nameAgainForNewRules(NAMING_RULES_VERSION))
         scan()

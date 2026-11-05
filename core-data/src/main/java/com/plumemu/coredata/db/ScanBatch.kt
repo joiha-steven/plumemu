@@ -9,6 +9,12 @@ data class ScanBatch(
     val systems: List<SystemEntity> = emptyList(),
     val newGames: List<GameEntity> = emptyList(),
     val changedGames: List<StoredGame> = emptyList(),
+    /**
+     * Written as `added_at` on the rows this batch inserts (the scan's clock); never on a stored
+     * row. Null before setup is finished and in the first scan after Reset library: those games are
+     * the library itself, not new to it.
+     */
+    val addedAt: Long? = System.currentTimeMillis(),
 )
 
 /**
@@ -29,6 +35,8 @@ data class ScanFinish(
     /** Relative paths of directories that disappeared; their directory records go. */
     val removedDirectoryPaths: List<String> = emptyList(),
     val directories: List<ScannedDirectoryEntity> = emptyList(),
+    /** The files the listed directories left out (Settings › Library › Files not added); null writes none. */
+    val leftOut: LeftOutWrite? = null,
 )
 
 /**

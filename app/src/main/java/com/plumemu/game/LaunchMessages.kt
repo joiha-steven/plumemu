@@ -23,7 +23,9 @@ internal fun launchMessage(
 ): PanelContent? =
     when (outcome) {
         is LaunchOutcome.Started -> null
-        is LaunchOutcome.EmulatorMissing -> emulatorMissing(outcome.emulator)
+        is LaunchOutcome.EmulatorMissing ->
+            // Installed since the launch looked (from the store, then back): nothing is missing any more.
+            if (listing?.installed?.any { it.id == outcome.emulator.emulatorId } == true) null else emulatorMissing(outcome.emulator)
         is LaunchOutcome.EmulatorNotChosen -> chooseForSystem(outcome)
         is LaunchOutcome.NoEmulatorForSystem -> noEmulator(outcome, listing)
         is LaunchOutcome.FileMissing ->
@@ -126,10 +128,12 @@ internal fun coreQuestionMessage(question: CoreQuestion): PanelContent =
                 PanelItem.Row(PanelRow(CORE_YES_KEY, UiText.Res(R.string.game_action_yes), PanelCommand.AnswerCore(question, started = true))),
                 PanelItem.Row(PanelRow(CORE_NO_KEY, UiText.Res(R.string.game_action_no), PanelCommand.AnswerCore(question, started = false))),
             ),
+        isButtonRow = true,
     )
 
 internal const val CORE_YES_KEY = "core_yes"
 internal const val CORE_NO_KEY = "core_no"
+internal const val CORE_TRY_KEY = "core_try"
 
 /**
  * After No to the core question: the line that the core may not be installed, then the system's
@@ -137,16 +141,34 @@ internal const val CORE_NO_KEY = "core_no"
  * then those to get. The pick is stored as the launch's choice was made: for the whole system when
  * the game has no choice of its own (title and body of the first game's question), else for the game
  * (Play with's title); then the game plays. With nothing to pick or get, OK closes.
+ *
+ * A RetroArch core ([coreFollowUp]) goes first: "Try <next core>?" (stored for this game, then played; its
+ * own question asks again), the other emulators after it (also for this game only), cores already answered No ([tried]) left out. With no
+ * core left the body says how to get one (RetroArch's Core Downloader) and names the first core of the order.
  */
 internal fun coreMissingMessage(
     listing: EmulatorListing,
     failedEmulatorId: String,
     emulatorName: String,
+    tried: Set<String> = emptySet(),
 ): PanelContent {
-    val forSystem = listing.currentEmulatorId == null
-    val others = listing.installed.filter { it.id != failedEmulatorId }.sortedBy { it.isLegalRisk }
+    val followUp = coreFollowUp(listing, failedEmulatorId, tried)
+    val next = (followUp as? CoreFollowUp.Next)?.core
+    // With a core to try, every pick of this panel is for this game alone: the attempt is one game's.
+    val forSystem = listing.currentEmulatorId == null && next == null
+    val failedCores = tried + failedEmulatorId
+    val others =
+        listing.installed
+            .filter { it.id != failedEmulatorId && it.id != next?.id && (followUp == null || it.id !in failedCores) }
+            .sortedBy { it.isLegalRisk }
+    val tryRow =
+        next?.let {
+            PanelItem.Row(
+                PanelRow(CORE_TRY_KEY, UiText.Res(R.string.game_core_try_row, listOf(coreNameOf(it))), PanelCommand.PlayWith(it.id, forSystem = false)),
+            )
+        }
     val rows =
-        others.map { emulator ->
+        listOfNotNull(tryRow) + others.map { emulator ->
             PanelItem.Row(
                 PanelRow(
                     key = emulator.id,
@@ -156,8 +178,21 @@ internal fun coreMissingMessage(
                 ),
             )
         } + notInstalledItems(listing.notInstalled.filter { it.id != failedEmulatorId })
+    val first =
+        when (followUp) {
+            null -> UiText.Res(R.string.game_core_missing_body, listOf(emulatorName))
+            is CoreFollowUp.Next -> UiText.Res(R.string.game_core_next_body, listOf(emulatorName))
+            is CoreFollowUp.NoneLeft -> UiText.Res(R.string.game_core_none_left_body, listOf(emulatorName, coreNameOf(followUp.toGet)))
+        }
+    val arcadeNote =
+        when {
+            !listing.isArcade -> null
+            // Only when the core offered is the one the name points to: never at a core that just failed or was refused.
+            listing.oldArcadeName && (followUp as? CoreFollowUp.Next)?.core?.id == MAME_2003_PLUS_ID -> UiText.Res(R.string.game_core_arcade_old_name_note)
+            else -> UiText.Res(R.string.game_core_arcade_note)
+        }
     val body =
-        listOf(UiText.Res(R.string.game_core_missing_body, listOf(emulatorName))) +
+        listOfNotNull(first, arcadeNote) +
             if (forSystem && others.isNotEmpty()) listOf(UiText.Res(R.string.game_choose_emulator_body, listOf(listing.systemName))) else emptyList()
     val title = if (forSystem) UiText.Res(R.string.game_choose_emulator_title, listOf(listing.systemName)) else UiText.Res(R.string.game_play_with_title)
     val content = PanelContent(title = title, body = body, items = rows)

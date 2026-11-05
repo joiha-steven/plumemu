@@ -52,6 +52,11 @@ class DiscRobustnessTest {
             Triple("cdlz.chd", "psx", ChdLzmaTest.chdOf(ContainerFixtures.named("ps1-cd.cdlz.bin"), "cdlz")),
             Triple("cdlz-64k.chd", "psx", ChdLzmaTest.chdOf(ContainerFixtures.named("ps1-cd-64k.cdlz.bin"), "cdlz")),
             Triple("lzma.chd", "psx", ChdLzmaTest.chdOf(ContainerFixtures.named("ps1-dvd.lzma.bin"), "lzma")),
+            Triple("cdzs.chd", "psx", ChdLzmaTest.chdOf(ContainerFixtures.named("ps1-cd.cdzs.bin"), "cdzs")),
+            Triple("cdzs-64k.chd", "psx", ChdLzmaTest.chdOf(ContainerFixtures.named("ps1-cd-64k.cdzs.bin"), "cdzs")),
+            Triple("zstd.chd", "psx", ChdLzmaTest.chdOf(ContainerFixtures.named("ps1-dvd.zstd.bin"), "zstd")),
+            Triple("psp-v2.cso", "psp", PackedImages.csoV2(DiscImages.pspIso(padTo = 4 shl 20))),
+            Triple("psp.zso", "psp", PackedImages.zso(DiscImages.pspIso(padTo = 4 shl 20))),
         )
     }
 

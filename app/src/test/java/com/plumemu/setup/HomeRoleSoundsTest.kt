@@ -12,7 +12,7 @@ class HomeRoleSoundsTest {
     private class Actions(var canRequest: Boolean) : HomeRoleActions {
         override fun isHomeApp() = false
 
-        override fun requestHomeRole() = canRequest
+        override fun requestHomeRole(onAnswered: (Boolean) -> Unit) = canRequest
 
         override fun markAsked() = Unit
     }

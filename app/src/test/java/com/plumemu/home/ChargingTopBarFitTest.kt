@@ -88,6 +88,7 @@ abstract class ChargingTopBarFitBase(
         val battery = bounds(BOARD_BATTERY)
         compose.onNodeWithTag(TopBarTags.CHARGING, useUnmergedTree = true).assertContentDescriptionEquals("Charging")
         val beforeDigits = battery.left.value - bolt.right.value
+        // The bolt comes right after the Wi-Fi glyph, then the digits (there is no battery drawing).
         val afterWifi = bolt.left.value - wifi.right.value
         val sideMargin = root.right.value - battery.right.value
         println(
@@ -113,7 +114,7 @@ abstract class ChargingTopBarFitBase(
         val digitHeight = digits.last - digits.first + 1
         val centreOff = (glyph.first + glyph.last) / 2f - (digits.first + digits.last) / 2f
         println("CHARGING-INK $at: bolt rows $glyph (h $glyphHeight px), digits rows $digits (h $digitHeight px), centre off $centreOff px")
-        if (abs(centreOff) > 1f) problems += "$at: the bolt's ink centre is $centreOff px from the digits'"
+        if (abs(centreOff) > CENTRE_TOLERANCE_PX) problems += "$at: the bolt's ink centre is $centreOff px from the digits'"
         if (abs(glyphHeight - digitHeight) > 1) problems += "$at: the bolt's ink is $glyphHeight px tall, the digits' $digitHeight"
     }
 
@@ -168,6 +169,7 @@ abstract class ChargingTopBarFitBase(
 
         /** Summed colour difference from the background that counts as ink. */
         const val INK_DIFFERENCE = 120
+        const val CENTRE_TOLERANCE_PX = 1f
     }
 }
 

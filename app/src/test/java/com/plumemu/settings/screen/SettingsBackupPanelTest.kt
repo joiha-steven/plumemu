@@ -5,6 +5,9 @@ import android.text.format.Formatter
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
@@ -51,7 +54,8 @@ class SettingsBackupPanelTest {
         }
     }
 
-    private fun text(id: Int) = compose.onNodeWithText(context.getString(id))
+    // Under the panel only: the top bar also says "Settings".
+    private fun text(id: Int) = compose.onNode(hasText(context.getString(id)) and hasAnyAncestor(hasTestTag(SettingsTags.BACKUP_PANEL)))
 
     @Test
     fun idleShowsBothChoicesAndThePasswordWarningOnlyWhileSignedIn() {

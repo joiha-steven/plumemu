@@ -96,6 +96,9 @@ class LibraryScrapeSource(
         val marked =
             when (which) {
                 AskAgain.Missing -> if (systems == null) dao.markMissingToAskAgain() else dao.markMissingToAskAgainIn(systems)
+                // Only without a system filter: it is the switch to ScreenScraper, which asks every game.
+                AskAgain.MissingAndDetails ->
+                    if (systems == null) dao.markMissingToAskAgain() + dao.markPictureOnlyToAskAgain() else dao.markMissingToAskAgainIn(systems)
                 AskAgain.All -> if (systems == null) dao.markAllToAskAgain() else dao.markAllToAskAgainIn(systems)
             }
         // Only Re-download all lifts the retry cap: Download missing asks the games that can still be asked.
@@ -427,6 +430,13 @@ class LibraryScrapeSource(
 enum class AskAgain {
     /** Games without a box front: no row yet, a no-match of any age, a match whose picture failed. */
     Missing,
+
+    /**
+     * The switch to ScreenScraper: [Missing] plus the games whose picture came from another source
+     * (libretro, Steam) and so have no year, genre or description; they keep that picture unless
+     * ScreenScraper answers with a box front.
+     */
+    MissingAndDetails,
 
     /** Every game's result (Re-download). */
     All,

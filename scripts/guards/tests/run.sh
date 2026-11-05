@@ -576,6 +576,54 @@ else
   else bad "deploy-web tests (exit $rc)"; fi
 fi
 
+# bench-device.sh: refuses anything but one emulator on a private adb server (a fake adb prints $FAKE_ADB_LIST).
+mkdir -p "$TMP/fakebin"
+printf '#!/usr/bin/env bash\nprintf "List of devices attached\\n%%b" "${FAKE_ADB_LIST:-}"\n' >"$TMP/fakebin/adb"
+chmod +x "$TMP/fakebin/adb"
+bench_check() { # label want_rc env... : runs `bench-device.sh --check` with a clean adb environment and the given variables
+  local label="$1" want="$2"; shift 2
+  env -u ANDROID_ADB_SERVER_PORT -u ADB_SERVER_SOCKET -u ADB_MDNS_AUTO_CONNECT -u ANDROID_SERIAL PATH="$TMP/fakebin:$PATH" "$@" \
+    bash "$GUARDS/../bench-device.sh" --check >"$OUT" 2>&1
+  local rc=$?
+  if [[ $rc == "$want" ]]; then ok "$label"; else bad "$label (exit $rc, wanted $want)"; fi
+}
+bench_check "bench-device passes one emulator on a private server" 0 ADB_SERVER_SOCKET=tcp:localhost:5038 ADB_MDNS_AUTO_CONNECT=0 FAKE_ADB_LIST='emulator-5554\tdevice\n'
+bench_check "bench-device refuses the default server" 1 ANDROID_ADB_SERVER_PORT=5037 ADB_MDNS_AUTO_CONNECT=0 FAKE_ADB_LIST='emulator-5554\tdevice\n'
+bench_check "bench-device refuses no private server set" 1 ADB_MDNS_AUTO_CONNECT=0 FAKE_ADB_LIST='emulator-5554\tdevice\n'
+bench_check "bench-device refuses mDNS left on" 1 ADB_SERVER_SOCKET=tcp:localhost:5038 FAKE_ADB_LIST='emulator-5554\tdevice\n'
+bench_check "bench-device refuses a real device next to the emulator" 1 ADB_SERVER_SOCKET=tcp:localhost:5038 ADB_MDNS_AUTO_CONNECT=0 FAKE_ADB_LIST='emulator-5554\tdevice\n0123456789\tdevice\n'
+bench_check "bench-device refuses a real device alone" 1 ADB_SERVER_SOCKET=tcp:localhost:5038 ADB_MDNS_AUTO_CONNECT=0 FAKE_ADB_LIST='0123456789\tdevice\n'
+bench_check "bench-device refuses no device" 1 ADB_SERVER_SOCKET=tcp:localhost:5038 ADB_MDNS_AUTO_CONNECT=0
+# device-install and perf-journeys: private test tooling (fake adb, no device; absent from the copy).
+if [[ ! -f "$GUARDS/../tests/test_device_install.sh" ]]; then
+  skip "device-install tests" "scripts/tests/test_device_install.sh is not in this checkout"
+else
+  bash "$GUARDS/../tests/test_device_install.sh" >"$OUT" 2>&1
+  rc=$?
+  show
+  if [[ $rc == 0 ]]; then ok "device-install tests ($(grep -Eo 'PASS \([0-9]+' "$OUT" | grep -Eo '[0-9]+') checks)"
+  else bad "device-install tests (exit $rc)"; fi
+fi
+if [[ ! -f "$GUARDS/../tests/test_perf_journeys.py" ]]; then
+  skip "perf-journeys tests" "scripts/tests/test_perf_journeys.py is not in this checkout"
+else
+  python3 -I "$GUARDS/../tests/test_perf_journeys.py" >"$OUT" 2>&1
+  rc=$?
+  show
+  if [[ $rc == 0 ]]; then ok "perf-journeys tests ($(grep -Eo '^Ran [0-9]+' "$OUT" | grep -Eo '[0-9]+') tests)"
+  else bad "perf-journeys tests (exit $rc)"; fi
+fi
+# golden-triage: pairs goldens with what the code renders (about 1 s, so never skipped by --changed-only).
+if [[ ! -f "$GUARDS/../tests/test_golden_triage.py" ]]; then
+  skip "golden-triage tests" "scripts/tests/test_golden_triage.py is not in this checkout"
+else
+  python3 -I "$GUARDS/../tests/test_golden_triage.py" >"$OUT" 2>&1
+  rc=$?
+  show
+  if [[ $rc == 0 ]]; then ok "golden-triage tests ($(grep -Eo '^Ran [0-9]+' "$OUT" | grep -Eo '[0-9]+') tests)"
+  else bad "golden-triage tests (exit $rc)"; fi
+fi
+
 if [[ $failures == 0 ]]; then
   echo "guard self-tests: PASS ($checks checks)"
   exit 0

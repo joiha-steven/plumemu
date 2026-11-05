@@ -38,7 +38,7 @@ Then the **section table** at offset 36: `sectionCount` entries of 12 bytes each
 
 | Offset in entry | Size | Field |
 |---|---|---|
-| 0 | 4 | tag, 4 ASCII characters (`STRS`, `SRCS`, `TITL`, `RELS`, `CRCS`, `CODE`, `ARCD`) |
+| 0 | 4 | tag, 4 ASCII characters (`STRS`, `SRCS`, `TITL`, `RELS`, `CRCS`, `CODE`, `TRKS`, `ARCD`) |
 | 4 | u32 | offset of the section from the start of the file |
 | 8 | u32 | length of the section in bytes |
 
@@ -48,7 +48,9 @@ twice; record sections are whole records; the sections the kind needs are presen
 are allowed and ignored (room for later sections without a new format version).
 
 Required sections: console `STRS SRCS TITL RELS CRCS CODE`; arcade `STRS SRCS ARCD`. The Kotlin
-writer puts them in that order; readers find them by tag, not by position.
+writer puts them in that order; readers find them by tag, not by position. A console pack may
+also hold `TRKS` (optional: a pack without it is valid and answers no track lookup). `TRKS` was
+added as a new section, so the format version stays 1: an older reader ignores the tag.
 
 ## Sections
 
@@ -151,6 +153,89 @@ A code that is blank, has no letter or digit, repeats one character ("0000"), or
 three or more digits that are all 0 ("00000000", "T-00000") is a dummy: identify does not look it up,
 and a pack should not list it.
 
+### `TRKS` track-size keys (console, optional, 12 bytes each)
+
+For discs: the byte sizes of a disc's track files, which a Redump DAT lists for every disc and
+which a device knows without reading a byte (file sizes, CHD track metadata). Written for the
+Redump discs of the disc systems (those whose discs the pack tool reads: PlayStation, Saturn, Dreamcast, Mega CD, PC Engine CD, 3DO, CD-i and so on); a pack with no such
+disc has no `TRKS`.
+
+| Offset | Size | Field |
+|---|---|---|
+| 0 | u64 | key (below) |
+| 8 | u32 | release index in `RELS` |
+
+Sorted by key as an unsigned number, then release index. A release has one **ORDERED** key, and
+a second **TOTAL** key when the disc has two or more track files. A key is the first 8 bytes,
+read as a little-endian u64, of SHA-256 over:
+
+- ORDERED: the byte `01`, then each track file's size as a little-endian u64, in track order (all
+  tracks, data and audio; never the `.cue`/`.gdi` file). One track is one size: a GameCube, Wii,
+  PS2 DVD or PSP disc is its single `.iso`'s size.
+- TOTAL: the byte `02`, then the sum of all track sizes as one little-endian u64.
+
+The kind byte only keeps the two kinds apart; it is not stored. One key may name several
+releases (the same layout under another region, a revision with the same sizes): the lookup
+returns all of them and the caller **must treat more than one title as ambiguous** (releases of one
+title are not). The build leaves out a key shared by more than 16 distinct titles (it tells nothing:
+every GameCube disc is the same size) and
+the same key twice on one release is written once.
+
+`NamePack.byTrackSizes(sizes)` computes the ORDERED key of the sizes; for a single size it also
+looks up TOTAL, so one file (a single-bin CUE, a CHD, an ISO) can be asked with one call.
+
+**Normalising a copy** (what `TrackSizeKeys.kt` assumes of its input; the disc reader of step N3b
+must produce it). Redump's split-bin layout is the reference: one file per track, each audio
+track holding its pregap, 2352-byte sectors, so every CD track size is a multiple of 2352.
+
+1. CUE with one `FILE` per track: the sizes of the files, in `TRACK` order.
+2. GDI: the sizes of the track files, in the GDI's track order (Redump lists Dreamcast discs as
+   `.cue`/`.bin` with the same sizes).
+3. CUE with a single `FILE` (single-bin) or a CHD: do not try to split; ask with one size, the sum
+   of all tracks (the file's size; for a CHD, the sum below). That is the TOTAL key, and it matches
+   a multi-track disc. If the cue sheet gives the track starts, the per-track sizes may also be
+   asked as ORDERED, but only the sum is certain.
+4. CHD: per track, bytes = `FRAMES` of its `CHT2` metadata (or `CHTR` in v4, `CHGD`/`CHGT` of a
+   GD-ROM) less its `PAD`, x 2352, whatever the track type (`MODE1`, `MODE1_RAW`, `MODE2_RAW`,
+   `AUDIO`). A CHD pads every track to a multiple of 4 frames in its hunk layout: use the
+   metadata's `FRAMES`, never the padded layout or the CHD's logical size. A GD-ROM audio track
+   carries `PAD` frames of filler (Crazy Taxi: `FRAMES:44550 PAD:43874` is Redump's 676 frames,
+   1,589,952 bytes). A CHD whose tracks are all cooked `MODE1` (a DVD made with `chdman
+   createcd`) is also asked as `FRAMES` x 2048, which is Redump's size of that `.iso`.
+5. A cue sheet whose track file holds cooked 2048-byte sectors (`MODE1/2048`, an `.iso` ripped
+   from a CD): frames x 2352 as in 4; a bare `.iso` of a CD system: ask with both its size and
+   size / 2048 x 2352.
+6. DVD and GameCube/Wii discs: the `.iso`'s size as it is (no x 2352). A cooked PS2 `.iso` is a
+   DVD whatever its size (Redump's PS2 CDs are always bin/cue).
+7. A `.cue` that is not complete (a missing track file) gives no key yet; it is asked again.
+
+A track key only looks a title up; it is never a fix key or the ScreenScraper key (two games can
+share one).
+
+Checked against real CHDs (24 discs read on a handheld): `FRAMES` already includes
+a stored pregap (`PREGAP:150 PGTYPE:VAUDIO` on the audio tracks of Mega Man 8, Rayman, Tekken 3):
+use it as it is, never add the pregap. Results: 14 of 14 PS1 discs, 3 of 5 Dreamcast discs (the
+two others are full-size GD-ROMs whose key the build leaves out, over 16 titles) and 5 of 5 PS2
+discs found in the pack, with the rules above.
+
+Worked example, a six-track PC Engine CD disc as Redump lists it (Hatsukoi Monogatari, Japan,
+Rev 1: `.cue` 687 bytes, then six `(Track N).bin`):
+
+| Track | Redump file size | Frames (size / 2352) | In a CHD: `FRAMES` / padded to 4 |
+|---|---|---|---|
+| 1 | 10,633,392 | 4,521 | 4,521 / 4,524 |
+| 2 | 301,157,136 | 128,043 | 128,043 / 128,044 |
+| 3 | 190,573,152 | 81,026 | 81,026 / 81,028 |
+| 4 | 42,042,000 | 17,875 | 17,875 / 17,876 |
+| 5 | 26,970,384 | 11,467 | 11,467 / 11,468 |
+| 6 | 32,690,448 | 13,899 | 13,899 / 13,900 |
+
+- Split-bin copy: ORDERED of the six sizes above = `773ac6913c9688a0` (as a hex u64).
+- The same disc as one CHD: sizes = `FRAMES` x 2352 give the same six numbers, so the same ORDERED key
+  (the padded counts would give a different, wrong one). A single-bin copy of it is 604,066,512
+  bytes, TOTAL = `31178c6a23e353b2`.
+- Both keys are in the `pcenginecd` pack (the build was checked for them).
+
 ### `ARCD` arcade sets (arcade, 24 bytes each)
 
 | Offset | Size | Field |
@@ -190,10 +275,10 @@ titles, releases, CRCs, codes and sources, given in the same order):
    offset. Arcade: for each set in sorted order its short name, title, maker (if any); then the
    sources.
 4. **`CRCS`** rows sorted by (CRC, stored size, release index); **`CODE`** rows by (code bytes,
-   kind, release index); **`ARCD`** by short-name bytes (short names are lower-cased and unique;
+   kind, release index); **`TRKS`** rows by (key as unsigned, release index), a repeated row once; **`ARCD`** by short-name bytes (short names are lower-cased and unique;
    a parent that is not in the pack is written as -1).
-5. **Sections** in the order `STRS SRCS TITL RELS CRCS CODE` (console) or `STRS SRCS ARCD`
-   (arcade). Each starts at the next multiple of 4 after the previous one; the table records
+5. **Sections** in the order `STRS SRCS TITL RELS CRCS CODE` and then `TRKS` when some release has
+   a key (console), or `STRS SRCS ARCD` (arcade). Each starts at the next multiple of 4 after the previous one; the table records
    its unpadded length. After the last section, zeros up to a multiple of 4, then the trailer.
 6. All reserved and padding bytes are zero. A year of 0 or none is written as 0. A title with
    no releases has first-release index 0.

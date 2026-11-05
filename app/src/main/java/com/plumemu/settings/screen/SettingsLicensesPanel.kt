@@ -105,8 +105,8 @@ private fun LicenseRows(
             ) {
                 Column(Modifier.weight(1f)) {
                     val nameStyle = if (focused) type.setupRowTitleFocused.copy(color = colors.strong) else type.meta.copy(color = colors.text2)
-                    BasicText(stringResource(notice.name), style = nameStyle, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    BasicText(stringResource(notice.licence), style = type.smallFact.copy(color = if (focused) colors.meta else colors.muted), maxLines = 1)
+                    BasicText(stringResource(notice.name), style = nameStyle, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    BasicText(stringResource(notice.licence), style = type.smallFact.copy(color = if (focused) colors.meta else colors.muted), maxLines = 2)
                 }
             }
         }

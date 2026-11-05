@@ -6,7 +6,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
-import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.components.fieldBoxHeight
+import com.plumemu.coreui.theme.FieldDimens
 import com.plumemu.coreui.theme.PlumTheme
 
 /**
@@ -28,7 +29,7 @@ internal fun TypingPanelLayout(
     body: @Composable () -> Unit,
 ) {
     // The field and one row under it, with their gap: what must always show.
-    val keep = PlumTheme.layout.rowHeight * 2 + PlumDimens.listRowGap
+    val keep = fieldBoxHeight() + PlumTheme.layout.rowHeight + FieldDimens.gap
     Layout(contents = listOf({ Column { header() } }, { Column { body() } }), modifier) { (headers, bodies), constraints ->
         val width = constraints.maxWidth
         val height = constraints.maxHeight

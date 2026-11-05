@@ -45,8 +45,7 @@ internal class SettingsRaAccountTest : SettingsModelHarness() {
         press(Action.Enter)
         val form = requireNotNull(model.signIn.form)
         assertEquals(SignInItem.Username, form.focus)
-        assertTrue("the form opens typing, the tray up", form.isTyping && form.inField && form.isTrayUp)
-        press(Action.Back)
+        assertFalse("the form opens with the keyboard down", form.isTyping || form.isTrayUp)
         assertSame("B puts the tray away and the form stays", form, model.signIn.form)
         assertFalse(form.isTyping)
         assertEquals(SignInItem.Username, form.focus)
@@ -67,13 +66,15 @@ internal class SettingsRaAccountTest : SettingsModelHarness() {
 
     @Test
     fun accountsListsScreenScraperThenRetroAchievementsAndKeepsOnlyTheRegionInLibrary() {
-        assertEquals(listOf(SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount), accounts())
+        assertEquals(listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount), accounts())
         assertTrue(SettingsOption.RetroAchievementsAccount !in SettingsSection.Library.rowsIn(model.content))
     }
 
     @Test
     fun theGamepadWalksTheAccountsSectionInOrder() {
         openSection(SettingsSection.Accounts)
+        assertEquals(SettingsOption.BoxArtSource, model.focusedOption)
+        move(Direction.Down)
         assertEquals(SettingsOption.ScraperAccount, model.focusedOption)
         move(Direction.Down)
         assertEquals(SettingsOption.RetroAchievementsAccount, model.focusedOption)
@@ -186,36 +187,61 @@ internal class SettingsRaAccountTest : SettingsModelHarness() {
     }
 
     @Test
-    fun signedInOpensTheSignedInPageAndSignOutByGamepadForgetsTheAccount() {
+    fun signedInOpensTheSignedInPageAndSignOutAsksFirstThenForgetsTheAccount() {
         show(RaAccountStatus.SignedIn("hung", 1234))
         openRaRow()
         press(Action.Enter)
         assertEquals(PanelPage.RaAccount, model.focus.page)
         assertEquals(listOf(RaPageItem.SignOut), raPageItems(model.content))
         press(Action.Enter)
+        assertEquals("Sign out asks first", PanelPage.RaSignOutConfirm, model.focus.page)
+        assertEquals("Cancel has the focus", SignOutConfirmItem.Cancel.ordinal, model.focus.panelIndex)
+        assertEquals("nobody is signed out yet", 0, actions.raAccountsFake.signOuts)
+        press(Action.Move(Direction.Up))
+        press(Action.Enter)
         assertEquals(1, actions.raAccountsFake.signOuts)
         assertEquals("the panel closes once the account is gone", SettingsColumn.Options, model.focus.column)
     }
 
     @Test
-    fun signOutByTouch() {
+    fun cancelAndBackOnTheSignOutConfirmKeepTheAccount() {
+        show(RaAccountStatus.SignedIn("hung", 1234))
+        openRaRow()
+        press(Action.Enter)
+        press(Action.Enter)
+        press(Action.Enter) // Cancel
+        assertEquals(PanelPage.RaAccount, model.focus.page)
+        assertEquals(0, model.focus.panelIndex)
+        press(Action.Enter)
+        press(Action.Back)
+        assertEquals(PanelPage.RaAccount, model.focus.page)
+        assertEquals("nobody was signed out", 0, actions.raAccountsFake.signOuts)
+    }
+
+    @Test
+    fun signOutByTouchAsksFirstToo() {
         show(RaAccountStatus.SignedIn("hung", 1234))
         openRaRow()
         press(Action.Enter)
         // Sign out is the only item and has the focus: one tap presses it.
         model.onTapPanelItem(0, actions.shown, wide)
+        assertEquals(PanelPage.RaSignOutConfirm, model.focus.page)
+        assertEquals(0, actions.raAccountsFake.signOuts)
+        model.onTapPanelItem(SignOutConfirmItem.SignOut.ordinal, actions.shown, wide)
+        model.onTapPanelItem(SignOutConfirmItem.SignOut.ordinal, actions.shown, wide)
         assertEquals(1, actions.raAccountsFake.signOuts)
     }
 
     @Test
-    fun aFailedSignOutIsSaidAndKeepsThePanelOpen() {
+    fun aFailedSignOutIsSaidUnderTheRow() {
         actions.raAccountsFake.signOutWorks = false
         show(RaAccountStatus.SignedIn("hung", 1234))
         openRaRow()
         press(Action.Enter)
         press(Action.Enter)
+        press(Action.Move(Direction.Up))
+        press(Action.Enter)
         assertEquals(SettingsOption.RetroAchievementsAccount to SettingsNotice.SignOutFailed, model.work.notice)
-        assertEquals(PanelPage.RaAccount, model.focus.page)
     }
 
     @Test

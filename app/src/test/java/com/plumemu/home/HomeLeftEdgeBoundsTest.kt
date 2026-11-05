@@ -41,7 +41,7 @@ class HomeLeftEdgeBoundsTest {
     private fun show(
         content: HomeContent,
         edge: LeftEdgeSetting,
-        size: TextSize = TextSize.Medium,
+        size: TextSize = TextSize.Small,
         actions: List<Action> = gamesFocused(FakeHomeContent.BOARD_SNES_INDEX),
     ) = compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { HomeAt(content.withLeftEdge(edge), actions) } }
 
@@ -109,7 +109,7 @@ class HomeLeftEdgeBoundsTest {
     }
 
     @Test
-    fun theWidestCodesFitThePeekAtMedium() = assertWidestCodesFitThePeek(TextSize.Medium)
+    fun theWidestCodesFitThePeekAtMedium() = assertWidestCodesFitThePeek(TextSize.Small)
 
     @Test
     fun theWidestCodesFitThePeekAtLargest() = assertWidestCodesFitThePeek(TextSize.Largest)

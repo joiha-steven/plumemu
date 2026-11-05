@@ -84,18 +84,23 @@ internal class SettingsStatisticsTest : SettingsModelHarness() {
         assertEquals(sections.indexOf(SettingsSection.Controls) + 1, sections.indexOf(SettingsSection.Statistics))
         assertEquals(sections.indexOf(SettingsSection.Accounts) - 1, sections.indexOf(SettingsSection.Statistics))
         assertEquals(emptyList<SettingsOption>(), SettingsSection.Statistics.rowsIn(SettingsContent()))
-        assertEquals("one stop per listed game", List(5) { SettingsOption.Statistic }, SettingsSection.Statistics.rowsIn(StatisticsShots.contentOf(StatisticsShots.played)))
-        assertEquals("the page itself is one stop", List(1) { SettingsOption.Statistic }, SettingsSection.Statistics.rowsIn(StatisticsShots.contentOf(StatisticsShots.nothingPlayed)))
+        assertEquals(
+            "one stop per listed game, then the Exact play time switch",
+            List(5) { SettingsOption.Statistic } + SettingsOption.ExactPlayTime,
+            SettingsSection.Statistics.rowsIn(StatisticsShots.contentOf(StatisticsShots.played)),
+        )
+        assertEquals("the switch is the only stop of a page with no games", listOf(SettingsOption.ExactPlayTime), SettingsSection.Statistics.rowsIn(StatisticsShots.contentOf(StatisticsShots.nothingPlayed)))
+        assertEquals("and of an unreadable page", listOf(SettingsOption.ExactPlayTime), SettingsSection.Statistics.rowsIn(SettingsContent(statistics = StatisticsState.Failed)))
     }
 
     @Test
-    fun theStopsAreOnePerListedGameElseOneForThePageAndNoneBeforeTheFigures() {
+    fun theGameStopsAreOnePerListedGame() {
         assertEquals(0, statisticStopsOf(StatisticsState.NotRead))
-        assertEquals(1, statisticStopsOf(StatisticsState.Failed))
-        assertEquals(1, statisticStopsOf(StatisticsState.Read(StatisticsShots.nothingPlayed)))
-        assertEquals(1, statisticStopsOf(StatisticsState.Read(PlayStatistics())))
+        assertEquals(0, statisticStopsOf(StatisticsState.Failed))
+        assertEquals(0, statisticStopsOf(StatisticsState.Read(StatisticsShots.nothingPlayed)))
+        assertEquals(0, statisticStopsOf(StatisticsState.Read(PlayStatistics())))
         assertEquals(5, statisticStopsOf(StatisticsState.Read(StatisticsShots.played)))
-        assertEquals("games without a play are never listed", 1, statisticStopsOf(StatisticsState.Read(StatisticsShots.nothingPlayed.copy(topGames = StatisticsShots.played.topGames))))
+        assertEquals("games without a play are never listed", 0, statisticStopsOf(StatisticsState.Read(StatisticsShots.nothingPlayed.copy(topGames = StatisticsShots.played.topGames))))
     }
 
     @Test
@@ -129,20 +134,98 @@ internal class SettingsStatisticsTest : SettingsModelHarness() {
         assertEquals(4, model.optionIndex)
         assertEquals("walking between games scrolls nothing here", 1, model.statisticsScroll.step.count)
         move(Direction.Down)
-        assertEquals("Down on the last game scrolls the page down", StatisticsStep(2, down = true), model.statisticsScroll.step)
-        assertEquals("and the cursor stays on the last game", 4, model.optionIndex)
+        assertEquals("Down on the last game reaches the Exact play time switch", 5, model.optionIndex)
+        assertEquals(SettingsOption.ExactPlayTime, model.focusedOption)
+        assertEquals("walking on scrolls nothing", 1, model.statisticsScroll.step.count)
+        move(Direction.Down)
+        assertEquals("Down on the switch scrolls the page down", StatisticsStep(2, down = true), model.statisticsScroll.step)
+        assertEquals("and the cursor stays on the switch", 5, model.optionIndex)
         assertEquals(0, actions.writes)
     }
 
     @Test
-    fun withNothingPlayedUpAndDownScrollThePageAndTheOneStopStays() {
+    fun upFromTheSwitchGoesBackToTheLastGame() {
+        enter()
+        repeat(5) { move(Direction.Down) }
+        move(Direction.Up)
+        assertEquals(4, model.optionIndex)
+        assertEquals(SettingsOption.Statistic, model.focusedOption)
+    }
+
+    @Test
+    fun withNothingPlayedTheSwitchIsTheOneStopAndUpAndDownScrollThePage() {
         enter(StatisticsShots.nothingPlayed)
+        assertEquals(SettingsOption.ExactPlayTime, model.focusedOption)
         move(Direction.Down)
         move(Direction.Up)
         assertEquals(StatisticsStep(2, down = false), model.statisticsScroll.step)
         assertEquals(0, model.optionIndex)
+    }
+
+    private fun enterOnTheSwitch(
+        access: Boolean,
+        figures: PlayStatistics = StatisticsShots.nothingPlayed,
+    ) {
+        enter(figures)
+        model.content = model.content.copy(hasUsageAccess = access)
+    }
+
+    @Test
+    fun aSwitchesExactPlayTimeOnWhenAccessIsGrantedAndOffAgain() {
+        enterOnTheSwitch(access = true)
         press(Action.Enter)
-        assertEquals("no game: A does nothing", emptyList<Pair<String, Long>>(), shown)
+        assertEquals(true, actions.settings.advanced.exactPlayTime)
+        assertEquals("access is there: Android's screen stays shut", 0, actions.usageAccessOpened)
+        press(Action.Enter)
+        assertEquals(false, actions.settings.advanced.exactPlayTime)
+    }
+
+    @Test
+    fun switchingOnWithoutAccessOpensAndroidsScreenAndKeepsItOn() {
+        enterOnTheSwitch(access = false)
+        press(Action.Enter)
+        assertEquals(1, actions.usageAccessOpened)
+        assertEquals(true, actions.settings.advanced.exactPlayTime)
+    }
+
+    @Test
+    fun onWithoutAccessATurnsItOffAndOpensNothing() {
+        enterOnTheSwitch(access = false)
+        press(Action.Enter)
+        assertEquals(true, actions.settings.advanced.exactPlayTime)
+        press(Action.Enter)
+        assertEquals(1, actions.usageAccessOpened)
+        assertEquals(false, actions.settings.advanced.exactPlayTime)
+    }
+
+    @Test
+    fun onWithoutAccessAndNoAndroidScreenATurnsItOff() {
+        actions.canOpenUsageAccess = false
+        actions.settings = actions.settings.copy(advanced = actions.settings.advanced.copy(exactPlayTime = true))
+        enterOnTheSwitch(access = false)
+        press(Action.Enter)
+        assertEquals(false, actions.settings.advanced.exactPlayTime)
+        assertEquals(0, actions.usageAccessOpened)
+    }
+
+    @Test
+    fun withNoUsageAccessScreenTheSwitchStaysOffWithAMessage() {
+        actions.canOpenUsageAccess = false
+        enterOnTheSwitch(access = false)
+        press(Action.Enter)
+        assertEquals(1, actions.usageAccessOpened)
+        assertEquals(false, actions.settings.advanced.exactPlayTime)
+        assertEquals(0, actions.writes)
+        assertEquals(SettingsOption.ExactPlayTime to SettingsNotice.UsageAccessUnavailable, model.work.notice)
+    }
+
+    @Test
+    fun rightOnTheSwitchOpensNoPanelOnEitherWidth() {
+        enterOnTheSwitch(access = true)
+        move(Direction.Right)
+        move(Direction.Right, narrow)
+        assertEquals(SettingsColumn.Options, model.focus.column)
+        assertNull(model.focus.page)
     }
 
     @Test
@@ -198,10 +281,10 @@ internal class SettingsStatisticsTest : SettingsModelHarness() {
     }
 
     @Test
-    fun aTapOnThePageWithNothingPlayedDoesNothing() {
-        enter(StatisticsShots.nothingPlayed)
+    fun aTapOnTheSwitchTogglesItAndShowsNoGame() {
+        enterOnTheSwitch(access = true, StatisticsShots.nothingPlayed)
         model.onTapOption(0, actions.shown, wide)
         assertEquals(emptyList<Pair<String, Long>>(), shown)
-        assertEquals(0, actions.writes)
+        assertEquals(true, actions.settings.advanced.exactPlayTime)
     }
 }

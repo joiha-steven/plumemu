@@ -126,7 +126,7 @@ class BackupUnpackTest {
         assertEquals(settings, unpacked.settings)
         assertEquals(account, unpacked.account)
         assertEquals(listOf("Mario", "Zelda"), titlesIn(requireNotNull(unpacked.database)))
-        assertEquals(14, unpacked.databaseSchemaVersion)
+        assertEquals(18, unpacked.databaseSchemaVersion)
         assertEquals(2, unpacked.mediaFiles)
         val media = requireNotNull(unpacked.media)
         assertArrayEquals(ByteArray(3_000) { it.toByte() }, File(media, "1234/box-front-small-120x168.webp").readBytes())

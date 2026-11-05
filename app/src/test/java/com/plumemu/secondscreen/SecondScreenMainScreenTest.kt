@@ -55,7 +55,7 @@ class SecondScreenMainScreenTest {
             MainScreen(settings, state, router, HomeCallbacks(), onRetry = {}, settingsHost = host, secondScreen = feed)
         }
         // The main screen's game index is built off the main thread before its first card.
-        compose.waitUntil(WAIT_MS) { shown() is SecondScreenContent.System }
+        compose.waitUntil(WAIT_MS) { shown() is EntryContent }
     }
 
     private fun send(vararg actions: Action) {
@@ -81,12 +81,12 @@ class SecondScreenMainScreenTest {
         showMainScreen()
         send(*List(FakeHomeContent.BOARD_SNES_INDEX) { Action.Move(Direction.Down) }.toTypedArray())
         val system = shown()
-        assertTrue("on Super Nintendo: $system", (system as? SecondScreenContent.System)?.name == "Super Nintendo")
+        assertTrue("on Super Nintendo: $system", (system as? EntryContent)?.name == "Super Nintendo")
         send(Action.Menu)
         assertEquals("Settings open", SecondScreenContent.Calm, shown())
         send(Action.Back)
         // Which entry: whatever the main screen's focus is after Settings (its own tests cover that).
-        compose.waitUntil(WAIT_MS) { shown() is SecondScreenContent.System }
+        compose.waitUntil(WAIT_MS) { shown() is EntryContent }
     }
 
     private companion object {
@@ -96,12 +96,12 @@ class SecondScreenMainScreenTest {
     @Test
     fun aLibraryThatFailedOrIsLoadingIsCalm() {
         showMainScreen()
-        assertTrue(shown() is SecondScreenContent.System)
+        assertTrue(shown() is EntryContent)
         compose.runOnIdle { state = HomeState.Failed }
         settle()
         assertEquals(SecondScreenContent.Calm, shown())
         compose.runOnIdle { state = HomeState.Ready(FakeHomeContent.board()) }
-        compose.waitUntil(WAIT_MS) { shown() is SecondScreenContent.System }
+        compose.waitUntil(WAIT_MS) { shown() is EntryContent }
         compose.runOnIdle { state = null }
         settle()
         assertEquals(SecondScreenContent.Calm, shown())
@@ -122,8 +122,11 @@ class SecondScreenMainScreenTest {
         settle()
         assertEquals(SetupStep.Folders, compose.runOnIdle { model.state.value.step })
         assertEquals("the folder step", SecondScreenContent.Calm, shown())
-        compose.runOnIdle { model.onAction(Action.Enter) }
-        settle()
+        // Continue, the look step's tile, then the box art step's first choice: the second screen question follows.
+        repeat(3) {
+            compose.runOnIdle { model.onAction(Action.Enter) }
+            settle()
+        }
         assertEquals(SetupStep.SecondScreen, compose.runOnIdle { model.state.value.step })
         assertEquals(SecondScreenContent.SetupQuestion, shown())
         compose.runOnIdle { model.onAction(Action.Enter) }

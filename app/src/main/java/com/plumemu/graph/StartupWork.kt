@@ -203,8 +203,8 @@ class StartupWork(
     private val packagesDirty = AtomicBoolean(false)
     private var rescanWanted = false
 
-    /** Why the next pass over every folder runs (`library_scanned.trigger`); the first reason asked wins. Guarded by [scanLock]. */
-    private var pendingTrigger: ScanTrigger? = null
+    /** Why the next pass over every folder runs (`library_scanned.trigger`). Guarded by [scanLock]. */
+    private val pendingReasons = ScanReasons()
 
     /** Library resets and folder removals waiting for the scan slot; [ScanState.isBusy] stays true meanwhile. */
     private var slotWaiters = 0
@@ -271,14 +271,15 @@ class StartupWork(
     /** Whether the Activity is started (between [onStart] and [onStop]): the person is in Plumemu, not in a game. */
     val isInFront: Boolean get() = synchronized(frontLock) { inFront }
 
-    private val packageChangesSeen = java.util.concurrent.atomic.AtomicInteger()
+    private val packageChangeTicks = kotlinx.coroutines.flow.MutableStateFlow(0)
 
-    /** How many package changes were reported in this process (tests read it). */
-    internal val packageChangeCount: Int get() = packageChangesSeen.get()
+    /** Counts every package change reported in this process: tests read it, and the game panel reads its emulators again on each (`GameActions.emulatorChanges`). */
+    val packageChangeFlow: kotlinx.coroutines.flow.StateFlow<Int> get() = packageChangeTicks
+    internal val packageChangeCount: Int get() = packageChangeTicks.value
 
     /** A package changed on the device (see `PackageChanges`); nothing runs until [onStart]. */
     fun markPackagesChanged() {
-        packageChangesSeen.incrementAndGet()
+        packageChangeTicks.value += 1
         packagesDirty.set(true)
     }
 
@@ -491,7 +492,7 @@ class StartupWork(
     fun requestScan(trigger: ScanTrigger = ScanTrigger.Manual): Job {
         synchronized(scanLock) {
             rescanWanted = true
-            if (pendingTrigger == null) pendingTrigger = trigger
+            pendingReasons.offer(trigger)
             publishBusyLocked()
         }
         return scope.launch { scanIfIdle() }
@@ -500,7 +501,7 @@ class StartupWork(
     /** [trigger] is why the next pass runs, unless a reason was already given for it. */
     private fun offerTrigger(trigger: ScanTrigger) =
         synchronized(scanLock) {
-            if (pendingTrigger == null) pendingTrigger = trigger
+            pendingReasons.offer(trigger)
         }
 
     private fun claimScan(): Boolean =
@@ -540,12 +541,8 @@ class StartupWork(
         val unavailable = HashSet(unavailableBefore)
         val startedAt = clock()
         // A check's pass is a change check whatever is pending; a pass over every folder takes the pending reason.
-        val trigger =
-            if (onlyFolderIds != null) {
-                ScanTrigger.ChangeCheck
-            } else {
-                synchronized(scanLock) { pendingTrigger.also { pendingTrigger = null } } ?: ScanTrigger.Manual
-            }
+        val (pending, includedFolderAdd) = if (onlyFolderIds != null) null to false else synchronized(scanLock) { pendingReasons.take() }
+        val trigger = if (onlyFolderIds != null) ScanTrigger.ChangeCheck else pending ?: ScanTrigger.Manual
         val reporter = ScanReporter()
         val stats = HashMap<Long, ScanStats>()
         mutableScanReport.value = reporter.running()
@@ -556,6 +553,7 @@ class StartupWork(
                 is FolderOutcome.Scanned -> stats[event.folderId] = outcome.stats
                 is FolderOutcome.Deleted, null -> Unit
             }
+            if (event is ScanEvent.AddedListed) stats[event.folderId]?.let { stats[event.folderId] = it.withListed(event) }
         }
         val scanned =
             if (onlyFolderIds == null) {
@@ -571,6 +569,9 @@ class StartupWork(
         mutableScanState.update { it.copy(hasFailed = !scanned, unavailableFolderIds = unavailable.toSet()) }
         mutableScanReport.value = reporter.finished(scanned)
         tellTasks("scan ended") { onScanEnded(ScanEnded(trigger, scanned, unavailable.isNotEmpty(), (clock() - startedAt).coerceAtLeast(0))) }
+        if (!scanned && includedFolderAdd) synchronized(scanLock) { pendingReasons.keepFolderAdd() }
+        // A folder added in Settings is scanned with the whole library, not by a change check: same notice (see newGamesOnly).
+        if (scanned && onlyFolderIds == null && includedFolderAdd) tellTasks("changes found") { onChangesFound(stats.values.newGamesOnly()) }
         return if (scanned) stats else null
     }
 

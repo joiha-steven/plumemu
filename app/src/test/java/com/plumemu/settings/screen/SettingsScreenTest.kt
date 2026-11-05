@@ -9,10 +9,12 @@ import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.core.app.ApplicationProvider
 import com.plumemu.MainScreen
@@ -88,6 +90,10 @@ class SettingsScreenTest {
     private fun down(times: Int = 1) = repeat(times) { send(Action.Move(Direction.Down)) }
 
     // What the top bar says, without the configuration's identity hash: the main screen is composed anew after Settings.
+    /** The parts the top bar names: the title, and the section only where the sections column is not on screen (two columns). */
+    private fun settingsCrumbParts(section: Int): List<Int> =
+        if (compose.onAllNodesWithTag(SettingsTags.SECTIONS_DIVIDER, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()) listOf(R.string.settings_title) else listOf(R.string.settings_title, section)
+
     private fun topBar(): String = compose.onNodeWithTag(HomeTags.TOP_BAR).fetchSemanticsNode().config.toString().substringAfter('{')
 
     private fun hintKey(
@@ -107,8 +113,10 @@ class SettingsScreenTest {
         compose.onNodeWithTag(HomeTags.TOP_BAR).assertDoesNotExist()
 
         send(Action.Move(Direction.Down), Action.Enter) // Appearance › options
-        compose.onNodeWithText(context.getString(R.string.settings_crumb, context.getString(R.string.settings_title), context.getString(R.string.settings_section_appearance)))
-            .assertIsDisplayed()
+        // The top bar draws the place name and the section as two texts; in three columns the section is in its column and the bar says "Settings" only.
+        for (part in settingsCrumbParts(R.string.settings_section_appearance)) {
+            compose.onNode(hasText(context.getString(part)) and hasAnyAncestor(hasTestTag(SettingsTags.TOP_BAR)), useUnmergedTree = true).assertIsDisplayed()
+        }
         send(Action.Back, Action.Back)
         compose.onNodeWithTag(SettingsTags.SCREEN).assertDoesNotExist()
         send(Action.Move(Direction.Right))
@@ -195,9 +203,9 @@ class SettingsScreenTest {
         down()
         send(Action.Enter)
         down(SettingsSection.Appearance.options.indexOf(SettingsOption.Font))
-        send(Action.Move(Direction.Right)) // Font › Serif
-        assertEquals(FontSetting.Serif, settings.value.appearance.font)
-        compose.onNode(androidx.compose.ui.test.hasText(context.getString(R.string.settings_font_serif)) and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag(SettingsTags.value(SettingsOption.Font))), useUnmergedTree = true).assertIsDisplayed()
+        send(Action.Move(Direction.Right)) // Font › Sans
+        assertEquals(FontSetting.Sans, settings.value.appearance.font)
+        compose.onNode(androidx.compose.ui.test.hasText(context.getString(R.string.settings_font_sans)) and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag(SettingsTags.value(SettingsOption.Font))), useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
@@ -218,9 +226,10 @@ class SettingsScreenTest {
     fun touchFocusesARowThenActsAndValuesAndSwitchesActOnTheFirstTap() {
         showMainScreen()
         send(Action.Menu)
-        compose.onNodeWithTag(SettingsTags.section(SettingsSection.Advanced)).performClick()
+        // The sections column scrolls at the default size: bring the row on screen first.
+        compose.onNodeWithTag(SettingsTags.section(SettingsSection.Advanced)).performScrollTo().performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(SettingsTags.section(SettingsSection.Advanced)).performClick()
+        compose.onNodeWithTag(SettingsTags.section(SettingsSection.Advanced)).performScrollTo().performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(SettingsTags.option(SettingsOption.Animations)).performClick()
         compose.waitForIdle()
@@ -247,13 +256,15 @@ class SettingsScreenTest {
         compose.onNodeWithTag(SettingsTags.option(SettingsOption.Animations)).assertIsDisplayed()
         compose.onNodeWithTag(SettingsTags.HINT_BACK).performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(SettingsTags.section(SettingsSection.Appearance)).performClick()
+        compose.onNodeWithTag(SettingsTags.section(SettingsSection.Appearance)).performScrollTo().performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(SettingsTags.section(SettingsSection.Appearance)).performClick()
+        compose.onNodeWithTag(SettingsTags.section(SettingsSection.Appearance)).performScrollTo().performClick()
         compose.waitForIdle()
+        // At the default size Font is below Appearance's window until the cursor is near it: put the cursor on the row after it, so Font is shown and not focused.
+        down(SettingsSection.Appearance.options.indexOf(SettingsOption.TextSize))
         compose.onNodeWithTag(SettingsTags.value(SettingsOption.Font)).performClick()
         compose.waitForIdle()
-        assertEquals("a tap on the chevrons goes to the next value", "Serif", settings.value.appearance.font.name)
+        assertEquals("a tap on the chevrons goes to the next value", "Sans", settings.value.appearance.font.name)
 
         compose.onNodeWithTag(SettingsTags.option(SettingsOption.Background)).performClick()
         compose.waitForIdle()

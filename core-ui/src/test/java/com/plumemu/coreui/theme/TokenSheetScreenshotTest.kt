@@ -113,13 +113,13 @@ private fun TokenSwatch(
 @Composable
 private fun Palette() {
     val d = PlumTheme.dimens
-    Column(verticalArrangement = Arrangement.spacedBy(d.swatchGapWide)) {
+    Column(verticalArrangement = Arrangement.spacedBy(SwatchDimens.swatchGapWide)) {
         CustomPalette.backgroundSwatches.chunked(CustomPalette.hueCount).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(d.swatchGapWide)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(SwatchDimens.swatchGapWide)) {
                 row.forEach { rgb ->
                     Box(
                         Modifier
-                            .size(d.swatchWide)
+                            .size(SwatchDimens.swatchWide)
                             .background(rgb.toComposeColor(), RoundedCornerShape(6.dp))
                             .border(1.dp, PlumTheme.colors.chip, RoundedCornerShape(6.dp)),
                     )
@@ -196,7 +196,7 @@ private fun TypeTable(
 ) {
     val c = PlumTheme.colors
     val textMode = PlumTheme.type.textMode
-    val typeByFont = PlumFont.entries.map { PlumTypography(it, TextSize.Medium, textMode) }
+    val typeByFont = PlumFont.entries.map { PlumTypography(it, TextSize.Small, textMode) }
     Sheet(title) {
         Column {
             TypeRow(label = "") { i ->

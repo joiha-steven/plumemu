@@ -16,6 +16,7 @@ import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreui.components.SystemRowTags
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.LeftColumnDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
@@ -67,13 +68,14 @@ abstract class HomeSystemsAlignBase {
             fun near(a: Float, b: Float) = kotlin.math.abs(a - b) <= TOLERANCE
             expect("header = hint key cap", near(header, hint), "header $header, hint $hint")
             expect("at least 5 labels visible", lefts.size >= 5, "${lefts.size}")
-            expect("every label = header", lefts.all { near(it, header) }, "header $header, labels ${lefts.distinct()}")
-            expect("focused label = header", near(labelLeft, header), "focused $labelLeft, header $header")
-            val inset = (PlumDimens.stripMarginSide - PlumDimens.gameRowPadding).value
+            val labelStart = LeftColumnDimens.systemLabelStart.value
+            expect("every label = the systems label start (the slab starts in the margin, the label at the header plus 8)", lefts.all { near(it, labelStart) }, "header $header, labels ${lefts.distinct()}")
+            expect("focused label = the other labels", near(labelLeft, labelStart), "focused $labelLeft, expected $labelStart")
+            val inset = LeftColumnDimens.systemPillStart.value
             val labelBox = unclipped(inside(SystemRowTags.LABEL))
-            expect("pill inset from the screen edge", near(pill.left.value, inset), "pill left ${pill.left.value}, inset $inset")
+            expect("pill starts at the systems pill start (16 from the screen edge)", near(pill.left.value, inset), "pill left ${pill.left.value}, inset $inset")
             expect("pill spans the row box", near(pill.top.value, rowBox.top.value) && near(pill.bottom.value, rowBox.bottom.value) && near(pill.right.value, rowBox.right.value), "pill $pill, row $rowBox")
-            expect("label is a game row's padding from the pill's left", near(labelLeft - pill.left.value, PlumDimens.gameRowPadding.value), "${labelLeft - pill.left.value}")
+            expect("label is the label inset from the pill left", near(labelLeft - pill.left.value, LeftColumnDimens.systemLabelInset.value), "${labelLeft - pill.left.value}")
             expect("label centred on the pill (baseline as unfocused)", near((labelBox.top.value + labelBox.bottom.value) / 2, (pill.top.value + pill.bottom.value) / 2), "label ${labelBox.top.value}..${labelBox.bottom.value}, pill ${pill.top.value}..${pill.bottom.value}")
         }
         assertTrue(problems.size.toString() + " problems:\n" + problems.joinToString("\n"), problems.isEmpty())
@@ -89,14 +91,14 @@ abstract class HomeSystemsAlignBase {
         val problems = mutableListOf<String>()
         lateinit var state: StripState
         var columnWidth = 0f
-        var size by mutableStateOf(TextSize.Medium)
+        var size by mutableStateOf(TextSize.Small)
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 columnWidth = (PlumDimens.stripMarginSide + PlumTheme.layout.systemsColumnWidth).value
                 HomeAt(FakeHomeContent.board(), listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX)), isMotionOn = true, onState = { state = it })
             }
         }
-        for (textSize in listOf(TextSize.Medium, TextSize.Largest)) {
+        for (textSize in listOf(TextSize.Small, TextSize.Largest)) {
             size = textSize
             val row = hasTestTag(HomeTags.system(FakeHomeContent.BOARD_SNES_INDEX))
             var sawMoving = 0
@@ -107,13 +109,13 @@ abstract class HomeSystemsAlignBase {
                 if (kotlin.math.abs((bounds.right - bounds.left).value - columnWidth) > TOLERANCE) problems += "$at: row is ${(bounds.right - bounds.left).value} wide, not $columnWidth"
                 if (bounds.left.value > TOLERANCE) problems += "$at: row starts at ${bounds.left.value}, right of the screen edge"
                 if (bounds.left.value < -TOLERANCE) sawMoving++
-                if (kotlin.math.abs((name.left - bounds.left).value - PlumDimens.stripMarginSide.value) > TOLERANCE) problems += "$at: label is ${(name.left - bounds.left).value} from the row's left edge"
+                if (kotlin.math.abs((name.left - bounds.left).value - LeftColumnDimens.systemLabelStart.value) > TOLERANCE) problems += "$at: label is ${(name.left - bounds.left).value} from the row's left edge"
                 val pills = compose.onAllNodesWithTag(SystemRowTags.PILL, useUnmergedTree = true).fetchSemanticsNodes()
                 if (expectPill && pills.isEmpty()) problems += "$at: no selector on the focused row"
                 if (pills.isNotEmpty()) {
                     sawPill++
                     val pill = unclipped(inside(SystemRowTags.PILL))
-                    val inset = (PlumDimens.stripMarginSide - PlumDimens.gameRowPadding).value
+                    val inset = LeftColumnDimens.systemPillStart.value
                     if (kotlin.math.abs(pill.left.value - bounds.left.value - inset) > TOLERANCE) problems += "$at: selector left ${pill.left.value}, row left ${bounds.left.value}, inset $inset"
                     if (pill.right.value > bounds.right.value + TOLERANCE) problems += "$at: selector right ${pill.right.value} past the column's right edge ${bounds.right.value}"
                 }

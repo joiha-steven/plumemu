@@ -41,7 +41,7 @@ class GamePanelChromeTest {
     @get:Rule
     val rules = rulesAround(compose)
 
-    private var size by mutableStateOf(TextSize.Medium)
+    private var size by mutableStateOf(TextSize.Small)
 
     private fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot()
 
@@ -57,7 +57,7 @@ class GamePanelChromeTest {
         val panel = bounds(GamePanelTags.PANEL)
         val caps = compose.onAllNodesWithTag(HINT_KEY_CAP_TAG, useUnmergedTree = true)
         val hintTop = (0 until caps.fetchSemanticsNodes().size).minOf { caps[it].getUnclippedBoundsInRoot().top.value }
-        val shadowBottom = panel.bottom.value + PlumDimens.panelOutsetBottom.value + PlumDimens.panelShadowBottom.value
+        val shadowBottom = panel.bottom.value + PlumDimens.panelShadowBottom.value
         assertTrue("shadow ends at $shadowBottom, hint keys start at $hintTop: need 8 dp clear", hintTop - shadowBottom >= 8f)
     }
 
@@ -69,19 +69,11 @@ class GamePanelChromeTest {
     @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
     fun theShadowIsClearOfTheHintKeysAt576() = assertShadowClearOfHints()
 
-    private fun assertDotFollowsTitle(what: String, oneLine: Boolean) {
+    private fun assertTitleHasNoDot(what: String) {
         val panel = bounds(GamePanelTags.PANEL)
         val text = bounds(GamePanelTags.TITLE)
-        val dot = bounds(PANEL_TITLE_DOT_TAG)
-        assertEquals("$what: title starts 14 in", panel.left.value + 14f, text.left.value, 0.5f)
-        if (oneLine) {
-            assertEquals("$what: dot after the title's visible end", text.right.value + PlumDimens.panelTitleDotGap.value, dot.left.value, 0.5f)
-        } else {
-            // A cut title's last line may end before the box's right edge; the exact place is PanelTitleDotTest's.
-            assertTrue("$what: dot on the last line", dot.left.value - PlumDimens.panelTitleDotGap.value <= text.right.value + 0.5f && dot.top.value >= (text.top.value + text.bottom.value) / 2f - 0.5f)
-        }
-        assertTrue("$what: dot inside the text column", dot.right.value <= panel.right.value - 14f + 0.5f)
-        assertTrue("$what: dot beside the title's lines", dot.top.value >= text.top.value - 0.5f && dot.bottom.value <= text.bottom.value + 0.5f)
+        assertEquals("$what: title starts panelTitleStart in from the rows' start", panel.left.value + PlumDimens.panelTitleStart.value, text.left.value, 0.5f)
+        assertTrue("$what: no accent dot after the title (it carried no state)", compose.onAllNodesWithTag(PANEL_TITLE_DOT_TAG, useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
     }
 
     private fun allSizes(title: String, oneLine: Boolean) {
@@ -89,7 +81,7 @@ class GamePanelChromeTest {
         for (each in TextSize.entries) {
             size = each
             compose.waitForIdle()
-            assertDotFollowsTitle("$title at $each", oneLine)
+            assertTitleHasNoDot("$title at $each")
         }
     }
 
@@ -97,17 +89,17 @@ class GamePanelChromeTest {
 
     @Test
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
-    fun theDotFollowsAShortTitleAtEveryTextSizeAt768() = allSizes("Super Metroid", oneLine = true)
+    fun theTitleHasNoDotAndFitsAShortTitleAtEveryTextSizeAt768() = allSizes("Super Metroid", oneLine = true)
 
     @Test
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
-    fun theDotFollowsALongCutTitleAtEveryTextSizeAt768() = allSizes(long, oneLine = false)
+    fun theTitleHasNoDotAndFitsALongCutTitleAtEveryTextSizeAt768() = allSizes(long, oneLine = false)
 
     @Test
     @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
-    fun theDotFollowsAShortTitleAtEveryTextSizeAt576() = allSizes("Super Metroid", oneLine = true)
+    fun theTitleHasNoDotAndFitsAShortTitleAtEveryTextSizeAt576() = allSizes("Super Metroid", oneLine = true)
 
     @Test
     @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
-    fun theDotFollowsALongCutTitleAtEveryTextSizeAt576() = allSizes(long, oneLine = false)
+    fun theTitleHasNoDotAndFitsALongCutTitleAtEveryTextSizeAt576() = allSizes(long, oneLine = false)
 }

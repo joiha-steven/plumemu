@@ -14,8 +14,6 @@ data class FolderChanges(
     /** Folders asked, and single-row queries made: what the check cost. */
     val foldersChecked: Int,
     val directoriesAsked: Int,
-    /** Changed folders that had no directory records (a first scan): their games are not news. */
-    val neverScannedFolderIds: Set<Long> = emptySet(),
 ) {
     val hasChanges: Boolean get() = changedFolderIds.isNotEmpty()
 

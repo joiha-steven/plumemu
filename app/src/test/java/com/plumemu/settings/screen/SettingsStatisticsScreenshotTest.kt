@@ -32,6 +32,11 @@ class SettingsStatisticsScreenshotTest {
             SettingsAt(SettingsFocus(column = SettingsColumn.Sections, section = SettingsSection.Statistics), content = StatisticsShots.contentOf(StatisticsShots.played))
         }
 
+    /** The sections column focused and nothing played: the invitation over the box art tile. */
+    @Composable
+    private fun PreviewNothingPlayed() =
+        SettingsAt(SettingsFocus(column = SettingsColumn.Sections, section = SettingsSection.Statistics), content = StatisticsShots.contentOf(StatisticsShots.nothingPlayed))
+
     @Test
     fun played() = ReferenceShots.capture("settings_statistics") { Played() }
 
@@ -49,4 +54,14 @@ class SettingsStatisticsScreenshotTest {
 
     @Test
     fun previewLargest() = ReferenceShots.capture("settings_statistics_preview", textSize = TextSize.Largest) { Preview() }
+
+    @Test
+    fun previewNothingPlayed() = ReferenceShots.capture("settings_statistics_preview_empty") { PreviewNothingPlayed() }
+
+    @Test
+    fun previewNothingPlayedLargest() = ReferenceShots.capture("settings_statistics_preview_empty", textSize = TextSize.Largest) { PreviewNothingPlayed() }
+
+    /** The Pocket 6's 1920x1080, where the audit saw the barren page. */
+    @Test
+    fun previewNothingPlayedPocket6() = ReferenceShots.capture("settings_statistics_preview_empty", sizes = listOf(ReferenceShots.Size.Pocket6)) { PreviewNothingPlayed() }
 }

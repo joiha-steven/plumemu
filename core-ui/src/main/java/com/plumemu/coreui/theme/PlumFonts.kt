@@ -6,9 +6,9 @@ import androidx.compose.ui.text.font.FontWeight
 import com.plumemu.coreui.R
 
 /**
- * The three Plum typefaces, built from `plum-fonts/dist` (Sans 0.0.4, Serif 0.0.3, Mono
- * 0.0.3). Sans and Serif ship 400, 500, 600, 700 and 800; Mono 400, 500, 700 and 800. Plum Sans is the
- * default; per-font tuning is [PlumFont].
+ * The typefaces: Jost (static faces built from the OFL variable font, `tools/fonts/build_jost.py`) and the three Plum ones,
+ * built from `plum-fonts/dist` (Sans 0.0.4, Serif 0.0.3, Mono 0.0.3). Jost, Sans and Serif ship 400, 500, 600, 700
+ * and 800; Mono 400, 500, 700 and 800. Jost is the default; per-font tuning is [PlumFont].
  *
  * Every weight a text role can ask for ([TextWeight] moves the design's 400 to 600 up to 800) has a face of
  * its own, so Compose never falls back by itself (the CSS matching it follows would draw a missing weight with
@@ -17,6 +17,15 @@ import com.plumemu.coreui.R
  * asks 600 where it used to ask 700. `PlumFontsTest` pins this table.
  */
 object PlumFonts {
+    val Jost: FontFamily =
+        FontFamily(
+            Font(R.font.jost_400, FontWeight.Normal),
+            Font(R.font.jost_500, FontWeight.Medium),
+            Font(R.font.jost_600, FontWeight.SemiBold),
+            Font(R.font.jost_700, FontWeight.Bold),
+            Font(R.font.jost_800, FontWeight.ExtraBold),
+        )
+
     val Sans: FontFamily =
         FontFamily(
             Font(R.font.plum_sans_400, FontWeight.Normal),
@@ -46,6 +55,7 @@ object PlumFonts {
 
     fun familyOf(font: PlumFont): FontFamily =
         when (font) {
+            PlumFont.Jost -> Jost
             PlumFont.Sans -> Sans
             PlumFont.Serif -> Serif
             PlumFont.Mono -> Mono

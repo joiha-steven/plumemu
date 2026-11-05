@@ -1,7 +1,10 @@
 # file kind key=value ... / entry name|size|crc32|file-or-dir (written by make_fixtures.py)
-ps1-cd.cdlz.bin chd-cdlz hunk=19584 crc=82a865fa first=16 lzma=2085
-ps1-cd-64k.cdlz.bin chd-cdlz hunk=66096 crc=4313ab48 first=0 lzma=3295
-ps1-dvd.lzma.bin chd-lzma hunk=16384 crc=b46f91f8 first=16 lzma=2017
+ps1-cd.cdlz.bin chd-cdlz hunk=19584 crc=9b4cfd00 crc16=18443 first=16 lzma=3888
+ps1-cd-64k.cdlz.bin chd-cdlz hunk=66096 crc=c74b887a crc16=34368 first=0 lzma=6162
+ps1-dvd.lzma.bin chd-lzma hunk=16384 crc=b46f91f8 crc16=24137 first=16 lzma=2017
+ps1-cd.cdzs.bin chd-cdzs hunk=19584 crc=9b4cfd00 crc16=18443 first=16 zstd=3928
+ps1-cd-64k.cdzs.bin chd-cdzs hunk=66096 crc=c74b887a crc16=34368 first=0 zstd=6238
+ps1-dvd.zstd.bin chd-zstd hunk=16384 crc=b46f91f8 crc16=24137 first=16 zstd=2024
 plain.7z 7z header=plain pack=0
 entry Test Game \u00e9 (ZZZE).gba|40000|6e731ae9|file
 lzma-header.7z 7z header=lzma pack=6402

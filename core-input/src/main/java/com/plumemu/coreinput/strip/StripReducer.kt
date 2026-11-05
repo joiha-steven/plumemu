@@ -18,6 +18,12 @@ sealed interface StripIntent {
         val index: Int,
     ) : StripIntent
 
+    /** Open the sort choices for the games list of [systemId] (R3); [index] is the focused game, whose list it is. */
+    data class OpenSortMenu(
+        val systemId: String,
+        val index: Int,
+    ) : StripIntent
+
     data object OpenSettings : StripIntent
 
     /** Switch list and grid for [systemId] (remembered per system by the settings). */
@@ -111,6 +117,12 @@ internal object StripReducer {
                     Reduction(current, listOf(StripIntent.ToggleFavorite(entry.id, current.row)))
                 }
             Action.Search -> Reduction(current, listOf(StripIntent.OpenSearch))
+            Action.Sort ->
+                if (current.column == Column.Systems || entry.itemCount == 0) {
+                    Reduction(current)
+                } else {
+                    Reduction(current, listOf(StripIntent.OpenSortMenu(entry.id, current.row)))
+                }
             is Action.TapItem -> ctx.tap(current, entry, action)
             is Action.LongPressItem -> ctx.longPress(current, action)
             // Only a screen that takes text gets these (InputRouter.textEntry); the strip never does.
@@ -183,7 +195,7 @@ internal object StripReducer {
                         Direction.Right -> if (entry.itemCount > 0) focus.copy(column = Column.Games) else focus
                         Direction.Left -> focus
                     }
-                Column.Games -> if (entry.gridColumns > 1) moveInGrid(focus, entry, move.direction) else moveInList(focus, entry, move)
+                Column.Games -> if (entry.packed != null) moveInPacked(focus, entry, entry.packed, move.direction) else if (entry.gridColumns > 1) moveInGrid(focus, entry, move.direction) else moveInList(focus, entry, move)
                 Column.Details ->
                     when (move.direction) {
                         Direction.Up, Direction.Down -> withRow(focus, entry, step(focus.row, entry.itemCount, move.direction == Direction.Down, move.isRepeat))
@@ -197,7 +209,7 @@ internal object StripReducer {
             entry: SystemEntry,
             move: Action.Move,
         ): Boolean =
-            move.direction == Direction.Right && entry.gridColumns <= 1 && entry.itemCount > 0 &&
+            move.direction == Direction.Right && entry.gridColumns <= 1 && entry.packed == null && entry.itemCount > 0 &&
                 // With a details stop (narrow, box art) the list's Right goes to the stop and the rule applies there.
                 if (hasDetailsStop && entry.hasDetails) focus.column == Column.Details else focus.column == Column.Games
 
@@ -233,6 +245,29 @@ internal object StripReducer {
                 Direction.Right ->
                     when {
                         row % columns != columns - 1 && row < last -> withRow(focus, entry, row + 1)
+                        hasDetailsStop && entry.hasDetails -> focus.copy(column = Column.Details)
+                        else -> focus
+                    }
+            }
+        }
+
+        /** A packed grid: Up and Down land on the box of the next row whose centre is nearest; Left and Right as in [moveInGrid] by the rows' own ends. */
+        private fun moveInPacked(
+            focus: StripFocus,
+            entry: SystemEntry,
+            rows: PackedRows,
+            direction: Direction,
+        ): StripFocus {
+            val row = focus.row
+            val last = entry.itemCount - 1
+            val line = rows.rowOf(row)
+            return when (direction) {
+                Direction.Up -> if (line > 0) withRow(focus, entry, rows.nearestIn(line - 1, rows.centres[row])) else focus
+                Direction.Down -> if (line < rows.rowCount - 1) withRow(focus, entry, rows.nearestIn(line + 1, rows.centres[row])) else focus
+                Direction.Left -> if (rows.isRowStart(row)) focus.copy(column = Column.Systems) else withRow(focus, entry, row - 1)
+                Direction.Right ->
+                    when {
+                        !rows.isRowEnd(row) && row < last -> withRow(focus, entry, row + 1)
                         hasDetailsStop && entry.hasDetails -> focus.copy(column = Column.Details)
                         else -> focus
                     }

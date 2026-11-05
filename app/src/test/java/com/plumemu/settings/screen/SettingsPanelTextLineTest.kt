@@ -1,5 +1,7 @@
 package com.plumemu.settings.screen
 
+import com.plumemu.coredata.settings.ColorSetting
+import com.plumemu.coredata.settings.PlumSettings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -34,8 +36,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * One left edge for side-panel content, as in the game panel: a panel's title
- * and text start on the row-text line, [PlumDimens.gameRowPadding] in from the panel's edge, and its
+ * One left edge for side-panel content: a panel's title and text start on the row-text line,
+ * [PlumDimens.gameRowPadding] in from the panel's edge, in the right column of three columns on the edge itself (the board), and its
  * buttons start on the edge itself. Measured on an explanation (Push right twice to play), a colour
  * panel (Background), About and the update panel with its Update button.
  */
@@ -68,9 +70,18 @@ class SettingsPanelTextLineTest {
         compose.onNode(hasText(text) and hasAnyAncestor(hasTestTag(SettingsTags.PANEL)), useUnmergedTree = true).getUnclippedBoundsInRoot().left.value
 
     @Test
-    fun titlesAndTextStartOnTheRowTextLine() {
+    fun titlesAndTextStartOnTheColumnsLeftEdgeInThreeColumns() = textStartsAt(0f)
+
+    /** Two columns (768 dp at the largest text) keep the row-text line. */
+    @Test
+    fun titlesAndTextStartOnTheRowTextLineInTwoColumns() = textStartsAt(PlumDimens.gameRowPadding.value, com.plumemu.coreui.theme.TextSize.Largest)
+
+    private fun textStartsAt(
+        expected: Float,
+        size: com.plumemu.coreui.theme.TextSize = com.plumemu.coreui.theme.TextSize.Small,
+    ) {
         var focus by mutableStateOf(optionsAt(SettingsOption.PushRightToPlay))
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { SettingsAt(focus, content = withUpdate) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { SettingsAt(focus, settingsForShot().let { it.copy(appearance = it.appearance.copy(accent = ColorSetting.Preset("Red"))) }, withUpdate) } }
         val problems = mutableListOf<String>()
         val cases =
             listOf(
@@ -89,19 +100,19 @@ class SettingsPanelTextLineTest {
             val edge = bounds(SettingsTags.PANEL).left.value
             for (text in texts) {
                 val inset = textLeft(text) - edge
-                if (kotlin.math.abs(inset - PlumDimens.gameRowPadding.value) > TOLERANCE) problems += "\"$text\" starts $inset in, not ${PlumDimens.gameRowPadding}"
+                if (kotlin.math.abs(inset - expected) > TOLERANCE) problems += "\"$text\" starts $inset in, not $expected"
             }
         }
         assertTrue(problems.joinToString("\n"), problems.isEmpty())
     }
 
     @Test
-    fun theUpdateNotesHeadingStartsOnTheRowTextLine() {
+    fun theUpdateNotesHeadingStartsOnTheColumnsLeftEdgeInThreeColumns() {
         val grouped = SettingsContent(update = UpdateView(lastCheck = LastCheck(1, CheckOutcome.Found), found = release.copy(sections = listOf(NoteSection(SectionKind.New, listOf("One."))))))
         val inPanel = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1), page = PanelPage.Update)
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { SettingsAt(inPanel, content = grouped) } }
         val inset = bounds(SettingsTags.UPDATE_HEADING).left.value - bounds(SettingsTags.PANEL).left.value
-        assertTrue("heading starts $inset in, not ${PlumDimens.gameRowPadding}", kotlin.math.abs(inset - PlumDimens.gameRowPadding.value) <= TOLERANCE)
+        assertTrue("heading starts $inset in, not on the column's left edge", kotlin.math.abs(inset) <= TOLERANCE)
     }
 
     @Test

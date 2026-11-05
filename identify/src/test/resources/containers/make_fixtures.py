@@ -17,6 +17,9 @@ CHD hunks (the Kotlin test builds the CHD around them with PackedImages.chd):
   ps1-cd-64k.cdlz.bin  the same in a hunk of 27 frames (sectors 0-26), so its length takes 3
                     bytes.
   ps1-dvd.lzma.bin  an `lzma` hunk of 8 cooked 2048-byte sectors (16-23): one raw LZMA stream.
+  ps1-cd.cdzs.bin, ps1-cd-64k.cdzs.bin, ps1-dvd.zstd.bin  the same three hunks as `cdzs` (zstd
+                    for the sectors and the subcode) and `zstd`; the frames come from the `zstd`
+                    command line (needs it on the PATH), level 19, no checksum.
 
 7z archives (7-Zip DOC/7zFormat.txt), built byte by byte: file data packed with LZMA2 (never
 decoded by the reader), the header plain or packed as named.
@@ -24,7 +27,7 @@ decoded by the reader), the header plain or packed as named.
 Manifest: `file kind key=value ...`, then for a 7z one line per entry,
 `entry <name>|<size>|<crc32>|<file or dir>` (names may hold spaces; a letter outside ASCII is
 written as \\uXXXX, the english-only guard reads this file).
-  chd-cdlz / chd-lzma: hunk=<bytes> crc=<crc32 of the whole decoded hunk> first=<first sector>
+  chd-cdlz / chd-lzma: hunk=<bytes> crc=<crc32 of the whole decoded hunk> crc16=<its CRC-16, as the CHD map keeps it> first=<first sector>
     lzma=<bytes of the LZMA part>
   7z: header=<plain|lzma|lzma2|bcj|aes> pack=<file offset of the packed header, 0 if plain>
     note=<text a note must contain, if the header is not read>
@@ -34,6 +37,8 @@ import lzma
 import os
 import random
 import struct
+import binascii
+import subprocess
 import sys
 import zlib
 
@@ -90,12 +95,45 @@ def bcd(value):
     return (value // 10) << 4 | value % 10
 
 
+GF_FORWARD = [((i << 1) ^ (0x11D if i & 0x80 else 0)) & 0xFF for i in range(256)]
+GF_BACKWARD = [0] * 256
+for _i in range(256):
+    GF_BACKWARD[_i ^ GF_FORWARD[_i]] = _i
+
+
+def add_parity(sector):
+    """P and Q parity of a Mode 1 raw sector (ECMA-130 clause 15), as chdman rebuilds it; zero EDC."""
+    def parity(major_count, minor_count, major_mult, minor_inc, dest):
+        size = major_count * minor_count
+        for major in range(major_count):
+            index = (major >> 1) * major_mult + (major & 1)
+            a = b = 0
+            for _ in range(minor_count):
+                value = sector[12 + index]
+                index += minor_inc
+                if index >= size:
+                    index -= size
+                a ^= value
+                b = GF_FORWARD[b ^ value]
+            a = GF_BACKWARD[GF_FORWARD[a] ^ b]
+            sector[dest + major] = a
+            sector[dest + major + major_count] = a ^ b
+    parity(86, 24, 2, 86, 0x81C)
+    parity(52, 43, 86, 88, 0x8C8)
+
+
+def crc16(data):
+    """CRC-16/CCITT-FALSE, the checksum a CHD map keeps for each hunk."""
+    return binascii.crc_hqx(data, 0xFFFF)
+
+
 def raw_frame(lba, data):
-    """A Mode 1 raw sector (sync, BCD address, mode, data, zero EDC/ECC) and 96 subcode zeros."""
+    """A Mode 1 raw sector (sync, BCD address, mode, data, zero EDC, valid parity) and 96 subcode zeros."""
     address = lba + 150
     header = bytes((bcd(address // 4500), bcd(address // 75 % 60), bcd(address % 75), 1))
-    sector = b"\x00" + b"\xff" * 10 + b"\x00" + header + data
-    return sector.ljust(RAW_SECTOR, b"\x00") + bytes(FRAME - RAW_SECTOR)
+    sector = bytearray((b"\x00" + b"\xff" * 10 + b"\x00" + header + data).ljust(RAW_SECTOR, b"\x00"))
+    add_parity(sector)
+    return bytes(sector) + bytes(FRAME - RAW_SECTOR)
 
 
 def raw_lzma(data):
@@ -112,7 +150,14 @@ def raw_deflate(data):
     return packer.compress(data) + packer.flush()
 
 
-def cdlz_hunk(sectors, first):
+def zstd_pack(data):
+    """One zstd frame from the `zstd` command line (no checksum, as chdman writes it)."""
+    return subprocess.run(["zstd", "-q", "-c", "-19", "--no-check"], input=data,
+                          stdout=subprocess.PIPE, check=True).stdout
+
+
+def cdlz_hunk(sectors, first, pack_base=raw_lzma, pack_subcode=raw_deflate):
+    """A CD hunk: `cdlz` by default; `cdzs` with zstd for both parts (cdzl: deflate for both)."""
     count = len(sectors)
     frames = b"".join(raw_frame(first + i, s) for i, s in enumerate(sectors))
     base = bytearray()
@@ -125,10 +170,10 @@ def cdlz_hunk(sectors, first):
             frame[0:12] = bytes(12)
         base += frame[:RAW_SECTOR]
         subcode += frame[RAW_SECTOR:]
-    packed = raw_lzma(bytes(base))
+    packed = pack_base(bytes(base))
     # MAME: the length takes 3 bytes when the hunk is 64 KB or more.
     length = struct.pack(">I", len(packed))[1:] if len(frames) >= 65536 else struct.pack(">H", len(packed))
-    hunk = bytes(bitmap) + length + packed + raw_deflate(bytes(subcode))
+    hunk = bytes(bitmap) + length + packed + pack_subcode(bytes(subcode))
     return hunk, frames, len(packed)
 
 
@@ -307,21 +352,37 @@ def main():
     hunk, frames, lzma_len = cdlz_hunk(sectors, FIRST)
     with open(os.path.join(HERE, "ps1-cd.cdlz.bin"), "wb") as out:
         out.write(hunk)
-    lines.append("ps1-cd.cdlz.bin chd-cdlz hunk=%d crc=%s first=%d lzma=%d"
-                 % (len(frames), crc(frames), FIRST, lzma_len))
+    lines.append("ps1-cd.cdlz.bin chd-cdlz hunk=%d crc=%s crc16=%d first=%d lzma=%d"
+                 % (len(frames), crc(frames), crc16(frames), FIRST, lzma_len))
     # 27 frames (66,096 bytes): sectors 0-26 in hunk 0, a 3-byte length.
     big = [bytes(SECTOR)] * FIRST + sectors + [text(rng, SECTOR) for _ in range(3)]
     hunk, frames, lzma_len = cdlz_hunk(big, 0)
     with open(os.path.join(HERE, "ps1-cd-64k.cdlz.bin"), "wb") as out:
         out.write(hunk)
-    lines.append("ps1-cd-64k.cdlz.bin chd-cdlz hunk=%d crc=%s first=0 lzma=%d"
-                 % (len(frames), crc(frames), lzma_len))
+    lines.append("ps1-cd-64k.cdlz.bin chd-cdlz hunk=%d crc=%s crc16=%d first=0 lzma=%d"
+                 % (len(frames), crc(frames), crc16(frames), lzma_len))
     cooked = b"".join(sectors)
     packed = raw_lzma(cooked)
     with open(os.path.join(HERE, "ps1-dvd.lzma.bin"), "wb") as out:
         out.write(packed)
-    lines.append("ps1-dvd.lzma.bin chd-lzma hunk=%d crc=%s first=%d lzma=%d"
-                 % (len(cooked), crc(cooked), FIRST, len(packed)))
+    lines.append("ps1-dvd.lzma.bin chd-lzma hunk=%d crc=%s crc16=%d first=%d lzma=%d"
+                 % (len(cooked), crc(cooked), crc16(cooked), FIRST, len(packed)))
+
+    # The same three hunks in zstd. The 7z random bytes below are drawn after these, unchanged.
+    for name, kind, args in (
+        ("ps1-cd.cdzs.bin", "chd-cdzs", (sectors, FIRST)),
+        ("ps1-cd-64k.cdzs.bin", "chd-cdzs", (big, 0)),
+    ):
+        hunk, frames, packed_len = cdlz_hunk(*args, pack_base=zstd_pack, pack_subcode=zstd_pack)
+        with open(os.path.join(HERE, name), "wb") as out:
+            out.write(hunk)
+        lines.append("%s %s hunk=%d crc=%s crc16=%d first=%d zstd=%d"
+                     % (name, kind, len(frames), crc(frames), crc16(frames), args[1], packed_len))
+    packed = zstd_pack(cooked)
+    with open(os.path.join(HERE, "ps1-dvd.zstd.bin"), "wb") as out:
+        out.write(packed)
+    lines.append("ps1-dvd.zstd.bin chd-zstd hunk=%d crc=%s crc16=%d first=%d zstd=%d"
+                 % (len(cooked), crc(cooked), crc16(cooked), FIRST, len(packed)))
 
     archives = [
         ("plain.7z", "plain", [("Test Game \u00e9 (ZZZE).gba", made_up(rng, 40000, "GBA"))],
@@ -357,7 +418,7 @@ def main():
 
     with open(os.path.join(HERE, "manifest.txt"), "w", encoding="ascii") as out:
         out.write("\n".join(lines) + "\n")
-    print("%d fixtures" % (3 + len(archives)))
+    print("%d fixtures" % (6 + len(archives)))
 
 
 if __name__ == "__main__":

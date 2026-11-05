@@ -40,19 +40,21 @@ internal fun LanguagePanel(
     val context = LocalContext.current
     val system = stringResource(R.string.settings_language_system)
     val names = remember(context, system) { listOf(system) + AppLanguages.all.map { ownName(context, it) } }
-    Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
-        PanelTitle(stringResource(R.string.settings_language))
-        PanelBody(stringResource(R.string.settings_language_body))
-        PanelLazyList(focused, Modifier.weight(1f, fill = false)) {
-            itemsIndexed(names, key = { index, _ -> index }, contentType = { _, _ -> "language" }) { index, name ->
-                PanelItem(
-                    title = name,
-                    isFocused = index == focused,
-                    isQuiet = !inPanel && index == current,
-                    badge = if (index == current) stringResource(R.string.settings_badge_current) else null,
-                    modifier = Modifier.tapTarget { touch.onPanelItem(index) }.testTag(SettingsTags.panelItem(index)),
-                )
+    PanelListLayout(
+        Modifier.fillMaxHeight(),
+        header = listOf({ PanelTitle(stringResource(R.string.settings_language)) }, { PanelBody(stringResource(R.string.settings_language_body)) }),
+        list = {
+            PanelLazyList(focused, Modifier) {
+                itemsIndexed(names, key = { index, _ -> index }, contentType = { _, _ -> "language" }) { index, name ->
+                    PanelItem(
+                        title = name,
+                        isFocused = index == focused,
+                        isQuiet = !inPanel && index == current,
+                        badge = if (index == current) stringResource(R.string.settings_badge_current) else null,
+                        modifier = Modifier.tapTarget { touch.onPanelItem(index) }.testTag(SettingsTags.panelItem(index)),
+                    )
+                }
             }
-        }
-    }
+        },
+    )
 }

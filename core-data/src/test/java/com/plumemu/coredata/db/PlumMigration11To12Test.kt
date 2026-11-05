@@ -82,7 +82,7 @@ class PlumMigration11To12Test {
         helper.createDatabase(DB_NAME, 11).use(::fill)
         val room =
             Room.databaseBuilder(ApplicationProvider.getApplicationContext(), PlumDatabase::class.java, DB_NAME)
-                .addMigrations(*PlumMigrations.ALL)
+                .addMigrations(*PlumMigrations.all(TestDetailsRating))
                 .allowMainThreadQueries()
                 .build()
         assertEquals(listOf(2L, 1L), room.gameDao().observeRecent(20).first().map { it.id })

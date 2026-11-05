@@ -50,7 +50,8 @@ buttons after the confirm setting (below).
 | `TapItem(column, index)` | — | Tap a row, cover or column item | Focus it; tapped again: act (open, play) | Same |
 | `LongPressItem(column, index)` | — | Long press | On a game: focus it and open its menu; on the system column: Settings (works with the hint bar hidden) | — |
 | `Erase(isRepeat)` | B (after the confirm setting) while a screen's own keyboard is up (`TextEntry.Keyboard`); held, it repeats like a move | "B Delete" hint | Search: delete before the caret; a fresh one on an empty query closes Search | — |
-| `Paste` | R3 (the right stick pressed in) only while a screen's own keyboard is up (`TextEntry.Keyboard`); taken but no action otherwise | "R3 Paste" hint (shown while the clipboard holds text) | Search and every field: insert the clipboard's text at the caret | Same |
+| `Sort` | R3 (the right stick pressed in) outside a text field | "R3 Sort" hint on a games list | Opens the sort choices (Name, Last played, Most played, Recently added, Year, Rating); nothing on the system column, on an empty list or on any other screen | Same |
+| `Paste` | R3 (the right stick pressed in) only while a screen's own keyboard is up (`TextEntry.Keyboard`); outside a text field R3 is `Sort` | "R3 Paste" hint (shown while the clipboard holds text) | Search and every field: insert the clipboard's text at the caret | Same |
 | `Typed(key)` | A hardware keyboard while a screen takes text (`TextEntry.Field` or `Keyboard`): `TypedKey.Text`, `Backspace`, `ForwardDelete`, `CaretLeft` / `CaretRight` (arrows, alphabetic keyboards only), `Enter` | — | Search: edit the query; Enter goes to the results | — |
 
 X and Y never swap: only A and B follow the confirm setting. Volume, Home, Power and

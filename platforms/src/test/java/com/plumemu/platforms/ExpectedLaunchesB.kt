@@ -251,8 +251,8 @@ internal val EXPECTED_B: List<ExpectedSystem> = listOf(
             extras = emptyMap(),
         )
         omnidroid("genesis", 11)
-        retroArch("genesis_plus_gx_wide_libretro_android.so")
         retroArch("picodrive_libretro_android.so")
+        retroArch("genesis_plus_gx_wide_libretro_android.so")
         retroArch("blastem_libretro_android.so")
         retroArch("clownmdemu_libretro_android.so")
     },
@@ -334,9 +334,9 @@ internal val EXPECTED_B: List<ExpectedSystem> = listOf(
         )
         omnidroid("psx", 20)
         retroArch("mednafen_psx_libretro_android.so")
-        retroArch("mednafen_psx_hw_libretro_android.so")
-        retroArch("pcsx_rearmed_libretro_android.so")
         retroArch("swanstation_libretro_android.so")
+        retroArch("pcsx_rearmed_libretro_android.so")
+        retroArch("mednafen_psx_hw_libretro_android.so")
         retroArch("duckstation_libretro_android.so")
         retroArch("goosestation_libretro_android.so")
     },

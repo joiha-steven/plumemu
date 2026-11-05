@@ -46,8 +46,11 @@ import androidx.compose.ui.unit.dp
 import com.plumemu.R
 import com.plumemu.coreinput.Action
 import com.plumemu.coreui.components.FieldRow
+import com.plumemu.account.unplaced
 import com.plumemu.coreui.components.FieldRowFrame
-import com.plumemu.coreui.components.sunkenFieldInRow
+import com.plumemu.coreui.components.fieldLine
+import com.plumemu.coreui.components.fieldBoxHeight
+import com.plumemu.coreui.theme.FieldDimens
 import com.plumemu.coreui.components.OptionRow
 import com.plumemu.coreui.components.OptionRowLook
 import com.plumemu.coreui.theme.PlumDimens
@@ -91,8 +94,8 @@ internal fun ProblemReportBody(
         val labelWidth = with(LocalDensity.current) { labels.maxOf { measurer.measure(it, labelStyle, maxLines = 1).size.width }.toDp() }
         val layout = PlumTheme.layout
         // What must show under a field typed over Plumemu's tray: the next row.
-        val belowField = PlumDimens.listRowGap + layout.rowHeight
-        Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.listRowGap)) {
+        val belowField = FieldDimens.gap + fieldBoxHeight()
+        Column(verticalArrangement = Arrangement.spacedBy(FieldDimens.gap)) {
             Field(form, ReportItem.Text, textFocus, onTap, onAction, labelWidth, belowField)
             Field(form, ReportItem.Email, emailFocus, onTap, onAction, labelWidth, belowField)
             DetailsRow(form, onTap)
@@ -246,21 +249,15 @@ private fun OwnKeyboardField(
         }
     FieldRowFrame(
         look = if (focused) OptionRowLook.Focused else OptionRowLook.Normal,
+        label = stringResource(if (isEmail) R.string.report_email_label else R.string.report_text_label),
+        labelWidth = labelWidth,
         modifier =
             Modifier
                 .bringIntoViewWhen(focused, above = trayUp, below = if (trayUp) belowWhileTyping else 0.dp)
                 .pointerInput(index, onTap) { detectTapGestures { onTap(index) } }
                 .semantics { contentDescription = hint }
                 .testTag(if (isEmail) ReportTags.EMAIL else ReportTags.TEXT),
-        answersButton = !trayUp,
     ) { style ->
-        BasicText(
-            stringResource(if (isEmail) R.string.report_email_label else R.string.report_text_label),
-            style = PlumTheme.type.settingsOption.copy(color = PlumTheme.colors.muted),
-            maxLines = 1,
-            modifier = Modifier.width(labelWidth),
-        )
-        Spacer(Modifier.width(PlumDimens.rowTrailingGap))
         CaretLine(
             text = if (isEmail) form.email else form.text,
             caret = { keys.caret },
@@ -268,7 +265,7 @@ private fun OwnKeyboardField(
             placeholder = "",
             style = style,
             onTapAt = onTapAt,
-            modifier = Modifier.weight(1f).fillMaxHeight().sunkenFieldInRow(),
+            modifier = Modifier.fieldLine(),
             textTag = ReportTags.typedText(item),
             placeholderTag = ReportTags.placeholder(item),
             onPaste = form.typing?.let { typing -> { typing.paste() } },
@@ -333,8 +330,8 @@ private fun Buttons(
     onTap: (Int) -> Unit,
     buttons: List<Pair<ReportItem, Int>>,
 ) {
-    // As wide as the widest, one over the other: the panel is narrow.
-    Column(Modifier.width(IntrinsicSize.Max), verticalArrangement = Arrangement.spacedBy(PlumDimens.setupButtonGap)) {
+    // As wide as the widest, one over the other: the panel is narrow. With the tray up over a field they keep their room, unseen: no strip above the tray.
+    Column((if (form.isTrayUp) Modifier.unplaced() else Modifier).width(IntrinsicSize.Max), verticalArrangement = Arrangement.spacedBy(PlumDimens.setupButtonGap)) {
         buttons.forEachIndexed { at, (item, label) ->
             val index = form.items.indexOf(item)
             SetupButton(

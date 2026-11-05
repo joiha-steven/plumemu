@@ -121,6 +121,12 @@ data class Emulator(
 ) {
     val allPackages: List<PackageVariant> get() = listOf(primary) + variants
 
+    /**
+     * The core's own name without the app ("Snes9x" of "RetroArch: Snes9x"): the data already names
+     * every RetroArch entry that way (`ShippedDataTest`); null for an emulator without a core.
+     */
+    val coreName: String? get() = if (core == null) null else name.substringAfter(": ", name)
+
     /** Whether this emulator can open [fileName] (by its extension; compound ones such as `p8.png` too). */
     fun acceptsFile(fileName: String): Boolean {
         val accepted = accepts ?: return true

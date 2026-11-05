@@ -100,11 +100,11 @@ class SecondScreenHomeFollowTest {
     fun followsTheCursorFromSystemToGameToMenu() {
         show(withSecondScreen = true)
         // The board's ids are not the database's: nothing to read for its last game.
-        val recent = SecondScreenContent.System("Recent", content.entries[0].shownCount)
+        val recentCount = content.entries[0].shownCount
         // The game index is built off the main thread first.
-        compose.waitUntil(WAIT_MS) { shown() == recent }
+        compose.waitUntil(WAIT_MS) { (shown() as? RecentEntry)?.let { it.name == "Recent" && it.gameCount == recentCount } == true }
         send(*List(FakeHomeContent.BOARD_SNES_INDEX) { Action.Move(Direction.Down) }.toTypedArray())
-        val system = shown() as SecondScreenContent.System
+        val system = shown() as SystemEntry
         assertEquals(snes.name, system.name)
         assertEquals(snes.shownCount, system.gameCount)
         send(Action.Enter, Action.Move(Direction.Down))
@@ -114,7 +114,7 @@ class SecondScreenHomeFollowTest {
         send(Action.Menu)
         assertEquals("the menu's game", game, shown())
         send(Action.Back, Action.Back)
-        assertTrue("back on the system: ${shown()}", shown() is SecondScreenContent.System)
+        assertTrue("back on the system: ${shown()}", shown() is EntryContent)
     }
 
     @Test

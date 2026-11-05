@@ -10,6 +10,7 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
@@ -25,8 +26,7 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * A single system's list with box art shows "1995 · USA". A 21-character title
  * ("Donkey Kong Country 2") must stay whole beside it at the Largest text size, in the 400 dp list
- * beside the details and in the full-width list used while the second screen's window is up; the
- * right-hand text is never cut. At the narrow details stop the text stays the year alone.
+ * beside the details; the right-hand text is never cut. At the narrow details stop the text stays the year alone.
  */
 abstract class RowYearRegionFitBase {
     protected val compose = appComposeRule()
@@ -48,46 +48,49 @@ abstract class RowYearRegionFitBase {
 
     private fun show(
         actions: List<Action>,
-        windowUp: Boolean,
         size: TextSize = TextSize.Largest,
+        font: PlumFont = PlumFont.Sans,
     ) = compose.setContent {
-        PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
-            HomeAt(content, toList + actions, detailsOnSecondScreen = { windowUp })
+        PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) {
+            HomeAt(content, toList + actions)
         }
     }
 
     /** The title is whole (its natural width fits what it was given) and "1995 · USA" is whole and clear of it. */
     protected fun titleStaysWhole(
         label: String,
-        windowUp: Boolean,
         text: String,
         size: TextSize = TextSize.Largest,
         wholeTitle: Boolean = true,
         regionCode: String = "USA",
+        font: PlumFont = PlumFont.Sans,
     ) {
         region = regionCode
-        show(emptyList(), windowUp, size)
+        show(emptyList(), size, font)
         compose.waitForIdle()
         val inRow = hasAnyAncestor(hasTestTag(HomeTags.game(0)))
-        val trailing = compose.onNode(hasText(text) and inRow, useUnmergedTree = true).fetchSemanticsNode()
+        // "1995 · USA" is the year column and the region column: each text is whole, and the title ends before the first.
         val name = compose.onNode(hasText(title) and inRow, useUnmergedTree = true).fetchSemanticsNode()
-        val tl = layoutOf(trailing)
         val nl = layoutOf(name)
         val spare = name.boundsInRoot.width - nl.multiParagraph.intrinsics.maxIntrinsicWidth
-        println("FIT $label windowUp=$windowUp [$text]: title needs ${nl.multiParagraph.intrinsics.maxIntrinsicWidth} px of ${name.boundsInRoot.width} (spare $spare px); gap to the text ${trailing.boundsInRoot.left - name.boundsInRoot.right} px; trailing needs ${tl.multiParagraph.intrinsics.maxIntrinsicWidth} of ${trailing.boundsInRoot.width} px")
         assertTrue("$label: the title is cut ('…')", !wholeTitle || spare >= 0f)
-        assertTrue("$label: '$text' is cut", tl.multiParagraph.intrinsics.maxIntrinsicWidth <= trailing.boundsInRoot.width + 1f)
-        assertTrue("$label: title runs into the text", name.boundsInRoot.right <= trailing.boundsInRoot.left)
+        val parts = text.split(" · ").map { compose.onNode(hasText(it) and inRow, useUnmergedTree = true).fetchSemanticsNode() }
+        parts.forEachIndexed { i, part ->
+            val pl = layoutOf(part)
+            println("FIT $label [${text.split(" · ")[i]}]: title needs ${nl.multiParagraph.intrinsics.maxIntrinsicWidth} px of ${name.boundsInRoot.width} (spare $spare px); gap to the text ${part.boundsInRoot.left - name.boundsInRoot.right} px; text needs ${pl.multiParagraph.intrinsics.maxIntrinsicWidth} of ${part.boundsInRoot.width} px")
+            assertTrue("$label: '${text.split(" · ")[i]}' is cut", pl.multiParagraph.intrinsics.maxIntrinsicWidth <= part.boundsInRoot.width + 1f)
+            assertTrue("$label: title runs into the text", name.boundsInRoot.right <= part.boundsInRoot.left)
+        }
     }
 
-    /** Narrow, no window: beside the details (games stop) or at the details stop, the list writes the year alone, never year · region. */
+    /** Narrow: beside the details (games stop) or at the details stop, the list writes the year alone, never year · region. */
     protected fun aNarrowListKeepsTheYearAlone(
         label: String,
         stop: List<Action>,
     ) {
-        show(stop, windowUp = false)
+        show(stop)
         compose.waitForIdle()
-        assertEquals("$label: no year · region", 0, compose.onAllNodesWithTextCount("1995 · USA"))
+        assertEquals("$label: no region column", 0, compose.onAllNodesWithTextCount("USA"))
         assertTrue("$label: the year alone", compose.onAllNodesWithTextCount("1995") > 0)
     }
 
@@ -99,9 +102,7 @@ abstract class RowYearRegionFitBase {
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w576dp-h432dp-land-xhdpi")
 class RowYearRegionFit576Test : RowYearRegionFitBase() {
-    @Test fun besideTheDetails() = titleStaysWhole("576x432 Largest", windowUp = false, text = "1995")
-
-    @Test fun inTheFullWidthListWhileTheSecondScreenIsUp() = titleStaysWhole("576x432 Largest", windowUp = true, text = "1995 · USA")
+    @Test fun besideTheDetails() = titleStaysWhole("576x432 Largest", text = "1995")
 
     @Test fun aNarrowListBesideTheDetailsKeepsTheYearAlone() = aNarrowListKeepsTheYearAlone("576x432 games stop", emptyList())
 
@@ -112,14 +113,17 @@ class RowYearRegionFit576Test : RowYearRegionFitBase() {
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
 class RowYearRegionFit768Test : RowYearRegionFitBase() {
-    @Test fun besideTheDetailsAtMedium() = titleStaysWhole("768x432 Medium", windowUp = false, text = "1995 · USA", size = TextSize.Medium)
+    @Test fun besideTheDetailsAtMedium() = titleStaysWhole("768x432 Medium", text = "1995 · USA", size = TextSize.Small)
 
-    @Test fun besideTheDetailsAtHuge() = titleStaysWhole("768x432 Huge", windowUp = false, text = "1995 · USA", size = TextSize.Huge)
+    @Test fun besideTheDetailsAtHuge() = titleStaysWhole("768x432 Huge", text = "1995", size = TextSize.Huge)
 
-    @Test fun besideTheDetailsAtHugeWithAWideRegion() = titleStaysWhole("768x432 Huge WLD", windowUp = false, text = "1995 · WLD", size = TextSize.Huge, regionCode = "WLD")
+    @Test fun besideTheDetailsAtHugeWithAWideRegion() = titleStaysWhole("768x432 Huge WLD", text = "1995", size = TextSize.Huge, regionCode = "WLD")
 
-    @Test fun besideTheDetailsAtLargerWithAWideRegion() = titleStaysWhole("768x432 Larger WLD", windowUp = false, text = "1995 · WLD", size = TextSize.Larger, regionCode = "WLD")
+    @Test fun besideTheDetailsAtLargerWithAWideRegion() = titleStaysWhole("768x432 Larger WLD", text = "1995 · WLD", size = TextSize.Larger, regionCode = "WLD")
 
-    // At Largest the systems column grows, the 400 dp list shrinks and year · region would cut the title: the year alone.
-    @Test fun besideTheDetailsAtLargestKeepsTheYear() = titleStaysWhole("768x432 Largest", windowUp = false, text = "1995")
+    // Mono's wide letters leave no room for the region from Large (the default size).
+    @Test fun besideTheDetailsAtLargeInMono() = titleStaysWhole("768x432 Large Mono", text = "1995", size = TextSize.Large, font = PlumFont.Mono)
+
+    // From Huge the systems column grows, the 400 dp list shrinks and year · region would cut the title: the year alone.
+    @Test fun besideTheDetailsAtLargestKeepsTheYear() = titleStaysWhole("768x432 Largest", text = "1995")
 }

@@ -6,12 +6,14 @@ import com.plumemu.identify.fingerprint.ascii
 import com.plumemu.identify.fingerprint.asciiText
 import com.plumemu.identify.fingerprint.isGameCode
 import com.plumemu.identify.fingerprint.startsWith
+import com.plumemu.identify.fingerprint.u32be
 import com.plumemu.identify.fingerprint.u32le
 import com.plumemu.identify.fingerprint.u64le
 import com.plumemu.identify.fingerprint.u8
 import com.plumemu.identify.source.RandomAccessSource
 import com.plumemu.identify.source.readFully
 import java.io.IOException
+import java.security.MessageDigest
 
 /**
  * GameCube and Wii disc headers (wiibrew, "Wii disc" header; YAGCD "Disc header"): game id at
@@ -39,7 +41,10 @@ internal object NintendoDiscs {
     private val RVZ = byteArrayOf('R'.code.toByte(), 'V'.code.toByte(), 'Z'.code.toByte(), 1)
     private val WIA = byteArrayOf('W'.code.toByte(), 'I'.code.toByte(), 'A'.code.toByte(), 1)
     private val GCZ = byteArrayOf(0x01, 0xC0.toByte(), 0x0B, 0xB1.toByte())
+    private const val WIA_FILE_HEAD = 0x48
     private const val WIA_DISC_HEADER = 0x58
+    private const val WIA_DISC_MIN = 0xD5L
+    private const val WIA_DISC_MAX = 0x1000L
     private const val GCZ_HEADER = 32
     private const val GCZ_RAW_FLAG = Long.MIN_VALUE
     private const val GCZ_FIRST_INPUT = 1024L
@@ -76,13 +81,37 @@ internal object NintendoDiscs {
     fun fromContainer(source: RandomAccessSource, container: Container): DiscId {
         val header = when (container) {
             Container.WBFS -> wbfsHeader(source)
-            Container.RVZ, Container.WIA -> source.readFully(WIA_DISC_HEADER.toLong(), HEADER)
+            Container.RVZ, Container.WIA -> wiaHeader(source)
             Container.GCZ -> gczHeader(source)
             else -> source.readFully(0, HEADER)
         }
         val name = container.name.lowercase()
         return fromHeader(header) ?: throw NotRead("$name: no GameCube or Wii disc header inside")
     }
+
+    /**
+     * The disc header copied into an RVZ / WIA file's head, so no group is decompressed. File
+     * header 1 (0x48 bytes) ends with the SHA-1 of its first 0x34 bytes and holds the size of
+     * file header 2 (0x0C) and that header's SHA-1 (0x10); a copy whose sums do not match is
+     * damaged and gives no id. File header 2 keeps the 0x80 disc header bytes at 0x10 (the file's
+     * 0x58): all that is read is 0x48 plus the size of file header 2 (about 0xDC bytes).
+     */
+    @Throws(IOException::class)
+    private fun wiaHeader(source: RandomAccessSource): ByteArray {
+        val name = if (source.readFully(0, 3).startsWith(ascii("RVZ"))) "rvz" else "wia"
+        val head = source.readFully(0, WIA_FILE_HEAD)
+        if (head.size < WIA_FILE_HEAD) throw NotRead("$name: header is truncated")
+        if (!sha1(head, 0, 0x34).contentEquals(head.copyOfRange(0x34, WIA_FILE_HEAD))) throw NotRead("$name: file header does not match its checksum")
+        val discSize = head.u32be(0x0C)
+        if (discSize !in WIA_DISC_MIN..WIA_DISC_MAX) throw NotRead("$name: disc header size $discSize is out of range")
+        val disc = source.readFully(WIA_FILE_HEAD.toLong(), discSize.toInt())
+        if (disc.size < discSize) throw NotRead("$name: disc header is truncated")
+        if (!sha1(disc, 0, disc.size).contentEquals(head.copyOfRange(0x10, 0x24))) throw NotRead("$name: disc header does not match its checksum")
+        return disc.copyOfRange(WIA_DISC_HEADER - WIA_FILE_HEAD, WIA_DISC_HEADER - WIA_FILE_HEAD + HEADER)
+    }
+
+    private fun sha1(data: ByteArray, from: Int, length: Int): ByteArray =
+        MessageDigest.getInstance("SHA-1").also { it.update(data, from, length) }.digest()
 
     @Throws(IOException::class)
     private fun wbfsHeader(source: RandomAccessSource): ByteArray {

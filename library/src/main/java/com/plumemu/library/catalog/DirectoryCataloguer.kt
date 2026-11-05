@@ -39,6 +39,11 @@ data class DirectoryCatalogue(
      * uses it to carry a person's marks from a row that the grouping now folds into another.
      */
     val partOf: Map<String, String> = emptyMap(),
+    /**
+     * Every file of the directory that is in no game, each once with its reason, in listing order:
+     * [skippedJunk] files with their junk kind, then [skippedUnmatched] files.
+     */
+    val leftOut: List<LeftOutFile> = emptyList(),
 )
 
 /**
@@ -91,13 +96,14 @@ class DirectoryCataloguer(
         shownUnder: MutableMap<DocumentEntry, DocumentEntry>?,
         sheetParts: Map<String, Set<String>> = emptyMap(),
     ): DirectoryCatalogue {
-        var junk = 0
+        val leftOutJunk = ArrayList<LeftOutFile>()
         val matched = mutableListOf<MatchedFile<DocumentEntry>>()
         val notMatched = mutableListOf<MatchedFile<DocumentEntry>>()
         for (file in files) {
             if (file.isDirectory) continue
-            if (JunkFilter.isJunkFile(file.name)) {
-                junk++
+            val junkKind = JunkFilter.kindOf(file.name)
+            if (junkKind != null) {
+                leftOutJunk += LeftOutFile(file, junkKind, null)
                 continue
             }
             val match = matcher.matchFile(folder, file.name)
@@ -122,7 +128,7 @@ class DirectoryCataloguer(
         val trackIds = tracks.mapTo(HashSet()) { it.item.documentId }
         val loose = notMatched.filter { sheets.claimOf.containsKey(it.item.documentId) && it.item.documentId !in trackIds }
         notMatched.removeAll(loose.toSet())
-        val unmatched = notMatched.size - tracks.size
+        val unmatchedFiles = notMatched.filter { it.item.documentId !in trackIds }
 
         val grouping = HashMap<MatchedFile<DocumentEntry>, MatchedFile<DocumentEntry>>()
         for (part in loose) grouping[part] = sheets.sheetOf(part.item.documentId)
@@ -165,8 +171,23 @@ class DirectoryCataloguer(
             }
         }
         val games = named.map { it.game.copy(isPrimaryCopy = it in primaries) }.sortedBy { it.entry.name }
-        return DirectoryCatalogue(games, junk, unmatched, partOf)
+        val folderSystem = systemOf(folder)
+        val leftOut = leftOutJunk.map { it.copy(systemId = folderSystem) } +
+            unmatchedFiles.map { file ->
+                // Outside a system's folder a file several systems open is waiting for one; anything else no emulator here opens.
+                val reason = if (folderSystem == null && matcher.isCandidateFile(file.item.name)) LeftOutReason.NO_SYSTEM else LeftOutReason.UNMATCHED
+                LeftOutFile(file.item, reason, folderSystem)
+            }
+        return DirectoryCatalogue(games, leftOutJunk.size, unmatchedFiles.size, partOf, leftOut)
     }
+
+    /** The system [folder] names, the nearest one on a path; null when it names none or several. */
+    private fun systemOf(folder: FolderMatch): String? =
+        when (folder) {
+            is FolderMatch.System -> folder.rule.id
+            is FolderMatch.Path -> folder.candidates.firstNotNullOfOrNull(::systemOf)
+            FolderMatch.Unknown, is FolderMatch.Ambiguous -> null
+        }
 
     /** A directory that may be one game's folder: it has a name, and the name is no system's. */
     private fun isGameFolder(directoryName: String?): Boolean =

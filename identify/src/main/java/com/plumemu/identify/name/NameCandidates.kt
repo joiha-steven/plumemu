@@ -15,12 +15,25 @@ package com.plumemu.identify.name
  * 5. without a leading `1 - `, `01. ` or `001_ ` number of one to three digits (a numbered
  *    collection), after the name as written, so a database still decides.
  *
+ * 6. narrow readings of a maker's spelling: a year written "20-02" as "2002", a last word "-0" as
+ *    "-O", each side of a "A ~ B" name (No-Intro's two names of one game), and "A in A's Title"
+ *    as "A's Title".
+ *
  * A candidate is accepted only when the matcher finds it in the pack, so an aggressive cleaning
  * never reaches the list unless it names a known game.
  */
 internal object NameCandidates {
     private val leadingNumber = Regex("""^\d{1,3}(?:\s+-\s+|\.\s+|_\s+)(.+)$""")
-    private val releaseNumber = Regex("""^\d{4}\s+-\s+(.+)$""")
+    /** A year its maker wrote with a hyphen: "NFL Blitz 20-02". */
+    private val yearWithHyphen = Regex("""(?<![\d-])(19|20)-(\d\d)(?![\d-])""")
+
+    /** A last word whose final letter is a zero: "Ninja Five-0" for "Ninja Five-O". */
+    private val finalZero = Regex("""^(.*\p{L}-)0$""")
+
+    /** "Yogi Bear in Yogi Bear's Goldrush": the game's own name follows "in". */
+    private val repeatedName = Regex("""^(\S.*?) in (\S.*)$""")
+
+    private val releaseNumber =Regex("""^\d{4}\s+-\s+(.+)$""")
 
     /** Systems whose collections put a release number in front of every name. */
     private val NUMBERED_SYSTEMS = setOf("nds", "gba")
@@ -36,6 +49,13 @@ internal object NameCandidates {
         }
         // After the title as written: "1942 - ..." or "007 - ..." may be the name a database has.
         leadingNumber.matchEntire(cleanedTitle)?.let { out += it.groupValues[1] }
+        yearWithHyphen.find(cleanedTitle)?.let { out += cleanedTitle.replaceRange(it.range, it.groupValues[1] + it.groupValues[2]) }
+        finalZero.matchEntire(cleanedTitle)?.let { out += it.groupValues[1] + "O" }
+        if (" ~ " in cleanedTitle) cleanedTitle.split(" ~ ").map(String::trim).filterTo(out) { it.isNotEmpty() }
+        repeatedName.matchEntire(cleanedTitle)?.let { m ->
+            val rest = m.groupValues[2]
+            if (rest.length > m.groupValues[1].length && rest.startsWith(m.groupValues[1], ignoreCase = true)) out += rest
+        }
         return if (out.size == 1) out else out.distinct()
     }
 

@@ -19,12 +19,16 @@ import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.game.Beetle
+import com.plumemu.game.DuckStation
+import com.plumemu.game.EmulatorItem
 import com.plumemu.game.FakeGameActions
+import com.plumemu.game.sampleFacts
 import com.plumemu.game.GameMenuEntryId
 import com.plumemu.game.GamePanelTags
 import com.plumemu.game.sampleListing
 import com.plumemu.launcher.FileProblem
 import com.plumemu.launcher.LaunchOutcome
+import com.plumemu.graph.AchievementCount
 import com.plumemu.graph.ClosedAtOnce
 import com.plumemu.graph.CoreQuestion
 import com.plumemu.coredata.db.AddedSession
@@ -93,7 +97,7 @@ class GameMenuScreenTest {
         assertTrue("START opens the menu", isPanelOpen())
         assertTrue("titled with the game", hasText(content.entries[FakeHomeContent.BOARD_SNES_INDEX].rows[2].title))
         assertTrue("inside, the hints are A Select and B Back", hasText("Select") && hasText("Back"))
-        down(5) // Info, after Hide and Name…
+        down(5) // Info, after Sort by… and Name…
         send(Action.Enter)
         compose.onNodeWithTag(GamePanelTags.FACTS, useUnmergedTree = true).assertExists()
         assertTrue("Info shows the folder", hasText("ROMs/psx"))
@@ -103,6 +107,29 @@ class GameMenuScreenTest {
         assertEquals("B again closes it", false, isPanelOpen())
         send(Action.Play)
         assertEquals("the focus is back on the same game", listOf("snes-2"), games.launched)
+    }
+
+    @Test
+    fun achievementsEntryOpensInfoByAAndByTap() {
+        games.facts = { key -> sampleFacts(title = "Game $key", achievementCount = AchievementCount(12, 40)) }
+        show()
+        openSnes()
+        send(Action.Menu)
+        assertTrue("the count is on the row", hasText("12 of 40"))
+        down(5) // Play with…, Favorite, Sort by…, Name…, Achievements
+        send(Action.Enter)
+        compose.onNodeWithTag(GamePanelTags.FACTS, useUnmergedTree = true).assertExists()
+        send(Action.Back)
+        tap(GamePanelTags.row(GameMenuEntryId.Achievements.name))
+        compose.onNodeWithTag(GamePanelTags.FACTS, useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun noAchievementsRowWithoutAStoredSet() {
+        show()
+        openSnes()
+        send(Action.Menu)
+        assertEquals(false, hasText("Achievements"))
     }
 
     @Test
@@ -152,7 +179,7 @@ class GameMenuScreenTest {
         openSnes()
         down(2)
         send(Action.Menu)
-        down(3) // Hide
+        down(6) // Hide, the last row
         send(Action.Enter)
         assertEquals(listOf("snes-2"), games.hidden)
         assertTrue("Hide says where the game went", isPanelOpen() && hasText("Game hidden") && hasText("Settings › Library › Hidden games", substring = true))
@@ -164,7 +191,7 @@ class GameMenuScreenTest {
         val beforeLast = content.entries[FakeHomeContent.BOARD_SNES_INDEX].rows.let { it[it.lastIndex - 1].id }
         send(*List(3) { Action.Move(Direction.Up) }.toTypedArray()) // up to the first row, then wraps to the last
         send(Action.Menu)
-        down(3)
+        down(6)
         send(Action.Enter)
         send(Action.Enter)
         send(Action.Play)
@@ -217,7 +244,7 @@ class GameMenuScreenTest {
     private val mesen = CoreToConfirm("com.retroarch", "mesen_libretro_android.so")
     private val added = AddedSession(sessionId = 9, gameId = 0, endedAt = 62_000, seconds = 62, previousLastPlayedAt = null)
 
-    private fun showWithCoreQuestion() {
+    private fun showWithCoreQuestion(question: CoreQuestion? = null) {
         compose.setContent {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
@@ -225,8 +252,46 @@ class GameMenuScreenTest {
             PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games, notices = notices)) }
         }
         compose.waitForIdle()
-        coreQuestion.value = CoreQuestion(1, "snes-0", "Super Mario World", Beetle.id, "RetroArch: Mesen", mesen, added)
+        coreQuestion.value = question ?: CoreQuestion(1, "snes-0", "Super Mario World", Beetle.id, "RetroArch: Mesen", mesen, added)
         compose.waitForIdle()
+    }
+
+    private fun gbaCore(id: String, name: String) =
+        EmulatorItem("retroarch-$id", "RetroArch: $name", "com.retroarch", isLegalRisk = false, core = "${id}_libretro_android.so")
+
+    private val gbaCores = listOf(gbaCore("mgba", "mGBA"), gbaCore("gpsp", "gpSP"), gbaCore("vbam", "VBA-M"))
+
+    private fun gbaQuestion(failed: EmulatorItem, tried: Set<String> = emptySet()) =
+        CoreQuestion(1, "snes-0", "Advance Wars", failed.id, failed.name, CoreToConfirm("com.retroarch", failed.core!!), added, tried)
+
+    @Test
+    fun noOffersTheNextCoreFirstAndFocusedAndPlayingItKeepsItForTheGameOnly() {
+        games.listing = { sampleListing(installed = listOf(DuckStation) + gbaCores, notInstalled = emptyList()) }
+        showWithCoreQuestion(gbaQuestion(gbaCores[0]))
+        tap(GamePanelTags.row(CORE_NO_KEY))
+        assertEquals(listOf(added), games.takenBack)
+        assertEquals(listOf("snes-0" to "retroarch-mgba"), games.forgottenCores)
+        assertTrue("the offer names the core", hasText("Try gpSP?"))
+        assertEquals("noted so its question knows mGBA said No", listOf(Triple("snes-0", "retroarch-gpsp", setOf("retroarch-mgba"))), games.expectedTries)
+        assertTrue("the failed core is not offered", compose.onAllNodesWithTag(GamePanelTags.row("retroarch-mgba"), useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+        send(Action.Enter)
+        assertEquals("the first row is focused: it is stored for the game", listOf("snes-0" to "retroarch-gpsp"), games.choices)
+        assertEquals(emptyList<Pair<String, String>>(), games.systemChoices)
+        assertEquals("then the game plays", listOf("snes-0"), games.launched)
+    }
+
+    @Test
+    fun withNoCoreLeftNoSaysHowToGetOneAndOffersNoCore() {
+        games.listing = { sampleListing(installed = gbaCores, notInstalled = emptyList()) }
+        showWithCoreQuestion(gbaQuestion(gbaCores[2], tried = setOf("retroarch-mgba", "retroarch-gpsp")))
+        tap(GamePanelTags.row(CORE_NO_KEY))
+        assertTrue("the way to a core", hasText("RetroArch › Online Updater › Core Downloader", substring = true))
+        assertTrue("the first core of the order is named", hasText("download mGBA", substring = true))
+        assertEquals("nothing is offered to try", emptyList<Triple<String, String, Set<String>>>(), games.expectedTries)
+        assertTrue(compose.onAllNodesWithText("Try", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+        send(Action.Enter)
+        assertEquals(false, isPanelOpen())
+        assertEquals(emptyList<String>(), games.launched)
     }
 
     @Test

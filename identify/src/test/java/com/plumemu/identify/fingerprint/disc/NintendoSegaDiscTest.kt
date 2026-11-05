@@ -105,7 +105,10 @@ class NintendoSegaDiscTest {
     fun systemsAndFormatsNotReadGetANote() {
         val (pce, pceBytes) = read(DiscImages.ps1Iso(), "game.cue", "pcenginecd")
         assertNull(pce.productCode)
-        assertTrue(pce.notes.toString(), pce.notes.single().startsWith("pcenginecd:"))
+        assertTrue(pce.notes.toString(), pce.notes.first().startsWith("pcenginecd:"))
+        // Not a cue sheet at all (an image under another name): no track key, and the note says so.
+        assertTrue(pce.notes.toString(), pce.notes.any { it.startsWith("cue:") })
+        assertEquals(emptyList<Long>(), pce.trackKeys)
         assertEquals(8L, pceBytes)
         val (cdi, _) = read(ByteArray(4096), "game.cdi", "dreamcast", Depth.FULL)
         assertNull(cdi.crc32)

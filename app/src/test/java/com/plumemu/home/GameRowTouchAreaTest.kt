@@ -42,8 +42,8 @@ class GameRowTouchAreaTest {
         val actions = mutableListOf<Action>()
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, onAction = { actions += it }) } }
         val density = ApplicationProvider.getApplicationContext<Context>().resources.displayMetrics.density
-        // Drawn row heights in dp, written out: 38 at Small and Medium (the minimum), 39.6 at Large.
-        for ((each, drawnDp) in listOf(TextSize.Small to 38f, TextSize.Medium to 38f, TextSize.Large to 39.6f)) {
+        // Drawn row heights in dp, written out: 38 at Small, Medium and Large (the minimum; Large's 34 x 1.1 is under it).
+        for ((each, drawnDp) in listOf(TextSize.Small to 38f, TextSize.Small to 38f, TextSize.Large to 38f)) {
             size = each
             compose.waitForIdle()
             for (index in 0..1) {

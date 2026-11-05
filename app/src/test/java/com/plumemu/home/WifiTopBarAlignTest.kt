@@ -87,19 +87,21 @@ abstract class WifiTopBarAlignBase(
         val root = compose.onRoot().getUnclippedBoundsInRoot()
         val clock = bounds(BOARD_CLOCK)
         val battery = bounds(BOARD_BATTERY)
+        // The gaps are to the percentage, which follows the Wi-Fi glyph (no battery drawing, no charger here).
+        val outline = battery
         val at = "$label $where ${font.name} ${size.name}"
         val gap = PlumDimens.topBarItemGap.value
         if (!withWifi) {
-            val between = battery.left.value - clock.right.value
+            val between = outline.left.value - clock.right.value
             if (!near(between, gap)) problems += "$at: clock-battery gap $between, not $gap"
             return
         }
         val wifi = wifiBounds()
         val before = wifi.left.value - clock.right.value
-        val after = battery.left.value - wifi.right.value
+        val after = outline.left.value - wifi.right.value
         if (!near(before, gap)) problems += "$at: gap before the glyph $before, the clock-battery gap is $gap"
         if (!near(after, gap)) problems += "$at: gap after the glyph $after, the clock-battery gap is $gap"
-        if (wifi.left.value < clock.right.value || wifi.right.value > battery.left.value) problems += "$at: the glyph overlaps the clock or the battery"
+        if (wifi.left.value < clock.right.value || wifi.right.value > outline.left.value) problems += "$at: the glyph overlaps the clock or the battery"
         if (wifi.top.value < 0f || wifi.bottom.value > root.bottom.value || battery.right.value > root.right.value) problems += "$at: something leaves the screen"
 
         val image = compose.onRoot().captureToImage().asAndroidBitmap()
@@ -114,7 +116,7 @@ abstract class WifiTopBarAlignBase(
         val digitHeight = digits.last - digits.first + 1
         val centreOff = (glyph.first + glyph.last) / 2f - (digits.first + digits.last) / 2f
         println("WIFI-INK $at: glyph rows $glyph (h $glyphHeight px), digits rows $digits (h $digitHeight px), centre off $centreOff px")
-        if (abs(centreOff) > 1f) problems += "$at: the glyph's ink centre is $centreOff px from the digits'"
+        if (abs(centreOff) > CENTRE_TOLERANCE_PX) problems += "$at: the glyph's ink centre is $centreOff px from the digits'"
         if (abs(glyphHeight - digitHeight) > 1) problems += "$at: the glyph's ink is $glyphHeight px tall, the digits' $digitHeight"
     }
 
@@ -164,6 +166,7 @@ abstract class WifiTopBarAlignBase(
 
         /** Summed colour difference from the background that counts as ink. */
         const val INK_DIFFERENCE = 120
+        const val CENTRE_TOLERANCE_PX = 1f
     }
 }
 

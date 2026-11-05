@@ -92,19 +92,19 @@ private fun ColumnScope.ChosenFoldersContent(
         look = if (state.focus == SetupControl.AddFolder) ChoiceLook.Focused else ChoiceLook.Plain,
         modifier = Modifier.setupControl(state, SetupControl.AddFolder, onAction),
     )
-    // The content gap above it, as between the cards: no extra spacer.
+    // The content gap plus the spacer above it, so the collar keeps its distance from the card.
     SetupButton(
         text = stringResource(R.string.setup_continue),
         isPrimary = true,
         isFocused = state.focus == SetupControl.Continue,
-        modifier = Modifier.setupControl(state, SetupControl.Continue, onAction),
+        modifier = Modifier.padding(top = PlumDimens.setupButtonSpacer).setupControl(state, SetupControl.Continue, onAction),
     )
     StepNote(state.message, R.string.setup_folder_note)
 }
 
 /**
  * One of the three plain lines: a `muted` dot (accent dots mean focus), 15 in `text2`, at least 32
- * high (a long line wraps to two).
+ * high (a long line wraps: to three at the largest text in a long translation).
  */
 @Composable
 private fun SetupPoint(text: String) {
@@ -115,7 +115,7 @@ private fun SetupPoint(text: String) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(PlumDimens.focusDot).background(colors.muted, CircleShape))
-        BasicText(text = text, style = PlumTheme.type.setupPoint.copy(color = colors.text2), maxLines = 2, overflow = TextOverflow.Ellipsis)
+        BasicText(text = text, style = PlumTheme.type.setupPoint.copy(color = colors.text2), maxLines = 3, overflow = TextOverflow.Ellipsis)
     }
 }
 

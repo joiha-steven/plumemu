@@ -75,6 +75,18 @@ internal class SettingsSwitchesTest : SettingsModelHarness() {
     }
 
     @Test
+    fun useAsHomeScreenSaysSoWhenAndroidClosedAndPlumemuIsStillNotHome() {
+        openSection(SettingsSection.HomeScreen)
+        actions.notHomeAfterAsking = true
+        press(Action.Enter)
+        assertEquals(SettingsOption.UseAsHome to SettingsNotice.HomeRoleNotYet, model.work.notice)
+        // A later press that worked clears the line.
+        actions.notHomeAfterAsking = false
+        model.onTapValue(0, actions.settings, wide)
+        assertNull(model.work.notice)
+    }
+
+    @Test
     fun useAsHomeScreenAsksAndroidOrSaysWhereToLook() {
         openSection(SettingsSection.HomeScreen)
         assertEquals(SettingsOption.UseAsHome, model.focusedOption)

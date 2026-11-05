@@ -155,7 +155,7 @@ class LibraryHomeContent(
         order: SortGamesSetting,
     ): Flow<Pair<List<SystemGames>, List<SystemGames>>> =
         combine(systems(names, order), arrangement.distinctUntilChanged(), locale.distinctUntilChanged(), measuredShapes()) { all, arrangement, language, measured ->
-            val shaped = all.map { it.copy(coverShape = SystemCoverShapes.of(names.systemOf(it.id), measured[it.id]), info = names.systemOf(it.id)?.let(::systemInfoOf), code = names.systemOf(it.id)?.code.orEmpty()) }
+            val shaped = all.map { it.copy(coverShape = SystemCoverShapes.of(names.systemOf(it.id), measured[it.id]), info = names.systemOf(it.id)?.let(::systemInfoOf), code = names.systemOf(it.id)?.code.orEmpty(), shortName = names.systemOf(it.id)?.shortName.orEmpty()) }
             val arranged = SystemOrder.arrange(shaped, arrangement, language) { names.factsOf(it.id, it.name) }
             SystemOrder.split(arranged, arrangement) { it.id }
         }
@@ -275,6 +275,7 @@ class LibraryHomeContent(
                 systemId = row.systemId,
                 sortName = row.sortName,
                 fileName = row.fileName,
+                artAspect = row.artAspect,
             )
 
         /** An app row: package and activity make the key (one package may have several launchers). */

@@ -231,10 +231,19 @@ class NintendoDiscHashesTest {
     // --- containers that need a decoder
 
     @Test
-    fun rvzWiaChdAndCisoNeedADecoder() {
+    fun chdAndCisoNeedADecoder() {
         for (console in listOf(RaConsoles.GAMECUBE, RaConsoles.WII)) {
-            for (name in listOf("game.rvz", "game.wia", "game.chd", "game.ciso")) {
+            for (name in listOf("game.chd", "game.ciso")) {
                 assertEquals("$console $name", NeedsDecoder, reasonOf(hash(console, name, gameCube)))
+            }
+        }
+    }
+
+    @Test
+    fun aFileNamedRvzOrWiaThatIsNotOneIsDamage() {
+        for (console in listOf(RaConsoles.GAMECUBE, RaConsoles.WII)) {
+            for (name in listOf("game.rvz", "game.wia")) {
+                assertEquals("$console $name", BadImage, reasonOf(hash(console, name, gameCube)))
             }
         }
     }

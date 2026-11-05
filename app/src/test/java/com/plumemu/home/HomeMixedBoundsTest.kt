@@ -52,7 +52,7 @@ class HomeMixedBoundsTest {
     fun atTheGamesStopTheShortNameIsShownWhole() {
         showRecent(emptyList())
         val box = compose.onNodeWithText("SCUMM", useUnmergedTree = true).getUnclippedBoundsInRoot()
-        assertTrue("SCUMM is inside the 400 dp list, left edge ${box.left}", box.left >= 72.dp && box.right <= 72.dp + 400.dp)
+        assertTrue("SCUMM is inside the list (480 dp, to the right margin: no details column at 576), left edge ${box.left}", box.left >= 72.dp && box.right <= 72.dp + 480.dp)
         assertEquals("Chrono Trigger shows SNES", 1, compose.onAllNodesWithText("SNES", useUnmergedTree = true).fetchSemanticsNodes().size)
     }
 }

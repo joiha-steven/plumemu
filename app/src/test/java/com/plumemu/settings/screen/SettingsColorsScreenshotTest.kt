@@ -41,7 +41,7 @@ class SettingsColorsScreenshotTest {
                 val name = "settings_colors_${size.label}_${set.name.lowercase()}${if (settings.appearance.buttonSet != null && settings.appearance.background != set.background.toSetting()) "_tuned" else ""}.png"
                 try {
                     captureRoboImage(filePath = "${ReferenceShots.OUTPUT_DIR}/$name") {
-                        PlumTheme(settings.toThemeSettings().copy(textSize = TextSize.Medium)) { SettingsAt(optionsAt(SettingsOption.Colors), settings) }
+                        PlumTheme(settings.toThemeSettings().copy(textSize = TextSize.Small)) { SettingsAt(optionsAt(SettingsOption.Colors), settings) }
                     }
                 } catch (e: AssertionError) {
                     // Collected, not swallowed: rethrown below together with the others.

@@ -1,8 +1,10 @@
 package com.plumemu.coreui.theme
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.plumemu.coreui.components.CollarSize
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -105,8 +107,16 @@ data class PlumLayout(
     val peek: Dp = PlumDimens.peekWidth,
     /** [TextSize.heightScale] of the text size in use: every box that holds a line of text grows by it. */
     val textScale: Float = 1f,
+    /** [TextSize.hintHeightScale]: the hint bar and its key caps stop growing at Medium. */
+    val hintScale: Float = maxOf(1f, minOf(textScale, TextSize.HINT_FACTOR_CAP)),
+    /** The top bar's place name line in the font and size in use: the bar grows to hold it, never cuts it. */
+    val topBarLine: Dp = 0.dp,
     /** Settings › Home screen › Grid size, one for every system: picks the grid's cells. */
     val gridSize: GridSize = GridSize.Default,
+    /** Whether Settings' three columns fit at the text size and font in use ([SettingsColumns.fits]); true where nothing says otherwise. */
+    val settingsThreeFit: Boolean = true,
+    /** Screen pixels per dp: rows lay out in rounded pixels, so what fits is counted there ([listRowsThatFit]). */
+    val pixelsPerDp: Float = 1f,
 ) {
     val widthClass: WidthClass = WidthClass.of(width)
 
@@ -163,50 +173,61 @@ data class PlumLayout(
             CoverClass.Square, CoverClass.Tall -> PlumDimens.gridColumnsGapPortrait
         }
 
-    /** Between covers of [shape], across and down: 22 landscape, 20 square and tall. */
-    fun gridGap(shape: CoverShape): Dp = gridGap(shape.coverClass)
+    /** Between neighbouring collars of [shape]'s covers across: the board's 10 px, 6.67 dp. Nothing grows on focus, so no room for growth. */
+    fun gridGap(shape: CoverShape): Dp = PlumDimens.gridGapAcross
 
-    /** Between covers of [coverClass], at every grid size: 22 landscape, 20 square and tall. */
+    /** Between covers of [coverClass] across and down in Apps' grid, whose focused tile still grows: 22 landscape, 20 square and tall. */
     fun gridGap(coverClass: CoverClass): Dp =
         when (coverClass) {
             CoverClass.Landscape -> PlumDimens.gridGapLandscape
             CoverClass.Square, CoverClass.Tall -> PlumDimens.gridGapPortrait
         }
 
-    /**
-     * Between rows of [shape]: [gridGap], but tall covers get [PlumDimens.gridGapTall]: the focused one grows 5 % of its row up (13 dp at 263) and
-     * rises, and its ring must not reach the cover above (`PlumLayoutTest`). The columns keep [gridGap].
-     */
-    fun gridRowGap(shape: CoverShape): Dp = if (shape.coverClass == CoverClass.Tall) PlumDimens.gridGapTall else gridGap(shape)
+    /** Between neighbouring collars of [shape]'s covers down: the board's 14 px, 9.33 dp, for every cover class (the tall-cover gap only made room for growth). */
+    fun gridRowGap(shape: CoverShape): Dp = PlumDimens.gridGapDown
 
     /**
-     * What the covers span across: the grid area minus the board's 4 dp padding on each side
-     * (664 on the RP5, 472 on the Nova). Covers start where the list would start.
+     * What the covers span across: the whole grid area, from where the list starts to the right margin the clock and the hint bar end on
+     * (672 on the RP5, 741 on the Thor, 480 on the Nova). Every full row meets both ends; nothing is left over on the right.
      */
-    val gridCoversWidth: Dp = gridAreaWidth - PlumDimens.gridPadding * 2
+    val gridCoversWidth: Dp = gridAreaWidth
 
-    /** One cover's width: the covers' span shared by the columns after the gaps (RP5 212 / 123.2, Nova 229 / 109). */
+    /** One cover's width: the covers' span shared by the columns after the gaps, exactly (a size picks a column count, never a width). */
     fun gridCoverWidth(shape: CoverShape): Dp {
         val columns = gridColumns(shape)
         return (gridCoversWidth - gridGap(shape) * (columns - 1)) / columns
     }
 
     /**
-     * A grid row's height: the cover width over the shape, rounded to whole dp like the board's
-     * narrow grids (Nova 164 / 140; RP5 151 / 158, where the board rounds by hand to 150 / 160).
+     * The height of a box (collar included) of [shape] one [gridCoverWidth] wide: its picture is exactly the shape. It is the target
+     * height of a mixed grid's rows and the height of every row of a one-shape grid. Not rounded: rows snap to whole px as they lay out.
+     * How many rows show follows from it ([gridRowsThatFit]); a row cut at the strip's edge reads as "more".
      */
-    fun gridRowHeight(shape: CoverShape): Dp = (gridCoverWidth(shape).value / shape.widthOverHeight).roundToInt().dp
+    fun gridRowHeight(shape: CoverShape): Dp {
+        val chromeX = CollarSize.Cover.sidePadding * 2
+        val chromeY = CollarSize.Cover.topPadding + CollarSize.Cover.bottomPadding
+        return (gridCoverWidth(shape) - chromeX) / shape.widthOverHeight + chromeY
+    }
 
     /** Grid rows of [shape] that fit whole in the grid (at least one). */
     fun gridRowsThatFit(shape: CoverShape): Int =
         floor((gridStripHeight + gridRowGap(shape)) / (gridRowHeight(shape) + gridRowGap(shape))).toInt().coerceAtLeast(1)
 
     /**
+     * Settings in three columns (sections, options, right column) on a wide screen at the text sizes where they fit, else
+     * two (docs/design/rules.md › Settings). Decided from the width class, the text size and the font only ([SettingsColumns]).
+     */
+    val isSettingsThreeColumns: Boolean = widthClass == WidthClass.Wide && settingsThreeFit
+
+    /**
      * Settings options column with the sections slid away. Wide: `width − 320` (margin, panel,
      * gap, margin; 448 on the RP5). Narrow: `width − 48` (both margins; 528 on the Nova).
      */
     val settingsOptionsWidth: Dp =
-        if (widthClass == WidthClass.Wide) {
+        if (isSettingsThreeColumns) {
+            width - SettingsThreeDimens.sectionsWidth - SettingsThreeDimens.optionsGap - SettingsThreeDimens.panelGap -
+                SettingsThreeDimens.panelWidth - PlumDimens.stripMarginSide
+        } else if (widthClass == WidthClass.Wide) {
             width - PlumDimens.stripMarginSide * 2 - PlumDimens.columnGap - PlumDimens.settingsPanelWidth
         } else {
             width - PlumDimens.stripMarginSide * 2
@@ -232,12 +253,19 @@ data class PlumLayout(
 
     /** The letter rail's least room per letter, growing with the text like the rows. */
     val railLetterMinHeight: Dp = PlumDimens.railLetterMinHeight * textScale
-    val topBarHeight: Dp = PlumDimens.topBarHeight * textScale
-    val hintBarHeight: Dp = PlumDimens.hintBarHeight * textScale
+    val topBarHeight: Dp = maxOf(PlumDimens.topBarHeight * textScale, topBarLine)
+
+    /** The top bar's height while a keyboard tray is up: the base height whatever the place-name line (the field and the keys need the room). */
+    val topBarHeightTyping: Dp = PlumDimens.topBarHeight * textScale
+
+    val hintBarHeight: Dp = PlumDimens.hintBarHeight * hintScale
+
+    /** The footer zone every screen with hint keys keeps under its content: [PlumDimens.footerGap], the bar, [PlumDimens.footerBelow] (40 at Small). */
+    val footerZone: Dp = PlumDimens.footerGap + hintBarHeight + PlumDimens.footerBelow
 
     /** The systems column widens with the text so a name keeps its line. */
     val systemsColumnWidth: Dp = PlumDimens.systemsColumnWidth * textScale
-    val keyCapHeight: Dp = PlumDimens.keyCapHeight * textScale
+    val keyCapHeight: Dp = PlumDimens.keyCapHeight * hintScale
     val settingsHexRowHeight: Dp = PlumDimens.settingsHexRowHeight * textScale
     val settingsPreviewRowHeight: Dp = PlumDimens.settingsPreviewRowHeight * textScale
     val setupPointHeight: Dp = PlumDimens.setupPointHeight * textScale
@@ -246,7 +274,7 @@ data class PlumLayout(
     val setupFoundRowHeight: Dp = PlumDimens.setupFoundRowHeight * textScale
 
     /** Under the keys on the tray: the gap to the hint bar, the hint bar, the bottom margin. */
-    private val keyboardBelowKeys: Dp = PlumDimens.keyboardHintGap + hintBarHeight + PlumDimens.stripMarginBottom
+    private val keyboardBelowKeys: Dp = KeyboardDimens.keyboardHintGap + hintBarHeight + PlumDimens.footerBelow
 
     /**
      * One column of the on-screen keyboard: 44, whatever the width or the text size, until the screen
@@ -264,12 +292,12 @@ data class PlumLayout(
      * and 471 high (`PlumLayoutTest`, `KeyboardFitTest` assert it) and over it on 375 high, where nothing can
      * shrink below the 40 dp touch area.
      */
-    val keyboardKeyHeight: Dp = PlumDimens.keyboardKeyHeight
+    val keyboardKeyHeight: Dp = KeyboardDimens.keyboardKeyHeight
 
     /** The keyboard without what the caller puts under it: 8 dp of tray, four rows of keys, three gaps (164). */
     val keyboardHeight: Dp =
-        PlumDimens.keyboardTopPadding + keyboardKeyHeight * PlumDimens.KEYBOARD_ROWS +
-            PlumDimens.keyboardKeyGap * (PlumDimens.KEYBOARD_ROWS - 1)
+        KeyboardDimens.keyboardTopPadding + keyboardKeyHeight * KeyboardDimens.KEYBOARD_ROWS +
+            KeyboardDimens.keyboardKeyGap * (KeyboardDimens.KEYBOARD_ROWS - 1)
 
     /**
      * The whole tray as a screen shows it: [keyboardHeight], then the 6 gap, the hint bar and the
@@ -279,21 +307,40 @@ data class PlumLayout(
     val keyboardTrayHeight: Dp = keyboardHeight + keyboardBelowKeys
 
     /** Shift, delete and hide icons: 18 at Medium, growing with the text. */
-    val keyboardIconSize: Dp = PlumDimens.keyboardIconSize * textScale
+    val keyboardIconSize: Dp = KeyboardDimens.keyboardIconSize * textScale
 
     /** The caret of a field typed with the keyboard: 1.5 at Medium, growing with the text (drawn, never blinking). */
     val caretWidth: Dp = PlumDimens.caretWidth * textScale
 
+    /** How far the hint keys' collars reach above the hint bar (0 when the bar has room for them): a list's bottom keeps this much extra above the bar so the gap to the drawn keys is still [PlumDimens.barGap]. */
+    val hintKeyReach: Dp = HintKeyDimens.reachAboveBar(hintBarHeight, keyCapHeight)
+
     /** The strip's height between the bars: 346 at 432 high at Medium. */
     val stripHeight: Dp =
-        height - PlumDimens.stripMarginTop - PlumDimens.stripMarginBottom - topBarHeight -
-            hintBarHeight - PlumDimens.barGap * 2
+        height - PlumDimens.stripMarginTop - topBarHeight - PlumDimens.barGap - footerZone
 
-    /** The cover grid's height: the strip less what its wider top gap ([PlumDimens.gridTopGap], not [PlumDimens.barGap]) takes. */
-    val gridStripHeight: Dp = stripHeight - (PlumDimens.gridTopGap - PlumDimens.barGap)
+    /** The cover grid's height: the strip less what its wider top gap ([PlumDimens.gridTopGap], not [PlumDimens.barGap]) and its bottom room take. */
+    val gridStripHeight: Dp = stripHeight - (PlumDimens.gridTopGap - PlumDimens.barGap) - PlumDimens.gridBottomRoom
 
-    /** Game rows that fit between the bars (the games list only), counting the gap after each; fewer at bigger text. */
-    val listRowsThatFit: Int = floor((stripHeight + PlumDimens.listRowGap) / (gameRowHeight + PlumDimens.listRowGap)).toInt().coerceAtLeast(0)
+    /** The Apps grid's height: the strip less its wider top gap ([PlumDimens.appsGridTopGap]). */
+    val appsStripHeight: Dp = stripHeight - (PlumDimens.appsGridTopGap - PlumDimens.barGap)
+
+    /**
+     * Game rows that fit between the bars (the games list only), counting the gap after each; fewer at bigger text.
+     * Counted in rounded pixels as [listRowsHeightPx] lays them out: a count that fits in dp can overflow by a pixel per row and cut the first row.
+     */
+    val listRowsThatFit: Int =
+        floor(
+            (floor(stripHeight.value * pixelsPerDp) + (PlumDimens.listRowGap.value * pixelsPerDp).roundToInt()) /
+                ((gameRowHeight + PlumDimens.listRowGap).value * pixelsPerDp).roundToInt(),
+        ).toInt().coerceAtLeast(0)
+
+    /** The games list's height: the [listRowsThatFit] whole rows, the last without its gap. The list ends on a row (where the list fades) and the scroll keeper's window is this, so the two agree on the last row. */
+    val listRowsHeight: Dp = ((gameRowHeight + PlumDimens.listRowGap) * listRowsThatFit - PlumDimens.listRowGap).coerceAtLeast(0.dp)
+
+    /** [listRowsHeight] in whole pixels, as the rows lay out: each row is its stride rounded to pixels, so the sum of rounded strides, not the rounded sum. */
+    fun listRowsHeightPx(density: Density): Int =
+        with(density) { ((gameRowHeight + PlumDimens.listRowGap).roundToPx() * listRowsThatFit - PlumDimens.listRowGap.roundToPx()).coerceAtLeast(0) }
 
     private fun gridColumns(
         cell: Dp,
@@ -304,15 +351,15 @@ data class PlumLayout(
         /** One keyboard column on a keyboard [width] wide (the keyboard measures with the width it is given). */
         fun keyboardColumnWidth(width: Dp): Dp =
             minOf(
-                PlumDimens.keyboardColumnWidth,
-                (width - PlumDimens.stripMarginSide * 2 - PlumDimens.keyboardKeyGap * (PlumDimens.KEYBOARD_COLUMNS - 1)) /
-                    PlumDimens.KEYBOARD_COLUMNS,
+                KeyboardDimens.keyboardColumnWidth,
+                (width - PlumDimens.stripMarginSide * 2 - KeyboardDimens.keyboardKeyGap * (KeyboardDimens.KEYBOARD_COLUMNS - 1)) /
+                    KeyboardDimens.KEYBOARD_COLUMNS,
             )
 
         /** The width of the keys' block on a keyboard [width] wide: 476, or `width − 48` on a narrower screen. */
         fun keyboardBlockWidth(width: Dp): Dp =
-            keyboardColumnWidth(width) * PlumDimens.KEYBOARD_COLUMNS +
-                PlumDimens.keyboardKeyGap * (PlumDimens.KEYBOARD_COLUMNS - 1)
+            keyboardColumnWidth(width) * KeyboardDimens.KEYBOARD_COLUMNS +
+                KeyboardDimens.keyboardKeyGap * (KeyboardDimens.KEYBOARD_COLUMNS - 1)
 
         /**
          * The narrowest cover of [coverClass] at [size] (docs/design/rules.md › Grid): the cell is

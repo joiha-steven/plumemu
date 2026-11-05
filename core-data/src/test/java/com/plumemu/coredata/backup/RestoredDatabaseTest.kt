@@ -7,6 +7,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.plumemu.coredata.db.PlumDatabase
 import com.plumemu.coredata.db.ScrapedPicture
 import com.plumemu.coredata.db.ScrapedPictures
+import com.plumemu.coredata.db.TestDetailsRating
 import com.plumemu.coredata.settings.LibrarySettings
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SetupFlags
@@ -80,7 +81,7 @@ class RestoredDatabaseTest {
         val file = File(tmp.root, "work/database/plumemu.db").also { it.parentFile?.mkdirs() }
         source.copyTo(file)
 
-        val prepared = RestoredDatabase.prepare(ApplicationProvider.getApplicationContext(), file, oldRoot, newRoot)
+        val prepared = RestoredDatabase.prepare(ApplicationProvider.getApplicationContext(), file, oldRoot, newRoot, TestDetailsRating)
 
         assertEquals(1, prepared.gameCount)
         assertEquals(1, prepared.picturesRewritten)
@@ -108,6 +109,42 @@ class RestoredDatabaseTest {
     }
 
     @Test
+    fun aVersion15SnapshotIsMigratedWithItsRatingsReadFromTheDetails() {
+        val name = "restore-v15-ratings.db"
+        helper.createDatabase(name, 15).use { db ->
+            val rows = listOf(
+                "crc:rated" to """{"format":1,"details":{"rating":17,"players":"1"}}""",
+                "crc:unrated" to """{"format":1,"details":{"players":"1"}}""",
+                "crc:broken" to """{"format":1,"details":{"rating":""",
+            )
+            for ((key, json) in rows) {
+                db.execSQL(
+                    "INSERT INTO scraped_game (scrape_key, game_id, outcome, scraped_at, details_json, pictures) VALUES (?, NULL, 'MATCHED', 50, ?, '')",
+                    arrayOf<Any>(key, json),
+                )
+            }
+            db.execSQL("INSERT INTO scraped_game (scrape_key, game_id, outcome, scraped_at, pictures) VALUES ('crc:none', NULL, 'NO_MATCH', 50, '')")
+        }
+        val source = ApplicationProvider.getApplicationContext<android.content.Context>().getDatabasePath(name)
+        val file = File(tmp.root, "work/database/plumemu.db").also { it.parentFile?.mkdirs() }
+        source.copyTo(file)
+
+        RestoredDatabase.prepare(ApplicationProvider.getApplicationContext(), file, oldRoot, newRoot, TestDetailsRating)
+
+        SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+            assertEquals(PlumDatabase.SCHEMA_VERSION, db.version)
+            val ratings = db.rawQuery("SELECT scrape_key, rating FROM scraped_game ORDER BY scrape_key", null).use { c ->
+                buildList { while (c.moveToNext()) add(c.getString(0) to if (c.isNull(1)) null else c.getInt(1)) }
+            }
+            assertEquals(
+                "the rated row gets its rating; no rating, broken details and no details keep none",
+                listOf("crc:broken" to null, "crc:none" to null, "crc:rated" to 17, "crc:unrated" to null),
+                ratings,
+            )
+        }
+    }
+
+    @Test
     fun theFlagsFollowTheirRules() {
         val device = PlumSettings(flags = SetupFlags(setupCompleted = true, homeRoleAsked = true, rescanAfterReset = true, folderMatchVersion = 2, namingRulesVersion = 2, scrapeRulesVersion = 2))
         val file = PlumSettings(library = LibrarySettings(scanOnStartup = false), flags = SetupFlags(setupCompleted = false, homeRoleAsked = false, rescanAfterReset = false, folderMatchVersion = 1, namingRulesVersion = 1, scrapeRulesVersion = 1))
@@ -127,6 +164,13 @@ class RestoredDatabaseTest {
         val settingsOnly = RestoreSettings.merge(file, device, withLibrary = false)
         assertEquals(false, settingsOnly.library.scanOnStartup)
         assertEquals("without its library every flag stays the device's", device.flags, settingsOnly.flags)
+
+        val skipped = device.copy(flags = device.flags.copy(setupQuestionsSkipped = true))
+        val fileSkipped = file.copy(flags = file.flags.copy(setupQuestionsSkipped = true))
+        for (withLibrary in listOf(true, false)) {
+            assertEquals("a restore never reopens setup for its skipped questions (device, withLibrary=$withLibrary)", false, RestoreSettings.merge(file, skipped, withLibrary).flags.setupQuestionsSkipped)
+            assertEquals("nor does the file's own flag (withLibrary=$withLibrary)", false, RestoreSettings.merge(fileSkipped, device, withLibrary).flags.setupQuestionsSkipped)
+        }
 
         val fresh = PlumSettings()
         assertEquals("an Everything file finished setup on a fresh device", true, RestoreSettings.merge(device, fresh, withLibrary = true).flags.setupCompleted)

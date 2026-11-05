@@ -79,10 +79,17 @@ internal fun ColumnScope.LibraryStepContent(
     if (PlumTheme.layout.widthClass == WidthClass.Wide && state.systems.isNotEmpty() && state.step != SetupStep.Ready) BiggestSystems(state.systems)
     if (state.step != SetupStep.Ready) return
     if (state.systemCount > 0) EmulatorsRow(state.emulators)
-    // Only after a sign-in on the box art step: the run starts in the background.
-    if (state.isBoxArtComing) {
+    // Only what is true now: coming, waiting for a network, or a refused account (never with own covers or no games).
+    if (state.boxArtLine != BoxArtLine.None) {
         SetupInfoRow(
-            title = stringResource(R.string.setup_ready_box_art),
+            title =
+                stringResource(
+                    when (state.boxArtLine) {
+                        BoxArtLine.WaitsForNetwork -> R.string.setup_ready_box_art_offline
+                        BoxArtLine.SignInAgain -> R.string.setup_ready_box_art_sign_in
+                        else -> R.string.setup_ready_box_art
+                    },
+                ),
             body = null,
             isFocused = false,
             // One content gap from the rows around it, like the statistics row.
@@ -94,20 +101,15 @@ internal fun ColumnScope.LibraryStepContent(
             title = stringResource(R.string.setup_stats_title),
             body = stringResource(R.string.setup_stats_body),
             isFocused = state.focus == SetupControl.UsageStatistics,
-            isFocusable = true,
             modifier = Modifier.setupControl(state, SetupControl.UsageStatistics, onAction),
         ) {
-            SetupSwitch(state.usageStatistics, stringResource(if (state.usageStatistics) R.string.setup_stats_on else R.string.setup_stats_off), isFocused = state.focus == SetupControl.UsageStatistics)
+            SetupSwitch(
+                state.usageStatistics,
+                stringResource(if (state.usageStatistics) R.string.setup_stats_on else R.string.setup_stats_off),
+                modifier = Modifier.testTag(SetupTags.USAGE_SWITCH),
+                isFocused = state.focus == SetupControl.UsageStatistics,
+            )
         }
-    }
-    SetupInfoRow(
-        title = stringResource(R.string.setup_one_hand_title),
-        body = stringResource(R.string.setup_one_hand_body),
-        isFocused = state.focus == SetupControl.PushRightToPlay,
-        isFocusable = true,
-        modifier = Modifier.setupControl(state, SetupControl.PushRightToPlay, onAction),
-    ) {
-        SetupSwitch(state.pushRightToPlay, stringResource(if (state.pushRightToPlay) R.string.setup_stats_on else R.string.setup_stats_off), isFocused = state.focus == SetupControl.PushRightToPlay)
     }
     Box(Modifier.padding(top = PlumDimens.setupButtonSpacer)) {
         SetupButton(
@@ -241,5 +243,5 @@ private fun joinNames(names: List<String>): String {
 private const val MIN_PROGRESS = 0.08f
 private const val BIGGEST_SYSTEMS = 4
 private const val FOUND_COLUMNS = 2
-private const val FOUND_TWO_COLUMNS_MAX_SCALE = 1.3f
+private const val FOUND_TWO_COLUMNS_MAX_SCALE = 1.4f
 private const val NAMED_SYSTEMS = 3

@@ -42,8 +42,7 @@ internal class SettingsAccountTest : SettingsModelHarness() {
         press(Action.Enter)
         val form = requireNotNull(model.signIn.form)
         assertEquals("the cursor opens on the first empty field", first, form.focus)
-        assertTrue("the form opens typing, the tray up", form.isTyping && form.inField && form.isTrayUp)
-        press(Action.Back)
+        assertFalse("the form opens with the keyboard down", form.isTyping || form.isTrayUp)
         assertSame("B puts the tray away and the form stays", form, model.signIn.form)
         assertFalse(form.isTyping)
         assertEquals(first, form.focus)
@@ -63,7 +62,7 @@ internal class SettingsAccountTest : SettingsModelHarness() {
     @Test
     fun signedOutListsSignInInAccountsAndNoRegionRowWithNoStatusLine() {
         show(AccountStatus.SignedOut)
-        assertEquals(listOf(SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount), accounts())
+        assertEquals(listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount), accounts())
         assertEquals("the region is no row: it is in the ScreenScraper panel", emptyList<SettingsOption>(), library().filter { it in ACCOUNT_ROWS })
         assertNull(boxArtLineOf(model.content.account, model.content.boxArt))
     }
@@ -73,7 +72,7 @@ internal class SettingsAccountTest : SettingsModelHarness() {
         // The daily limit and the wrong password are no rows of their own.
         for (account in listOf(AccountStatus.SignedIn("plumtester"), AccountStatus.SignedIn("plumtester", isRefused = true), AccountStatus.SignedIn("plumtester", dailyLimitUntilMillis = 5_000L))) {
             show(account)
-            assertEquals(listOf(SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount), accounts())
+            assertEquals(listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount), accounts())
             assertEquals(emptyList<SettingsOption>(), library().filter { it in ACCOUNT_ROWS })
         }
         show(AccountStatus.SignedIn("plumtester", isRefused = true))
@@ -154,8 +153,9 @@ internal class SettingsAccountTest : SettingsModelHarness() {
     fun touchOpensTheFormAndPressesSignIn() {
         show(AccountStatus.SignedOut)
         openSection(SettingsSection.Accounts)
-        // The first row has the focus on entering the section: one tap opens it.
+        // Box art is the first row and has the focus on entering the section: a tap on the account row focuses it, the second opens it.
         val row = accounts().indexOf(SettingsOption.ScraperAccount)
+        model.onTapOption(row, actions.shown, wide)
         model.onTapOption(row, actions.shown, wide)
         val form = requireNotNull(model.signIn.form)
         model.onTapPanelItem(1, actions.shown, wide)

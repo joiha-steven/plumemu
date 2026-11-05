@@ -22,6 +22,9 @@ class HomeRealCoversScreenshotTest {
     fun superNintendoGridFocusedTopLeft() = ReferenceShots.capture("home_art_real_grid_snes") { RealCoverGrid("snes", 0, GridSize.Large) }
 
     @Test
+    fun superNintendoGridOnThePocket6AtFullSize() = ReferenceShots.capture("home_art_real_grid_snes", sizes = listOf(ReferenceShots.Size.Pocket6Full)) { RealCoverGrid("snes", 0, GridSize.Large) }
+
+    @Test
     fun megaDriveGridPortraitBoxesInWideCells() = ReferenceShots.capture("home_art_real_grid_megadrive") { RealCoverGrid("megadrive", 4, GridSize.Large) }
 
     @Test

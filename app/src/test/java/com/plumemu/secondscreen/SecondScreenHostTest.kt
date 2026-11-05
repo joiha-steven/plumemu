@@ -8,6 +8,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.SecondScreenGameCardDimens
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -159,6 +161,28 @@ class SecondScreenHostTest : SecondScreenHostTestBase() {
     }
 
     @Test
+    fun anActivityInFrontTakesTheWindowFromOneLeftInGame() {
+        // Two Activities at once: one opened from the launcher icon left a game running, then Home made another.
+        val old = startHost()
+        presence.value = Presence.Playing
+        idle()
+        assertEquals(WindowMode.InGameClock, old.shownMode)
+        val front = MutableStateFlow(Presence.InPlumemu)
+        val newer = SecondScreenHost(activity, activity.lifecycleScope, screens, settings, SecondScreenFeed(activity.lifecycleScope), front, 0)
+        others += newer
+        newer.start()
+        idle()
+        assertNull("the one left behind lets go", old.shownDisplayId)
+        assertEquals("the one in front picks", WindowMode.Picking, newer.shownMode)
+        front.value = Presence.Away
+        presence.value = Presence.InPlumemu
+        idle()
+        assertNull("the other way round too", newer.shownDisplayId)
+        assertEquals(WindowMode.Picking, old.shownMode)
+        newer.stop()
+    }
+
+    @Test
     fun theWindowIsNotFocusableAndStillTouchable() {
         val flags = startHost().shownWindow!!.window!!.attributes.flags
         assertTrue("not focusable", flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE != 0)
@@ -295,7 +319,7 @@ class SecondScreenHostTest : SecondScreenHostTestBase() {
         assertEquals(Lifecycle.State.CREATED, activity.lifecycle.currentState)
         assertEquals("the window's own owner", Lifecycle.State.RESUMED, lifecycleOf(window))
         assertEquals("the window does not follow the Activity's stop by itself", displayId, host.shownDisplayId)
-        feed.offer(SecondScreenContent.System("Mega Drive", 12))
+        feed.offer(SystemEntry("md", "Mega Drive", 12))
         idle(SETTLED_MS)
         val texts = textsOf(window).joinToString()
         assertTrue("recomposed while stopped: $texts", "Mega Drive" in texts)
@@ -321,9 +345,9 @@ class SecondScreenHostTest : SecondScreenHostTestBase() {
         assertEquals("the second display's density (369 dpi)", 369f / 160f, density, 0.01f)
         assertEquals("538 dp wide", 538f, view.width / density, 1f)
         assertEquals("468 dp high", 468f, view.height / density, 1f)
-        val block = nodesOf(window).first { it.config.getOrNull(SemanticsProperties.TestTag) == SecondScreenTags.BLOCK }
-        val leftDp = block.boundsInRoot.left / density
-        assertTrue("Roomy's 40 dp margin, not Compact's 28: $leftDp", abs(leftDp - 40f) < 1f)
+        val card = nodesOf(window).first { it.config.getOrNull(SemanticsProperties.TestTag) == GameCardTags.CARD }
+        val leftDp = card.boundsInRoot.left / density
+        assertTrue("the game card's 24 dp side margin: $leftDp", abs(leftDp - SecondScreenGameCardDimens.marginSide.value) < 1f)
     }
 
 }

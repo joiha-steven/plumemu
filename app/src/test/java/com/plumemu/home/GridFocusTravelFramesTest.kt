@@ -13,7 +13,7 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.strip.StripState
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.coreui.theme.LocalGlideClock
@@ -30,9 +30,11 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
 
 /**
- * The focus ring of the games grid and the Apps grid travels from the cell it leaves to the cell it lands on (the PS Vita's
+ * The focus ring of the Apps grid travels from the cell it leaves to the cell it lands on (the PS Vita's
  * way; the home lists' pill does the same, [GlidingPillFramesBase]): over [PlumMotion.GLIDE_MS],
  * decelerating, in X within a row and in Y between rows (in step with the rows' glide), drawn by the grid, nothing recomposed.
+ * The cover grid has no travelling ring (its focus is the lit groove of the cover's collar, which stays on its cover); what is left
+ * of it here is the ring's absence once the focus has left the covers.
  * The ring is a draw, not a node, so it is found in the pixels the screen really draws: the box of the accent-coloured pixels
  * inside the grid, its centre X and its bottom Y (the cover grows and lifts under it, which moves its top). Frame by frame on
  * the test clock.
@@ -58,7 +60,7 @@ abstract class GridFocusTravelFramesBase {
     ) {
         compose.setContent {
             CompositionLocalProvider(LocalGlideClock provides { compose.mainClock.currentTime * 1_000_000L }) {
-                PlumTheme(MediumText.Default.copy(animationsOn = animationsOn)) {
+                PlumTheme(TableText.Default.copy(animationsOn = animationsOn)) {
                     accent = PlumTheme.colors.accent
                     if (kind == Kind.Covers) {
                         columns = PlumTheme.layout.gridColumns(CoverShape.Landscape)
@@ -83,10 +85,17 @@ abstract class GridFocusTravelFramesBase {
         compose.waitForIdle()
     }
 
+    /** The last cover of the first packed row (rows hold as many covers as their shapes let them). */
+    private fun endOfFirstRow(): Int = generateSequence(0) { it + 1 }.takeWhile { runCatching { cell(it).top == cell(0).top }.getOrDefault(false) }.last()
+
     private fun move(direction: Direction) = compose.runOnIdle { checkNotNull(state).dispatch(Action.Move(direction)) }
 
     /** Where cell [index] is drawn now (its layout place and the glide's translation). */
     private fun cell(index: Int): Rect = compose.onNodeWithTag(HomeTags.cover(index), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+
+    /** The accent, or the lit groove beside a picture (the accent a shade darker under the art's shadow). */
+    private fun Color.isRing(): Boolean =
+        listOf(accent, litGroove(accent)).any { abs(red - it.red) + abs(green - it.green) + abs(blue - it.blue) < 0.12f }
 
     /** The ring's centre X and bottom Y in the pixels now; null when none is drawn. */
     private fun ring(): Pair<Float, Float>? {
@@ -98,7 +107,7 @@ abstract class GridFocusTravelFramesBase {
         for (y in grid.top.toInt() until grid.bottom.toInt() step 2) {
             for (x in grid.left.toInt() until pixels.width step 2) {
                 val p = pixels[x, y]
-                if (abs(p.red - accent.red) + abs(p.green - accent.green) + abs(p.blue - accent.blue) < 0.12f) {
+                if (p.isRing()) {
                     if (x < minX) minX = x
                     if (x > maxX) maxX = x
                     if (y > maxY) maxY = y
@@ -160,9 +169,6 @@ abstract class GridFocusTravelFramesBase {
     }
 
     @Test
-    fun aRightMoveInsideARowTravelsInXInTheCoverGrid() = rightWithinARow(Kind.Covers)
-
-    @Test
     fun aRightMoveInsideARowTravelsInXInTheAppsGrid() = rightWithinARow(Kind.Apps)
 
     /**
@@ -182,9 +188,6 @@ abstract class GridFocusTravelFramesBase {
         assertTravel("${kind.name} up", frames.ys(), from.second, from.second + delta, TOL_Y)
         assertTrue("${kind.name} up: X stays (same column): ${frames.xs()}", frames.xs().all { abs(it - from.first) <= TOL })
     }
-
-    @Test
-    fun anUpMoveBetweenRowsTravelsInYInTheCoverGrid() = upWithoutScroll(Kind.Covers)
 
     @Test
     fun anUpMoveBetweenRowsTravelsInYInTheAppsGrid() = upWithoutScroll(Kind.Apps)
@@ -232,9 +235,6 @@ abstract class GridFocusTravelFramesBase {
     }
 
     @Test
-    fun aDownMoveThatScrollsTheRowsGlidesThemAndKeepsTheRingWithThemInTheCoverGrid() = downWithScroll(Kind.Covers)
-
-    @Test
     fun aDownMoveThatScrollsTheRowsGlidesThemAndKeepsTheRingWithThemInTheAppsGrid() = downWithScroll(Kind.Apps)
 
     /** Held Down through the grid: the rows keep moving at the repeat speed (linear) and the ring never goes back or jumps. */
@@ -259,9 +259,6 @@ abstract class GridFocusTravelFramesBase {
     }
 
     @Test
-    fun aHeldDownGlidesTheRowsAndTheRingWithoutJumpsInTheCoverGrid() = heldDownScrolls(Kind.Covers)
-
-    @Test
     fun aHeldDownGlidesTheRowsAndTheRingWithoutJumpsInTheAppsGrid() = heldDownScrolls(Kind.Apps)
 
     /** Down off a column that the last, short row does not have lands on its last cover: the ring travels left as well as down. */
@@ -269,7 +266,7 @@ abstract class GridFocusTravelFramesBase {
     fun aDownMoveIntoAShortLastRowTravelsDiagonally() {
         compose.setContent {
             CompositionLocalProvider(LocalGlideClock provides { compose.mainClock.currentTime * 1_000_000L }) {
-                PlumTheme(MediumText.Default) {
+                PlumTheme(TableText.Default) {
                     accent = PlumTheme.colors.accent
                     columns = appsGridColumns(PlumTheme.layout)
                     val board = remember { appsGridLibrary() }
@@ -307,8 +304,9 @@ abstract class GridFocusTravelFramesBase {
     @Test
     fun aRightMoveAtTheEndOfARowDoesNotWrapAndLeavesNoRingTravelling() {
         open(Kind.Covers, focus = 0)
-        focusOn(columns - 1)
-        val covers = cell(0).let { Rect(it.left, it.top, cell(columns - 1).right, it.bottom) }.inflate(10f)
+        val end = endOfFirstRow()
+        focusOn(end)
+        val covers = cell(0).let { Rect(it.left, it.top, cell(end).right, it.bottom) }.inflate(10f)
         val from = checkNotNull(ring())
         val row = checkNotNull(state).focus.row
         compose.mainClock.autoAdvance = false
@@ -328,13 +326,15 @@ abstract class GridFocusTravelFramesBase {
     @Test
     fun aLeftMoveAtTheStartOfARowTakesTheRingAway() {
         open(Kind.Covers, focus = 0)
-        val covers = cell(0).let { Rect(it.left, it.top, cell(columns - 1).right, it.bottom) }.inflate(10f)
+        val covers = cell(0).let { Rect(it.left, it.top, cell(endOfFirstRow()).right, it.bottom) }.inflate(10f)
         assertTrue("the ring is on the first cover at rest", ringIn(covers))
         compose.mainClock.autoAdvance = false
         move(Direction.Left)
         record(framesFor(PlumMotion.GLIDE_MS) + 4)
         assertEquals(Column.Systems, checkNotNull(state).focus.column)
-        assertTrue("no ring on the covers once the focus left them", !ringIn(covers))
+        // The strip slid to show the systems: look where the covers stand now, not where they stood.
+        val now = cell(0).let { Rect(it.left, it.top - 10f, cell(columns - 1).right + 10f, it.bottom + 10f) }
+        assertTrue("no ring on the covers once the focus left them", !ringIn(now))
     }
 
     private fun ringIn(area: Rect): Boolean {
@@ -342,7 +342,7 @@ abstract class GridFocusTravelFramesBase {
         return (area.top.toInt() until area.bottom.toInt() step 2).any { y ->
             (area.left.toInt() until area.right.toInt() step 2).any { x ->
                 val p = pixels[x.coerceIn(0, pixels.width - 1), y.coerceIn(0, pixels.height - 1)]
-                abs(p.red - accent.red) + abs(p.green - accent.green) + abs(p.blue - accent.blue) < 0.12f
+                p.isRing()
             }
         }
     }
@@ -367,9 +367,6 @@ abstract class GridFocusTravelFramesBase {
     }
 
     @Test
-    fun aHeldRightKeepsTheRingMovingEvenlyInTheCoverGrid() = heldRight(Kind.Covers)
-
-    @Test
     fun aHeldRightKeepsTheRingMovingEvenlyInTheAppsGrid() = heldRight(Kind.Apps)
 
     private fun jumpsWithAnimationsOff(kind: Kind) {
@@ -383,9 +380,6 @@ abstract class GridFocusTravelFramesBase {
         println("${kind.name} animations off ring X: $xs")
         assertTrue("${kind.name}: the ring is on the new cell at once, from the first frame it is drawn: $xs", xs.all { abs(it - (from.first + delta)) <= TOL })
     }
-
-    @Test
-    fun withAnimationsOffTheRingJumpsInTheCoverGrid() = jumpsWithAnimationsOff(Kind.Covers)
 
     @Test
     fun withAnimationsOffTheRingJumpsInTheAppsGrid() = jumpsWithAnimationsOff(Kind.Apps)

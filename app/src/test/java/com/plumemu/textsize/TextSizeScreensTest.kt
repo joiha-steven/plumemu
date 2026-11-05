@@ -9,11 +9,14 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.GridSize
+import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
@@ -141,6 +144,9 @@ abstract class TextSizeScreensBase(
         /** A text cut to its height by design ([FitAllowance.cutToFit]). */
         val cutToFit: String? = null,
         val readThrough: InfoReadThrough? = null,
+        /** The gap a focused item's node carries under its drawn part (a game row's), which the list's last row may leave outside. */
+        val trailingGap: Dp = 0.dp,
+        /** Titles that may end in an ellipsis at Largest in Serif and Mono only ([LONG_TITLES]). */ val longTitles: Set<String> = emptySet(),
     )
 
     private fun check(
@@ -171,10 +177,10 @@ abstract class TextSizeScreensBase(
             val screenRoot = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
             val root = if (spec.rootTag == null) screenRoot else compose.onNodeWithTag(spec.rootTag, useUnmergedTree = true).fetchSemanticsNode()
             val label = "$name at ${each.name} (${each.factor}) ${eachFont.name} ${eachWeight.name} on ${widthDp}x$heightDp"
-            (textProblems(root, FitAllowance(spec.scrollTags, spec.ellipsisUnder, isLargest = each.factor >= spec.ellipsisFrom.factor, stripTags = homeLists + HomeTags.DETAILS, cutToFit = spec.cutToFit, slidingText = spec.slidingText)) + spec.readThrough?.unreadRows(compose).orEmpty()).mapTo(failures) { "$label: $it" }
+            (textProblems(root, FitAllowance(spec.scrollTags, spec.ellipsisUnder, isLargest = each.factor >= spec.ellipsisFrom.factor, stripTags = homeLists + HomeTags.DETAILS, cutToFit = spec.cutToFit, slidingText = spec.slidingText, oneLine = DETAILS_ONE_LINE, ellipsisTexts = if (each == TextSize.Largest && eachFont != PlumFont.Sans) spec.longTitles else emptySet())) + spec.readThrough?.unreadRows(compose).orEmpty()).mapTo(failures) { "$label: $it" }
             (if (each == TextSize.Largest && eachFont != PlumFont.Sans) spec.focusedWhenTooTall ?: spec.focused else spec.focused)?.let { find ->
                 val node = find(screenRoot)
-                if (node == null) failures += "$label: the focused item is not drawn" else notFullyShown(node, screenRoot)?.let { failures += "$label: the focused item $it" }
+                if (node == null) failures += "$label: the focused item is not drawn" else notFullyShown(node, screenRoot, with(compose.density) { spec.trailingGap.toPx() })?.let { failures += "$label: the focused item $it" }
             }
         }
         assertTrue(failures.size.toString() + " problems:\n" + failures.take(40).joinToString("\n"), failures.isEmpty())
@@ -228,15 +234,11 @@ abstract class TextSizeScreensBase(
     /** The cover [CoverGridBoard] focuses: row 2 on both, three columns wide, two narrow. */
     private val gridFocus: Int get() = if (widthDp >= WIDE_FROM_DP) MEGA_MAN_X else FINAL_FANTASY_VI
 
-    @Test
-    fun homeGridWithArt() =
-        check("home_art_grid", Spec(scrollTags = homeLists + HomeTags.GRID, ellipsisUnder = HomeTags.PORTRAIT_TILE_TITLE, focused = tagged(HomeTags.cover(gridFocus)), shoot = true)) {
+    @Test fun homeGridWithArt() = check("home_art_grid", Spec(scrollTags = homeLists + HomeTags.GRID, ellipsisUnder = HomeTags.PORTRAIT_TILE_TITLE, focused = tagged(HomeTags.cover(gridFocus)), shoot = true)) {
             CoverGridBoard(rememberSource { coverArtSource() })
         }
 
-    @Test
-    fun homeGridWithoutArt() =
-        check("home_art_grid_none", Spec(scrollTags = homeLists + HomeTags.GRID, ellipsisUnder = HomeTags.PORTRAIT_TILE_TITLE, focused = tagged(HomeTags.cover(gridFocus)))) {
+    @Test fun homeGridWithoutArt() = check("home_art_grid_none", Spec(scrollTags = homeLists + HomeTags.GRID, ellipsisUnder = HomeTags.PORTRAIT_TILE_TITLE, focused = tagged(HomeTags.cover(gridFocus)))) {
             CoverGridBoard(rememberSource { coverArtSource(noArt = allArtTitles) })
         }
 
@@ -260,26 +262,26 @@ abstract class TextSizeScreensBase(
 
     @Test
     fun homeDetailsWithArt() =
-        check("home_art_details", Spec(scrollTags = homeLists, focused = tagged(HomeTags.DETAILS_TITLE), shoot = true, cutToFit = HomeTags.DETAILS_SYNOPSIS)) {
+        check("home_art_details", Spec(scrollTags = homeLists, focused = tagged(HomeTags.DETAILS_TITLE), shoot = true, cutToFit = HomeTags.DETAILS_SYNOPSIS, longTitles = LONG_TITLES)) {
             CoverDetailsBoard(rememberSource { coverArtSource() })
         }
 
     @Test
     fun homeDetailsWithoutArt() =
-        check("home_art_details_none", Spec(scrollTags = homeLists, focused = tagged(HomeTags.DETAILS_TITLE), cutToFit = HomeTags.DETAILS_SYNOPSIS)) {
+        check("home_art_details_none", Spec(scrollTags = homeLists, focused = tagged(HomeTags.DETAILS_TITLE), cutToFit = HomeTags.DETAILS_SYNOPSIS, longTitles = LONG_TITLES)) {
             CoverDetailsBoard(rememberSource { coverArtSource(noArt = setOf("Super Metroid")) })
         }
 
     // Home
     @Test
-    fun homeSystems() = check("home_systems", Spec(scrollTags = homeLists, focused = tagged(HomeTags.system(FakeHomeContent.BOARD_SNES_INDEX)), shoot = true)) { HomeAt(FakeHomeContent.board(), BoardSystemsFocused) }
+    fun homeSystems() = check("home_systems", Spec(scrollTags = homeLists, focused = tagged(HomeTags.system(FakeHomeContent.BOARD_SNES_INDEX)), shoot = true, longTitles = LONG_TITLES)) { HomeAt(FakeHomeContent.board(), BoardSystemsFocused) }
 
     @Test
-    fun homeGames() = check("home_games", Spec(scrollTags = homeLists, focused = tagged(HomeTags.game(FakeHomeContent.BOARD_REMEMBERED_ROW)), shoot = true)) { HomeAt(FakeHomeContent.board(), BoardGamesFocused) }
+    fun homeGames() = check("home_games", Spec(scrollTags = homeLists, focused = tagged(HomeTags.game(FakeHomeContent.BOARD_REMEMBERED_ROW)), shoot = true, trailingGap = PlumDimens.listRowGap, longTitles = LONG_TITLES)) { HomeAt(FakeHomeContent.board(), BoardGamesFocused) }
 
     /** A thousand games in every system: the peek column's four-digit counts. */
     @Test
-    fun homeGamesWithFourDigitCounts() = check("home_games_1000", Spec(scrollTags = homeLists)) { HomeAt(FakeHomeContent.large(18_000), BoardGamesFocused) }
+    fun homeGamesWithFourDigitCounts() = check("home_games_1000", Spec(scrollTags = homeLists, longTitles = LONG_TITLES)) { HomeAt(FakeHomeContent.large(18_000), BoardGamesFocused) }
 
     @Test
     fun homeSearchResults() =
@@ -356,7 +358,8 @@ abstract class TextSizeScreensBase(
 
     @Test
     fun settingsSections() =
-        check("settings_sections", Spec(scrollTags = settingsLists, focused = tagged(SettingsTags.section(SettingsSection.Appearance)))) { SettingsAt(SettingsFocus(section = SettingsSection.Appearance)) }
+        // The right column now shows the first row's panel (the language list) with the sections focused; that list scrolls.
+        check("settings_sections", Spec(scrollTags = settingsLists + SettingsTags.PANEL, focused = tagged(SettingsTags.section(SettingsSection.Appearance)))) { SettingsAt(SettingsFocus(section = SettingsSection.Appearance)) }
 
     // The game panel
     @Test
@@ -538,18 +541,15 @@ abstract class TextSizeScreensBase(
         page: PanelPage?,
         focusedTag: String,
         ellipsisUnder: String? = null,
+        ellipsisFrom: TextSize = TextSize.Largest,
         tune: (SettingsFocus) -> SettingsFocus = { it },
-    ) = check(name, Spec(scrollTags = settingsLists + SettingsTags.ACCOUNT_PANEL + SettingsTags.PANEL_LIST, ellipsisUnder = ellipsisUnder, focused = tagged(focusedTag), shoot = page != null)) {
+    ) = check(name, Spec(scrollTags = settingsLists + SettingsTags.ACCOUNT_PANEL + SettingsTags.PANEL_LIST, ellipsisUnder = ellipsisUnder, ellipsisFrom = ellipsisFrom, focused = tagged(focusedTag), shoot = page != null)) {
         SettingsAt(tune(AccountShotContent.focusOn(content, SettingsOption.ScraperAccount, page)), content = content)
     }
 
-    @Test
-    fun settingsBoxArtRowRunning() =
-        boxArt("settings_box_art_row_running", BoxArtShots.content(BoxArtShots.SIGNED_IN, BoxArtShots.running), null, SettingsTags.option(SettingsOption.ScraperAccount))
+    @Test fun settingsBoxArtRowRunning() = boxArt("settings_box_art_row_running", BoxArtShots.content(BoxArtShots.SIGNED_IN, BoxArtShots.running), null, SettingsTags.option(SettingsOption.ScraperAccount))
 
-    @Test
-    fun settingsBoxArtPanelRunning() =
-        boxArt("settings_box_art_panel_running", BoxArtShots.content(BoxArtShots.SIGNED_IN, BoxArtShots.running).copy(accountLimits = BoxArtShots.limits), PanelPage.ScraperAccount, SettingsTags.panelItem(0))
+    @Test fun settingsBoxArtPanelRunning() = boxArt("settings_box_art_panel_running", BoxArtShots.content(BoxArtShots.SIGNED_IN, BoxArtShots.running).copy(accountLimits = BoxArtShots.limits), PanelPage.ScraperAccount, SettingsTags.panelItem(0))
 
     @Test
     fun settingsBoxArtPanelSignOutFocused() {
@@ -579,7 +579,7 @@ abstract class TextSizeScreensBase(
     @Test
     fun settingsBoxArtSystemsLastAction() {
         val last = BoxArtShots.longSystems.systems.size + 1
-        boxArt("settings_box_art_systems_action", BoxArtShots.longSystems, PanelPage.ScraperSystems, SettingsTags.panelItem(last), ellipsisUnder = SettingsTags.BOX_ART_SYSTEMS) {
+        boxArt("settings_box_art_systems_action", BoxArtShots.longSystems, PanelPage.ScraperSystems, SettingsTags.panelItem(last), ellipsisUnder = SettingsTags.BOX_ART_SYSTEMS, ellipsisFrom = TextSize.Huge) {
             it.copy(panelIndex = last, chosenSystems = setOf("arcade"))
         }
     }

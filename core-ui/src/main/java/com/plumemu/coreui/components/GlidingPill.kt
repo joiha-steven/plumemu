@@ -4,20 +4,38 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.graphics.Outline
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlinx.coroutines.delay
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalDensity
@@ -26,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.theme.ListGlide
 import com.plumemu.coreui.theme.LocalGlideClock
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.Settle
@@ -60,6 +79,9 @@ class GlidingPill internal constructor(
 ) {
     /** Set by the focused row, while it composes: its press dip, so the pill is scaled with it. */
     internal var press: PressDip? = null
+
+    /** Set by the focused row with a title and a line under it: where its accent bar stands ([StripeAnchor]). */
+    internal var stripe: StripeAnchor? = null
 
     /**
      * Set by the focused row, while it is placed, in a list whose rows differ in height (the panels'): its own top inside its
@@ -132,11 +154,63 @@ class GlidingPill internal constructor(
         return top to height
     }
 
+    private var warmedFor: Any? = null
+
+    /**
+     * Builds, on the low-priority image thread ([BackgroundBuilds]), the cached images the pill's first draw at list width [width] px would build in the
+     * frame that shows it (the slab's shadow and inset shadows are per-pixel work of tens of ms): the same draw calls into a 1 px canvas, once per width,
+     * look and density. Rows of equal height only. The caller restarts this when the list or focus moves; it is cancelled between its two parts, and a
+     * build that ran out of memory is dropped (the draw then builds its image itself). It is the one speculative build there is.
+     */
+    internal suspend fun warm(
+        input: PillInput,
+        width: Int,
+        density: Density,
+        layoutDirection: LayoutDirection,
+    ) {
+        if (width <= 0 || input.heightPx <= 0f || !input.isOn) return
+        val key = listOf(width, input.colors, input.shape, input.heightPx, input.onCard, input.blob, density.density)
+        if (key == warmedFor) return
+        delay(WARM_DELAY_MS)
+        val size = androidx.compose.ui.geometry.Size(width.toFloat(), input.heightPx)
+        val colors = input.colors
+        val blobColor = if (input.blob) colors.slabBlob else Color.Transparent
+        fun drawIn(part: DrawScope.(Outline) -> Unit) {
+            CanvasDrawScope().draw(density, layoutDirection, Canvas(ImageBitmap(1, 1)), size) { part(input.shape.createOutline(size, layoutDirection, this)) }
+        }
+        if (!inBuilds { drawIn { drawSlabOutside(it, colors.slab, colors.slabGlow, blobColor, if (input.onCard) colors.card.fill else colors.bg) } }) return
+        if (!inBuilds { drawIn { drawSlabFill(it, colors.slab, input.onCard) } }) return
+        warmedFor = key
+    }
+
+    /** Runs [part] on the image thread and waits for it; false if it could not run or failed (queue full, out of memory), or the caller was cancelled meanwhile. */
+    private suspend fun inBuilds(part: () -> Unit): Boolean {
+        var done = false
+        suspendCancellableCoroutine { c ->
+            val queued = BackgroundBuilds.submit {
+                try {
+                    part()
+                    done = true
+                } finally {
+                    c.resume(Unit)
+                }
+                null
+            }
+            if (!queued) c.resume(Unit)
+        }
+        currentCoroutineContext().ensureActive()
+        return done
+    }
+
     internal fun draw(
         scope: DrawScope,
         input: PillInput,
     ) = with(scope) {
-        val (top, height) = place(input) ?: return@with
+        val (top, height) = place(input) ?: run {
+            // Animations off: the rows draw the fill and edge; the halo (and the light blob) is still drawn here, outside the list's clip, so it is the one motion-on draws.
+            if (!input.isOn && !haloElsewhere && input.scroll == null) drawHaloOnly(scope, input)
+            return@with
+        }
         val colors = input.colors
         val p = press?.progress?.value ?: 0f
         val scale = if (p == 0f) 1f else 1f - (1f - PlumMotion.PRESS_SCALE) * p
@@ -147,18 +221,24 @@ class GlidingPill internal constructor(
         // The halo has its own clip: it reaches past the list's sides, where the pill's clip (the list's width) would cut it; above and below it is cut at the list.
         // It stays at the resting size, so a press does not dip it and never repaints the rows it reaches over.
         val reach = PlumDimens.focusHaloReach.toPx()
+        // The slab is drawn past its row above and below ([slabOverhang]): the clips leave that much room at the list's ends.
+        val over = slabOverhang(height, this)
         if (!haloElsewhere) {
-            clipRect(left = -reach - side, right = size.width + reach + side) {
-                withTransform({ translate(0f, top) }) { drawHaloOutside(outline, colors.focusGlow) }
+            // A light theme's blob reaches further than the halo, so its clip is wider (the list's own clip above and below still applies).
+            val blobColor = if (input.blob) colors.slabBlob else Color.Transparent
+            val blob = maxOf(if (blobColor.alpha > 0f) SlabDimens.blobReach.toPx() else 0f, endGlow(colors.slabGlow.alpha > 0f && input.glide.keepsGlowRoom))
+            val sideReach = maxOf(haloReach(colors.slabGlow.alpha > 0f, reach), blob)
+            clipRect(left = -sideReach - side, top = -over - blob, right = size.width + sideReach + side, bottom = size.height + over + blob) {
+                drawOutsideFaded(outline, top, height, over, blob, -sideReach - side, size.width + sideReach + side, colors, blobColor, if (input.onCard) colors.card.fill else colors.bg)
             }
         }
-        clipRect(left = -side, right = size.width + side) {
+        clipRect(left = -side, top = -over, right = size.width + side, bottom = size.height + over) {
             withTransform({
                 translate(0f, top)
                 if (scale != 1f) scale(scale, scale, Offset(size.width / 2f, height / 2f))
             }) {
-                drawOutline(outline, if (p == 0f) colors.pill else lerp(colors.pill, colors.text, PlumMotion.PRESS_FILL_MIX * p))
-                drawRingInside(outline, colors.accent)
+                drawSlabFill(outline, colors.slab, input.onCard, PlumMotion.PRESS_FILL_MIX * p, colors.text)
+                drawSlabFace(outline, colors, barShift = stripe?.shiftY ?: 0f, barInset = (input.shape as? InsetFocusPillShape)?.barInset ?: SlabDimens.barInset)
             }
         }
     }
@@ -171,10 +251,98 @@ class GlidingPill internal constructor(
         val (top, height) = place(input, forHalo = true) ?: return@with
         val outline = input.shape.createOutline(androidx.compose.ui.geometry.Size(size.width, height), layoutDirection, this)
         val reach = PlumDimens.focusHaloReach.toPx()
-        clipRect(left = -reach, top = 0f, right = size.width + reach, bottom = size.height) {
-            withTransform({ translate(0f, top) }) { drawHaloOutside(outline, input.colors.focusGlow) }
+        val over = slabOverhang(height, this)
+        val blobColor = if (input.blob) input.colors.slabBlob else Color.Transparent
+        val blob = maxOf(if (blobColor.alpha > 0f) SlabDimens.blobReach.toPx() else 0f, endGlow(input.colors.slabGlow.alpha > 0f && input.glide.keepsGlowRoom))
+        val sideReach = maxOf(haloReach(input.colors.slabGlow.alpha > 0f, reach), blob)
+        clipRect(left = -sideReach, top = -over - blob, right = size.width + sideReach, bottom = size.height + over + blob) {
+            drawOutsideFaded(outline, top, height, over, blob, -sideReach, size.width + sideReach, input.colors, blobColor, if (input.onCard) input.colors.card.fill else input.colors.bg)
         }
     }
+
+    private var tailLength = -1f
+    private var tailKey = Rect.Zero
+    private var tailLow: Rect = Rect.Zero
+    private var tailHigh: Rect = Rect.Zero
+    private var tailDown: Brush? = null
+    private var tailUp: Brush? = null
+    private val tailLayer = Paint()
+
+    /**
+     * The outside shadow, glow and blob of the pill at [top], clipped [over] + [blob] px past the list's window at each end ([left] to [right] wide): the last
+     * [SlabDimens.tailFade] of that clip is drawn into an offscreen layer and masked to transparent, so the clip is no line, over any neighbour drawn earlier.
+     * Only a pill whose shadow reaches a band pays for its layer (two small rects of the list's width); the brushes and bounds are kept: a frame builds none
+     * unless the list's size changed.
+     */
+    private fun DrawScope.drawOutsideFaded(
+        outline: androidx.compose.ui.graphics.Outline,
+        top: Float,
+        height: Float,
+        over: Float,
+        blob: Float,
+        left: Float,
+        right: Float,
+        colors: com.plumemu.coreui.theme.PlumComposeColors,
+        blobColor: Color,
+        bg: Color,
+    ) {
+        val clipTop = -over - blob
+        val clipBottom = size.height + over + blob
+        val length = minOf(SlabDimens.tailFade.toPx(), blob)
+        val atLow = top + height + over + blob > clipBottom - length
+        val atHigh = top - over - blob < clipTop + length
+        if (length <= 0f || (!atLow && !atHigh)) {
+            withTransform({ translate(0f, top) }) { drawSlabOutside(outline, colors.slab, colors.slabGlow, blobColor, bg) }
+            return
+        }
+        if (length != tailLength) {
+            tailLength = length
+            tailDown = Brush.verticalGradient(0f to OPAQUE, 1f to Color.Transparent, startY = 0f, endY = length)
+            tailUp = Brush.verticalGradient(0f to Color.Transparent, 1f to OPAQUE, startY = 0f, endY = length)
+        }
+        val key = Rect(left, clipTop, right, clipBottom)
+        if (key != tailKey) {
+            tailKey = key
+            tailHigh = Rect(left, clipTop, right, clipTop + length)
+            tailLow = Rect(left, clipBottom - length, right, clipBottom)
+        }
+        clipRect(left, clipTop + length, right, clipBottom - length) {
+            withTransform({ translate(0f, top) }) { drawSlabOutside(outline, colors.slab, colors.slabGlow, blobColor, bg) }
+        }
+        if (atHigh) fadedBand(tailHigh, tailUp!!, outline, top, colors, blobColor, bg)
+        if (atLow) fadedBand(tailLow, tailDown!!, outline, top, colors, blobColor, bg)
+    }
+
+    /** One end band: the shadow drawn in a layer the size of [band], then multiplied by [mask] (opaque to transparent towards the clip edge). */
+    private fun DrawScope.fadedBand(
+        band: Rect,
+        mask: Brush,
+        outline: androidx.compose.ui.graphics.Outline,
+        top: Float,
+        colors: com.plumemu.coreui.theme.PlumComposeColors,
+        blobColor: Color,
+        bg: Color,
+    ) {
+        clipRect(band.left, band.top, band.right, band.bottom) {
+            val canvas = drawContext.canvas
+            canvas.saveLayer(band, tailLayer)
+            withTransform({ translate(0f, top) }) { drawSlabOutside(outline, colors.slab, colors.slabGlow, blobColor, bg) }
+            withTransform({ translate(0f, band.top) }) {
+                // Past the band too: the layer's bounds round outward, and a pixel row the clip covers in part must be masked as well.
+                drawRect(mask, topLeft = Offset(band.left, -MASK_RUN_PX), size = androidx.compose.ui.geometry.Size(band.width, band.height + 2 * MASK_RUN_PX), blendMode = BlendMode.DstIn)
+            }
+            canvas.restore()
+        }
+    }
+
+    /** How far the glow is drawn past the slab above and below: its whole reach for a list that keeps room for it ([ListGlide.keepsGlowRoom]), else none: such a list ends at the overhang. */
+    private fun DrawScope.endGlow(glows: Boolean) = if (glows) SlabDimens.glowReach.toPx() else 0f
+
+    /** The glow's side clip: [SlabDimens.glowReach] where the slab glows, else [reach]. */
+    private fun DrawScope.haloReach(
+        glows: Boolean,
+        reach: Float,
+    ) = if (glows) maxOf(reach, SlabDimens.glowReach.toPx()) else reach
 
     private fun stopTracking() {
         lastIndex = NONE
@@ -202,9 +370,15 @@ class GlidingPill internal constructor(
     }
 
     private companion object {
+        /** Past the frames of a start or a page change. */
+        const val WARM_DELAY_MS = 400L
         const val NONE = -1
         const val NANOS_PER_MS = 1_000_000L
         const val SIDE_UNCLIPPED_PX = 64f
+        const val MASK_RUN_PX = 2f
+
+        /** Any colour at full alpha: a mask only reads its alpha. */
+        val OPAQUE = Color.Transparent.copy(alpha = 1f)
     }
 }
 
@@ -232,6 +406,10 @@ internal class PillInput(
     val extraGapPx: Float,
     val fromBottom: Boolean,
     val isOn: Boolean,
+    /** The pill sits in a raised card ([LocalSlabOnCard]): its fill is the lighter one. */
+    val onCard: Boolean = false,
+    /** The games list: on a light theme its slab carries the board's blue blob ([SlabDimens.blobDrop]); other lists and cards do not. */
+    val blob: Boolean = false,
     val focusedIndex: () -> Int,
 )
 
@@ -287,6 +465,10 @@ fun rememberGlidingPill(
     rowsVary: Boolean = false,
     /** The halo is drawn by [GlidingPillHost.drawHalo] from a parent outside the list's clip: the pill leaves it out. */
     haloOutside: Boolean = false,
+    /** The slab draws the light themes' blue blob (the games list only). */
+    blob: Boolean = false,
+    /** The list's width in px when known before it is laid out: its slab's images are then built in the background once the page is composed, not in the frame that first shows it. */
+    warmWidthPx: Int = 0,
     focusedIndex: () -> Int,
 ): GlidingPillHost {
     val scope = rememberCoroutineScope()
@@ -294,16 +476,33 @@ fun rememberGlidingPill(
     val isOn = PlumTheme.motion.isOn
     val colors = PlumTheme.colors
     val density = LocalDensity.current
+    val onCard = LocalSlabOnCard.current
+    val layoutDirection = LocalLayoutDirection.current
     val latestIndex = rememberUpdatedState(focusedIndex)
     val pill = remember(scope) { GlidingPill(Settle(scope)) { clock.value() } }
     val input =
-        remember(listState, glide, colors, shape, rowHeight, stride, extraGap, fromBottom, isOn, density) {
-            PillInput(listState, null, glide, colors, shape, with(density) { rowHeight.roundToPx() }.toFloat(), with(density) { stride.toPx() }, with(density) { extraGap.toPx() }, fromBottom, isOn) { latestIndex.value() }
+        remember(listState, glide, colors, shape, rowHeight, stride, extraGap, fromBottom, isOn, density, onCard, blob) {
+            PillInput(listState, null, glide, colors, shape, with(density) { rowHeight.roundToPx() }.toFloat(), with(density) { stride.toPx() }, with(density) { extraGap.toPx() }, fromBottom, isOn, onCard, blob) { latestIndex.value() }
         }
     pill.measuresRows = rowsVary
     pill.haloElsewhere = haloOutside
-    return remember(pill, input, haloOutside) {
-        GlidingPillHost(if (isOn) pill else null, if (haloOutside) pill else null, Modifier.drawBehind { pill.draw(this, input) }, Modifier.onPlaced { pill.content = it }, input)
+    if (warmWidthPx > 0 && !rowsVary) {
+        // Restarts on any movement of the list or the focus: nothing is built while a key is held or a page scrolls.
+        LaunchedEffect(pill, input, warmWidthPx) {
+            snapshotFlow { Triple(latestIndex.value(), input.listState?.firstVisibleItemIndex, input.listState?.firstVisibleItemScrollOffset) }
+                .collectLatest { pill.warm(input, warmWidthPx, density, layoutDirection) }
+        }
+    }
+    // A list of equal rows has its halo placed here even with animations off (no row box needed); one whose rows differ in height leaves it to the rows.
+    val haloHere = haloOutside || !rowsVary
+    return remember(pill, input, haloOutside, haloHere) {
+        GlidingPillHost(
+            if (isOn) pill else null,
+            if (haloHere) pill else null,
+            Modifier.drawBehind { pill.draw(this, input) },
+            Modifier.onPlaced { pill.content = it },
+            input,
+        )
     }
 }
 
@@ -329,11 +528,12 @@ fun rememberGlidingPill(
     val isOn = PlumTheme.motion.isOn
     val colors = PlumTheme.colors
     val density = LocalDensity.current
+    val onCard = LocalSlabOnCard.current
     val latestIndex = rememberUpdatedState(focusedIndex)
     val pill = remember(scope) { GlidingPill(Settle(scope)) { clock.value() } }
     val input =
-        remember(scroll, glide, colors, shape, stride, extraGap, isOn, density) {
-            PillInput(null, scroll, glide, colors, shape, 0f, with(density) { stride.toPx() }, with(density) { extraGap.toPx() }, false, isOn) { latestIndex.value() }
+        remember(scroll, glide, colors, shape, stride, extraGap, isOn, density, onCard) {
+            PillInput(null, scroll, glide, colors, shape, 0f, with(density) { stride.toPx() }, with(density) { extraGap.toPx() }, false, isOn, onCard) { latestIndex.value() }
         }
     pill.measuresRows = true
     return remember(pill, input) {

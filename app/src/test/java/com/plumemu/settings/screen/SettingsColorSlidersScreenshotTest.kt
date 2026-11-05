@@ -81,10 +81,10 @@ abstract class SettingsColorSlidersShotBase(
 
     @Test
     fun shots() {
-        var look by mutableStateOf(Look("background", ReferenceShots.Preset.Graphite, TextSize.Medium))
+        var look by mutableStateOf(Look("background", ReferenceShots.Preset.Graphite, TextSize.Small))
         compose.setContent { PlumTheme(look.preset.settings.copy(textSize = look.textSize)) { key(look) { SlidersPage(look.screen) } } }
         for (screen in listOf("background", "text")) {
-            for (textSize in listOf(TextSize.Medium, TextSize.Largest)) {
+            for (textSize in listOf(TextSize.Small, TextSize.Largest)) {
                 for (preset in ReferenceShots.Preset.entries) {
                     look = Look(screen, preset, textSize)
                     compose.waitForIdle()

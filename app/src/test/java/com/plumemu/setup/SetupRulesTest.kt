@@ -77,12 +77,12 @@ class SetupRulesTest {
         assertEquals(emptyList<SetupControl>(), controlsOf(SetupStep.Scan, folderCount = 1, hasScanFailed = false))
         assertEquals(listOf(SetupControl.TryAgain), controlsOf(SetupStep.Scan, folderCount = 1, hasScanFailed = true))
         val ready = controlsOf(SetupStep.Ready, folderCount = 1, hasScanFailed = false)
-        assertEquals(listOf(SetupControl.UsageStatistics, SetupControl.PushRightToPlay, SetupControl.StartPlaying), ready)
+        assertEquals(listOf(SetupControl.UsageStatistics, SetupControl.StartPlaying), ready)
         assertEquals(SetupControl.StartPlaying, focusIn(ready, requested = null))
         // A build with no statistics server asks nothing about them.
         val readyWithoutStatistics = controlsOf(SetupStep.Ready, folderCount = 1, hasScanFailed = false, asksAboutStatistics = false)
-        assertEquals(listOf(SetupControl.PushRightToPlay, SetupControl.StartPlaying), readyWithoutStatistics)
-        assertEquals(listOf(SetupControl.PushRightToPlay, SetupControl.StartPlaying), SetupUiState(step = SetupStep.Ready, asksAboutStatistics = false).controls)
+        assertEquals(listOf(SetupControl.StartPlaying), readyWithoutStatistics)
+        assertEquals(listOf(SetupControl.StartPlaying), SetupUiState(step = SetupStep.Ready, asksAboutStatistics = false).controls)
         assertEquals(SetupControl.UsageStatistics, focusIn(ready, SetupControl.UsageStatistics))
         assertEquals("a focus the step does not have falls back", SetupControl.StartPlaying, focusIn(ready, SetupControl.Continue))
     }

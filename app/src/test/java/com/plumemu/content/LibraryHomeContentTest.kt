@@ -173,6 +173,8 @@ class LibraryHomeContentTest {
         val first = withTimeout(TIMEOUT_MS) { source.content.first { it.systemCount == 3 } }
         assertEquals(LeftEdgeSetting.Counts, first.leftEdge)
         assertEquals(listOf("GBA", "SNS"), listOf("gba", "snes").map { id -> first.entries.first { it.id == id }.code }.sorted())
+        val recent = first.entries.first { it.id == HomeContent.RECENT_ID }
+        assertEquals("Recent's captions take the data's short name", catalog.systems.first { it.id == "snes" }.shortName, recent.systemShortNames["snes"])
         val edge = MutableStateFlow<LeftEdgeSetting?>(null)
         val withEdge = LibraryHomeContent(db.gameDao(), { catalog }, apps, showApps, Dispatchers.Default, leftEdge = edge)
         assertEquals("not picked is Game counts", LeftEdgeSetting.Counts, withTimeout(TIMEOUT_MS) { withEdge.content.first { it.entries.any { e -> e.id == "snes" } } }.leftEdge)

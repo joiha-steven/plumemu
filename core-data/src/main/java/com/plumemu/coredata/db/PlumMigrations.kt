@@ -278,10 +278,120 @@ object PlumMigrations {
         }
     }
 
-    val ALL: Array<Migration> =
+    /**
+     * Version 15 (Settings › Library › Files not added). Adds the empty `left_out_file` table and its
+     * index. No existing table or value changes, so every game, mark and play time stays; the next
+     * scan that lists a directory fills its rows (unchanged directories stay empty until then). Runs
+     * again on a file it already migrated (IF NOT EXISTS). Going back means a build with schema 15 or
+     * later (no 15 to 14).
+     */
+    val MIGRATION_14_15: Migration = object : Migration(14, 15) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `left_out_file` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`folder_id` INTEGER NOT NULL, `directory_path` TEXT NOT NULL, `relative_path` TEXT, `reason` TEXT NOT NULL, " +
+                    "`system_id` TEXT, `more` INTEGER NOT NULL DEFAULT 0, " +
+                    "FOREIGN KEY(`folder_id`) REFERENCES `rom_folder`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_left_out_file_folder_id_directory_path` ON `left_out_file` (`folder_id`, `directory_path`)",
+            )
+            // The table starts empty and a rescan skips unchanged directories: the first scan after
+            // the upgrade lists each directory once so its left-out files are stored. Unchanged
+            // files keep their rows and names (updateScanFields only flags changed fields).
+            db.execSQL("UPDATE scanned_directory SET last_modified = 0")
+        }
+    }
+
+    /**
+     * Version 16 (the Rating sort): `scraped_game` gets `rating`, back-filled from each row's
+     * `details_json` with [rating] (SQLite on Android 6 has no JSON functions). Only adds: no
+     * other value changes. A row without details, without a rating or whose details do not read
+     * keeps null; one bad row never fails the migration. Pages of [RATING_PAGE] rows by key keep
+     * each cursor window small (a row's details can be large). Runs again safely: the column is
+     * added only when missing and only null ratings are read.
+     */
+    fun migration15To16(rating: DetailsRating): Migration = object : Migration(15, 16) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            if ("rating" !in columnsOf(db, "scraped_game")) db.execSQL("ALTER TABLE `scraped_game` ADD COLUMN `rating` INTEGER")
+            backfillRatings(db, rating)
+        }
+    }
+
+    /**
+     * Version 17 (the second screen): `game.added_at`, `ra_progress.points_earned` and
+     * `points_total`, all nullable and left null on existing rows (no time or points is known for
+     * them; `modified_at` is the file's own time, not when it entered the library), and the empty
+     * `ra_achievement` table. Only adds: every existing value stays. Runs again safely (each column
+     * only when missing, the table IF NOT EXISTS). Going back means a build with schema 17 or later.
+     */
+    val MIGRATION_16_17: Migration = object : Migration(16, 17) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            if ("added_at" !in columnsOf(db, "game")) db.execSQL("ALTER TABLE `game` ADD COLUMN `added_at` INTEGER")
+            val progress = columnsOf(db, "ra_progress")
+            if ("points_earned" !in progress) db.execSQL("ALTER TABLE `ra_progress` ADD COLUMN `points_earned` INTEGER")
+            if ("points_total" !in progress) db.execSQL("ALTER TABLE `ra_progress` ADD COLUMN `points_total` INTEGER")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `ra_achievement` (`ra_game_id` INTEGER NOT NULL, `achievement_id` INTEGER NOT NULL, " +
+                    "`title` TEXT NOT NULL, `badge_name` TEXT, `points` INTEGER NOT NULL, `earned_at` INTEGER, " +
+                    "`earned_hardcore_at` INTEGER, PRIMARY KEY(`ra_game_id`, `achievement_id`))",
+            )
+        }
+    }
+
+    /**
+     * Version 18 (a grid packs at the stored shapes): `game.art_aspect`, nullable. Only adds a column: no row is
+     * read or written, so the time does not grow with the library. Null on existing rows until [ArtAspects.sync] reads their
+     * pictures. Runs again safely. Going back means a build with schema 18 or later.
+     */
+    val MIGRATION_17_18: Migration = object : Migration(17, 18) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            if ("art_aspect" !in columnsOf(db, "game")) db.execSQL("ALTER TABLE `game` ADD COLUMN `art_aspect` REAL")
+        }
+    }
+
+    /** The highest rating kept (ScreenScraper's are out of 20, the scraper's `GameDetails.MAX_RATING`). */
+    private const val MAX_RATING = 20
+
+    private const val RATING_PAGE = 100
+
+    private fun backfillRatings(db: SupportSQLiteDatabase, rating: DetailsRating) {
+        var after = ""
+        while (true) {
+            val page = db.query(
+                // The LIKE only skips rows whose text cannot hold a rating, so they are not decoded.
+                "SELECT scrape_key, details_json FROM scraped_game WHERE scrape_key > ? AND details_json IS NOT NULL " +
+                    "AND details_json LIKE '%\"rating\"%' AND rating IS NULL ORDER BY scrape_key LIMIT $RATING_PAGE",
+                arrayOf<Any?>(after),
+            ).use { cursor ->
+                buildList { while (cursor.moveToNext()) add(cursor.getString(0) to cursor.getString(1)) }
+            }
+            if (page.isEmpty()) return
+            for ((key, json) in page) {
+                val value = try {
+                    rating.of(json)?.takeIf { it in 1..MAX_RATING }
+                } catch (e: Throwable) {
+                    // Details that do not read keep no rating; the row and the migration stay. Any
+                    // Throwable (a StackOverflowError on deeply nested text too): rethrown, it would
+                    // roll the migration back and the database would fail on every open. Nothing
+                    // here is a coroutine, so there is no cancellation to pass on.
+                    null
+                }
+                if (value != null) db.execSQL("UPDATE scraped_game SET rating = ? WHERE scrape_key = ?", arrayOf<Any?>(value, key))
+            }
+            after = page.last().first
+        }
+    }
+
+    /**
+     * Every migration, oldest first. [rating] reads a stored details JSON for [migration15To16]:
+     * the app passes the scraper's reader.
+     */
+    fun all(rating: DetailsRating): Array<Migration> =
         arrayOf(
             MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-            MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14,
+            MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15,
+            migration15To16(rating), MIGRATION_16_17, MIGRATION_17_18,
         )
 
     private val SESSION_BATTERY_COLUMNS_V8 = listOf("battery_seconds", "charge_start_uah", "charge_end_uah", "battery_draw_ua")

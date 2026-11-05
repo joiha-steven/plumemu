@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
@@ -31,18 +32,25 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import com.plumemu.R
+import com.plumemu.coredata.settings.PlumSettings
+import com.plumemu.coreui.components.EllipsisText
 import com.plumemu.coreui.components.ListEdgeFade
 import com.plumemu.coreui.components.focusPill
+import com.plumemu.coreui.theme.EmptyStateDimens
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.SettingsThreeDimens
 import com.plumemu.coreui.theme.PlumLayout
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.StatisticsDimens
@@ -52,16 +60,15 @@ import kotlin.math.roundToInt
 /*
  * Settings › Statistics as one page (docs/design/rules.md › Statistics page): figure tiles across the top, then the
  * most-played games and the systems as two lists of bars (stacked on narrow screens), and one line saying the figures stay
- * on the handheld. Only the games take the cursor; A or a tap on one shows it on the main screen. The page scrolls as a
+ * on the handheld. The games take the cursor, then the Exact play time switch (at the end of the page, above that line); A or a tap on a game shows it on the main screen. The page scrolls as a
  * whole: past the first or last game, or on a page with no game, Up and Down scroll it ([StatisticsScroll]).
  */
 
-/** Statistics' cursor stops: one per most-played game, else the page itself (one stop); none until the figures arrive. */
+/** Statistics' game stops: one per most-played game; none before the figures arrive, on a failed read or with nothing played. The Exact play time switch comes after them. */
 internal fun statisticStopsOf(state: StatisticsState): Int =
     when (state) {
-        StatisticsState.NotRead -> 0
-        StatisticsState.Failed -> 1
-        is StatisticsState.Read -> shownGamesOf(state.statistics).size.coerceAtLeast(1)
+        StatisticsState.NotRead, StatisticsState.Failed -> 0
+        is StatisticsState.Read -> shownGamesOf(state.statistics).size
     }
 
 /** The most-played game at cursor stop [index]; null for the page itself. */
@@ -71,7 +78,12 @@ internal fun StatisticsState.gameAt(index: Int): TopGame? = (this as? Statistics
 private fun shownGamesOf(figures: PlayStatistics): List<TopGame> = if (figures.hasPlayed) figures.topGames else emptyList()
 
 /** The page's width once entered: the options column and, on wide screens, the side panel's room, which this page does not use. */
-internal fun statisticsPageWidth(layout: PlumLayout): Dp = layout.width - PlumDimens.stripMarginSide * 2
+internal fun statisticsPageWidth(layout: PlumLayout): Dp =
+    if (layout.isSettingsThreeColumns) layout.settingsOptionsWidth + SettingsThreeDimens.panelGap + SettingsThreeDimens.panelWidth else layout.width - PlumDimens.stripMarginSide * 2
+
+/** How much of the Statistics page shows beside the sections column: up to the screen's right margin. */
+internal fun statisticsPreviewShownWidth(layout: PlumLayout): Dp =
+    if (layout.isSettingsThreeColumns) statisticsPageWidth(layout) else layout.width - PlumDimens.stripMarginSide * 2 - PlumDimens.settingsSectionsWidth - PlumDimens.columnGap
 
 /** A D-pad press that scrolls the page instead of moving the cursor; [count] tells two presses the same way apart. */
 @Immutable
@@ -107,36 +119,82 @@ internal fun StatisticsPage(
     model: SettingsModel,
     touch: SettingsTouch,
     isPreview: Boolean,
+    settings: PlumSettings,
+    hasUsageAccess: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val state = model.content.statistics
+    val line = boxArtLineOf(model.content.account, model.content.boxArt)
+    val state = model.content.statistics.let { if (it is StatisticsState.Read) StatisticsState.Read(it.statistics.copy(boxArtLine = line)) else it }
     when {
         state == StatisticsState.NotRead -> Unit
-        state == StatisticsState.Failed -> PageLines(modifier) { Unreadable() }
+        state == StatisticsState.Failed ->
+            FailedPage(model, touch, settings, hasUsageAccess, modifier)
         // The preview's tiles are narrow: the week shows its bars without the day letters, and the tiles keep their height (clipped, never squeezed).
+        // Nothing played: the invitation over the box art tile in the first grid cell, not one tile alone in a corner.
+        isPreview && !(state as StatisticsState.Read).statistics.hasPlayed ->
+            BoxWithConstraints(modifier.clipToBounds().testTag(StatisticsTags.PAGE)) {
+                val perRow = StatisticsDimens.NARROW_TILES_PER_ROW
+                val tileWidth = (maxWidth - PlumDimens.settingsPanelGap * (perRow - 1)) / perRow
+                // The page can reach past the screen's right margin (narrow screens clip it there): the block centres in what shows.
+                val shown = minOf(maxWidth, statisticsPreviewShownWidth(PlumTheme.layout))
+                CentredBlock(PlumDimens.settingsPanelGap) {
+                    Column(Modifier.width(shown), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap), horizontalAlignment = Alignment.CenterHorizontally) {
+                        EmptyPage((state as StatisticsState.Read).statistics, tileWidth, isCompact = true, isPreview = true)
+                    }
+                }
+            }
         isPreview ->
             Box(modifier.clipToBounds().testTag(StatisticsTags.PAGE)) {
                 Box(Modifier.wrapContentHeight(Alignment.Top, unbounded = true)) { Tiles((state as StatisticsState.Read).statistics, StatisticsDimens.NARROW_TILES_PER_ROW, showsDays = false) }
             }
-        else -> ScrollingPage((state as StatisticsState.Read).statistics, model, touch, modifier)
+        else -> ScrollingPage((state as StatisticsState.Read).statistics, model, touch, settings, hasUsageAccess, modifier)
     }
 }
 
-/** A page of plain lines (a failed read): still a whole page, with the footer. */
+/**
+ * A failed read: the line, the Exact play time switch (the only stop) and the footer, a whole page. It scrolls by touch and, like the
+ * played page, by Up and Down on the switch (the explanation and footer can outgrow the window at the large text sizes).
+ */
 @Composable
-private fun PageLines(
+private fun FailedPage(
+    model: SettingsModel,
+    touch: SettingsTouch,
+    settings: PlumSettings,
+    hasUsageAccess: Boolean,
     modifier: Modifier,
-    lines: @Composable ColumnScope.() -> Unit,
-) = Column(modifier.testTag(StatisticsTags.PAGE), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap)) {
-    lines()
-    Footer()
+) {
+    val scroll = rememberScrollState()
+    val rows = remember { HashMap<Int, LayoutCoordinates>() }
+    val page = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    FollowStatisticsFocus(model, scroll, remember { spanIn(page, rows) }, 1)
+    Column(
+        modifier.testTag(StatisticsTags.PAGE).verticalScroll(scroll).onPlaced { page[0] = it },
+        verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap),
+    ) {
+        Unreadable()
+        ExactPlayTime(0, model, settings, hasUsageAccess, touch, rows)
+        Footer()
+    }
 }
+
+/** A row's place within the page (px, unscrolled), measured when asked: null while either is not placed. */
+private fun spanIn(
+    page: Array<LayoutCoordinates?>,
+    rows: Map<Int, LayoutCoordinates>,
+): (Int) -> IntRange? =
+    { index ->
+        val within = page[0]?.takeIf { it.isAttached }
+        val row = rows[index]?.takeIf { it.isAttached }
+        if (within == null || row == null) null else within.localBoundingBoxOf(row).let { it.top.roundToInt() until it.bottom.roundToInt() }
+    }
 
 @Composable
 private fun ScrollingPage(
     figures: PlayStatistics,
     model: SettingsModel,
     touch: SettingsTouch,
+    settings: PlumSettings,
+    hasUsageAccess: Boolean,
     modifier: Modifier,
 ) {
     val scroll = rememberScrollState()
@@ -145,16 +203,11 @@ private fun ScrollingPage(
     // a span worked out while placing the rows would be missing on the first frame.
     val rows = remember { HashMap<Int, LayoutCoordinates>() }
     val page = remember { arrayOfNulls<LayoutCoordinates>(1) }
-    val spanOf =
-        remember {
-            { index: Int ->
-                val within = page[0]?.takeIf { it.isAttached }
-                val row = rows[index]?.takeIf { it.isAttached }
-                if (within == null || row == null) null else within.localBoundingBoxOf(row).let { it.top.roundToInt() until it.bottom.roundToInt() }
-            }
-        }
-    val isWide = PlumTheme.layout.widthClass == WidthClass.Wide
-    FollowStatisticsFocus(model, scroll, spanOf, games.size)
+    val spanOf = remember { spanIn(page, rows) }
+    // In three columns the page has the options' and right column's room only (555 at 768): laid out as on a narrow screen.
+    val isWide = PlumTheme.layout.widthClass == WidthClass.Wide && !PlumTheme.layout.isSettingsThreeColumns
+    // The games, then the Exact play time switch: one more stop than games.
+    FollowStatisticsFocus(model, scroll, spanOf, games.size + 1)
     val perRow = if (isWide) StatisticsDimens.WIDE_TILES_PER_ROW else StatisticsDimens.NARROW_TILES_PER_ROW
     BoxWithConstraints(modifier.testTag(StatisticsTags.PAGE)) {
         val tileWidth = (maxWidth - PlumDimens.settingsPanelGap * (perRow - 1)) / perRow
@@ -169,9 +222,9 @@ private fun ScrollingPage(
             horizontalAlignment = if (figures.hasPlayed) Alignment.Start else Alignment.CenterHorizontally,
         ) {
             if (!figures.hasPlayed) {
-                EmptyPage(figures, tileWidth)
+                EmptyPage(figures, tileWidth, isCompact = perRow == StatisticsDimens.NARROW_TILES_PER_ROW)
             } else {
-                Tiles(figures, perRow)
+                Tiles(figures, perRow, isCompact = perRow == StatisticsDimens.NARROW_TILES_PER_ROW)
                 val most: @Composable (Modifier) -> Unit = { place -> MostPlayed(games, figures.hasBoxArt, model, touch, rows, place) }
                 val systems: @Composable (Modifier) -> Unit = { place -> Systems(figures.topSystems, figures.totalSeconds, place) }
                 if (isWide) {
@@ -184,6 +237,7 @@ private fun ScrollingPage(
                     systems(Modifier.fillMaxWidth())
                 }
             }
+            ExactPlayTime(games.size, model, settings, hasUsageAccess, touch, rows)
             Footer()
         }
         if (scroll.canScrollForward) ListEdgeFade(atBottom = true, Modifier.align(Alignment.BottomCenter).testTag(StatisticsTags.PAGE + FADE_BOTTOM_SUFFIX))
@@ -201,7 +255,7 @@ private fun FollowStatisticsFocus(
     model: SettingsModel,
     scroll: ScrollState,
     spanOf: (Int) -> IntRange?,
-    gameCount: Int,
+    stopCount: Int,
 ) {
     val motion = PlumTheme.motion
     val density = LocalDensity.current
@@ -209,8 +263,8 @@ private fun FollowStatisticsFocus(
     // The focused game stays clear of the edge fades too, not only inside the window: a row under a fade reads as cut.
     val fade = with(density) { PlumDimens.listEdgeFade.roundToPx() }
 
-    fun focused(): IntRange? = if (gameCount == 0) null else spanOf(model.optionIndex)?.let { (it.first - fade).coerceAtLeast(0)..(it.last + fade) }
-    LaunchedEffect(model, scroll, gameCount) {
+    fun focused(): IntRange? = spanOf(model.optionIndex)?.let { (it.first - fade).coerceAtLeast(0)..(it.last + fade) }
+    LaunchedEffect(model, scroll, stopCount) {
         // The page's length is a key too: a text size change moves the rows without changing the window.
         snapshotFlow { Triple(model.optionIndex, scroll.viewportSize, scroll.maxValue) }.collect { (index, viewport) ->
             val span = focused() ?: return@collect
@@ -218,7 +272,7 @@ private fun FollowStatisticsFocus(
             val target =
                 when {
                     index == 0 && span.last + 1 <= viewport -> 0
-                    index == gameCount - 1 && span.first >= scroll.maxValue -> scroll.maxValue
+                    index == stopCount - 1 && span.first >= scroll.maxValue -> scroll.maxValue
                     else -> keepVisible(scroll.value, viewport, span).coerceIn(0, scroll.maxValue)
                 }
             if (target != scroll.value) scroll.animateScrollBy((target - scroll.value).toFloat(), motion.glideSpec())
@@ -297,12 +351,11 @@ private fun GameRow(
         }
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.Top) {
-                BasicText(
+                EllipsisText(
                     game.title,
                     style = if (focused) type.settingsOptionFocused else type.settingsOption,
                     color = { if (focused) colors.strong else colors.text2 },
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f).testTag(StatisticsTags.gameTitle(index)),
                 )
                 Spacer(Modifier.width(PlumDimens.rowTrailingGap))
@@ -341,7 +394,7 @@ private fun Systems(
             verticalArrangement = Arrangement.Center,
         ) {
             Row {
-                BasicText(system.name, style = type.settingsOption, color = { colors.text2 }, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                EllipsisText(system.name, style = type.settingsOption, color = { colors.text2 }, maxLines = 1, modifier = Modifier.weight(1f))
                 Spacer(Modifier.width(PlumDimens.rowTrailingGap))
                 BasicText(statisticTime(system.seconds), style = type.meta, color = { colors.text }, maxLines = 1)
             }
@@ -358,21 +411,57 @@ private fun Systems(
     }
 }
 
-/** Nothing played yet: one centred line asking for a first game; the box art tile still shows under it, at a tile's width. */
+/**
+ * One block centred down the page, [gap] clear above it at least: a block taller than the page starts at the gap instead of
+ * being cut at both ends. Measured once, not scrolled.
+ */
+@Composable
+private fun CentredBlock(
+    gap: Dp,
+    content: @Composable () -> Unit,
+) {
+    Layout(content) { measurables, constraints ->
+        val placeable = measurables.single().measure(Constraints(maxWidth = constraints.maxWidth))
+        val top = ((constraints.maxHeight - placeable.height) / 2).coerceAtLeast(gap.roundToPx())
+        layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(0, top) }
+    }
+}
+
+/**
+ * Nothing played yet: one line asking for a first game and the box art tile under it, at a tile's width. The entered page
+ * centres them; the preview ([isPreview]) keeps them in the first grid cell, as the played preview's tiles are, the
+ * line wrapping inside the cell.
+ */
 @Composable
 private fun EmptyPage(
     figures: PlayStatistics,
     tileWidth: Dp,
+    isCompact: Boolean,
+    isPreview: Boolean = false,
 ) {
     val colors = PlumTheme.colors
-    val line = if (figures.libraryGames == 0) R.string.settings_statistics_no_games else R.string.settings_statistics_play_invite
-    BasicText(
-        stringResource(line),
-        style = PlumTheme.type.settingsOption.copy(textAlign = TextAlign.Center),
-        color = { colors.text },
-        modifier = Modifier.padding(horizontal = PlumDimens.gameRowPadding).testTag(StatisticsTags.INVITE),
-    )
-    for (tile in tilesOf(figures)) Tile(tile, figures, Modifier.width(tileWidth))
+    val type = PlumTheme.type
+    val noGames = figures.libraryGames == 0
+    // The empty state's pair: a bold title over a muted line centred.
+    Column(
+        Modifier.fillMaxWidth().then(if (isPreview) Modifier else Modifier.padding(horizontal = PlumDimens.gameRowPadding)).testTag(StatisticsTags.INVITE),
+        verticalArrangement = Arrangement.spacedBy(EmptyStateDimens.gap),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        BasicText(
+            stringResource(if (noGames) R.string.settings_statistics_no_games_title else R.string.settings_statistics_no_plays_title),
+            style = type.messageTitle.copy(fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center),
+            color = { colors.text },
+            modifier = Modifier.testTag(StatisticsTags.INVITE_TITLE),
+        )
+        BasicText(
+            stringResource(if (noGames) R.string.settings_statistics_no_games_body else R.string.settings_statistics_play_invite),
+            style = type.meta.copy(textAlign = TextAlign.Center),
+            color = { colors.body },
+            modifier = Modifier.widthIn(max = EmptyStateDimens.bodyWidth).testTag(StatisticsTags.INVITE_BODY),
+        )
+    }
+    for (tile in tilesOf(figures)) Tile(tile, figures, Modifier.width(tileWidth), isCompact = isCompact)
 }
 
 @Composable
@@ -381,6 +470,48 @@ private fun Unreadable() {
     Column(Modifier.onRowTextLine().testTag(StatisticsTags.UNREADABLE), verticalArrangement = Arrangement.spacedBy(PlumDimens.factsRowGap)) {
         BasicText(stringResource(R.string.settings_statistics_unreadable), style = PlumTheme.type.settingsOption, color = { colors.text })
         BasicText(stringResource(R.string.settings_statistics_unreadable_detail), style = PlumTheme.type.smallFact, color = { colors.muted })
+    }
+}
+
+/**
+ * Statistics' last stop, Exact play time: a switch row like the other switches, then what it does in a few small lines (the
+ * page has no side panel to show it) and, under them, the line of a try that failed. On only counts as on while Usage access is
+ * granted; on without it the row says so and A or a tap opens Android's screen again.
+ */
+@Composable
+private fun ExactPlayTime(
+    index: Int,
+    model: SettingsModel,
+    settings: PlumSettings,
+    hasUsageAccess: Boolean,
+    touch: SettingsTouch,
+    rows: HashMap<Int, LayoutCoordinates>,
+) {
+    val colors = PlumTheme.colors
+    val focused by remember(model, index) { derivedStateOf { model.focus.column == SettingsColumn.Options && model.optionIndex == index } }
+    val isOn = settings.advanced.exactPlayTime
+    val value = if (isOn && !hasUsageAccess) OptionValue.Text(stringResource(R.string.settings_exact_play_time_needs_access)) else OptionValue.Switch(isOn)
+    Column(Modifier.testTag(StatisticsTags.EXACT_PLAY_TIME), verticalArrangement = Arrangement.spacedBy(PlumDimens.factsRowGap)) {
+        OptionRow(
+            SettingsOption.ExactPlayTime,
+            value,
+            if (focused) OptionLook.Focused else OptionLook.Normal,
+            Modifier.onPlaced { rows[index] = it }.tapTarget { touch.onOption(index) },
+        )
+        BasicText(
+            stringResource(R.string.settings_exact_play_time_body),
+            style = PlumTheme.type.smallFact,
+            color = { colors.muted },
+            modifier = Modifier.onRowTextLine().testTag(StatisticsTags.EXACT_PLAY_TIME_BODY),
+        )
+        model.work.notice?.takeIf { it.first == SettingsOption.ExactPlayTime }?.let { (_, line) ->
+            BasicText(
+                stringResource(line.text),
+                style = PlumTheme.type.smallFact,
+                color = { colors.text },
+                modifier = Modifier.onRowTextLine().testTag(StatisticsTags.EXACT_PLAY_TIME_NOTICE),
+            )
+        }
     }
 }
 
@@ -407,8 +538,14 @@ internal object StatisticsTags {
     const val SYSTEMS = "settings_statistics_systems"
     const val HEADING = "settings_statistics_heading"
     const val INVITE = "settings_statistics_invite"
+    const val INVITE_TITLE = "settings_statistics_invite_title"
+    const val INVITE_BODY = "settings_statistics_invite_body"
+    const val BOX_ART_STATUS = "settings_statistics_box_art_status"
     const val UNREADABLE = "settings_statistics_unreadable"
     const val FOOTER = "settings_statistics_footer"
+    const val EXACT_PLAY_TIME = "settings_statistics_exact_play_time"
+    const val EXACT_PLAY_TIME_BODY = "settings_statistics_exact_play_time_body"
+    const val EXACT_PLAY_TIME_NOTICE = "settings_statistics_exact_play_time_notice"
 
     fun tile(tile: StatisticTile) = "settings_statistics_tile_${tile.name.lowercase()}"
 

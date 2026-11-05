@@ -21,6 +21,13 @@ internal class RecordingSink : TelemetrySink {
         on: Boolean,
         where: SwitchPlace,
     ) = Unit
+
+    /** Every list handed to [reportUnidentified], in order. */
+    val unidentified: MutableList<List<TelemetryEvent.GameUnidentified>> = Collections.synchronizedList(ArrayList())
+
+    override fun reportUnidentified(games: List<TelemetryEvent.GameUnidentified>) {
+        unidentified += games
+    }
 }
 
 /**

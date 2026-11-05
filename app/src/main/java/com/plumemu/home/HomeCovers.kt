@@ -43,8 +43,6 @@ import com.plumemu.coreui.theme.CoverClass
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumTheme
-import com.plumemu.coreui.theme.POSTER_PALETTE
-import com.plumemu.coreui.theme.posterLookIndex
 import kotlin.math.roundToInt
 
 /**
@@ -125,7 +123,6 @@ private fun TitledTile(
     val type = PlumTheme.type
     val density = LocalDensity.current
     val fitter = currentTileTitleFit()
-    val measurer = fitter.measurer
     // The title steps down to the ramp's smallest tile step when a word does not fit the tile's width (TileTitleFit).
     // Strict line breaking (no break before a ":" or "!"), as the word segmentation of the fit assumes.
     val steps =
@@ -134,16 +131,18 @@ private fun TitledTile(
         }
     // As the tile lays its text area out: the tile and each side's padding rounded to px on their own.
     val widthPx = with(density) { size.width.roundToPx() - padding.roundToPx() * 2 }
-    val fitted = if (title == null) null else remember(fitter, title, steps, widthPx) { fitter.fit(title, steps, widthPx) }
+    val fitted = if (title == null) null else remember(fitter, title, steps, widthPx, density) { fitter.fit(title, steps, widthPx, density) }
     val shownStyle = steps[fitted?.step ?: 0]
     // Never larger than the title above it.
     val factStyle = if ((fitted?.step ?: 0) > 0) type.smallTileYear else type.coverSubtitle(PlumTheme.layout.gridSize)
     // Line heights as laid out (font, text size and line height all count), measured once per style.
-    val lineHeight = remember(measurer, shownStyle, density) { with(density) { measurer.measure(LINE_PROBE, shownStyle, maxLines = 1).size.height.toDp() } }
-    val factHeight = remember(measurer, factStyle, density) { with(density) { measurer.measure(LINE_PROBE, factStyle, maxLines = 1).size.height.toDp() } }
-    // The title comes first: when it needs the year's line, the year goes (one more pass, for
-    // that tile only, when its title is laid out longer than the lines it was given).
-    var hasYearRoom by remember(title, subtitle, size, lineHeight) { mutableStateOf(!subtitle.isNullOrEmpty()) }
+    val lineHeight = with(density) { fitter.lineHeightPx(shownStyle, density).toDp() }
+    val factHeight = with(density) { fitter.lineHeightPx(factStyle, density).toDp() }
+    // The title comes first: when it needs the year's line, the year goes. Decided here, from the title's measured lines, so the
+    // first frame already has the final look (no second pass after layout).
+    val titleLines = remember(fitter, fitted, shownStyle, widthPx) { fitted?.let { fitter.lineCount(it.text, shownStyle, widthPx, density) } ?: 0 }
+    val linesWithYear = ((size.height - padding * 2 - factHeight - PlumDimens.titleLineGap) / lineHeight).toInt().coerceAtLeast(1)
+    val hasYearRoom = !subtitle.isNullOrEmpty() && titleLines <= linesWithYear
     val subtitleHeight = if (hasYearRoom) factHeight + PlumDimens.titleLineGap else 0.dp
     val lines = ((size.height - padding * 2 - subtitleHeight) / lineHeight).toInt().coerceAtLeast(1)
     val isPortrait = size.width < size.height
@@ -157,7 +156,6 @@ private fun TitledTile(
         titleModifier = Modifier.testTag(if (isPortrait) HomeTags.PORTRAIT_TILE_TITLE else HomeTags.WIDE_TILE_TITLE),
         titleStyle = shownStyle,
         subtitleStyle = factStyle,
-        onTitleLayout = { if (hasYearRoom && it.hasVisualOverflow) hasYearRoom = false },
         rim = rim,
     )
 }
@@ -172,19 +170,18 @@ internal data class PosterSpec(
     val title: String,
     val system: String,
     val systemShort: String,
+    /** The small line under the band: "Publisher · Year" as far as known, else empty. */
+    val line: String = "",
 )
+
+/** "Publisher · Year", the year alone, the publisher alone, or empty: the small line of a drawn box front. */
+internal fun boxLine(details: GameDetails?): String = listOfNotNull(details?.publisher?.trim()?.takeIf { it.isNotEmpty() }, details?.year?.toString()).joinToString(" \u00B7 ")
 
 /** The poster of [row] in this entry: its own system's names in Recent and Favorites, else the entry's. */
 internal fun HomeEntry.posterOf(row: GameRowModel): PosterSpec {
     val full = if (kind.mixesSystems) systemNames[row.systemId].orEmpty() else name.orEmpty()
     val short = row.systemAbbr.ifEmpty { full }
-    return PosterSpec(row.title, full.ifEmpty { short }, short)
-}
-
-/** The colour a focused poster glows in: its gradient's middle, so the glow matches what the cover shows, lifted as a picture's is. */
-internal fun posterGlowColor(title: String): Color {
-    val look = POSTER_PALETTE[posterLookIndex(title)]
-    return CoverGlowColor.lifted(lerp(look.top, look.bottom, 0.5f))
+    return PosterSpec(row.title, full.ifEmpty { short }, short, boxLine(row.details))
 }
 
 /**
@@ -207,7 +204,7 @@ private fun PosterTile(
                 .semantics { contentDescription = poster.title },
     ) {
         // The tag sits on the inner node: the outer one keeps the tags its caller gave it (the cell's, COVER_OWN_SHAPE, DETAILS_COVER).
-        PosterCover(poster.title, poster.system, poster.systemShort, Modifier.fillMaxSize().testTag(HomeTags.POSTER_COVER))
+        PosterCover(poster.title, poster.system, poster.systemShort, Modifier.fillMaxSize().testTag(HomeTags.POSTER_COVER), poster.line)
     }
 }
 
@@ -236,12 +233,15 @@ private fun CoverPicture(
     // Read when the fade starts (not captured at composition), so Animations turned off meanwhile is honoured.
     val isMotionOn by rememberUpdatedState(PlumTheme.motion.isOn)
     val cached = remember(images, picture, widthPx, heightPx) { images.cached(picture, widthPx, heightPx) }
-    if (cached != null) LaunchedEffect(glowColors, picture, cached) { glowColors.learn(picture, cached) }
-    val bitmap = remember(images, picture, widthPx, heightPx) { mutableStateOf(cached) }
-    val alpha = remember(images, picture, widthPx, heightPx) { Animatable(if (cached != null) 1f else 0f) }
+    // Another size of the same picture stands in, scaled, until the exact one is decoded: no tile flashes on a size step.
+    val stale = if (cached == null) remember(images, picture, widthPx, heightPx) { images.cachedAnySize(picture) } else null
+    val shown = cached ?: stale
+    if (cached != null) LaunchedEffect(glowColors, picture, cached) { glowColors.learnSoon(picture, cached) }
+    val bitmap = remember(images, picture, widthPx, heightPx) { mutableStateOf(shown) }
+    val alpha = remember(images, picture, widthPx, heightPx) { Animatable(if (shown != null) 1f else 0f) }
     // The tile stays composed until the picture covers it fully; read here, so a landing picture
     // recomposes this cover once.
-    val isCovered = remember(images, picture, widthPx, heightPx) { mutableStateOf(cached != null) }
+    val isCovered = remember(images, picture, widthPx, heightPx) { mutableStateOf(shown != null) }
     // The file cannot be read (CoilCoverImages logs why): the poster takes the tile's place for good.
     val isUnreadable = remember(images, picture, widthPx, heightPx) { mutableStateOf(false) }
     if (cached == null) {
@@ -252,9 +252,9 @@ private fun CoverPicture(
                 isUnreadable.value = true
                 return@LaunchedEffect
             }
-            glowColors.learn(picture, loaded)
+            glowColors.learnSoon(picture, loaded)
             bitmap.value = loaded
-            if (isMotionOn) alpha.animateTo(1f, tween(PlumMotion.FADE_IN_MS, easing = PlumMotion.EaseOut)) else alpha.snapTo(1f)
+            if (isMotionOn && shown == null) alpha.animateTo(1f, tween(PlumMotion.FADE_IN_MS, easing = PlumMotion.EaseOut)) else alpha.snapTo(1f)
             isCovered.value = true
         }
     }
@@ -287,7 +287,7 @@ private fun CoverPicture(
  * [size], scaled down (never up) to fit the room it is given, its shape kept. The picture is still
  * loaded at [size] and drawn into the smaller box.
  */
-private fun Modifier.shrinkInto(size: DpSize): Modifier =
+internal fun Modifier.shrinkInto(size: DpSize): Modifier =
     layout { measurable, constraints ->
         val width = size.width.toPx()
         val height = size.height.toPx()
@@ -295,9 +295,6 @@ private fun Modifier.shrinkInto(size: DpSize): Modifier =
         val placeable = measurable.measure(Constraints.fixed((width * scale).roundToInt(), (height * scale).roundToInt()))
         layout(placeable.width, placeable.height) { placeable.place(0, 0) }
     }
-
-/** Text measured for one line's height: a cap, an x-height letter and a descender. */
-private const val LINE_PROBE = "Ag"
 
 /** The corner of a picture of [aspect] where no system's cover class is at hand: its own class's, 8 from 1.2 up, 6 below (design/rules.md › Grid). */
 internal fun pictureCorner(aspect: Float): Dp =

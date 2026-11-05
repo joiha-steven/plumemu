@@ -234,7 +234,9 @@ class ListGlideTest {
     fun withAnimationsOffTheListJumpsAndComposesNoExtraRow() {
         val glide = showList(motion = false)
         compose.runOnIdle {
-            assertEquals(0.dp, glide.extra)
+            // Only the room a slab overhangs a first or last row by, no extra row.
+            assertEquals(SlabDimens.maxOverhang, glide.extra)
+            assertFalse(glide.motionOn)
             glide.jumped(-rowPx)
             assertEquals("a plain jump", 0f, glide.offset)
             assertFalse(glide.isGliding)

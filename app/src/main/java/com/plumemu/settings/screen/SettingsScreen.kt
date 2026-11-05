@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,8 +35,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -46,6 +48,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.plumemu.R
+import com.plumemu.game.isTrayUp
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SoundLevel
 import com.plumemu.coredata.settings.TextSizeSetting
@@ -58,7 +61,10 @@ import com.plumemu.coreui.components.SystemRow
 import com.plumemu.coreui.components.SystemRowLook
 import com.plumemu.coreui.components.TopBar
 import com.plumemu.coreui.components.InsetFocusPillShape
+import com.plumemu.coreui.theme.LeftColumnDimens
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.SettingsThreeDimens
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.PlumLayout
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.WidthClass
@@ -90,6 +96,8 @@ internal fun SettingsScreen(
     onStatistics: (StatisticsState) -> Unit = {},
     /** Opens on About › Update available's panel (the main screen's pill or START while an update waits), once, when that row exists. */
     opensOnUpdate: Boolean = false,
+    /** Opens on Library › Files not added (the home's empty state), once, when the library's content has arrived. */
+    opensOnFilesNotAdded: Boolean = false,
     /** Closes Settings and puts the main screen's cursor on a game in its system's list (Statistics' most-played rows). */
     showOnHome: (systemId: String, gameId: Long) -> Unit = { _, _ -> },
 ) {
@@ -114,6 +122,12 @@ internal fun SettingsScreen(
     val hasUpdateRow = content.update.found != null
     LaunchedEffect(opensOnUpdate, hasUpdateRow) {
         if (opensOnUpdate && hasUpdateRow && !hasOpenedUpdate) hasOpenedUpdate = model.openUpdate(currentSettings, currentGeometry)
+    }
+    // Library's rows depend on the content (unknown folders sit before this one), so it waits for it: the folders arrive with it.
+    var hasOpenedFilesNotAdded by rememberSaveable { mutableStateOf(false) }
+    val hasLibraryContent = content.folders.isNotEmpty()
+    LaunchedEffect(opensOnFilesNotAdded, hasLibraryContent) {
+        if (opensOnFilesNotAdded && hasLibraryContent && !hasOpenedFilesNotAdded) hasOpenedFilesNotAdded = model.openFilesNotAdded(currentSettings, currentGeometry)
     }
     LaunchedEffect(router, model, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -210,12 +224,16 @@ internal fun colorTilesWidth(layout: PlumLayout): Dp = settingsPanelWidth(layout
 
 /** The panel: 248 beside the options on wide screens; the options' width as a further stop on narrow ones. */
 internal fun settingsPanelWidth(layout: PlumLayout): Dp =
-    if (layout.widthClass == WidthClass.Wide) PlumDimens.settingsPanelWidth else layout.settingsOptionsWidth
+    when {
+        layout.isSettingsThreeColumns -> SettingsThreeDimens.panelWidth
+        layout.widthClass == WidthClass.Wide -> PlumDimens.settingsPanelWidth
+        else -> layout.settingsOptionsWidth
+    }
 
 /**
  * Where the strip rests for [column] (strip coordinates, as on the board): sections at 0; options
  * with margin and sections slid fully away (−224); the narrow panel stop one options column and
- * gap further. The wide panel sits beside the options, so the strip stays.
+ * gap further. The wide panel sits beside the options, so the strip stays; in three columns it never moves.
  */
 internal fun settingsStripOffset(
     column: SettingsColumn,
@@ -223,6 +241,8 @@ internal fun settingsStripOffset(
 ): Dp {
     val toOptions = PlumDimens.stripMarginSide + PlumDimens.settingsSectionsWidth
     return when {
+        // Three columns: the sections stay where they are.
+        layout.isSettingsThreeColumns -> 0.dp
         column == SettingsColumn.Sections -> 0.dp
         column == SettingsColumn.Panel && layout.widthClass == WidthClass.Narrow -> -(toOptions + PlumDimens.columnGap + layout.settingsOptionsWidth)
         else -> -toOptions
@@ -252,16 +272,17 @@ internal fun SettingsLayout(
                 .drawBehind { drawRect(colors.bg) }
                 // No tap passes through Settings (the main screen leaves the composition while it shows).
                 .pointerInput(Unit) {}
-                .padding(top = PlumDimens.stripMarginTop, bottom = PlumDimens.stripMarginBottom)
+                .padding(top = PlumDimens.stripMarginTop, bottom = PlumDimens.footerBelow)
                 .testTag(SettingsTags.SCREEN),
-        verticalArrangement = Arrangement.spacedBy(PlumDimens.barGap),
     ) {
         SettingsTopBar(model, clock, battery, wifi, charging)
+        Spacer(Modifier.height(PlumDimens.barGap))
         Box(Modifier.fillMaxWidth().weight(1f)) {
             SettingsStrip(settings, model, touch, versionName, Modifier.fillMaxSize())
             // Plumemu's keyboard for the focused page's field, down to the screen's bottom; the hint bar is drawn on it.
             SettingsKeyboardTray(model, belowContent = settingsTrayBelowStrip())
         }
+        Spacer(Modifier.height(PlumDimens.footerGap))
         SettingsHints(settings, model, touch.onHint)
     }
 }
@@ -289,13 +310,15 @@ private fun SettingsTopBar(
         }
     val place =
         when {
-            focus.column == SettingsColumn.Sections -> title
+            // The sections are on screen in three columns: the bar names the screen only.
+            focus.column == SettingsColumn.Sections || PlumTheme.layout.isSettingsThreeColumns -> title
             focus.column == SettingsColumn.Panel && option != null ->
                 stringResource(R.string.settings_crumb, stringResource(R.string.settings_crumb, title, section), option)
             else -> stringResource(R.string.settings_crumb, title, section)
         }
-    TopBar(place = place, emphasis = title, clock = clock, battery = battery, wifi = wifi, wifiDescription = stringResource(R.string.wifi_connected),
+    TopBar(place = place, emphasis = title, modifier = Modifier.testTag(SettingsTags.TOP_BAR), clock = clock, battery = battery, wifi = wifi, wifiDescription = stringResource(R.string.wifi_connected),
         charging = charging, chargingDescription = stringResource(R.string.battery_charging),
+        typing = { model.ownKeyboardField?.typing?.isTrayUp == true },
     )
 }
 
@@ -312,6 +335,7 @@ private fun SettingsStrip(
     // Only the column is read here: a move inside a column must not recompose the strip (sections,
     // every option row and the panel); each row reads the focus for its own look.
     val column by remember(model) { derivedStateOf { model.focus.column } }
+    val covered by remember(model, layout) { derivedStateOf { layout.isSettingsThreeColumns && model.focus.isWidePage() } }
     val density = LocalDensity.current
     val targetPx = with(density) { settingsStripOffset(column, layout).toPx() }
     val offset = remember { Animatable(targetPx) }
@@ -319,7 +343,7 @@ private fun SettingsStrip(
     val isMotionOn = PlumTheme.motion.isOn
     // Transform only: 180 ms ease-out, or a jump when motion is off.
     LaunchedEffect(targetPx, isMotionOn) { if (isMotionOn) offset.animateTo(targetPx, spec) else offset.snapTo(targetPx) }
-    Box(modifier.clipToBounds().testTag(SettingsTags.STRIP)) {
+    Box(modifier.clipStrip().testTag(SettingsTags.STRIP)) {
         Row(
             modifier =
                 Modifier
@@ -328,17 +352,26 @@ private fun SettingsStrip(
                     .graphicsLayer { translationX = offset.value }
                     // No start padding: the sections column starts at the screen edge and holds the margin itself.
                     .padding(end = PlumDimens.stripMarginSide),
-            horizontalArrangement = Arrangement.spacedBy(PlumDimens.columnGap),
+            horizontalArrangement = Arrangement.spacedBy(if (layout.isSettingsThreeColumns) 0.dp else PlumDimens.columnGap),
         ) {
             SectionsColumn(model, touch)
-            OptionsColumn(settings, model, touch, versionName)
-            val panelVisible = column == SettingsColumn.Panel || (column == SettingsColumn.Options && layout.widthClass == WidthClass.Wide)
-            Box(Modifier.width(settingsPanelWidth(layout)).fillMaxHeight().testTag(SettingsTags.PANEL)) {
-                if (panelVisible) PanelHost(settings, model, touch, versionName)
+            if (layout.isSettingsThreeColumns) Spacer(Modifier.width(SettingsThreeDimens.optionsGap))
+            // A wide page covers the options: they are not composed then, so no text of theirs lies under the page.
+            if (covered) Spacer(Modifier.width(layout.settingsOptionsWidth)) else OptionsColumn(settings, model, touch, versionName)
+            if (layout.isSettingsThreeColumns) Spacer(Modifier.width(SettingsThreeDimens.panelGap))
+            if (layout.isSettingsThreeColumns) {
+                Spacer(Modifier.width(settingsPanelWidth(layout)))
+            } else {
+                val panelVisible = column == SettingsColumn.Panel || (column == SettingsColumn.Options && layout.widthClass == WidthClass.Wide)
+                Box(Modifier.width(settingsPanelWidth(layout)).fillMaxHeight().clipPanel().testTag(SettingsTags.PANEL)) {
+                    if (panelVisible) PanelHost(settings, model, touch, versionName)
+                }
             }
         }
-        // Content runs past the right edge only while the sections show.
-        if (column == SettingsColumn.Sections) EdgeFade(Modifier.align(Alignment.CenterEnd))
+        if (layout.isSettingsThreeColumns) ThreeColumnPanel(model) { PanelHost(settings, model, touch, versionName) }
+        if (layout.isSettingsThreeColumns) SectionsDivider(Modifier.align(Alignment.TopStart))
+        // Content runs past the right edge only while the sections show (never in three columns: everything is on screen).
+        else if (column == SettingsColumn.Sections) EdgeFade(Modifier.align(Alignment.CenterEnd))
     }
 }
 
@@ -352,7 +385,10 @@ private fun PanelHost(
 ) {
     val option = model.focusedOption ?: return
     // Keyed by the row too: each system of Emulators is the same option with its own panel.
-    FadeIn(option to model.optionIndex, Modifier.fillMaxSize()) { SettingsPanel(option, settings, model, touch, versionName) }
+    val textStart = if (PlumTheme.layout.isSettingsThreeColumns && !model.focus.isWidePage()) 0.dp else PlumDimens.gameRowPadding
+    CompositionLocalProvider(LocalPanelTextStart provides textStart) {
+        FadeIn(option to model.optionIndex, Modifier.fillMaxSize()) { PanelWithLookPreview(option, settings, model, touch, versionName) }
+    }
 }
 
 @Composable
@@ -360,19 +396,19 @@ private fun SectionsColumn(
     model: SettingsModel,
     touch: SettingsTouch,
 ) {
-    // Scrolls to the focused section: at the larger text sizes the rows do not all fit the strip.
-    // Second screen comes and goes with the screen; nothing else about the content recomposes the column.
+    // Scrolls to the focused section (the rows do not all fit the strip). Only the second screen changes the rows.
     val sections by remember(model) { derivedStateOf { SettingsSection.shownIn(model.content) } }
     KeepFocusedColumn(
         { sections.indexOf(model.focus.section) },
         sections.size,
         0.dp,
-        Modifier.width(PlumDimens.stripMarginSide + PlumDimens.settingsSectionsWidth).fillMaxHeight().testTag(SettingsTags.SECTIONS),
+        Modifier.width(sectionsColumnWidth(PlumTheme.layout)).fillMaxHeight().testTag(SettingsTags.SECTIONS),
         fadeTag = SettingsTags.SECTIONS,
+        endRoom = SlabDimens.listEndRoom,
         // Only while the sections have the focus: a Current section (focus in the options) keeps its own quiet look.
         pillIndex = { if (model.focus.column == SettingsColumn.Sections) sections.indexOf(model.focus.section) else -1 },
         // The rows draw their pill from [PlumDimens.gameRowPadding] before the label (SystemRow's bleedStart); the gliding one does the same.
-        pillShape = remember { InsetFocusPillShape((PlumDimens.stripMarginSide - PlumDimens.gameRowPadding).coerceAtLeast(0.dp)) },
+        pillShape = remember { InsetFocusPillShape(LeftColumnDimens.systemPillStart, SlabDimens.barInset) },
     ) { place ->
         sections.forEachIndexed { index, section -> SectionRow(section, model, touch, place(index)) }
     }
@@ -396,15 +432,23 @@ private fun SectionRow(
             }
         }
     }
+    // Three columns: the open section is told by an accent dot where the focus bar stands (the board's current, not focused); every label starts alike.
+    val three = PlumTheme.layout.isSettingsThreeColumns
+    val colors = PlumTheme.colors
+    val marked = three && look == SystemRowLook.Current
     SystemRow(
         name = stringResource(section.title),
         count = "",
         look = look,
-        showName = true,
-        bleedStart = PlumDimens.stripMarginSide,
+        showName = true, showCount = !three,
+        endPadding = if (three) 0.dp else PlumDimens.systemRowPadding,
+        bleedStart = LeftColumnDimens.sectionLabelStart, barInset = SlabDimens.barInset,
         // As high as an option row (not the systems' 40): the two columns' text lines then share a centre row by row, where the
         // 4 dp between 40 and 44 at Large put the options' first text line 2 dp lower. The outer height wins over SystemRow's own.
-        modifier = place.height(PlumTheme.layout.rowHeight).tapTarget { touch.onSection(section) }.testTag(SettingsTags.section(section)),
+        modifier = place.height(PlumTheme.layout.rowHeight).tapTarget { touch.onSection(section) }.testTag(SettingsTags.section(section))
+            .drawBehind {
+                if (marked) drawCircle(colors.accent, PlumDimens.hintDot.toPx() / 2, Offset(LeftColumnDimens.sectionBarCentre.toPx(), size.height / 2))
+            },
     )
 }
 
@@ -425,6 +469,8 @@ private fun OptionsColumn(
             Modifier
                 .width(
                     when {
+                        // Three columns: Statistics has no right column, so its page (and its preview) take that room too.
+                        section == SettingsSection.Statistics && layout.isSettingsThreeColumns -> statisticsPageWidth(layout)
                         isPreview -> layout.settingsOptionsPreviewWidth
                         // Statistics has no side panel: once entered, its page takes the panel's room too.
                         section == SettingsSection.Statistics -> statisticsPageWidth(layout)
@@ -456,7 +502,7 @@ private fun OptionsColumn(
             )
         }
         if (section == SettingsSection.Statistics) {
-            StatisticsPage(model, touch, isPreview, Modifier.fillMaxWidth().weight(1f))
+            StatisticsPage(model, touch, isPreview, settings, content.hasUsageAccess, Modifier.fillMaxWidth().weight(1f))
             return@Column
         }
         // Keyed by section: the column's scroll and measured rows belong to one section's rows. Kept across a
@@ -470,6 +516,7 @@ private fun OptionsColumn(
                     PlumDimens.listRowGap,
                     Modifier.testTag(SettingsTags.OPTION_LIST),
                     fadeTag = SettingsTags.OPTION_LIST,
+                    endRoom = SlabDimens.listEndRoom,
                     // Only while the options have the focus: with a panel focused the option row is Current, not focused.
                     pillIndex = { if (model.focus.column == SettingsColumn.Options) model.optionIndex else -1 },
                 ) { place ->
@@ -536,11 +583,7 @@ private fun OptionRowAt(
 
 /** A plain line about what the focused option just tried (errors are never silent). */
 @Composable
-internal fun NoticeLine(
-    notice: SettingsNotice,
-    modifier: Modifier = Modifier,
-    count: Int = 0,
-) {
+internal fun NoticeLine(notice: SettingsNotice, modifier: Modifier = Modifier, count: Int = 0) {
     BasicText(
         notice.lineText(count),
         style = PlumTheme.type.panelBody.copy(color = PlumTheme.colors.text),

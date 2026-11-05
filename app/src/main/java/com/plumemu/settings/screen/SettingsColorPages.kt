@@ -296,7 +296,7 @@ internal object ColorPages {
         page: PanelPage,
         index: Int,
         background: Rgb,
-        accent: ColorSetting = ColorSetting.Preset(AppearanceSettings.DEFAULT_ACCENT),
+        accent: ColorSetting = AppearanceSettings.DEFAULT_ACCENT,
     ): ColorSetting? =
         when (page) {
             PanelPage.BackgroundPresets ->

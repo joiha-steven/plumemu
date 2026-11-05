@@ -8,7 +8,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.DpRect
 import com.plumemu.coreinput.Action
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
@@ -40,7 +40,7 @@ class SetupFlowFixesTest {
 
     private fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot()
 
-    private fun show(state: SetupUiState) = compose.setContent { PlumTheme(MediumText.Default) { SetupAt(state) } }
+    private fun show(state: SetupUiState) = compose.setContent { PlumTheme(TableText.Default) { SetupAt(state) } }
 
     private fun count(tag: String) = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().size
 
@@ -67,7 +67,7 @@ class SetupFlowFixesTest {
     @Config(qualifiers = WIDE)
     fun aTapOnSetUpLaterOnTheFailedLoadSendsItsOwnControlIndex() {
         val actions = mutableListOf<Action>()
-        compose.setContent { PlumTheme(MediumText.Default) { SetupLayout(SetupFakes.loadFailed, com.plumemu.settings.ButtonLetters.Default, { actions += it }, { "21:40" }, { null }) } }
+        compose.setContent { PlumTheme(TableText.Default) { SetupLayout(SetupFakes.loadFailed, com.plumemu.settings.ButtonLetters.Default, { actions += it }, { "21:40" }, { null }) } }
         compose.onNodeWithTag(SetupTags.control(SetupControl.SetUpLater), useUnmergedTree = true).performClick()
         compose.waitForIdle()
         assertTrue("a tap reached the router: $actions", actions.any { it is Action.TapItem && it.index == 1 })
@@ -95,8 +95,8 @@ class SetupFlowFixesTest {
         val start = bounds(SetupTags.control(SetupControl.StartPlaying))
         val hints = bounds(SetupTags.HINTS)
         assertTrue(
-            "Start playing ends at ${start.bottom}; the hints start at ${hints.top}, ${hints.top - start.bottom} below; the bar gap is ${PlumDimens.barGap}",
-            hints.top.value - start.bottom.value >= PlumDimens.barGap.value - TOLERANCE,
+            "Start playing ends at ${start.bottom}; the hints start at ${hints.top}, ${hints.top - start.bottom} below; the footer gap is ${PlumDimens.footerGap}",
+            hints.top.value - start.bottom.value >= PlumDimens.footerGap.value - TOLERANCE,
         )
         // The first card (the emulators row) is whole, and the scroll's top padding (the ring's reach) is above it.
         val node = compose.onNodeWithTag(SetupTags.EMULATORS, useUnmergedTree = true)
@@ -136,7 +136,7 @@ class SetupFlowFixesTest {
         val next = bounds(SetupTags.control(SetupControl.Continue))
         val cardGap = second.top.value - first.bottom.value
         assertEquals("card to card is the content gap", PlumDimens.setupContentGap.value, cardGap, TOLERANCE)
-        assertEquals("the last card to Continue is the same gap as card to card", cardGap, next.top.value - add.bottom.value, TOLERANCE)
+        assertEquals("the last card to Continue is the card gap and the button spacer, the collar being part of the button", cardGap + PlumDimens.setupButtonSpacer.value, next.top.value - add.bottom.value, TOLERANCE)
         val note = bounds(SetupTags.NOTE)
         assertEquals("the note starts at the cards' left edge", first.left.value, note.left.value, TOLERANCE)
     }

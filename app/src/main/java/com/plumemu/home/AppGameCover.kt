@@ -27,8 +27,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
@@ -161,7 +161,8 @@ internal fun AppGameCover(
         LaunchedEffect(shown) { glow.learn(iconKey, shown.image, replace = true)?.let { average.value = it } }
     }
     val colors = PlumTheme.colors
-    val measurer = rememberTextMeasurer(cacheSize = 8)
+    // The grid's shared measurer when there is one: a measurer of its own per card was one more allocation per cover.
+    val measurer = LocalTileTitleFit.current?.measurer ?: rememberTextMeasurer(cacheSize = 8)
     val family = PlumTheme.type.gridFocusTitle.fontFamily
     val rim = shadow?.rim ?: Color.Transparent
     val shape = RoundedCornerShape(corner)
@@ -182,9 +183,9 @@ internal fun AppGameCover(
                 // Read here: the colour landing rebuilds the card (a redraw), nothing recomposes.
                 val found = average.value
                 val look = if (found != null) appGameLook(found) else appGameNeutralLook(colors)
-                val layout = PosterLayout.of(measurer, this, "", poster.system, poster.systemShort, look, family, this.size)
+                val layout = AppCardLayout.of(measurer, this, poster.system, poster.systemShort, look, family, this.size)
                 val side = min(this.size.width, this.size.height) * APP_GAME_ICON_SHARE
-                val bandHeight = this.size.height * PosterLayout.BAND_HEIGHT
+                val bandHeight = this.size.height * AppCardLayout.BAND_HEIGHT
                 val centre = Offset(this.size.width / 2f, (this.size.height - bandHeight) / 2f)
                 val topLeft = Offset(centre.x - side / 2f, centre.y - side / 2f)
                 val cornerPx = side * ICON_CORNER_SHARE

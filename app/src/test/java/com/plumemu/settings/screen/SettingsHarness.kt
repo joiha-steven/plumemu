@@ -98,7 +98,7 @@ internal object NoActions : SettingsActions {
 
     override fun detectEmulators(onDone: (Boolean) -> Unit) = Unit
 
-    override fun openHomeSettings(): Boolean = true
+    override fun openHomeSettings(onNotHome: () -> Unit): Boolean = true
 
     override fun forgetFolderAnswer() = Unit
 

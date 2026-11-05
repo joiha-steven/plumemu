@@ -1,5 +1,7 @@
 package com.plumemu.identify.fingerprint.disc
 
+import com.plumemu.identify.codec.zstd.Zstd
+import com.plumemu.identify.codec.zstd.ZstdException
 import com.plumemu.identify.fingerprint.CodeKind
 import com.plumemu.identify.source.RandomAccessSource
 import com.plumemu.identify.source.readFully
@@ -81,6 +83,26 @@ internal fun inflate(input: ByteArray, outputLength: Int, nowrap: Boolean, what:
         inflater.end()
     }
 }
+
+/**
+ * Decodes zstd [input] (one or more frames) to exactly [expected] bytes. A frame may declare a
+ * window up to 128 MB (level 19 declares 8 MB even for a small hunk); only the output is
+ * allocated, and it never passes [expected], so memory stays bounded.
+ *
+ * @throws NotRead when the data is damaged or is not [expected] bytes long: a decoder fault is
+ * a note, never an IOException (that is the storage failing).
+ */
+internal fun zstd(input: ByteArray, expected: Int, what: String): ByteArray {
+    val out = try {
+        Zstd.decompress(input, maxOutput = expected, maxWindow = ZSTD_MAX_WINDOW)
+    } catch (e: ZstdException) {
+        throw NotRead("$what: compressed data is damaged (${e.message})")
+    }
+    if (out.size != expected) throw NotRead("$what: zstd data is ${out.size} bytes, not $expected")
+    return out
+}
+
+private const val ZSTD_MAX_WINDOW = 1 shl 27
 
 /**
  * A small text file (cue sheet, track list, playlist, `SYSTEM.CNF`): UTF-8 when it decodes

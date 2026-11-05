@@ -44,7 +44,7 @@ class HomeLetterRailBoundsTest {
     private fun show(
         content: HomeContent,
         actions: List<Action>,
-        size: TextSize = TextSize.Medium,
+        size: TextSize = TextSize.Small,
     ) = compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { HomeAt(content.withLeftEdge(LeftEdgeSetting.Letters), actions) } }
 
     private fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot()
@@ -142,7 +142,7 @@ class HomeLetterRailBoundsTest {
     fun allLettersShowWhenTheyFit() {
         show(alphabet(last = 'S'), gamesFocused(FIRST_SYSTEM_INDEX))
         compose.waitForIdle()
-        val capacity = railCapacity(bounds(HomeTags.RAIL).height, railMin(TextSize.Medium))
+        val capacity = railCapacity(bounds(HomeTags.RAIL).height, railMin(TextSize.Small))
         assertTrue("20 letters fit a 432 dp screen at Medium ($capacity)", capacity >= 20)
         assertEquals(20, lettersShown().size)
     }

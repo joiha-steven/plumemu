@@ -1,6 +1,8 @@
 package com.plumemu.settings.screen
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +24,8 @@ import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.graph.BoxArtClearResult
 import com.plumemu.graph.ScrapeCounts
 import com.plumemu.graph.ScrapeStatus
+import com.plumemu.scraper.PictureFailure
+import com.plumemu.sound.Outcome
 import com.plumemu.home.rememberCountFormat
 import com.plumemu.library.scrape.AskAgain
 import com.plumemu.scraper.AccountLimits
@@ -53,6 +57,12 @@ internal interface SettingsBoxArtActions {
         onDone: (Boolean) -> Unit,
     )
 
+    /** Stores where box art comes from and makes the run follow it; [onDone] gets whether it was stored. */
+    fun setSource(
+        source: BoxArtSourceSetting,
+        onDone: (Boolean) -> Unit,
+    )
+
     /** Clear box art: deletes the saved pictures and their stored results (the account stays); [onDone] gets how it ended. */
     fun clearBoxArt(onDone: (BoxArtClearResult) -> Unit)
 
@@ -67,6 +77,11 @@ internal interface SettingsBoxArtActions {
 
         override fun setPaused(
             isPaused: Boolean,
+            onDone: (Boolean) -> Unit,
+        ) = onDone(false)
+
+        override fun setSource(
+            source: BoxArtSourceSetting,
             onDone: (Boolean) -> Unit,
         ) = onDone(false)
     }
@@ -101,6 +116,12 @@ internal sealed interface BoxArtLine {
 
     /** No run, some games not asked yet (Download missing asks them). */
     data class Some(val withBoxFront: Int, val listed: Int) : BoxArtLine
+
+    /** "Box art only" asked for every game and none has a box front. */
+    data object NoneFound : BoxArtLine
+
+    /** "Box art only": the pictures could not be had, and [why] says so. */
+    data class Failed(val why: PictureFailure) : BoxArtLine
 
     /** The library has no games: nothing to download. */
     data object EmptyLibrary : BoxArtLine
@@ -148,15 +169,17 @@ internal fun boxArtLineOf(
     account: AccountStatus,
     status: ScrapeStatus,
 ): BoxArtLine? {
+    // A run's own state (not the account's) means "Box art only": it needs no account, so a signed-out or refused one says nothing.
+    val hasRunState = status !is ScrapeStatus.NotInThisBuild && status !is ScrapeStatus.SignedOut && status !is ScrapeStatus.Refused
     when (account) {
-        AccountStatus.NotInThisBuild -> return BoxArtLine.NotInThisBuild
-        AccountStatus.SignedOut -> return null
-        is AccountStatus.SignedIn -> if (account.isRefused) return BoxArtLine.WrongPassword
+        AccountStatus.NotInThisBuild -> if (!hasRunState) return BoxArtLine.NotInThisBuild
+        AccountStatus.SignedOut -> if (!hasRunState) return null
+        is AccountStatus.SignedIn -> if (account.isRefused && !hasRunState) return BoxArtLine.WrongPassword
     }
     val counts = countsOf(status)
     return when (status) {
         // The run's state has not arrived yet (or is a moment behind): the account's own pause, else nothing.
-        ScrapeStatus.NotInThisBuild, ScrapeStatus.SignedOut, ScrapeStatus.Refused -> account.dailyLimitUntilMillis?.let { BoxArtLine.DailyLimit(it) }
+        ScrapeStatus.NotInThisBuild, ScrapeStatus.SignedOut, ScrapeStatus.Refused -> (account as? AccountStatus.SignedIn)?.dailyLimitUntilMillis?.let { BoxArtLine.DailyLimit(it) }
         is ScrapeStatus.PausedByPerson -> BoxArtLine.PausedByPerson
         is ScrapeStatus.Paused ->
             if (status.reason == PauseReason.DailyQuota) BoxArtLine.DailyLimit(status.untilMillis) else BoxArtLine.ServerClosed(status.untilMillis)
@@ -179,9 +202,11 @@ private fun runLine(
         is ScrapeStatus.WaitingForWifi -> BoxArtLine.WaitingForWifi
         is ScrapeStatus.WaitingForBattery -> BoxArtLine.WaitingForBattery
         is ScrapeStatus.Retrying -> BoxArtLine.Retrying(status.nextAtMillis)
+        is ScrapeStatus.Failed -> BoxArtLine.Failed(status.why)
         is ScrapeStatus.Idle ->
             when {
                 counts == null -> BoxArtLine.Unreadable
+                counts.pending == 0 && counts.withBoxFront == 0 && counts.listed > 0 -> BoxArtLine.NoneFound
                 counts.pending == 0 -> BoxArtLine.Done(counts.withBoxFront, counts.listed)
                 else -> BoxArtLine.Some(counts.withBoxFront, counts.listed)
             }
@@ -200,6 +225,7 @@ internal fun countsOf(status: ScrapeStatus): ScrapeCounts? =
         is ScrapeStatus.WaitingForBattery -> status.counts
         is ScrapeStatus.Paused -> status.counts
         is ScrapeStatus.Retrying -> status.counts
+        is ScrapeStatus.Failed -> status.counts
     }
 
 /** The panel's full line: "Downloading box art 340 of 2,054 · about 5 h left", "Paused", "Done: 2,012 of 2,054 games have box art". */
@@ -227,6 +253,9 @@ internal fun boxArtLineText(line: BoxArtLine): String {
         }
         is BoxArtLine.Done -> stringResource(R.string.settings_box_art_done, format.format(line.withBoxFront), format.format(line.listed))
         is BoxArtLine.Some -> stringResource(R.string.settings_box_art_some, format.format(line.withBoxFront), format.format(line.listed))
+        BoxArtLine.NoneFound -> stringResource(R.string.settings_box_art_none_found)
+        is BoxArtLine.Failed ->
+            stringResource(if (line.why == PictureFailure.NoNetwork) R.string.settings_box_art_failed_offline else R.string.settings_box_art_failed_server)
         BoxArtLine.EmptyLibrary -> stringResource(R.string.settings_box_art_empty)
         BoxArtLine.Unreadable -> stringResource(R.string.settings_box_art_unreadable)
     }
@@ -251,7 +280,8 @@ private fun timeLeftText(left: TimeLeft): String {
 internal fun boxArtShortText(line: BoxArtLine?): String? {
     val format = rememberCountFormat()
     return when (line) {
-        null, BoxArtLine.NotInThisBuild, is BoxArtLine.Some, is BoxArtLine.Done, BoxArtLine.EmptyLibrary, BoxArtLine.Unreadable -> null
+        null, BoxArtLine.NotInThisBuild, is BoxArtLine.Some, is BoxArtLine.Done, BoxArtLine.NoneFound, BoxArtLine.EmptyLibrary, BoxArtLine.Unreadable -> null
+        is BoxArtLine.Failed -> stringResource(if (line.why == PictureFailure.NoNetwork) R.string.settings_box_art_short_offline else R.string.settings_box_art_short_no_answer)
         BoxArtLine.WrongPassword -> stringResource(R.string.settings_account_sign_in_again)
         BoxArtLine.PausedByPerson -> stringResource(R.string.settings_box_art_paused)
         is BoxArtLine.DailyLimit -> stringResource(R.string.settings_box_art_short_daily_limit)
@@ -378,20 +408,22 @@ internal enum class ClearConfirmItem { Clear, Cancel }
 internal enum class SignOutConfirmItem { SignOut, Cancel }
 
 /**
- * Accounts › ScreenScraper › Sign out, asked first: it says what happens to box art (the covers and the grid stop
+ * Accounts › ScreenScraper › Sign out (and, with its own words, RetroAchievements' Sign out), asked first: it says what happens to box art (the covers and the grid stop
  * showing and downloads stop; the pictures already saved stay on the device for the next sign-in), then Sign out and Cancel.
  */
 @Composable
 internal fun SignOutConfirmPage(
     model: SettingsModel,
     touch: SettingsTouch,
+    @StringRes title: Int = R.string.settings_sign_out_confirm_title,
+    @StringRes body: Int = R.string.settings_sign_out_confirm_body,
 ) {
     val focus = model.focus
     val focused = if (focus.column == SettingsColumn.Panel) focus.panelIndex else -1
     AccountPanelScroll(PlumDimens.settingsPanelGap) {
-        PanelTitle(stringResource(R.string.settings_sign_out_confirm_title))
+        PanelTitle(stringResource(title))
         BasicText(
-            stringResource(R.string.settings_sign_out_confirm_body),
+            stringResource(body),
             style = PlumTheme.type.panelBody.copy(color = PlumTheme.colors.text),
             modifier = Modifier.onRowTextLine().testTag(SettingsPanelTags.STATUS),
         )
@@ -530,4 +562,15 @@ internal fun BoxArtConfirmPage(
             }
         }
     }
+}
+
+/** The Box art row while its status is a failure or "none found": A and a tap say Try again ([confirmHint]) instead of opening the panel. */
+internal fun SettingsModel.canTryBoxArtAgain(option: SettingsOption): Boolean =
+    (option == SettingsOption.ScraperAccount || option == SettingsOption.ScraperStatus) &&
+        boxArtLineOf(content.account, content.boxArt).let { it is BoxArtLine.Failed || it == BoxArtLine.NoneFound }
+
+/** Asks a box art run for the games without a box front only. */
+internal fun SettingsModel.tryBoxArtAgain() {
+    work.askAgain(AskAgain.Missing, null)
+    feel.report(Outcome.Activated)
 }

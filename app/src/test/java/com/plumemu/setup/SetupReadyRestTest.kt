@@ -15,6 +15,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.text.TextLayoutResult
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
@@ -74,12 +75,12 @@ class SetupReadyRestTest {
         val start = compose.onNodeWithTag(SetupTags.control(SetupControl.StartPlaying), useUnmergedTree = true).getUnclippedBoundsInRoot()
         val hints = compose.onNodeWithTag(SetupTags.HINTS, useUnmergedTree = true).getUnclippedBoundsInRoot()
         val gap = hints.top.value - start.bottom.value
-        assertTrue("At $height dp high Start playing ends at ${start.bottom}, $gap above the hints at ${hints.top}; the bar gap is ${PlumDimens.barGap}", gap >= PlumDimens.barGap.value - TOLERANCE)
+        assertTrue("At $height dp high Start playing ends at ${start.bottom}, $gap above the hints at ${hints.top}; the footer gap is ${PlumDimens.footerGap}", gap >= PlumDimens.footerGap.value - TOLERANCE)
     }
 
     /** No line of the title or the description is cut by the top of the visible scroll area. */
     private fun assertNoLineCutAtTheTop(height: Int) {
-        val visibleTop = compose.onNodeWithTag(SetupTags.SCROLL, useUnmergedTree = true).getUnclippedBoundsInRoot().top.value + PlumDimens.focusRingOutset.value
+        val visibleTop = compose.onNodeWithTag(SetupTags.SCROLL, useUnmergedTree = true).getUnclippedBoundsInRoot().top.value + PlumDimens.focusRingOutset.value + SlabDimens.listEndRoom.value // the scroll's frame reaches the shadow room past the window; its draw clip cuts that back
         for (tag in listOf(SetupTags.TITLE, SetupTags.DESCRIPTION)) {
             val node = compose.onNodeWithTag(tag, useUnmergedTree = true)
             val top = node.getUnclippedBoundsInRoot().top.value

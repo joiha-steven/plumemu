@@ -111,6 +111,10 @@ object FakeHomeContent {
         return HomeContent.of(rows, rows.take(FAVORITES_COUNT).map { it.copy(isFavorite = true) }, apps(), systems, hasBoxArt = withBoxArt)
     }
 
+    private const val LONG_DESCRIPTION =
+        "Samus Aran returns to planet Zebes to recover a stolen Metroid larva, exploring a vast connected world and gaining new abilities along " +
+            "the way. Hidden passages, bosses and secrets reward a careful player, and the map grows with every power-up found on the journey."
+
     private val appNames =
         listOf("Browser", "Calculator", "Calendar", "Camera", "Clock", "Contacts", "Files", "Gallery", "Music", "Settings")
 
@@ -123,25 +127,41 @@ object FakeHomeContent {
      */
     const val EXTRA_LARGE_LIBRARY = "com.plumemu.benchmark.LARGE_LIBRARY"
 
+    /** Benchmark builds only: a comma list of drawing families to skip (`glow`, `collar`, `bands`), see `PerfSwitches`. */
+    const val EXTRA_SKIP_DRAWING = "com.plumemu.benchmark.SKIP_DRAWING"
+
     /** What `MainActivity` shows: 10,000 games only when a benchmark build asks for them, else [board]. */
     fun forLaunch(
         isBenchmarkBuild: Boolean,
         wantsLargeLibrary: Boolean,
-    ): HomeContent = if (isBenchmarkBuild && wantsLargeLibrary) large() else board()
+        wantsDetails: Boolean = false,
+        wantsCovers: Boolean = false,
+    ): HomeContent =
+        when {
+            isBenchmarkBuild && wantsCovers -> withArtwork(withScrapeKeys = true)
+            isBenchmarkBuild && wantsLargeLibrary -> large(withDetails = wantsDetails)
+            else -> board()
+        }
+
+    /** Intent extra (boolean): the board with every game's box art served by [BenchmarkCoverArt] (grid benchmarks). Benchmark builds only. */
+    const val EXTRA_COVERS = "com.plumemu.benchmark.COVERS"
+
+    /** Intent extra (boolean): the large library with box-art facts on every game, as a signed-in library has. Benchmark builds only. */
+    const val EXTRA_DETAILS = "com.plumemu.benchmark.DETAILS"
 
     /**
      * The board's content with box art: details for every game,
      * years in the list, the grid boards' covers (RP5-3 Super Nintendo with "Zelda: A Link to the
      * Past" ninth, RP5-4 PSP) and each system's cover shape. Covers are stand-in tiles.
      */
-    fun withArtwork(): HomeContent {
+    fun withArtwork(withScrapeKeys: Boolean = false): HomeContent {
         val systems =
             boardSystems.map { (id, name, count) ->
                 val titles = ArtworkFakes.boardTitles[id].orEmpty()
                 val games =
                     gamesFor(id, name, count).mapIndexed { i, game ->
                         val title = titles.getOrNull(i) ?: game.title
-                        game.copy(title = title, details = ArtworkFakes.detailsFor(title, i))
+                        game.copy(title = title, details = ArtworkFakes.detailsFor(title, i), scrapeKey = if (withScrapeKeys) game.id else null)
                     }
                 SystemGames(id, name, games, if (id in ArtworkFakes.portraitSystems) CoverShape.Portrait else CoverShape.Landscape, code = boardCodes[id].orEmpty())
             }
@@ -157,6 +177,9 @@ object FakeHomeContent {
 
     /** The board with games everywhere but no favorite: Favorites is empty and the library is not (the "press Y" line). */
     fun noFavorites(): HomeContent = HomeContent.of(recent(), emptyList(), apps(), boardSystems.map { (id, name, count) -> SystemGames(id, name, gamesFor(id, name, count), code = boardCodes[id].orEmpty()) })
+
+    /** The board with games everywhere but nothing played yet: Recent is empty and the library is not. */
+    fun noRecent(): HomeContent = HomeContent.of(emptyList(), favorites(), apps(), boardSystems.map { (id, name, count) -> SystemGames(id, name, gamesFor(id, name, count), code = boardCodes[id].orEmpty()) })
 
     /** The board's content with a Super Nintendo title far too long for one line (the ellipsis case). */
     fun longTitle(): HomeContent {
@@ -189,32 +212,43 @@ object FakeHomeContent {
      * [totalGames] games spread over the board's eighteen systems (the scrolling benchmark
      * uses 10,000). Each system keeps its board name; titles are numbered.
      */
-    fun large(totalGames: Int = 10_000): HomeContent {
+    fun large(
+        totalGames: Int = 10_000,
+        withDetails: Boolean = false,
+    ): HomeContent {
         val perSystem = totalGames / boardSystems.size
         val extra = totalGames % boardSystems.size
         val counts = boardSystems.mapIndexed { i, (id, name, _) -> Triple(id, name, perSystem + if (i < extra) 1 else 0) }
-        return withSystems(counts)
+        return withSystems(counts, withDetails)
     }
 
-    private fun withSystems(systems: List<Triple<String, String, Int>>): HomeContent =
+    private fun withSystems(
+        systems: List<Triple<String, String, Int>>,
+        withDetails: Boolean = false,
+    ): HomeContent =
         HomeContent.of(
             recent = recent(),
             favorites = favorites(),
             apps = apps(),
-            systems = systems.map { (id, name, count) -> SystemGames(id, name, gamesFor(id, name, count), code = boardCodes[id].orEmpty()) },
+            systems = systems.map { (id, name, count) -> SystemGames(id, name, gamesFor(id, name, count, withDetails), code = boardCodes[id].orEmpty()) },
+            hasBoxArt = withDetails,
         )
 
     private fun gamesFor(
         systemId: String,
         systemName: String,
         count: Int,
+        withDetails: Boolean = false,
     ): List<GameRowModel> =
         List(count) { i ->
             val board = if (systemId == "snes") boardSnesGames.getOrNull(i) else null
+            val title = board?.first ?: "$systemName title ${i + 1}"
             GameRowModel(
                 id = "$systemId-$i",
-                title = board?.first ?: "$systemName title ${i + 1}",
+                title = title,
                 region = board?.second ?: regions[i % regions.size],
+                details = if (withDetails) ArtworkFakes.detailsFor(title, i).copy(description = LONG_DESCRIPTION) else null,
+                scrapeKey = if (withDetails) "$systemId-$i" else null,
                 systemAbbr = boardAbbrs[systemId].orEmpty(),
                 systemId = systemId,
             )

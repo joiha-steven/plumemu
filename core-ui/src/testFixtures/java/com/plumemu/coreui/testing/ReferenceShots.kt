@@ -35,30 +35,44 @@ object ReferenceShots {
     /** Where the reference images live, relative to the module (unit tests run there). */
     const val OUTPUT_DIR: String = "src/test/screenshots"
 
-    enum class Size(
+    /** A screen size in dp. A class, not an enum, so [Pocket6] can stay out of [entries] (the shots that cover every size). */
+    class Size private constructor(
         val label: String,
         val widthDp: Int,
         val heightDp: Int,
     ) {
-        /** Retroid Pocket 5, the reference device. */
-        Wide("768x432", 768, 432),
-
-        /** Retroid Pocket Nova. */
-        Narrow("576x432", 576, 432),
-
-        /** A 4:3 screen of 640 dp at full height: 1280x960 px at 320 dpi, without the system bar. */
-        FourThree("640x480", 640, 480),
-
-        /** The same 4:3 screen with Android's 48 dp navigation bar taking the bottom: the Retroid Pocket Nova as it runs. */
-        FourThreeWithBar("640x432", 640, 432),
-        ;
+        override fun toString(): String = label
 
         companion object {
+            /** Retroid Pocket 5, the reference device. */
+            val Wide = Size("768x432", 768, 432)
+
+            /** Retroid Pocket Nova. */
+            val Narrow = Size("576x432", 576, 432)
+
+            /** A 4:3 screen of 640 dp at full height: 1280x960 px at 320 dpi, without the system bar. */
+            val FourThree = Size("640x480", 640, 480)
+
+            /** The same 4:3 screen with Android's 48 dp navigation bar taking the bottom: the Retroid Pocket Nova as it runs. */
+            val FourThreeWithBar = Size("640x432", 640, 432)
+
+            /** Retroid Pocket 6, about 832x468 dp. Not in [entries]: a screen asks for it by name. */
+            val Pocket6 = Size("832x468", 832, 468)
+
+            /** The Pocket 6 at its real 1920x1080 px, 853x480 dp at xhdpi-ish scale; not in [entries]. */
+            val Pocket6Full = Size("853x480", 853, 480)
+
+            /** The sizes screens that say "every size" cover. */
+            val entries: List<Size> = listOf(Wide, Narrow, FourThree, FourThreeWithBar)
+
             /** The two original reference sizes: what [capture] takes without a `sizes` argument, so existing shots stay as they were. */
             val Original: List<Size> = listOf(Wide, Narrow)
 
             /** The 4:3 sizes (640 wide), each screen that covers them says so with `sizes = Size.FourThreeSizes`. */
             val FourThreeSizes: List<Size> = listOf(FourThree, FourThreeWithBar)
+
+            /** The original sizes and the Pocket 6's, for screens whose layout depends on the width. */
+            val WithPocket6: List<Size> = listOf(Wide, Narrow, Pocket6)
         }
     }
 
@@ -71,25 +85,25 @@ object ReferenceShots {
     }
 
     /**
-     * `<screen>_<size>_<preset>.png` for Plum Sans; other fonts add `_<font>`
-     * (`home_768x432_paper_serif.png`), so Sans names stay as they were; a text size other than
+     * `<screen>_<size>_<preset>.png` for the default font (Jost); other fonts add `_<font>`
+     * (`home_768x432_paper_serif.png`); a text size other than
      * Medium adds its name last (`home_768x432_paper_largest.png`).
      */
     fun fileName(
         screen: String,
         size: Size,
         preset: Preset,
-        font: PlumFont = PlumFont.Sans,
-        textSize: TextSize = TextSize.Medium,
+        font: PlumFont = PlumFont.Default,
+        textSize: TextSize = TextSize.Small,
     ): String {
-        val fontSuffix = if (font == PlumFont.Sans) "" else "_${font.name.lowercase()}"
-        val sizeSuffix = if (textSize == TextSize.Medium) "" else "_${textSize.name.lowercase()}"
+        val fontSuffix = if (font == PlumFont.Default) "" else "_${font.name.lowercase()}"
+        val sizeSuffix = if (textSize == TextSize.Small) "" else "_${textSize.name.lowercase()}"
         return "${screen}_${size.label}_${preset.label}$fontSuffix$sizeSuffix.png"
     }
 
     /**
      * Captures [content] inside [PlumTheme] at every [Size] and [Preset], in each of [fonts]
-     * at [textSize] (Medium by default; Plum Sans only by default; key screens add Serif and Mono, docs/conventions/testing.md).
+     * at [textSize] (Medium by default; the default font only by default; key screens add Serif and Mono, docs/conventions/testing.md).
      * [content] sees the screen size through `PlumTheme.layout`, as on a device.
      *
      * Every shot is taken and compared even when an earlier one differs; the test then fails
@@ -97,8 +111,8 @@ object ReferenceShots {
      */
     fun capture(
         screen: String,
-        fonts: List<PlumFont> = listOf(PlumFont.Sans),
-        textSize: TextSize = TextSize.Medium,
+        fonts: List<PlumFont> = listOf(PlumFont.Default),
+        textSize: TextSize = TextSize.Small,
         sizes: List<Size> = Size.Original,
         content: @Composable () -> Unit,
     ) {

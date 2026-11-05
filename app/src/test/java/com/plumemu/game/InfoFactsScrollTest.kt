@@ -39,9 +39,9 @@ class InfoFactsScrollTest {
     }
 
     @Test
-    fun theViewportEndsInsideARowSoEveryStopShowsMore() {
-        // 100 high would end some stop in a gap at one edge or the other; 94 lets every stop cut a row at both.
-        assertEquals(FactsFit(viewport = 94, endRoom = 0), factsFit(available = 100, spans = rows))
+    fun theViewportFillsWhatBackLeaves() {
+        // The window never gives up height (an empty band above Back is worse); the edge fade says there is more.
+        assertEquals(100, factsFit(available = 100, spans = rows).viewport)
         assertEquals("the facts fit: all of it", FactsFit(400, 0), factsFit(available = 400, spans = rows))
     }
 
@@ -55,7 +55,7 @@ class InfoFactsScrollTest {
         val measured = listOf(0..36, 45..81, 90..126, 135..171, 180..216, 225..261, 270..306, 315..351, 376..412, 421..457, 466..502)
         val fit = factsFit(available = 318, spans = measured)
         val cut = FactsCut.of(measured)
-        assertTrue("$fit gives up at most two rows", fit.viewport in (318 - 2 * 37)..318)
+        assertEquals("the viewport fills what Back leaves", 318, fit.viewport)
         val max = 503 + fit.endRoom - fit.viewport
         var at = 0
         val stops = mutableListOf(0)
@@ -63,7 +63,6 @@ class InfoFactsScrollTest {
         while (nextFactsScroll(at, fit.viewport, max, measured, isDown = false).also { at = it } != stops.last()) stops += at
         assertEquals("down to the end and back to the top", 0, stops.last())
         assertTrue("the end shows the last row whole: $stops", stops.max() + fit.viewport >= 503)
-        stops.forEach { assertTrue("at $it of $stops ($fit)", showsMoreRows(it, fit.viewport, measured, cut)) }
     }
 
     @Test

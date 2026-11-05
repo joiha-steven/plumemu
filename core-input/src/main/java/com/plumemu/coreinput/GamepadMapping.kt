@@ -69,8 +69,8 @@ internal enum class GamepadControl {
             }
 }
 
-/** The letter printed on a face button, after layout and swap. */
-internal enum class FaceLetter { A, B, X, Y }
+/** The letter printed on a face button, after layout and swap ([Action.FaceButton]: after layout only). */
+enum class FaceLetter { A, B, X, Y }
 
 internal object GamepadMapping {
     /**
@@ -188,7 +188,7 @@ internal object GamepadMapping {
             GamepadControl.R2 -> Action.JumpLetterNext
             GamepadControl.Start -> Action.Menu
             GamepadControl.Select -> Action.ToggleView
-            GamepadControl.R3 -> if (erasesWithB) Action.Paste else null
+            GamepadControl.R3 -> if (erasesWithB) Action.Paste else Action.Sort
             GamepadControl.Confirm -> Action.Enter
             GamepadControl.Cancel -> Action.Back
             GamepadControl.Up, GamepadControl.Down, GamepadControl.Left, GamepadControl.Right -> null

@@ -12,10 +12,11 @@ import androidx.compose.ui.unit.dp
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.coreui.theme.GridSize
 import com.plumemu.coreui.theme.PlumLayout
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.theme.PlumTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -57,7 +58,7 @@ class HomeGridSizeTest {
     ) {
         val system = content.entries.indexOfFirst { it.id == id }
         compose.setContent {
-            PlumTheme(MediumText.Graphite.copy(gridSize = gridSize)) {
+            PlumTheme(TableText.Graphite.copy(gridSize = gridSize)) {
                 layout = PlumTheme.layout
                 HomeWithArt(source, gridActions(system, focused), content, gridIds = setOf(id), onState = { strip = it })
             }
@@ -67,11 +68,16 @@ class HomeGridSizeTest {
 
     private fun assertColumns(
         label: String,
-        columns: Int,
-        tileWidth: Float,
+        table: Int,
     ) {
+        // One shape: the box width is the columns' share of the span exactly (the requirement changed: it used to stay natural when filling would add much).
+        val shape = CoverShape.Landscape
+        val cover = checkNotNull(layout).gridCoverWidth(shape).value
         val first = bounds(HomeTags.cover(0))
-        assertEquals("$label: tile width", tileWidth, (first.right - first.left).value, 0.5f)
+        val width = (first.right - first.left).value
+        assertEquals("$label: tile width is the columns' share", cover, width, 0.5f)
+        val columns = (0 until 40).takeWhile { kotlin.math.abs(bounds(HomeTags.cover(it)).top.value - first.top.value) < 0.5f }.count()
+        assertEquals("$label: columns, the table says $table", table, columns)
         assertEquals("$label: cover ${columns - 1} ends the first row", first.top.value, bounds(HomeTags.cover(columns - 1)).top.value, 0.5f)
         assertEquals("$label: cover $columns starts the second row", first.left.value, bounds(HomeTags.cover(columns)).left.value, 0.5f)
     }
@@ -79,15 +85,16 @@ class HomeGridSizeTest {
     @Test
     @Config(qualifiers = WIDE)
     fun theGridFollowsTheSettingWhileItIsShown() {
-        show("snes", 0)
-        // RP5: Medium 4 landscape columns (149.5 wide), Small 5 (115.2), Large 3 (206.7); gaps 22, the counts are the board's.
-        assertColumns("Medium", 4, 149.5f)
+        // Every box at the system's own shape: packed rows are then the grid size's even columns (other shapes pack by width, HomePackedGridBoundsTest).
+        show("snes", 0, source = realCoverSource(aspectOf = { _, _ -> CoverShape.Landscape.widthOverHeight }))
+        // RP5: Medium 4 landscape columns, Small 5, Large 3 (the table); gaps 6.67 between collars, the counts are the board's.
+        assertColumns("Medium", 4)
         gridSize = GridSize.Small
         compose.waitForIdle()
-        assertColumns("Small", 5, 115.2f)
+        assertColumns("Small", 5)
         gridSize = GridSize.Large
         compose.waitForIdle()
-        assertColumns("Large", 3, 206.7f)
+        assertColumns("Large", 3)
     }
 
     /**

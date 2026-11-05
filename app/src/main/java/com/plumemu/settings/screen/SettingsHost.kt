@@ -5,6 +5,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import com.plumemu.account.RaAccounts
 import com.plumemu.account.ScraperAccounts
 import com.plumemu.report.ProblemReportActions
+import com.plumemu.report.ReportDraft
 import com.plumemu.coredata.backup.BackupKind
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.graph.LibraryResetState
@@ -131,14 +132,24 @@ internal interface SettingsActivityActions {
     /** False when the device has no folder picker. */
     fun openFolderPicker(): Boolean
 
-    /** False when the device offers no screen to pick the home app. */
-    fun openHomeSettings(): Boolean
+    /**
+     * False when the device offers no screen to pick the home app. [onNotHome] is called when Android's question closed
+     * and Plumemu is still not the home app and Android's own list could not be opened (Android 10+ answers at once,
+     * showing nothing, after two refusals; the list is then opened straight away).
+     */
+    fun openHomeSettings(onNotHome: () -> Unit = {}): Boolean
 
     /** Opens [url] in the device's browser; false when none could. */
     fun openWebPage(url: String): Boolean = false
 
     /** Asked each time Settings comes back to the front (a binder call; never per frame). */
     fun isHomeApp(): Boolean
+
+    /** Android's Usage access screen for Plumemu (Statistics › Exact play time); false when the device has none. */
+    fun openUsageAccess(): Boolean = false
+
+    /** Plumemu has Usage access; asked when Settings comes back to the front, like [isHomeApp]. */
+    fun isUsageAccessGranted(): Boolean = false
 
     /** Android's save picker for a [kind] backup (Advanced › Back up…); false when the device has none. */
     fun openBackupPicker(kind: BackupKind): Boolean
@@ -156,7 +167,7 @@ internal interface SettingsActivityActions {
 
         override fun openRestorePicker(): Boolean = false
 
-        override fun openHomeSettings(): Boolean = false
+        override fun openHomeSettings(onNotHome: () -> Unit): Boolean = false
 
         override fun isHomeApp(): Boolean = false
     }
@@ -178,6 +189,8 @@ internal class SettingsHost(
     val saveFailed: StateFlow<Boolean> = MutableStateFlow(false),
     /** Folders, scan, systems' emulators (without [SettingsContent.isHomeApp], which the screen asks). */
     val content: Flow<SettingsContent> = flowOf(SettingsContent()),
+    /** The last content [content] gave in this process (never a failed read), so a repeat opening draws it on its first frame. */
+    val remembered: () -> SettingsContent? = { null },
     /** The last folder picked from Settings. */
     val folderAdd: StateFlow<FolderAddState> = MutableStateFlow(FolderAddState.Idle),
     val library: SettingsLibraryActions = SettingsLibraryActions.None,
@@ -203,6 +216,8 @@ internal class SettingsHost(
     val updates: SettingsUpdateActions = SettingsUpdateActions.None,
     /** About › Report a problem. */
     val problemReports: ProblemReportActions = ProblemReportActions.None,
+    /** The unsent words of Report a problem, kept above Settings for the process's life. */
+    val reportDraft: ReportDraft? = null,
 ) {
     /** What a finger on the colour sliders shows before it is written; the main screen lays it over the stored settings. */
     val colorPreview = ColorPreview()
@@ -241,7 +256,9 @@ internal class SettingsHost(
 
             override fun detectEmulators(onDone: (Boolean) -> Unit) = library.detectEmulators(onDone)
 
-            override fun openHomeSettings(): Boolean = activity.openHomeSettings()
+            override fun openHomeSettings(onNotHome: () -> Unit): Boolean = activity.openHomeSettings(onNotHome)
+
+            override fun openUsageAccess(): Boolean = activity.openUsageAccess()
 
             override fun openWebPage(url: String): Boolean = activity.openWebPage(url)
 
@@ -280,6 +297,8 @@ internal class SettingsHost(
             override val raAccounts: RaAccounts get() = this@SettingsHost.raAccounts
 
             override val problemReports: ProblemReportActions get() = this@SettingsHost.problemReports
+
+            override val reportDraft: ReportDraft? get() = this@SettingsHost.reportDraft
 
             override val boxArt: SettingsBoxArtActions get() = this@SettingsHost.boxArt
 

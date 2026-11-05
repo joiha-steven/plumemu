@@ -4,31 +4,41 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Text size setting (Settings › Appearance), six steps. Medium is the table in design/rules.md ›
- * Type; the others scale it. Android's own font scale applies on top, since sizes are in sp.
- * Small, Medium and Large keep the factors they always had; the names are what the settings file
- * stores (core-data `TextSizeSetting` has the same names).
+ * Text size setting (Settings › Appearance), six steps. Small is the table in design/rules.md › Type;
+ * the others scale it. Android's own font scale applies on top, since sizes are in sp.
+ * The names are what the settings file stores (core-data `TextSizeSetting` has the same names).
  */
 enum class TextSize(
     val factor: Float,
+    /** The factor on the second screen, whose text is physical-size: one step under the top screen's (see [PlumTypography.secondScreen]). */
+    val secondScreenFactor: Float,
 ) {
-    Small(0.9f),
-    Medium(1f),
-    Large(1.1f),
-    Larger(1.2f),
-    Huge(1.3f),
-    Largest(1.45f),
+    Small(1f, 0.9f),
+    Medium(1.1f, 1f),
+    Large(1.2f, 1.1f),
+    Larger(1.3f, 1.2f),
+    Huge(1.4f, 1.3f),
+    Largest(1.5f, 1.45f),
     ;
 
     /**
-     * How much taller than at Medium a box around text of this size must be: 1 for the sizes
-     * below Medium (their text fits the Medium box), the factor above it.
+     * How much taller than at Small a box around text of this size must be: the factor itself, never
+     * below 1 (Small draws the table's boxes).
      */
     val heightScale: Float get() = maxOf(1f, factor)
+
+    /** The factor the hint bar's labels and key caps use: [factor] up to [HINT_FACTOR_CAP], so the bar keeps its keys at every size. */
+    val hintFactor: Float get() = minOf(factor, HINT_FACTOR_CAP)
+
+    /** [heightScale] for the hint bar and its key caps. */
+    val hintHeightScale: Float get() = maxOf(1f, hintFactor)
 
     companion object {
         /** The size used until the person picks one, on every screen (small handhelds read better at Large). */
         val Default: TextSize = Large
+
+        /** The hint bar's own scale stops here (Medium): five hints with their labels must fit a 576 dp bar at the default size. */
+        const val HINT_FACTOR_CAP = 1.1f
     }
 }
 
@@ -72,9 +82,9 @@ enum class TextWeight(
  * Every text style of the app, from design/rules.md › Type, at Plum Sans and Medium size.
  * [weight] is the design weight; [PlumFonts] says which real face draws each weight.
  *
- * Sizes come from one ramp: the top screen 11 · 13 · 16 · 20 · 26, the
- * second screen (`Second*`) 16 · 20 · 26 · 36. Only glyphs drawn as icons inside a shape stay off
- * it ([KeyCap], [SettingsInkSample]). `TypeScaleTest` fails on a size outside the ramp.
+ * Sizes come from one ramp: the top screen 11 · 11.33 (the board's small meta: the hint bar subtitle, the games list's tag) · 13 · 16 · 20 · 26, the
+ * second screen (`Second*`) 16 · 20 · 26 · 36. Only glyphs drawn as icons inside a shape ([KeyCap], [SettingsInkSample]) stay off it.
+ * `TypeScaleTest` fails on a size outside the ramp.
  */
 enum class TypeRole(
     val sizeSp: Float,
@@ -111,8 +121,38 @@ enum class TypeRole(
     /** The current game's year in the narrow details stop's list peek: accent, 600. */
     SmallFactCurrent(13f, 600),
 
-    /** The focused game's title on the grid's bottom bar (the board's 14 / 600; 13 on the ramp). */
+    /**
+     * A game row's year (the board's list columns and the year alone) and the same current in accent 600. The board draws 10 dp; the Thor's
+     * list read too small at that and at 11.33, so it takes the ramp's next step, 13 (design/rules.md › Type).
+     */
+    RowYear(13f, 400),
+    RowYearCurrent(13f, 600),
+
+    /**
+     * The tag: a region or a system's short code in tracked capitals beside a game's title (600, spaced 0.1 em; [PlumTypography.tag]). The
+     * board draws 8 dp; raised to the info line's small step with the year beside it.
+     */
+    Tag(11.33f, 600),
+
+    /**
+     * The top bar's place name and its count, from the Covers bar (30 px = 20 dp, 600; 17 px = 11.33 dp, the ramp's 11); the clock
+     * and status use [InfoLineMeta]. A name whose line does not fit steps down to 16 ([PlaceText]).
+     */
+    PlaceName(20f, 600),
+    PlaceCount(11f, 400),
+
+    /** The details block's labels GENRE / RATING / PLAYED: 11 board px = 7.3 dp, 600, caps, spaced 0.145 em; under the ramp's smallest step, so 11. */
+    DetailsLabel(11f, 600),
+
+    /** The line under the details title ("Nintendo, 1994"): 15 board px = 10 dp, the ramp's 11. */
+    DetailsSubtitle(11f, 400),
+
+    /** A titled grid tile's title (the board's 14 / 600; 13 on the ramp). */
     GridFocusTitle(13f, 600),
+
+    /** The focused game's title on the grid's info line (the Covers board: 24 px = 16 dp, 600) and the part after it (17 px = 11.33 dp; also the top bar clock and status). */
+    InfoLineTitle(16f, 600),
+    InfoLineMeta(11.33f, 400),
 
     /**
      * A titled tile's title in the Small grid: 11 / 600, the ramp's step under 13 (12 on the older ramp;
@@ -144,6 +184,7 @@ enum class TypeRole(
     /** A setup choice or folder card; focused 500, like a settings option. */
     SetupChoice(16f, 400),
     SetupChoiceFocused(16f, 500),
+    SetupChoiceCurrent(16f, 600),
 
     /** The first line of setup's emulator and usage statistics rows. */
     SetupRowTitle(13f, 400),
@@ -156,6 +197,9 @@ enum class TypeRole(
 
     /** "Current", "Default": accent fill, onAccent text, 11 bold (design/rules.md › Colour). */
     Badge(11f, 700),
+
+    /** A system's tag on its raised chip (the band at the top of a games list): the ramp's 13, heavier than the board's 8.67 for a 34 dp chip. */
+    SystemTag(13f, 700),
 
     /** Settings › Text color: the "Aa" of each card (the board's 28 / 600). */
     SettingsInkSample(28f, 600),
@@ -197,19 +241,11 @@ enum class TypeRole(
     SecondFactsCompact(16f, 400),
 
     /**
-     * Second screen, the details card (a game with a ScreenScraper result, layout C): the title,
-     * Roomy and Compact; the "1994 · Nintendo" and "Action · 1 player" lines and the description
-     * (its line height is [PlumTypography.secondDescription]'s). The top line is [SecondTopRoomy]
-     * at both sizes, the played line the picking card's facts line.
+     * Second screen, the App and Apps cards: the title, Roomy and Compact. The top line is
+     * [SecondTopRoomy] at both sizes.
      */
     SecondDetailsTitleRoomy(26f, 600),
     SecondDetailsTitleCompact(20f, 600),
-    /**
-     * The details card's fact lines, file line and description: 15, off the second screen's ramp (the ramp
-     * asks 16). At 16 the Roomy card cut "Action, Adventure · 8.5/10" beside the cover at Medium
-     * (194 dp beside a 240 cover); kept unless a smaller cover or a cut genre is chosen.
-     */
-    SecondDetailsFact(15f, 400),
 
     /**
      * Second screen in game, the battery part under the clock card: the time left's number ("45", 600) and its words ("min left",
@@ -237,13 +273,15 @@ enum class TypeRole(
     fun scaledSizeSp(
         font: PlumFont,
         textSize: TextSize,
-    ): Float = sizeSp * font.sizeFactor * textSize.factor
+        secondScreen: Boolean = false,
+    ): Float = sizeSp * font.sizeFactor * (if (secondScreen) textSize.secondScreenFactor else if (this == HintLabel || this == KeyCap) textSize.hintFactor else textSize.factor)
 
     /** Line height in sp: the font's normal line at the scaled size. */
     fun lineHeightSp(
         font: PlumFont,
         textSize: TextSize,
-    ): Float = scaledSizeSp(font, textSize) * font.lineHeightEm
+        secondScreen: Boolean = false,
+    ): Float = scaledSizeSp(font, textSize, secondScreen) * font.lineHeightEm
 
     /** Design weight plus the font's dark-background adjustment when the text is light, then moved up by [textWeight]. */
     fun weightFor(
@@ -252,3 +290,6 @@ enum class TypeRole(
         textWeight: TextWeight = TextWeight.Default,
     ): Int = textWeight.apply(if (textMode == TextMode.Light) weight + font.darkBackgroundWeightAdjust else weight)
 }
+
+/** The top bar's place name one ramp step down ([TypeRole.PlaceName] when its line does not fit); the bar's height holds this step's line. */
+const val PLACE_NAME_STEP_SP = 16f

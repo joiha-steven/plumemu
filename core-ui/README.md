@@ -59,7 +59,7 @@ sources where colour, dp and sp literals may appear.
 | `components/CoverShadow.kt` | `CoverShadow` / `rememberCoverShadow` / `Modifier.coverShadow`: the soft shadow under every grid cover (one small blurred ALPHA_8 corner bitmap per look, drawn as nine slices; the focused cover's deeper one drawn by the grid), its `drawGlow` (the focused cover's tinted glow, same slices) and `drawCoverRim` (the 1 dp rim light) |
 | `components/FocusRing.kt` | `DrawScope.drawFocusRing`: the 2.5 dp ring 3 dp out inside the focus halo, drawn only (by the parent, over the item); `drawFocusHalo` / `drawHaloOutside` draw the halo for rings and pills |
 | `components/keyboard/` | Plumemu's own on-screen keyboard: `KeyboardLayout.kt` (pages, keys, spans, `KeyboardSpec`), `KeyboardModel.kt` (the rules, pure Kotlin: focus, Up/Down by nearest centre, wrap on a fresh press, shift once/locked, pages, events), `KeyboardState.kt` (the model for Compose), `PlumKeyboard.kt` (tray and keys, taps), `KeyboardIcons.kt` (shift, delete, hide) |
-| `src/main/res/font/` | Plum Sans 400/600, Plum Serif 400/600, Plum Mono 400/700 (TTF from `plum-fonts/dist`) |
+| `src/main/res/font/` | Jost 400-800 (static faces built from the OFL variable font, `tools/fonts/build_jost.py`), Plum Sans 400/600, Plum Serif 400/600, Plum Mono 400/700 (TTF from `plum-fonts/dist`) |
 | `src/main/assets/licenses/` | `plum-<family>-OFL.txt`, the SIL OFL 1.1 text of each font, shipped in the APK |
 | `src/testFixtures/java/com/plumemu/coreui/testing/ReferenceShots.kt` | Screenshot harness: four reference shots per screen (optionally per font) in one call; reports every mismatch |
 | `src/testFixtures/java/com/plumemu/coreui/theme/ProvideGridSize.kt` | `ProvideGridSize`: one grid size for a subtree (shots and tests) |

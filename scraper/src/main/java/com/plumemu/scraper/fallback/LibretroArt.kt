@@ -9,12 +9,16 @@ import com.plumemu.scraper.MediaDownload
 import com.plumemu.scraper.MediaKind
 import com.plumemu.scraper.MediaRef
 import com.plumemu.scraper.OutcomeWords
+import com.plumemu.scraper.PictureFailure
 import com.plumemu.scraper.ScrapeRequest
 import com.plumemu.scraper.ScrapeResult
 import com.plumemu.scraper.TitleMatch
 import com.plumemu.scraper.api.await
 import com.plumemu.scraper.media.MediaDownloader
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -53,6 +57,14 @@ internal class LibretroArt(
     private val log: (String) -> Unit,
 ) : ArtFallbackSource {
     private val oneAtATime = Mutex()
+    private val lastFailure = MutableStateFlow<PictureFailure?>(null)
+
+    /** Why this source last failed, null after its next answer; the status line of "Box art only" reads it. */
+    val failure: StateFlow<PictureFailure?> = lastFailure.asStateFlow()
+
+    private fun failed(why: PictureFailure) {
+        lastFailure.value = why
+    }
 
     override val name = "libretro"
 
@@ -77,10 +89,12 @@ internal class LibretroArt(
                     // A refusal of this one name (403, 414, 410...) is a miss, like a 404: the listing is tried. Only 429, 5xx and no answer are failures.
                     in HTTP_CLIENT_ERRORS -> if (code == HTTP_TOO_MANY_REQUESTS) {
                         log("libretro art: HTTP 429 for the picture named like the file")
+                        failed(PictureFailure.ServerDidNotAnswer)
                         return@withLock FallbackArt.Failed(FAILED)
                     }
                     else -> {
                         log("libretro art: HTTP $code for the picture named like the file")
+                        failed(if (code < 0) PictureFailure.NoNetwork else PictureFailure.ServerDidNotAnswer)
                         return@withLock FallbackArt.Failed(FAILED)
                     }
                 }
@@ -113,7 +127,12 @@ internal class LibretroArt(
     private fun indexUrl(playlist: String): HttpUrl = baseUrl.newBuilder()
         .addPathSegment(playlist).addPathSegment(BOXARTS).addPathSegment("").build()
 
-    private fun found(playlist: String, name: String) = FallbackArt.Found(
+    private fun found(playlist: String, name: String): FallbackArt.Found {
+        lastFailure.value = null
+        return foundOf(playlist, name)
+    }
+
+    private fun foundOf(playlist: String, name: String) = FallbackArt.Found(
         ScrapeResult.Matched(
             // The folder of the pictures: a short hash keeps it to the characters the media folder allows.
             match = GameMatch("libretro_" + sha256Hex("$playlist/$name").take(ID_HEX_DIGITS), MatchedBy.Fallback),
@@ -160,12 +179,14 @@ internal class LibretroArt(
                     }
                     else -> {
                         log("libretro art: folder listing answered HTTP ${response.code}")
+                        failed(PictureFailure.ServerDidNotAnswer)
                         null
                     }
                 }
             }
         } catch (e: IOException) {
             log("libretro art: folder listing network error ${e.javaClass.simpleName}")
+            failed(PictureFailure.NoNetwork)
             return Loaded.Failed
         } ?: return Loaded.Failed
         if (names.isEmpty()) {
@@ -221,12 +242,14 @@ internal class LibretroArt(
                     }
                     else -> {
                         log("libretro art: HTTP ${response.code} from the thumbnail server")
+                        failed(PictureFailure.ServerDidNotAnswer)
                         MediaDownload.ServerError(response.code)
                     }
                 }
             }
         } catch (e: IOException) {
             log("libretro art: picture network error ${e.javaClass.simpleName}")
+            failed(PictureFailure.NoNetwork)
             target.delete()
             MediaDownload.NetworkDown
         }

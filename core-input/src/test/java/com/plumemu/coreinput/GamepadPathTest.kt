@@ -60,6 +60,12 @@ class GamepadPathTest {
     }
 
     @Test
+    fun r3IsTheSortChoicesOnAGameAndNothingOnTheSystemColumn() {
+        assertEquals(listOf(StripIntent.OpenSortMenu("snes", 0)), snesGames.press(KeyEvent.KEYCODE_BUTTON_THUMBR).intents)
+        assertEquals(emptyList<StripIntent>(), start.press(KeyEvent.KEYCODE_BUTTON_THUMBR).intents)
+    }
+
+    @Test
     fun startIsTheGameMenuOnAGameAndSettingsOnTheSystemColumn() {
         assertEquals(listOf(StripIntent.OpenGameMenu("snes", 0)), snesGames.press(KeyEvent.KEYCODE_BUTTON_START).intents)
         assertEquals(listOf(StripIntent.OpenSettings), start.press(KeyEvent.KEYCODE_BUTTON_START).intents)

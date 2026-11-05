@@ -16,6 +16,7 @@ import com.plumemu.coreui.components.pressFeelTouchDelayMs
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
+import com.plumemu.coreui.theme.TextSize
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Rule
@@ -41,9 +42,13 @@ class PressFeelFingerTest {
 
     private val held = mutableStateOf<Set<String>>(emptySet())
 
-    private fun pixels(tag: String): List<Int> {
+    /** The node's pixels; [skipTop] leaves out the top band the focused row above overhangs with its slab (it dips with that row, not with this one). */
+    private fun pixels(
+        tag: String,
+        skipTop: Int = 0,
+    ): List<Int> {
         val map = compose.onNodeWithTag(tag, useUnmergedTree = true).captureToImage().toPixelMap()
-        return buildList { for (y in 0 until map.height) for (x in 0 until map.width) add(map[x, y].hashCode()) }
+        return buildList { for (y in skipTop until map.height) for (x in 0 until map.width) add(map[x, y].hashCode()) }
     }
 
     private fun settle() {
@@ -52,7 +57,7 @@ class PressFeelFingerTest {
     }
 
     private fun show(content: @androidx.compose.runtime.Composable () -> Unit) {
-        compose.setContent { PlumTheme(PlumThemeSettings.Default) { CompositionLocalProvider(LocalHeldKeys provides held) { content() } } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Default.copy(textSize = TextSize.Small)) { CompositionLocalProvider(LocalHeldKeys provides held) { content() } } }
         compose.waitForIdle()
         compose.mainClock.autoAdvance = false
     }
@@ -114,11 +119,12 @@ class PressFeelFingerTest {
         val focused = HomeTags.system(0)
         val other = HomeTags.system(1)
         val restingFocused = pixels(focused)
-        val restingOther = pixels(other)
+        val skip = compose.slabOverhangPx(other).toInt() + 1
+        val restingOther = pixels(other, skip)
         held.value = setOf("A")
         settle()
         assertNotEquals("the focused system row dips", restingFocused, pixels(focused))
-        assertEquals("an unfocused one does not", restingOther, pixels(other))
+        assertEquals("an unfocused one does not", restingOther, pixels(other, skip))
     }
 
     @Test
@@ -180,5 +186,4 @@ class PressFeelFingerTest {
         }
         settle()
         assertEquals(resting, pixels(tag))
-    }
-}
+    }}

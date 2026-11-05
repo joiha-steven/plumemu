@@ -46,7 +46,7 @@ abstract class HomeScrollCueBase {
     val rules = rulesAround(compose)
 
     private var state: StripState? = null
-    private var textSize by mutableStateOf(TextSize.Medium)
+    private var textSize by mutableStateOf(TextSize.Small)
     private var gridSize by mutableStateOf(GridSize.Default)
     private var edgeFadeOn by mutableStateOf(true)
     private val problems = mutableListOf<String>()
@@ -114,24 +114,28 @@ abstract class HomeScrollCueBase {
         return down
     }
 
-    /** A grid: fades only where a cover is cut at that edge, never over the focused cover. Returns whether a fade showed. */
+    /**
+     * A grid: fades only where a cover is cut at that edge, never over the focused cover. Returns whether a cover was cut (faded, or left out). A grid that leaves
+     * out a row less than [minShown] of which shows (the Apps grid) fades only where a row is cut and mostly there.
+     */
     private fun checkGrid(
         label: String,
         focused: Int,
         count: Int,
+        minShown: Float = 0f,
     ): Boolean {
         val node = faded { tagOf(it) == HomeTags.GRID }
         val (top, bottom) = bands(node)
         val box = node.boundsInRoot
         val cells = (0 until count).mapNotNull { rectPx(HomeTags.cover(it)) }
-        val cutTop = cells.any { it.top < box.top - 1f && it.bottom > box.top + 1f }
-        val cutBottom = cells.any { it.top < box.bottom - 1f && it.bottom > box.bottom + 1f }
+        val cutTop = cells.any { it.top < box.top - 1f && it.bottom > box.top + 1f && (it.bottom - box.top) >= minShown * it.height }
+        val cutBottom = cells.any { it.top < box.bottom - 1f && it.bottom > box.bottom + 1f && (box.bottom - it.top) >= minShown * it.height }
         if (top.hasArea() != cutTop) problems += "$label: a cover cut at the top = $cutTop but top fade is ${top.height} px"
         if (bottom.hasArea() != cutBottom) problems += "$label: a cover cut at the bottom = $cutBottom but bottom fade is ${bottom.height} px"
         if (bottom.hasArea() && !canScroll(node, down = true)) problems += "$label: bottom fade at the grid's end"
         val cell = rectPx(HomeTags.cover(focused))
         if (cell == null || cell.overlaps(top) || cell.overlaps(bottom)) problems += "$label: focused cover $focused $cell under a fade (top $top, bottom $bottom)"
-        return top.hasArea() || bottom.hasArea()
+        return cells.any { (it.top < box.top - 1f && it.bottom > box.top + 1f) || (it.top < box.bottom - 1f && it.bottom > box.bottom + 1f) }
     }
 
     private fun assertNoProblems() = assertTrue(problems.joinToString("\n"), problems.isEmpty())
@@ -208,7 +212,7 @@ abstract class HomeScrollCueBase {
             for (direction in List(STEPS) { Direction.Down } + List(STEPS) { Direction.Up }) {
                 send(Action.Move(direction, isRepeat = true))
                 val focused = checkNotNull(state).focus.rowOf(appsId)
-                if (checkGrid("apps $text app $focused", focused, AppsGridApps.size)) fading++
+                if (checkGrid("apps $text app $focused", focused, AppsGridApps.size, minShown = 0.75f)) fading++
             }
         }
         assertNoProblems()
@@ -229,7 +233,7 @@ abstract class HomeScrollCueBase {
     }
 
     private companion object {
-        val TEXT_SIZES = listOf(TextSize.Medium, TextSize.Large, TextSize.Largest)
+        val TEXT_SIZES = listOf(TextSize.Small, TextSize.Large, TextSize.Largest)
         const val STEPS = 14
     }
 }

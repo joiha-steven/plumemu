@@ -1,5 +1,6 @@
 package com.plumemu.game
 
+import com.plumemu.graph.AchievementCount
 import com.plumemu.telemetry.LaunchFrom
 import com.plumemu.coredata.db.AddedSession
 import com.plumemu.launcher.LaunchOutcome
@@ -83,6 +84,12 @@ internal class FakeGameActions(
     override suspend fun forgetFailedCore(gameKey: String, emulatorId: String) {
         writeError?.let { throw it }
         forgottenCores += gameKey to emulatorId
+    }
+
+    val expectedTries = mutableListOf<Triple<String, String, Set<String>>>()
+
+    override suspend fun expectCoreTry(gameKey: String, emulatorId: String, tried: Set<String>) {
+        expectedTries += Triple(gameKey, emulatorId, tried)
     }
 
     override suspend fun facts(gameKey: String): GameFacts? {
@@ -323,6 +330,8 @@ internal fun sampleFacts(
     versions: VersionListing? = null,
     versionsPending: Boolean = false,
     canRemoveFromRecent: Boolean = false,
+    canSort: Boolean = false,
+    achievementCount: AchievementCount? = null,
 ) = GameFacts(
     title = title,
     systemName = "PlayStation",
@@ -341,6 +350,8 @@ internal fun sampleFacts(
     versions = versions,
     versionsPending = versionsPending,
     canRemoveFromRecent = canRemoveFromRecent,
+    canSort = canSort,
+    achievementCount = achievementCount,
 )
 
 /** Two regional copies of a console game, the first one current ("USA", "Europe"; made-up files). */

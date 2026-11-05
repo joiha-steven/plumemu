@@ -3,6 +3,7 @@ package com.plumemu.coredata.backup
 import com.plumemu.coredata.settings.AdvancedSettings
 import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.BoxArtRegionSetting
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.ConfirmButtonSetting
 import com.plumemu.coredata.settings.ControlsSettings
@@ -49,6 +50,7 @@ class SettingsJsonTest {
                     scanOnStartup = false,
                     sortGames = SortGamesSetting.LastPlayed,
                     boxArtRegion = BoxArtRegionSetting.Japan,
+                    boxArtSource = BoxArtSourceSetting.LibretroOnly,
                     boxArtPaused = true,
                     systemOrder = SystemOrderSetting.Manual,
                     manualSystemOrder = listOf("snes", "nes", "My Hacks"),
@@ -57,13 +59,23 @@ class SettingsJsonTest {
                 ),
             homeScreen = HomeScreenSettings(showApps = false, showClock = false, showBattery = false, showSystemInfo = false),
             secondScreen = SecondScreenSettings(enabled = false, inGame = InGameSetting.Black),
-            advanced = AdvancedSettings(animations = false, sounds = SoundLevel.Quiet, usageStatistics = false, vibration = false),
+            advanced = AdvancedSettings(animations = false, sounds = SoundLevel.Quiet, usageStatistics = false, vibration = false, exactPlayTime = true),
             updates = UpdateSettings(checkDaily = false),
             flags = SetupFlags(
                 setupCompleted = true, homeRoleAsked = true, rescanAfterReset = true, folderMatchVersion = 3, namingRulesVersion = 4, scrapeRulesVersion = 5,
-                inGameDriftNoteShown = true,
+                inGameDriftNoteShown = true, setupQuestionsSkipped = true,
             ),
         )
+
+    @Test
+    fun aFileFromBeforeSetupQuestionsSkippedReadsFalseAndTheFlagRoundTrips() {
+        val json = SettingsJson.encode(everyFieldChanged)
+        assertEquals(true, roundTrip(everyFieldChanged).settings.flags.setupQuestionsSkipped)
+        json.getJSONObject("flags").remove("setupQuestionsSkipped")
+        val old = SettingsJson.decode(json.toString())
+        assertEquals(false, old.settings.flags.setupQuestionsSkipped)
+        assertEquals("a missing key is not an unknown value", false, old.unknownKeys.any { it.contains("setupQuestionsSkipped") })
+    }
 
     private fun roundTrip(settings: PlumSettings): SettingsJson.Decoded = SettingsJson.decode(SettingsJson.encode(settings).toString())
 
@@ -175,13 +187,27 @@ class SettingsJsonTest {
     }
 
     @Test
+    fun theBoxArtSourceIsLeftOutUntilChosenAndAnUnknownOneReadsAsNotChosen() {
+        val unchosen = everyFieldChanged.copy(library = everyFieldChanged.library.copy(boxArtSource = null))
+        val json = SettingsJson.encode(unchosen)
+        assertEquals(false, json.getJSONObject("library").has("boxArtSource"))
+        assertEquals(null, SettingsJson.decode(json.toString()).settings.library.boxArtSource)
+        val chosen = SettingsJson.encode(everyFieldChanged)
+        assertEquals("LibretroOnly", chosen.getJSONObject("library").getString("boxArtSource"))
+        chosen.getJSONObject("library").put("boxArtSource", "Mars")
+        val decoded = SettingsJson.decode(chosen.toString())
+        assertEquals(null, decoded.settings.library.boxArtSource)
+        assertEquals(listOf("library.boxArtSource"), decoded.unknownKeys)
+    }
+
+    @Test
     fun aValueThisVersionDoesNotKnowReadsAsItsDefaultAndIsListed() {
         val json = SettingsJson.encode(everyFieldChanged)
         json.getJSONObject("appearance").put("font", "Comic")
         json.getJSONObject("library").put("boxArtRegion", "mars")
         json.getJSONObject("advanced").put("animations", "yes")
         val decoded = SettingsJson.decode(json.toString())
-        assertEquals(FontSetting.Sans, decoded.settings.appearance.font)
+        assertEquals(FontSetting.Jost, decoded.settings.appearance.font)
         assertEquals(BoxArtRegionSetting.Usa, decoded.settings.library.boxArtRegion)
         assertEquals(true, decoded.settings.advanced.animations)
         assertEquals(listOf("appearance.font", "library.boxArtRegion", "advanced.animations").sorted(), decoded.unknownKeys.sorted())

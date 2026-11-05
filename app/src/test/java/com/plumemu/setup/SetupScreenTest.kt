@@ -115,6 +115,12 @@ class SetupScreenTest {
         assertEquals("a tap on the hint", 3, pickerOpened)
     }
 
+    /** On the look step: its preselected tile; then on box art: its first choice (Box art only without ScreenScraper keys). */
+    private fun passLookAndBoxArt() {
+        send(Action.Enter)
+        send(Action.Enter)
+    }
+
     @Test
     fun aPickedFolderShowsAsACardWithContinueThenTheScanAndBack() {
         show(PlumSettings.Defaults)
@@ -125,17 +131,26 @@ class SetupScreenTest {
 
         compose.onNodeWithTag(SetupTags.control(SetupControl.Continue)).performClick()
         compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.setup_look_title)).assertIsDisplayed()
+        compose.onNodeWithTag(SetupTags.control(SetupControl.Look0)).performClick() // touch: a tile
+        compose.waitForIdle()
+        compose.onNodeWithTag(SetupTags.control(SetupControl.BoxArtLibretro)).performClick() // touch: Box art only
+        compose.waitForIdle()
         compose.onNodeWithText(text(R.string.setup_scan_title)).assertIsDisplayed()
         compose.onNodeWithTag(SetupTags.PROGRESS).assertIsDisplayed()
 
-        compose.onNodeWithTag(SetupTags.HINT_BACK).performClick() // touch: the B Back hint
+        compose.onNodeWithTag(SetupTags.HINT_BACK).performClick() // touch: the B Back hint, to the question just before the scan
         compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.setup_box_art_question_title)).assertIsDisplayed()
+        send(Action.Back)
+        send(Action.Back)
         compose.onNodeWithText(text(R.string.setup_folder_title)).assertIsDisplayed()
 
         send(Action.Enter) // gamepad: Continue again
+        passLookAndBoxArt()
         compose.onNodeWithText(text(R.string.setup_scan_title)).assertIsDisplayed()
         send(Action.Back)
-        compose.onNodeWithText(text(R.string.setup_folder_title)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.setup_box_art_question_title)).assertIsDisplayed() // the question just before the scan
     }
 
     @Test
@@ -144,16 +159,17 @@ class SetupScreenTest {
         show(PlumSettings.Defaults)
         compose.runOnIdle { model.onPicked(PickResult.Picked(SetupFakes.ROMS_TREE)) }
         compose.waitForIdle()
-        compose.onAllNodesWithTag(SetupTags.DOT, useUnmergedTree = true).assertCountEquals(3)
+        compose.onAllNodesWithTag(SetupTags.DOT, useUnmergedTree = true).assertCountEquals(5)
 
         send(Action.Enter) // Continue
+        passLookAndBoxArt()
         compose.onNodeWithText(text(R.string.setup_second_screen_title)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.setup_second_screen_desc)).assertIsDisplayed()
         compose.onNodeWithTag(SetupTags.HINT_BACK).performClick() // touch: the B Back hint
         compose.waitForIdle()
-        compose.onNodeWithText(text(R.string.setup_folder_title)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.setup_box_art_question_title)).assertIsDisplayed()
 
-        send(Action.Enter) // Continue again
+        send(Action.Enter) // Box art only again
         send(Action.Enter) // Use it, focused for a built-in screen
         assertEquals(true, source.secondScreenAnswer)
         compose.onNodeWithText(text(R.string.setup_scan_title)).assertIsDisplayed()
@@ -167,6 +183,7 @@ class SetupScreenTest {
         compose.waitForIdle()
         compose.onNodeWithTag(SetupTags.control(SetupControl.Continue)).performClick()
         compose.waitForIdle()
+        passLookAndBoxArt()
         compose.onNodeWithTag(SetupTags.control(SetupControl.SkipSecondScreen)).performClick()
         compose.waitForIdle()
         assertEquals(false, source.secondScreenAnswer)
@@ -174,12 +191,13 @@ class SetupScreenTest {
     }
 
     @Test
-    fun noSecondScreenNoQuestionAndTwoDots() {
+    fun noSecondScreenNoQuestionAndFourDots() {
         show(PlumSettings.Defaults)
         compose.runOnIdle { model.onPicked(PickResult.Picked(SetupFakes.ROMS_TREE)) }
         compose.waitForIdle()
-        compose.onAllNodesWithTag(SetupTags.DOT, useUnmergedTree = true).assertCountEquals(2)
+        compose.onAllNodesWithTag(SetupTags.DOT, useUnmergedTree = true).assertCountEquals(4)
         send(Action.Enter)
+        passLookAndBoxArt()
         compose.onNodeWithText(text(R.string.setup_scan_title)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.setup_second_screen_title)).assertDoesNotExist()
     }
@@ -191,6 +209,7 @@ class SetupScreenTest {
         compose.waitForIdle()
         source.systems.value = SetupFakes.boardSystems
         send(Action.Enter)
+        passLookAndBoxArt()
         compose.runOnIdle { source.endScan() }
         compose.waitForIdle()
         compose.onNodeWithText(text(R.string.setup_ready_title)).assertIsDisplayed()
@@ -218,6 +237,7 @@ class SetupScreenTest {
         compose.waitForIdle()
         source.systems.value = SetupFakes.boardSystems
         send(Action.Enter)
+        passLookAndBoxArt()
         compose.runOnIdle {
             source.scanReport.value = ScanReport(phase = ScanPhase.Naming, walkedFolderIds = setOf(1L), gamesNamed = 10, gamesToName = 1837)
         }
@@ -267,6 +287,25 @@ class SetupScreenTest {
         send(Action.Enter)
         assertEquals(1, homeRole.requests)
         assertEquals(1, homeRole.marked)
+        // The card stays until Android answers (it may answer at once, showing nothing).
+        compose.onNodeWithTag(HomeRoleTags.PROMPT).assertIsDisplayed()
+        compose.runOnIdle { homeRole.answer!!(true) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(HomeRoleTags.PROMPT).assertDoesNotExist()
+    }
+
+    @Test
+    fun yesThatAndroidAnswersWithoutMakingPlumemuHomeSaysSoAndOffersAndroidsList() {
+        show(completed(homeRoleAsked = false))
+        compose.onNodeWithTag(HomeRoleTags.button(0)).performClick() // touch: Yes
+        compose.waitForIdle()
+        compose.runOnIdle { homeRole.answer!!(false) }
+        compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.home_role_not_yet)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.home_role_open_settings)).assertIsDisplayed()
+        compose.onNodeWithTag(HomeRoleTags.button(0)).performClick()
+        compose.waitForIdle()
+        assertEquals(1, homeRole.listOpened)
         compose.onNodeWithTag(HomeRoleTags.PROMPT).assertDoesNotExist()
     }
 
@@ -304,12 +343,20 @@ class SetupScreenTest {
         var canRequest = true
         var requests = 0
         var marked = 0
+        var listOpened = 0
+        var answer: ((Boolean) -> Unit)? = null
 
         override fun isHomeApp(): Boolean = isHome
 
-        override fun requestHomeRole(): Boolean {
+        override fun requestHomeRole(onAnswered: (Boolean) -> Unit): Boolean {
             requests++
+            answer = onAnswered
             return canRequest
+        }
+
+        override fun openHomeSettings(): Boolean {
+            listOpened++
+            return true
         }
 
         override fun markAsked() {

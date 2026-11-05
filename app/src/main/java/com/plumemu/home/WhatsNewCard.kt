@@ -2,7 +2,6 @@ package com.plumemu.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -126,7 +125,7 @@ internal fun WhatsNewCardLayout(
             .background(colors.bg.copy(alpha = WHATS_NEW_SCRIM_ALPHA))
             // Taps outside the card land here, not on the main screen underneath.
             .pointerInput(Unit) { detectTapGestures { } }
-            .padding(top = PlumDimens.stripMarginTop + PlumTheme.layout.topBarHeight + PlumDimens.barGap, bottom = PlumDimens.stripMarginBottom)
+            .padding(top = PlumDimens.stripMarginTop + PlumTheme.layout.topBarHeight + PlumDimens.barGap, bottom = PlumDimens.footerBelow)
             .testTag(WhatsNewTags.CARD),
     ) {
         Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = PlumDimens.stripMarginSide), contentAlignment = Alignment.Center) {
@@ -135,14 +134,15 @@ internal fun WhatsNewCardLayout(
                     .widthIn(max = PlumDimens.homeRolePromptWidth)
                     .panelChrome({ colors.sel2 })
                     .padding(PlumDimens.homeRolePromptPadding),
-                verticalArrangement = Arrangement.spacedBy(PlumDimens.setupTitleGapWide),
             ) {
                 PanelTitleWithDot(
                     text = stringResource(R.string.home_whatsnew_title, state.release.versionName),
                     style = PlumTheme.type.setupTitle(WidthClass.Narrow).copy(color = colors.text),
                     titleModifier = Modifier.testTag(WhatsNewTags.TITLE),
                 )
+                Spacer(Modifier.height(PlumDimens.setupTitleGapWide))
                 WhatsNewNotes(state, Modifier.weight(1f, fill = false))
+                // One gap above OK (not the title's gap plus this one): the card is as tall as the screen allows, the notes take what is left.
                 Spacer(Modifier.height(PlumDimens.setupButtonGap))
                 SetupButton(
                     text = stringResource(R.string.home_role_ok),
@@ -152,7 +152,7 @@ internal fun WhatsNewCardLayout(
                 )
             }
         }
-        Spacer(Modifier.height(PlumDimens.barGap))
+        Spacer(Modifier.height(PlumDimens.footerGap))
         // Opaque: the main screen's own hints sit at the same place and would show through.
         HintBar(Modifier.background(colors.bg)) {
             Hint(

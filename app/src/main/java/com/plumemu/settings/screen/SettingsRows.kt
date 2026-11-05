@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import com.plumemu.coreui.components.borderDrawn
 import com.plumemu.coreui.components.KeyState
+import com.plumemu.coreui.components.StripeAnchor
 import com.plumemu.coreui.components.focusPill
 import com.plumemu.coreui.components.rememberKeyState
 import androidx.compose.ui.input.pointer.pointerInput
@@ -31,6 +32,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.plumemu.R
 import com.plumemu.account.AccountStatus
@@ -55,6 +57,7 @@ import com.plumemu.coredata.settings.TextWeightSetting
 import com.plumemu.coreui.theme.AccentPreset
 import com.plumemu.coreui.theme.BackgroundPreset
 import com.plumemu.coreui.theme.ColorSet
+import com.plumemu.coreui.theme.FocusSlab
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.graph.BackupState
@@ -107,8 +110,11 @@ internal sealed interface OptionValue {
     /** Plain text: a figure, a version, a state word; nothing to step or open. */
     data class Text(val text: String) : OptionValue
 
-    /** A value that Left / Right step: its chevrons show on the focused row only. */
-    data class Choice(val text: String) : OptionValue
+    /**
+     * A value that Left / Right step: its chevrons show on the focused row only. [opensPanel] (Colors, whose A opens its tiles) keeps the
+     * right chevron shown at rest as every row that opens a page does; the left one still comes with the focus.
+     */
+    data class Choice(val text: String, val opensPanel: Boolean = false) : OptionValue
 
     /** A row that opens a page: the text (empty for none) ends in a chevron; [isSignedIn] puts an accent check before it. */
     data class Opens(val text: String, val isSignedIn: Boolean = false) : OptionValue
@@ -143,32 +149,41 @@ internal fun OptionRow(
             // The box art status is information only: its sentence is the row's label, drawn like a value (secondary text colour).
             isStatusLine -> if (focused) { { colors.meta } } else { { colors.muted } }
             look == OptionLook.Focused -> { { colors.strong } }
-            look == OptionLook.Normal -> { { colors.text2 } }
+            look == OptionLook.Normal -> { { colors.text } }
             look == OptionLook.Current -> { { colors.accent } }
             else -> { { colors.muted } }
         }
     // The line under a label (Confirm with B) is secondary text: dimmer on every row but the focused one.
     val secondaryColor: () -> Color = if (focused) { { colors.meta } } else { { colors.muted } }
-    // Values are in normal text brightness (decision 0011); only the preview, where the whole column is dimmed, mutes them.
-    val valueColor: () -> Color = if (look == OptionLook.Preview) { { colors.muted } } else { { colors.text } }
+    // Values are not dimmed (decision 0011): a row at rest reads them in the board's body ink, a focused one in the slab's bright trailing ink
+    // (the games list's region); only the preview, where the whole column is dimmed, mutes them.
+    val valueColor: () -> Color =
+        when (look) {
+            OptionLook.Preview -> { { colors.muted } }
+            OptionLook.Normal -> { { colors.body } }
+            OptionLook.Focused -> { { colors.slab.region } }
+            else -> { { colors.text } }
+        }
     // A switch's knob widens with a tap anywhere on its row.
     val knob = rememberKeyState()
+    // The accent bar of the two-line Confirm row stands beside its label, not beside the line under it.
+    val anchor = remember { StripeAnchor() }
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
                 .heightIn(min = PlumTheme.layout.rowHeight)
-                .focusPill(focused, mirror = knob)
-                .padding(horizontal = PlumDimens.gameRowPadding, vertical = verticalPadding)
+                .focusPill(focused, mirror = knob, stripe = if (option == SettingsOption.ConfirmBottom) anchor else null)
+                .padding(start = PlumDimens.gameRowPadding, end = PlumDimens.panelTextEnd, top = verticalPadding, bottom = verticalPadding)
                 .testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
             val style = if (focused || look == OptionLook.Current) type.settingsOptionFocused else type.settingsOption
-            BasicText(label, style = style, color = labelColor, maxLines = labelLines, overflow = TextOverflow.Ellipsis)
+            BasicText(label, style = style, color = labelColor, maxLines = labelLines, overflow = TextOverflow.Ellipsis, onTextLayout = if (option == SettingsOption.ConfirmBottom) anchor::measured else null, modifier = if (option == SettingsOption.ConfirmBottom) anchor.title() else Modifier)
             // The confirm option names the buttons on a second line; the board's 16 sp label would not fit.
             if (option == SettingsOption.ConfirmBottom) {
-                BasicText(stringResource(R.string.settings_confirm_bottom_detail), style = type.smallFact, color = secondaryColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                BasicText(stringResource(R.string.settings_confirm_bottom_detail), style = type.smallFact, color = secondaryColor, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
         Spacer(Modifier.width(PlumDimens.rowTrailingGap))
@@ -185,7 +200,8 @@ private fun OptionValueView(
     knob: KeyState,
 ) {
     val colors = PlumTheme.colors
-    val style = PlumTheme.type.meta
+    // On the focused row the value takes the row's weight, as the board's focused trailing text does.
+    val style = if (focused) PlumTheme.type.meta.copy(fontWeight = FontWeight(FocusSlab.YEAR_WEIGHT)) else PlumTheme.type.meta
     // The marks are dimmed text; a choice's chevrons keep their room while hidden so the value never moves with focus.
     val dim: () -> Color = { colors.muted }
     val hidden: () -> Color = { Color.Transparent }
@@ -200,7 +216,7 @@ private fun OptionValueView(
                 Spacer(Modifier.width(PlumDimens.settingsValueGap))
                 BasicText(value.text, style = style, color = color, maxLines = 2, modifier = Modifier.weight(1f, fill = false).testTag(SettingsTags.valueText(valueTag)))
                 Spacer(Modifier.width(PlumDimens.settingsValueGap))
-                ValueChevron(ChevronSide.Right, style, if (focused) dim else hidden, tag = SettingsTags.chevronRight(valueTag))
+                ValueChevron(ChevronSide.Right, style, if (focused || value.opensPanel) dim else hidden, tag = SettingsTags.chevronRight(valueTag))
             }
         is OptionValue.Opens ->
             Row(widest, verticalAlignment = Alignment.CenterVertically) {
@@ -248,7 +264,8 @@ internal fun optionValue(
             OptionValue.Swatch(theme.textColor.toComposeColor(), stringResource(textColorName(settings.appearance.textColor, theme.backgroundColor)), hasRing = false, live = LiveSwatch.Text)
         SettingsOption.Language ->
             OptionValue.Opens(languageName(AppLanguages.byTag(settings.appearance.language)?.tag))
-        SettingsOption.Colors, SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight, SettingsOption.LeftEdge, SettingsOption.GridSize, SettingsOption.SortGames, SettingsOption.RecentSize, SettingsOption.SystemOrder,
+        SettingsOption.Colors -> OptionValue.Choice(stringResource(choiceName(option, option.choiceIndex(settings, textSizeInUse()))), opensPanel = true)
+        SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight, SettingsOption.LeftEdge, SettingsOption.GridSize, SettingsOption.SortGames, SettingsOption.RecentSize, SettingsOption.SystemOrder,
         SettingsOption.SecondScreenInGame, SettingsOption.BoxArtRegion, SettingsOption.Keyboard, SettingsOption.SwitchSystemWith, SettingsOption.Sounds,
         ->
             OptionValue.Choice(stringResource(choiceName(option, option.choiceIndex(settings, textSizeInUse()))))
@@ -264,6 +281,7 @@ internal fun optionValue(
         SettingsOption.Rescan -> OptionValue.Text(if (content.isScanning) stringResource(R.string.settings_rescan_running) else "")
         SettingsOption.SystemEmulator -> OptionValue.Opens(emulatorValue(content.systems.getOrNull(index)))
         SettingsOption.UnknownFolder -> OptionValue.Opens(unknownFolderValue(content, content.unknownFolderAtRow(index)))
+        SettingsOption.FilesNotAdded -> OptionValue.Opens(notAddedCount(content.notAdded).let { if (it == 0) "" else rememberCountFormat().format(it) })
         SettingsOption.DetectEmulators -> OptionValue.Text(if (isDetecting) stringResource(R.string.settings_detect_running) else "")
         // Shown as the board's switch; A asks Android, which is the only one that can change it.
         SettingsOption.UseAsHome -> OptionValue.Switch(content.isHomeApp)
@@ -280,6 +298,7 @@ internal fun optionValue(
             OptionValue.Opens("")
         // A page to read beside the row: A opens nothing, so no "»".
         SettingsOption.Privacy, SettingsOption.ExportLogs -> OptionValue.Text("")
+        SettingsOption.BoxArtSource -> OptionValue.Opens(stringResource(boxArtSourceName(boxArtSourceIn(settings, content.account))))
         // Signed in: how box art is going in a word or two ("340 of 2,054", "Paused"), else the name; signed out: "Sign in »".
         SettingsOption.ScraperAccount ->
             when (val account = content.account) {
@@ -298,6 +317,8 @@ internal fun optionValue(
         SettingsOption.ScraperStatus -> OptionValue.Text("")
         // Statistics draws its own page (StatisticsPage); its stops have no row.
         SettingsOption.Statistic -> OptionValue.Text("")
+        // The Statistics page draws this row itself.
+        SettingsOption.ExactPlayTime -> OptionValue.Switch(option.switchValue(settings) && content.hasUsageAccess)
     }
 }
 
@@ -370,7 +391,9 @@ internal object SettingsTags {
 
     const val SCREEN = "settings_screen"
     const val STRIP = "settings_strip"
+    const val TOP_BAR = "settings_top_bar"
     const val SECTIONS = "settings_sections"
+    const val SECTIONS_DIVIDER = "settings_sections_divider"
     const val OPTIONS = "settings_options"
     const val PANEL = "settings_panel"
     const val PANEL_LIST = "settings_panel_list"
@@ -464,6 +487,9 @@ internal object SettingsTags {
 
     /** Appearance › Colors' panel, each tile's picture and each tile's name. */
     const val COLOR_SETS_PANEL = "settings_color_sets_panel"
+
+    /** The look preview card at the top of the right column ([SettingsLookPreview]). */
+    const val LOOK_PREVIEW = "settings_look_preview"
     const val COLOR_TILE = "settings_color_tile"
     const val COLOR_TILE_NAME = "settings_color_tile_name"
 

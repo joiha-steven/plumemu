@@ -1,5 +1,8 @@
 package com.plumemu.settings.screen
 
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import com.plumemu.account.AccountStatus
 import com.plumemu.account.RaAccountStatus
 import com.plumemu.account.SignInItem
@@ -16,9 +19,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Opening a sign-in panel in Settings puts the cursor on its first empty field with Plumemu's tray
- * up: the user name, or the key / password when "Sign in again" filled the name. B puts only the
- * tray away and the panel stays. On the real screen with a real router. Names are made up.
+ * Opening a sign-in panel in Settings puts the cursor on its first empty field (the user name, or the key / password when
+ * "Sign in again" filled the name) with the keyboard DOWN, so Cancel and RetroAchievements' key page button are in view;
+ * A on the field brings Plumemu's tray up, and moving off the field puts it away again. On the real screen with a real
+ * router. Names are made up.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], qualifiers = "w768dp-h432dp-land-xhdpi")
@@ -42,51 +46,75 @@ internal class SettingsSignInOpensTypingTest : SettingsKeyboardPathHarness() {
         send(Action.Enter)
     }
 
-    private fun assertTypingIn(item: SignInItem) {
+    private fun assertOpenWithTheTrayDown() {
         assertTrue("the sign-in panel is open", isFormOpen)
-        assertTrue("the tray is up as the panel opens", isTrayUp)
-        assertEquals(TextEntry.Keyboard, textEntry())
-        assertEquals(item, trayField)
+        assertFalse("the tray is down as the panel opens", isTrayUp)
+        assertEquals(TextEntry.Field, textEntry())
+    }
+
+    private fun assertShown(vararg items: SignInItem) {
+        val window = compose.onRoot().getBoundsInRoot()
+        for (item in items) {
+            val box = compose.onNodeWithTag(SignInTags.item(item), useUnmergedTree = true).getBoundsInRoot()
+            assertTrue("$item is inside the window: $box in $window", box.top >= window.top && box.bottom <= window.bottom)
+        }
     }
 
     @Test
-    fun theRetroAchievementsPanelOpensTypingTheUserName() {
+    fun theRetroAchievementsPanelOpensWithTheTrayDownAndCancelAndTheKeyPageInView() {
         openRow(SettingsOption.RetroAchievementsAccount)
-        assertTypingIn(SignInItem.Username)
+        assertOpenWithTheTrayDown()
+        assertShown(SignInItem.SignIn, SignInItem.Leave, SignInItem.OpenKeyPage)
+        // A on the user name brings the tray up and it types there.
+        send(Action.Enter)
+        assertTrue("A on the field brings the tray up", isTrayUp)
+        assertEquals(SignInItem.Username, trayField)
         typeOnKeyboard("plum")
         assertEquals("the keys type in the user name", "plum", textOf(SignInTags.typedText(SignInItem.Username)))
     }
 
     @Test
-    fun theScreenScraperPanelOpensTypingTheUserName() {
+    fun theScreenScraperPanelOpensWithTheTrayDownAndCancelInView() {
         openRow(SettingsOption.ScraperAccount)
-        assertTypingIn(SignInItem.Username)
+        assertOpenWithTheTrayDown()
+        assertShown(SignInItem.SignIn, SignInItem.Leave)
     }
 
     @Test
-    fun signInAgainWithTheNameFilledOpensTypingTheKey() {
+    fun signInAgainWithTheNameFilledOpensOnTheKeyWithTheTrayDown() {
         ra = RaAccountStatus.SignedIn("plumtester", 1234, isKeyRefused = true)
         openRow(SettingsOption.RetroAchievementsAccount)
         // The account panel: Sign in again is its first item.
         send(Action.Enter)
-        assertTypingIn(SignInItem.Password)
+        assertOpenWithTheTrayDown()
         assertEquals("plumtester", textOf(SignInTags.typedText(SignInItem.Username)))
+        assertShown(SignInItem.Leave, SignInItem.OpenKeyPage)
+        send(Action.Enter)
+        assertTrue(isTrayUp)
+        assertEquals(SignInItem.Password, trayField)
     }
 
     @Test
-    fun bPutsOnlyTheTrayAwayAndMovingFieldsKeepsItUp() {
+    fun withTheTrayUpBPutsItAwayAndTheKeyPageButtonIsReachableAndInView() {
         openRow(SettingsOption.RetroAchievementsAccount)
-        // START: Next, the tray stays up on the key.
-        send(Action.Menu)
-        assertTypingIn(SignInItem.Password)
+        send(Action.Enter)
+        assertTrue(isTrayUp)
         press(back)
-        assertFalse("B on an empty field puts the tray away", isTrayUp)
-        assertTrue("the panel stays open", isFormOpen)
-        assertEquals(TextEntry.Field, textEntry())
+        assertFalse("B puts the tray away", isTrayUp)
+        assertTrue("the panel stays", isFormOpen)
+        send(Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Move(Direction.Down))
+        assertShown(SignInItem.OpenKeyPage)
     }
 
     @Test
-    fun androidsKeyboardIsAskedForAsThePanelOpens() {
+    fun bOnTheOpenFormWithTheTrayDownClosesIt() {
+        openRow(SettingsOption.RetroAchievementsAccount)
+        press(back)
+        assertFalse("B closes the panel", isFormOpen)
+    }
+
+    @Test
+    fun androidsKeyboardStaysDownAsThePanelOpens() {
         show(androidKeyboard = true)
         repeat(SettingsSection.Accounts.shownIndex) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
@@ -95,6 +123,6 @@ internal class SettingsSignInOpensTypingTest : SettingsKeyboardPathHarness() {
         assertTrue(isFormOpen)
         assertFalse("no tray on Android's path", isTrayUp)
         ime.settle()
-        assertTrue("Android's keyboard is asked for", ime.keyboardShows)
+        assertFalse("Android's keyboard is not up until A", ime.keyboardShows)
     }
 }

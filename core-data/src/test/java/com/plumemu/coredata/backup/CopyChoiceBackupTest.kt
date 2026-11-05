@@ -4,6 +4,7 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import com.plumemu.coredata.db.CopyChoice
 import com.plumemu.coredata.db.PlumDatabase
+import com.plumemu.coredata.db.TestDetailsRating
 import com.plumemu.coredata.settings.PlumSettings
 import java.io.File
 import kotlinx.coroutines.runBlocking
@@ -52,7 +53,7 @@ class CopyChoiceBackupTest {
 
         val unpacked = runBlocking { zip.inputStream().use { BackupUnpack.unpack(it, File(tmp.root, "work"), PlumDatabase.SCHEMA_VERSION, freeBytes = { Long.MAX_VALUE }) } }
         val file = requireNotNull(unpacked.database)
-        RestoredDatabase.prepare(ApplicationProvider.getApplicationContext(), file, "/old/media", "/new/media")
+        RestoredDatabase.prepare(ApplicationProvider.getApplicationContext(), file, "/old/media", "/new/media", TestDetailsRating)
 
         SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
             db.rawQuery("SELECT game_id, chosen_at FROM copy_choice", null).use { c ->

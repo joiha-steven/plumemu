@@ -1,5 +1,6 @@
 package com.plumemu.game
 
+import com.plumemu.graph.AchievementCount
 import com.plumemu.R
 import com.plumemu.launcher.EmulatorOffer
 import com.plumemu.launcher.FailureReason
@@ -26,7 +27,7 @@ class GamePanelContentTest {
     fun menuEntriesInOrderWithFavoriteOff() {
         // Every entry: Fix box art… (listed only while box art can be asked for) and Other versions…
         // (only for a row of two or more copies) included.
-        val rows = gameMenuEntries(sampleFacts(isFavorite = false, canFixBoxArt = true, versions = sampleVersions(), canRemoveFromRecent = true))
+        val rows = gameMenuEntries(sampleFacts(isFavorite = false, canFixBoxArt = true, versions = sampleVersions(), canRemoveFromRecent = true, canSort = true, achievementCount = AchievementCount(12, 40)))
         assertEquals(GameMenuEntryId.entries.map { it.name }, rows.map { it.key })
         assertEquals(UiText.Res(R.string.game_menu_favorite), rows[3].label)
         assertEquals(PanelCommand.SetFavorite(true), rows[3].command)
@@ -34,11 +35,28 @@ class GamePanelContentTest {
     }
 
     @Test
+    fun achievementsEntryShowsTheStoredCountAndOpensInfo() {
+        val row = gameMenuEntries(sampleFacts(achievementCount = AchievementCount(12, 40))).single { it.key == GameMenuEntryId.Achievements.name }
+        assertEquals(UiText.Res(R.string.game_menu_achievements), row.label)
+        assertEquals(UiText.Res(R.string.game_menu_achievements_count, listOf("12", "40")), row.value)
+        assertEquals(PanelCommand.OpenInfo, row.command)
+        assertTrue("it ends in a chevron", row.command.opensSomething)
+        assertEquals("before Info and Hide game", GameMenuEntryId.Achievements.name, gameMenuEntries(sampleFacts(achievementCount = AchievementCount(0, 5))).let { it[it.size - 3].key })
+    }
+
+    @Test
+    fun noAchievementsEntryWithoutAStoredSet() {
+        assertTrue(gameMenuEntries(sampleFacts()).none { it.key == GameMenuEntryId.Achievements.name })
+        // An app game or a shortcut never has one, whatever the facts carry.
+        assertTrue(gameMenuEntries(sampleFacts(isShortcut = true, achievementCount = AchievementCount(1, 2))).none { it.key == GameMenuEntryId.Achievements.name })
+    }
+
+    @Test
     fun aPinnedShortcutHasNoNameOrFixBoxArtEntry() {
         // A shortcut game: no file to name or to look up; Hide, Favorite and Info stay.
         val rows = gameMenuEntries(sampleFacts(canFixBoxArt = true, isShortcut = true))
         assertEquals(
-            listOf(GameMenuEntryId.Play, GameMenuEntryId.PlayWith, GameMenuEntryId.Favorite, GameMenuEntryId.Hide, GameMenuEntryId.Info).map { it.name },
+            listOf(GameMenuEntryId.Play, GameMenuEntryId.PlayWith, GameMenuEntryId.Favorite, GameMenuEntryId.Info, GameMenuEntryId.Hide).map { it.name },
             rows.map { it.key },
         )
     }
@@ -56,8 +74,8 @@ class GamePanelContentTest {
         assertEquals(UiText.Plain("Chrono Trigger"), content.title)
         assertEquals(
             listOf(
-                PanelCommand.Play, PanelCommand.OpenPlayWith, PanelCommand.SetFavorite(true), PanelCommand.Hide,
-                PanelCommand.OpenNameMenu, PanelCommand.OpenInfo,
+                PanelCommand.Play, PanelCommand.OpenPlayWith, PanelCommand.SetFavorite(true),
+                PanelCommand.OpenNameMenu, PanelCommand.OpenInfo, PanelCommand.Hide,
             ),
             content.commands(),
         )

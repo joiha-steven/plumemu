@@ -72,7 +72,7 @@ class PlumMigration8To9Test {
         helper.createDatabase(DB_NAME, 8).use(::fillEveryVersion8Table)
         val room =
             Room.databaseBuilder(ApplicationProvider.getApplicationContext(), PlumDatabase::class.java, DB_NAME)
-                .addMigrations(*PlumMigrations.ALL)
+                .addMigrations(*PlumMigrations.all(TestDetailsRating))
                 .allowMainThreadQueries()
                 .build()
         assertEquals(listOf(true), room.gameDao().observeSystemGames("snes").first().map { it.isFavorite })

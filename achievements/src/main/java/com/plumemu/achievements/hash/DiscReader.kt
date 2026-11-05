@@ -65,7 +65,7 @@ internal object DiscReader {
         return when (extension) {
             "cue" -> openCueTrack(rom, track, check)
             "gdi" -> openGdiTrack(rom, track, check)
-            "cso", "ciso" -> openBinTrack(CsoDiscFile.open(rom, check), track, check)
+            "cso", "ciso", "zso" -> openBinTrack(CsoDiscFile.open(rom, check), track, check)
             "chd" -> openChdTrack(rom, track, check)
             else -> openBinTrack(RawDiscFile(rom, check), track, check)
         }

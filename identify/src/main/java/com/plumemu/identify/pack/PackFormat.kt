@@ -22,6 +22,7 @@ internal object PackFormat {
     const val RELEASE_RECORD = 20
     const val CRC_RECORD = 12
     const val CODE_RECORD = 12
+    const val TRACK_RECORD = 12
     const val SOURCE_RECORD = 8
     const val ARCADE_RECORD = 24
 
@@ -31,6 +32,9 @@ internal object PackFormat {
     const val TAG_RELEASES = "RELS"
     const val TAG_CRCS = "CRCS"
     const val TAG_CODES = "CODE"
+
+    /** Optional console section: track-size keys of discs. A pack without it is valid. */
+    const val TAG_TRACKS = "TRKS"
     const val TAG_ARCADE = "ARCD"
 
     /** Largest string in the pool: its length is a u16. */
@@ -48,6 +52,7 @@ internal object PackFormat {
         TAG_RELEASES -> RELEASE_RECORD
         TAG_CRCS -> CRC_RECORD
         TAG_CODES -> CODE_RECORD
+        TAG_TRACKS -> TRACK_RECORD
         TAG_ARCADE -> ARCADE_RECORD
         else -> null
     }

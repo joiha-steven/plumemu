@@ -144,6 +144,20 @@ abstract class ScrapedGameDao {
     abstract suspend fun markMissingToAskAgainIn(systemIds: List<String>): Int
 
     /**
+     * The switch to ScreenScraper: visible games whose picture came from another source (the row's
+     * ScreenScraper id is `<source>_<id>`, never digits: libretro, Steam) have no details yet, so
+     * they are asked again. The row and its picture stay until ScreenScraper answers: a match
+     * replaces them, a no-match keeps the picture. Never a person's choice.
+     *
+     * @return the rows marked.
+     */
+    @Query(
+        "UPDATE scraped_game SET ask_again = 1 WHERE is_person_choice = 0 AND screenscraper_id IS NOT NULL " +
+            "AND screenscraper_id NOT GLOB '[0-9]*' AND scrape_key IN (" + VISIBLE_KEYS + ")",
+    )
+    abstract suspend fun markPictureOnlyToAskAgain(): Int
+
+    /**
      * Settings' Re-download: every stored result of a visible game is asked again,
      * except a person's choice. The rows stay as they are until replaced: a no-match then never
      * replaces a match ([storeFromRun]), and the pictures shown stay meanwhile.

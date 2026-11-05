@@ -17,14 +17,12 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.OkHttpClient
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** What the app hands events and the statistics switch to; tests of the app use a fake. */
@@ -41,6 +39,9 @@ public interface TelemetrySink {
         on: Boolean,
         where: SwitchPlace,
     )
+
+    /** Fingerprints of games the identifier could not name: queued while on, once each ([UnidentifiedSent]). */
+    public fun reportUnidentified(games: List<TelemetryEvent.GameUnidentified>) {}
 }
 
 /** How a send ended, for the worker. */
@@ -93,6 +94,8 @@ public class Telemetry internal constructor(
     private val store = StateStore(File(dir, StateStore.FILE_NAME), scope)
     internal val queue = EventQueue(File(dir, "queue"), log)
 
+    internal val unidentifiedSent = UnidentifiedSent(File(dir, UnidentifiedSent.FILE_NAME), log)
+
     /** Crash reports waiting for the next send ([CrashCapture] writes them as the app dies). */
     internal val crashes = CrashStore(CrashStore.dirIn(dir), log)
     private val exits = ExitReasons(File(CrashStore.dirIn(dir), ExitReasons.MARKER_NAME), readExits, log)
@@ -102,6 +105,8 @@ public class Telemetry internal constructor(
         class Record(val event: TelemetryEvent, val id: String, val time: String) : Command
 
         class Switch(val on: Boolean, val where: SwitchPlace) : Command
+
+        class Unidentified(val games: List<TelemetryEvent.GameUnidentified>, val time: String) : Command
 
         /** Completed once every command sent before it was handled. */
         class Barrier(val done: CompletableDeferred<Unit>) : Command
@@ -161,7 +166,7 @@ public class Telemetry internal constructor(
         // Kept for a crash report even while statistics are off: it stays in memory, and an off
         // install's reports are deleted unsent.
         if (event is TelemetryEvent.ScreenOpened) CrashCapture.screen = event.screen.wire
-        if (!enabledHint) return
+        if (!enabledHint || event is TelemetryEvent.GameUnidentified) return // fingerprints: reportUnidentified
         inbox.trySend(Command.Record(event, newId(), isoTime(clock())))
     }
 
@@ -171,6 +176,11 @@ public class Telemetry internal constructor(
     ) {
         enabledHint = on
         inbox.trySend(Command.Switch(on, where))
+    }
+
+    override fun reportUnidentified(games: List<TelemetryEvent.GameUnidentified>) {
+        if (!enabledHint || games.isEmpty()) return
+        inbox.trySend(Command.Unidentified(games, isoTime(clock())))
     }
 
     /** This install's id once read (null before [start] has read it, and never sent while statistics are off). */
@@ -249,6 +259,7 @@ public class Telemetry internal constructor(
                 when (command) {
                     is Command.Record -> record(command.event, command.id, command.time)
                     is Command.Switch -> if (command.on) switchOn(command.where) else switchOff(command.where)
+                    is Command.Unidentified -> recordUnidentified(command.games, command.time)
                     is Command.Barrier -> command.done.complete(Unit)
                 }
             } catch (e: Exception) {
@@ -350,10 +361,21 @@ public class Telemetry internal constructor(
             log("Statistics: ${event.name} dropped (a field is not of the allowed shape)")
             return
         }
-        queue.append(eventJson(event, id, time), newId) { isoTime(clock()) }
+        append(eventJson(event, id, time))
         if (event.urgent) askNow()
         askSoon()
     }
+
+    private fun append(json: JsonObject) = queue.append(json, newId) { isoTime(clock()) }
+
+    /** Nothing while off (the switch as stored, read on this coroutine). */
+    private fun recordUnidentified(games: List<TelemetryEvent.GameUnidentified>, time: String) {
+        if (!state.enabled || unreadable) return
+        // Marked sent only when the server accepts their batch (sendBatch).
+        val fresh = unidentifiedSent.fresh(games, queue.all()).onEach { append(eventJson(it, newId(), time)) }
+        if (fresh.isNotEmpty()) askSoon()
+    }
+
 
     private fun askNow() {
         nowAskedDuringSend.set(true)
@@ -486,7 +508,10 @@ public class Telemetry internal constructor(
                 put("common", common)
                 put("events", JsonArray(events))
             }
-        if (sender.post(Sender.EVENTS, body) == Answer.Retry) return null
+        val answer = sender.post(Sender.EVENTS, body)
+        if (answer == Answer.Retry) return null
+        // Before the removal, so a fingerprint is never in neither (a report meanwhile would queue it again).
+        if (answer == Answer.Accepted) unidentifiedSent.accepted(entries)
         queue.remove(entries.mapTo(HashSet()) { it.id })
         overflow?.let {
             overflowSent += it.id
@@ -528,23 +553,12 @@ public class Telemetry internal constructor(
             val log: (String) -> Unit = { AppLog.w(LOG_TAG, it) }
             val base = config.apiBase()
             if (base == null) log("Statistics: this build may not send to its endpoint; nothing will be sent")
-            // Built on the first request, on a background thread: building it loads the trust store,
-            // which must not happen on the main thread at startup.
-            val client = {
-                OkHttpClient.Builder()
-                    .connectTimeout(15, TimeUnit.SECONDS)
-                    .readTimeout(30, TimeUnit.SECONDS)
-                    .callTimeout(60, TimeUnit.SECONDS)
-                    // A redirect answer is dropped like any other 3xx/4xx, never followed (HTTPS only).
-                    .followRedirects(false)
-                    .followSslRedirects(false)
-                    .build()
-            }
+            // The client is built on the first request, on a background thread: it loads the trust store (not on the main thread at startup).
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, e -> log("Statistics failed (${e.javaClass.simpleName})") })
             return Telemetry(
                 dir = File(app.noBackupFilesDir, DIR_NAME),
-                readCommon = { commonOrMinimal(app, config, log) },
-                sender = base?.let { Sender(client, it, log) },
+                readCommon = { CommonFields.readOrMinimal(app, config, log) },
+                sender = base?.let { Sender(Sender::statisticsClient, it, log) },
                 scheduler = TelemetryScheduler(app, log),
                 scope = scope,
                 log = log,
@@ -554,22 +568,6 @@ public class Telemetry internal constructor(
                 readLog = { ProblemReports.snapshotText(app, CrashReports.header(config), log) },
             )
         }
-
-        private fun commonOrMinimal(
-            app: Context,
-            config: TelemetryConfig,
-            log: (String) -> Unit,
-        ): JsonObject =
-            try {
-                CommonFields.read(app, config)
-            } catch (e: RuntimeException) {
-                log("Statistics: device details could not be read (${e.javaClass.simpleName})")
-                buildJsonObject {
-                    put("app_version", JsonPrimitive(config.appVersion))
-                    put("version_code", JsonPrimitive(config.versionCode))
-                    put("build_type", JsonPrimitive(config.buildType.wire))
-                }
-            }
 
         /** A name-based UUID of the install and the exit: the same exit, the same crash id. */
         internal fun exitId(

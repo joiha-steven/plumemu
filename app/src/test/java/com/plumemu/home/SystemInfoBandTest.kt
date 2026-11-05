@@ -130,7 +130,7 @@ class SystemInfoBandTest {
     private fun listBounds(row: Int) =
         compose.onNode(hasTestTag(HomeTags.GAMES_PAGE) and hasAnyDescendant(hasTestTag(HomeTags.game(row))), useUnmergedTree = true).getUnclippedBoundsInRoot()
 
-    private val textSizes = listOf(TextSize.Medium, TextSize.Largest)
+    private val textSizes = listOf(TextSize.Small, TextSize.Largest)
 
     private fun atEachSize(actions: List<Action>, check: (String) -> Unit) {
         for (size in textSizes) {
@@ -205,18 +205,19 @@ class SystemInfoBandTest {
     @Test
     fun aTapOnARowKeepsItUnderTheFingerSoTheSecondTapIsTheSameGame() {
         show()
-        val row = compose.onNodeWithTag(HomeTags.game(2), useUnmergedTree = true)
+        // Game 1, not 2: the band and three rows of context on each side of a tapped row must fit the seven rows the list shows, else the list scrolls on the tap by design.
+        val row = compose.onNodeWithTag(HomeTags.game(1), useUnmergedTree = true)
         val top = row.getUnclippedBoundsInRoot().top
         row.performTouchInput { click() }
         compose.waitForIdle()
-        assertEquals("the first tap focused game 2", 2, state.focus.row)
+        assertEquals("the first tap focused game 1", 1, state.focus.row)
         assertEquals(Column.Games, state.focus.column)
-        assertEquals("the row did not move", top.value, compose.onNodeWithTag(HomeTags.game(2), useUnmergedTree = true).getUnclippedBoundsInRoot().top.value, 0.1f)
+        assertEquals("the row did not move", top.value, compose.onNodeWithTag(HomeTags.game(1), useUnmergedTree = true).getUnclippedBoundsInRoot().top.value, 0.1f)
         sent.clear()
-        compose.onNodeWithTag(HomeTags.game(2), useUnmergedTree = true).performTouchInput { click() }
+        compose.onNodeWithTag(HomeTags.game(1), useUnmergedTree = true).performTouchInput { click() }
         compose.waitForIdle()
-        assertEquals("the second tap landed on the same game", listOf<Action>(Action.TapItem(Column.Games, 2)), sent)
-        assertEquals(2, state.focus.row)
+        assertEquals("the second tap landed on the same game", listOf<Action>(Action.TapItem(Column.Games, 1)), sent)
+        assertEquals(1, state.focus.row)
     }
 
     @Test
@@ -254,7 +255,7 @@ class SystemInfoBandTest {
     @Test
     @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
     fun theLineNeverWrapsAndStaysInsideTheRightMargin() {
-        for (size in listOf(TextSize.Medium, TextSize.Largest)) {
+        for (size in listOf(TextSize.Small, TextSize.Largest)) {
             show(settings = PlumThemeSettings.Graphite.copy(textSize = size))
             val line = factsText()!!
             assertTrue("$size: $line is one of the fallbacks", line in SnesInfo.factsIn())
@@ -295,7 +296,7 @@ class SystemInfoBandTest {
     fun layoutNumbersAt837() = checkLayout()
 
     private fun checkLayout() {
-        for (size in listOf(TextSize.Medium, TextSize.Largest)) {
+        for (size in listOf(TextSize.Small, TextSize.Largest)) {
             for (preset in listOf(PlumThemeSettings.Graphite, PlumThemeSettings.Paper)) {
                 show(settings = preset.copy(textSize = size))
                 val at = "${layout.width} $size"
@@ -304,8 +305,8 @@ class SystemInfoBandTest {
                 val rule = bounds(HomeTags.SYSTEM_BAND_RULE)
                 val band = bounds(HomeTags.SYSTEM_BAND)
                 val tolerance = 0.6f
-                assertTrue("$at: badge at least 72 wide (${badge.width})", badge.width.value >= 72f - tolerance)
-                assertTrue("$at: badge at least 48 high (${badge.height})", badge.height.value >= 48f - tolerance)
+                assertTrue("$at: tag at least 24 wide (${badge.width})", badge.width.value >= 24f - tolerance)
+                assertEquals("$at: tag 34 high times the text scale", 34f * layout.textScale, badge.height.value, tolerance)
                 assertEquals("$at: facts 14 right of the badge", 14f, (facts.left - badge.right).value, tolerance)
                 assertEquals("$at: facts centred on the badge", (badge.top + badge.bottom).value / 2, (facts.top + facts.bottom).value / 2, tolerance)
                 assertEquals("$at: badge at the band's left edge", band.left.value, badge.left.value, tolerance)
@@ -346,7 +347,7 @@ class SystemInfoBandTest {
     @Test
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
     fun theAboutTextSitsUnderTheFactsInThreeLinesAtMostAndTheBandGrowsToHoldIt() {
-        for (size in listOf(TextSize.Medium, TextSize.Largest)) {
+        for (size in listOf(TextSize.Small, TextSize.Largest)) {
             for (preset in listOf(PlumThemeSettings.Graphite, PlumThemeSettings.Paper)) {
                 show(content = FakeHomeContent.board().withSnesAbout(), settings = preset.copy(textSize = size))
                 val at = "$size"
@@ -371,7 +372,7 @@ class SystemInfoBandTest {
     @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
     fun noAboutTextIsEverCutWhateverTheSystemOrTheTextSize() {
         var shown = 0
-        for (size in listOf(TextSize.Medium, TextSize.Largest)) {
+        for (size in listOf(TextSize.Small, TextSize.Largest)) {
             for (id in SystemAbouts.ids) {
                 val content = FakeHomeContent.board().let { board -> board.withEntries(board.entries.map { if (it.id == "snes") it.copy(info = SnesInfo.copy(about = SystemAbouts.of(id))) else it }) }
                 show(content = content, settings = PlumThemeSettings.Graphite.copy(textSize = size))

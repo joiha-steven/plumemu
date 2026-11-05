@@ -34,11 +34,12 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.plumemu.content.HomeState
 import com.plumemu.battery.batteryPaceNow
-import com.plumemu.battery.batteryPaceOf
 import com.plumemu.content.homePlayFacts
 import com.plumemu.coredata.settings.ControlsSettings
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.InputRouter
+import com.plumemu.coreui.components.ImageBuilding
+import com.plumemu.coreui.components.PerfSwitches
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextMode
 import com.plumemu.graph.AppGraph
@@ -52,8 +53,10 @@ import com.plumemu.usage.LocalScreenTracker
 import com.plumemu.usage.UsageSession
 import com.plumemu.usage.openFromOf
 import com.plumemu.game.AppActions
+import com.plumemu.game.BadgeImages
 import com.plumemu.game.AppGameActions
 import com.plumemu.game.GameActions
+import com.plumemu.home.BenchmarkCoverArt
 import com.plumemu.home.FakeHomeContent
 import com.plumemu.home.CoverImages
 import com.plumemu.home.HomeAppIcons
@@ -66,14 +69,10 @@ import com.plumemu.home.HomeNotices
 import com.plumemu.graph.homeAchievements
 import com.plumemu.home.HomePlayFactsSource
 import com.plumemu.launcher.play.battery.BatteryReads
-import com.plumemu.secondscreen.AndroidDisplaySource
 import com.plumemu.secondscreen.SecondScreenFeed
-import com.plumemu.secondscreen.isWindowLikelyShown
 import com.plumemu.secondscreen.SecondScreenHost
 import com.plumemu.secondscreen.StrayFocusCatcher
-import com.plumemu.secondscreen.SecondScreenPlayFacts
-import com.plumemu.game.emulatorToStart
-import com.plumemu.game.launchedFileName
+import com.plumemu.secondscreen.secondScreenPlayFacts
 import com.plumemu.secondscreen.cardResult
 import com.plumemu.secondscreen.SecondScreenPresence
 import com.plumemu.settings.followSettings
@@ -86,11 +85,11 @@ import com.plumemu.settings.toSetting
 import com.plumemu.settings.toThemeSettings
 import com.plumemu.settings.withGridView
 import com.plumemu.setup.HomeRoleActions
+import com.plumemu.setup.HomeRoleLauncher
 import com.plumemu.sound.UiSounds
 import com.plumemu.setup.OpenRomsFolder
 import com.plumemu.setup.PickResult
-import com.plumemu.setup.homeRoleIntent
-import com.plumemu.setup.homeSettingsIntent
+import com.plumemu.settings.UsageAccess
 import com.plumemu.graph.addFolderFromHome
 import com.plumemu.setup.isHomeApp as isPlumemuHomeApp
 import com.plumemu.setup.romsInitialUri
@@ -121,23 +120,24 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
 
     /** Benchmark builds show the fake content (board or 10,000 games) and do no startup work. */
     private val isBenchmarkBuild = BuildConfig.BENCHMARK_CONTENT
+    private val wantsCovers get() = isBenchmarkBuild && intent?.getBooleanExtra(FakeHomeContent.EXTRA_COVERS, false) == true
 
     /** Benchmarks measure the window on the emulator's overlay display, which is off by default. */
     private val isSecondScreenForced: Boolean
         get() = isBenchmarkBuild && intent?.getBooleanExtra(SecondScreenHost.EXTRA_BENCHMARK_SECOND_SCREEN, false) == true
 
     /**
-     * Games play and have their menu, apps of the Apps entry open (`GraphAppActions`);
-     * benchmark builds launch nothing. Settings is opened by MainScreen. Lazy: the application is
-     * attached after construction. Internal for `MainActivityAppsTest`.
+     * Games play and have their menu, apps open (`GraphAppActions`), sorts change (`GraphSortActions`); benchmark
+     * builds launch nothing. Settings is opened by MainScreen. Lazy (the application attaches late); internal for `MainActivityAppsTest`.
      */
     internal val homeCallbacks by lazy {
         HomeCallbacks(
             apps = if (isBenchmarkBuild) AppActions.None else GraphAppActions(graph),
+            sorts = if (isBenchmarkBuild) com.plumemu.game.SortActions.None else com.plumemu.graph.GraphSortActions(graph),
             games = if (isBenchmarkBuild) GameActions.None else AppGameActions(graph, this),
             // MainScreen opens Settings instead; START in benchmark builds (no Settings) only logs.
             onSettings = { Log.i(TAG, "Settings: none in benchmark builds") },
-            art = if (isBenchmarkBuild) HomeArtSource.None else graph.homeArt,
+            art = if (!isBenchmarkBuild) graph.homeArt else if (wantsCovers) BenchmarkCoverArt() else HomeArtSource.None,
             playFacts = if (isBenchmarkBuild) HomePlayFactsSource.None else graph.homePlayFacts(),
             appIcons = if (isBenchmarkBuild) HomeAppIcons.None else GraphAppIcons(graph),
             // The battery line's figures again when the battery changes, under the details and in Info (benchmark builds: no line).
@@ -151,8 +151,9 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
             // A box-art run asks the shown system's games first.
             onSystemShown = { systemId -> if (!isBenchmarkBuild) graph.viewedSystem.value = systemId },
             // L1 / R1 in a grid: the same setting and queue as Settings › Home screen › Grid size.
+            // The cover benchmarks write it too (the emulator's own settings store), as the size shows only through the theme.
             onGridSize = { size, onFailed ->
-                if (!isBenchmarkBuild) {
+                if (!isBenchmarkBuild || wantsCovers) {
                     graph.settingsWriter.submitTold({ it.copy(appearance = it.appearance.copy(gridSize = size.toSetting())) }, onFailed, graph::trackSettingChanges)
                 }
             },
@@ -187,21 +188,7 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
     private val secondScreenFeed: SecondScreenFeed by lazy {
         SecondScreenFeed(
             lifecycleScope,
-            facts =
-                SecondScreenPlayFacts(
-                    plays = { graph.database.playDao() },
-                    // Benchmark builds show no art (as the home screen's).
-                    resultOf = if (isBenchmarkBuild) null else graph.homeArt::cardResult,
-                    // The emulator A would start, named on the played line (benchmark builds: none).
-                    emulatorOf = if (isBenchmarkBuild) null else { id -> graph.emulatorToStart(id) },
-                    // The file Play launches (a chosen version's), as Info's "File" row (benchmark builds: no file line).
-                    fileNameOf = if (isBenchmarkBuild) null else { id -> graph.launchedFileName(id) },
-                    // The game's usual battery pace for the line under the played line (benchmark builds: none).
-                    paceOf = if (isBenchmarkBuild) null else { id -> graph.batteryPaceOf(id) },
-                    // The stored RetroAchievements progress for one line on the details card: the database only (benchmark builds: none).
-                    achievementsOf = if (isBenchmarkBuild) null else { id -> graph.achievements.storedCountOf(id) },
-                    isArtShown = { secondScreenFeed.hasArtRoom },
-                )::fill,
+            facts = graph.secondScreenPlayFacts(isBenchmarkBuild, hasArtRoom = { secondScreenFeed.hasArtRoom })::fill,
         )
     }
 
@@ -244,26 +231,16 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
     /** Settings › Advanced › Restore…'s open picker; its answer starts the reading in the graph. */
     private val restorePicker = RestorePicker(this) { graph }
 
-    /** Android's own home-app screen; Plumemu does nothing with its answer (Android applies it). */
-    private val homeRoleRequest =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            Log.i(TAG, "Home app screen closed (result ${result.resultCode})")
-        }
+    /** Android's own home-app screens (the question's Yes, Settings' row), with what came of them. */
+    private val homeRoles = HomeRoleLauncher(this)
 
     private val homeRoleActions =
         object : HomeRoleActions {
             override fun isHomeApp(): Boolean = isPlumemuHomeApp(this@MainActivity)
 
-            override fun requestHomeRole(): Boolean {
-                val intent = homeRoleIntent(this@MainActivity) ?: return false
-                return try {
-                    homeRoleRequest.launch(intent)
-                    true
-                } catch (e: ActivityNotFoundException) {
-                    Log.w(TAG, "Home app screen could not open (${e.javaClass.simpleName})")
-                    false
-                }
-            }
+            override fun requestHomeRole(onAnswered: (Boolean) -> Unit): Boolean = homeRoles.request(onAnswered)
+
+            override fun openHomeSettings(): Boolean = homeRoles.openList()
 
             // In the process's scope: the answer is stored even if the Activity goes away meanwhile.
             override fun markAsked() {
@@ -285,27 +262,14 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
                 }
 
             override fun isHomeApp(): Boolean = isPlumemuHomeApp(this@MainActivity)
-
             override fun openBackupPicker(kind: BackupKind): Boolean = backupPicker.open(kind)
-
             override fun openRestorePicker(): Boolean = restorePicker.open()
-
             override fun exportLogs(onDone: (Boolean) -> Unit) = shareLogFile(onDone)
             override fun openWebPage(url: String): Boolean = com.plumemu.account.openWebPage(url) { startActivity(it) }
 
-            override fun openHomeSettings(): Boolean {
-                // Already the home app: Android's home settings, to switch back (the role request
-                // would answer at once and show nothing).
-                val intent = if (isHomeApp()) homeSettingsIntent(this@MainActivity) else homeRoleIntent(this@MainActivity)
-                if (intent == null) return false
-                return try {
-                    homeRoleRequest.launch(intent)
-                    true
-                } catch (e: ActivityNotFoundException) {
-                    Log.w(TAG, "Home app screen could not open (${e.javaClass.simpleName})")
-                    false
-                }
-            }
+            override fun isUsageAccessGranted(): Boolean = UsageAccess.isGranted(this@MainActivity)
+            override fun openUsageAccess(): Boolean = UsageAccess.open(this@MainActivity)
+            override fun openHomeSettings(onNotHome: () -> Unit): Boolean = homeRoles.openSettings(onNotHome)
         }
 
     /** Settings › …; benchmark builds have none (their START only logs). */
@@ -318,6 +282,17 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // A size change draws the covers' collars from the last image while the new ones are built off the main thread.
+        ImageBuilding.inBackground = true
+        ImageBuilding.budgetBytes = ImageBuilding.budgetFor(Runtime.getRuntime().maxMemory())
+        if (isBenchmarkBuild) {
+            PerfSwitches.set(intent?.getStringExtra(FakeHomeContent.EXTRA_SKIP_DRAWING))
+            // `sync` in the same list: the way before background builds and kept covers, to measure what they save.
+            if (intent?.getStringExtra(FakeHomeContent.EXTRA_SKIP_DRAWING)?.split(',')?.contains("sync") == true) {
+                ImageBuilding.inBackground = false
+                BenchmarkCoverArt.keepsOtherSizes = false
+            }
+        }
         graph.gameStarts.target = secondScreenPresence
         usage?.onActivityCreated(openFromOf(intent), isRecreated = savedInstanceState != null)
         pickerForSettings = savedInstanceState?.getBoolean(STATE_PICKER_FOR_SETTINGS) == true
@@ -337,10 +312,6 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
         cachedBackgroundArgb = cached.backgroundArgb
         window.setBackgroundDrawable(ColorDrawable(cached.backgroundArgb))
         applySystemBarStyle(cached.textMode)
-        // Layout C: the window comes after the first frame, so the top screen starts from a guess (cached switch, listed displays); the host corrects it.
-        secondScreenFeed.setWindowShown(
-            isWindowLikelyShown(graph.secondScreenSwitchCache.read(), AndroidDisplaySource(this).presentationDisplays(), isSecondScreenForced),
-        )
         hideSystemBars()
         val settingsFlow = graph.settings
         lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.STARTED) { input.followSettings(settingsFlow.filterNotNull()) } }
@@ -417,7 +388,8 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
     private fun homeStates(): StateFlow<HomeState?> =
         if (isBenchmarkBuild) {
             val large = intent?.getBooleanExtra(FakeHomeContent.EXTRA_LARGE_LIBRARY, false) == true
-            MutableStateFlow(HomeState.Ready(FakeHomeContent.forLaunch(isBenchmarkBuild = true, wantsLargeLibrary = large)))
+            val details = intent?.getBooleanExtra(FakeHomeContent.EXTRA_DETAILS, false) == true
+            MutableStateFlow(HomeState.Ready(FakeHomeContent.forLaunch(isBenchmarkBuild = true, wantsLargeLibrary = large, wantsDetails = details, wantsCovers = wantsCovers)))
         } else {
             graph.homeContent
         }
@@ -463,6 +435,8 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
                 // Benchmarks measure the window on the emulator's overlay display, which is off by default.
                 forcedOn = isSecondScreenForced,
                 images = if (isBenchmarkBuild) CoverImages.None else graph.homeArt.images,
+                // The game card's achievement badges, from the disk cache only (benchmark builds: none).
+                badges = if (isBenchmarkBuild) BadgeImages.None else graph.achievementBadges,
                 appIcons = if (isBenchmarkBuild) HomeAppIcons.None else GraphAppIcons(graph),
                 // Benchmarks measure the window's own cost: no battery reads there.
                 battery = if (isBenchmarkBuild) BatteryReads.None else graph.playBattery,

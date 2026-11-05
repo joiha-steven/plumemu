@@ -1,6 +1,7 @@
 package com.plumemu.coreui.components.keyboard
 
 import androidx.compose.runtime.Immutable
+import com.plumemu.coreui.theme.KeyboardDimens
 import com.plumemu.coreui.theme.PlumDimens
 
 /*
@@ -73,8 +74,8 @@ data class KeyboardSpec(
 
 /** The rows of every page, top to bottom, each left to right. */
 object KeyboardLayout {
-    const val COLUMNS = PlumDimens.KEYBOARD_COLUMNS
-    const val ROWS = PlumDimens.KEYBOARD_ROWS
+    const val COLUMNS = KeyboardDimens.KEYBOARD_COLUMNS
+    const val ROWS = KeyboardDimens.KEYBOARD_ROWS
 
     /** Worded keys on rows three and four: wider than a letter. */
     private const val WIDE = 1.5f

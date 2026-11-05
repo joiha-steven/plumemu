@@ -16,16 +16,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import com.plumemu.R
 import com.plumemu.coreui.components.drawSunken
 import com.plumemu.coreui.theme.PlumDimens
@@ -50,12 +55,13 @@ internal fun Tiles(
     figures: PlayStatistics,
     perRow: Int,
     showsDays: Boolean = true,
+    isCompact: Boolean = false,
 ) {
     val tiles = tilesOf(figures)
     Column(Modifier.fillMaxWidth().testTag(StatisticsTags.TILES), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap)) {
         for (row in tiles.chunked(perRow)) {
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap)) {
-                for (tile in row) Tile(tile, figures, Modifier.weight(1f).fillMaxHeight(), showsDays)
+                for (tile in row) Tile(tile, figures, Modifier.weight(1f).fillMaxHeight(), showsDays, isCompact)
                 repeat(perRow - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
@@ -81,6 +87,7 @@ internal fun Tile(
     figures: PlayStatistics,
     modifier: Modifier,
     showsDays: Boolean = true,
+    isCompact: Boolean = false,
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
@@ -97,11 +104,11 @@ internal fun Tile(
             // Tagged outside the padding: the tag's bounds are the tile's, which the layout tests measure.
             .testTag(StatisticsTags.tile(tile))
             .drawBehind { drawRoundRect(colors.sel2, cornerRadius = CornerRadius(PlumDimens.cornerRow.toPx())) }
-            .padding(StatisticsDimens.tilePadding),
+            .padding(horizontal = StatisticsDimens.tilePadding, vertical = if (isCompact) StatisticsDimens.tilePaddingVerticalNarrow else StatisticsDimens.tilePadding),
         verticalArrangement = Arrangement.spacedBy(PlumDimens.factsRowGap),
     ) {
         BasicText(label, style = type.meta, color = { colors.meta }, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        BasicText(figure, style = type[TypeRole.DetailsTitleWide], color = { colors.text }, maxLines = 2, modifier = Modifier.testTag(StatisticsTags.figure(tile)))
+        TileFigure(figure, tile)
         // Every tile ends in something at its foot, so tiles of one height have no empty half.
         Spacer(Modifier.weight(1f))
         when (tile) {
@@ -116,9 +123,22 @@ internal fun Tile(
                     modifier = Modifier.testTag(StatisticsTags.foot(tile)),
                 )
             }
-            StatisticTile.Week -> WeekBars(figures, showsDays)
+            StatisticTile.Week -> WeekBars(figures, showsDays, if (isCompact) StatisticsDimens.weekChartHeightNarrow else StatisticsDimens.weekChartHeight)
             StatisticTile.Played -> Bar(shareOf(figures.playedGames, figures.libraryGames), { colors.accent }, { colors.bg }, Modifier.testTag(StatisticsTags.foot(tile)))
-            StatisticTile.BoxArt -> Bar(shareOf(figures.gamesWithBoxArt, figures.boxArtGames), { colors.accent }, { colors.bg }, Modifier.testTag(StatisticsTags.foot(tile)))
+            StatisticTile.BoxArt -> {
+                // What the run is doing, or why it could not: a person who chose box art sees it here, not only in Settings.
+                figures.boxArtLine?.takeIf { it != BoxArtLine.NotInThisBuild }?.let {
+                    BasicText(
+                        boxArtLineText(it),
+                        style = type.smallFact,
+                        color = { colors.meta },
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.testTag(StatisticsTags.BOX_ART_STATUS),
+                    )
+                }
+                Bar(shareOf(figures.gamesWithBoxArt, figures.boxArtGames), { colors.accent }, { colors.bg }, Modifier.testTag(StatisticsTags.foot(tile)))
+            }
         }
     }
 }
@@ -153,6 +173,30 @@ internal fun sharePercentOf(
 }
 
 /**
+ * A tile's big number in its own size (20) when the whole figure fits the tile's width, else one ramp step down (16, the rows' size);
+ * a number is never ellipsized. What still does not fit wraps at its spaces.
+ */
+@Composable
+private fun TileFigure(
+    figure: String,
+    tile: StatisticTile,
+) {
+    val textColor = PlumTheme.colors.text
+    val full = PlumTheme.type[TypeRole.DetailsTitleWide]
+    // Measured on the first draw (the line height is kept, so the tile's height, worked out from the full size, does not change).
+    var isStepped by remember(figure, full) { mutableStateOf(false) }
+    val style = if (isStepped) full.copy(fontSize = full.fontSize * (TypeRole.SettingsOption.sizeSp / TypeRole.DetailsTitleWide.sizeSp)) else full
+    BasicText(
+        figure,
+        style = style,
+        color = { textColor },
+        maxLines = 2,
+        onTextLayout = { if (!isStepped && (it.didOverflowWidth || it.lineCount > 1)) isStepped = true },
+        modifier = Modifier.testTag(StatisticsTags.figure(tile)),
+    )
+}
+
+/**
  * The week's seven days, from the week's first, as bars against the longest day: today in the accent, the others muted; a day
  * without play a stub. Under each its narrow name in the locale ("M", "T"), today's in the accent.
  */
@@ -160,6 +204,7 @@ internal fun sharePercentOf(
 private fun WeekBars(
     figures: PlayStatistics,
     showsDays: Boolean,
+    chartHeight: Dp,
 ) = Column(verticalArrangement = Arrangement.spacedBy(StatisticsDimens.barGap)) {
     val colors = PlumTheme.colors
     val days = figures.weekDaySeconds
@@ -167,7 +212,7 @@ private fun WeekBars(
     val locale = currentLocale()
     val letters = remember(locale) { narrowWeekdays(locale) }
     Row(
-        Modifier.fillMaxWidth().height(StatisticsDimens.weekChartHeight).testTag(StatisticsTags.WEEK),
+        Modifier.fillMaxWidth().height(chartHeight).testTag(StatisticsTags.WEEK),
         horizontalArrangement = Arrangement.spacedBy(StatisticsDimens.weekBarGap),
         verticalAlignment = Alignment.Bottom,
     ) {
@@ -187,6 +232,8 @@ private fun WeekBars(
             )
         }
     }
+    // The letters' line is asked for outright: the tile's height is worked out from it, so a large size never leaves the letter shorter than its line.
+    val letterLine = with(LocalDensity.current) { PlumTheme.type.smallFact.lineHeight.toDp() }
     if (showsDays) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(StatisticsDimens.weekBarGap)) {
         letters.forEachIndexed { day, letter ->
             val isToday = day == figures.todayIndex
@@ -197,7 +244,7 @@ private fun WeekBars(
                     style = PlumTheme.type.smallFact,
                     color = { if (isToday) colors.accent else colors.muted },
                     maxLines = 1,
-                    modifier = Modifier.wrapContentWidth(unbounded = true).testTag(StatisticsTags.dayLetter(day)),
+                    modifier = Modifier.heightIn(min = letterLine).wrapContentWidth(unbounded = true).testTag(StatisticsTags.dayLetter(day)),
                 )
             }
         }

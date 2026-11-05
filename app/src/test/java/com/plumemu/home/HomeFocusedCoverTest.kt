@@ -24,11 +24,13 @@ import androidx.compose.ui.unit.DpRect
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.strip.StripState
+import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.CollarDimens
 import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.coreui.theme.GridSize
 import com.plumemu.coreui.theme.PlumDimens
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.theme.PlumTheme
 import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.coroutines.CompletableDeferred
@@ -47,9 +49,9 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * The focused grid cover: grown from its bottom centre, whole at every
- * edge of the grid (top row, first and last column, last row) at both reference widths, its ring
- * drawn around the drawn picture, its neighbours never moved; and every tile names its game in
+ * The focused grid cover: not moved or grown, whole at every
+ * edge of the grid (top row, first and last column, last row) at both reference widths, its collar's groove
+ * lit around the picture, its neighbours never moved; and every tile names its game in
  * every state of its art (no result yet, none, a picture still decoding, a file that cannot be read).
  */
 @RunWith(RobolectricTestRunner::class)
@@ -71,7 +73,7 @@ class HomeFocusedCoverTest {
         shape: CoverShape = CoverShape.Landscape,
         content: @Composable () -> Unit,
     ) = compose.setContent {
-        PlumTheme(MediumText.Default.copy(gridSize = gridSize)) {
+        PlumTheme(TableText.Default.copy(gridSize = gridSize)) {
             accent = PlumTheme.colors.accent
             columns = PlumTheme.layout.gridColumns(shape)
             tileTitleSize = PlumTheme.type.coverTitle(gridSize).fontSize.value
@@ -84,11 +86,7 @@ class HomeFocusedCoverTest {
 
     private fun cell(index: Int): DpRect = compose.onNodeWithTag(HomeTags.cover(index), useUnmergedTree = true).getUnclippedBoundsInRoot()
 
-    /**
-     * Where the focused picture of cover [index] should be drawn, in px: its resting place (the
-     * layout's) grown [PlumDimens.FOCUSED_COVER_SCALE] about its centre and raised [PlumDimens.focusedLift]. The pixels then
-     * show whether it is drawn there, whole.
-     */
+    /** Where the picture of cover [index] is, in px (the layout's: the focused one is drawn larger over it, see [liftedPicture]). */
     private fun restingPicture(index: Int): Rect {
         val node: SemanticsNode =
             compose.onNodeWithTag(HomeTags.cover(index), useUnmergedTree = true).fetchSemanticsNode().children
@@ -96,11 +94,16 @@ class HomeFocusedCoverTest {
         return Rect(node.positionInRoot, androidx.compose.ui.geometry.Size(node.size.width.toFloat(), node.size.height.toFloat()))
     }
 
-    private fun drawnPicture(index: Int): Rect {
-        val scale = PlumDimens.FOCUSED_COVER_SCALE
-        val rest = restingPicture(index)
-        val lift = PlumDimens.focusedLift.value * compose.density.density
-        return Rect(rest.center.x - rest.width * scale / 2f, rest.center.y - rest.height * scale / 2f - lift, rest.center.x + rest.width * scale / 2f, rest.center.y + rest.height * scale / 2f - lift)
+    /** [picture] (as laid out) drawn [PlumDimens.FOCUSED_COVER_SCALE] larger about its collar's centre: where the focused cover's picture is on screen. */
+    private fun liftedPicture(picture: Rect): Rect {
+        val d = compose.density.density
+        val collar = Rect(
+            picture.left - CollarSize.Cover.sidePadding.value * d, picture.top - CollarSize.Cover.topPadding.value * d,
+            picture.right + CollarSize.Cover.sidePadding.value * d, picture.bottom + CollarSize.Cover.bottomPadding.value * d,
+        )
+        val s = PlumDimens.FOCUSED_COVER_SCALE
+        val c = collar.center
+        return Rect(c.x + (picture.left - c.x) * s, c.y + (picture.top - c.y) * s, c.x + (picture.right - c.x) * s, c.y + (picture.bottom - c.y) * s)
     }
 
     /** The Super Nintendo grid with the game [pick] gives for the width's column count focused; that game's index. */
@@ -129,7 +132,7 @@ class HomeFocusedCoverTest {
         var case by mutableStateOf(SizeCase(GridSize.Small, isPsp = false, isLast = false))
         var focused = -1
         compose.setContent {
-            PlumTheme(MediumText.Default.copy(gridSize = case.size)) {
+            PlumTheme(TableText.Default.copy(gridSize = case.size)) {
                 accent = PlumTheme.colors.accent
                 background = PlumTheme.colors.bg
                 val shape = if (case.isPsp) pspShape else CoverShape.Landscape
@@ -168,21 +171,21 @@ class HomeFocusedCoverTest {
     private fun Color.near(other: Color): Boolean = abs(red - other.red) < 0.12f && abs(green - other.green) < 0.12f && abs(blue - other.blue) < 0.12f
 
     /**
-     * The focused cover [index] is drawn whole (a pixel just inside each edge is the picture's, not
-     * what lies between it and its ring), its ring stands 3 dp + half its width outside the drawn
-     * picture on every side, and ring and cover keep clear of both bars.
+     * The focused cover [index] is drawn whole (a pixel just inside each edge is the picture's, not the groove's), its collar's groove
+     * is lit in the accent on every side, the box stands where it does at rest (centred, on its collar's bottom), and the collar with its
+     * halo keeps clear of both bars.
      */
     private fun assertWholeWithItsRing(
         label: String,
         index: Int,
     ) {
         val density = compose.density.density
-        val drawn = drawnPicture(index)
+        val resting = restingPicture(index)
+        val drawn = liftedPicture(resting)
         val pixels = compose.onRoot().captureToImage().toPixelMap()
-        // Past the picture's antialiased last pixel and its 1 dp light rim, still inside the art.
+        // Past the picture's antialiased last pixel, still inside the art.
         val inside = 4f
-        val gap = PlumDimens.focusRingGap.value * density / 2f
-        val ring = (PlumDimens.focusRingGap.value + PlumDimens.focusRingWidth.value / 2f) * density
+        val groove = CollarDimens.coverGroove.value * density * PlumDimens.FOCUSED_COVER_SCALE
         val sides =
             mapOf(
                 "top" to (Offset(drawn.center.x, drawn.top) to Offset(0f, -1f)),
@@ -192,25 +195,25 @@ class HomeFocusedCoverTest {
             )
         for ((side, edgeAndOut) in sides) {
             val (edge, out) = edgeAndOut
+            // Not the bottom: the box's drop shadow falls on its groove there.
+            if (side == "bottom") continue
             val picture = pixels.at(edge - out * inside)
-            val between = pixels.at(edge + out * gap)
-            // The ring's gap is the background colour, so a picture that is cut or missing would read as the gap: the picture's own edge pixel must differ.
-            // Unconditional, and tight enough for a dark picture on a black background: only a picture that is really missing leaves the two pixels equal.
-            assertTrue("$label: the picture reaches its $side edge (not cut): picture $picture, gap $between", maxOf(abs(picture.red - between.red), abs(picture.green - between.green), abs(picture.blue - between.blue)) > 0.02f)
-            assertTrue("$label: the ring runs ${ring / density} dp outside the picture's $side edge (${pixels.at(edge + out * ring)})", pixels.at(edge + out * ring).near(accent))
+            // The groove is about 3 px wide and shaded at its inner edge: the sample across it (and a little past) that is closest to a lit groove.
+            val lit = (1..8).map { pixels.at(edge + out * (groove * it / 4f)) }.minBy { abs(it.red - litGroove(accent).red) + abs(it.green - litGroove(accent).green) + abs(it.blue - litGroove(accent).blue) }
+            // Unconditional, and tight enough for a dark picture: only a picture that is really missing leaves the two pixels equal.
+            assertTrue("$label: the picture reaches its $side edge (not cut): picture $picture, groove $lit", maxOf(abs(picture.red - lit.red), abs(picture.green - lit.green), abs(picture.blue - lit.blue)) > 0.02f)
+            assertTrue("$label: the groove is lit in the accent on the $side side ($lit)", lit.near(litGroove(accent)))
         }
-        val outset = PlumDimens.focusRingOutset.value
+        // The lifted collar and its ring (the halo may fade into the bar gaps) keep clear of both bars.
+        val reach = PlumDimens.focusRingOutset.value
         val top = compose.onNodeWithTag(HomeTags.TOP_BAR, useUnmergedTree = true).getUnclippedBoundsInRoot()
         val hints = compose.onNodeWithTag(HomeTags.HINT_BAR, useUnmergedTree = true).getUnclippedBoundsInRoot()
-        assertTrue("$label: the ring stays under the top bar", drawn.top / density - outset >= top.bottom.value - EPSILON)
-        assertTrue("$label: the ring stays over the hint bar", drawn.bottom / density + outset <= hints.top.value + EPSILON)
-        // About its centre: the centre line is the resting cover's, and it is raised by the lift, not slid on the shelf.
-        val resting = cell(index)
-        assertEquals("$label: centred on its cell", (resting.left.value + resting.right.value) / 2f, drawn.center.x / density, EPSILON)
-        // The art stands on its cell's shelf at rest, and the lifted copy's vertical centre is the resting one's less the lift (the ring pixels above are measured around `drawn`).
-        val restPicture = restingPicture(index)
-        assertEquals("$label: at rest the art stands on its cell's bottom", resting.bottom.value, restPicture.bottom / density, EPSILON)
-        assertEquals("$label: lifted centre is the resting centre less the lift", restPicture.center.y / density - PlumDimens.focusedLift.value, drawn.center.y / density, EPSILON)
+        assertTrue("$label: the ring stays under the top bar", drawn.top / density - CollarSize.Cover.topPadding.value * PlumDimens.FOCUSED_COVER_SCALE - reach >= top.bottom.value - EPSILON)
+        assertTrue("$label: the ring stays over the hint bar", drawn.bottom / density + CollarSize.Cover.bottomPadding.value * PlumDimens.FOCUSED_COVER_SCALE + reach <= hints.top.value + EPSILON)
+        // Layout is unchanged by the lift: the box stands where it does at rest.
+        val cell = cell(index)
+        assertEquals("$label: centred on its cell", (cell.left.value + cell.right.value) / 2f, resting.center.x / density, EPSILON)
+        assertEquals("$label: the collar stands on its cell's bottom", cell.bottom.value - CollarSize.Cover.bottomPadding.value, resting.bottom / density, EPSILON)
     }
 
     @Test
@@ -265,7 +268,8 @@ class HomeFocusedCoverTest {
         compose.runOnIdle { state.dispatch(Action.TapItem(Column.Games, 1)) }
         compose.waitForIdle()
         for ((index, before) in shown) assertEquals("cover $index stays where it was", before, cell(index))
-        assertTrue("the focus moved: game 1 is drawn larger", drawnPicture(1).height / compose.density.density > (cell(1).bottom - cell(1).top).value * 0.9f)
+        val box = restingPicture(1)
+        assertTrue("the focus moved: game 1's box does not grow (${box.height})", box.height / compose.density.density <= (cell(1).bottom - cell(1).top).value - CollarSize.Cover.topPadding.value - CollarSize.Cover.bottomPadding.value + EPSILON)
     }
 
     /**
@@ -453,12 +457,22 @@ class HomeFocusedCoverTest {
         val title = inCell(row.title)
         val yearBox = inCell(year)
         val padding = PlumDimens.coverPaddingLandscape.value
-        assertEquals("the title starts at the tile's padding", cell.left.value + padding, title.left.value, EPSILON)
-        assertTrue("the title ends inside the padding", title.right.value <= cell.right.value - padding + EPSILON)
-        assertTrue("the title is in the lower half (a label, not an empty box)", title.top.value >= (cell.top.value + cell.bottom.value) / 2f - EPSILON)
+        // The tile stands in its collar.
+        val side = CollarSize.Cover.sidePadding.value
+        // A packed cell may be wider than its tile (the tile and its collar stand centred in it), so the padding is measured from the tile.
+        val tile = compose.onNode((hasTestTag(HomeTags.COVER_OWN_SHAPE) or hasTestTag(HomeTags.COVER_PICTURE)) and hasAnyAncestor(hasTestTag(HomeTags.cover(index))), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue("the tile is inside its cell's collar", tile.left.value >= cell.left.value + side - EPSILON && tile.right.value <= cell.right.value - side + EPSILON)
+        assertEquals("the title starts at the tile's padding", tile.left.value + padding, title.left.value, EPSILON)
+        assertTrue("the title ends inside the padding", title.right.value <= tile.right.value - padding + EPSILON)
+        // In the tile, which is the cell less its collar; the tile is a little shorter than before, so the title may start a little above the middle.
+        val tileTop = cell.top.value + CollarSize.Cover.topPadding.value
+        val tileBottom = cell.bottom.value - CollarSize.Cover.bottomPadding.value
+        // The title and the year stack from the bottom, so a taller line (Jost's 1.445 em) lifts the title's top; its middle is what stays low.
+        val titleMiddle = (title.top.value + title.bottom.value) / 2
+        assertTrue("the title is in the lower half of the tile (a label, not an empty box): title $title in cell $cell", titleMiddle >= tileTop + (tileBottom - tileTop) * TITLE_MIDDLE_FROM - EPSILON)
         assertTrue("the year under the title", yearBox.top >= title.bottom)
         assertEquals("the year starts on the title's line", title.left.value, yearBox.left.value, EPSILON)
-        assertEquals("the year sits on the padding above the tile's bottom", cell.bottom.value - padding, yearBox.bottom.value, EPSILON)
+        assertEquals("the year sits on the padding above the tile's bottom", cell.bottom.value - CollarSize.Cover.bottomPadding.value - padding, yearBox.bottom.value, EPSILON)
         assertEquals("the title is set in the focus title's 13 sp", 13f, tileTitleSize, 0.01f)
     }
 
@@ -467,6 +481,7 @@ class HomeFocusedCoverTest {
         const val SETTLE_MS = 400L
         const val GLIDE_PART_MS = 48L
         const val GLOW_DP = 8f
+        const val TITLE_MIDDLE_FROM = 0.5f
         const val DONKEY_KONG_COUNTRY_2 = 1
         const val EARTHBOUND = 2
         const val WIDE = "w768dp-h432dp-land-xhdpi"

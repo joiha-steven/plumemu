@@ -79,6 +79,15 @@ internal class TitleFinder(private val choices: List<TitleChoice>) {
         checkpoint: () -> Unit = {},
     ): List<TitleChoice> = search.find(query, RESULT_LIMIT, checkpoint).map { choices[it.index] }
 
+    /**
+     * Up to three titles close to [name], best first; fewer, or none, when nothing is close enough
+     * ([TitleSearch.suggest]). For a person to look at: nothing here is ever applied.
+     */
+    fun suggest(
+        name: String,
+        checkpoint: () -> Unit = {},
+    ): List<TitleChoice> = search.suggest(name, TitleSearch.SUGGEST_LIMIT, checkpoint).map { choices[it.index] }
+
     private companion object {
         const val RESULT_LIMIT = 100
     }

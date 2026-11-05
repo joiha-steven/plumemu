@@ -4,6 +4,7 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import com.plumemu.coredata.db.SessionBattery
 import com.plumemu.coredata.db.PlumDatabase
+import com.plumemu.coredata.db.TestDetailsRating
 import com.plumemu.coredata.settings.PlumSettings
 import java.io.File
 import kotlinx.coroutines.runBlocking
@@ -54,7 +55,7 @@ class SessionBatteryBackupTest {
 
         val unpacked = runBlocking { zip.inputStream().use { BackupUnpack.unpack(it, File(tmp.root, "work"), PlumDatabase.SCHEMA_VERSION, freeBytes = { Long.MAX_VALUE }) } }
         val file = requireNotNull(unpacked.database)
-        RestoredDatabase.prepare(ApplicationProvider.getApplicationContext(), file, "/old/media", "/new/media")
+        RestoredDatabase.prepare(ApplicationProvider.getApplicationContext(), file, "/old/media", "/new/media", TestDetailsRating)
 
         SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
             db.rawQuery("SELECT game_id, battery_seconds, charge_start_uah, charge_end_uah, battery_draw_ua FROM play_session", null).use { c ->

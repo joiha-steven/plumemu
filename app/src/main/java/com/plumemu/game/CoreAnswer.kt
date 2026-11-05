@@ -12,7 +12,7 @@ import kotlinx.coroutines.withContext
  * The answer to "Did <game> start?", for
  * [GameMenuController]: a write the person asked for, so it is not cancelled by B. Yes stores the core
  * as started and closes the question (`show(null)`). No takes back the play session the return
- * recorded, then forgets the person's choices of the failed core (so the next game asks again), then offers the system's other emulators in the question's place. A failure says so in
+ * recorded, then forgets the person's choices of the failed core (so the next game asks again), then offers the next RetroArch core and the system's other emulators in the question's place. A failure says so in
  * its place (save or read message), never silently. [show] applies a panel only if the question is
  * still the open one (the controller's `showIfStill`). Logs ids and class names only.
  */
@@ -60,6 +60,18 @@ internal fun answerCore(
                     log("core check: game ${game.key}'s emulators could not be read (${e.javaClass.simpleName})")
                     null
                 }
-            show(OpenPanel(game, PanelScreen.Message(listing?.let { coreMissingMessage(it, question.emulatorId, question.emulatorName) } ?: readFailedMessage())))
+            val tried = question.tried + question.emulatorId
+            // The core offered will ask again; its question must not offer the ones answered No.
+            val offered = listing?.let { (coreFollowUp(it, question.emulatorId, question.tried) as? CoreFollowUp.Next)?.core }
+            if (offered != null) {
+                try {
+                    actions.expectCoreTry(game.key, offered.id, tried)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log("core check: game ${game.key}'s next core could not be noted (${e.javaClass.simpleName})")
+                }
+            }
+            show(OpenPanel(game, PanelScreen.Message(listing?.let { coreMissingMessage(it, question.emulatorId, question.emulatorName, question.tried) } ?: readFailedMessage())))
         }
     }

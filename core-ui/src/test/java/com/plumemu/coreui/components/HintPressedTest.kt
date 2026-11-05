@@ -34,8 +34,8 @@ import kotlin.math.abs
 
 /**
  * A hint's key cap looks pressed while its button is held and while a finger is down on it
- * (design/rules.md › Shapes and motion › Pressed): the cap fills with the text colour, its letter takes
- * the background colour, and the face goes down into its edge (`KeyPressFramesTest` measures that move). Read from the drawn pixels, with the test clock.
+ * (design/rules.md › Shapes and motion › Pressed): the cap sinks into its collar in its darker pressed tone,
+ * its letter kept, and the face goes down into its edge (`KeyPressFramesTest` measures that move). Read from the drawn pixels, with the test clock.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -70,7 +70,14 @@ class HintPressedTest {
         Snapshot.sendApplyNotifications()
     }
 
-    private fun isFilled() = pixel(0.16f).near(colors.text)
+    private fun Color.distance(other: Color) = abs(red - other.red) + abs(green - other.green) + abs(blue - other.blue)
+
+    /** Pressed when the cap's face (mid-height, past the top tone) is nearer the pressed tone than the resting one. */
+    private fun isFilled(): Boolean {
+        val p = pixel(0.16f)
+        val cap = colors.collarCap
+        return p.distance(cap.downBottom) < p.distance(cap.face)
+    }
 
     @Test
     fun capNamesReadTheCapText() {
@@ -82,16 +89,16 @@ class HintPressedTest {
     }
 
     @Test
-    fun theCapFillsWithTheTextColourWhileItsButtonIsHeldAndLetsGo() {
+    fun theCapSinksWhileItsButtonIsHeldAndLetsGo() {
         show("A")
         assertFalse("at rest the cap has its key face", isFilled())
         compose.mainClock.autoAdvance = false
         hold("A")
         compose.mainClock.advanceTimeBy(PlumMotion.PRESS_IN_MS + 40L)
-        assertTrue("pressed: filled with the text colour", isFilled())
+        assertTrue("pressed: the darker pressed face", isFilled())
         hold()
         compose.mainClock.advanceTimeBy(PlumMotion.PRESS_OUT_MS + 200L)
-        assertFalse("released: back to the ring", isFilled())
+        assertFalse("released: back to the resting face", isFilled())
     }
 
     @Test
@@ -159,8 +166,8 @@ class HintPressedTest {
         compose.mainClock.autoAdvance = false
         hold("A")
         compose.mainClock.advanceTimeBy(100)
-        assertTrue("filled", isFilled())
-        assertTrue("the face is filled", pixel(0.08f).near(colors.text))
+        assertTrue("pressed", isFilled())
+        assertFalse("the letter stays, never a fill in the text colour", pixel(0.08f).near(colors.text))
     }
 
     private companion object {

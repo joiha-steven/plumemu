@@ -58,7 +58,15 @@ internal val FixtureUnidentified =
         SettingsGame(32, "My Homebrew Demo 2", "Test System"),
     )
 
-private val fixtureTitles =
+/** Three suggestions of different shapes (regions and year, none, year only), as a worst case for the page's height. */
+internal val fixtureSuggestions =
+    listOf(
+        TitleChoice("Metroid Fusion", "USA, Europe", 2002, "Test DAT"),
+        TitleChoice("Metroid Fusion Prototype", "", null, "Test DAT"),
+        TitleChoice("Metroid Fusion Demo", "", 2002, "Test DAT"),
+    )
+
+internal val fixtureTitles =
     listOf(
         TitleChoice("Metroid Fusion", "USA, Europe", 2002, "Test DAT"),
         TitleChoice("Metroid Fusion (Japan)", "Japan", 2003, "Test DAT"),
@@ -66,15 +74,15 @@ private val fixtureTitles =
     )
 
 /** Answers at once: game 32's system has no list. */
-private object FixtureNames : SettingsNameActions by SettingsNameActions.None {
+private class FixtureNames(private val titles: List<TitleChoice>) : SettingsNameActions by SettingsNameActions.None {
     override fun titleList(
         gameId: Long,
         onDone: (TitleList?) -> Unit,
-    ) = onDone(if (gameId == 32L) TitleList.NoList("Test System") else TitleList.Ready(TitleFinder(fixtureTitles)))
+    ) = onDone(if (gameId == 32L) TitleList.NoList("Test System") else TitleList.Ready(TitleFinder(titles)))
 }
 
-private object FixtureActions : SettingsActions by NoActions {
-    override val names: SettingsNameActions get() = FixtureNames
+private class FixtureActions(titles: List<TitleChoice>) : SettingsActions by NoActions {
+    override val names: SettingsNameActions = FixtureNames(titles)
 }
 
 /**
@@ -88,6 +96,10 @@ internal fun NameFixTypingSettings(
     refused: Boolean = false,
     /** Controls › Keyboard on Android: the page without typing. */
     android: Boolean = false,
+    /** The closest titles the page shows; null: still looking. Set at once so the panel's own search does not race the shot. */
+    suggestions: List<TitleChoice>? = fixtureTitles.take(1),
+    /** No result for the name, as when nothing in the list is like it. */
+    noResults: Boolean = false,
 ) {
     val settings = settingsForShot().let { if (android) it.copy(controls = it.controls.copy(keyboard = KeyboardSetting.Android)) else it }
     val geometry = settingsGeometry(PlumTheme.layout)
@@ -102,11 +114,14 @@ internal fun NameFixTypingSettings(
                     page = PanelPage.UnidentifiedGames,
                     panelIndex = if (own) 1 else 0,
                 )
-            SettingsModel(FixtureActions, focus).also { model ->
+            SettingsModel(FixtureActions(if (noResults) emptyList() else fixtureTitles), focus).also { model ->
                 model.content = content
                 model.onAction(Action.Enter, settings, geometry)
                 when (val screen = model.nameFix.open?.screen) {
-                    is PanelScreen.FixName -> screen.typing.let { state: FixNameState -> state.showResults(state.query, state.finder?.find(state.query).orEmpty()) }
+                    is PanelScreen.FixName -> screen.typing.let { state: FixNameState ->
+                        state.showResults(state.query, state.finder?.find(state.query).orEmpty())
+                        suggestions?.let(state::showSuggestions)
+                    }
                     is PanelScreen.OwnName ->
                         if (refused) {
                             val state: OwnNameState = screen.typing
@@ -175,6 +190,26 @@ internal fun RaSignInOpenedSettings() {
             SettingsModel(NoActions, focus).also {
                 it.content = content
                 it.signIn.open(SettingsSignIn.newForm(keyboard = KeyboardChoice.Plumemu, kind = SignInKind.RetroAchievements)).startTyping()
+            }
+        }
+    ShownSettings(settingsForShot(), model)
+}
+
+/** Accounts › [kind]'s sign-in with the tray up over the password (the username typed, Next pressed): Sign in shows, Cancel must not as a strip. */
+@Composable
+internal fun AccountPasswordTypingSettings(kind: SignInKind) {
+    val content = AccountShotContent.of(AccountStatus.SignedOut)
+    val option = if (kind == SignInKind.RetroAchievements) SettingsOption.RetroAchievementsAccount else SettingsOption.ScraperAccount
+    val focus = AccountShotContent.focusOn(content, option, PanelPage.ScraperSignIn)
+    val model =
+        remember(kind) {
+            SettingsModel(NoActions, focus).also {
+                val form = SettingsSignIn.newForm(keyboard = KeyboardChoice.Plumemu, kind = kind)
+                form.onAction(Action.Enter)
+                form.onAction(Action.Typed(TypedKey.Text("plumtester")))
+                form.onAction(Action.Menu)
+                it.content = content
+                it.signIn.open(form)
             }
         }
     ShownSettings(settingsForShot(), model)

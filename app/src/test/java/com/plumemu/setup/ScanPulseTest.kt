@@ -93,7 +93,8 @@ class ScanPulseTest {
         return image.asAndroidBitmap().getPixel(image.width / 2, image.height / 2)
     }
 
-    private fun red(pixel: Int) = (pixel shr 16) and 0xFF
+    // The accent is blue, so its alpha shows most in the blue channel.
+    private fun blue(pixel: Int) = pixel and 0xFF
 
     @Test
     fun theDotBreathesBetweenAboutAThirdAndFullBrightnessWithoutRecomposing() {
@@ -103,10 +104,10 @@ class ScanPulseTest {
         val seen = mutableListOf<Int>()
         repeat(32) {
             compose.mainClock.advanceTimeBy(50)
-            seen += red(dotPixel())
+            seen += blue(dotPixel())
         }
         assertTrue("the dot never changed: $seen", seen.max() - seen.min() > 40)
-        // The background's red channel is dark and the accent's bright, so the dot's alpha shows in red.
+        // The background's blue channel is dark and the accent's bright, so the dot's alpha shows in blue.
         assertEquals("nothing recomposed while the dot breathed: $calls", emptyList<String>(), calls)
     }
 
@@ -117,7 +118,7 @@ class ScanPulseTest {
         calls.clear()
         compose.mainClock.advanceTimeBy(800)
         assertEquals(first, dotPixel())
-        assertEquals("solid: the accent itself", PlumThemeSettings.Graphite.accentColor.red, red(first))
+        assertEquals("solid: the accent itself", PlumThemeSettings.Graphite.accentColor.blue, blue(first))
         assertEquals(emptyList<String>(), calls)
     }
 

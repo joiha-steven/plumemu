@@ -11,6 +11,7 @@ import com.plumemu.game.OpenPanel
 import com.plumemu.game.PanelScreen
 import com.plumemu.game.boxArtStoredContent
 import com.plumemu.game.sampleFacts
+import com.plumemu.graph.AchievementCount
 import com.plumemu.home.BoxArtPanelFixtures.game
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -119,6 +120,10 @@ class FixBoxArtScreenshotTest {
     /** Seven rows now: the cursor on Info, the last, must be fully on screen. */
     @Test
     fun gameMenuWithFixBoxArt() = shot("game_menu_fix_box_art", OpenPanel(game, PanelScreen.Menu(sampleFacts(title = "Super Metroid", canFixBoxArt = true)), focus = 6))
+
+    /** The eight-row menu: Box art and Achievements ("12 of 40 ›") both listed, the cursor on Achievements. */
+    @Test
+    fun gameMenuWithAchievements() = shot("game_menu_achievements", OpenPanel(game, PanelScreen.Menu(sampleFacts(title = "Super Metroid", canFixBoxArt = true, achievementCount = AchievementCount(12, 40))), focus = 6))
 
     @Test
     fun gameMenuWithFixBoxArtOnItsRow() = shot("game_menu_fix_box_art_row", OpenPanel(game, PanelScreen.Menu(sampleFacts(title = "Super Metroid", canFixBoxArt = true)), focus = 5))

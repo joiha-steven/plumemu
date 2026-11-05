@@ -59,7 +59,7 @@ internal class LibraryHomeArt(
         try {
             val json = scraped().get(key)?.detailsJson ?: return DetailsExtras.None
             withContext(mapping) {
-                ScrapedDetails.fromJson(json)?.let { DetailsExtras(englishSynopsis(it), it.rating?.takeIf { rating -> rating in 1..MAX_RATING }) } ?: DetailsExtras.None
+                ScrapedDetails.fromJson(json)?.let { DetailsExtras(englishSynopsis(it), it.listedRating()) } ?: DetailsExtras.None
             }
         } catch (e: CancellationException) {
             throw e
@@ -70,9 +70,6 @@ internal class LibraryHomeArt(
 
     companion object {
         private const val TAG = "PlumHomeArt"
-
-        /** ScreenScraper's ratings are out of 20; anything else, and 0 (never a real rating there), is none. */
-        private const val MAX_RATING = 20
 
         /** ScreenScraper's code for English synopses. */
         private const val ENGLISH = "en"

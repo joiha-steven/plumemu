@@ -75,7 +75,7 @@ class PlumMigration12To13Test {
         helper.createDatabase(DB_NAME, 12).use(::fill)
         val room =
             Room.databaseBuilder(ApplicationProvider.getApplicationContext(), PlumDatabase::class.java, DB_NAME)
-                .addMigrations(*PlumMigrations.ALL)
+                .addMigrations(*PlumMigrations.all(TestDetailsRating))
                 .allowMainThreadQueries()
                 .build()
         assertEquals(emptyList<SkippedSubfolderEntity>(), room.skippedSubfolderDao().observeAll().first())

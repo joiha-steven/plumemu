@@ -43,7 +43,7 @@ class SettingsAccountScreenshotTest {
     private fun formShot(
         name: String,
         state: AccountShots.State,
-    ) = ReferenceShots.capture(name) { SignInFormAt(state) }
+    ) = ReferenceShots.capture(name, sizes = ReferenceShots.Size.Original + ReferenceShots.Size.FourThree) { SignInFormAt(state) }
 
     @Test fun signedOut() = shot("settings_account_signed_out", AccountStatus.SignedOut, SettingsOption.ScraperAccount)
 

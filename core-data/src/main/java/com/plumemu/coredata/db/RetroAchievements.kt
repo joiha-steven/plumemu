@@ -97,9 +97,36 @@ data class RaProgressEntity(
     @ColumnInfo(name = "highest_award") val highestAward: String?,
     /** Epoch milliseconds of the refresh that wrote the row. */
     @ColumnInfo(name = "updated_at") val updatedAt: Long,
+    /**
+     * Points of the achievements unlocked in either mode (schema 17); null while not known: the
+     * completion list carries no points, only a game's achievement list does ([RaDao.replaceProgress]
+     * keeps a known value while the counts are unchanged).
+     */
+    @ColumnInfo(name = "points_earned") val pointsEarned: Int? = null,
+    /** Points of every achievement in the set (schema 17); null while not known, as [pointsEarned]. */
+    @ColumnInfo(name = "points_total") val pointsTotal: Int? = null,
 ) {
     companion object {
         /** The award kind of a mastered game (every achievement unlocked in hardcore). */
         const val MASTERED = "mastered"
     }
 }
+
+/**
+ * Schema 17: one achievement of a RetroAchievements game as its achievement list last said (Info,
+ * after a game). Personal (the earned times are the signed-in person's): [RaDao.clearProgress]
+ * deletes every row with the progress. [RaDao.saveGameProgress] replaces a game's rows as a whole.
+ */
+@Entity(tableName = "ra_achievement", primaryKeys = ["ra_game_id", "achievement_id"])
+data class RaAchievementEntity(
+    @ColumnInfo(name = "ra_game_id") val raGameId: Long,
+    @ColumnInfo(name = "achievement_id") val achievementId: Long,
+    @ColumnInfo(name = "title") val title: String,
+    /** RetroAchievements' badge name (the app makes the media URL); null when the list gave none. */
+    @ColumnInfo(name = "badge_name") val badgeName: String?,
+    @ColumnInfo(name = "points") val points: Int,
+    /** Epoch milliseconds of the unlock in either mode; null while locked. */
+    @ColumnInfo(name = "earned_at") val earnedAt: Long?,
+    /** Epoch milliseconds of the hardcore unlock; null while not unlocked in hardcore. */
+    @ColumnInfo(name = "earned_hardcore_at") val earnedHardcoreAt: Long?,
+)

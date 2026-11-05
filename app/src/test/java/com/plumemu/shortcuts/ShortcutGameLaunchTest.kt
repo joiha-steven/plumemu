@@ -69,6 +69,8 @@ class ShortcutGameLaunchTest {
 
         assertEquals(LaunchOutcome.Started(id, "app.gamenative", "app.gamenative", ChoiceSource.PinnedShortcut, coreToConfirm = null), outcome)
         assertEquals("started from the record: package, shortcut id, user", listOf(Triple("app.gamenative", "game_274190", 0L)), host.starts.toList())
+        // Exact play time asks Android about this package when the play ends.
+        assertEquals("app.gamenative", context.getSharedPreferences("plumemu_play_session", Context.MODE_PRIVATE).getString("started_package", null))
         val play = pendingPlay()
         assertTrue("a session is pending, its app as the emulator: $play", play is PlaySessionOutcome.TooShort)
         play as PlaySessionOutcome.TooShort

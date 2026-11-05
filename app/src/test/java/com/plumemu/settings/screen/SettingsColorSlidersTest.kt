@@ -21,6 +21,10 @@ import org.junit.Test
  * tones, B and A, the sounds, and taps and drags on a track.
  */
 internal class SettingsColorSlidersTest : SettingsModelHarness() {
+    init {
+        startOnRedSans() // the accent presets are walked from Red
+    }
+
     private val reported = Reported().also { it.listenTo(model.feel) }
 
     private fun heard(direction: Direction) = press(Action.Move(direction)).let { actions.settings; reported.drain() }

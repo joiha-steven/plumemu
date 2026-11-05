@@ -83,7 +83,7 @@ internal fun PinConfirmLayout(
             .background(colors.bg.copy(alpha = SCRIM_ALPHA))
             // Taps outside the panel land here, not on the app underneath.
             .pointerInput(Unit) { detectTapGestures { } }
-            .padding(top = PlumDimens.stripMarginTop + PlumTheme.layout.topBarHeight + PlumDimens.barGap, bottom = PlumDimens.stripMarginBottom)
+            .padding(top = PlumDimens.stripMarginTop + PlumTheme.layout.topBarHeight + PlumDimens.barGap, bottom = PlumDimens.footerBelow)
             .testTag(PinConfirmTags.SCREEN),
     ) {
         Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = PlumDimens.stripMarginSide), contentAlignment = Alignment.Center) {
@@ -110,7 +110,7 @@ internal fun PinConfirmLayout(
                 }
             }
         }
-        Spacer(Modifier.height(PlumDimens.barGap))
+        Spacer(Modifier.height(PlumDimens.footerGap))
         HintBar(Modifier.background(colors.bg)) {
             Hint(
                 keyCap = stringResource(letters.confirm),

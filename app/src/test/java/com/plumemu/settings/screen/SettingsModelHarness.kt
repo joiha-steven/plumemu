@@ -5,6 +5,7 @@ import com.plumemu.account.FakeScraperAccounts
 import com.plumemu.account.RaAccounts
 import com.plumemu.account.ScraperAccounts
 import com.plumemu.coredata.settings.AppearanceSettings
+import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.PlumSettings
@@ -24,7 +25,8 @@ internal abstract class SettingsModelHarness {
      */
     protected class FakeActions : SettingsActions {
         // Starts on Graphite, the first preset: the colour-page tests walk the presets from index 0
-        // (the app default is Black, which is index 1).
+        // (the app default is Black, which is index 1). Accent and font are the app's defaults (#3E7BE0, Jost);
+        // a test that walks the accent presets or the font steps from Red / Plum Sans calls [startOnRedSans].
         private var stored =
             PlumSettings(
                 appearance = AppearanceSettings(background = ColorSetting.Preset("Graphite")),
@@ -175,9 +177,22 @@ internal abstract class SettingsModelHarness {
             callbacks += onDone
         }
 
-        override fun openHomeSettings(): Boolean {
+        /** What Android's question left behind: set, the next open reports "still not the home app". */
+        var notHomeAfterAsking = false
+
+        override fun openHomeSettings(onNotHome: () -> Unit): Boolean {
             homeOpened++
+            if (canOpenHome && notHomeAfterAsking) onNotHome()
             return canOpenHome
+        }
+
+        /** Times Android's Usage access screen was asked to open, and whether the device has one. */
+        var usageAccessOpened = 0
+        var canOpenUsageAccess = true
+
+        override fun openUsageAccess(): Boolean {
+            usageAccessOpened++
+            return canOpenUsageAccess
         }
 
         /** Pages asked to open in the browser, and whether the device has one. */
@@ -188,6 +203,9 @@ internal abstract class SettingsModelHarness {
             webPages += url
             return hasBrowser
         }
+
+        /** About › Report a problem: the unsent words, kept above the model as the app keeps them. */
+        override val reportDraft = com.plumemu.report.ReportDraft()
 
         /** About › Report a problem: each report asked for, and the answers held back until a test gives them. */
         val reports = mutableListOf<Triple<String, String?, Boolean>>()
@@ -272,6 +290,15 @@ internal abstract class SettingsModelHarness {
                     onDone(boxArtWorks)
                 }
 
+                override fun setSource(
+                    source: com.plumemu.coredata.settings.BoxArtSourceSetting,
+                    onDone: (Boolean) -> Unit,
+                ) {
+                    boxArtCalls += "source ${source.name}"
+                    if (boxArtWorks) update { it.copy(library = it.library.copy(boxArtSource = source)) }
+                    onDone(boxArtWorks)
+                }
+
                 override fun clearBoxArt(onDone: (com.plumemu.graph.BoxArtClearResult) -> Unit) {
                     boxArtCalls += "clear"
                     onDone(clearResult ?: if (boxArtWorks) com.plumemu.graph.BoxArtClearResult.Done else com.plumemu.graph.BoxArtClearResult.Failed)
@@ -342,6 +369,11 @@ internal abstract class SettingsModelHarness {
 
     protected val actions = FakeActions()
     protected val model = SettingsModel(actions)
+    /** For the tests that walk the accent presets or the font steps from Red / Plum Sans. */
+    protected fun startOnRedSans() {
+        actions.settings = actions.settings.let { it.copy(appearance = it.appearance.copy(accent = ColorSetting.Preset("Red"), font = FontSetting.Sans)) }
+    }
+
     protected val wide = SettingsGeometry(isNarrow = false, presetColumns = 5, defaultTextSize = TextSizeSetting.Medium)
     protected val narrow = SettingsGeometry(isNarrow = true, presetColumns = 10, defaultTextSize = TextSizeSetting.Medium)
 

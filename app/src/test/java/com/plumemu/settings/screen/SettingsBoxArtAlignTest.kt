@@ -35,6 +35,11 @@ import org.robolectric.annotation.GraphicsMode
  * line (one left edge for side-panel content, as in the game panel).
  */
 abstract class SettingsBoxArtAlignBase {
+    /** True in the classes of a wide screen, where small sizes show three columns and a panel's title starts on its edge (the board). */
+    protected open val wide = false
+
+    private fun titleStart(at: String) = panelTextStartAt(at, wide)
+
     protected val compose = appComposeRule()
 
     @get:Rule
@@ -90,7 +95,7 @@ abstract class SettingsBoxArtAlignBase {
             val lines =
                 listOf(
                     "Signed in as plumtester",
-                    "Downloading box art 340\u00A0of\u00A02,054 · about 5\u00A0h left",
+                    "Downloading box art · 340\u00A0of\u00A02,054 · about 5\u00A0h left",
                     "12 games gave up after server errors · Re-download all to try again",
                     "Box art:\u00A0312 MB",
                     "Requests today: 1,234\u00A0of\u00A010,000",
@@ -104,7 +109,7 @@ abstract class SettingsBoxArtAlignBase {
             for ((text, line) in lines) if (!near(line.left.value, title.left.value)) problems += "$at: \"$text\" at ${line.left}, the title at ${title.left}"
             val buttons = accountPageItems(content).indices.map { bounds(SettingsTags.panelItem(it)) }
             val edge = bounds(SettingsTags.PANEL).left.value
-            if (!near(title.left.value - edge, PlumDimens.gameRowPadding.value)) problems += "$at: the title at ${title.left}, not on the row-text line"
+            if (!near(title.left.value - edge, titleStart(at))) problems += "$at: the title at ${title.left}, not on the row-text line"
             buttons.forEachIndexed { index, button ->
                 if (!near(button.left.value, edge)) problems += "$at: button $index at ${button.left}, the panel's edge at $edge"
                 if (!near(button.right.value, buttons.first().right.value)) problems += "$at: button $index ends at ${button.right}, the first at ${buttons.first().right}"
@@ -206,6 +211,8 @@ abstract class SettingsBoxArtAlignBase {
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
 class SettingsBoxArtAlign768Test : SettingsBoxArtAlignBase() {
+    override val wide = true
+
     @Test fun theRowsValueEndsWithTheOthers() = theRowsValueEndsWithTheOthers("768x432")
 
     @Test fun thePanelLinesUp() = thePanelLinesUp("768x432")

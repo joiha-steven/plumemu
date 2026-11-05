@@ -19,6 +19,7 @@ import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.GridSize
+import com.plumemu.coreui.theme.AppsGridDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumLayout
@@ -118,15 +119,15 @@ class HomeAppsGridBoundsTest {
             if (index >= columns) near("$at gap down", gap, tile.top - bounds(HomeTags.cover(index - columns)).bottom)
             val iconTag = if (index == APP_WITHOUT_ICON) HomeTags.APP_ICON_STAND_IN else HomeTags.APP_ICON
             val icon = inTile(index, iconTag)
-            near("$at icon width", PlumDimens.appsGridIcon, icon.right - icon.left)
-            near("$at icon height", PlumDimens.appsGridIcon, icon.bottom - icon.top)
+            near("$at icon width", AppsGridDimens.appsGridIcon, icon.right - icon.left)
+            near("$at icon height", AppsGridDimens.appsGridIcon, icon.bottom - icon.top)
             near("$at icon centred", icon.left - tile.left, tile.right - icon.right)
             val name = inTile(index, HomeTags.APP_NAME)
             assertTrue("$at: the name is inside the tile across ($name in $tile)", name.left >= tile.left - PIXEL.dp && name.right <= tile.right + PIXEL.dp)
             assertTrue("$at: the name is under the icon", name.top >= icon.bottom)
             near("$at: the name is centred under the icon", icon.left + icon.right, name.left + name.right)
-            near("$at: the name sits ${PlumDimens.appsGridNameGap} under the icon", PlumDimens.appsGridNameGap, name.top - icon.bottom)
-            assertTrue("$at: the name ends inside the tile (${name.bottom} > ${tile.bottom})", name.bottom <= tile.bottom - PlumDimens.appsGridTilePadding + PIXEL.dp)
+            near("$at: the name sits ${AppsGridDimens.appsGridNameGap} under the icon", AppsGridDimens.appsGridNameGap, name.top - icon.bottom)
+            assertTrue("$at: the name ends inside the tile (${name.bottom} > ${tile.bottom})", name.bottom <= tile.bottom - AppsGridDimens.appsGridTilePadding + PIXEL.dp)
             val lines = (name.bottom - name.top) / nameLine
             assertTrue("$at: at most two lines ($lines)", lines <= 2f + PIXEL / nameLine.value)
             if (index == APP_LONG_NAME) near("$at: a long name takes exactly two lines", nameLine * 2, name.bottom - name.top)
@@ -172,12 +173,12 @@ class HomeAppsGridBoundsTest {
 
     /**
      * The columns the docs and PlumDimens name, with the peek growing with the text as the theme makes it:
-     * 7 / 5 / 8 at Medium on 768 / 576 / 837, 7 on the Thor at its default Large, 5 / 3 / 5 at Largest; never by grid size.
+     * 7 / 5 / 8 at Small on 768 / 576 / 837, 6 on the Thor at its default Large, 5 / 3 / 5 at Largest; never by grid size.
      */
     @Test
     fun theColumnsFollowTheWidthAndTextSizeNeverTheGridSize() {
         val expected = mapOf(
-            (768 to TextSize.Medium) to 7, (576 to TextSize.Medium) to 5, (837 to TextSize.Medium) to 8, (837 to TextSize.Large) to 7,
+            (768 to TextSize.Small) to 7, (576 to TextSize.Small) to 5, (837 to TextSize.Small) to 8, (837 to TextSize.Large) to 6,
             (768 to TextSize.Largest) to 5, (576 to TextSize.Largest) to 3, (837 to TextSize.Largest) to 5,
         )
         for ((at, columns) in expected) {

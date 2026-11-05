@@ -50,6 +50,14 @@ class ColorSetsTest {
             check(set, "meta on pill", ColorMath.contrast(c.meta, c.pill), 6.0)
             check(set, "muted on pill", ColorMath.contrast(c.muted, c.pill), 4.6)
             check(set, "pill against bg", ColorMath.contrast(c.pill, c.bg), 1.12)
+            val dark = TextMode.of(c.text, c.bg) == TextMode.Light
+            val slab = FocusSlab.fill(c.bg, c.text, dark)
+            check(set, "accent on slab (bar)", ColorMath.contrast(c.accent, slab), 3.5)
+            check(set, "strong on slab", ColorMath.contrast(c.strong, slab), 4.5)
+            check(set, "text on slab", ColorMath.contrast(c.text, slab), 4.5)
+            check(set, "meta on slab", ColorMath.contrast(c.meta, slab), 6.0)
+            check(set, "muted on slab", ColorMath.contrast(c.muted, slab), 4.6)
+            check(set, "slab against bg", ColorMath.contrast(slab, c.bg), 1.12)
             check(set, "text on tray", ColorMath.contrast(c.text, c.tray), 4.5)
             check(set, "text2 on trayKey", ColorMath.contrast(c.text2, c.trayKey), 4.5)
             check(set, "strong on trayKey", ColorMath.contrast(c.strong, c.trayKey), 4.5)
@@ -74,21 +82,46 @@ class ColorSetsTest {
         )
         val expected =
             mapOf(
-                ColorSet.Plumemu to Triple(0x000000, TextMode.Light, 0xDA4655),
-                ColorSet.Paper to Triple(0xF4F3EF, TextMode.Dark, 0x9E2A3A),
-                ColorSet.Pocket to Triple(0xCDCCC4, TextMode.Dark, 0x8C1D4E),
-                ColorSet.DotMatrix to Triple(0xB4DB11, TextMode.Dark, 0x2E5E2E),
+                ColorSet.Plumemu to Triple(0x000000, TextMode.Light, 0x3E7BE0),
+                ColorSet.Paper to Triple(0xECE8DF, TextMode.Dark, 0x9E2A3A),
+                ColorSet.Pocket to Triple(0xD2D1CA, TextMode.Dark, 0x8C1D4E),
+                ColorSet.DotMatrix to Triple(0xB8E011, TextMode.Dark, 0x2E5E2E),
                 ColorSet.Super to Triple(0xD9D8D3, TextMode.Dark, 0xAA2924),
                 ColorSet.Indigo to Triple(0x262158, TextMode.Light, 0xA79CF5),
                 ColorSet.Charcoal to Triple(0x2A2B2E, TextMode.Light, 0x5FD38D),
                 ColorSet.Ivory to Triple(0xF3EAD0, TextMode.Dark, 0x127087),
-                ColorSet.Banana to Triple(0xF2CD3C, TextMode.Dark, 0x1F45A8),
+                ColorSet.Banana to Triple(0xF2CF43, TextMode.Dark, 0x1F45A8),
                 ColorSet.Cream to Triple(0xE9DFC8, TextMode.Dark, 0x9A1F2B),
             )
         for ((set, colours) in expected) {
             assertEquals("$set background", Rgb(colours.first), set.backgroundColor)
             assertEquals("$set text", colours.second, set.textMode)
             assertEquals("$set accent", Rgb(colours.third), set.accentColor)
+        }
+    }
+
+    /** Plumemu's red accent was replaced by #3E7BE0: a stored own-colour red on its background still reads as the set and draws the new accent. */
+    @Test
+    fun theOldRedAccentOfThePlumemuSetIsSettledToItsNewOne() {
+        val stored = PlumThemeSettings(accent = AccentChoice.Custom(Rgb(0xDA4655)))
+        assertEquals(ColorSet.Plumemu.accent, ColorSet.settled(stored).accent)
+        assertEquals(ColorSet.Plumemu, ColorSet.matching(ColorSet.settled(stored)))
+        // Another background keeps it as stored.
+        val onPaper = PlumThemeSettings.Paper.copy(accent = AccentChoice.Custom(Rgb(0xDA4655)))
+        assertEquals(onPaper, ColorSet.settled(onPaper))
+    }
+
+    /** A background a set had before the dark text became #1C1C1E still reads as the set and draws the current one. */
+    @Test
+    fun anOldBackgroundIsSettledToTheSetsCurrentOne() {
+        for ((set, old) in listOf(ColorSet.Pocket to 0xCDCCC4, ColorSet.DotMatrix to 0xB4DB11, ColorSet.Banana to 0xF2CD3C)) {
+            val stored = themeOf(set).copy(background = BackgroundChoice.Custom(Rgb(old)))
+            assertEquals("$set background", set.background, ColorSet.settled(stored).background)
+            assertEquals("$set reads", set, ColorSet.matching(ColorSet.settled(stored)))
+            assertNull("$set unsettled is Custom", ColorSet.matching(stored))
+            assertNull("$set near", ColorSet.matching(ColorSet.settled(stored.copy(background = BackgroundChoice.Custom(Rgb(old + 1))))))
+            // The set's other colours must be the set's too.
+            assertEquals(stored.copy(accent = AccentChoice.Custom(Rgb(0x123456))), ColorSet.settled(stored.copy(accent = AccentChoice.Custom(Rgb(0x123456)))))
         }
     }
 
@@ -102,7 +135,7 @@ class ColorSetsTest {
     fun theCurrentSetIsTheOneWithAllThreeColoursEqual() {
         for (set in ColorSet.entries) assertEquals(set, ColorSet.matching(themeOf(set)))
         // A preset or a typed hex of the same colour is the same set: the colours count, not how they are stored.
-        val typed = PlumThemeSettings(background = BackgroundChoice.Custom(Rgb(0x000000)), accent = AccentChoice.Custom(Rgb(0xDA4655)))
+        val typed = PlumThemeSettings(background = BackgroundChoice.Custom(Rgb(0x000000)), accent = AccentChoice.Custom(Rgb(0x3E7BE0)))
         assertEquals(ColorSet.Plumemu, ColorSet.matching(typed))
         // One of the three changed is no set.
         assertNull("other text", ColorSet.matching(themeOf(ColorSet.Pocket).copy(text = Rgb(0x000000))))

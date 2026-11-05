@@ -4,6 +4,8 @@ package com.plumemu.achievements.hash
 import com.plumemu.achievements.hash.RaCannotHashReason.BadImage
 import com.plumemu.achievements.hash.RaCannotHashReason.NeedsDecoder
 import com.plumemu.achievements.hash.RaCannotHashReason.NotYetSupported
+import com.plumemu.identify.codec.cd.CdEcc
+import com.plumemu.identify.codec.zstd.Zstd
 import org.tukaani.xz.LZMAInputStream
 import java.io.ByteArrayInputStream
 import java.io.DataInputStream
@@ -28,7 +30,7 @@ internal class ChdCdTrack(val number: Int, val type: String, val frames: Int, va
 /**
  * A `.chd` (version 5) opened for reading. Only the header, the map and the metadata are read up front;
  * a hunk is decoded when something asks for it and the last few stay in a small cache.
- * Codecs: `zlib`, `lzma` (XZ for Java), `cdzl`, `cdlz`, and uncompressed hunks. Anything else, and a
+ * Codecs: `zlib`, `lzma` (XZ for Java), `zstd`, `cdzl`, `cdlz`, `cdzs`, and uncompressed hunks. Anything else, and a
  * parent CHD, is [RaCannotHashReason.NeedsDecoder] when a hunk that needs it is read.
  */
 internal class ChdImage private constructor(
@@ -95,8 +97,10 @@ internal class ChdImage private constructor(
             when (codec) {
                 CODEC_ZLIB -> inflate(packed, 0, packed.size, hunkBytes)
                 CODEC_LZMA -> lzma(packed, 0, packed.size, hunkBytes)
-                CODEC_CDLZ -> decodeCd(packed, useLzma = true)
-                CODEC_CDZL -> decodeCd(packed, useLzma = false)
+                CODEC_CDLZ -> decodeCd(packed, CdBase.Lzma)
+                CODEC_CDZL -> decodeCd(packed, CdBase.Deflate)
+                CODEC_ZSTD -> zstd(packed, 0, packed.size, hunkBytes)
+                CODEC_CDZS -> decodeCd(packed, CdBase.Zstd)
                 else -> throw DiscFormatException(NeedsDecoder, "${tagName(codec)} hunks need a decoder")
             }
         } catch (e: DataFormatException) {
@@ -108,11 +112,11 @@ internal class ChdImage private constructor(
     }
 
     /**
-     * `cdlz` / `cdzl`: an ECC bitmap, the length of the sector part (2 bytes, 3 when the hunk is 64 KiB or more),
-     * the sector part (LZMA or deflate) and the subcode part (deflate). Sectors whose ECC bit is set had their sync
+     * `cdlz` / `cdzl` / `cdzs`: an ECC bitmap, the length of the sector part (2 bytes, 3 when the hunk is 64 KiB or more),
+     * the sector part (LZMA, deflate or zstd) and the subcode part (deflate; zstd for `cdzs`). Sectors whose ECC bit is set had their sync
      * and error-correction bytes cut out when the CHD was made; they are rebuilt here.
      */
-    private fun decodeCd(packed: ByteArray, useLzma: Boolean): ByteArray {
+    private fun decodeCd(packed: ByteArray, base: CdBase): ByteArray {
         val frames = hunkBytes / CD_FRAME_BYTES
         val eccBytes = (frames + 7) / 8
         val lengthBytes = if (hunkBytes < 65536) 2 else 3
@@ -122,9 +126,14 @@ internal class ChdImage private constructor(
         val baseStart = eccBytes + lengthBytes
         if (baseLength < 0 || baseStart + baseLength > packed.size) throw corrupt("a CD hunk's sector data is cut short")
         val sectorBytes = frames * CD_SECTOR_BYTES
-        val sectors = if (useLzma) lzma(packed, baseStart, baseLength, sectorBytes) else inflate(packed, baseStart, baseLength, sectorBytes)
+        val sectors = when (base) {
+            CdBase.Lzma -> lzma(packed, baseStart, baseLength, sectorBytes)
+            CdBase.Deflate -> inflate(packed, baseStart, baseLength, sectorBytes)
+            CdBase.Zstd -> zstd(packed, baseStart, baseLength, sectorBytes)
+        }
         val subStart = baseStart + baseLength
-        val subcode = inflate(packed, subStart, packed.size - subStart, frames * CD_SUBCODE_BYTES)
+        val subBytes = frames * CD_SUBCODE_BYTES
+        val subcode = if (base == CdBase.Zstd) zstd(packed, subStart, packed.size - subStart, subBytes) else inflate(packed, subStart, packed.size - subStart, subBytes)
         val out = ByteArray(hunkBytes)
         for (f in 0 until frames) {
             val at = f * CD_FRAME_BYTES
@@ -153,6 +162,7 @@ internal class ChdImage private constructor(
         private const val MAX_HUNKS = 2_200_000L
         // A compressed map can say "same as before" for about 270 hunks in two bits, so a file cannot be shorter than this ratio allows.
         private const val MAX_HUNKS_PER_FILE_BYTE = 64L
+        private const val ZSTD_MIN_WINDOW = 1 shl 20
         private const val MAX_METADATA_BYTES = 1 shl 16
         private const val MAX_METADATA_ENTRIES = 1024
 
@@ -172,6 +182,11 @@ internal class ChdImage private constructor(
         private val CODEC_LZMA = tag("lzma")
         private val CODEC_CDLZ = tag("cdlz")
         private val CODEC_CDZL = tag("cdzl")
+        private val CODEC_ZSTD = tag("zstd")
+        private val CODEC_CDZS = tag("cdzs")
+
+        /** What compresses the sector part of a CD hunk; the subcode part is deflate, except with zstd. */
+        private enum class CdBase { Lzma, Deflate, Zstd }
 
         private fun tag(text: String): Int = text.fold(0) { acc, c -> (acc shl 8) or c.code }
 
@@ -325,6 +340,13 @@ internal class ChdImage private constructor(
             } finally {
                 inflater.end()
             }
+        }
+
+        /** One zstd frame that must decode to exactly [expected] bytes; the output is its window, so nothing else big is allocated. */
+        private fun zstd(data: ByteArray, off: Int, len: Int, expected: Int): ByteArray {
+            val out = Zstd.decompress(data, off, len, maxOutput = expected, maxWindow = maxOf(expected, ZSTD_MIN_WINDOW))
+            if (out.size != expected) throw IOException("zstd gave ${out.size} bytes, not $expected")
+            return out
         }
 
         /** Raw LZMA with the properties CHD fixes: lc 3, lp 0, pb 2, and the dictionary size LZMA's encoder picks for the hunk size. */

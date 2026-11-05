@@ -64,8 +64,8 @@ class SettingsRepositoryTest {
         assertEquals(PlumSettings.Defaults, s)
         assertEquals(ColorSetting.Preset("Black"), s.appearance.background)
         assertEquals(TextColorSetting.Light, s.appearance.textColor)
-        assertEquals(ColorSetting.Preset("Red"), s.appearance.accent)
-        assertEquals(FontSetting.Sans, s.appearance.font)
+        assertEquals(ColorSetting.Custom(0x3E7BE0), s.appearance.accent)
+        assertEquals(FontSetting.Jost, s.appearance.font)
         assertNull("text size is not picked until the person picks one", s.appearance.textSize)
         assertEquals("the grid at Medium", GridSizeSetting.Medium, s.appearance.gridSize)
         assertEquals("every system is a list until SELECT", emptySet<String>(), s.appearance.gridSystems)
@@ -88,7 +88,7 @@ class SettingsRepositoryTest {
         assertEquals(true, s.advanced.animations)
         assertEquals("sounds are Loud for new and existing installs (the keys are absent)", SoundLevel.Loud, s.advanced.sounds)
         assertEquals("vibration is on by default", true, s.advanced.vibration)
-        assertEquals("statistics are off for a new install", false, s.advanced.usageStatistics)
+        assertEquals("statistics and exact play time are off for a new install", false, s.advanced.usageStatistics || s.advanced.exactPlayTime)
         assertEquals(SetupFlags(setupCompleted = false, homeRoleAsked = false, rescanAfterReset = false), s.flags)
         assertTrue("no warning for a missing file: $logLines", logLines.isEmpty())
     }
@@ -109,16 +109,16 @@ class SettingsRepositoryTest {
                 language = "zh-TW", edgeFade = false,
             ),
             controls = ControlsSettings(ConfirmButtonSetting.Bottom, holdToScrollFaster = false, showButtonHints = false, keyboard = KeyboardSetting.Android, pushRightToPlay = true, switchSystemWith = SwitchSystemWithSetting.Bumpers),
-            library = LibrarySettings(scanOnStartup = false, sortGames = SortGamesSetting.LastPlayed, boxArtRegion = BoxArtRegionSetting.Japan, boxArtPaused = true,
+            library = LibrarySettings(scanOnStartup = false, sortGames = SortGamesSetting.LastPlayed, boxArtRegion = BoxArtRegionSetting.Japan, boxArtSource = BoxArtSourceSetting.LibretroOnly, boxArtPaused = true,
                 systemOrder = SystemOrderSetting.Maker, manualSystemOrder = listOf("snes", "sg-1000", "gba"), hiddenSystems = setOf("psx", "tg-cd"), recentSize = RecentSizeSetting.Fifty,
             ),
             homeScreen = HomeScreenSettings(showApps = false, showClock = false, showBattery = false, showSystemInfo = false),
             secondScreen = SecondScreenSettings(enabled = true, inGame = InGameSetting.Black),
-            advanced = AdvancedSettings(animations = false, sounds = SoundLevel.Quiet, usageStatistics = false, vibration = false),
+            advanced = AdvancedSettings(animations = false, sounds = SoundLevel.Quiet, usageStatistics = false, vibration = false, exactPlayTime = true),
             updates = UpdateSettings(checkDaily = false),
             flags = SetupFlags(
                 setupCompleted = true, homeRoleAsked = true, rescanAfterReset = true, folderMatchVersion = 7, namingRulesVersion = 8, scrapeRulesVersion = 9,
-                inGameDriftNoteShown = true,
+                inGameDriftNoteShown = true, setupQuestionsSkipped = true,
             ),
         )
         // Every field differs from its default, so a field the codec forgot reads back wrong.
@@ -274,7 +274,7 @@ class SettingsRepositoryTest {
         job.cancelAndJoin()
 
         val s = open().settings.first()
-        assertEquals(FontSetting.Sans, s.appearance.font)
+        assertEquals(FontSetting.Jost, s.appearance.font)
         assertEquals(ColorSetting.Preset("Black"), s.appearance.background)
         assertEquals("known values next to it still read", false, s.controls.holdToScrollFaster)
         assertTrue(logLines.toString(), logLines.any { "appearance.font" in it })

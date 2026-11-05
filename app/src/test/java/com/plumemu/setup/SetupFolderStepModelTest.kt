@@ -134,6 +134,8 @@ class SetupFolderStepModelTest {
         )
         model.onAction(Action.TapItem(Column.Games, 1))
         runCurrent()
+        model.onAction(Action.TapItem(Column.Games, 1)) // the second tap: the first only focused the card
+        runCurrent()
         assertEquals(listOf(2L), source.removed.toList())
         assertEquals(listOf(1L), model.state.value.folders.map { it.id })
         assertEquals(SetupControl.Continue, model.state.value.focus)
@@ -146,6 +148,8 @@ class SetupFolderStepModelTest {
         source.removeAnswer = { false }
         model.onAction(Action.TapItem(Column.Games, 0))
         runCurrent()
+        model.onAction(Action.TapItem(Column.Games, 0)) // the second tap: the first only focused the card
+        runCurrent()
         assertEquals(SetupMessage.FolderCouldNotRemove, model.state.value.message)
         assertEquals(1, model.state.value.folders.size)
     }
@@ -156,6 +160,8 @@ class SetupFolderStepModelTest {
         pick(model, TREE_A)
         source.removeAnswer = { throw IllegalStateException("content://secret/path") }
         model.onAction(Action.TapItem(Column.Games, 0))
+        runCurrent()
+        model.onAction(Action.TapItem(Column.Games, 0)) // the second tap: the first only focused the card
         runCurrent()
         assertEquals(SetupMessage.FolderCouldNotRemove, model.state.value.message)
         assertTrue(logLines.any { it.contains("IllegalStateException") })

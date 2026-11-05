@@ -3,6 +3,7 @@ package com.plumemu.coreui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
@@ -10,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,7 +31,7 @@ class HintPressedScreenshotTest {
     @Composable
     private fun Bar(held: Set<String>) {
         CompositionLocalProvider(LocalHeldKeys provides remember { mutableStateOf(held) }) {
-            Box(Modifier.fillMaxSize().background(PlumTheme.colors.bg), contentAlignment = Alignment.BottomStart) {
+            Box(Modifier.fillMaxSize().background(PlumTheme.colors.bg).padding(bottom = PlumDimens.stripMarginBottom), contentAlignment = Alignment.BottomStart) {
                 HintBar {
                     Hint("A", "Select")
                     Hint("B", "Back")

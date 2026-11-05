@@ -50,6 +50,7 @@ open class PlumApplication : Application(), Configuration.Provider, ScraperHost,
 
     override fun onCreate() {
         super.onCreate()
+        if (BuildConfig.BENCHMARK_CONTENT) MainLooperTrace.start()
         val statistics = makeTelemetry()
         telemetry = statistics
         graph = AppGraph(this, telemetry = statistics, problemReports = statistics?.problems)

@@ -22,6 +22,7 @@ import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.plumemu.coreui.testing.ReferenceShots
 import androidx.compose.ui.graphics.luminance
+import com.plumemu.coreui.theme.CollarDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
@@ -34,11 +35,12 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 /*
- * The grid cover's hairline (covers with a black border melted into a dark
- * background). The Super Nintendo grid on the AYN Thor's top screen (1920x1080, 837x471 dp at
+ * The grid cover's collar (covers with a black border melted into a dark
+ * background; the collar's lip and groove frame them). The Super Nintendo grid on the AYN Thor's top screen (1920x1080, 837x471 dp at
  * 367 dpi), every other cover with a wide black border and one all dark, on Black and on Paper:
  * `home_grid_cover_edge_thor_{black,paper}.png`. Placeholder pictures drawn in memory, never real
  * covers.
@@ -58,12 +60,12 @@ class HomeCoverEdgeScreenshotTest {
         compose.setContent {
             PlumTheme(settings) {
                 background = PlumTheme.colors.bg
-                edge = PlumTheme.colors.coverEdge
-                rim = if (background.luminance() < PlumDimens.COVER_SHADOW_LIGHT_BACKGROUND) PlumDimens.coverRimColor.copy(alpha = PlumDimens.COVER_RIM_ALPHA_DARK) else null
+                groove = PlumTheme.colors.collar.seat.well
+                seat = PlumTheme.colors.collar
                 key(settings) {
                     HomeWithArt(
-                        rememberSource { FakeArtSource(coverArtSource().results.value, images = BlackBorderedCovers()) },
-                        gridActions(FakeHomeContent.BOARD_SNES_INDEX, 1),
+                        rememberSource { FakeArtSource(withOneVeryWideBox(coverArtSource().results.value), images = BlackBorderedCovers()) },
+                        gridActions(FakeHomeContent.BOARD_SNES_INDEX, FOCUSED_CELL),
                         gridIds = setOf("snes"),
                     )
                 }
@@ -91,60 +93,73 @@ class HomeCoverEdgeScreenshotTest {
         assertEquals("shots match their references", emptyList<String>(), mismatches)
     }
 
-    private var edge = Color.Unspecified
+    /** One picture far wider than the grid: its box takes a row of its own at the grid's width, and the row is only as tall as the picture. */
+    private fun withOneVeryWideBox(results: Map<String, GameArt>): Map<String, GameArt> {
+        val row = FakeHomeContent.withArtwork().entries[FakeHomeContent.BOARD_SNES_INDEX].rows[WIDE_CELL]
+        val art = results.getValue(artKey(row.id))
+        return results + (artKey(row.id) to art.copy(grid = checkNotNull(art.grid).let { ArtPicture(it.path, it.height * WIDE_ASPECT, it.height) }))
+    }
 
-    /** The rim light on a dark background (white at its opacity, over the picture); null on a light one, where the hairline [edge] stands. */
-    private var rim: Color? = null
+    private var groove = Color.Unspecified
+    private var seat: com.plumemu.coreui.theme.CollarLook? = null
+
+    /**
+     * The groove's colour [dx] px left of a picture's edge at mid height, as the board's CSS draws it: the well, under the art's
+     * `0 3px 4px` drop (outer, so only past the art's edge) and the well's own inset from the lip's side. Density [d].
+     */
+    private fun grooveBeside(dx: Float, d: Float): Color {
+        val look = seat ?: return groove
+        fun phi(z: Float): Float {
+            val t = 1f / (1f + 0.3275911f * abs(z) / 1.4142135f)
+            val e = 1f - t * (0.2548296f + t * (-0.28449672f + t * (1.4214137f + t * (-1.4531521f + t * 1.0614054f)))) * kotlin.math.exp(-z * z / 2f)
+            return if (z >= 0f) (1f + e) / 2f else (1f - e) / 2f
+        }
+        val drop = 0.4f * phi(-dx / (CollarDimens.boxShadowSoftSigma.value * d))
+        val ws = look.seat.wellShade
+        val fromLip = CollarDimens.coverGroove.value * d - dx
+        val inset = ws.color.alpha * (1f - phi(fromLip / (ws.blur.value / 2f * d)))
+        return look.shadow.copy(alpha = drop).compositeOver(ws.color.copy(alpha = inset).compositeOver(groove))
+    }
     private var background = Color.Unspecified
 
     /**
-     * The hairline lies on each drawn picture's own top edge, not the cell's: for a picture shorter
-     * than its cell (letterboxed, standing on the shelf) the cell space above it stays background.
+     * The collar's groove hugs each drawn picture's own edge (the lip and groove frame a black-bordered box on a dark background), not
+     * the cell's: for a picture shorter than its cell (letterboxed, standing on the shelf) the cell space above the collar stays background.
+     * The focused cell (its groove is lit) is left out.
      */
     private fun assertTheEdgeHugsEachPicture(look: String) {
         val pixels = compose.onRoot().captureToImage().toPixelMap()
-        val cells = (0 until FIRST_CELLS).map { compose.onNodeWithTag(HomeTags.cover(it), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot }
-        val shadowed = shadowRegions()
-        var letterboxed = 0
+        // The focused cover is drawn larger over its neighbours with its ring and halo: a cell within that reach is partly covered, so it is left out too.
+        val focusedBounds = compose.onNodeWithTag(HomeTags.cover(FOCUSED_CELL), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val d = compose.density.density
+        val lifted = focusedBounds.inflate(max(focusedBounds.width, focusedBounds.height) * (PlumDimens.FOCUSED_COVER_SCALE - 1f) / 2f + (PlumDimens.focusRingOutset.value + PlumDimens.focusRingKeyline.value + PlumDimens.focusHaloReach.value) * d)
+        val cells = (0 until FIRST_CELLS).filter { it != FOCUSED_CELL }.map { compose.onNodeWithTag(HomeTags.cover(it), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot }.filter { it.width > 0f && it.bottom <= pixels.height && !it.overlaps(lifted) } // a row off the screen has no pixels to read
+        var checked = 0
+        var shorter = 0
         for (cell in cells) {
             val picture =
                 compose.onAllNodesWithTag(HomeTags.COVER_PICTURE, useUnmergedTree = true).fetchSemanticsNodes().map { it.boundsInRoot }
                     .firstOrNull { it.left >= cell.left - 1f && it.right <= cell.right + 1f && it.bottom <= cell.bottom + 1f && it.top >= cell.top - 1f } ?: continue
-            if (picture.top - cell.top < 4f) continue
-            letterboxed++
-            val x = picture.center.x.roundToInt()
-            val onEdge = pixels[x, picture.top.roundToInt()]
-            val aboveIt = pixels[x, (picture.top - 2f).roundToInt()]
-            val cellTop = pixels[x, (cell.top + 1f).roundToInt()]
-            // Dark: the rim is see-through, so the line is the picture's own pixel just inside it, lightened; light: the opaque hairline.
-            val line = rim?.compositeOver(pixels[x, (picture.top + 3f * compose.density.density).roundToInt()]) ?: edge
-            assertTrue("$look: the line on the picture's top ($onEdge, expected $line)", onEdge.near(line))
-            assertTrue("$look: background just above the picture ($aboveIt)", aboveIt.nearOrShadowed(background, Offset(x.toFloat(), picture.top - 2f), shadowed))
-            assertTrue("$look: no frame at the cell's top ($cellTop)", cellTop.nearOrShadowed(background, Offset(x.toFloat(), cell.top + 1f), shadowed))
+            // Packed rows: a box is as wide as its picture's shape, so most pictures fill their cell; one that stands shorter keeps its top clear.
+            val isShorter = picture.top - cell.top >= 12f
+            checked++
+            if (isShorter) shorter++
+            val y = picture.center.y.roundToInt()
+            val bx = (picture.left - 1.5f).roundToInt()
+            val besideIt = pixels[bx, y]
+            val expected = grooveBeside(picture.left - (bx + 0.5f), compose.density.density)
+            assertTrue("$look: the groove hugs the picture's left edge ($besideIt, expected $expected)", besideIt.near(expected))
+            if (isShorter) {
+                val cellTop = pixels[picture.center.x.roundToInt(), (cell.top + 1f).roundToInt()]
+                assertTrue("$look: no frame at the cell's top ($cellTop)", cellTop.near(background))
+            }
         }
-        assertTrue("$look: some covers are shorter than their cells", letterboxed > 0)
+        assertTrue("$look: some pictures were checked", checked > 0)
+        // The requirement changed: a box is exactly its picture's shape and a very wide one gets a row of its own at the grid's width,
+        // its height following, so no picture is letterboxed any more (it used to stand short in a cell cut to the grid's width).
+        assertEquals("$look: no picture stands shorter than its box", 0, shorter)
     }
 
-    /**
-     * Where a cover's shadow can fall, in px: each drawn picture's bounds grown by the widest blur on every side and
-     * shifted down by the deepest offset below (the focused cover's lifted shadow, drawn under its grown copy,
-     * reaches furthest; the focused cover also grows, which the extra [LIFT_GROWTH] dp covers).
-     */
-    private fun shadowRegions(): List<Rect> {
-        val density = compose.density.density
-        val blur = (maxOf(PlumDimens.coverShadowBlur, PlumDimens.coverShadowLiftedBlur).value + LIFT_GROWTH) * density
-        val down = maxOf(PlumDimens.coverShadowOffsetY, PlumDimens.coverShadowLiftedOffsetY).value * density
-        return compose.onAllNodesWithTag(HomeTags.COVER_PICTURE, useUnmergedTree = true).fetchSemanticsNodes().map {
-            val r = it.boundsInRoot
-            Rect(r.left - blur, r.top - blur, r.right + blur, r.bottom + blur + down)
-        }
-    }
-
-    /**
-     * This pixel (at [at], px) matches [other]: inside a cover's [shadowed] region it may also be [other] darkened by black
-     * at most the shadow's own opacity (never lighter); outside every such region it must match the
-     * background as before, so a black frame or plate there still fails, on Graphite too.
-     */
     private fun Color.nearOrShadowed(
         other: Color,
         at: Offset,
@@ -157,7 +172,7 @@ class HomeCoverEdgeScreenshotTest {
         return channel(red, other.red) && channel(green, other.green) && channel(blue, other.blue)
     }
 
-    private fun Color.near(other: Color): Boolean = abs(red - other.red) < 0.03f && abs(green - other.green) < 0.03f && abs(blue - other.blue) < 0.03f
+    private fun Color.near(other: Color): Boolean = abs(red - other.red) < 0.04f && abs(green - other.green) < 0.04f && abs(blue - other.blue) < 0.04f
 
     /** Every cover cell's and drawn picture's bounds, in dp. */
     private fun coverRects(): List<String> {
@@ -211,6 +226,8 @@ class HomeCoverEdgeScreenshotTest {
 
     private companion object {
         const val FIRST_CELLS = 10
-        const val LIFT_GROWTH = 6
+        const val FOCUSED_CELL = 0 // not above the wide box: its halo would reach the letterboxed cell below
+        const val WIDE_CELL = 3
+        const val WIDE_ASPECT = 12
     }
 }

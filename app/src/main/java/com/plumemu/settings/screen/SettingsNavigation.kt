@@ -167,12 +167,16 @@ internal abstract class SettingsNavigation(
     /** Accounts › ScreenScraper while signed out: the sign-in form. */
     val signIn = SettingsSignIn()
 
-    /** The sign-in form for the account row, typing in its first empty field; [username] pre-filled for Sign in again. */
+    /**
+     * The sign-in form for the account row, the cursor on its first empty field and the keyboard down, like setup's: Cancel
+     * (and RetroAchievements' key page button) are in view at once; A on a field brings the keyboard up. [username] pre-filled
+     * for Sign in again.
+     */
     protected fun openSignIn(
         username: String = "",
         kind: SignInKind = SignInKind.ScreenScraper,
     ) {
-        signIn.open(SettingsSignIn.newForm(username, keyboardChoice, kind)).startTyping()
+        signIn.open(SettingsSignIn.newForm(username, keyboardChoice, kind)).focusFirstEmpty()
         moveTo(focus.copy(column = SettingsColumn.Panel, page = PanelPage.ScraperSignIn, panelIndex = 0))
     }
 
@@ -200,7 +204,8 @@ internal abstract class SettingsNavigation(
         when (step) {
             is SignInStep.Stay -> if (step.moved) feel.report(Outcome.Moved)
             is SignInStep.Submit -> {
-                work.signIn(form, step.username, step.password) { if (signIn.form === form && focus.page == PanelPage.ScraperSignIn) leaveSignIn() }
+                val isOpen = { signIn.form === form && focus.page == PanelPage.ScraperSignIn }
+                work.signIn(form, step.username, step.password, isOpen) { if (isOpen()) leaveSignIn() }
                 feel.report(Outcome.Activated)
             }
             SignInStep.OpenKeyPage -> {
@@ -313,6 +318,10 @@ internal abstract class SettingsNavigation(
     fun focusAboutRow(index: Int) =
         moveTo(focus.copy(section = SettingsSection.About, column = SettingsColumn.Options, rememberedOption = focus.rememberedOption + (SettingsSection.About to index)))
 
+    /** Puts the focus on Library's option row [index] (the row the home's empty state leads to). */
+    fun focusLibraryRow(index: Int) =
+        moveTo(focus.copy(section = SettingsSection.Library, column = SettingsColumn.Options, rememberedOption = focus.rememberedOption + (SettingsSection.Library to index)))
+
     protected fun moveTo(next: SettingsFocus) {
         val from = focus
         if (next.page == PanelPage.Backup) backupPanelOpened = true
@@ -349,8 +358,8 @@ internal abstract class SettingsNavigation(
     private fun leavesRescanView(next: SettingsFocus) =
         next.column == SettingsColumn.Sections || (focus.column == SettingsColumn.Panel && next.column != SettingsColumn.Panel)
 
-    private companion object {
+    internal companion object {
         /** Pages one step deeper than their column (a colour's custom page, a licence text, a confirm, Fix name…). */
-        val DEEP_PAGES = setOf(PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom, PanelPage.LicenseText, PanelPage.Folder, PanelPage.SkipSubfolder, PanelPage.RemoveFolder, PanelPage.FixName, PanelPage.ScraperSignIn, PanelPage.ProblemReport, PanelPage.ScraperSystems, PanelPage.ScraperConfirm, PanelPage.ScraperSignOutConfirm, PanelPage.ScraperClearConfirm)
+        val DEEP_PAGES = setOf(PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom, PanelPage.LicenseText, PanelPage.Folder, PanelPage.SkipSubfolder, PanelPage.RemoveFolder, PanelPage.FixName, PanelPage.ScraperSignIn, PanelPage.ProblemReport, PanelPage.ScraperSystems, PanelPage.ScraperConfirm, PanelPage.ScraperSignOutConfirm, PanelPage.RaSignOutConfirm, PanelPage.ScraperClearConfirm)
     }
 }

@@ -6,6 +6,7 @@ import com.plumemu.coreinput.Direction
 import com.plumemu.graph.ScrapeCounts
 import com.plumemu.graph.ScrapeStatus
 import com.plumemu.scraper.PauseReason
+import com.plumemu.scraper.PictureFailure
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -294,7 +295,12 @@ internal class SettingsBoxArtTest : SettingsModelHarness() {
                 ScrapeStatus.PausedByPerson(ScrapeCounts(0, 0, 0)) to BoxArtLine.PausedByPerson,
             )
         for ((status, line) in cases) assertEquals("$status", line, boxArtLineOf(signedIn, status))
-        assertEquals(BoxArtLine.WrongPassword, boxArtLineOf(AccountStatus.SignedIn("plumtester", isRefused = true), ScrapeStatus.Running(counts, 5.7)))
+        val refused = AccountStatus.SignedIn("plumtester", isRefused = true)
+        assertEquals(BoxArtLine.WrongPassword, boxArtLineOf(refused, ScrapeStatus.Refused))
+        // "Box art only" needs no account: its own run state shows whatever the account is.
+        assertEquals(BoxArtLine.Running(counts, TimeLeft.Hours(5)), boxArtLineOf(refused, ScrapeStatus.Running(counts, 5.7)))
+        assertEquals(BoxArtLine.Failed(PictureFailure.NoNetwork), boxArtLineOf(AccountStatus.SignedOut, ScrapeStatus.Failed(counts, PictureFailure.NoNetwork)))
+        assertEquals(BoxArtLine.Done(300, 2_054), boxArtLineOf(AccountStatus.NotInThisBuild, ScrapeStatus.Idle(ScrapeCounts(300, 2_054, 0))))
         assertEquals(BoxArtLine.NotInThisBuild, boxArtLineOf(AccountStatus.NotInThisBuild, ScrapeStatus.NotInThisBuild))
         assertNull(boxArtLineOf(AccountStatus.SignedOut, ScrapeStatus.SignedOut))
         assertNull("the run's state not here yet", boxArtLineOf(signedIn, ScrapeStatus.SignedOut))

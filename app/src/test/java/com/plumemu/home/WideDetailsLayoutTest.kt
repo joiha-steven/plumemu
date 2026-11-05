@@ -66,7 +66,9 @@ class WideDetailsLayoutTest {
                     WideDetailsLayout(
                         cover = { Box(Modifier.fillMaxSize().testTag(COVER)) },
                         titleBlock = { title?.let { Spacer(Modifier.width(PlumDimens.detailsColumnWidth).height(it).testTag(TITLE)) } },
-                        rest = { Spacer(Modifier.width(PlumDimens.detailsColumnWidth).height(40.dp)) },
+                        rest = {},
+                        // The synopsis' stand-in: it takes what is left; only the title block and the facts make the cover give way.
+                        tail = { Spacer(Modifier.width(PlumDimens.detailsColumnWidth).height(40.dp)) },
                     )
                 }
             }
@@ -97,14 +99,20 @@ class WideDetailsLayoutTest {
         assertEquals(PlumDimens.detailsCoverHeightWide.value, cover.height, 0.5f)
     }
 
-    /** The real column at Medium: the cover 178 high, the title right under it (unchanged by the layout). */
+    /**
+     * The real column at Medium: the facts block holds its room whether or not facts exist (none are read here), so the cover is what is left
+     * after the title and that block, never above its full height; the title stays right under it.
+     */
     @Test
-    fun atMediumTheCoverStays178() {
+    fun atMediumTheCoverHoldsRoomForTheFactsAndTheTitleSitsUnderIt() {
         compose.setContent { PlumTheme { CoverDetailsBoard(rememberSource { coverArtSource() }) } }
         compose.waitForIdle()
         val cover = bounds(HomeTags.DETAILS_COVER)
-        assertEquals(PlumDimens.detailsCoverHeightWide.value, cover.height, 0.5f)
+        val column = bounds(HomeTags.DETAILS)
+        assertTrue("the cover is at most its full height and at least 0.85 of its floor (a title of two lines takes up to that): ${cover.height}", cover.height <= PlumDimens.detailsCoverHeightWide.value + 0.5f && cover.height >= PlumDimens.detailsCoverMinWide.value * 0.85f - 0.5f)
         assertEquals(cover.bottom + PlumDimens.detailsBlockGapWide.value, bounds(HomeTags.DETAILS_TITLE).top, 0.5f)
+        val facts = bounds(HomeTags.DETAILS_FACTS)
+        assertTrue("the held facts block is whole inside the column (${facts.bottom} of ${column.bottom})", facts.height > 0f && facts.bottom <= column.bottom + 0.5f)
     }
 
     /**
@@ -123,12 +131,18 @@ class WideDetailsLayoutTest {
         val column = bounds(HomeTags.DETAILS)
         val cover = bounds(HomeTags.DETAILS_COVER)
         val title = bounds(HomeTags.DETAILS_TITLE)
-        assertTrue("the cover gave up height: ${cover.height}", cover.height < PlumDimens.detailsCoverHeightWide.value - 0.5f)
+        // The title block is now the title and one subtitle line, so a two-line title fits under a full cover on 432 high; the
+        // cover gives way only when it would not (WideDetailsLayoutTest's synthetic cases above cover the giving way itself).
+        assertTrue("the cover is at most its full height: ${cover.height}", cover.height <= PlumDimens.detailsCoverHeightWide.value + 0.5f)
         assertEquals("the title a gap under the cover", cover.bottom + PlumDimens.detailsBlockGapWide.value, title.top, 0.5f)
         val texts = textsUnder(compose.onNodeWithTag(HomeTags.DETAILS, useUnmergedTree = true).fetchSemanticsNode())
         val blockBottom = texts.filter { (text, box) -> box.top >= title.top - 0.5f && box.height > 0f && text.isNotEmpty() }.maxOf { it.second.bottom }
         assertTrue("the title and fact lines whole in the column (bottom $blockBottom of ${column.bottom})", blockBottom <= column.bottom + 0.5f)
-        assertEquals("the cover gave up exactly what the block needs", column.bottom, cover.bottom + PlumDimens.detailsBlockGapWide.value + (blockBottom - title.top), 1f)
+        // Down to its floor: there the cover stops and the facts' cells leave whole instead (a little room may then be left under them).
+        assertTrue("the cover keeps its floor: ${cover.height}", cover.height >= PlumDimens.detailsCoverMinWide.value - 0.5f)
+        if (cover.height < PlumDimens.detailsCoverHeightWide.value - 0.5f && cover.height > PlumDimens.detailsCoverMinWide.value + 0.5f) {
+            assertEquals("the cover gave up exactly what the block needs", column.bottom, cover.bottom + PlumDimens.detailsBlockGapWide.value + (blockBottom - title.top), 1f)
+        }
         val drawn = texts.filter { (_, box) -> box.height > 0f && box.width > 0f && box.overlaps(cover) }
         assertEquals("texts drawn over the cover", emptyList<Pair<String, Rect>>(), drawn)
         val picture = bounds(HomeTags.COVER_PICTURE)
@@ -161,7 +175,7 @@ class WideDetailsLayoutTest {
         assertTrue("the title appears within $MAX_FRAMES frames", frames != null)
         val cover = bounds(HomeTags.DETAILS_COVER)
         val title = bounds(HomeTags.DETAILS_TITLE)
-        assertTrue("the cover gave up height: ${cover.height}", cover.height < PlumDimens.detailsCoverHeightWide.value - 0.5f)
+        assertTrue("the cover is at most its full height: ${cover.height}", cover.height <= PlumDimens.detailsCoverHeightWide.value + 0.5f)
         assertEquals("in the move's frame the title a gap under the cover", cover.bottom + PlumDimens.detailsBlockGapWide.value, title.top, 0.5f)
     }
 
@@ -190,7 +204,8 @@ class WideDetailsLayoutTest {
         val texts = textsUnder(compose.onNodeWithTag(HomeTags.DETAILS, useUnmergedTree = true).fetchSemanticsNode())
         assertTrue("no text cut at the column's bottom", texts.filter { it.second.height > 0f }.all { it.second.bottom <= column.bottom + 0.5f })
         val posters = compose.onAllNodesWithTag(HomeTags.POSTER_COVER, useUnmergedTree = true).fetchSemanticsNodes().size
-        if (posters == 0) {
+        // A poster with no room is composed at zero height, not left out.
+        if (posters == 0 || bounds(HomeTags.DETAILS_COVER).height == 0f) {
             assertEquals("no poster: the title at the column's top", column.top, title.top, 0.5f)
         } else {
             val cover = bounds(HomeTags.DETAILS_COVER)

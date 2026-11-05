@@ -33,7 +33,7 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
     private fun use(
         background: ColorSetting,
         text: TextColorSetting,
-        accent: ColorSetting = ColorSetting.Preset(AppearanceSettings.DEFAULT_ACCENT),
+        accent: ColorSetting = ColorSetting.Preset("Red"),
     ) {
         actions.settings = actions.settings.copy(appearance = appearance.copy(background = background, textColor = text, accent = accent))
         model.forgetColorWrites()
@@ -164,7 +164,7 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
         use(ColorSetting.Preset("Black"), TextColorSetting.Light)
         openTextPalette(onHexRow = false)
         val cells = PaletteCuration.curated(CustomPalette.textSwatchesOn(shownBackground()))
-        // Light #EDEDED is not a cell: the page opens on the nearest swatch, not on the hex row.
+        // Light #EBE7DD is not a cell: the page opens on the nearest swatch, not on the hex row.
         val start = model.focus.panelIndex
         assertTrue("on a swatch, not the hex row", start < cells.size)
         val sideways = if (start % 8 == 7) -1 else 1

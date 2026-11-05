@@ -1,6 +1,7 @@
 package com.plumemu.telemetry
 
 import kotlinx.serialization.json.JsonPrimitive
+import java.util.Locale
 
 /**
  * Every event of docs/conventions/telemetry.md, one type each, so a wrong field or value does not
@@ -246,6 +247,59 @@ public sealed class TelemetryEvent(
         public val code: Enum<*>,
     ) : TelemetryEvent("error_shown") {
         override fun props(): Map<String, JsonPrimitive> = mapOf("where" to wire(where), "code" to JsonPrimitive(code.snakeName()))
+    }
+
+    /**
+     * `game_unidentified`: the fingerprint of a game the identifier could not name, never its file
+     * name, folder or title. Queued only through [TelemetrySink.reportUnidentified], which sends each
+     * fingerprint once per install. A field not of its shape is left out ([code] with a space or a
+     * slash, for example); with no [crc], code or [trackKey] left the event is not sent.
+     *
+     * @property container how the file is stored, lower case (`zip`, `cue`, `chd`).
+     * @property size the bytes [crc] covers, else the file's length.
+     * @property crc CRC-32 of the file, or of the game inside a zip, any copier header left out.
+     * @property codeKind which numbering [code] is, lower case (`ps1`).
+     * @property code cartridge product code or disc serial read from the game itself.
+     * @property trackKey the disc's strongest track-size key.
+     */
+    public class GameUnidentified(
+        public val system: SystemRef,
+        public val container: String?,
+        public val size: Long?,
+        public val crc: Long?,
+        public val codeKind: String?,
+        public val code: String?,
+        public val trackKey: Long?,
+    ) : TelemetryEvent("game_unidentified") {
+        override fun isValid(): Boolean = props().keys.any { it == "crc" || it == "code" || it == "track_key" }
+
+        override fun props(): Map<String, JsonPrimitive> =
+            buildMap {
+                put("system_id", JsonPrimitive(system.id))
+                container?.takeIf(LOWER_WORD::matches)?.let { put("container", JsonPrimitive(it)) }
+                // Not the map's own `size`.
+                this@GameUnidentified.size?.takeIf { it >= 0 }?.let { put("size", num(it)) }
+                crc?.takeIf { it in 0..0xFFFF_FFFFL }?.let { put("crc", JsonPrimitive(String.format(Locale.ROOT, "%08x", it))) }
+                code?.takeIf(PRODUCT_CODE::matches)?.let { kept ->
+                    codeKind?.takeIf(LOWER_WORD::matches)?.let { put("code_kind", JsonPrimitive(it)) }
+                    put("code", JsonPrimitive(kept))
+                }
+                trackKey?.let { put("track_key", JsonPrimitive(String.format(Locale.ROOT, "%016x", it))) }
+            }
+
+        /** What makes two reports the same fingerprint: every field as sent. */
+        internal fun key(): String = keyOf(props())
+
+        internal companion object {
+            private val LOWER_WORD = Regex("[a-z][a-z0-9_]{0,15}")
+
+            /** As the server allows it: upper case, digits, dash, dot; never a space or a slash. */
+            private val PRODUCT_CODE = Regex("[A-Z0-9][A-Z0-9._-]{0,23}")
+
+            private val FIELDS = listOf("system_id", "container", "size", "crc", "code_kind", "code", "track_key")
+
+            fun keyOf(props: Map<String, JsonPrimitive>): String = FIELDS.joinToString("|") { props[it]?.content.orEmpty() }
+        }
     }
 
     /** At the first launch, sent at once. */

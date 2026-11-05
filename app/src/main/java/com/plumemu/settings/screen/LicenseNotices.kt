@@ -24,6 +24,7 @@ internal object LicenseNotices {
 
     val all: List<LicenseNotice> =
         listOf(
+            LicenseNotice(R.string.settings_license_jost, R.string.settings_licence_ofl, "licenses/jost-OFL.txt"),
             LicenseNotice(R.string.settings_license_plum_sans, R.string.settings_licence_ofl, "licenses/plum-sans-OFL.txt"),
             LicenseNotice(R.string.settings_license_plum_serif, R.string.settings_licence_ofl, "licenses/plum-serif-OFL.txt"),
             LicenseNotice(R.string.settings_license_plum_mono, R.string.settings_licence_ofl, "licenses/plum-mono-OFL.txt"),
@@ -44,6 +45,8 @@ internal object LicenseNotices {
             LicenseNotice(R.string.settings_license_lzma_sdk, R.string.settings_licence_public_domain, null),
             // The achievements module's hashes are rewritten from rcheevos' rc_hash; the text ships in achievements' assets.
             LicenseNotice(R.string.settings_license_rcheevos, R.string.settings_licence_mit, "licenses/rcheevos-MIT.txt"),
+            // Parts of the achievements module's zstd decoder follow zstd's BSD code; the text ships in achievements' assets.
+            LicenseNotice(R.string.settings_license_zstd, R.string.settings_licence_bsd3, "licenses/zstd-BSD-3-Clause.txt"),
             // The achievements module reads LZMA hunks of .chd discs with it; 0BSD asks for no notice.
             LicenseNotice(R.string.settings_license_xz, R.string.settings_licence_0bsd, null),
         )

@@ -1,8 +1,6 @@
 package com.plumemu.setup
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -10,15 +8,15 @@ import androidx.compose.ui.res.stringResource
 import com.plumemu.R
 import com.plumemu.account.SignInBody
 import com.plumemu.coreinput.Action
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreinput.Column as StripColumn
 
 /**
- * "Box art from ScreenScraper": first the question, Use my account and Not
- * now side by side like the second screen's Use it and Not now; after Use my account the sign-in
- * form, Sign in and Skip. The title block says what it is and that the account is the person's
- * own, free, from screenscraper.fr. Taps reach the model through the router like setup's other
- * controls (`TapItem` with the control's or the form's item place).
+ * "Box art": the same three choices as Settings › Accounts › Box art, one above the other (two in a build
+ * without ScreenScraper), each with its one line. "Box art and game info" without a usable account shows
+ * the sign-in form (Sign in and Skip; Skip goes back to the choices). Taps reach the model through the
+ * router like setup's other controls (`TapItem` with the control's or the form's item place).
  */
 @Composable
 internal fun ColumnScope.BoxArtStepContent(
@@ -27,7 +25,7 @@ internal fun ColumnScope.BoxArtStepContent(
 ) {
     val form = state.boxArt
     if (form == null) {
-        BoxArtQuestion(state, onAction)
+        BoxArtChoices(state, onAction)
         return
     }
     SignInBody(
@@ -40,24 +38,48 @@ internal fun ColumnScope.BoxArtStepContent(
     )
 }
 
-/** At the content's top, as the second screen's: on wide screens the buttons line up with the title beside them. */
 @Composable
-private fun BoxArtQuestion(
+private fun ColumnScope.BoxArtChoices(
     state: SetupUiState,
     onAction: (Action) -> Unit,
 ) {
-    Row(Modifier.testTag(SetupTags.BOX_ART_QUESTION), horizontalArrangement = Arrangement.spacedBy(PlumDimens.setupButtonGap)) {
-        SetupButton(
-            text = stringResource(R.string.setup_box_art_use),
-            isPrimary = true,
-            isFocused = state.focus == SetupControl.UseBoxArt,
-            modifier = Modifier.setupControl(state, SetupControl.UseBoxArt, onAction),
-        )
-        SetupButton(
-            text = stringResource(R.string.setup_box_art_not_now),
-            isPrimary = false,
-            isFocused = state.focus == SetupControl.SkipBoxArt,
-            modifier = Modifier.setupControl(state, SetupControl.SkipBoxArt, onAction),
+    state.controls.forEach { control ->
+        val source = sourceOf(control) ?: return@forEach
+        SetupChoice(
+            label = stringResource(boxArtChoiceName(source)),
+            sub = stringResource(boxArtChoiceLine(source)),
+            subMaxLines = 4,
+            look =
+                when {
+                    state.focus == control -> ChoiceLook.Focused
+                    state.boxArtSource == source -> ChoiceLook.Current
+                    else -> ChoiceLook.Plain
+                },
+            modifier = Modifier.setupControl(state, control, onAction),
         )
     }
+    if (state.message != null) StepNote(state.message, R.string.setup_folder_note)
 }
+
+private fun sourceOf(control: SetupControl): BoxArtSourceSetting? =
+    when (control) {
+        SetupControl.UseBoxArt -> BoxArtSourceSetting.ScreenScraper
+        SetupControl.BoxArtLibretro -> BoxArtSourceSetting.LibretroOnly
+        SetupControl.BoxArtOwnCovers -> BoxArtSourceSetting.OwnCovers
+        else -> null
+    }
+
+// The words of Settings › Accounts › Box art: one source of truth for what each choice says.
+private fun boxArtChoiceName(source: BoxArtSourceSetting): Int =
+    when (source) {
+        BoxArtSourceSetting.ScreenScraper -> R.string.settings_box_art_source_screenscraper
+        BoxArtSourceSetting.LibretroOnly -> R.string.settings_box_art_source_libretro
+        BoxArtSourceSetting.OwnCovers -> R.string.settings_box_art_source_own
+    }
+
+private fun boxArtChoiceLine(source: BoxArtSourceSetting): Int =
+    when (source) {
+        BoxArtSourceSetting.ScreenScraper -> R.string.settings_box_art_source_screenscraper_line
+        BoxArtSourceSetting.LibretroOnly -> R.string.settings_box_art_source_libretro_line
+        BoxArtSourceSetting.OwnCovers -> R.string.settings_box_art_source_own_line
+    }

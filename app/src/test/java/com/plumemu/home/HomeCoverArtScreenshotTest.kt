@@ -63,19 +63,6 @@ class HomeCoverArtScreenshotTest {
             HomeWithArt(rememberSource { coverArtSource(absent = setOf("EarthBound", "Yoshi's Island")) }, BoardGamesFocused)
         }
 
-    /** The second screen's window is up: no details column, the list takes `width − 96` and writes year · region. */
-    @Test
-    fun listWithYearsWhileTheSecondScreenShowsTheDetails() =
-        ReferenceShots.capture("home_art_list_second_screen") {
-            HomeWithArt(rememberSource { coverArtSource(absent = setOf("EarthBound", "Yoshi's Island")) }, BoardGamesFocused, detailsOnSecondScreen = true)
-        }
-
-    @Test
-    fun listWithYearsWhileTheSecondScreenShowsTheDetailsAtLargestText() =
-        ReferenceShots.capture("home_art_list_second_screen", textSize = TextSize.Largest) {
-            HomeWithArt(rememberSource { coverArtSource(absent = setOf("EarthBound", "Yoshi's Island")) }, BoardGamesFocused, detailsOnSecondScreen = true)
-        }
-
     private fun pictureOf(title: String): String {
         val row = FakeHomeContent.withArtwork().entries[FakeHomeContent.BOARD_SNES_INDEX].rows.first { it.title == title }
         return "/media/${row.id}/box-front-grid.webp"

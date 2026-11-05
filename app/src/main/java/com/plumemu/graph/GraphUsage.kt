@@ -1,6 +1,9 @@
 package com.plumemu.graph
 
+import com.plumemu.coredata.db.UnidentifiedFingerprintRow
 import com.plumemu.coredata.settings.GridSizeSetting
+import com.plumemu.identify.LaunchFileSystems
+import com.plumemu.library.naming.UnidentifiedFingerprint
 import com.plumemu.telemetry.GridSize
 import com.plumemu.BuildConfig
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +21,7 @@ import com.plumemu.telemetry.EmulatorRef
 import com.plumemu.telemetry.LaunchFrom
 import com.plumemu.telemetry.SystemRef
 import com.plumemu.telemetry.TelemetryEvent
+import com.plumemu.telemetry.TelemetrySink
 import com.plumemu.usage.launchEmulatorIdOf
 import com.plumemu.usage.launchResultOf
 import com.plumemu.usage.settingChanges
@@ -185,8 +189,43 @@ internal fun AppGraph.trackScan(ended: ScanEnded) {
                 result = result,
             ),
         )
+        reportUnidentified(sink)
     }
 }
+
+/**
+ * `game_unidentified` for the games Settings › Library › Unidentified games lists, after a scan and
+ * only while statistics are switched on (the module checks again and sends each fingerprint once).
+ * Games found while statistics were off go too, at the first scan after a switch-on: setup scans
+ * before its Ready step, where most people switch statistics on.
+ */
+private suspend fun AppGraph.reportUnidentified(sink: TelemetrySink) {
+    try {
+        if (storedUsageStatistics() != true) return
+        val catalog = catalog() ?: return
+        val rows = database.identifyDao().unidentifiedFingerprints(LaunchFileSystems.IDS)
+        sink.reportUnidentified(unidentifiedEvents(rows) { id -> catalog.system(id)?.let(SystemRef::of) })
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w(TAG, "Usage: unidentified games not read (${e.javaClass.simpleName})")
+    }
+}
+
+/**
+ * The events of [rows]: the stored fingerprint's fields only ([UnidentifiedFingerprint] has no name
+ * or path), and nothing for a system the platform data does not list or a fingerprint that tells
+ * no game apart.
+ */
+internal fun unidentifiedEvents(
+    rows: List<UnidentifiedFingerprintRow>,
+    systemOf: (String) -> SystemRef?,
+): List<TelemetryEvent.GameUnidentified> =
+    rows.mapNotNull { row ->
+        val system = systemOf(row.systemId) ?: return@mapNotNull null
+        val print = UnidentifiedFingerprint.of(row.fingerprint) ?: return@mapNotNull null
+        TelemetryEvent.GameUnidentified(system, print.container, print.size, print.crc, print.codeKind, print.code, print.trackKey)
+    }
 
 private const val MILLIS_PER_SECOND = 1_000L
 private const val SECONDS_PER_MINUTE = 60L

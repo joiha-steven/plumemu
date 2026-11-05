@@ -7,6 +7,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 /** What the module does with a batch after the server answered. */
 internal enum class Answer {
@@ -77,5 +78,16 @@ internal class Sender(
         const val CRASHES = "/api/v1/crashes"
         const val REPORTS = "/api/v1/reports"
         private val JSON = "application/json; charset=utf-8".toMediaType()
+
+        /** The client [Telemetry.create] sends with; built on the first request (it loads the trust store). */
+        fun statisticsClient(): OkHttpClient =
+            OkHttpClient.Builder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .callTimeout(60, TimeUnit.SECONDS)
+                // A redirect answer is dropped like any other 3xx/4xx, never followed (HTTPS only).
+                .followRedirects(false)
+                .followSslRedirects(false)
+                .build()
     }
 }

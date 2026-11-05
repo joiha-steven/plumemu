@@ -1,6 +1,6 @@
 package com.plumemu.secondscreen
 
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.SecondScreenText
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -40,7 +40,7 @@ abstract class InGameBatteryScreenshotBase(
     fun hostTheCard() {
         RuntimeEnvironment.setQualifiers("w${size.widthDp}dp-h${size.heightDp}dp-land-xhdpi")
         compose.setContent {
-            PlumTheme(MediumText.Default) {
+            PlumTheme(SecondScreenText.Default) {
                 val s = sample
                 InGameCard(
                     time = InGameBatterySamples.format("H:mm", InGameBatterySamples.at(s.minute)),

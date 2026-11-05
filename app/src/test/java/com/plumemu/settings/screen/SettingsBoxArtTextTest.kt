@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import com.plumemu.graph.ScrapeCounts
 import com.plumemu.scraper.AccountLimits
+import com.plumemu.scraper.PictureFailure
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
 import org.junit.Assert.assertEquals
@@ -36,11 +37,11 @@ class SettingsBoxArtTextTest {
     fun everyLineSaysItsState() {
         val lines =
             listOf(
-                BoxArtLine.Running(counts, TimeLeft.Hours(5)) to ("Downloading box art 340\u00A0of\u00A02,054 · about 5\u00A0h left" to "340\u00A0of\u00A02,054"),
-                BoxArtLine.Running(counts, TimeLeft.Minutes(40)) to ("Downloading box art 340\u00A0of\u00A02,054 · about 40\u00A0min left" to "340\u00A0of\u00A02,054"),
-                BoxArtLine.Running(counts, TimeLeft.Days(3)) to ("Downloading box art 340\u00A0of\u00A02,054 · about 3 days left" to "340\u00A0of\u00A02,054"),
-                BoxArtLine.Running(counts, TimeLeft.UnderAMinute) to ("Downloading box art 340\u00A0of\u00A02,054 · under a minute left" to "340\u00A0of\u00A02,054"),
-                BoxArtLine.Running(counts, null) to ("Downloading box art 340\u00A0of\u00A02,054" to "340\u00A0of\u00A02,054"),
+                BoxArtLine.Running(counts, TimeLeft.Hours(5)) to ("Downloading box art · 340\u00A0of\u00A02,054 · about 5\u00A0h left" to "340\u00A0of\u00A02,054"),
+                BoxArtLine.Running(counts, TimeLeft.Minutes(40)) to ("Downloading box art · 340\u00A0of\u00A02,054 · about 40\u00A0min left" to "340\u00A0of\u00A02,054"),
+                BoxArtLine.Running(counts, TimeLeft.Days(3)) to ("Downloading box art · 340\u00A0of\u00A02,054 · about 3 days left" to "340\u00A0of\u00A02,054"),
+                BoxArtLine.Running(counts, TimeLeft.UnderAMinute) to ("Downloading box art · 340\u00A0of\u00A02,054 · under a minute left" to "340\u00A0of\u00A02,054"),
+                BoxArtLine.Running(counts, null) to ("Downloading box art · 340\u00A0of\u00A02,054" to "340\u00A0of\u00A02,054"),
                 BoxArtLine.Running(null, null) to ("Downloading box art" to "Downloading"),
                 BoxArtLine.PausedByPerson to ("Paused" to "Paused"),
                 BoxArtLine.WaitingForWifi to ("Waiting for Wi-Fi" to "Waiting for Wi-Fi"),
@@ -51,7 +52,10 @@ class SettingsBoxArtTextTest {
                 BoxArtLine.Retrying(tenPm) to ("No connection, trying again at 10:00 PM" to "No connection"),
                 BoxArtLine.Retrying(null) to ("No connection, trying again soon" to "No connection"),
                 BoxArtLine.Starting(counts) to ("Starting…" to "Starting…"),
-                BoxArtLine.Done(2_012, 2_054) to ("Done: 2,012 of 2,054 games have box art" to null),
+                BoxArtLine.Done(2_012, 2_054) to ("Box art for 2,012 of 2,054 games" to null),
+                BoxArtLine.NoneFound to ("No box art found for these games" to null),
+                BoxArtLine.Failed(PictureFailure.NoNetwork) to ("No network: box art could not be downloaded" to "No connection"),
+                BoxArtLine.Failed(PictureFailure.ServerDidNotAnswer) to ("The box art server did not answer" to "No answer"),
                 BoxArtLine.Some(300, 2_054) to ("300 of 2,054 games have box art" to null),
                 BoxArtLine.EmptyLibrary to ("No games yet: box art comes once Plumemu has found your games." to null),
                 BoxArtLine.Unreadable to ("Plumemu could not read how far box art has come." to null),

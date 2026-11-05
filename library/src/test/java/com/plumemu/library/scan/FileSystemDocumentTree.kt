@@ -20,11 +20,15 @@ internal class FileSystemDocumentTree(
     var statCount = 0
         private set
 
-    /** Simulates access revoked in Android's settings. */
+    /** Simulates access revoked in Android's settings. Volatile: set from reader threads. */
+    @Volatile
     var isPermissionRevoked = false
 
     /** Document ids whose queries fail with an I/O error. */
     val failing = mutableSetOf<String>()
+
+    /** Directories deleted and made again at the same path: path → new document id; the old `fs:` id no longer answers. */
+    val recreatedDirectories = mutableMapOf<String, String>()
 
     /** Document ids of every file opened for reading, in order (the identification pass). */
     val opened: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
@@ -92,6 +96,7 @@ internal class FileSystemDocumentTree(
     private fun <T> answer(documentId: String, read: (File) -> TreeResult<T>): TreeResult<T> {
         if (isPermissionRevoked) return TreeResult.PermissionDenied(SecurityException("revoked"))
         if (documentId in failing) return TreeResult.Failed(IOException("read error"))
+        if (documentId.removePrefix("fs:") in recreatedDirectories) return TreeResult.Failed(IOException("provider gave no answer"))
         val file = fileOf(documentId)
         return when {
             file.exists() -> read(file)
@@ -109,10 +114,16 @@ internal class FileSystemDocumentTree(
     )
 
     private fun idOf(file: File): String =
-        if (fileIdsByName && file.isFile) "name:${file.name}" else "fs:" + file.relativeTo(root).path
+        if (fileIdsByName && file.isFile) {
+            "name:${file.name}"
+        } else {
+            file.relativeTo(root).path.let { path -> if (file.isDirectory) recreatedDirectories[path] ?: "fs:$path" else "fs:$path" }
+        }
 
     private fun fileOf(documentId: String): File =
-        if (documentId.startsWith("name:")) {
+        if (documentId in recreatedDirectories.values) {
+            File(root, recreatedDirectories.entries.first { it.value == documentId }.key)
+        } else if (documentId.startsWith("name:")) {
             root.walkTopDown().firstOrNull { it.isFile && it.name == documentId.removePrefix("name:") } ?: File(root, documentId)
         } else {
             File(root, documentId.removePrefix("fs:"))

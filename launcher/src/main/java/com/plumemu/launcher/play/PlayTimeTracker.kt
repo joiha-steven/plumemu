@@ -35,6 +35,8 @@ sealed interface PlaySessionOutcome {
      * [emulatorId]: the platform data's emulator started, when the launch said (null for an app).
      * [coreToConfirm]: the RetroArch core not yet confirmed (the app asks whether the game started);
      * then [added] is the session written, for [PlayTimeTracker.takeBack] (null otherwise).
+     * [seconds] may be under the minimum, or 0 (nothing written then), when Usage access found the game barely in front
+     * although the device was awake for the minimum: the start was real.
      */
     data class Recorded(
         val gameId: Long,
@@ -44,7 +46,10 @@ sealed interface PlaySessionOutcome {
         val added: AddedSession? = null,
     ) : PlaySessionOutcome
 
-    /** Under [PlayTimeTracker.MIN_SESSION_SECONDS]: the emulator failed to open, or the person backed out. */
+    /**
+     * Under [PlayTimeTracker.MIN_SESSION_SECONDS] awake (the exact Usage access count plays no part): the emulator failed to open,
+     * or the person backed out.
+     */
     data class TooShort(
         val gameId: Long,
         val seconds: Long,
@@ -55,7 +60,10 @@ sealed interface PlaySessionOutcome {
     /** The game left the library meanwhile (rescan, folder removed); nothing to add the time to. */
     data class GameGone(val gameId: Long) : PlaySessionOutcome
 
-    /** The clocks give a negative time (a clock set back, on Android 6 or across a reboot). */
+    /**
+     * The device rebooted in between (switched off, battery run out): no clock tells how much of
+     * that was play, so none is counted. Also a negative time (a clock set back on Android 6).
+     */
     data class Unmeasurable(val gameId: Long) : PlaySessionOutcome
 
     data class Failed(val gameId: Long, val error: Throwable) : PlaySessionOutcome
@@ -67,6 +75,9 @@ internal interface PlayClock {
 
     fun realtimeMs(): Long
 
+    /** Time since boot without deep sleep: play time is measured on this clock. */
+    fun uptimeMs(): Long
+
     /** How many times the device has booted; null when unknown (Android 6 has no count). */
     fun bootCount(): Int?
 }
@@ -75,6 +86,8 @@ internal class SystemPlayClock(private val resolver: ContentResolver) : PlayCloc
     override fun wallMs(): Long = System.currentTimeMillis()
 
     override fun realtimeMs(): Long = SystemClock.elapsedRealtime()
+
+    override fun uptimeMs(): Long = SystemClock.uptimeMillis()
 
     override fun bootCount(): Int? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return null
@@ -88,7 +101,8 @@ internal class SystemPlayClock(private val resolver: ContentResolver) : PlayCloc
 
 /**
  * Play time "from launch to coming back" (SPEC > Library): [onGameLaunched] notes the start on
- * disk, the Activity's next [onResume] adds the elapsed time to `play`. The pending start survives
+ * disk, the Activity's next [onResume] adds the time the device was awake with its screen on,
+ * at most [MAX_SESSION_SECONDS], to `play`. The pending start survives
  * process death; it is cleared before the time is added, so a second resume never counts it twice.
  */
 class PlayTimeTracker internal constructor(
@@ -100,14 +114,34 @@ class PlayTimeTracker internal constructor(
     private val io: CoroutineDispatcher,
     /** The battery measured during the play (the app's meter), stored with its session. */
     private val battery: PlayBattery = PlayBattery.None,
+    /** The screen-off time of this process, left out of a play. */
+    private val screenOff: ScreenOffTime = ScreenOffTime(clock),
+    /** The exact time the started package was in front; only ever lowers a play ([record]). */
+    private val foregroundTime: ForegroundTime = ForegroundTime.None,
 ) {
-    constructor(context: Context, playDao: PlayDao, gameDao: GameDao, battery: PlayBattery = PlayBattery.None) :
-        this(
-            SharedPreferencesSessionStore(context), playDao, gameDao, SystemPlayClock(context.applicationContext.contentResolver),
-            AndroidLauncherLog, Dispatchers.IO, battery,
-        )
+    /** Listens to the screen for the life of the process: build one per process ([com.plumemu.launcher.Launching.create]). */
+    constructor(context: Context, playDao: PlayDao, gameDao: GameDao, battery: PlayBattery = PlayBattery.None,
+        foregroundTime: ForegroundTime = ForegroundTime.None,
+    ) : this(
+        context.applicationContext, playDao, gameDao, battery, SystemPlayClock(context.applicationContext.contentResolver), foregroundTime,
+    )
+
+    private constructor(
+        app: Context,
+        playDao: PlayDao,
+        gameDao: GameDao,
+        battery: PlayBattery,
+        clock: SystemPlayClock,
+        foregroundTime: ForegroundTime,
+    ) : this(
+        SharedPreferencesSessionStore(app), playDao, gameDao, clock, AndroidLauncherLog, Dispatchers.IO, battery,
+        ScreenOffTime(clock).also { it.watch(app) }, foregroundTime,
+    )
 
     private val mutex = Mutex()
+
+    /** The note of the play in progress and [screenOff]'s total when it was written; this process only. */
+    @Volatile private var screenOffAtStart: Pair<PendingSession, Long>? = null
 
     /**
      * Called right before the emulator starts; [GameLauncher] does it, the Activity need not. [emulatorId] is kept for the
@@ -117,8 +151,9 @@ class PlayTimeTracker internal constructor(
         gameId: Long,
         emulatorId: String? = null,
         coreToConfirm: CoreToConfirm? = null,
+        packageName: String? = null,
     ) {
-        noteStart(gameId, emulatorId, coreToConfirm)
+        noteStart(gameId, emulatorId, coreToConfirm, packageName)
     }
 
     /** [onGameLaunched], returning the note written (what [takeBack] may remove later). */
@@ -126,12 +161,16 @@ class PlayTimeTracker internal constructor(
         gameId: Long,
         emulatorId: String?,
         coreToConfirm: CoreToConfirm?,
+        packageName: String?,
     ): PendingSession = mutex.withLock {
         withContext(io) {
             val previous = store.read()
             if (previous != null) log.info("play time: session of game ${previous.gameId} replaced before a resume")
             battery.onPlayStarting(usualDrawOf(gameId))
-            val note = PendingSession(gameId, clock.wallMs(), clock.realtimeMs(), clock.bootCount(), emulatorId, coreToConfirm)
+            val note = PendingSession(
+                gameId, clock.wallMs(), clock.realtimeMs(), clock.bootCount(), emulatorId, coreToConfirm, clock.uptimeMs(), packageName,
+            )
+            screenOffAtStart = note to screenOff.totalMs()
             if (!store.write(note)) log.warn("play time: could not save the start of game $gameId; its time may be lost")
             note
         }
@@ -199,13 +238,14 @@ class PlayTimeTracker internal constructor(
         gameId: Long,
         emulatorId: String? = null,
         coreToConfirm: CoreToConfirm? = null,
+        packageName: String? = null,
         start: suspend () -> T,
     ): T {
         val caller = currentCoroutineContext().job
         val watch = currentCoroutineContext()[HandOffWatch]
         caller.ensureActive()
         return withContext(NonCancellable) {
-            val note = noteStart(gameId, emulatorId, coreToConfirm)
+            val note = noteStart(gameId, emulatorId, coreToConfirm, packageName)
             // A caller waiting with a time limit settles the race through its HandOffWatch: it gave up, or it waits for this.
             val handsOver = caller.isActive && watch?.claim() != false
             if (!handsOver) {
@@ -257,16 +297,32 @@ class PlayTimeTracker internal constructor(
 
     private suspend fun record(session: PendingSession, measured: SessionBattery?): PlaySessionOutcome {
         val nowWall = clock.wallMs()
-        val elapsedMs = PlaySessions.elapsedMs(session, nowWall, clock.realtimeMs(), clock.bootCount())
+        val elapsedMs = PlaySessions.elapsedMs(session, nowWall, clock.realtimeMs(), clock.uptimeMs(), clock.bootCount())
             ?: return PlaySessionOutcome.Unmeasurable(session.gameId)
-        val seconds = elapsedMs / MILLIS_PER_SECOND
+        // Known only when this process wrote the note; otherwise the awake clock alone leaves out deep sleep.
+        val screenOffMs = screenOffAtStart?.takeIf { it.first == session }?.let { screenOff.totalMs() - it.second } ?: 0
+        val awakeMs = (elapsedMs - screenOffMs).coerceAtLeast(0)
+        val cappedMs = awakeMs.coerceAtMost(MAX_SESSION_SECONDS * MILLIS_PER_SECOND)
+        // Too short is decided on the awake count: the exact source only lowers what is recorded, it never says the start failed
+        // (a game left at once for another app, a shortcut handing off to another package, still started).
         val core = session.coreToConfirm
-        if (seconds < MIN_SESSION_SECONDS) return PlaySessionOutcome.TooShort(session.gameId, seconds, session.emulatorId, core)
+        if (cappedMs / MILLIS_PER_SECOND < MIN_SESSION_SECONDS) {
+            return PlaySessionOutcome.TooShort(session.gameId, cappedMs / MILLIS_PER_SECOND, session.emulatorId, core)
+        }
+        val exactMs = session.packageName?.let { foregroundTime.inFrontMs(it, session.startedAtWallMs, nowWall) }
+        // The exact source only lowers; unknown (null) keeps the awake count.
+        val countedMs = if (exactMs != null && exactMs < cappedMs) exactMs.coerceAtLeast(0) else cappedMs
+        if (countedMs < cappedMs) log.info("play time: ${cappedMs / MILLIS_PER_SECOND} s awake counted as ${countedMs / MILLIS_PER_SECOND} s in front")
+        if (screenOffMs > 0) log.info("play time: ${screenOffMs / MILLIS_PER_SECOND} s with the screen off not counted")
+        if (cappedMs < awakeMs) log.info("play time: ${awakeMs / MILLIS_PER_SECOND} s counted as $MAX_SESSION_SECONDS s")
+        val seconds = countedMs / MILLIS_PER_SECOND
         return try {
             if (gameDao.game(session.gameId) == null) return PlaySessionOutcome.GameGone(session.gameId)
+            // Nothing in front at all: a real start with no time to add (no empty session row).
+            if (seconds == 0L) return PlaySessionOutcome.Recorded(session.gameId, 0, session.emulatorId, core)
             // The start is now minus the measured time, not the stored wall start: a clock changed
             // during the game must not stretch or shrink the session's span (play_session).
-            val added = playDao.recordSession(session.gameId, endedAt = nowWall, seconds = seconds, startedAt = nowWall - elapsedMs, battery = measured)
+            val added = playDao.recordSession(session.gameId, endedAt = nowWall, seconds = seconds, startedAt = nowWall - countedMs, battery = measured)
             // The written session is kept only where the person may take it back (an unconfirmed core).
             PlaySessionOutcome.Recorded(session.gameId, seconds, session.emulatorId, core, added.takeIf { core != null })
         } catch (e: CancellationException) {
@@ -287,6 +343,9 @@ class PlayTimeTracker internal constructor(
     }
 
     companion object {
+        /** A play counts at most this long: past it, the emulator was most likely left open (ARCHITECTURE > Launching). */
+        const val MAX_SESSION_SECONDS = 4 * 3_600L
+
         /** Sessions shorter than this are not counted (ARCHITECTURE > Launching). */
         const val MIN_SESSION_SECONDS = 10L
         private const val MILLIS_PER_SECOND = 1_000L
@@ -298,13 +357,14 @@ internal object PlaySessions {
     private const val SAME_BOOT_TOLERANCE_MS = 60_000L
 
     /**
-     * Milliseconds between the start and now, or null when that cannot be measured. Within one boot
-     * the elapsed-since-boot clock decides, so a network time correction or a clock set by hand does
-     * not count. After a reboot that clock restarted at zero and the wall clock is the only measure.
-     * The boot count (Android 7+) tells a reboot apart; on Android 6 a boot moment that moved by more
-     * than a minute is taken as a reboot, so a time change there falls back to the wall clock.
+     * Milliseconds the device was awake between the start and now, or null when that cannot be
+     * measured. Within one boot the awake clock decides (deep sleep with the game in front is not
+     * play; a network time correction or a clock set by hand does not count either); a note written
+     * before it was kept falls back to the elapsed-since-boot clock. A reboot in between cannot be
+     * measured: the wall clock would count the hours the device was off. The boot count (Android 7+)
+     * tells a reboot apart; on Android 6 a boot moment that moved by more than a minute is taken as one.
      */
-    fun elapsedMs(session: PendingSession, nowWallMs: Long, nowRealtimeMs: Long, nowBootCount: Int?): Long? {
+    fun elapsedMs(session: PendingSession, nowWallMs: Long, nowRealtimeMs: Long, nowUptimeMs: Long, nowBootCount: Int?): Long? {
         val bootThen = session.bootCount
         val sameBoot = if (bootThen != null && nowBootCount != null) {
             bootThen == nowBootCount
@@ -312,7 +372,9 @@ internal object PlaySessions {
             val drift = (nowWallMs - nowRealtimeMs) - (session.startedAtWallMs - session.startedAtRealtimeMs)
             nowRealtimeMs >= session.startedAtRealtimeMs && abs(drift) <= SAME_BOOT_TOLERANCE_MS
         }
-        val elapsed = if (sameBoot) nowRealtimeMs - session.startedAtRealtimeMs else nowWallMs - session.startedAtWallMs
+        if (!sameBoot) return null
+        val uptimeThen = session.startedAtUptimeMs
+        val elapsed = if (uptimeThen != null) nowUptimeMs - uptimeThen else nowRealtimeMs - session.startedAtRealtimeMs
         return elapsed.takeIf { it >= 0 }
     }
 }

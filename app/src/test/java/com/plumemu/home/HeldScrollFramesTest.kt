@@ -297,7 +297,7 @@ class HeldScrollFramesTest {
 
     @Test
     @Config(qualifiers = RP5)
-    fun gamesListEndsAndWrapRp5Medium() = gamesListEndsAndWrap(TextSize.Medium, "768x432 Medium")
+    fun gamesListEndsAndWrapRp5Medium() = gamesListEndsAndWrap(TextSize.Small, "768x432 Medium")
 
     @Test
     @Config(qualifiers = THOR)
@@ -315,7 +315,7 @@ class HeldScrollFramesTest {
         val content = mutableStateOf(FakeHomeContent.large(GAMES_PER_SYSTEM * 18))
         val far = content.value.entries.size - 3
         compose.setContent {
-            PlumTheme(PlumThemeSettings(textSize = TextSize.Medium)) {
+            PlumTheme(PlumThemeSettings(textSize = TextSize.Small)) {
                 HomeAt(content.value, listOf(Action.TapItem(Column.Systems, far)), isMotionOn = PlumTheme.motion.isOn)
             }
         }
@@ -371,7 +371,7 @@ class HeldScrollFramesTest {
     fun theGlideFollowsFrameTimeNotTheMachinesClock() {
         val content = FakeHomeContent.large(GAMES_PER_SYSTEM * 18)
         val system = FakeHomeContent.BOARD_SNES_INDEX
-        show(content, TextSize.Medium) { it.focus.rowOf(content.entries[system].id) }
+        show(content, TextSize.Small) { it.focus.rowOf(content.entries[system].id) }
         send(Action.TapItem(Column.Systems, system), Action.Enter)
         val fast = glideSteps(startRow = 20, probeRow = 22, sleepMs = 0)
         // Let the fast run's glide settle: the slow run must start from rest, as the fast one did (the longer glide would otherwise carry over).
@@ -392,7 +392,7 @@ class HeldScrollFramesTest {
     fun aHeldDirectionMovesTheRowsContinuouslyWithNoFrameThatResets() {
         val content = FakeHomeContent.large(GAMES_PER_SYSTEM * 18)
         val system = FakeHomeContent.BOARD_SNES_INDEX
-        show(content, TextSize.Medium) { it.focus.rowOf(content.entries[system].id) }
+        show(content, TextSize.Small) { it.focus.rowOf(content.entries[system].id) }
         send(Action.TapItem(Column.Systems, system), Action.Enter)
         // Leading frames where the probe row is not composed yet (a sentinel) are not moves.
         // Cadences: 80 ms repeats; the fastest (2 frames); and a real hold: first repeat after 300 ms (19 frames), then 120 ms
@@ -472,7 +472,7 @@ class HeldScrollFramesTest {
 
     @Test
     @Config(qualifiers = RP5)
-    fun gridRp5Medium() = gridHeld(TextSize.Medium, "768x432 Medium")
+    fun gridRp5Medium() = gridHeld(TextSize.Small, "768x432 Medium")
 
     @Test
     @Config(qualifiers = THOR)
@@ -480,11 +480,11 @@ class HeldScrollFramesTest {
 
     @Test
     @Config(qualifiers = RP5)
-    fun systemsColumnRp5Medium() = systemsColumn(TextSize.Medium, "768x432 Medium")
+    fun systemsColumnRp5Medium() = systemsColumn(TextSize.Small, "768x432 Medium")
 
     @Test
     @Config(qualifiers = RP5)
-    fun gamesListRp5Medium() = gamesList(TextSize.Medium, "768x432 Medium")
+    fun gamesListRp5Medium() = gamesList(TextSize.Small, "768x432 Medium")
 
     @Test
     @Config(qualifiers = RP5)
@@ -492,7 +492,7 @@ class HeldScrollFramesTest {
 
     @Test
     @Config(qualifiers = THOR)
-    fun gamesListThorMedium() = gamesList(TextSize.Medium, "837x471 Medium")
+    fun gamesListThorMedium() = gamesList(TextSize.Small, "837x471 Medium")
 
     @Test
     @Config(qualifiers = THOR)
@@ -504,7 +504,7 @@ class HeldScrollFramesTest {
 
     @Test
     @Config(qualifiers = THOR)
-    fun systemsColumnThorMedium() = systemsColumn(TextSize.Medium, "837x471 Medium")
+    fun systemsColumnThorMedium() = systemsColumn(TextSize.Small, "837x471 Medium")
 
     @Test
     @Config(qualifiers = THOR)

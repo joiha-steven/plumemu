@@ -4,10 +4,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.offset
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.graphics.graphicsLayer
+import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
-import kotlin.math.roundToInt
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -17,6 +16,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import kotlin.math.roundToInt
 
 /*
  * The Wi-Fi glyph of the top bar: three arcs over a dot, drawn on a Canvas like the other small
@@ -34,7 +34,8 @@ fun WifiGlyph(
     color: Color,
     description: String,
     modifier: Modifier = Modifier,
-) = WifiGlyph(style, { color }, description, modifier)
+    font: PlumFont = PlumTheme.type.font,
+) = WifiGlyph(style, { color }, description, modifier, font)
 
 /** [WifiGlyph] with a colour read while drawing, so a theme colour that moves redraws it without recomposing. */
 @Composable
@@ -43,14 +44,16 @@ fun WifiGlyph(
     color: () -> Color,
     description: String,
     modifier: Modifier = Modifier,
+    /** The font the text beside it is drawn in: the person's, unless the screen fixes its own (the in-game card draws in Plum Sans). */
+    font: PlumFont = PlumTheme.type.font,
 ) {
     val density = LocalDensity.current
-    val font = PlumTheme.type.font
     val height = with(density) { (style.fontSize.toPx() * font.digitHeightEm).toDp() }
     val width = height * WIDTH_PER_HEIGHT
     // The row centres the box on the text line; the digits' ink sits a little off that line centre.
-    val shift = with(density) { (style.fontSize.toPx() * font.digitCentreBelowLineCentreEm).roundToInt() }
-    Canvas(modifier.offset { IntOffset(0, shift) }.size(width, height).semantics { contentDescription = description }) {
+    // Whole pixels: a fractional top edge fades into an extra row of ink and the glyph reads taller and off the digits.
+    val shift = with(density) { (style.fontSize.toPx() * font.digitCentreBelowLineCentreEm).roundToInt().toFloat() }
+    Canvas(modifier.graphicsLayer { translationY = shift }.size(width, height).semantics { contentDescription = description }) {
         val color = color()
         val stroke = size.height * STROKE_PER_HEIGHT
         val dotRadius = stroke * DOT_PER_STROKE

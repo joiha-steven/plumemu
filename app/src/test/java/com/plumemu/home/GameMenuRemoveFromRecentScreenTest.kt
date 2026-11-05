@@ -92,7 +92,7 @@ class GameMenuRemoveFromRecentScreenTest {
         games.onRemoveFromRecent = ::dropFromRecent
         show()
         send(Action.Enter, Action.Move(Direction.Down), Action.Menu)
-        down(4) // Play, Play with, Favorite, Hide, Remove from Recent
+        down(REMOVE_ROW) // Play, Play with, Favorite, Name, Info, Remove from Recent (Hide is last)
         send(Action.Enter)
         assertEquals(listOf("recent-1"), games.removedFromRecent)
         assertFalse("the menu is gone", isPanelOpen())
@@ -111,12 +111,17 @@ class GameMenuRemoveFromRecentScreenTest {
         games.onRemoveFromRecent = ::dropFromRecent
         show()
         send(Action.Enter, Action.Menu)
-        down(4)
+        down(REMOVE_ROW)
         send(Action.Enter)
         assertEquals(listOf("recent-0"), games.removedFromRecent)
         send(Action.Play)
         assertTrue("no game is under the focus: the Recent entry is", games.launched.isEmpty())
         send(Action.Menu)
         assertFalse("START on the systems column opens no game menu", isPanelOpen())
+    }
+
+    private companion object {
+        /** Steps from Play to Remove from Recent: Play with, Favorite, Name, Info, Remove (Hide stays last). */
+        const val REMOVE_ROW = 5
     }
 }

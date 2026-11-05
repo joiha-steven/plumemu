@@ -56,6 +56,8 @@ class SettingsSignInGapTest {
         compose.waitForIdle()
         assertTrue("A on the username opens the tray", form.isTrayUp)
         val up = gaps()
-        assertEquals("the gaps with the tray up as with it down", down, up)
+        assertEquals("the field gap with the tray up as with it down", down[0], up[0])
+        // On the username the buttons keep their room but are not shown (no strip above the tray).
+        assertTrue("the buttons are not shown over the username", !compose.onNodeWithTag(SignInTags.item(SignInItem.SignIn), useUnmergedTree = true).fetchSemanticsNode().layoutInfo.isPlaced)
     }
 }

@@ -60,10 +60,13 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
     }
 
     @Test
-    fun theFormOpensWithTheTrayUpOnTheUsernameAndNoAndroidKeyboard() {
-        showTheForm()
+    fun theFormOpensWithTheTrayDownThenAOnTheUsernameBringsItUpAndNoAndroidKeyboard() {
+        showTheForm(startTyping = false)
         assertEquals(SignInItem.Username, form.focus)
-        assertTrue("the tray is up when the form opens", isTrayUp)
+        assertNoTray("when the form opens")
+        assertNoAndroidKeyboard("when the form opens")
+        press(confirm)
+        assertTrue("the tray is up after A on the username", isTrayUp)
         assertNoAndroidKeyboard("when the form opens")
         assertEquals(TextEntry.Keyboard, textEntry())
         assertTrue("START says Next on the username", hintText(Action.Menu).endsWith("Next"))
@@ -284,7 +287,8 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
         press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT)
         assertEquals(TextEntry.None, textEntry())
         press(confirm)
-        assertEquals(SetupStep.Scan, model.state.value.step)
+        assertEquals("Skip goes on to the scan", SetupStep.Scan, model.state.value.step)
+        assertNull(model.state.value.boxArt)
         assertEquals(TextEntry.None, textEntry())
     }
 

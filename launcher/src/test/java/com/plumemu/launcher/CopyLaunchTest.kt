@@ -40,6 +40,8 @@ class CopyLaunchTest {
 
         override fun realtimeMs(): Long = now
 
+        override fun uptimeMs(): Long = now
+
         override fun bootCount(): Int? = 1
     }
     private lateinit var playTime: PlayTimeTracker

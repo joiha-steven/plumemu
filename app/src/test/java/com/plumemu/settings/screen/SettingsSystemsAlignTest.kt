@@ -34,6 +34,11 @@ import org.robolectric.annotation.GraphicsMode
  * ROM folders' value ends.
  */
 abstract class SettingsSystemsAlignBase {
+    /** True in the classes of a wide screen, where small sizes show three columns and a panel's title starts on its edge (the board). */
+    protected open val wide = false
+
+    private fun titleStart(at: String) = panelTextStartAt(at, wide)
+
     protected val compose = appComposeRule()
 
     @get:Rule
@@ -96,7 +101,7 @@ abstract class SettingsSystemsAlignBase {
             if (others.any { !near(it.left.value, others.first().left.value) }) problems += "$at: names start at ${others.map { it.left }}"
             if (!near(focusedName.left.value, others.first().left.value)) problems += "$at: the focused name starts at ${focusedName.left}, the others' at ${others.first().left} (focus moves no text)"
             if (!near(others.first().left.value, panel.left.value + PlumDimens.settingsPanelRowPadding.value)) problems += "$at: names start at ${others.first().left}, not the row padding inside the panel ${panel.left}"
-            if (!near(others.first().left.value, title.left.value)) problems += "$at: names start at ${others.first().left}, the title at ${title.left} (one row-text line)"
+            if (!near(others.first().left.value, title.left.value + PlumDimens.gameRowPadding.value - titleStart(at))) problems += "$at: names start at ${others.first().left}, the title at ${title.left} (a row-text line in from it, less where the title starts on the edge)"
             all(SettingsTags.SYSTEM_COUNT).forEachIndexed { index, count ->
                 if (!near(count.left.value, names[index].left.value)) problems += "$at: row $index's count starts at ${count.left}, its name at ${names[index].left}"
             }
@@ -127,6 +132,8 @@ abstract class SettingsSystemsAlignBase {
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
 class SettingsSystemsAlign768Test : SettingsSystemsAlignBase() {
+    override val wide = true
+
     @Test fun theValuesEndWithTheOthers() = theValuesEndWithTheOthers("768x432")
 
     @Test fun theRowsLineUp() = theRowsLineUp("768x432")

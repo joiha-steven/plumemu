@@ -14,9 +14,10 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
+import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumDimens
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
@@ -58,7 +59,7 @@ class SetupBoundsTest {
         item: DpRect,
     ) = assertTrue("$what ends at ${item.bottom}, past 388", item.bottom.value <= CONTENT_BOTTOM + TOLERANCE)
 
-    private fun show(state: SetupUiState) = compose.setContent { PlumTheme(MediumText.Default) { SetupAt(state) } }
+    private fun show(state: SetupUiState) = compose.setContent { PlumTheme(TableText.Default) { SetupAt(state) } }
 
     @Test
     @Config(qualifiers = WIDE)
@@ -66,13 +67,14 @@ class SetupBoundsTest {
         show(SetupFakes.chooseFolder)
         val title = bounds(SetupTags.TITLE)
         assertDp("title column left", 24.dp, title.left)
-        assertDp("title top: 14 + 18 + 10 + 34", 76.dp, title.top)
+        assertDp("title top: 14 + 23 + 10 + 34", 81.dp, title.top)
         val button = bounds(SetupTags.control(SetupControl.ChooseFolder))
         assertDp("content column: 24 + 260 + 48", 332.dp, button.left)
-        assertDp("three points of 32, three gaps of 8, then 12", 208.dp, button.top)
-        assertDp("button height", 40.dp, button.bottom - button.top)
+        // The first point ("Android's folder picker opens. Go to your games folder.") wraps to two lines here: 15 more than three single lines.
+        assertDp("three points (one of two lines), three gaps of 8, then 12", 228.dp, button.top)
+        assertDp("button height: the 38 cap and its collar", BUTTON_WITH_COLLAR, button.bottom - button.top)
         val hints = bounds(SetupTags.HINTS)
-        assertDp("hint bar ends at the bottom margin", 420.dp, hints.bottom)
+        assertDp("hint bar ends at the bottom margin", 432.dp - PlumDimens.footerBelow, hints.bottom)
         assertDp("hint bar height", 22.dp, hints.bottom - hints.top)
     }
 
@@ -86,8 +88,8 @@ class SetupBoundsTest {
         val note = bounds(SetupTags.NOTE)
         val hints = bounds(SetupTags.HINTS)
         assertTrue(
-            "note ends at ${note.bottom}; the hints start at ${hints.top} and a gap of ${PlumDimens.barGap} must stay",
-            note.bottom.value + PlumDimens.barGap.value <= hints.top.value + TOLERANCE,
+            "note ends at ${note.bottom}; the hints start at ${hints.top} and a gap of ${PlumDimens.footerGap} must stay",
+            note.bottom.value + PlumDimens.footerGap.value <= hints.top.value + TOLERANCE,
         )
     }
 
@@ -104,14 +106,15 @@ class SetupBoundsTest {
     fun wideFolderChosen() {
         show(SetupFakes.folderChosen)
         val card = bounds(SetupTags.FOLDER_CARD)
-        assertDp("card at the content's top", 76.dp, card.top)
+        assertDp("card at the content's top", 81.dp, card.top)
         assertDp("card left", 332.dp, card.left)
         assertDp("card runs to the right margin: 768 - 24", 744.dp, card.right)
-        assertDp("choice height", 56.dp, card.bottom - card.top)
+        // 56 is the minimum; Jost's two lines (16 sp and 13 sp at 1.445 em) plus 2 x 8 padding make 61.5.
+        assertDp("choice height", 61.5.dp, card.bottom - card.top)
         val add = bounds(SetupTags.control(SetupControl.AddFolder))
-        assertDp("8 after the card", 140.dp, add.top)
+        assertDp("8 after the card", 150.5.dp, add.top)
         val next = bounds(SetupTags.control(SetupControl.Continue))
-        assertDp("Continue: 8 after Add another folder, as between the cards", 204.dp, next.top)
+        assertDp("Continue: 8 + 4 after Add another folder, so its collar keeps its distance", 224.dp, next.top)
     }
 
     @Test
@@ -121,14 +124,11 @@ class SetupBoundsTest {
         assertEquals("the four biggest systems give way to the Ready step's rows, as on narrow screens", 0, compose.onAllNodesWithTag(SetupTags.FOUND).fetchSemanticsNodes().size)
         val emulators = bounds(SetupTags.EMULATORS)
         val stats = bounds(SetupTags.control(SetupControl.UsageStatistics))
-        val oneHand = bounds(SetupTags.control(SetupControl.PushRightToPlay))
         assertDp("rows span the content column", 412.dp, stats.right - stats.left)
-        assertDp("the one-hand row is as wide as the statistics row", 412.dp, oneHand.right - oneHand.left)
         assertDp("8 between the rows", 8.dp, stats.top - emulators.bottom)
-        assertDp("8 between the statistics and one-hand rows", 8.dp, oneHand.top - stats.bottom)
         val start = bounds(SetupTags.control(SetupControl.StartPlaying))
-        assertDp("Start playing: 8 + 4 after the switch row", 12.dp, start.top - oneHand.bottom)
-        assertReadyFirstViewShowsTheOneHandRowAndStartPlaying(opensUnscrolled = true)
+        assertDp("Start playing: 8 + 4 after the switch row", 12.dp, start.top - stats.bottom)
+        assertReadyFirstViewShowsTheStatisticsRowAndStartPlaying(opensUnscrolled = true)
     }
 
     @Test
@@ -140,10 +140,10 @@ class SetupBoundsTest {
         val notNow = bounds(SetupTags.control(SetupControl.SkipSecondScreen))
         assertDp("Use it in the content column", 332.dp, use.left)
         assertDp("Use it level with the title", title.top, use.top)
-        assertDp("button height", 40.dp, use.bottom - use.top)
+        assertDp("button height: the 38 cap and its collar", BUTTON_WITH_COLLAR, use.bottom - use.top)
         assertDp("the two buttons on one line", use.top, notNow.top)
         assertDp("the setup button gap between them", PlumDimens.setupButtonGap, notNow.left - use.right)
-        assertEquals("three dots: folder, second screen, library", 3, compose.onAllNodesWithTag(SetupTags.DOT, useUnmergedTree = true).fetchSemanticsNodes().size)
+        assertEquals("five dots: folder, look, box art, second screen, library", 5, compose.onAllNodesWithTag(SetupTags.DOT, useUnmergedTree = true).fetchSemanticsNodes().size)
     }
 
     @Test
@@ -159,50 +159,40 @@ class SetupBoundsTest {
         assertFitsAboveTheHints("Not now", notNow)
     }
 
-    /**
-     * The box art question's buttons sit where the second screen's do, at the same size and gap; on
-     * narrow screens they follow the description, which may take another line ([sameTop] false).
-     */
-    private fun assertBoxArtButtonsLikeTheSecondScreens(sameTop: Boolean) {
-        // One content per test: the step is switched in state.
-        var shown by mutableStateOf(SetupFakes.secondScreen)
-        compose.setContent { PlumTheme(MediumText.Default) { SetupAt(shown) } }
-        val use = bounds(SetupTags.control(SetupControl.UseSecondScreen))
-        val notNow = bounds(SetupTags.control(SetupControl.SkipSecondScreen))
-        val title = bounds(SetupTags.TITLE)
-        shown = SetupFakes.boxArtQuestion
-        compose.waitForIdle()
-        val useAccount = bounds(SetupTags.control(SetupControl.UseBoxArt))
-        val skip = bounds(SetupTags.control(SetupControl.SkipBoxArt))
-        val boxArtTitle = bounds(SetupTags.TITLE)
-        assertDp("Use my account starts where Use it does", use.left, useAccount.left)
-        if (sameTop) assertDp("Use my account at Use it's height", use.top, useAccount.top) else assertTrue("under the title", useAccount.top > boxArtTitle.bottom)
-        assertDp("same button height", use.bottom - use.top, useAccount.bottom - useAccount.top)
-        assertDp("the title where the second screen's is", title.top, boxArtTitle.top)
-        assertDp("the two buttons on one line", useAccount.top, skip.top)
-        assertDp("the setup button gap between them", notNow.left - use.right, skip.left - useAccount.right)
-        assertFitsAboveTheHints("Not now", skip)
+    /** The box art choices: three rows of one width, one above the other with the setup gap, the first under the title or beside it. */
+    private fun assertBoxArtChoicesStacked(): List<DpRect> {
+        show(SetupFakes.boxArtQuestion)
+        val rows =
+            listOf(SetupControl.UseBoxArt, SetupControl.BoxArtLibretro, SetupControl.BoxArtOwnCovers)
+                .map { bounds(SetupTags.control(it)) }
+        assertDp("same width", rows[0].right - rows[0].left, rows[1].right - rows[1].left)
+        assertDp("same width", rows[0].right - rows[0].left, rows[2].right - rows[2].left)
+        assertDp("same gap", rows[1].top - rows[0].bottom, rows[2].top - rows[1].bottom)
+        assertDp("same left", rows[0].left, rows[2].left)
+        return rows
     }
 
     @Test
     @Config(qualifiers = WIDE)
-    fun wideBoxArtQuestionLinesItsButtonsUpLikeTheSecondScreens() {
-        assertBoxArtButtonsLikeTheSecondScreens(sameTop = true)
-        assertDp("Use my account level with the title", bounds(SetupTags.TITLE).top, bounds(SetupTags.control(SetupControl.UseBoxArt)).top)
+    fun wideBoxArtChoicesStandBesideTheTitleAndFitAboveTheHints() {
+        val rows = assertBoxArtChoicesStacked()
+        assertDp("the first choice level with the title", bounds(SetupTags.TITLE).top, rows[0].top)
+        assertFitsAboveTheHints("Plumemu's own covers", rows[2])
     }
 
     @Test
     @Config(qualifiers = NARROW)
-    fun narrowBoxArtQuestionLinesItsButtonsUpLikeTheSecondScreens() {
-        assertBoxArtButtonsLikeTheSecondScreens(sameTop = false)
-        assertDp("Use my account at the left margin", 24.dp, bounds(SetupTags.control(SetupControl.UseBoxArt)).left)
+    fun narrowBoxArtChoicesFollowTheTitleAtTheLeftMargin() {
+        val rows = assertBoxArtChoicesStacked()
+        assertDp("left margin", 24.dp, rows[0].left)
+        assertTrue("under the title", rows[0].top > bounds(SetupTags.TITLE).bottom)
     }
 
     @Test
     @Config(qualifiers = WIDE)
-    fun twoDotsWithoutASecondScreen() {
+    fun fourDotsWithoutASecondScreenOrAGamepad() {
         show(SetupFakes.scanning)
-        assertEquals(2, compose.onAllNodesWithTag(SetupTags.DOT, useUnmergedTree = true).fetchSemanticsNodes().size)
+        assertEquals("folders, look, box art, library", 4, compose.onAllNodesWithTag(SetupTags.DOT, useUnmergedTree = true).fetchSemanticsNodes().size)
     }
 
     @Test
@@ -210,7 +200,7 @@ class SetupBoundsTest {
     fun narrowStacksTheTitleOverTheContent() {
         show(SetupFakes.folderChosen)
         val title = bounds(SetupTags.TITLE)
-        assertDp("title top: 14 + 18 + 10 + 8", 50.dp, title.top)
+        assertDp("title top: 14 + 23 + 10 + 8", 55.dp, title.top)
         assertDp("title left", 24.dp, title.left)
         val card = bounds(SetupTags.FOLDER_CARD)
         assertDp("card left", 24.dp, card.left)
@@ -224,17 +214,17 @@ class SetupBoundsTest {
     fun narrowLibraryReadyHidesTheBiggestSystems() {
         show(SetupFakes.ready)
         assertEquals(0, compose.onAllNodesWithTag(SetupTags.FOUND).fetchSemanticsNodes().size)
-        assertReadyFirstViewShowsTheOneHandRowAndStartPlaying(opensUnscrolled = false)
+        assertReadyFirstViewShowsTheStatisticsRowAndStartPlaying(opensUnscrolled = false)
     }
 
     /**
-     * What is on screen when the Ready step first opens, before any scrolling: the one-hand switch
+     * What is on screen when the Ready step first opens, before any scrolling: the statistics switch
      * row and the focused Start playing are fully visible (clipped bounds equal unclipped ones) and end
      * above the hint bar by at least the focus ring's reach: the content area ends at 388 and the hints start
      * 10 below, so a button may end at 398 minus the ring (5.5), i.e. 392.5.
      */
-    private fun assertReadyFirstViewShowsTheOneHandRowAndStartPlaying(opensUnscrolled: Boolean) {
-        for (control in listOf(SetupControl.PushRightToPlay, SetupControl.StartPlaying)) {
+    private fun assertReadyFirstViewShowsTheStatisticsRowAndStartPlaying(opensUnscrolled: Boolean) {
+        for (control in listOf(SetupControl.UsageStatistics, SetupControl.StartPlaying)) {
             val node = compose.onNodeWithTag(SetupTags.control(control), useUnmergedTree = true)
             val unclipped = node.getUnclippedBoundsInRoot()
             val clipped = node.getBoundsInRoot()
@@ -277,8 +267,8 @@ class SetupBoundsTest {
         val start = bounds(SetupTags.control(SetupControl.StartPlaying))
         val hints = bounds(SetupTags.HINTS)
         assertTrue(
-            "Start playing ends at ${start.bottom}, ${hints.top - start.bottom} above the hints; the bar gap is ${PlumDimens.barGap}",
-            hints.top.value - start.bottom.value >= PlumDimens.barGap.value - TOLERANCE,
+            "Start playing ends at ${start.bottom}, ${hints.top - start.bottom} above the hints; the footer gap is ${PlumDimens.footerGap}",
+            hints.top.value - start.bottom.value >= PlumDimens.footerGap.value - TOLERANCE,
         )
     }
 
@@ -287,6 +277,7 @@ class SetupBoundsTest {
         const val CLASSIC = "w620dp-h540dp-land-xhdpi"
         const val NARROW = "w576dp-h432dp-land-xhdpi"
         const val TOLERANCE = 0.6f
+        val BUTTON_WITH_COLLAR = PlumDimens.setupButtonHeight + CollarSize.Control.topPadding + CollarSize.Control.bottomPadding
         const val CONTENT_BOTTOM = 388f
     }
 }

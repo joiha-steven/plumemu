@@ -72,7 +72,8 @@ internal object PickingBatteryTags {
  * it is given (those lines, and the height left: beside a cover at the largest sizes only one line),
  * the words "on this charge" go first ("About 2 h 45 min · 30% an hour"), never a number; where not
  * even that fits, the line is not shown at all rather than cut or shown in part. [topGap] above it
- * (only when it shows).
+ * (only when it shows). Without [withPace] the line says the time only ("2 h 15 min on this charge")
+ * and is left out while charging, when there is no time to say.
  */
 @Composable
 internal fun PickingBatteryLine(
@@ -81,11 +82,13 @@ internal fun PickingBatteryLine(
     modifier: Modifier = Modifier,
     maxLines: Int = MAX_LINES,
     topGap: Dp = 0.dp,
+    withPace: Boolean = true,
 ) {
     val readings = LocalBatteryReading.current
     val reading = readings.value ?: return
     val now = rememberPaceNow(pace, readings) ?: return
-    val parts = pickingBatteryParts(now, reading.isCharging) ?: return
+    val read = pickingBatteryParts(now, reading.isCharging) ?: return
+    val parts = if (withPace) read else read.takeIf { it.onCharge != null }?.copy(percentPerHour = null) ?: return
     val whole = pickingBatteryText(parts, withWords = true)
     val short = pickingBatteryText(parts, withWords = false)
     val measurer = rememberTextMeasurer(cacheSize = 0)
@@ -118,6 +121,30 @@ internal fun PickingBatteryLine(
         }
     }
 }
+
+/**
+ * The time on this charge as the details block's battery cell shows it ("About 2 h 45 min", "2 h"): the line's own estimate
+ * ([rememberPaceNow], [pickingBatteryParts]) and wording without the pace; null with Show battery off, no reading yet, while
+ * charging or when the pace tells no time, so the cell is left out.
+ */
+@Composable
+internal fun pickingBatteryCellText(pace: BatteryPace): BatteryCellText? {
+    val readings = LocalBatteryReading.current
+    val reading = readings.value ?: return null
+    val now = rememberPaceNow(pace, readings) ?: return null
+    val time = pickingBatteryParts(now, reading.isCharging)?.onCharge ?: return null
+    val numbers = rememberCountFormat()
+    val duration = durationText(time.minutes, numbers)
+    val widest = durationText(WIDEST_CELL_MINUTES, numbers)
+    return BatteryCellText(if (time.isApproximate) stringResource(R.string.battery_line_about, duration) else duration, duration, stringResource(R.string.battery_line_about, widest), widest)
+}
+
+/** The widest time the cell can say ([WIDEST_CELL_MINUTES]), in its wording: the cells are placed for this, so a time that changes while a game rests moves none. */
+
+private const val WIDEST_CELL_MINUTES = 99 * 60 + 59
+
+/** The battery cell's time: [full] ("About 2 h 45 min") and [short], the same time without the word (for a row that has no room for it). */
+internal class BatteryCellText(val full: String, val short: String, val widestFull: String, val widestShort: String)
 
 /**
  * [pace], worked out again ([LocalBatteryPaceNow], off the main thread) each time the [readings]' level
@@ -194,8 +221,7 @@ internal fun pickingBatteryText(
 
 /** "45 min", "2 h", "2 h 15 min" in the details column's words. */
 @Composable
-private fun durationText(minutes: Int): String {
-    val numbers = rememberCountFormat()
+private fun durationText(minutes: Int, numbers: java.text.NumberFormat = rememberCountFormat()): String {
     val hours = minutes / MINUTES_PER_HOUR
     val rest = minutes % MINUTES_PER_HOUR
     return when {

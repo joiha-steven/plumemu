@@ -88,7 +88,7 @@ class SettingsMappingTest {
     @Test
     fun everyStoredTextSizeNameReachesTheThemeWithItsOwnFactor() {
         assertEquals(
-            mapOf("Small" to 0.9f, "Medium" to 1.0f, "Large" to 1.1f, "Larger" to 1.2f, "Huge" to 1.3f, "Largest" to 1.45f),
+            mapOf("Small" to 1.0f, "Medium" to 1.1f, "Large" to 1.2f, "Larger" to 1.3f, "Huge" to 1.4f, "Largest" to 1.5f),
             TextSizeSetting.entries.associate { it.name to AppearanceSettings(textSize = it).toThemeSettings(true).textSize!!.factor },
         )
     }

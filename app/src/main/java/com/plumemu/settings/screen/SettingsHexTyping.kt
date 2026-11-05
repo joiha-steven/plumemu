@@ -3,6 +3,7 @@ package com.plumemu.settings.screen
 import androidx.compose.runtime.Stable
 import com.plumemu.coreinput.Action
 import com.plumemu.coreui.components.keyboard.KeyboardPage
+import com.plumemu.coreui.theme.Rgb
 import com.plumemu.game.FieldKeys
 import com.plumemu.game.KeyboardAsk
 import com.plumemu.game.TypingOutcome
@@ -65,3 +66,6 @@ internal class HexTyping(
         const val USE_ROW = 0
     }
 }
+
+/** "#1a2b3c", "1A2B3C" → the colour; anything else → null. */
+internal fun parseHexColor(text: String): Rgb? = Rgb.fromHexOrNull("#" + text.trim().removePrefix("#").uppercase())

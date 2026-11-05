@@ -49,6 +49,7 @@ private fun AppearanceSettings.rawColorsAndLook(animationsOn: Boolean): PlumThem
         text = textColor.toRgb(),
         accent = accent.toAccentChoice(),
         font = when (font) {
+            FontSetting.Jost -> PlumFont.Jost
             FontSetting.Sans -> PlumFont.Sans
             FontSetting.Serif -> PlumFont.Serif
             FontSetting.Mono -> PlumFont.Mono

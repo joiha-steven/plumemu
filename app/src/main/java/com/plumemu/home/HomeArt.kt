@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -114,6 +115,12 @@ internal interface CoverImages {
         heightPx: Int,
     ): ImageBitmap?
 
+    /**
+     * [picture] decoded at the size it was last drawn at, whatever that was, when it is still in memory: drawn scaled to the new
+     * size while the exact decode is made, so a size step shows no empty tile.
+     */
+    fun cachedAnySize(picture: ArtPicture): ImageBitmap? = null
+
     /** [picture] decoded to fit [widthPx] x [heightPx], off the main thread; null when it cannot be read (the titled placeholder stays). */
     suspend fun load(
         picture: ArtPicture,
@@ -189,7 +196,26 @@ internal class HomeArt(
         }
     }
 
+    /**
+     * Reads the results of [keys] once, for those with no slot yet, so a system about to be shown opens with its pictures' shapes known
+     * (one packing, no re-pack when they land). Slots already there are left to [follow]. Call on the main thread.
+     */
+    suspend fun prefetchSlots(keys: List<String>) {
+        if (!isLive) return
+        val missing = keys.filter { slots[it] == null }
+        if (missing.isEmpty()) return
+        val found = source.observe(missing).first()
+        // The main thread may have followed the same keys while this read ran.
+        val stillMissing = missing.filter { slots[it] == null }
+        if (stillMissing.isNotEmpty()) write(stillMissing, found)
+    }
+
     private fun write(
+        keys: List<String>,
+        found: Map<String, GameArt>,
+    ) = homeTrace("Plum:artWrite") { writeSlots(keys, found) }
+
+    private fun writeSlots(
         keys: List<String>,
         found: Map<String, GameArt>,
     ) {

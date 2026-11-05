@@ -25,6 +25,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     // LZMA hunks of .chd images (XZ for Java, 0BSD).
     implementation(libs.xz)
+    // Zstd and LZ4 decoders (codec/), shared with the disc readers there.
+    implementation(project(":identify"))
 
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)

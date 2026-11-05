@@ -28,6 +28,10 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], qualifiers = "w768dp-h432dp-land-xhdpi")
 internal class SettingsOwnKeyboardPathTest : SettingsKeyboardPathHarness() {
+    init {
+        startOnRedSans() // the accent palette's "+" is reached by walking the presets from Red
+    }
+
     private fun assertNoAndroidKeyboard(where: String) {
         ime.settle()
         assertFalse("no Android keyboard in $where", ime.keyboardShows)

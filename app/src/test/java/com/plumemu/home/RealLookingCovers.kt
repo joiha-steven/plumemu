@@ -184,10 +184,19 @@ internal fun RealCoverDetails(
     id: String,
     index: Int,
     source: FakeArtSource? = null,
+    /** The game's box shape already stored when the focus lands on it (the shapes pass has run), else only the picture knows it. */
+    storedAspect: Float? = null,
 ) {
     val narrow = PlumTheme.layout.widthClass == WidthClass.Narrow
     val open = listOf(Action.TapItem(Column.Systems, boardIndexOf(id)), Action.Enter, Action.TapItem(Column.Games, index))
-    HomeWithArt(source ?: rememberSource { realCoverSource() }, if (narrow) open + Action.Move(Direction.Right) else open)
+    val actions = if (narrow) open + Action.Move(Direction.Right) else open
+    if (storedAspect == null) {
+        HomeWithArt(source ?: rememberSource { realCoverSource() }, actions)
+    } else {
+        val base = FakeHomeContent.withArtwork()
+        val content = base.withEntries(base.entries.map { e -> if (e.id != id) e else e.copy(rows = e.rows.mapIndexed { i, r -> if (i == index) r.copy(artAspect = storedAspect) else r }) })
+        HomeWithArt(source ?: rememberSource { realCoverSource() }, actions, content)
+    }
 }
 
 /** [source] with game [index] of system [id]'s large box front saved again at [aspect]. */

@@ -62,9 +62,9 @@ class CustomPaletteTest {
     @Test
     fun theNamedAnchorsAreInTheGrid() {
         assertEquals("#E8BE46", at(0, 3).toHex()) // lemon
-        assertEquals("#E98D43", at(0, 2).toHex()) // tangerine
-        assertEquals("#B4A9D6", at(1, 7).toHex()) // lavender
-        assertEquals("#1541A9", at(3, 6).toHex()) // cobalt
+        assertEquals("#EA934C", at(0, 2).toHex()) // tangerine
+        assertEquals("#BDB3DB", at(1, 7).toHex()) // lavender
+        assertEquals("#143FA4", at(3, 6).toHex()) // cobalt
         assertEquals("#6A1F1F", at(4, 1).toHex()) // wine
     }
 

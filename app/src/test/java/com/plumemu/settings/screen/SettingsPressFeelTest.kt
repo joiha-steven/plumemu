@@ -176,7 +176,7 @@ class SettingsPressFeelTest {
     }
 
     @Test
-    fun theColorCodeRowDoesNotDipWhileTheOwnKeyboardIsUpAndDipsAgainWhenItCloses() {
+    fun theColorCodeRowNeverDipsWhileItsCodeIsTyped() {
         show { ColorCodeOwnKeyboard() }
         val model = checkNotNull(ownModel)
         assertNotEquals("the tray is up", null, model.ownKeyboardField)
@@ -191,6 +191,7 @@ class SettingsPressFeelTest {
         compose.waitForIdle()
         val closedRest = pixels(SettingsTags.HEX_ROW)
         holdA()
-        assertNotEquals("with the tray closed the row dips again", closedRest, pixels(SettingsTags.HEX_ROW))
+        // The typed code's well carries the focus now, so the row keeps no pill to dip with the tray closed either.
+        assertEquals("with the tray closed the row still does not dip", closedRest, pixels(SettingsTags.HEX_ROW))
     }
 }

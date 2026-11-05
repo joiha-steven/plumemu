@@ -145,7 +145,7 @@ class FixBoxArtStoreLineTest {
         val key = GamePanelTags.row(boxArtHitKey(many[7]))
         var size by mutableStateOf(TextSize.Small)
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { BoxArtPanelFixtures.Screen(BoxArtPanelFixtures.panel(state)) } }
-        for (next in listOf(TextSize.Largest, TextSize.Medium, TextSize.Large)) {
+        for (next in listOf(TextSize.Largest, TextSize.Small, TextSize.Large)) {
             size = next
             compose.waitForIdle()
             val list = compose.onNodeWithTag(FixBoxArtTags.ROWS, useUnmergedTree = true).getUnclippedBoundsInRoot()

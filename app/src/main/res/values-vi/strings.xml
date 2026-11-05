@@ -69,6 +69,7 @@
     <string name="home_hint_unfavorite">Bỏ yêu thích</string>
     <!-- X: open search. -->
     <string name="home_hint_search">Tìm kiếm</string>
+    <string name="home_hint_sort">Sắp xếp</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
          shown when no title matches. -->
@@ -78,6 +79,7 @@
     <string name="home_search_no_match">Không có trò chơi nào khớp</string>
     <string name="home_search_empty">Nhập tên trò chơi để tìm</string>
     <string name="home_favorites_empty">Nhấn %1$s trên một trò chơi để thêm vào Yêu thích</string>
+    <string name="home_recent_empty">Các trò chơi bạn đã chơi sẽ hiện ở đây</string>
     <!-- Search's hints while Plumemu's keyboard is up (B deletes, X types a space, Y changes the page, L1 R1 move the caret). -->
     <string name="home_hint_delete">Xóa</string>
     <string name="home_hint_space">Dấu cách</string>
@@ -102,9 +104,13 @@
          a year and a publisher ("1994 · Nintendo"), or a genre and a player count. The games list's
          right-hand text reuses it for a year and a region ("1994 · USA"). -->
     <string name="home_details_pair">%1$s · %2$s</string>
+    <string name="home_details_publisher_year">%1$s, %2$s</string>
     <string name="home_details_last_played">Chơi lần cuối</string>
-    <string name="home_details_play_time">Thời gian chơi</string>
+    <string name="home_details_play_time">Đã chơi</string>
+    <string name="home_details_genre">Thể loại</string>
+    <string name="home_details_rating_label">Đánh giá</string>
     <string name="home_details_emulator">Trình giả lập</string>
+    <string name="home_details_battery">Pin</string>
     <string name="home_details_never">Chưa chơi</string>
     <string name="home_details_today">Hôm nay</string>
     <string name="home_details_yesterday">Hôm qua</string>
@@ -120,9 +126,11 @@
 
     <!-- Main screen with no games at all. -->
     <string name="home_empty_title">Chưa có thư mục trò chơi</string>
-    <string name="home_empty_body">%1$s Thêm thư mục</string>
-    <string name="home_nogames_title">Chưa tìm thấy trò chơi</string>
-    <string name="home_nogames_body">Hãy kiểm tra thư mục có trò chơi.\n%1$s</string>
+    <string name="home_empty_body_folder">Hãy chọn thư mục chứa trò chơi. Plumemu sẽ liệt kê các trò chơi trong đó.</string>
+    <string name="home_empty_files_not_added">Tệp chưa được thêm</string>
+    <string name="home_empty_choose_folder">Chọn thư mục</string>
+    <string name="home_nogames_title">Chưa có trò chơi nào ở đây</string>
+    <string name="home_nogames_body_files">Thư mục không có tệp nào mà trình giả lập trên máy này mở được. “Tệp chưa được thêm” cho biết lý do của từng tệp.</string>
 
     <!-- The library could not be read (database or platform data failed); shown instead of the main screen. -->
     <string name="home_library_error_title">Plumemu không mở được thư viện</string>
@@ -137,9 +145,9 @@
     <!-- Setup, folder step. -->
     <string name="setup_folder_title">Trò chơi của bạn ở đâu?</string>
     <string name="setup_folder_desc">Chọn thư mục chứa ROM của bạn. Các thư mục con như snes hay psx sẽ tự khớp với hệ máy tương ứng.</string>
-    <string name="setup_folder_point_opens">Trình chọn thư mục của Android mở sẵn ở thư mục ROMs</string>
-    <!-- “Use this folder” is the button of Android's own folder picker: write it as Android words it in your language. -->
-    <string name="setup_folder_point_use">Tại đó, nhấn “Sử dụng thư mục này”</string>
+    <string name="setup_folder_point_opens">Trình chọn thư mục của Android sẽ mở ra. Hãy đến thư mục chứa trò chơi của bạn.</string>
+    <!-- No button name: it differs by Android version. -->
+    <string name="setup_folder_point_use">Sau đó xác nhận thư mục ấy ngay trong trình chọn.</string>
     <string name="setup_folder_point_private">Plumemu chỉ thấy những thư mục bạn chọn</string>
     <string name="setup_choose_folder">Chọn thư mục</string>
     <string name="setup_set_up_later">Thiết lập sau</string>
@@ -188,7 +196,10 @@
     <string name="setup_ready_title">Thư viện đã sẵn sàng</string>
     <string name="setup_ready_desc">Trò chơi xếp theo tên, chia theo hệ máy. Có thể đổi mọi thứ sau trong Cài đặt.</string>
     <string name="setup_ready_naming">Tên vẫn đang được điền dần · tiếp tục chạy nền</string>
-    <string name="setup_ready_empty_desc">Chưa tìm thấy trò chơi nào. Hãy thêm thư mục sau trong Cài đặt › Thư viện › Thư mục ROM.</string>
+    <string name="setup_ready_empty_desc">Hãy thêm thư mục sau trong Cài đặt › Thư viện › Thư mục ROM.</string>
+    <string name="setup_ready_empty_title">Chưa tìm thấy trò chơi nào</string>
+    <string name="setup_ready_no_folder_title">Bạn có thể thêm trò chơi sau</string>
+    <string name="setup_ready_no_folder_desc">Màn hình chính sẽ hỏi thư mục trò chơi khi bạn sẵn sàng.</string>
     <!-- %1$s and %2$s are numbers formatted for the locale. -->
     <string name="setup_emulators_some">Đã tìm thấy trình giả lập cho %1$s trên %2$s hệ máy</string>
     <plurals name="setup_emulators_all">
@@ -209,8 +220,6 @@
     <string name="setup_stats_title">Gửi thống kê sử dụng ẩn danh</string>
     <!-- The short form of settings_usage_statistics_body (Settings › About › Send usage statistics): the whole text does not fit the Ready step at 768 x 432 (TextSizeScreens*Test). -->
     <string name="setup_stats_body">Số liệu ẩn danh và báo cáo sự cố. Không gửi tên trò chơi, nội dung tìm kiếm hay tài khoản. Tắt: gửi một lần cuối, rồi thôi.</string>
-    <string name="setup_one_hand_title">Nhấn phải 2 lần để chơi</string>
-    <string name="setup_one_hand_body">Nhấn lên, xuống để chọn trò chơi. Nút A vẫn dùng được. Có thể đổi trong Cài đặt › Điều khiển.</string>
     <string name="setup_stats_on">Bật</string>
     <string name="setup_stats_off">Tắt</string>
     <string name="setup_start_playing">Bắt đầu chơi</string>
@@ -238,6 +247,8 @@
     <string name="home_role_yes">Có</string>
     <string name="home_role_not_now">Để sau</string>
     <string name="home_role_unavailable">Thiết bị này không có màn hình để chọn ứng dụng màn hình chính. Hãy chọn Plumemu trong Cài đặt của Android › Ứng dụng › Ứng dụng mặc định.</string>
+    <string name="home_role_not_yet">Plumemu chưa phải là ứng dụng màn hình chính của bạn. Hãy chọn nó trong cài đặt của Android.</string>
+    <string name="home_role_open_settings">Mở cài đặt</string>
     <string name="home_role_ok">OK</string>
     <string name="home_role_hint_select">Chọn</string>
     <string name="home_role_hint_not_now">Để sau</string>
@@ -282,12 +293,18 @@
     <!-- Game menu row: a verb, take the game out of Favorites. -->
     <string name="game_menu_unfavorite">Bỏ khỏi Yêu thích</string>
     <!-- Game menu row: a verb, hide the game from every list (Settings › Library › Hidden games brings it back). -->
-    <string name="game_menu_hide">Ẩn</string>
+    <string name="game_menu_hide">Ẩn trò chơi</string>
+    <!-- Game menu row: opens Info, where the achievements are. -->
+    <string name="game_menu_achievements">Thành tích</string>
+    <!-- Its value: earned, then total, both numbers ("12 of 40"). -->
+    <string name="game_menu_achievements_count">%1$s trên %2$s</string>
     <string name="game_menu_remove_from_recent">Xóa khỏi Gần đây</string>
     <!-- Game menu row: opens the game's facts. A short noun. -->
     <string name="game_menu_info">Thông tin</string>
     <!-- Fixing a game's name. -->
     <string name="game_menu_name">Tên…</string>
+    <string name="game_menu_sort_by">Sắp xếp theo…</string>
+    <string name="game_sort_title">Sắp xếp theo</string>
     <string name="game_menu_fix_name">Sửa tên…</string>
     <string name="game_menu_own_name">Tự đặt tên</string>
     <string name="game_menu_not_a_game">Không phải trò chơi</string>
@@ -296,6 +313,11 @@
     <string name="game_fix_name_prompt">Nhập một phần tên</string>
     <string name="game_fix_name_no_match">Không có tên nào khớp trong danh sách</string>
     <string name="game_fix_name_loading">Đang đọc danh sách tên…</string>
+    <!-- Settings › Unidentified games: the closest official titles, shown above the other results; only offered, never applied. -->
+    <string name="game_fix_name_suggestions">Tên gần nhất</string>
+    <string name="game_fix_name_no_suggestion">Không có tên nào gần giống</string>
+    <string name="game_fix_name_suggesting">Đang tìm tên gần giống…</string>
+    <string name="game_fix_name_others">Các tên khác</string>
     <!-- A title's regions and year under it in Fix name: "USA, Europe · 1994". -->
     <string name="game_fix_name_release">%1$s · %2$s</string>
     <string name="game_fix_name_no_list">Plumemu chưa có danh sách tên cho %1$s. Bạn vẫn có thể tự đặt tên cho trò chơi này.</string>
@@ -307,7 +329,7 @@
     <string name="game_own_name_empty">Hãy nhập tên trước. Không thể lưu tên trống.</string>
     <string name="game_own_name_save">Lưu tên</string>
     <!-- Fix box art…: the game menu's entry and its panel's lines. -->
-    <string name="game_menu_fix_box_art">Sửa ảnh bìa…</string>
+    <string name="game_menu_fix_box_art">Ảnh bìa</string>
     <string name="game_fix_box_art_title">Sửa ảnh bìa</string>
     <string name="game_fix_box_art_prompt">Nhập tên trò chơi</string>
     <string name="game_fix_box_art_field_label">Tên</string>
@@ -391,7 +413,7 @@
     <string name="game_info_play_time">Thời gian chơi</string>
     <string name="game_info_none">Không có</string>
     <!-- Info: nothing is chosen for the system yet; Play asks which emulator. -->
-    <string name="game_info_emulator_not_chosen">Chưa chọn, sẽ hỏi khi chơi</string>
+    <string name="game_info_emulator_not_chosen">Sẽ hỏi khi chơi</string>
     <string name="game_info_no_emulator">Chưa cài trình nào</string>
     <!-- %1$s is the emulator the person chose, uninstalled since. -->
     <string name="game_info_not_installed">%1$s (chưa cài)</string>
@@ -471,6 +493,11 @@
     <string name="game_action_yes">Có</string>
     <string name="game_action_no">Không</string>
     <string name="game_core_missing_body">%1$s không chạy được trò chơi: có thể lõi chưa được cài trong RetroArch. Hãy chọn trình giả lập khác, hoặc cài lõi trong RetroArch.</string>
+    <string name="game_core_next_body">%1$s không chạy được trò chơi: có thể lõi chưa được cài trong RetroArch. Có thể một lõi khác sẽ chạy được.</string>
+    <string name="game_core_try_row">Thử %1$s?</string>
+    <string name="game_core_none_left_body">%1$s không chạy được trò chơi và không còn lõi nào để thử. Để có thêm lõi, mở RetroArch › Online Updater › Core Downloader rồi tải %2$s.</string>
+    <string name="game_core_arcade_note">Bộ arcade được làm cho một phiên bản trình giả lập nhất định, nên bộ này có thể cần một lõi khác.</string>
+    <string name="game_core_arcade_old_name_note">Bộ arcade được làm cho một phiên bản trình giả lập nhất định. Tên bộ này là tên MAME 2003-Plus dùng, nên có thể nó cần lõi đó.</string>
     <!-- A pinned shortcut (Steam, Windows, Shortcuts): listed, not startable by Plumemu yet. %1$s is the app that published it. -->
     <string name="game_error_shortcut_title">Không mở được lối tắt</string>
     <string name="game_error_shortcut_body_app">Hãy mở từ %1$s, ứng dụng tạo ra nó.</string>
@@ -518,6 +545,7 @@
     <string name="settings_hint_section">Mục</string>
     <!-- Hint bar label beside A in a list of choices: a verb, pick the focused one. -->
     <string name="settings_hint_choose">Chọn</string>
+    <string name="settings_hint_try_again">Thử lại</string>
     <!-- Narrow screens: opens the focused option's explanation as a further stop (the right button). -->
     <string name="settings_hint_more">Xem thêm</string>
     <!-- Option values: words only; the chevrons and check beside them are drawn (SettingsValueIcons.kt). -->
@@ -591,8 +619,11 @@
     <string name="settings_sort_games">Sắp xếp trò chơi</string>
     <string name="settings_sort_by_name">Tên</string>
     <string name="settings_sort_by_last_played">Chơi gần nhất</string>
+    <string name="settings_sort_by_most_played">Chơi nhiều nhất</string>
+    <string name="settings_sort_by_recently_added">Mới thêm</string>
     <string name="settings_sort_by_year">Năm phát hành</string>
-    <string name="settings_sort_games_body">Cách sắp xếp danh sách của từng hệ máy và mục Yêu thích. Gần đây luôn đưa trò chơi vừa chơi lên đầu.</string>
+    <string name="settings_sort_by_rating">Điểm đánh giá</string>
+    <string name="settings_sort_games_body">Cách sắp xếp danh sách của từng hệ máy và mục Yêu thích. Trò chưa có dữ liệu để xếp (chưa chơi, không có năm, không có điểm) nằm sau, theo tên. Năm phát hành và Điểm đánh giá chỉ hiện khi có trò có dữ liệu đó từ ScreenScraper. Gần đây luôn đưa trò vừa chơi lên đầu.</string>
     <string name="settings_recent_size">Số mục Gần đây</string>
     <string name="settings_recent_size_body">Số trò chơi mà Gần đây giữ lại. Khi đầy, trò chơi được chơi lâu nhất sẽ rơi khỏi cuối danh sách. Thời gian chơi và thống kê không đổi.</string>
     <string name="settings_clear_recent">Xóa Gần đây…</string>
@@ -661,7 +692,7 @@
     <string name="settings_emulator_missing">%1$s, chưa cài</string>
     <!-- Nothing chosen for the system: its first game asks which emulator (the person chooses). -->
     <string name="settings_emulator_ask">Hỏi khi chơi lần đầu</string>
-    <string name="settings_emulator_automatic_none">Hỏi khi chơi lần đầu (chưa cài trình nào)</string>
+    <string name="settings_emulator_automatic_none">Hỏi khi chơi (chưa cài trình nào)</string>
     <plurals name="settings_emulators_found">
         <item quantity="other">Tìm thấy %1$s trình giả lập trên thiết bị</item>
     </plurals>
@@ -774,21 +805,57 @@
     <string name="settings_show_battery_body_two_screens">Mức pin ở góc trên bên phải màn hình. Hiện cả trên đồng hồ của màn hình phụ.</string>
     <!-- Second screen, picking cards. Top line: "Super Nintendo · USA"; the separator is also used in the facts line (quoted: Android trims the spaces of an unquoted string). -->
     <string name="second_screen_android_app">Ứng dụng Android</string>
-    <!-- The game card's played line ("DuckStation · Played 3 days ago"). %1$s is a number formatted for the locale. -->
-    <string name="second_screen_played_today">Chơi hôm nay</string>
-    <string name="second_screen_played_yesterday">Chơi hôm qua</string>
-    <plurals name="second_screen_played_days_ago">
-        <item quantity="other">Chơi %1$s ngày trước</item>
-    </plurals>
-    <!-- The system card: how long ago its last game was played, after the title and a " · " ("Last played Super Metroid · yesterday"). Lower case in English because it follows the title mid-line. -->
+    <string name="second_screen_app_tag">APP</string>
     <string name="second_screen_ago_today">hôm nay</string>
     <string name="second_screen_ago_yesterday">hôm qua</string>
     <plurals name="second_screen_ago_days">
         <item quantity="other">%1$s ngày trước</item>
     </plurals>
     <string name="second_screen_not_played">Chưa chơi</string>
-    <!-- %1$s is a game's title. -->
-    <string name="second_screen_last_game">Chơi lần cuối: %1$s</string>
+    <string name="second_game_achievements">Thành tích</string>
+    <string name="second_game_of_total">trên %1$s</string>
+    <string name="second_game_points">%1$s / %2$s điểm</string>
+    <string name="second_game_latest">Mới nhất: %1$s</string>
+    <string name="second_game_play_label">Thời gian chơi · 8 tuần qua</string>
+    <plurals name="second_game_sessions">
+        <item quantity="other">%1$s phiên</item>
+    </plurals>
+    <string name="second_game_about_session">Khoảng %1$s mỗi phiên</string>
+    <string name="second_game_this_week">tuần này</string>
+    <string name="second_screen_last_played">Chơi gần đây</string>
+    <string name="second_screen_play_time">Thời gian chơi</string>
+    <string name="second_screen_played">Đã chơi</string>
+    <string name="second_screen_achievements">Thành tích</string>
+    <string name="second_screen_on_system">trên %1$s</string>
+    <string name="second_screen_games_played">trò đã chơi</string>
+    <string name="second_screen_mastered">đã chinh phục</string>
+    <plurals name="second_screen_points">
+        <item quantity="other">%1$s điểm</item>
+    </plurals>
+    <plurals name="second_screen_games_with_progress">
+        <item quantity="other">%1$s trò đang chơi dở</item>
+    </plurals>
+    <plurals name="second_screen_new_this_week">
+        <item quantity="other">%1$s trò mới tuần này</item>
+    </plurals>
+    <string name="second_screen_opens_in">Mở bằng %1$s</string>
+    <plurals name="second_screen_files_not_added">
+        <item quantity="other">%1$s tệp chưa thêm</item>
+    </plurals>
+    <string name="second_screen_last_week">Tuần trước %1$s</string>
+    <string name="second_screen_shown_of">Hiện %1$s trên %2$s</string>
+    <plurals name="second_screen_on_systems">
+        <item quantity="other">trên %1$s máy</item>
+    </plurals>
+    <string name="second_screen_when_now">vừa xong</string>
+    <plurals name="second_screen_when_minutes">
+        <item quantity="other">%1$s phút trước</item>
+    </plurals>
+    <string name="second_screen_when_hours_short">%1$s giờ trước</string>
+    <plurals name="second_screen_when_hours">
+        <item quantity="other">%1$s giờ trước</item>
+    </plurals>
+    <string name="second_screen_when_last_week">tuần trước</string>
     <!-- The second screen's in-game card: the battery line while charging ("Charging · 82%"). -->
     <string name="second_screen_charging">Đang sạc · %1$s</string>
     <!-- The in-game card's battery part. The time left is drawn in two sizes: the numbers
@@ -956,7 +1023,7 @@
     <string name="settings_color_adjusted_accent">Đã đổi màu nhấn để vẫn dễ thấy</string>
     <string name="settings_color_adjusted_both">Đã đổi màu chữ và màu nhấn để vẫn dễ đọc</string>
     <string name="settings_accent_body">Tô màu hệ máy đang chọn, chấm đánh dấu, công tắc và nút bấm. Theo hệ máy: mỗi hệ máy một màu riêng.</string>
-    <string name="settings_font_body">Ba phông chữ Plum, đã chỉnh cỡ cho đồng đều trên màn hình nhỏ.</string>
+    <string name="settings_font_body">Phông chữ cho mọi chữ trong Plumemu.</string>
     <string name="settings_text_size_body">Đổi cỡ toàn bộ chữ trong Plumemu. Cỡ chữ của Android vẫn áp dụng thêm.</string>
     <string name="settings_text_weight_body">Đổi độ dày của toàn bộ chữ trong Plumemu.</string>
     <string name="settings_left_edge_body">Dải hẹp ở mép trái hiện gì khi bạn đang ở danh sách trò chơi: số trò chơi của mỗi hệ máy, mã ngắn của từng hệ máy, hoặc các chữ cái của danh sách đang xem.</string>
@@ -1130,6 +1197,10 @@
     <string name="settings_statistics_with_box_art">Có ảnh bìa</string>
     <!-- Settings › Statistics' last line: these figures stay on the device, unlike Advanced › Send usage statistics. -->
     <string name="settings_statistics_kept_here">Chỉ lưu trên máy cầm tay này</string>
+    <string name="settings_exact_play_time">Thời gian chơi chính xác</string>
+    <string name="settings_exact_play_time_body">Chỉ tính lúc game hiện trên màn hình; nếu tắt, thời gian ở ứng dụng khác cũng bị tính (tối đa 4 giờ). Cần quyền Truy cập dữ liệu sử dụng của Android, màn hình đó mở ra khi bạn bật mục này. Plumemu chỉ xem game của chính nó và không gửi gì đi.</string>
+    <string name="settings_exact_play_time_needs_access">Cần quyền truy cập dữ liệu sử dụng</string>
+    <string name="settings_exact_play_time_unavailable">Máy này không có màn hình Truy cập dữ liệu sử dụng nên không bật được thời gian chơi chính xác</string>
     <!-- Statistics, under the total play time. %1$s is a number already formatted for the locale. -->
     <plurals name="settings_statistics_across_games">
         <item quantity="other">qua %1$s trò chơi</item>
@@ -1144,7 +1215,9 @@
     <!-- "38 of 412": games played, or games with box art, out of the games in the library; numbers formatted for the locale. -->
     <string name="settings_statistics_count_of">%1$s trên %2$s</string>
     <string name="settings_statistics_nothing_played">Chưa chơi trò chơi nào</string>
-    <string name="settings_statistics_no_games">Thư viện chưa có trò chơi nào</string>
+    <string name="settings_statistics_no_plays_title">Chưa có thời gian chơi</string>
+    <string name="settings_statistics_no_games_title">Chưa có trò chơi nào</string>
+    <string name="settings_statistics_no_games_body">Thời gian chơi được tính khi Plumemu tìm thấy trò chơi của bạn</string>
     <string name="settings_statistics_unreadable">Không đọc được thống kê chơi</string>
     <string name="settings_statistics_unreadable_detail">Hãy đóng rồi mở lại Cài đặt để thử lại.</string>
     <string name="settings_version">Phiên bản</string>
@@ -1190,7 +1263,7 @@
     <string name="report_error_refused">Máy chủ không nhận báo cáo này. Hãy kiểm tra địa chỉ email. Nội dung bạn viết vẫn còn, có thể thử lại.</string>
     <string name="report_error_unavailable">Bản Plumemu này không gửi được báo cáo. Hãy dùng Xuất nhật ký rồi tự gửi tệp đó.</string>
     <string name="report_error_not_saved">Không lưu được báo cáo trên thiết bị này.</string>
-    <string name="settings_privacy_body">Thư viện, cài đặt và thời gian chơi của bạn nằm trong bộ nhớ riêng của Plumemu trên thiết bị này và không bao giờ được gửi đi. Chỉ khi bạn bật (Cài đặt › Giới thiệu › Gửi thống kê sử dụng), Plumemu gửi số liệu sử dụng ẩn danh và báo cáo sự cố cho nhà phát triển: quốc gia, mẫu thiết bị, phiên bản Android và ứng dụng, màn hình và cài đặt bạn dùng, thời gian chơi theo hệ máy. Không bao giờ gửi tên trò chơi, từ khóa tìm kiếm hay tài khoản ScreenScraper. Báo cáo sự cố có thể chứa đường dẫn tệp. Khi tắt, Plumemu gửi một lượt đếm ẩn danh “đã tắt”, rồi không gửi gì nữa. Báo cáo lỗi chỉ được gửi khi bạn nhấn Gửi trong mục Báo lỗi, và có thể chứa nhật ký bạn chọn đính kèm, với đường dẫn tệp. Dữ liệu đã gửi được lưu giữ không thời hạn. Mỗi ngày một lần khi có Wi-Fi, Plumemu hỏi plumemu-app.stevensdesk.com xem có phiên bản mới hơn không; Cloudflare, nơi lưu trữ máy chủ này, sẽ thấy địa chỉ IP của bạn. Có thể tắt việc này bằng mục Tự kiểm tra cập nhật ở trên. Lần kiểm tra hằng ngày đó cũng tải dữ liệu nền tảng mới (danh sách hệ máy và trình giả lập) từ cùng máy chủ; không gửi thêm gì khác. Nếu bạn có tài khoản ScreenScraper, Plumemu gửi cho ScreenScraper tên tệp, dung lượng và mã kiểm tra (checksum) của từng trò chơi, cùng tên trò chơi khi những thông tin đó không cho kết quả, để tìm ảnh bìa. Nếu bạn có tài khoản RetroAchievements, Plumemu gửi cho retroachievements.org tên người dùng, khóa và số RetroAchievements của từng trò chơi, khi bạn mở thông tin trò chơi, sau khi chơi và mỗi ngày một lần khi có Wi-Fi; ảnh huy hiệu lấy từ media.retroachievements.org. Khóa được lưu mã hóa trên thiết bị này, không bao giờ nằm trong bản sao lưu hay nhật ký. Đăng xuất là dừng gửi.</string>
+    <string name="settings_privacy_body">Thư viện, cài đặt và thời gian chơi của bạn nằm trong bộ nhớ riêng của Plumemu trên thiết bị này và không bao giờ được gửi đi. Chỉ khi bạn bật (Cài đặt › Giới thiệu › Gửi thống kê sử dụng), Plumemu gửi số liệu sử dụng ẩn danh và báo cáo sự cố cho nhà phát triển: quốc gia, mẫu thiết bị, phiên bản Android và ứng dụng, màn hình và cài đặt bạn dùng, thời gian chơi theo hệ máy. Không bao giờ gửi tên trò chơi, từ khóa tìm kiếm hay tài khoản ScreenScraper. Báo cáo sự cố có thể chứa đường dẫn tệp. Khi tắt, Plumemu gửi một lượt đếm ẩn danh “đã tắt”, rồi không gửi gì nữa. Báo cáo lỗi chỉ được gửi khi bạn nhấn Gửi trong mục Báo lỗi, và có thể chứa nhật ký bạn chọn đính kèm, với đường dẫn tệp. Dữ liệu đã gửi được lưu giữ không thời hạn. Mỗi ngày một lần khi có Wi-Fi, Plumemu hỏi plumemu-app.stevensdesk.com xem có phiên bản mới hơn không; Cloudflare, nơi lưu trữ máy chủ này, sẽ thấy địa chỉ IP của bạn. Có thể tắt việc này bằng mục Tự kiểm tra cập nhật ở trên. Lần kiểm tra hằng ngày đó cũng tải dữ liệu nền tảng mới (danh sách hệ máy và trình giả lập) từ cùng máy chủ; không gửi thêm gì khác. Nếu bạn có tài khoản ScreenScraper, Plumemu gửi cho ScreenScraper tên tệp, dung lượng và mã kiểm tra (checksum) của từng trò chơi, cùng tên trò chơi khi những thông tin đó không cho kết quả, để tìm ảnh bìa. Nếu bạn có tài khoản RetroAchievements, Plumemu gửi cho retroachievements.org tên người dùng, khóa và số RetroAchievements của từng trò chơi, khi bạn mở thông tin trò chơi, sau khi chơi và mỗi ngày một lần khi có Wi-Fi; ảnh huy hiệu lấy từ media.retroachievements.org. Khóa được lưu mã hóa trên thiết bị này, không bao giờ nằm trong bản sao lưu hay nhật ký. Đăng xuất là dừng gửi. Thời gian chơi chính xác, nếu bạn bật trong Cài đặt \u203A Thống kê, xin quyền Truy cập dữ liệu sử dụng của Android các sự kiện trong khoảng thời gian của lượt chơi và chỉ giữ lại những sự kiện của game hoặc ứng dụng bạn mở từ Plumemu cùng sự kiện về màn hình; ngoài độ dài lượt chơi không lưu gì thêm và không bao giờ gửi đi.</string>
     <!-- Updates -->
     <string name="settings_update_available">Có bản cập nhật</string>
     <string name="settings_update_value_downloading">Đang tải…</string>
@@ -1253,11 +1326,20 @@
     <string name="setup_box_art_desc">Ảnh bìa và thông tin trò chơi lấy từ ScreenScraper, bằng tài khoản miễn phí của riêng bạn trên screenscraper.fr. Bạn cũng có thể đăng nhập sau trong Cài đặt › Tài khoản › ScreenScraper.</string>
     <string name="setup_box_art_skip">Bỏ qua</string>
     <!-- The question before the sign-in form. -->
-    <string name="setup_box_art_question_title">Lấy ảnh bìa từ ScreenScraper?</string>
-    <string name="setup_box_art_question_desc">Cần một tài khoản miễn phí trên screenscraper.fr để lấy ảnh bìa. Bạn có thể thiết lập sau trong Cài đặt › Tài khoản › ScreenScraper.</string>
-    <string name="setup_box_art_use">Dùng tài khoản của tôi</string>
-    <string name="setup_box_art_not_now">Để sau</string>
+    <string name="setup_confirm_title">Nút nào để xác nhận?</string>
+    <string name="setup_confirm_desc">Nút A để xác nhận, nút B để quay lại. Muốn ngược lại? Chọn “Dùng nút B”.</string>
+    <string name="setup_confirm_keep">Dùng nút A</string>
+    <string name="setup_confirm_use_b">Dùng nút B</string>
+    <string name="setup_confirm_active_a">Nút xác nhận: A</string>
+    <string name="setup_confirm_active_b">Nút xác nhận: B</string>
+    <string name="setup_confirm_again_desc">Dùng phím điều hướng để chọn nút bạn dùng. Chọn nút đang dùng sẽ đi tiếp.</string>
+    <string name="setup_look_title">Chọn giao diện</string>
+    <string name="setup_look_desc">Chọn màu sắc. Bạn có thể đổi bất cứ lúc nào trong Cài đặt › Giao diện.</string>
+    <string name="setup_box_art_question_title">Ảnh bìa</string>
+    <string name="setup_box_art_question_desc">Nơi Plumemu lấy ảnh bìa cho trò chơi của bạn. Có thể đổi bất cứ lúc nào trong Cài đặt › Tài khoản › Ảnh bìa.</string>
     <string name="setup_ready_box_art">Ảnh bìa: đang tải ngầm</string>
+    <string name="setup_ready_box_art_offline">Ảnh bìa: bắt đầu khi có mạng</string>
+    <string name="setup_ready_box_art_sign_in">Ảnh bìa: hãy đăng nhập lại trong Cài đặt › Tài khoản</string>
     <string name="account_username">Tên người dùng</string>
     <string name="account_password">Mật khẩu</string>
     <!-- What the keyboard shows as the field's name (EditorInfo.hintText), even in a full-screen editor. -->
@@ -1291,12 +1373,14 @@
     <!-- Sign out's confirm: what happens to box art. -->
     <string name="settings_sign_out_confirm_title">Đăng xuất khỏi ScreenScraper?</string>
     <string name="settings_sign_out_confirm_body">Ảnh bìa sẽ không hiện nữa, và việc tải về dừng lại. Ảnh đã lưu vẫn ở trên máy này và sẽ hiện lại khi bạn đăng nhập lại.</string>
+    <string name="settings_ra_sign_out_confirm_title">Đăng xuất khỏi RetroAchievements?</string>
+    <string name="settings_ra_sign_out_confirm_body">Tên người dùng, khóa và tiến độ hiển thị ở đây sẽ bị xóa khỏi máy này. Thành tích của bạn vẫn ở trên retroachievements.org. Đăng nhập lại bằng khóa để xem.</string>
     <string name="settings_account_not_available">Ảnh bìa: bản này không hỗ trợ</string>
     <string name="settings_account_not_available_body">Bản Plumemu này không có quyền truy cập ScreenScraper, nên không hiện ảnh bìa hay thông tin trò chơi. Mọi tính năng khác vẫn hoạt động bình thường.</string>
     <string name="settings_account_refused">Sai mật khẩu: hãy đăng nhập lại</string>
     <string name="settings_account_daily_limit">Hết lượt trong ngày. Tiếp tục lúc %1$s.</string>
-    <string name="settings_box_art_running">Đang tải ảnh bìa %1$s\u00A0trên\u00A0%2$s</string>
-    <string name="settings_box_art_running_left">Đang tải ảnh bìa %1$s\u00A0trên\u00A0%2$s · %3$s</string>
+    <string name="settings_box_art_running">Đang tải ảnh bìa · %1$s/%2$s</string>
+    <string name="settings_box_art_running_left">Đang tải ảnh bìa · %1$s/%2$s · %3$s</string>
     <string name="settings_box_art_running_no_counts">Đang tải ảnh bìa</string>
     <string name="settings_box_art_left_under_a_minute">còn chưa tới một phút</string>
     <string name="settings_box_art_left_minutes">còn khoảng %1$s\u00A0phút</string>
@@ -1311,10 +1395,14 @@
     <string name="settings_box_art_retrying_at">Không có kết nối, sẽ thử lại lúc %1$s</string>
     <string name="settings_box_art_retrying">Không có kết nối, sẽ sớm thử lại</string>
     <string name="settings_box_art_starting">Đang bắt đầu…</string>
-    <string name="settings_box_art_done">Xong: %1$s trên %2$s trò chơi đã có ảnh bìa</string>
+    <string name="settings_box_art_done">Đã có ảnh bìa cho %1$s/%2$s trò chơi</string>
     <string name="settings_box_art_some">%1$s trên %2$s trò chơi đã có ảnh bìa</string>
     <string name="settings_box_art_empty">Chưa có trò chơi nào: Plumemu sẽ tải ảnh bìa khi tìm thấy trò chơi.</string>
     <string name="settings_box_art_unreadable">Plumemu không đọc được tiến độ tải ảnh bìa.</string>
+    <string name="settings_box_art_none_found">Không tìm thấy ảnh bìa cho các trò chơi này</string>
+    <string name="settings_box_art_failed_offline">Không có mạng: không tải được ảnh bìa</string>
+    <string name="settings_box_art_failed_server">Máy chủ ảnh bìa không trả lời</string>
+    <string name="settings_box_art_short_no_answer">Không phản hồi</string>
     <string name="settings_box_art_fact_requests">Yêu cầu hôm nay: %1$s\u00A0trên\u00A0%2$s</string>
     <string name="settings_box_art_fact_requests_used_up">Yêu cầu hôm nay: %1$s\u00A0trên\u00A0%2$s · đã hết lượt trong ngày</string>
     <string name="settings_box_art_fact_requests_only">Yêu cầu hôm nay: %1$s</string>
@@ -1392,6 +1480,20 @@
     <string name="settings_unknown_folder_body_none">Hãy chọn hệ máy mà thư mục này thuộc về.</string>
     <string name="settings_unknown_folder_body_answered">Chọn hệ máy khác để đổi câu trả lời.</string>
     <string name="settings_unknown_folder_failed">Không lưu được câu trả lời đó. Chưa có gì thay đổi.</string>
+    <string name="settings_files_not_added_title">Tệp chưa được thêm</string>
+    <string name="settings_files_not_added_body">Các tệp trong thư mục của bạn không có trong thư viện, và lý do.</string>
+    <string name="settings_files_not_added_none">Mọi tệp đều đã có trong thư viện</string>
+    <string name="settings_files_not_added_no_system">Không nằm trong thư mục của hệ máy nào</string>
+    <string name="settings_files_not_added_unmatched_system">Không trình giả lập %1$s nào mở được các tệp này</string>
+    <string name="settings_files_not_added_unmatched">Không trình giả lập nào mở được các tệp này</string>
+    <string name="settings_files_not_added_bios">BIOS và firmware</string>
+    <string name="settings_files_not_added_saves">Bản lưu và trạng thái lưu</string>
+    <string name="settings_files_not_added_junk">Ghi chú, hình ảnh và tệp ẩn</string>
+    <string name="settings_files_not_added_folder">%1$s · %2$s</string>
+    <plurals name="settings_files_not_added_more">
+        <item quantity="one">và %1$s tệp nữa</item>
+        <item quantity="other">và %1$s tệp nữa</item>
+    </plurals>
     <plurals name="home_notice_unknown_folders">
         <item quantity="other">%1$s thư mục không rõ</item>
     </plurals>
@@ -1462,4 +1564,15 @@
         <item quantity="other">+%1$s thành tích</item>
     </plurals>
     <string name="achievement_mastered">Đã hoàn thành hết</string>
+
+    <!-- Settings › Accounts › Box art: where box art comes from. -->
+    <string name="settings_box_art_source">Bìa hộp</string>
+    <string name="settings_box_art_source_body">Nơi Plumemu lấy bìa hộp. Nhấn A để chọn.</string>
+    <string name="settings_box_art_source_screenscraper">Bìa hộp và thông tin game</string>
+    <string name="settings_box_art_source_screenscraper_line">Bìa hộp kèm năm phát hành, điểm đánh giá, thể loại, nhà phát hành và mô tả. Cần tài khoản ScreenScraper miễn phí.</string>
+    <string name="settings_box_art_source_libretro">Chỉ bìa hộp</string>
+    <string name="settings_box_art_source_libretro_line">Mặt trước hộp từ libretro qua Wi-Fi. Không có chi tiết. Không cần tài khoản.</string>
+    <string name="settings_box_art_source_own">Bìa riêng của Plumemu</string>
+    <string name="settings_box_art_source_own_line">Không dùng mạng. Plumemu tự vẽ bìa áp phích cho mỗi game.</string>
+    <string name="settings_box_art_source_failed">Plumemu không lưu được. Hãy thử lại.</string>
 </resources>

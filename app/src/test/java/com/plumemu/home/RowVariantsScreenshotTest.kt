@@ -87,7 +87,7 @@ abstract class RowVariantsFitBase {
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w576dp-h432dp-land-xhdpi")
 class RowVariantsFit576Test : RowVariantsFitBase() {
-    @Test fun medium() = check("576x432 Medium", TextSize.Medium, longTitle = false)
+    @Test fun medium() = check("576x432 Medium", TextSize.Small, longTitle = false)
 
     @Test fun largestLongTitle() = check("576x432 Largest long title", TextSize.Largest, longTitle = true)
 }
@@ -96,7 +96,7 @@ class RowVariantsFit576Test : RowVariantsFitBase() {
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
 class RowVariantsFit768Test : RowVariantsFitBase() {
-    @Test fun medium() = check("768x432 Medium", TextSize.Medium, longTitle = false)
+    @Test fun medium() = check("768x432 Medium", TextSize.Small, longTitle = false)
 
     @Test fun largestLongTitle() = check("768x432 Largest long title", TextSize.Largest, longTitle = true)
 }

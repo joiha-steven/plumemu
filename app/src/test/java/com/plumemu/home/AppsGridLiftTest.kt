@@ -12,7 +12,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.strip.StripState
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumMotion
@@ -52,7 +52,7 @@ class AppsGridLiftTest {
     private fun open(
         focus: Int,
         animationsOn: Boolean = true,
-        theme: PlumThemeSettings = MediumText.Default,
+        theme: PlumThemeSettings = TableText.Default,
     ) {
         compose.mainClock.autoAdvance = false
         compose.setContent {
@@ -223,7 +223,7 @@ class AppsGridLiftTest {
 
     @Test
     fun theFocusedTileHasTheFocusHaloOnGraphite() {
-        open(focus = 8, theme = MediumText.Graphite)
+        open(focus = 8, theme = TableText.Graphite)
         compose.mainClock.advanceTimeBy(1000)
         val halo = haloBesideFocusedTile()
         // The tile's own glow gives about 20 here; the halo adds about 35 more.
@@ -232,7 +232,7 @@ class AppsGridLiftTest {
 
     @Test
     fun theFocusedTileHasNoHaloOnPaper() {
-        open(focus = 8, theme = MediumText.Paper)
+        open(focus = 8, theme = TableText.Paper)
         compose.mainClock.advanceTimeBy(1000)
         val halo = haloBesideFocusedTile()
         // Only the tile's own glow reaches here (about 5), no halo.

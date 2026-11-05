@@ -33,7 +33,7 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
 
 /**
- * The games list's row at Default and Largest text (rows drawn 36 × text scale but at least 38, titles 16 sp):
+ * The games list's row at Default and Largest text (rows drawn 34 × text factor (1.0 to 1.5) but at least 38, titles 16 sp):
  * the title is centred in its row, the year sits on the title's baseline, nothing is cut, and the
  * focused row's fill is the whole row, `gameRowHeight` high.
  */
@@ -50,7 +50,7 @@ abstract class GameRowAlignBase {
     }
 
     protected fun theTitleIsCentredAndTheYearSharesItsBaseline(label: String) {
-        var size by mutableStateOf(TextSize.Medium)
+        var size by mutableStateOf(TextSize.Small)
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 // No spacing: each GameRow carries its own 2 dp gap, as in the real list.
@@ -63,13 +63,13 @@ abstract class GameRowAlignBase {
             }
         }
         val problems = mutableListOf<String>()
-        for (each in listOf(TextSize.Medium, TextSize.Largest)) {
+        for (each in listOf(TextSize.Small, TextSize.Largest)) {
             size = each
             compose.waitForIdle()
             val density = ApplicationProvider.getApplicationContext<Context>().resources.displayMetrics.density
             val onePx = 1f
             // The drawn row's height, from the decision, not from the code's formula.
-            val expectedHeight = mapOf(TextSize.Medium to 38f, TextSize.Largest to 52.2f).getValue(each) * density
+            val expectedHeight = mapOf(TextSize.Small to 38f, TextSize.Largest to 51f).getValue(each) * density
             for (index in 0..3) {
                 val at = "$label ${each.name} row $index"
                 val row = compose.onNode(hasTestTag(GAME_ROW_DRAWN_TAG) and hasAnyAncestor(hasTestTag("row$index")), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
@@ -100,7 +100,7 @@ abstract class GameRowAlignBase {
         val density = ApplicationProvider.getApplicationContext<Context>().resources.displayMetrics.density
         val row = compose.onNode(hasTestTag(GAME_ROW_DRAWN_TAG) and hasAnyAncestor(hasTestTag("focused")), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         // The fill is a background on the drawn row's own modifier chain, so it is exactly that box (the tap area adds the gap below).
-        assertEquals("$label: focused row height", 52.2f * density, row.height, 1f)
+        assertEquals("$label: focused row height", 51f * density, row.height, 1f)
     }
 }
 

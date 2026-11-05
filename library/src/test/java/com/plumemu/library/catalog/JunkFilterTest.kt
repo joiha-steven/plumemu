@@ -1,5 +1,6 @@
 package com.plumemu.library.catalog
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -52,5 +53,17 @@ class JunkFilterTest {
     fun gamesWithBiosLikeWordsAreNotJunk() {
         listOf("Bios Fear.bin", "BioShock.iso", "Openbios Quest.bin", "scph.bin", "Kickboxer.rom", "SCPH Adventure.bin")
             .forEach { assertFalse(it, JunkFilter.isJunkFile(it)) }
+    }
+
+    @Test
+    fun eachJunkFileHasOneKind() {
+        mapOf(
+            "scph1001.bin" to LeftOutReason.BIOS, "gba_bios.bin" to LeftOutReason.BIOS, "neogeo.zip" to LeftOutReason.BIOS,
+            "Game.srm" to LeftOutReason.SAVE, "Game.sav" to LeftOutReason.SAVE, "Game.state3" to LeftOutReason.SAVE,
+            "Game.st0" to LeftOutReason.SAVE, "Game.rtc" to LeftOutReason.SAVE,
+            "._Game.gba" to LeftOutReason.JUNK, ".hidden.sav" to LeftOutReason.JUNK, "readme.txt" to LeftOutReason.JUNK,
+            "cover.png" to LeftOutReason.JUNK, "README.md" to LeftOutReason.JUNK, "Thumbs.db" to LeftOutReason.JUNK, "game.md5" to LeftOutReason.JUNK,
+            "Super Mario World (USA).sfc" to null, "Bios Fear.bin" to null,
+        ).forEach { (name, kind) -> assertEquals(name, kind, JunkFilter.kindOf(name)) }
     }
 }

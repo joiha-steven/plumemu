@@ -172,7 +172,7 @@ class ReadabilityTest {
 
     @Test
     fun lightTextOnPocketsBackgroundIsDrawnDark() {
-        val stored = PlumThemeSettings(background = BackgroundChoice.Custom(Rgb(0xCDCCC4)), text = light)
+        val stored = PlumThemeSettings(background = BackgroundChoice.Custom(Rgb(0xCDCCC4)), text = light, accent = AccentChoice.Preset(AccentPreset.Red))
         assertEquals("what is stored stays", light, stored.text)
         assertEquals(dark, stored.textColor)
         assertEquals(TextMode.Dark, stored.textMode)

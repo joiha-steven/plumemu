@@ -19,7 +19,7 @@ import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coreui.components.SystemRowTags
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
@@ -50,7 +50,7 @@ abstract class SettingsLayoutAuditBase {
 
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 
-    private var theme by mutableStateOf(MediumText.Graphite)
+    private var theme by mutableStateOf(TableText.Graphite)
 
     /** Shows the page once; [each] then runs in Graphite and in Paper (one setContent per test). */
     private fun inBothThemes(
@@ -72,10 +72,10 @@ abstract class SettingsLayoutAuditBase {
 
     protected abstract val narrow: Boolean
 
-    private val themes = listOf("Graphite" to MediumText.Graphite, "Paper" to MediumText.Paper)
+    private val themes = listOf("Graphite" to TableText.Graphite, "Paper" to TableText.Paper)
 
     /**
-     * With nine sections the column does not all fit 432 high at Medium text: it scrolls and fades the cut row
+     * With nine sections the column does not all fit 432 high at Small text: it scrolls and fades the cut row
      * (design/rules.md › Lists that scroll). What still holds: equal rows of at least 40, the focused row and the one past it whole,
      * the bottom fade drawn while rows are cut.
      */
@@ -146,21 +146,21 @@ abstract class SettingsLayoutAuditBase {
     @Test
     fun theBackgroundPanelShowsSampleRowsOneByOneAsTheTextGrows() {
         val (page, startIndex) = ColorPages.openingFor(SettingsOption.Background, PlumSettings(appearance = AppearanceSettings(background = ColorSetting.Preset("Graphite"))))
-        var size by mutableStateOf(TextSize.Medium)
-        compose.setContent { PlumTheme(MediumText.Graphite.copy(textSize = size)) { SettingsAt(panelAt(SettingsOption.Background, page, startIndex)) } }
+        var size by mutableStateOf(TextSize.Small)
+        compose.setContent { PlumTheme(TableText.Graphite.copy(textSize = size)) { SettingsAt(panelAt(SettingsOption.Background, page, startIndex)) } }
         val counts = mutableMapOf<TextSize, Int>()
-        for (each in listOf(TextSize.Medium, TextSize.Large, TextSize.Largest)) {
+        for (each in listOf(TextSize.Small, TextSize.Large, TextSize.Largest)) {
             size = each
             compose.waitForIdle()
-            // At Largest on the wide panel the four swatch rows leave no room even for the name: it is left out whole (keeping it clipped and overlapped "+", TextSizeScreens768Test).
-            val nameShown = compose.onAllNodes(hasText("#0E0F11", substring = true), useUnmergedTree = true).fetchSemanticsNodes().any { n -> n.layoutInfo.isPlaced }
-            if (narrow || each != TextSize.Largest) assertTrue("the colour name shows at $each", nameShown)
+            // On the wide screen the swatch rows leave no room even for the name (five rows of three in the 205 dp right column, four of four in the 248 dp panel at Largest): it is left out whole (keeping it clipped and overlapped "+", TextSizeScreens768Test).
+            val nameShown = compose.onAllNodes(hasText("#111214", substring = true), useUnmergedTree = true).fetchSemanticsNodes().any { n -> n.layoutInfo.isPlaced }
+            if (narrow) assertTrue("the colour name shows at $each", nameShown)
             counts[each] = listOf("Mega Man X", "Super Metroid", "Yoshi's Island").count { compose.onAllNodes(hasText(it), useUnmergedTree = true).fetchSemanticsNodes().any { n -> n.layoutInfo.isPlaced } }
         }
         println("SAMPLE_ROWS narrow=$narrow $counts")
         // 768 wide: four rows of swatches leave about 25 below them, room for the name and no sample row; 576 wide: three rows of swatches leave room for rows.
-        if (narrow) assertTrue("at least one sample row shows at Medium when there is room: $counts", counts.getValue(TextSize.Medium) >= 1)
-        assertTrue("rows only drop as text grows: $counts", counts.getValue(TextSize.Medium) >= counts.getValue(TextSize.Large) && counts.getValue(TextSize.Large) >= counts.getValue(TextSize.Largest))
+        if (narrow) assertTrue("at least one sample row shows at Small when there is room: $counts", counts.getValue(TextSize.Small) >= 1)
+        assertTrue("rows only drop as text grows: $counts", counts.getValue(TextSize.Small) >= counts.getValue(TextSize.Large) && counts.getValue(TextSize.Large) >= counts.getValue(TextSize.Largest))
     }
 
     @Test

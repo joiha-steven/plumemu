@@ -88,7 +88,9 @@ abstract class HomeGridClipBase {
             val top = grid.top.value * density
             val bottom = grid.bottom.value * density
             val gap = PlumDimens.barGap.value * density
-            val ring = PlumDimens.focusRingOutset.value * density * 2
+            val gapBelow = footerGapToKeys(settings.textSize ?: TextSize.Large).value * density
+            // What a lifted focused cover (its collar grown by the lift) puts past its own bounds: ring, keyline and halo (half the growth each side is added per cover).
+            val ring = (PlumDimens.focusRingOutset.value + PlumDimens.focusRingKeyline.value + PlumDimens.focusHaloReach.value) * density
             val nodes = compose.onAllNodes(isCover, useUnmergedTree = true).fetchSemanticsNodes()
             val covers = nodes.map { it.positionInRoot.y to it.positionInRoot.y + it.size.height }
             // Scrolled: the cell at the grid's top is not the first one.
@@ -114,14 +116,14 @@ abstract class HomeGridClipBase {
             covers.filter { it.first < top - 1 && it.second > top + 1 }.forEach { problems += "$step: a row starts ${(top - it.first) / density} dp above the grid's top and is cut there" }
             val cutAbove = covers.any { it.first < top - 1 && it.second > top }
             val cutBelow = covers.any { it.second > bottom + 1 && it.first < bottom }
-            if (cutAbove && (focusTop == null || focusTop.first - ring >= top)) {
+            if (cutAbove && (focusTop == null || focusTop.first - ring - (focusTop.second - focusTop.first) * (PlumDimens.FOCUSED_COVER_SCALE - 1f) / 2f >= top)) {
                 cutTop++
                 val n = dirty((top - gap).toInt(), top.toInt())
                 if (n > 0) problems += "$step: $n pixels of the gap above the grid are not background"
             }
-            if (cutBelow && (focusTop == null || focusTop.second + ring <= bottom)) {
+            if (cutBelow && (focusTop == null || focusTop.second + ring + (focusTop.second - focusTop.first) * (PlumDimens.FOCUSED_COVER_SCALE - 1f) / 2f <= bottom)) {
                 cutBottom++
-                val n = dirty(bottom.toInt(), (bottom + gap).toInt())
+                val n = dirty(bottom.toInt(), (bottom + gapBelow).toInt())
                 if (n > 0) problems += "$step: $n pixels of the gap below the grid are not background"
             }
         }
@@ -169,6 +171,7 @@ abstract class HomeGridClipBase {
         label: String,
         entryId: String,
         gridSizes: List<GridSize> = listOf(GridSize.Small),
+        needsCutRow: Boolean = true,
         board: @Composable () -> Unit,
     ) {
         compose.setContent { PlumTheme(settings) { ProvideGridSize(gridSize) { key(settings, gridSize) { board() } } } }
@@ -190,7 +193,7 @@ abstract class HomeGridClipBase {
             }
         }
         assertTrue("$label: ${problems.size} of the sizes draw outside the grid:\n" + problems.take(4).joinToString("\n"), problems.isEmpty())
-        assertTrue("$label: the walks never scrolled ($top) or cut a row at the bottom ($bottom), so they prove nothing", top > 0 && bottom > 0)
+        assertTrue("$label: the walks never scrolled ($top) or cut a row at the bottom ($bottom), so they prove nothing", top > 0 && (bottom > 0 || !needsCutRow))
     }
 
     @Test
@@ -202,15 +205,17 @@ abstract class HomeGridClipBase {
         content: HomeContent,
         source: HomeArtSource,
         gridId: String,
-    ) = everySize(label, content.entries[entryIndex].id, GridSize.entries) {
+        needsCutRow: Boolean = true,
+    ) = everySize(label, content.entries[entryIndex].id, GridSize.entries, needsCutRow) {
         HomeWithArt(source, gridActions(entryIndex, 0), content, gridIds = setOf(gridId), onState = { state = it })
     }
 
+    // Medium and Small show whole rows (the mixed board is short enough not to scroll at all there), so only Large can cut one; this board's Large rows end on the grid's edge.
     @Test
-    fun recentGridCutsAtItsEdges() = gamesGrid("Recent", 0, MixedGridLibrary, mixedGridSource(), MixedGridLibrary.entries[0].id)
+    fun recentGridCutsAtItsEdges() = gamesGrid("Recent", 0, MixedGridLibrary, mixedGridSource(), MixedGridLibrary.entries[0].id, needsCutRow = false)
 
     @Test
-    fun favoritesGridCutsAtItsEdges() = gamesGrid("Favorites", 1, MixedGridLibrary, mixedGridSource(), MixedGridLibrary.entries[1].id)
+    fun favoritesGridCutsAtItsEdges() = gamesGrid("Favorites", 1, MixedGridLibrary, mixedGridSource(), MixedGridLibrary.entries[1].id, needsCutRow = false)
 
     @Test
     fun systemGridCutsAtItsEdges() = gamesGrid("Super Nintendo", FakeHomeContent.BOARD_SNES_INDEX, CoverArtLibrary, coverArtSource(), "snes")
@@ -224,7 +229,7 @@ abstract class HomeGridClipBase {
         compose.waitForIdle()
         val problems = mutableListOf<String>()
         var scrolled = false
-        for (size in listOf(TextSize.Medium, TextSize.Large, TextSize.Largest)) {
+        for (size in listOf(TextSize.Small, TextSize.Large, TextSize.Largest)) {
             settings = PlumThemeSettings.Graphite.copy(textSize = size)
             compose.waitForIdle()
             for (gesture in 0 until 6) {
@@ -252,7 +257,7 @@ abstract class HomeGridClipBase {
         compose.setContent { PlumTheme(settings) { AppsGridBoard(focused = AppsGridApps.lastIndex, onState = { state = it }) } }
         compose.waitForIdle()
         val problems = mutableListOf<String>()
-        val order = listOf(TextSize.Medium, TextSize.Large, TextSize.Small, TextSize.Largest, TextSize.Medium, TextSize.Huge, TextSize.Small, TextSize.Large)
+        val order = listOf(TextSize.Small, TextSize.Large, TextSize.Small, TextSize.Largest, TextSize.Small, TextSize.Huge, TextSize.Small, TextSize.Large)
         for (size in order) {
             settings = PlumThemeSettings.Graphite.copy(textSize = size)
             problems += topCuts("end of Apps at $size")

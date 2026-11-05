@@ -20,7 +20,7 @@ class HomeMixedGridContentTest {
             recent = listOf(psp, snes, hiddenNes, unknown),
             favorites = listOf(snes),
             apps = listOf(app),
-            systems = listOf(SystemGames("psp", "PSP", listOf(psp), CoverShape(0.58f)), SystemGames("snes", "Super Nintendo", listOf(snes), CoverShape(1.4f))),
+            systems = listOf(SystemGames("psp", "PSP", listOf(psp), CoverShape(0.58f)), SystemGames("snes", "Super Nintendo", listOf(snes), CoverShape(1.4f), shortName = "SNES")),
             hasBoxArt = true,
             hiddenSystems = listOf(SystemGames("nes", "NES", listOf(hiddenNes), CoverShape(0.7f))),
         )
@@ -46,6 +46,13 @@ class HomeMixedGridContentTest {
         assertEquals("a system with no shape: landscape, like a system the data does not know", CoverShape.Landscape, recent.shapeOf(unknown))
         assertEquals(CoverShape(1.4f), favorites.shapeOf(snes))
         assertEquals("a system's own games take its shape", CoverShape(0.58f), content.entries[3].shapeOf(psp))
+    }
+
+    @Test
+    fun recentAndFavoritesKnowEachSystemsShortNameWhereTheDataHasOne() {
+        assertEquals(mapOf("snes" to "SNES"), recent.systemShortNames)
+        assertEquals(mapOf("snes" to "SNES"), favorites.systemShortNames)
+        assertEquals("a system's own entry needs none", emptyMap<String, String>(), content.entries[3].systemShortNames)
     }
 
     @Test

@@ -54,6 +54,8 @@ internal class HomeNotices(
     val onCoreQuestionOver: (CoreQuestion) -> Unit = {},
     /** The home started asking (again): a question an earlier home showed can no longer be answered. */
     val onCoreQuestionsRestarted: () -> Unit = {},
+    /** Which button of the empty state has the focus (kept while Settings is open over the home). */
+    val emptyFocus: EmptyFocus = EmptyFocus(),
 )
 
 /** What an empty library is waiting for. */

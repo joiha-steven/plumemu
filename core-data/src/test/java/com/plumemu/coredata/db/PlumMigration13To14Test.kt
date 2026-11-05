@@ -117,7 +117,7 @@ class PlumMigration13To14Test {
         helper.createDatabase(DB_NAME, 13).use(::fill)
         val room =
             Room.databaseBuilder(ApplicationProvider.getApplicationContext(), PlumDatabase::class.java, DB_NAME)
-                .addMigrations(*PlumMigrations.ALL)
+                .addMigrations(*PlumMigrations.all(TestDetailsRating))
                 .allowMainThreadQueries()
                 .build()
         assertEquals(2, room.scanDao().gamesInFolder(1).size)
@@ -135,7 +135,7 @@ class PlumMigration13To14Test {
             everything(db)
         }
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val room = Room.databaseBuilder(context, PlumDatabase::class.java, DB_NAME).addMigrations(*PlumMigrations.ALL).build()
+        val room = Room.databaseBuilder(context, PlumDatabase::class.java, DB_NAME).addMigrations(*PlumMigrations.all(TestDetailsRating)).build()
         val failure = runCatching { room.openHelper.writableDatabase }.exceptionOrNull()
         room.close()
         assertTrue("the open should fail, got $failure", failure is IllegalStateException)

@@ -2,6 +2,30 @@ package com.plumemu.settings.screen
 
 /** Library › ROM folders and Emulators › a system: where their panel pages put the focus. */
 internal object SettingsListPages {
+    /** Library's rows whose panel is a plain list, opened on its first item. */
+    val listPageOf: Map<SettingsOption, PanelPage> =
+        mapOf(
+            SettingsOption.HiddenGames to PanelPage.HiddenGames,
+            SettingsOption.UnidentifiedGames to PanelPage.UnidentifiedGames,
+            SettingsOption.FilesNotAdded to PanelPage.FilesNotAdded,
+        )
+
+    /**
+     * Library › Files not added › line [index]: on an unknown folder's line, the cursor goes to that
+     * folder's row in Library (its panel beside it, A answers there); null on any other line.
+     */
+    fun toUnknownFolderRow(
+        index: Int,
+        content: SettingsContent,
+        focus: SettingsFocus,
+    ): SettingsFocus? {
+        val folder = (content.notAdded.getOrNull(index) as? NotAddedItem.Folder)?.folder ?: return null
+        val place = content.unknownFolders.indexOfFirst { it.key == folder }
+        val first = SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.UnknownFolder)
+        if (place < 0 || first < 0) return null
+        val row = SettingsSection.Library to first + place
+        return focus.copy(column = SettingsColumn.Options, page = null, panelIndex = 0, rememberedOption = focus.rememberedOption + row)
+    }
     /** Back to the folders list, on the folder the confirm was about (or the nearest item when it left). */
     fun backToFolders(
         focus: SettingsFocus,

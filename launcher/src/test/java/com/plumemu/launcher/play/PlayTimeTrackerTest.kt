@@ -19,14 +19,28 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-private class FakeClock(var wall: Long = 1_700_000_000_000, var realtime: Long = 50_000, var boots: Int? = 7) : PlayClock {
+private class FakeClock(
+    var wall: Long = 1_700_000_000_000,
+    var realtime: Long = 50_000,
+    var boots: Int? = 7,
+    var uptime: Long = 40_000,
+) : PlayClock {
     override fun wallMs() = wall
 
     override fun realtimeMs() = realtime
 
+    override fun uptimeMs() = uptime
+
     override fun bootCount() = boots
 
     fun advance(ms: Long) {
+        wall += ms
+        realtime += ms
+        uptime += ms
+    }
+
+    /** Deep sleep: the awake clock stands still. */
+    fun sleep(ms: Long) {
         wall += ms
         realtime += ms
     }
@@ -41,9 +55,9 @@ class PlayTimeTrackerTest {
     private var gameId = 0L
 
     /** A tracker as a fresh process would build it: nothing in memory, only what is on disk. */
-    private fun newProcessTracker() = PlayTimeTracker(
+    private fun newProcessTracker(screenOff: ScreenOffTime = ScreenOffTime(clock)) = PlayTimeTracker(
         SharedPreferencesSessionStore(ApplicationProvider.getApplicationContext()),
-        db.playDao(), db.gameDao(), clock, log, UnconfinedTestDispatcher(),
+        db.playDao(), db.gameDao(), clock, log, UnconfinedTestDispatcher(), screenOff = screenOff,
     )
 
     @Before
@@ -130,6 +144,7 @@ class PlayTimeTrackerTest {
         tracker.onGameLaunched(gameId)
         clock.wall += 3 * 3_600_000 // the clock was three hours off and got corrected
         clock.realtime += 300_000
+        clock.uptime += 300_000
         assertEquals(PlaySessionOutcome.Recorded(gameId, 300), tracker.onResume())
     }
 
@@ -139,6 +154,7 @@ class PlayTimeTrackerTest {
         tracker.onGameLaunched(gameId)
         clock.wall += 3 * 3_600_000 // corrected during the game: the span must not grow by three hours
         clock.realtime += 300_400
+        clock.uptime += 300_400
         assertEquals(PlaySessionOutcome.Recorded(gameId, 300), tracker.onResume())
         val session = db.playDao().sessions(gameId).single()
         assertEquals(clock.wall, session.endedAt)
@@ -153,6 +169,7 @@ class PlayTimeTrackerTest {
         tracker.onGameLaunched(gameId)
         clock.wall -= 3_600_000 // the person set the clock an hour back
         clock.realtime += 30_000
+        clock.uptime += 30_000
         assertEquals(PlaySessionOutcome.Recorded(gameId, 30), tracker.onResume())
     }
 
@@ -167,13 +184,15 @@ class PlayTimeTrackerTest {
     }
 
     @Test
-    fun aRebootInBetweenFallsBackToTheWallClock() = runTest {
+    fun aRebootInBetweenCountsNothing() = runTest {
         val tracker = newProcessTracker()
         tracker.onGameLaunched(gameId)
-        clock.wall += 1_800_000
-        clock.realtime = 20_000 // the elapsed-since-boot clock restarted
+        clock.wall += 1_800_000 // switched off, or the battery ran out: no clock tells how long was play
+        clock.realtime = 20_000
+        clock.uptime = 15_000
         clock.boots = 8
-        assertEquals(PlaySessionOutcome.Recorded(gameId, 1_800), newProcessTracker().onResume())
+        assertEquals(PlaySessionOutcome.Unmeasurable(gameId), newProcessTracker().onResume())
+        assertNull(db.playDao().play(gameId))
     }
 
     @Test
@@ -181,8 +200,56 @@ class PlayTimeTrackerTest {
         newProcessTracker().onGameLaunched(gameId) // started 50 s after boot
         clock.wall += 3_600_000
         clock.realtime = 600_000 // ten minutes after the next boot
+        clock.uptime = 590_000
         clock.boots = 8
-        assertEquals(PlaySessionOutcome.Recorded(gameId, 3_600), newProcessTracker().onResume())
+        assertEquals(PlaySessionOutcome.Unmeasurable(gameId), newProcessTracker().onResume())
+    }
+
+    @Test
+    fun deepSleepWithTheGameInFrontIsNotCounted() = runTest {
+        val tracker = newProcessTracker()
+        tracker.onGameLaunched(gameId)
+        clock.advance(600_000)
+        clock.sleep(2 * 3_600_000) // folded shut for two hours
+        clock.advance(300_000)
+        assertEquals(PlaySessionOutcome.Recorded(gameId, 900), tracker.onResume())
+        val session = db.playDao().sessions(gameId).single()
+        assertEquals(clock.wall - 900_000, session.startedAt)
+    }
+
+    @Test
+    fun screenOffWhileKeptAwakeIsNotCounted() = runTest {
+        val screen = ScreenOffTime(clock)
+        val tracker = newProcessTracker(screen)
+        tracker.onGameLaunched(gameId)
+        clock.advance(600_000)
+        screen.screenChanged(on = false)
+        clock.advance(30 * 60_000) // screen off, but something holds the device awake
+        screen.screenChanged(on = true)
+        clock.advance(300_000)
+        assertEquals(PlaySessionOutcome.Recorded(gameId, 900), tracker.onResume())
+    }
+
+    @Test
+    fun screenOffBeforeTheLaunchIsNotSubtracted() = runTest {
+        val screen = ScreenOffTime(clock)
+        screen.screenChanged(on = false)
+        clock.advance(3_600_000)
+        screen.screenChanged(on = true)
+        val tracker = newProcessTracker(screen)
+        tracker.onGameLaunched(gameId)
+        clock.advance(600_000)
+        assertEquals(PlaySessionOutcome.Recorded(gameId, 600), tracker.onResume())
+    }
+
+    @Test
+    fun aSessionLongerThanTheLimitCountsTheLimit() = runTest {
+        val tracker = newProcessTracker()
+        tracker.onGameLaunched(gameId)
+        clock.advance(10 * 3_600_000) // the emulator left open overnight, screen kept on
+        val limit = PlayTimeTracker.MAX_SESSION_SECONDS
+        assertEquals(PlaySessionOutcome.Recorded(gameId, limit), tracker.onResume())
+        assertEquals(clock.wall - limit * 1_000, db.playDao().sessions(gameId).single().startedAt)
     }
 
     @Test
@@ -204,16 +271,27 @@ class PlayTimeTrackerTest {
 
     @Test
     fun elapsedTimeRules() {
-        val start = PendingSession(1, startedAtWallMs = 1_000_000, startedAtRealtimeMs = 100_000, bootCount = 3)
-        // Same boot: the elapsed-since-boot clock decides, whatever the wall clock did.
-        assertEquals(20_000L, PlaySessions.elapsedMs(start, 1_000_000 + 10_820_000, 120_000, 3))
-        assertEquals(20_000L, PlaySessions.elapsedMs(start, 1_000_000 - 3_600_000, 120_000, 3))
-        // Another boot: the wall clock decides; negative cannot be measured.
-        assertEquals(500_000L, PlaySessions.elapsedMs(start, 1_500_000, 200_000, 4))
-        assertNull(PlaySessions.elapsedMs(start, 900_000, 50_000, 4))
+        val start = PendingSession(1, startedAtWallMs = 1_000_000, startedAtRealtimeMs = 100_000, bootCount = 3, startedAtUptimeMs = 90_000)
+        // Same boot: the awake clock decides, whatever the wall clock and deep sleep did.
+        assertEquals(20_000L, PlaySessions.elapsedMs(start, 1_000_000 + 10_820_000, 120_000, 110_000, 3))
+        assertEquals(20_000L, PlaySessions.elapsedMs(start, 1_000_000 - 3_600_000, 120_000, 110_000, 3))
+        assertEquals(5_000L, PlaySessions.elapsedMs(start, 1_020_000, 120_000, 95_000, 3))
+        // A note without the awake clock (written by an older version): the elapsed-since-boot clock.
+        assertEquals(20_000L, PlaySessions.elapsedMs(start.copy(startedAtUptimeMs = null), 1_020_000, 120_000, 95_000, 3))
+        // Another boot cannot be measured.
+        assertNull(PlaySessions.elapsedMs(start, 1_500_000, 200_000, 150_000, 4))
+        assertNull(PlaySessions.elapsedMs(start, 900_000, 50_000, 40_000, 4))
         // Android 6, no boot count: the boot moment seen through both clocks decides.
         val old = start.copy(bootCount = null)
-        assertEquals(20_000L, PlaySessions.elapsedMs(old, 1_000_000 + 20_500, 120_000, null))
-        assertEquals(500_000L, PlaySessions.elapsedMs(old, 1_500_000, 200_000, null))
+        assertEquals(20_000L, PlaySessions.elapsedMs(old, 1_000_000 + 20_500, 120_000, 110_000, null))
+        assertNull(PlaySessions.elapsedMs(old, 1_500_000, 200_000, 150_000, null))
+    }
+
+    @Test
+    fun theAwakeStartSurvivesProcessDeath() = runTest {
+        newProcessTracker().onGameLaunched(gameId)
+        clock.advance(300_000)
+        clock.sleep(3_600_000)
+        assertEquals(PlaySessionOutcome.Recorded(gameId, 300), newProcessTracker().onResume())
     }
 }

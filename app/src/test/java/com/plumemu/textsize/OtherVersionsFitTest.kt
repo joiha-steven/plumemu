@@ -101,7 +101,7 @@ abstract class OtherVersionsFitBase(
 
     @Test
     fun theCurrentVersionIsWholeAtMedium() {
-        val failures = problems("game_menu_versions_medium", menu, listOf(PlumFont.Sans to TextSize.Medium)) { false }
+        val failures = problems("game_menu_versions_medium", menu, listOf(PlumFont.Sans to TextSize.Small)) { false }
         compose.onNodeWithText("World 930201", useUnmergedTree = true).assertExists()
         assertNone(failures)
     }

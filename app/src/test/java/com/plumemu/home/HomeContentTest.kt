@@ -115,15 +115,16 @@ class HomeContentTest {
         val snes = board.entries[FakeHomeContent.BOARD_SNES_INDEX]
         val apps = board.entries[2]
         val systems = hintsFor(board, Column.Systems, snes).map { it.label }
-        assertEquals("the board's RP5-1", listOf(R.string.home_hint_select, R.string.home_hint_search, R.string.home_hint_settings), systems)
+        assertEquals("the board's RP5-1 and SELECT, which switches the focused system's games view as in the list", listOf(R.string.home_hint_select, R.string.home_hint_search, R.string.home_hint_settings, R.string.home_hint_grid_view), systems)
         val games = hintsFor(board, Column.Games, snes).map { it.label }
         assertEquals(
-            "SELECT without box art too (the grid needs no account); Y Favorite and X Search (D3); START opens the game menu",
+            "SELECT without box art too (the grid needs no account); Y Favorite and X Search (D3); R3 Sort (0.1.2); START opens the game menu",
             listOf(
                 R.string.home_hint_play,
                 R.string.home_hint_back,
                 R.string.home_hint_favorite,
                 R.string.home_hint_search,
+                R.string.home_hint_sort,
                 R.string.home_hint_menu,
                 R.string.home_hint_switch_system,
                 R.string.home_hint_grid_view,
@@ -144,6 +145,35 @@ class HomeContentTest {
         assertEquals("nothing to mark on the system column", false, hintsFor(board, Column.Systems, snes).any { it.action == Action.ToggleFavorite })
         val empty = HomeContent.of(emptyList(), emptyList(), apps.rows, emptyList())
         assertEquals("nothing to find in an empty library", false, hintsFor(empty, Column.Systems, empty.entries[2]).any { it.action == Action.Search })
+    }
+
+    @Test
+    fun aGridOffersYFavoriteAndTheSystemsListOffersTheViewSwitchWorded_AsTheGamesList() {
+        val snes = board.entries[FakeHomeContent.BOARD_SNES_INDEX]
+        assertEquals(true, hintsFor(board, Column.Games, snes, showsGrid = true).any { it.action == Action.ToggleFavorite })
+        assertEquals(R.string.home_hint_grid_view, hintsFor(board, Column.Systems, snes).single { it.action == Action.ToggleView }.label)
+        assertEquals(R.string.home_hint_list_view, hintsFor(board, Column.Systems, snes, showsGrid = true).single { it.action == Action.ToggleView }.label)
+    }
+
+    @Test
+    fun sortIsAHintOnlyOnAListTheSortOrders() {
+        val snes = board.entries[FakeHomeContent.BOARD_SNES_INDEX]
+        val sort = hintsFor(board, Column.Games, snes).single { it.action == Action.Sort }
+        assertEquals(R.string.home_key_r3, sort.key)
+        assertEquals(R.string.home_hint_sort, sort.label)
+        board.entries.filter { !it.kind.followsSort }.forEach { other ->
+            assertEquals("no Sort on ${other.kind}", false, hintsFor(board, Column.Games, other).any { it.action == Action.Sort })
+        }
+        assertEquals("nothing to sort on the system column", false, hintsFor(board, Column.Systems, snes).any { it.action == Action.Sort })
+    }
+
+    @Test
+    fun theLetterRailAndLetterJumpsBelongToNameOrderAloneAndOtherSortsJumpAPage() {
+        fun entryOf(sortedByName: Boolean) =
+            HomeContent.of(emptyList(), emptyList(), emptyList(), board.entries[FakeHomeContent.BOARD_SNES_INDEX].let { listOf(SystemGames(it.id, it.name.orEmpty(), it.rows)) }, sortedByName = sortedByName).entries
+                .first { it.kind == EntryKind.System }
+        assertEquals(true, entryOf(sortedByName = true).hasLetterRail)
+        assertEquals("by last played, most played, recently added or year the rail has no letters and L1 / R1 jump a page", false, entryOf(sortedByName = false).hasLetterRail)
     }
 
     @Test
@@ -177,7 +207,7 @@ class HomeContentTest {
         val recent = noGames.entries[0]
         val apps = noGames.entries[2]
         assertEquals("an empty library asks for a folder, with nothing to open", listOf(R.string.home_hint_add_folder, R.string.home_hint_settings), hintsFor(noGames, Column.Systems, recent).map { it.label })
-        assertEquals(listOf(R.string.home_hint_select, R.string.home_hint_settings), hintsFor(noGames, Column.Systems, apps).map { it.label })
+        assertEquals(listOf(R.string.home_hint_select, R.string.home_hint_settings, R.string.home_hint_grid_view), hintsFor(noGames, Column.Systems, apps).map { it.label })
         // Apps' grid of icons needs no box art: SELECT is offered on the Apps list too.
         assertEquals(
             "no other list to switch to",

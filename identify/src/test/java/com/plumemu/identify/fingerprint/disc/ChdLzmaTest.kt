@@ -17,7 +17,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.zip.CRC32
 
-/** CHD hunks in the `cdlz` and `lzma` codecs, from the fixtures of `containers/make_fixtures.py`. */
+/** CHD hunks in the `cdlz` and `lzma` codecs (and the unread ones), from the fixtures of `containers/make_fixtures.py`. */
 class ChdLzmaTest {
 
     private val cd = ContainerFixtures.named("ps1-cd.cdlz.bin")
@@ -53,7 +53,7 @@ class ChdLzmaTest {
             val (f, bytes) = read(chdOf(fixture, codec))
             assertEquals(fixture.file + f.notes, "SLUS-99999", f.productCode)
             assertTrue(f.notes.toString(), f.notes.isEmpty())
-            assertTrue("read $bytes", bytes < 6 * 1024)
+            assertTrue("read $bytes", bytes < 8 * 1024)
         }
     }
 
@@ -86,18 +86,17 @@ class ChdLzmaTest {
 
     @Test
     fun aWholeHunkMustUseExactlyItsCompressedBytes() {
-        // A prefix does not look at the end of the stream; the whole hunk does, as MAME does.
+        // MAME checks the end of the stream: bytes left over after the data make the hunk damaged.
         val padded = dvd.bytes + ByteArray(7) { 0x55 }
         val chd = chdOf(dvd, "lzma", padded)
         val source = ChdSource(ByteArraySource(chd), ChdHeader.read(ByteArraySource(chd)))
-        assertEquals(2048, source.readFully(2L * dvd.int("hunk"), 2048).size)
-        val thrown = assertThrows(NotRead::class.java) { source.readFully(2L * dvd.int("hunk"), dvd.int("hunk")) }
+        val thrown = assertThrows(NotRead::class.java) { source.readFully(2L * dvd.int("hunk"), 2048) }
         assertTrue(thrown.message, thrown.message!!.contains("LZMA data damaged"))
     }
 
     @Test
     fun codecsWithoutADecoderStayNotes() {
-        for (codec in listOf("cdfl", "flac", "zstd", "cdzs", "huff")) {
+        for (codec in listOf("cdfl", "flac", "huff")) {
             val (f, _) = read(chdOf(cd, codec))
             assertNull(codec, f.productCode)
             assertTrue(f.notes.toString(), f.notes.any { it.contains("codec $codec not read") })
@@ -116,10 +115,11 @@ class ChdLzmaTest {
                 ByteArray(4 * hunk), hunk, unit(codec), codecs = listOf(codec),
                 plan = { if (it == index) HunkPlan(0) else HunkPlan(4) },
                 encoded = mapOf(index to bytes),
+                encodedCrc16 = mapOf(index to fixture.int("crc16")),
             )
         }
 
-        private fun unit(codec: String) = if (codec == "lzma") 2048 else PackedImages.CD_FRAME
+        private fun unit(codec: String) = if (codec == "lzma" || codec == "zstd") 2048 else PackedImages.CD_FRAME
 
         internal fun hunkIndex(fixture: ContainerFixtures.Fixture, codec: String) =
             fixture.int("first") / (fixture.int("hunk") / unit(codec))

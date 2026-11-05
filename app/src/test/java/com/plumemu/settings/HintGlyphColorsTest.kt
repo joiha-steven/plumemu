@@ -2,6 +2,7 @@ package com.plumemu.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +39,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 
 /**
@@ -67,7 +69,7 @@ class HintGlyphColorsTest {
                 val letters = ButtonLetters.of(confirm)
                 CompositionLocalProvider(LocalButtonLetters provides letters) {
                     // The theme's background behind the caps, as on every screen.
-                    Row(Modifier.background(PlumTheme.colors.bg)) {
+                    Row(Modifier.background(PlumTheme.colors.bg).padding(bottom = 8.dp)) { // room under the caps for their collar
                         Hint(stringResource(letters.confirm), "Play")
                         Hint(stringResource(letters.back), "Back")
                         Hint(stringResource(letters.search), "Search")
@@ -97,6 +99,16 @@ class HintGlyphColorsTest {
         return found >= INK_PIXELS
     }
 
+    /** A cap's face is the board's vertical gradient: half way down it is the middle of its stops. */
+    private fun middle(stops: List<Color>): Color = androidx.compose.ui.graphics.lerp(stops.first(), stops.last(), 0.5f)
+
+    private fun usualFace(colors: PlumColors): Color = middle(PlumComposeColors.from(colors).collar.seat.hintCap.rest.stops)
+
+    private fun setFace(
+        colors: PlumColors,
+        fill: Color,
+    ): Color = middle(PlumComposeColors.from(colors).collar.seat.hintAccent(fill).rest.stops)
+
     private fun near(
         want: Color,
         got: Color,
@@ -118,12 +130,13 @@ class HintGlyphColorsTest {
             val buttons = set.buttons!!
             val composeColors = PlumComposeColors.from(PlumColors.derive(set.backgroundColor, set.textMode, set.accentColor))
             assertEquals(6, caps().size)
-            val keyFace = composeColors.keyFace.face
+            val colors = PlumColors.derive(set.backgroundColor, set.textMode, set.accentColor)
+            val keyFace = usualFace(colors)
             // Filled inside, not only ringed, and the letter in its own colour on it.
             val drawn = caps()
             val letters = listOf(buttons.a, buttons.b, buttons.x, buttons.y)
             for (i in 0..3) {
-                assertNear("$set cap $i is filled", letters[i].fill.toComposeColor(), drawn[i].inside())
+                assertNear("$set cap $i is filled", setFace(colors, letters[i].fill.toComposeColor()), drawn[i].inside())
                 assertTrue("$set cap $i's letter is ${letters[i].letter}", drawn[i].hasInk(letters[i].letter.toComposeColor()))
             }
             assertNear("$set START keeps the usual key face", keyFace, drawn[4].inside())
@@ -138,9 +151,10 @@ class HintGlyphColorsTest {
         theme = themeOf(ColorSet.Super)
         show()
         val buttons = ColorSet.Super.buttons!!
+        val colors = PlumColors.derive(ColorSet.Super.backgroundColor, ColorSet.Super.textMode, ColorSet.Super.accentColor)
         val drawn = caps()
-        assertNear("confirm (B) filled", buttons.b.fill.toComposeColor(), drawn[0].inside())
-        assertNear("back (A)", buttons.a.fill.toComposeColor(), drawn[1].inside())
+        assertNear("confirm (B) filled", setFace(colors, buttons.b.fill.toComposeColor()), drawn[0].inside())
+        assertNear("back (A)", setFace(colors, buttons.a.fill.toComposeColor()), drawn[1].inside())
     }
 
     @Test
@@ -150,10 +164,10 @@ class HintGlyphColorsTest {
         for (look in ColorSet.entries.filter { it.buttons == null }.map(::themeOf) + custom) {
             theme = look
             val colors = PlumColors.derive(look.backgroundColor, look.textMode, look.accentColor)
-            val keyFace = PlumComposeColors.from(colors).keyFace.face
+            val keyFace = usualFace(colors)
             caps().forEachIndexed { i, cap ->
                 assertNear("$look cap $i has the usual key face", keyFace, cap.inside())
-                assertTrue("$look cap $i letter in strong", cap.hasInk(colors.strong.toComposeColor()))
+                assertTrue("$look cap $i letter in text", cap.hasInk(colors.text.toComposeColor()))
             }
         }
     }
@@ -166,8 +180,9 @@ class HintGlyphColorsTest {
         theme = themeOf(ColorSet.Ivory).copy(background = banana, text = TextMode.Dark.color)
         val buttons = ColorSet.Ivory.buttons!!
         val drawn = caps()
-        assertNear("A keeps its red face", buttons.a.fill.toComposeColor(), drawn[0].inside())
-        assertNear("B is still filled with its yellow", buttons.b.fill.toComposeColor(), caps()[1].inside())
+        val colors = PlumColors.derive(theme.backgroundColor, theme.textMode, theme.accentColor)
+        assertNear("A keeps its red face", setFace(colors, buttons.a.fill.toComposeColor()), drawn[0].inside())
+        assertNear("B is still filled with its yellow", setFace(colors, buttons.b.fill.toComposeColor()), caps()[1].inside())
         // A yellow B on Banana melts into the background by colour alone: its edge and shadow under it keep it standing off.
         val bounds = compose.onAllNodesWithTag(HINT_KEY_CAP_TAG)[1].fetchSemanticsNode().boundsInRoot
         val root = compose.onRoot().captureToImage().toPixelMap()

@@ -20,6 +20,8 @@
     <!-- Haptics: a light tick on each cursor move and a click on confirm, Settings > Controls > Vibration.
          A normal permission: Android asks nobody. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Statistics > Exact play time (off by default): a special access the person grants in Android's Usage access screen; nothing is asked at install. -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
 
     <!-- No Android backup or device-to-device copy of the app's data (the library database): Plumemu has
          its own backup. allowBackup covers Android 11 and older and the

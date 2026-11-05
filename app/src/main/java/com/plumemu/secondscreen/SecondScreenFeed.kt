@@ -38,7 +38,6 @@ internal class SecondScreenFeed(
 ) {
     private val shown = MutableStateFlow<SecondScreenContent>(SecondScreenContent.Calm)
     private val following = MutableStateFlow(false)
-    private val windowShown = MutableStateFlow(false)
 
     /** The offer [shown] was made from (before its facts were filled in); null while Calm from a reset. */
     private var shownFrom: SecondScreenContent? = null
@@ -65,21 +64,6 @@ internal class SecondScreenFeed(
             shown.value = SecondScreenContent.Calm
         }
         following.value = isOn
-    }
-
-    /**
-     * Whether the window is on a display now, in any mode (picking, or the in-game card while a
-     * game runs): true from a `show()` that succeeded until the window is dismissed (switch off,
-     * display removed or changed, Plumemu left, the Activity destroyed); never for a refused show.
-     * The top screen reads it once at its layout level (layout C, `HomeScreen`): its lists drop
-     * the details column while this is true. Kept through a game, so coming back from one does
-     * not change the top screen's layout.
-     */
-    val isWindowShown: StateFlow<Boolean> = windowShown.asStateFlow()
-
-    /** Set by the host (main thread) when its window has been shown or has gone. */
-    fun setWindowShown(isShown: Boolean) {
-        windowShown.value = isShown
     }
 
     /**
@@ -120,7 +104,7 @@ internal class SecondScreenFeed(
                                 Answer(null)
                             }
                         }
-                    // One change, not two: the facts, the title's size and the cover's place come together
+                    // One change, not two: the facts and the title's size come together
                     // when the read is quick. A slow read never holds the text back.
                     val quick = withTimeoutOrNull(FILL_WAIT_MS) { answer.await() }
                     if (quick != null) {
@@ -148,13 +132,10 @@ internal class SecondScreenFeed(
                     // Re-offered (a star toggled): the lines the facts bring must not vanish and come back.
                     batteryPace = previous.batteryPace,
                     achievements = previous.achievements,
-                    // Only the cover of the same result: another key (signed out and in again) never inherits it.
-                    art = art ?: previous.art.takeIf { scrapeKey != null && scrapeKey == previous.scrapeKey },
+                    // Only the details of the same result: another key (signed out and in again) never inherits them.
                     details = details ?: previous.details.takeIf { scrapeKey != null && scrapeKey == previous.scrapeKey },
                 )
-            this is SecondScreenContent.System && previous is SecondScreenContent.System &&
-                lastPlayFrom != null && lastPlayFrom == previous.lastPlayFrom && lastGameTitle == null ->
-                copy(lastGameTitle = previous.lastGameTitle, lastPlayedDaysAgo = previous.lastPlayedDaysAgo)
+            this is EntryContent -> keepingFiguresOf(previous)
             else -> this
         }
 
@@ -164,14 +145,16 @@ internal class SecondScreenFeed(
          * screen's own motion after a move, the strip's slide ([PlumMotion.DURATION_MS], 180 ms)
          * and the focus glide ([PlumMotion.GLIDE_MS], 200 ms), so the card's composition and text
          * layout never share a frame with it. Held directions repeat every 80 ms and faster, so
-         * nothing reaches the window until the person stops.
+         * nothing reaches the window until the person stops. Longer than a steady press every
+         * 250 ms too (a settle of exactly that landed the card in the next press's frame): a
+         * person pressing at that pace sees the card only when they stop.
          */
-        const val SETTLE_MS = 250L
+        const val SETTLE_MS = 400L
 
         /**
-         * How long the settled card waits for its facts and cover record ([facts]) before it shows
+         * How long the settled card waits for its facts record ([facts]) before it shows
          * without them. A read that comes back in time (a Room point query, usually a few ms) lets the
-         * card appear once, with the title's size, the cover's place and the facts line together;
+         * card appear once, with the title's size and the facts line together;
          * the card changing twice a game would flicker on a screen the person watches at rest.
          */
         const val FILL_WAIT_MS = 100L

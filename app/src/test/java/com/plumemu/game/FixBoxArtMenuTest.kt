@@ -63,9 +63,9 @@ class FixBoxArtMenuTest {
 
     @Test
     fun fixBoxArtIsListedAfterNameOnlyWhenBoxArtCanBeAskedFor() {
-        assertEquals(listOf("Play", "PlayWith", "Favorite", "Hide", "Name", "Info"), gameMenuEntries(sampleFacts()).map { it.key })
-        assertEquals(listOf("Play", "PlayWith", "Favorite", "Hide", "Name", "FixBoxArt", "Info"), gameMenuEntries(sampleFacts(canFixBoxArt = true)).map { it.key })
-        assertEquals(UiText.Res(R.string.game_menu_fix_box_art), gameMenuEntries(sampleFacts(canFixBoxArt = true))[5].label)
+        assertEquals(listOf("Play", "PlayWith", "Favorite", "Name", "Info", "Hide"), gameMenuEntries(sampleFacts()).map { it.key })
+        assertEquals(listOf("Play", "PlayWith", "Favorite", "Name", "FixBoxArt", "Info", "Hide"), gameMenuEntries(sampleFacts(canFixBoxArt = true)).map { it.key })
+        assertEquals(UiText.Res(R.string.game_menu_fix_box_art), gameMenuEntries(sampleFacts(canFixBoxArt = true))[4].label)
     }
 
     @Test
@@ -228,9 +228,9 @@ class FixBoxArtMenuTest {
             }
             menu.chooseRow(GameMenuEntryId.FixBoxArt.name)
             menu.search()
-            menu.onAction(Action.Menu)
+            menu.onAction(Action.Back)
             assertTrue(searchCancelled)
-            assertNull(menu.panel)
+            assertTrue("B goes back to the menu", menu.panel!!.screen is PanelScreen.Menu)
         }
 
     @Test

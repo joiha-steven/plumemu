@@ -64,9 +64,10 @@ class SettingsColorsRowTest {
         compose.onAllNodesWithText(text(R.string.settings_colors)).assertCountEquals(2) // the row and its panel's title
         compose.onNode(colorsValue(R.string.settings_colors_plumemu), useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.settings_colors_panel_help)).assertIsDisplayed()
-        // Plumemu's colours are presets: the rows below name them.
+        // Plumemu is Black with an own-colour accent: the rows below name them.
         compose.onNode(valueText(R.string.settings_bg_black), useUnmergedTree = true).assertIsDisplayed()
-        compose.onNode(valueText(R.string.settings_accent_red), useUnmergedTree = true).assertIsDisplayed()
+        // The Accent row names its own-colour accent by the set it belongs to, so "Plumemu" shows on the Colors row and the Accent row.
+        compose.onAllNodes(valueText(R.string.settings_colors_plumemu), useUnmergedTree = true).assertCountEquals(2)
     }
 
     @Test

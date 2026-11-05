@@ -53,8 +53,7 @@ class StripState internal constructor(
      * focused system only: other systems' remembered rows are found again when they are focused,
      * and fall back to their last remembered index if their game is gone by then.
      *
-     * A details stop the new content no longer has (its entry lost [SystemEntry.hasDetails]: the
-     * app's second screen took the details) moves the cursor to the games column for good, on the
+     * A details stop the new content no longer has (its entry lost [SystemEntry.hasDetails]) moves the cursor to the games column for good, on the
      * same row, and ends a slide still heading for the old stop: the strip rests at the list in the
      * same frame, and when the stop comes back the cursor stays on the list.
      */
@@ -142,11 +141,50 @@ class StripState internal constructor(
         return "${focus.systemId}/${entry?.itemIds?.getOrNull(focus.row) ?: "row${focus.row}"}"
     }
 
+    private var packedSource: Triple<String, () -> PackedRows, Any>? = null
+
+    /**
+     * The grid of entry [entryId] gives its rows as drawn through [rows], asked at each dispatch (so it is never a frame behind
+     * the grid's size, text or art): Up and Down then follow them. Set while composing, so there is no frame without a table
+     * between one grid and the next. Only the shown grid has one; a table that does not describe the entry's games is never used.
+     */
+    fun setPackedRowsSource(
+        entryId: String,
+        rows: () -> PackedRows,
+    ) {
+        packedSource = Triple(entryId, rows, rows)
+    }
+
+    /** The grid of entry [entryId] is gone; a newer grid's source is left alone ([rows] is the one it set). */
+    fun clearPackedRowsSource(
+        entryId: String,
+        rows: () -> PackedRows,
+    ) {
+        if (packedSource?.third === rows && packedSource?.first == entryId) packedSource = null
+    }
+
+    /** A fixed table (tests, and grids that never change). */
+    fun setPackedRows(
+        entryId: String,
+        rows: PackedRows?,
+    ) {
+        if (rows != null) setPackedRowsSource(entryId) { rows } else if (packedSource?.first == entryId) packedSource = null
+    }
+
+    private fun withPacked(content: StripContent): StripContent {
+        val (id, source) = packedSource ?: return content
+        val at = content.systems.indexOfFirst { it.id == id }
+        val entry = content.systems.getOrNull(at) ?: return content
+        val rows = source()
+        if (!rows.covers(entry.itemCount, entry.itemIds)) return content
+        return content.copy(systems = content.systems.toMutableList().also { it[at] = entry.copy(packed = rows) })
+    }
+
     /** Applies [action] to the focus and returns what the screen must do. */
     fun dispatch(action: Action): List<StripIntent> {
         val key = focusKey()
         val isArmed = pushRightPlays && pushRightArm.isArmedFor(key)
-        val reduction = StripReducer.reduce(focus, action, content, isNarrow, pushRightPlays, isArmed)
+        val reduction = StripReducer.reduce(focus, action, withPacked(content), isNarrow, pushRightPlays, isArmed)
         // Any input but Right (a held Right included) puts the arming away; so does a play.
         val isHeldRight = action is Action.Move && action.direction == Direction.Right && action.isRepeat
         when {

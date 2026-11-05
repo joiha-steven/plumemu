@@ -352,4 +352,37 @@ class PanelOwnKeyboardTest {
             assertNull("START closes the panel as before", ownMenu.panel)
             assertEquals("Zork Quest 2", own.text)
         }
+
+    @Test
+    fun startWithTheTrayDownLeavesEveryTypingPanelAndItsTextAlone() =
+        runMenu {
+            val (fixMenu, fix) = fixName()
+            val (ownMenu, own) = ownName()
+            val (artMenu, art) = boxArt(FakeGameActions(facts = { sampleFacts(title = "Zork Quest 2", canFixBoxArt = true) }))
+            for ((menu, typing) in listOf(fixMenu to fix, ownMenu to own, artMenu to art)) {
+                menu.press(Action.Enter)
+                menu.press(Action.Typed(TypedKey.Text("x")))
+                menu.press(Action.Back) // the tray goes down, the typed text stays
+                assertFalse(typing.isTrayUp)
+                val typed = typing.fieldText
+                assertTrue(typed.endsWith("x"))
+                var heard = 0
+                menu.feel.sink = { heard++ }
+                menu.press(Action.Menu)
+                assertTrue("the panel stays open", menu.panel?.screen is TypingScreen)
+                assertEquals("the typed text is kept", typed, typing.fieldText)
+                assertEquals("no sound of leaving", 0, heard)
+                menu.press(Action.Back)
+                assertTrue("B still goes back", menu.panel?.screen !is TypingScreen)
+            }
+        }
+
+    @Test
+    fun startStillClosesAPanelWithoutTypedText() =
+        runMenu {
+            val menu = controller(FakeGameActions())
+            menu.openMenu(game)
+            menu.press(Action.Menu)
+            assertNull(menu.panel)
+        }
 }

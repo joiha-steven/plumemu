@@ -71,6 +71,11 @@ internal abstract class GraphScrapesHarness {
     protected var pauseWriteFails = false
     protected var libraryFails = false
 
+    /** The stored box art source (`library.box_art_source`; null: not chosen), and the libretro scrapers made. */
+    protected val chosenSource = MutableStateFlow<com.plumemu.coredata.settings.BoxArtSourceSetting?>(null)
+    protected var sourceWriteFails = false
+    protected val libretroMade = CopyOnWriteArrayList<FakeScraper>()
+
     /** Every cancel and enqueue the graph asked of WorkManager, in order. */
     protected val scheduled = CopyOnWriteArrayList<String>()
 
@@ -88,7 +93,7 @@ internal abstract class GraphScrapesHarness {
                 clock = { now },
                 log = { logLines += it },
                 onSignedIn = { scrapes.requestRun() },
-                onSignedOut = { scrapes.cancelRuns() },
+                onSignedOut = { scrapes.signedOut() },
             )
         scrapes =
             GraphScrapes(
@@ -118,6 +123,13 @@ internal abstract class GraphScrapesHarness {
                     paused.value = isPaused
                 },
                 main = Dispatchers.Unconfined,
+                chosenSource = { chosenSource.value },
+                writeSource = {
+                    if (sourceWriteFails) throw java.io.IOException("disk full")
+                    chosenSource.value = it
+                },
+                makeLibretroScraper = { FakeScraper(UserCredentials("libretro", "none")).also { libretroMade += it } },
+                sourceChanges = chosenSource,
             )
         return scrapes
     }
@@ -194,6 +206,7 @@ internal abstract class GraphScrapesHarness {
 
         val checks = AtomicInteger()
         override val accountLimits = kotlinx.coroutines.flow.MutableStateFlow<AccountLimits?>(null)
+        override val pictureFailure = kotlinx.coroutines.flow.MutableStateFlow<com.plumemu.scraper.PictureFailure?>(null)
 
         override suspend fun checkAccount(): AccountCheck {
             checks.incrementAndGet()

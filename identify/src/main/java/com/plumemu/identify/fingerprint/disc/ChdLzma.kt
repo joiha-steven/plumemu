@@ -62,36 +62,34 @@ internal class HunkBytes(private val file: RandomAccessSource, private val start
  * never reach further back than the bytes produced. The stream has no end marker and fills its
  * compressed length exactly.
  *
- * Both decoders can stop early: [prefix] bytes (a whole hunk when it is the hunk size) are
- * decoded and only the compressed bytes they need are fetched. A whole hunk is decoded with every
- * MAME check ([lzmaDecode] `exactInput`); a prefix only has to be produced.
+ * Both decoders decode the whole hunk with every MAME check ([lzmaDecode] `exactInput`), since
+ * the CRC-16 of the map covers all of it.
  */
 internal object ChdLzma {
     private const val SECTOR = 2352
     private const val SECTOR_LZMA = 1 shl 16
 
     /**
-     * `lzma`: the whole hunk is one raw LZMA stream. Returns the first [prefix] bytes.
+     * `lzma`: the whole hunk is one raw LZMA stream.
      *
      * @throws LzmaException when the data is damaged.
      */
     @Throws(IOException::class, LzmaException::class)
-    fun lzmaHunk(bytes: HunkBytes, hunkBytes: Int, prefix: Int): ByteArray =
-        decode(bytes.input(0, bytes.length), hunkBytes, prefix)
+    fun lzmaHunk(bytes: HunkBytes, hunkBytes: Int): ByteArray =
+        decode(bytes.input(0, bytes.length), hunkBytes)
 
     /**
      * `cdlz` (`chd_cd_decompressor<chd_lzma_decompressor, chd_zlib_decompressor>`): a bitmap
      * with one bit per frame (set: the sync header and ECC were removed), the length of the
      * sector part (2 bytes, 3 when the hunk is 64 KB or more), the sectors (2352 bytes per frame)
-     * as raw LZMA, then the subcode deflated. Returns the first [frames] frames of 2448 bytes, the
-     * sync header put back as `cdzl` does; the subcode is left as zeros and the ECC is not
-     * rebuilt (the user data needs neither).
+     * as raw LZMA, then the subcode deflated. Returns the whole hunk, as [ChdCd.assemble] makes it
+     * (sync and ECC put back), so its CRC-16 can be checked.
      *
      * @throws LzmaException when the data is damaged.
      * @throws NotRead when the header of the hunk is out of range.
      */
     @Throws(IOException::class, LzmaException::class)
-    fun cdlzHunk(bytes: HunkBytes, hunkBytes: Int, frames: Int): ByteArray {
+    fun cdlzHunk(bytes: HunkBytes, hunkBytes: Int): ByteArray {
         val allFrames = hunkBytes / ChdHeader.CD_FRAME
         val eccBytes = (allFrames + 7) / 8
         val lengthBytes = if (hunkBytes < SECTOR_LZMA) 2 else 3
@@ -100,26 +98,17 @@ internal object ChdLzma {
         for (i in 0 until lengthBytes) baseLength = (baseLength shl 8) or bytes.byteAt(eccBytes + i)
         val start = eccBytes + lengthBytes
         if (baseLength.toLong() + start > bytes.length) throw NotRead("chd cdlz: sector data length is out of range")
-        val sectors = decode(bytes.input(start, baseLength), allFrames * SECTOR, frames * SECTOR)
-        val out = ByteArray(if (frames == allFrames) hunkBytes else frames * ChdHeader.CD_FRAME)
-        for (frame in 0 until frames) {
-            System.arraycopy(sectors, frame * SECTOR, out, frame * ChdHeader.CD_FRAME, SECTOR)
-            if (bytes.byteAt(frame / 8) and (1 shl (frame % 8)) != 0) {
-                System.arraycopy(CD_SYNC, 0, out, frame * ChdHeader.CD_FRAME, CD_SYNC.size)
-            }
-        }
-        return out
+        val sectors = decode(bytes.input(start, baseLength), allFrames * SECTOR)
+        val subStart = start + baseLength
+        val packedSubcode = ByteArray(bytes.length - subStart) { bytes.byteAt(subStart + it).toByte() }
+        val subcode = inflate(packedSubcode, allFrames * ChdCd.SUBCODE, nowrap = true, what = "chd cdlz")
+        val ecc = ByteArray(eccBytes) { bytes.byteAt(it).toByte() }
+        return ChdCd.assemble(allFrames, ecc, sectors, subcode, "chd cdlz")
     }
 
-    /** The first [prefix] of the [total] bytes of a raw CHD LZMA stream; all checks when whole. */
-    private fun decode(input: CompressedInput, total: Int, prefix: Int): ByteArray {
+    /** A raw CHD LZMA stream of [total] bytes, with every MAME check. */
+    private fun decode(input: CompressedInput, total: Int): ByteArray {
         val props = LzmaProperties(lc = 3, lp = 0, pb = 2, dictionarySize = total.toLong())
-        if (prefix >= total) return lzmaDecode(input, props, total, knownSize = true, exactInput = true)
-        val out = lzmaDecode(input, props, prefix, knownSize = false)
-        if (out.size != prefix) throw LzmaException("end marker after ${out.size} of $total bytes")
-        return out
+        return lzmaDecode(input, props, total, knownSize = true, exactInput = true)
     }
-
-    /** The 12-byte sync header of a raw CD sector. */
-    val CD_SYNC = byteArrayOf(0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0)
 }

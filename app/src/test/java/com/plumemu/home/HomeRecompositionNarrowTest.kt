@@ -88,15 +88,17 @@ class HomeRecompositionNarrowTest {
         onAllNodes(androidx.compose.ui.test.hasTestTag(tag), useUnmergedTree = true).fetchSemanticsNodes().size
 
     @Test
-    fun aMoveAtTheGamesStopShowsTheDetailsTextInThePeekAndTheCoverToo() {
+    @Config(qualifiers = ROOM_FOR_DETAILS)
+    fun aMoveAtTheGamesStopShowsTheDetailsTextAndTheCoverInsideTheMargin() {
         show()
         press(Action.Move(Direction.Down))
-        assertEquals("the title is composed in the peek (cut by the screen's edge)", 1, titleNodes())
-        assertEquals("the cover still peeks", 1, compose.onAllNodesWithTagCount(HomeTags.DETAILS_COVER))
+        assertEquals("the title is composed in the column beside the list", 1, titleNodes())
+        assertEquals("the cover shows", 1, compose.onAllNodesWithTagCount(HomeTags.DETAILS_COVER))
     }
 
     /** The peek has text now: a game move at the games stop re-runs two rows and the details column once, in one frame (as beside the column at 768). */
     @Test
+    @Config(qualifiers = ROOM_FOR_DETAILS)
     fun aGameMoveAtTheGamesStopRecomposesTheTwoRowsAndTheColumnOnce() {
         show()
         compose.runOnIdle { callTimes.clear() }
@@ -110,7 +112,7 @@ class HomeRecompositionNarrowTest {
         val tooOften = parts.map { it.first.substringBefore(' ') }.groupingBy { it }.eachCount().filter { (name, times) -> times > (CALLS_PER_PASS[name] ?: 1) }
         assertEquals("nothing runs more often than one pass calls it", emptyMap<String, Int>(), tooOften)
         assertEquals("all in one frame", 1, parts.map { it.second }.distinct().size)
-        assertEquals("the title shows in the peek", 1, titleNodes())
+        assertEquals("the title shows beside the list", 1, titleNodes())
     }
 
     @Test
@@ -134,5 +136,10 @@ class HomeRecompositionNarrowTest {
         assertEquals("$what: nothing runs more often than one pass calls it", emptyMap<String, Int>(), tooOften)
         assertEquals("$what: all in one frame", 1, parts.map { it.second }.distinct().size)
         assertEquals("$what: a title shows", 1, titleNodes())
+    }
+
+    private companion object {
+        /** A narrow screen whose games stop leaves the details column room at Largest text (576 and 640 leave none). */
+        const val ROOM_FOR_DETAILS = "w700dp-h480dp-land-xhdpi"
     }
 }

@@ -219,7 +219,7 @@ class DiscHashesTest {
 
     @Test
     fun packedDiscFormatsNeedADecoder() {
-        for (name in listOf("game.rvz", "game.wia", "game.wbfs", "game.gcz", "game.pbp", "game.ecm", "game.zso")) {
+        for (name in listOf("game.rvz", "game.wia", "game.wbfs", "game.gcz", "game.pbp", "game.ecm")) {
             assertEquals(name, NeedsDecoder, reason(hash(RaConsoles.PLAYSTATION, MemorySource(name, genericFile(5000)))))
         }
         assertEquals(NeedsDecoder, reason(hash(RaConsoles.PSP, MemorySource("game.rvz", genericFile(5000)))))
@@ -228,16 +228,42 @@ class DiscHashesTest {
     }
 
     @Test
-    fun aCsoWithLz4BlocksNeedsADecoder() {
-        val zso = csoOf(vectors[0].image).also { "ZISO".toByteArray().copyInto(it) }
-        assertEquals(NeedsDecoder, reason(hash(RaConsoles.PLAYSTATION, MemorySource("game.cso", zso))))
+    fun aZsoAndACsoV2AreHashedLikeTheIso() {
+        val psp = vectors.first { it.console == RaConsoles.PSP }
+        val iso = hash(RaConsoles.PSP, MemorySource("game.iso", psp.image))
+        assertEquals(RaHashResult.Hashed(psp.md5), iso)
+        assertEquals(iso, hash(RaConsoles.PSP, MemorySource("game.zso", lz4ImageOf(psp.image, zso = true))))
+        assertEquals(iso, hash(RaConsoles.PSP, MemorySource("game.cso", lz4ImageOf(psp.image, zso = false))))
+        // The format is told by the header, not by the extension.
+        assertEquals(iso, hash(RaConsoles.PSP, MemorySource("game.cso", lz4ImageOf(psp.image, zso = true))))
     }
 
     @Test
-    fun aCsoV2IsNeverReadAsV1() {
-        // v2 changes what the index bits mean, so even an intact file is left to a decoder.
-        val cso = csoOf(vectors[0].image, version = 2)
+    fun aCsoNewerThanV2NeedsADecoder() {
+        val cso = csoOf(vectors[0].image, version = 3)
         assertEquals(NeedsDecoder, reason(hash(RaConsoles.PLAYSTATION, MemorySource("game.cso", cso))))
+    }
+
+    @Test
+    fun aZsoOrCsoV2WithADamagedOrCutBlockIsBadImage() {
+        val psp = vectors.first { it.console == RaConsoles.PSP }.image
+        for (zso in listOf(true, false)) {
+            val name = if (zso) "game.zso" else "game.cso"
+            val good = lz4ImageOf(psp, zso)
+            // Noise over every LZ4 block (bit 31 clear in a ZSO, set in v2): a bad sequence, never a wrong hash.
+            val damaged = good.copyOf()
+            val blocks = (psp.size + 2047) / 2048
+            fun word(n: Int) = (0 until 4).sumOf { (good[24 + 4 * n + it].toLong() and 0xFF) shl (8 * it) }
+            for (n in 0 until blocks) {
+                val start = (word(n) and 0x7FFFFFFFL).toInt()
+                val span = ((word(n + 1) and 0x7FFFFFFFL) - start).toInt()
+                // v2: a full-size block is raw even with bit 31 set.
+                val lz4 = if (zso) word(n) and 0x80000000L == 0L else word(n) and 0x80000000L != 0L && span < 2048
+                if (lz4) for (i in 0 until minOf(40, span)) damaged[start + i] = (0xF7 - i).toByte()
+            }
+            assertEquals(name, BadImage, reason(hash(RaConsoles.PSP, MemorySource(name, damaged))))
+            assertEquals(name, BadImage, reason(hash(RaConsoles.PSP, MemorySource(name, good.copyOf(good.size / 2)))))
+        }
     }
 
     @Test

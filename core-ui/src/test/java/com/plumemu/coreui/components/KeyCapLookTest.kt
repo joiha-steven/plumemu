@@ -52,7 +52,7 @@ class KeyCapLookTest {
             for (cap in listOf("START", "SELECT", "L1 R1", "L1", "R1", "↑↓", "a", "AB", "")) {
                 val look = keyCapLook(cap, set.buttons, colors)
                 assertNull("$set '$cap' has no fill", look.fill)
-                assertEquals("$set '$cap' text", colors.strong, look.letter)
+                assertEquals("$set '$cap' text", colors.text, look.letter)
             }
         }
     }
@@ -65,7 +65,7 @@ class KeyCapLookTest {
             for (cap in listOf("A", "B", "X", "Y")) {
                 val look = keyCapLook(cap, themeOf(set).buttonSet?.buttons, colors)
                 assertNull("$set $cap", look.fill)
-                assertEquals(colors.strong, look.letter)
+                assertEquals(colors.text, look.letter)
             }
         }
         // Super with one colour changed by hand is Custom, but its buttons stay.

@@ -16,7 +16,7 @@ class LibraryNoticesTest {
     private fun stats(
         added: Map<String, Int> = emptyMap(),
         removed: Map<String, Int> = emptyMap(),
-    ) = ScanStats(1, 0, 10, added.values.sum(), 0, removed.values.sum(), 0, 0, 0, added, removed)
+    ) = ScanStats(1, 0, 10, added.values.sum(), 0, removed.values.sum(), 0, 0, 0, added, removed, listedAddedBySystem = added)
 
     @Test
     fun noNewAndNoRemovedGamesMeansNoNotice() {
@@ -60,6 +60,39 @@ class LibraryNoticesTest {
         assertEquals("an old message's answer does not clear a newer one", second, notices.closedAtOnce.value)
         notices.closedAtOnceShown(second)
         assertNull(notices.closedAtOnce.value)
+    }
+
+    private val gpsp = CoreToConfirm("com.retroarch", "gpsp_libretro_android.so")
+    private val tryPlay = AddedSession(sessionId = 5, gameId = 7, endedAt = 1, seconds = 60, previousLastPlayedAt = null)
+
+    @Test
+    fun theQuestionOfTheCoreOfferedAfterNoCarriesTheCoresAnsweredNo() {
+        val notices = LibraryNotices()
+        notices.expectCoreTry("7", "retroarch-gpsp", setOf("retroarch-mgba"))
+        notices.askAboutCore("7", "Advance Wars", "retroarch-gpsp", "RetroArch: gpSP", gpsp, tryPlay)
+        assertEquals(setOf("retroarch-mgba"), notices.coreQuestion.value!!.tried)
+    }
+
+    @Test
+    fun anotherCoreOrAnotherGameStartsAFreshAttempt() {
+        val notices = LibraryNotices()
+        notices.expectCoreTry("7", "retroarch-gpsp", setOf("retroarch-mgba"))
+        notices.askAboutCore("7", "Advance Wars", "retroarch-vbam", "RetroArch: VBA-M", gpsp, tryPlay)
+        assertEquals("the person played another core: nothing carried over", emptySet<String>(), notices.coreQuestion.value!!.tried)
+        val other = LibraryNotices()
+        other.expectCoreTry("7", "retroarch-gpsp", setOf("retroarch-mgba"))
+        other.askAboutCore("8", "Zork", "retroarch-gpsp", "RetroArch: gpSP", gpsp, tryPlay)
+        assertEquals(emptySet<String>(), other.coreQuestion.value!!.tried)
+    }
+
+    @Test
+    fun aTryCarriesToOneQuestionOnly() {
+        val notices = LibraryNotices()
+        notices.expectCoreTry("7", "retroarch-gpsp", setOf("retroarch-mgba"))
+        notices.askAboutCore("7", "Advance Wars", "retroarch-gpsp", "RetroArch: gpSP", gpsp, tryPlay)
+        notices.coreQuestionShown(notices.coreQuestion.value!!)
+        notices.askAboutCore("7", "Advance Wars", "retroarch-gpsp", "RetroArch: gpSP", gpsp, tryPlay.copy(sessionId = 6))
+        assertEquals(emptySet<String>(), notices.coreQuestion.value!!.tried)
     }
 
     @Test

@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
@@ -46,7 +46,7 @@ abstract class HomeFourThreeBoundsBase(
         content: HomeContent,
         actions: List<Action>,
     ) {
-        compose.setContent { PlumTheme(MediumText.Default) { HomeAt(content, actions) } }
+        compose.setContent { PlumTheme(TableText.Default) { HomeAt(content, actions) } }
         compose.waitForIdle()
     }
 
@@ -88,20 +88,21 @@ abstract class HomeFourThreeBoundsBase(
     fun withArtAndTheSystemsOpenTheListEndsAtTheRightMargin() {
         show(FakeHomeContent.withArtwork(), BoardSystemsFocused)
         val row = bounds(HomeTags.game(0))
-        assertDp("list starts after the systems column and the gap", 248.dp, row.left)
+        assertDp("list starts after the systems column and the gap, less its 8 bleed", 248.dp - PlumDimens.gamesListBleed, row.left)
         assertDp("list ends at the right margin", rightMargin, row.right)
         assertEquals("no text past the screen", emptyList<String>(), textsPast(screenWidth))
         assertEquals("no text past the margin (the year is whole)", emptyList<String>(), textsPast(rightMargin))
     }
 
     @Test
-    fun withArtAndTheGamesFocusedTheDetailsPeekInWholeAndCutByTheScreen() {
+    fun withArtAndTheGamesFocusedTheDetailsColumnEndsAtTheRightMargin() {
         show(FakeHomeContent.withArtwork(), BoardGamesFocused)
-        assertTrue("the title starts on screen (${bounds(HomeTags.DETAILS_TITLE).left})", bounds(HomeTags.DETAILS_TITLE).left < screenWidth)
+        val column = bounds(HomeTags.DETAILS)
+        assertDp("the details end at the right margin, not at the screen's edge", rightMargin, column.right)
+        assertTrue("the column is at least the cover's 140 dp wide (${column.right - column.left})", column.right - column.left >= 140.dp)
         assertEquals("the title is there", 1, count(HomeTags.DETAILS_TITLE))
-        // The peek is the details stop's layout shifted, cut by the screen's edge: text on the left, the cover on the right.
-        assertTextLeftAndCoverRight()
-        assertDp("the column is the details stop's width", screenWidth - 104.dp, bounds(HomeTags.DETAILS).let { it.right - it.left })
+        assertEquals("no text past the margin", emptyList<String>(), textsPast(rightMargin))
+        assertTrue("the cover is whole inside the margin", bounds(HomeTags.DETAILS_COVER).right <= rightMargin)
     }
 
     @Test
@@ -117,7 +118,7 @@ abstract class HomeFourThreeBoundsBase(
     fun withoutArtTheSystemsOpenPreviewEndsAtTheRightMargin() {
         show(FakeHomeContent.board(), BoardSystemsFocused)
         val row = bounds(HomeTags.game(0))
-        assertDp("preview starts after the systems column and the gap", 248.dp, row.left)
+        assertDp("preview starts after the systems column and the gap, less its 8 bleed", 248.dp - PlumDimens.gamesListBleed, row.left)
         assertDp("preview ends at the right margin", rightMargin, row.right)
         assertEquals("no text past the margin", emptyList<String>(), textsPast(rightMargin))
     }
@@ -139,8 +140,8 @@ abstract class HomeFourThreeBoundsBase(
     @Test
     fun withoutArtTheGamesListStaysInsideTheMargin() {
         show(FakeHomeContent.board(), BoardGamesFocused)
-        assertDp("list starts after the peek", 72.dp, bounds(HomeTags.game(0)).left)
-        assertDp("the list takes width − 96 once the games are focused", screenWidth - 96.dp, bounds(HomeTags.game(0)).let { it.right - it.left })
+        assertDp("list starts after the peek, less its 8 bleed", 72.dp - PlumDimens.gamesListBleed, bounds(HomeTags.game(0)).left)
+        assertDp("the list takes width − 96 once the games are focused", screenWidth - 96.dp + PlumDimens.gamesListBleed, bounds(HomeTags.game(0)).let { it.right - it.left })
         assertTrue("list ends inside the right margin", bounds(HomeTags.game(0)).right <= rightMargin)
         assertEquals("no text past the margin", emptyList<String>(), textsPast(rightMargin))
     }

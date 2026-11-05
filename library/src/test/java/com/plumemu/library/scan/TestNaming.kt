@@ -7,6 +7,7 @@ import com.plumemu.identify.pack.ArcadeFlags
 import com.plumemu.identify.pack.ArcadePackBuilder
 import com.plumemu.identify.pack.BundledPacks
 import com.plumemu.identify.pack.ConsolePackBuilder
+import com.plumemu.identify.pack.TrackSizeKeys
 import com.plumemu.identify.pack.NamePack
 import com.plumemu.identify.pack.PackOpenResult
 import com.plumemu.identify.pack.PackStore
@@ -46,10 +47,13 @@ internal object TestNaming {
         arcadeBroken: Boolean = false,
         arcadeVersion: Long = 1,
         crcReleases: Map<String, List<Pair<String, ByteArray>>> = emptyMap(),
+        trackReleases: Map<String, List<Pair<String, List<Long>>>> = emptyMap(),
+        trackVersion: Long = 1,
     ): GameNaming {
         val snes = snesPack(snesVersion).let { if (snesCorruptAtLookup) breakFirstTitleRef(it) else it }
         val damaged = if (snesBroken) "snes" else if (arcadeBroken) "arcade" else null
-        val extra = crcReleases.filterKeys { it != "gba" && it != "snes" }.map { (system, releases) -> system to crcPack(system, releases) }
+        val extra = crcReleases.filterKeys { it != "gba" && it != "snes" }.map { (system, releases) -> system to crcPack(system, releases) } +
+            trackReleases.map { (system, releases) -> system to trackPack(system, releases, trackVersion) }
         val packs = PackStore(directory, bundle("gba" to gbaPack(crcReleases["gba"].orEmpty()), "snes" to snes, *extra.toTypedArray(), "arcade" to arcadePack(arcadeVersion), "switch" to switchPack(), damaged = damaged), log)
         return GameNaming(packs, Identifier(packs, FingerprintReader(), log))
     }
@@ -67,6 +71,15 @@ internal object TestNaming {
     /** A pack of [system] listing each title by the CRC of its bytes (a No-Intro style DAT). */
     private fun crcPack(system: String, releases: List<Pair<String, ByteArray>>): ByteArray = ConsolePackBuilder(system, 1).run {
         addCrcReleases(releases, source("Test DAT", "1"))
+        build()
+    }
+
+    /** A pack of [system] listing each title by the track-size keys of a disc (a Redump style DAT). */
+    private fun trackPack(system: String, releases: List<Pair<String, List<Long>>>, version: Long): ByteArray = ConsolePackBuilder(system, version).run {
+        val src = source("Test DAT", version.toString())
+        for ((name, sizes) in releases) {
+            release(title(name), regions = listOf("USA"), source = src, trackKeys = listOf(TrackSizeKeys.ordered(sizes), TrackSizeKeys.total(sizes.sum())))
+        }
         build()
     }
 

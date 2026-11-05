@@ -17,17 +17,11 @@ enum class SecondScreenDimens(
     val titleRole: TypeRole,
     val starRole: TypeRole,
     val factsRole: TypeRole,
-    /** The details card (layout C): the side of the square the box front is fitted in. */
+    /** The App card: the side of the square the app's icon is fitted in. */
     val artSlot: Dp,
-    /** The details card's title role and lines, and the description's lines. */
+    /** The App and Apps cards' title role and lines. */
     val detailsTitleRole: TypeRole,
     val detailsTitleMaxLines: Int,
-    val descriptionMaxLines: Int,
-    /**
-     * The description's lines while the top screen shows the game's grid: the card has no cover then,
-     * so the description takes its room; fewer when they do not fit.
-     */
-    val descriptionMaxLinesBesideGrid: Int,
     /** The statistics card: the square a most-played game's cover is fitted in, and its title's lines. */
     val statisticsCover: Dp,
     val statisticsTitleMaxLines: Int,
@@ -42,15 +36,13 @@ enum class SecondScreenDimens(
 ) {
     Roomy(
         40.dp, 3, TypeRole.SecondTopRoomy, TypeRole.SecondTitleRoomy, TypeRole.SecondStarRoomy, TypeRole.SecondFactsRoomy,
-        artSlot = 240.dp, detailsTitleRole = TypeRole.SecondDetailsTitleRoomy, detailsTitleMaxLines = 3, descriptionMaxLines = 3,
-        descriptionMaxLinesBesideGrid = 8,
+        artSlot = 240.dp, detailsTitleRole = TypeRole.SecondDetailsTitleRoomy, detailsTitleMaxLines = 3,
         statisticsCover = 48.dp, statisticsTitleMaxLines = 2, statisticsRowGap = 8.dp, statisticsGroupGap = 20.dp,
         badgeMinWidth = 96.dp, badgeMinHeight = 64.dp, aboutMaxLines = 3,
     ),
     Compact(
         28.dp, 2, TypeRole.Meta, TypeRole.SecondTitleCompact, TypeRole.SecondStarCompact, TypeRole.SecondFactsCompact,
-        artSlot = 168.dp, detailsTitleRole = TypeRole.SecondDetailsTitleCompact, detailsTitleMaxLines = 2, descriptionMaxLines = 2,
-        descriptionMaxLinesBesideGrid = 4,
+        artSlot = 168.dp, detailsTitleRole = TypeRole.SecondDetailsTitleCompact, detailsTitleMaxLines = 2,
         statisticsCover = 36.dp, statisticsTitleMaxLines = 1, statisticsRowGap = 6.dp, statisticsGroupGap = 12.dp,
         badgeMinWidth = 72.dp, badgeMinHeight = 48.dp, aboutMaxLines = 3,
     ),
@@ -68,9 +60,6 @@ enum class SecondScreenDimens(
 
         /** Between the top line and the title. */
         val topToTitleGap: Dp = 12.dp
-
-        /** Between the title and the facts line. */
-        val titleToFactsGap: Dp = 16.dp
 
         /** The system card: between the badge and the top line (the dot and the count). */
         val badgeToTopGap: Dp = 18.dp
@@ -97,24 +86,14 @@ enum class SecondScreenDimens(
         const val MARK_TOP = 33.3f
         const val MARK_BOTTOM = 80.9f
 
-        /** The details card: the top line's role (16 at both sizes; the fact lines' 15 is off the ramp, see [TypeRole.SecondDetailsFact]) and the fact lines' ("1994 · Nintendo"). */
+        /** The App and Apps cards: the top line's role (16 at both sizes). */
         val detailsTopRole: TypeRole = TypeRole.SecondTopRoomy
-        val detailsFactRole: TypeRole = TypeRole.SecondDetailsFact
 
-        /** The details card: between the art and the text beside it. */
+        /** The App card: between the icon and the text beside it. */
         val artToTextGap: Dp = 24.dp
 
-        /** The details card: between the art (or the text beside it, if taller) and the description under it. */
+        /** The Apps card: between the title and the icon grid under it. */
         val artToDescriptionGap: Dp = 20.dp
-
-        /** The details card: between the title and the "1994 · Nintendo" line. */
-        val titleToFactLinesGap: Dp = 12.dp
-
-        /** The details card: between "1994 · Nintendo" and "Action · 1 player". */
-        val factLineGap: Dp = PlumDimens.factsRowGap
-
-        /** The details card: the least room above the description (without art) and above the played line. */
-        val descriptionGap: Dp = 16.dp
 
         /** The statistics card: between a most-played game's cover slot and its title. */
         val statisticsCoverGap: Dp = 16.dp

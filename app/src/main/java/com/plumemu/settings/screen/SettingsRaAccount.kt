@@ -55,23 +55,19 @@ internal fun raIndexAfter(
 }
 
 /**
- * A or a tap on an item of the signed-in page. Sign in again opens the form with the name filled in; Sign out forgets the name and the key
- * at once (the key stays on the site), the panel closing through [closeIfHere] once the account is gone and staying open, with a line, if it failed.
+ * A or a tap on an item of the signed-in page. Sign in again opens the form with the name filled in; Sign out asks first ([askSignOut]):
+ * it forgets the name, the key and the progress shown here at once (the key stays on the site).
  */
 internal fun enterRaItem(
     item: RaPageItem?,
     content: SettingsContent,
-    work: SettingsWork,
-    activated: () -> Unit,
+    askSignOut: () -> Unit,
     signInAgain: (String) -> Unit,
     closeIfHere: () -> Unit,
 ) {
     when (item) {
         RaPageItem.SignInAgain -> signInAgain((content.raAccount as? RaAccountStatus.SignedIn)?.userName.orEmpty())
-        RaPageItem.SignOut -> {
-            work.signOutRa(closeIfHere)
-            activated()
-        }
+        RaPageItem.SignOut -> askSignOut()
         null -> closeIfHere()
     }
 }
@@ -84,6 +80,7 @@ internal fun RaAccountPanel(
 ) {
     val form = model.signIn.form
     val page = model.focus.page
+    if (page == PanelPage.RaSignOutConfirm) return SignOutConfirmPage(model, touch, R.string.settings_ra_sign_out_confirm_title, R.string.settings_ra_sign_out_confirm_body)
     val title = stringResource(R.string.settings_ra_title)
     if (form != null && form.kind == SignInKind.RetroAchievements && page == PanelPage.ScraperSignIn) {
         SignInPage(title, form, touch) { RaNotes() }
@@ -103,7 +100,7 @@ internal fun RaAccountPanel(
                     style = PlumTheme.type.meta.copy(color = PlumTheme.colors.text),
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.onRowTextLine().testTag(SettingsPanelTags.STATUS),
+                    modifier = Modifier.onPanelTextLine().testTag(SettingsPanelTags.STATUS),
                 )
             }
             PanelLine(model, SettingsOption.RetroAchievementsAccount, null)

@@ -37,9 +37,9 @@ class PanelKeyboardScreenshotTest {
 
     private fun shot(
         name: String,
-        textSize: TextSize = TextSize.Medium,
+        textSize: TextSize = TextSize.Small,
         panel: () -> OpenPanel,
-    ) = ReferenceShots.capture(name, textSize = textSize) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = panel()) }
+    ) = ReferenceShots.capture(name, textSize = textSize, sizes = ReferenceShots.Size.Original + ReferenceShots.Size.FourThree) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = panel()) }
 
     /** Typing "Super M" in Fix name…, shift pressed once (SELECT) for the next capital. */
     private fun fixNameShift(): OpenPanel {

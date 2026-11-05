@@ -58,6 +58,8 @@ internal data class PlayStatistics(
      * does, and the box-art line is shown. Without it there is neither.
      */
     val hasBoxArt: Boolean = false,
+    /** What the box art run is doing or why it failed, for the box art tile; set by the page from the Settings content, null when there is nothing to say. */
+    val boxArtLine: BoxArtLine? = null,
 ) {
     /** The system played longest; null when none was. */
     val topSystem: TopSystem? get() = topSystems.firstOrNull()

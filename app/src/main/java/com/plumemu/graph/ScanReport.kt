@@ -82,6 +82,8 @@ class ScanReporter {
                 namingFolder = event.folderId
                 phase = ScanPhase.Naming
             }
+            // Only the home notice reads it ([StartupWork]); the report counts rows added.
+            is ScanEvent.AddedListed -> Unit
             is ScanEvent.FolderFinished ->
                 when (val outcome = event.outcome) {
                     is FolderOutcome.Scanned -> {

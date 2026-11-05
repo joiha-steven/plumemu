@@ -5,7 +5,8 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -55,8 +56,15 @@ internal interface HomeRoleActions {
     /** Plumemu already is the home app (then nothing is asked). */
     fun isHomeApp(): Boolean
 
-    /** Opens Android's screen for picking the home app; false when this device has none. */
-    fun requestHomeRole(): Boolean
+    /**
+     * Opens Android's screen for picking the home app; false when this device has none. [onAnswered] gets, once
+     * that screen closes, whether Plumemu is now the home app (Android 10+ answers at once, showing nothing,
+     * after two refusals).
+     */
+    fun requestHomeRole(onAnswered: (isHomeApp: Boolean) -> Unit = {}): Boolean
+
+    /** Opens Android's own list of home apps; false when this device has none. */
+    fun openHomeSettings(): Boolean = false
 
     /** Stores `flags.home_role_asked`: the question is never asked again. */
     fun markAsked()
@@ -64,7 +72,9 @@ internal interface HomeRoleActions {
 
 /**
  * "Use Plumemu as your home screen?", asked once after the library first opens. Either answer
- * marks it asked; Yes opens Android's own screen (or, where there is none, says where to look).
+ * marks it asked; Yes opens Android's own screen (or, where there is none, says where to look). The card
+ * stays until Android answers: Plumemu now the home app closes it; if not, it says so and offers Android's own
+ * list of home apps ([showsNotYet]), so Yes never seems to do nothing.
  */
 @Stable
 internal class HomeRolePromptState(private val actions: HomeRoleActions) {
@@ -76,13 +86,24 @@ internal class HomeRolePromptState(private val actions: HomeRoleActions) {
     var isClosed by mutableStateOf(false)
         private set
 
+    /** Yes was pressed and Android has not answered yet: the card stays as it was and waits. */
+    var isWaiting by mutableStateOf(false)
+        private set
+
+    /** Android answered and Plumemu is still not the home app: 0 = open Android's list, 1 = OK. */
+    var showsNotYet by mutableStateOf(false)
+        private set
+
+    /** The card holds the screen after the answer was stored (the "asked" flag no longer asks for it). */
+    val keepsShowing: Boolean get() = showsUnavailable || isWaiting || showsNotYet
+
     private val buttonCount: Int get() = if (showsUnavailable) 1 else 2
 
     /** Says what each action did, for the sounds (set by the screen). */
     val feel = Feel()
 
     fun onAction(action: Action) {
-        if (isClosed) return
+        if (isClosed || isWaiting) return
         feel.act {
             when (action) {
                 is Action.Move -> {
@@ -98,7 +119,7 @@ internal class HomeRolePromptState(private val actions: HomeRoleActions) {
                     feel.report(Outcome.Activated)
                 }
                 Action.Back -> {
-                    if (showsUnavailable) isClosed = true else activate(NOT_NOW)
+                    if (showsUnavailable || showsNotYet) isClosed = true else activate(NOT_NOW)
                     feel.report(Outcome.WentBack)
                 }
                 is Action.TapItem ->
@@ -117,12 +138,39 @@ internal class HomeRolePromptState(private val actions: HomeRoleActions) {
             isClosed = true
             return
         }
+        if (showsNotYet) {
+            if (index != YES) {
+                isClosed = true
+            } else if (actions.openHomeSettings()) {
+                isClosed = true
+            } else {
+                showsNotYet = false
+                showsUnavailable = true
+                focus = 0
+            }
+            return
+        }
         actions.markAsked()
-        if (index == YES && !actions.requestHomeRole()) {
+        if (index != YES) {
+            isClosed = true
+            return
+        }
+        isWaiting = true
+        if (!actions.requestHomeRole(::answered)) {
+            isWaiting = false
             showsUnavailable = true
             focus = 0
-        } else {
+        }
+    }
+
+    private fun answered(isHomeApp: Boolean) {
+        if (!isWaiting) return
+        isWaiting = false
+        if (isHomeApp) {
             isClosed = true
+        } else {
+            showsNotYet = true
+            focus = 0
         }
     }
 
@@ -147,26 +195,29 @@ internal fun HomeRolePrompt(
         }
     }
     val send = remember(input) { { action: Action -> input.send(action) } }
-    HomeRolePromptLayout(state.showsUnavailable, state.focus, letters, send)
+    HomeRolePromptLayout(state.showsUnavailable, state.focus, letters, send, showsNotYet = state.showsNotYet)
 }
 
 /** A `sel2` panel in setup's language over the dimmed main screen, with its own hint bar. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun HomeRolePromptLayout(
     showsUnavailable: Boolean,
     focus: Int,
     letters: ButtonLetters,
     onAction: (Action) -> Unit,
+    showsNotYet: Boolean = false,
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
+    val isMessage = showsUnavailable || showsNotYet
     Column(
         Modifier
             .fillMaxSize()
             .background(colors.bg.copy(alpha = SCRIM_ALPHA))
             // Taps outside the panel land here, not on the main screen underneath.
             .pointerInput(Unit) { detectTapGestures { } }
-            .padding(top = PlumDimens.stripMarginTop + PlumTheme.layout.topBarHeight + PlumDimens.barGap, bottom = PlumDimens.stripMarginBottom)
+            .padding(top = PlumDimens.stripMarginTop + PlumTheme.layout.topBarHeight + PlumDimens.barGap, bottom = PlumDimens.footerBelow)
             .testTag(HomeRoleTags.PROMPT),
     ) {
         Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = PlumDimens.stripMarginSide), contentAlignment = Alignment.Center) {
@@ -181,12 +232,24 @@ internal fun HomeRolePromptLayout(
                 verticalArrangement = Arrangement.spacedBy(PlumDimens.setupTitleGapWide),
             ) {
                 PanelTitleWithDot(text = stringResource(R.string.home_role_title), style = type.setupTitle(WidthClass.Narrow).copy(color = colors.text))
-                val body = if (showsUnavailable) R.string.home_role_unavailable else R.string.home_role_body
+                val body =
+                    when {
+                        showsUnavailable -> R.string.home_role_unavailable
+                        showsNotYet -> R.string.home_role_not_yet
+                        else -> R.string.home_role_body
+                    }
                 BasicText(text = stringResource(body), style = type.description.copy(color = colors.muted))
                 Spacer(Modifier.height(PlumDimens.setupButtonSpacer))
-                Row(horizontalArrangement = Arrangement.spacedBy(PlumDimens.setupButtonGap)) {
+                // Wraps: a long first button at the largest text must not squeeze the second one empty.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(PlumDimens.setupButtonGap),
+                    verticalArrangement = Arrangement.spacedBy(PlumDimens.setupButtonGap),
+                ) {
                     if (showsUnavailable) {
                         PromptButton(R.string.home_role_ok, index = 0, isPrimary = true, focus, onAction)
+                    } else if (showsNotYet) {
+                        PromptButton(R.string.home_role_open_settings, index = 0, isPrimary = true, focus, onAction)
+                        PromptButton(R.string.home_role_ok, index = 1, isPrimary = false, focus, onAction)
                     } else {
                         PromptButton(R.string.home_role_yes, index = 0, isPrimary = true, focus, onAction)
                         PromptButton(R.string.home_role_not_now, index = 1, isPrimary = false, focus, onAction)
@@ -194,7 +257,7 @@ internal fun HomeRolePromptLayout(
                 }
             }
         }
-        Spacer(Modifier.height(PlumDimens.barGap))
+        Spacer(Modifier.height(PlumDimens.footerGap))
         // Opaque: the main screen's own hints sit at the same place and would show through.
         HintBar(Modifier.background(colors.bg)) {
             Hint(
@@ -202,7 +265,7 @@ internal fun HomeRolePromptLayout(
                 label = stringResource(if (showsUnavailable) R.string.home_role_ok else R.string.home_role_hint_select),
                 modifier = Modifier.hint(Action.Enter, onAction),
             )
-            if (!showsUnavailable) {
+            if (!isMessage) {
                 Hint(
                     keyCap = stringResource(letters.back),
                     label = stringResource(R.string.home_role_hint_not_now),

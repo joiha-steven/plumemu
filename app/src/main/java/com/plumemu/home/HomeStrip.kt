@@ -28,9 +28,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -44,16 +43,17 @@ import com.plumemu.coreinput.strip.StripFocus
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreinput.stripDrag
 import com.plumemu.coreinput.tapItem
-import com.plumemu.coreui.components.CentredMessage
 import com.plumemu.coreui.components.EdgeFade
 import com.plumemu.coreui.components.GameRowLook
 import com.plumemu.coreui.components.InsetFocusPillShape
 import com.plumemu.coreui.components.SystemRow
 import com.plumemu.coreui.components.SystemRowLook
+import com.plumemu.coreui.components.clipSidesLeavingRoom
 import com.plumemu.coreui.components.rememberGlidingPill
-import com.plumemu.coreui.components.listEdgeFadeMask
+import com.plumemu.coreui.theme.LeftColumnDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.WidthClass
 import com.plumemu.coreui.theme.fadingIn
 import com.plumemu.coreui.theme.rememberContentFade
@@ -73,7 +73,6 @@ internal fun HomeStrip(
     modifier: Modifier = Modifier,
     isPanelOpen: Boolean = false,
     positions: GamesPagePositions,
-    detailsOnSecondScreen: Boolean = false,
     showSystemInfo: Boolean = true,
 ) {
     val layout = PlumTheme.layout
@@ -89,29 +88,32 @@ internal fun HomeStrip(
             column == Column.Details || (content.showsGrid(content.entries.getOrNull(state.focus.systemIndex), gridIds) && column != Column.Systems)
         }
     }
-    // Apps never has details (apps have no art); a wide grid takes the whole width; a list has
-    // none while the second screen's window shows them (layout C), a narrow grid keeps its stop.
+    // Apps shows details in its list only (the icon column); a wide grid takes the whole width; a narrow grid keeps its stop.
     // Without box art a list has the text-only column on wide screens only (listHasDetails).
-    val showsDetails by remember(state, content, gridIds, layout, detailsOnSecondScreen) {
+    val showsDetails by remember(state, content, gridIds, layout) {
         derivedStateOf {
             val entry = content.entries.getOrNull(state.focus.systemIndex)
             val hasColumn =
-                if (content.showsGrid(entry, gridIds)) layout.widthClass == WidthClass.Narrow else listHasDetails(layout, content.hasBoxArt, detailsOnSecondScreen)
-            entry?.hasDetails == true && hasColumn
+                if (content.showsGrid(entry, gridIds)) layout.widthClass == WidthClass.Narrow else listHasDetails(layout, content.hasBoxArt)
+            entry?.hasDetails == true && hasColumn && !(entry.kind == EntryKind.Apps && content.showsGrid(entry, gridIds))
         }
     }
-    // Without box art an empty library keeps the no-details width (its message centred and its Apps
-    // list as before the text-only column); with box art it is unchanged.
-    val keepsFullWidth = content.isLibraryEmpty && !content.hasBoxArt
+    // A wide screen's column never runs past the right margin: it takes the room left at this stop (homeDetailsFit).
+    val detailsWidth by remember(state, layout, content.hasBoxArt, showsGrid) { derivedStateOf { homeDetailsFit(layout, content.hasBoxArt, showsGrid, state.focus.column) } }
+    // Without box art an empty library keeps the no-details width (its message centred); its Apps list
+    // shrinks like any list with a column, so the column shows (SPEC: Apps list). With box art it is unchanged.
+    // Every entry has details now, so "no details" never holds: only the Apps list keeps its column.
+    val onApps by remember(state, content) { derivedStateOf { content.entries.getOrNull(state.focus.systemIndex)?.kind == EntryKind.Apps } }
+    val keepsFullWidth = content.isLibraryEmpty && !content.hasBoxArt && !(onApps && showsDetails)
     // 640 dp and up, narrow, no details beside the list: with the systems open its preview must end inside the margin
     // (the right column is the year, region or system code); it takes its full width once the games have the focus.
     val systemsOpen by remember(state) { derivedStateOf { state.focus.column == Column.Systems } }
     val previewFits = layout.isNarrowFitted && !showsGrid && !showsDetails && !keepsFullWidth && systemsOpen
-    val gamesWidth = if (previewFits) layout.narrowListWidth else if (keepsFullWidth) layout.listWidthWithoutArt else homeGamesWidth(layout, content.hasBoxArt, showsGrid, detailsOnSecondScreen)
-    // A grid's focus ring may reach into the bar gaps (with box art, or Apps' grid without it); a list
-    // without box art draws nothing outside the strip and the plain clip keeps that screen as it was.
-    val clip = if (content.hasBoxArt || showsGrid) Modifier.clipSidesAndBarGaps() else Modifier.clipToBounds()
-    Box(modifier = modifier.then(clip).stripDrag(state).testTag(HomeTags.STRIP)) {
+    val gamesWidth = if (previewFits) layout.narrowListWidth else if (keepsFullWidth) layout.listWidthWithoutArt else homeGamesWidth(layout, content.hasBoxArt, showsGrid)
+    // A grid's focus ring and a list's focus slab (drawn past its first and last row) may reach into the bar gaps; a first or last row's glow reaches
+    // [SlabDimens.listEndRoom] past the row, further than the gap, so the clip leaves that much above (else the glow is cut flat under the title).
+    // Below stays the gap: a row cut by the list's end must not show in the hint keys' strip. A grid's ring keeps the gap too (its shots are not touched here).
+    Box(modifier = modifier.then(Modifier.clipSidesLeavingRoom(above = if (showsGrid) PlumDimens.barGap else maxOf(PlumDimens.barGap, SlabDimens.listEndRoom))).stripDrag(state).testTag(HomeTags.STRIP)) {
         Row(
             modifier =
                 Modifier
@@ -121,30 +123,26 @@ internal fun HomeStrip(
             horizontalArrangement = Arrangement.spacedBy(PlumDimens.columnGap),
         ) {
             // Starts at the screen edge: the 24 dp margin is inside the column, so the selector can run under the edge.
-            SystemsColumn(content, state, onAction, Modifier.width(PlumDimens.stripMarginSide + PlumTheme.layout.systemsColumnWidth).fillMaxHeight())
+            SystemsColumn(content, state, onAction, Modifier.width(PlumDimens.stripMarginSide + PlumTheme.layout.systemsColumnWidth).fillMaxHeight(), isPanelOpen)
             if (showsGrid) {
                 GamesGrid(content, state, onAction, Modifier.width(gamesWidth).fillMaxHeight(), isPanelOpen)
+                PrefetchNeighbourCovers(content, state, gridIds)
             } else {
-                GamesList(content, state, gridIds, positions, onAction, Modifier.width(gamesWidth).fillMaxHeight(), isPanelOpen, listShowsPlace(layout, detailsOnSecondScreen), showSystemInfo)
+                // The list's width in px as it is laid out (the bleed of boardListStart included), for the pill images built ahead.
+                val density = LocalDensity.current
+                val listWidthPx = with(density) { gamesWidth.roundToPx() + if (keepsFullWidth) 0 else PlumDimens.gamesListBleed.roundToPx() }
+                CompositionLocalProvider(LocalGamesListWidthPx provides listWidthPx) {
+                    GamesList(content, state, gridIds, positions, onAction, Modifier.width(gamesWidth).fillMaxHeight().then(if (keepsFullWidth) Modifier else Modifier.boardListStart()), isPanelOpen, listShowsPlace(layout, PlumTheme.type.font), showSystemInfo)
+                }
             }
             // Beside the list on wide screens; on narrow ones the third stop, after list or grid.
-            if (showsDetails) {
-                DetailsColumn(content, state, onAction, Modifier.width(homeDetailsWidth(layout)).fillMaxHeight())
+            if (showsDetails && (layout.widthClass == WidthClass.Wide || detailsWidth > 0.dp)) {
+                DetailsColumn(content, state, onAction, Modifier.width(detailsWidth).fillMaxHeight(), detailsWidth)
             }
         }
         if (!hideFade) EdgeFade(Modifier.align(Alignment.CenterEnd).testTag(HomeTags.EDGE_FADE))
     }
 }
-
-/**
- * Clips the strip at its sides (where it slides off screen) but lets drawing reach into the
- * 10 dp gaps above and below, where a focused cover's ring and glow may extend.
- */
-private fun Modifier.clipSidesAndBarGaps(): Modifier =
-    drawWithContent {
-        val gap = PlumDimens.barGap.toPx()
-        clipRect(top = -gap, bottom = size.height + gap) { this@drawWithContent.drawContent() }
-    }
 
 /**
  * Recent, Favorites, Apps, a 4 dp gap, then each system; every entry with its count. In the peek the letter rail
@@ -156,9 +154,14 @@ private fun SystemsColumn(
     state: StripState,
     onAction: (Action) -> Unit,
     modifier: Modifier,
+    isPanelOpen: Boolean,
 ) {
     val listState = rememberLazyListState()
-    val glide = rememberListGlide(stride = PlumTheme.layout.systemRowHeight)
+    // The counts peek out left of a narrow game card: not drawn while it is open (read while drawing, so no row recomposes).
+    val panelOpen = rememberUpdatedState(isPanelOpen)
+    val isNarrow = PlumTheme.layout.widthClass == WidthClass.Narrow
+    val countHidden = remember(panelOpen, isNarrow) { { isNarrow && panelOpen.value } }
+    val glide = rememberListGlide(stride = PlumTheme.layout.systemRowHeight, glowRoom = true)
     val numbers = rememberCountFormat()
     // The names fade with the strip's real position as it slides to the peek (read while drawing).
     val nameAlpha = remember(state) { { state.systemNamesAlpha } }
@@ -181,31 +184,35 @@ private fun SystemsColumn(
         derivedStateOf { content.leftEdge == LeftEdgeSetting.Letters && content.entries.getOrNull(state.focus.systemIndex)?.railLetters?.isNotEmpty() == true }
     }
     // The focus pill is drawn by the list, so it glides from row to row; inset as the row's own was.
-    val pillInset = (PlumDimens.stripMarginSide - PlumDimens.gameRowPadding).coerceAtLeast(0.dp)
-    val pillShape = remember(pillInset) { InsetFocusPillShape(pillInset) }
+    val pillShape = remember { InsetFocusPillShape(LeftColumnDimens.systemPillStart, LeftColumnDimens.systemBarInset) }
     val pill =
         rememberGlidingPill(listState, glide, rowHeight = PlumTheme.layout.systemRowHeight, stride = PlumTheme.layout.systemRowHeight, extraGap = PlumDimens.systemGroupGap, shape = pillShape, fromBottom = true) {
-            if (state.focus.column == Column.Systems) state.focus.systemIndex else -1
+            if (state.focus.column == Column.Systems && !notices.emptyFocus.inButtons) state.focus.systemIndex else -1
         }
     // The column fades out at an edge it continues past (design/rules.md › Lists that scroll).
-    val fades = remember(listState, glide, state) { ListEdgeFades(listState, glide) { state.focus.systemIndex } }
+    val groupGapPx = with(LocalDensity.current) { PlumDimens.systemGroupGap.toPx() }
+    val fades = remember(listState, glide, state, content.firstSystemIndex, groupGapPx) {
+        ListEdgeFades(listState, glide, wholeRowsOnly = true, gapAbove = { if (it == content.firstSystemIndex) groupGapPx else 0f }) { state.focus.systemIndex }
+    }
+    // The column takes the strip's whole height; a row cut by its top or bottom edge is hidden, only whole rows show.
+    val systemsHeightPx = with(LocalDensity.current) { PlumTheme.layout.stripHeight.roundToPx() }
     Box(modifier) {
         pill.Provide {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize().testTag(HomeTags.SYSTEMS).listEdgeFadeMask(fades, PlumTheme.edgeFadeOn).then(pill.modifier).then(glide.modifier),
+                modifier = Modifier.fillMaxSize().listHeightAtMost(systemsHeightPx).testTag(HomeTags.SYSTEMS).then(pill.modifier).then(glide.withFadeMask(fades, PlumTheme.edgeFadeOn, hidesCutRows = true)),
                 contentPadding = PaddingValues(vertical = glide.extra),
             ) {
                 itemsIndexed(content.entries, key = { _, entry -> entry.id }) { index, entry ->
                     if (index == content.firstSystemIndex) Spacer(Modifier.height(PlumDimens.systemGroupGap))
                     // Read the focus in its own derived state: a game-row move changes the focus object
                     // but not this row's look, so the row is not recomposed.
-                    val look by remember(state, index) { derivedStateOf { systemLook(state.focus, index) } }
+                    val look by remember(state, index) { derivedStateOf { systemLook(state.focus, index, notices.emptyFocus.inButtons) } }
                     val tap = remember(index, onAction) { Modifier.tapItem(Column.Systems, index, onAction).testTag(HomeTags.system(index)) }
                     // Counts and System codes stay in the peek as the names fade; the rail covers the count's place, so it fades with the names.
                     // Codes stand in for the counts only in the peek: the open column keeps its counts.
                     val edgeText = if (content.leftEdge == LeftEdgeSetting.Codes && !systemsOpen) entryCode(entry) else numbers.formatSystemCount(entry.shownCount)
-                    SystemRow(name = entryName(entry), count = edgeText, look = look, nameAlpha = nameAlpha, modifier = tap, bleedStart = PlumDimens.stripMarginSide, hasDot = entry.id in newGameSystems, fadeCount = countsGiveWay)
+                    SystemRow(name = entryName(entry), count = edgeText, look = look, nameAlpha = nameAlpha, modifier = tap, bleedStart = LeftColumnDimens.systemLabelStart, hasDot = entry.id in newGameSystems, fadeCount = countsGiveWay, countHidden = countHidden)
                 }
             }
         }
@@ -240,7 +247,12 @@ private fun GamesList(
         return
     }
     if (entry.rows.isEmpty() && entry.kind == EntryKind.Favorites) {
-        EmptyFavoritesLine(modifier)
+        val key = stringResource(LocalButtonLetters.current.favorite)
+        EmptyEntryLine(stringResource(R.string.home_favorites_empty, key), HomeTags.EMPTY_FAVORITES, modifier)
+        return
+    }
+    if (entry.rows.isEmpty() && entry.kind == EntryKind.Recent) {
+        EmptyEntryLine(stringResource(R.string.home_recent_empty), HomeTags.EMPTY_RECENT, modifier)
         return
     }
     // L1/R1 with the games focused: the next system's games fade in instead of popping. Moves in
@@ -250,74 +262,39 @@ private fun GamesList(
 }
 
 /**
- * Favorites with no game yet (the area would be blank): one muted line where the list would start,
- * like Search's "Type a game name to search", naming the key that adds one (Y; [com.plumemu.settings.ButtonLetters.favorite]).
- * It may wrap to two lines in a long translation; it is never cut.
+ * Favorites or Recent with no game yet (the area would be blank): one muted line where the list would start,
+ * like Search's "Type a game name to search". Favorites names the key that adds one (Y; [com.plumemu.settings.ButtonLetters.favorite]);
+ * Recent says where played games appear. It may wrap to two lines in a long translation; it is never cut.
  */
 @Composable
-private fun EmptyFavoritesLine(modifier: Modifier) {
+private fun EmptyEntryLine(
+    text: String,
+    tag: String,
+    modifier: Modifier,
+) {
     val layout = PlumTheme.layout
-    val key = stringResource(LocalButtonLetters.current.favorite)
     // As the empty library's message: the area from the list's start to the right margin, with the systems focused.
     val onScreen = layout.width - PlumDimens.stripMarginSide * 2 - layout.systemsColumnWidth - PlumDimens.columnGap
     Box(modifier) {
         Box(Modifier.width(onScreen).heightIn(min = layout.gameRowHeight).padding(horizontal = PlumDimens.gameRowPadding), contentAlignment = Alignment.CenterStart) {
             BasicText(
-                stringResource(R.string.home_favorites_empty, key),
+                text,
                 style = PlumTheme.type.gameTitle.copy(color = PlumTheme.colors.muted),
-                modifier = Modifier.testTag(HomeTags.EMPTY_FAVORITES),
+                modifier = Modifier.testTag(tag),
             )
         }
-    }
-}
-
-/**
- * No games at all: the system column with Recent, Favorites and Apps stays,
- * and the games area says why it is empty. Centred in the part of the area that is on screen
- * with systems focused (from the list's start to the right margin), not in the whole list width.
- */
-@Composable
-private fun EmptyLibraryMessage(
-    modifier: Modifier,
-    onAction: (Action) -> Unit,
-) {
-    val onScreen =
-        PlumTheme.layout.width - PlumDimens.stripMarginSide * 2 - PlumTheme.layout.systemsColumnWidth - PlumDimens.columnGap
-    val notices = LocalHomeNotices.current
-    val why by notices.emptyLibrary.collectAsState()
-    val folderMessage by notices.folderMessage.collectAsState()
-    val add = stringResource(R.string.home_empty_body, stringResource(LocalButtonLetters.current.confirm))
-    val problem = folderMessage?.let { stringResource(it) }
-    val (title, body) =
-        when (why) {
-            EmptyLibrary.NoFolder -> stringResource(R.string.home_empty_title) to add
-            EmptyLibrary.Scanning -> stringResource(R.string.setup_scan_title) to stringResource(R.string.setup_scan_running)
-            EmptyLibrary.NoGames -> stringResource(R.string.home_nogames_title) to stringResource(R.string.home_nogames_body, add)
-        }
-    Box(modifier = modifier, contentAlignment = Alignment.CenterStart) {
-        CentredMessage(
-            title = title,
-            // "A Add folder": the key's name follows Settings › Controls; a tap does what A does.
-            body = if (problem == null) body else "$problem\n$body",
-            // Kept clear of the right-edge fade on both sides, so the centre stays put and a long
-            // line wraps instead of fading out (the Nova).
-            modifier =
-                Modifier
-                    .width(onScreen)
-                    .clickable(interactionSource = null, indication = null) { onAction(Action.Enter) }
-                    .padding(horizontal = PlumDimens.edgeFade)
-                    .testTag(HomeTags.EMPTY_MESSAGE),
-        )
     }
 }
 
 internal fun systemLook(
     focus: StripFocus,
     index: Int,
+    // A button of the empty state has the focus: the column row is current, not focused.
+    buttonHasFocus: Boolean = false,
 ): SystemRowLook =
     when {
         index != focus.systemIndex -> SystemRowLook.Normal
-        focus.column == Column.Systems -> SystemRowLook.Focused
+        focus.column == Column.Systems && !buttonHasFocus -> SystemRowLook.Focused
         else -> SystemRowLook.Current
     }
 

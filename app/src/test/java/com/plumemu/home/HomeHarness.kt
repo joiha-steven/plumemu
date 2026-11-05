@@ -31,7 +31,6 @@ internal val BoardGamesFocused: List<Action> = BoardSystemsFocused.dropLast(1)
 /**
  * The main screen's layout with its own strip state, brought to a focus by [actions] before the
  * first frame. With [isMotionOn] false every move jumps, as with animations off.
- * [detailsOnSecondScreen] is read here once, as `HomeScreen` reads the second screen's window state.
  */
 @Composable
 internal fun HomeAt(
@@ -46,14 +45,12 @@ internal fun HomeAt(
     battery: () -> String? = { BOARD_BATTERY },
     showHints: Boolean = true,
     search: SearchState? = null,
-    detailsOnSecondScreen: () -> Boolean = { false },
     wifi: () -> Boolean = { false },
     charging: () -> Boolean = { false },
     pushRightToPlay: Boolean = false,
     showSystemInfo: Boolean = true,
 ) {
-    val listOnly = detailsOnSecondScreen()
-    val state = rememberHomeStripState(content, gridIds, isMotionOn, listOnly)
+    val state = rememberHomeStripState(content, gridIds, isMotionOn)
     // Applied once, synchronously, before the first frame. A dispatch that changes column starts
     // a slide when motion is on, so with [isMotionOn] pass only moves within the system column.
     // Not observed: reads inside the dispatches would otherwise subscribe this harness to the
@@ -80,7 +77,6 @@ internal fun HomeAt(
             pushRightToPlay = pushRightToPlay,
             showSystemInfo = showSystemInfo,
             search = search,
-            detailsOnSecondScreen = listOnly,
         )
     }
 }

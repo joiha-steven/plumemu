@@ -21,7 +21,7 @@ import org.robolectric.annotation.GraphicsMode
 class AppsMenuScreenshotTest {
     private val app = GameRef(AppsGridApps[0].id, AppsGridApps[0].title)
 
-    private fun menu(name: String, canUninstall: Boolean, textSize: TextSize = TextSize.Medium) {
+    private fun menu(name: String, canUninstall: Boolean, textSize: TextSize = TextSize.Small) {
         val panel = OpenPanel(app, PanelScreen.AppMenu(canUninstall))
         ReferenceShots.capture(name, textSize = textSize) { HomeAt(appsGridLibrary(), gridActions(APPS_ENTRY, 0), panel = panel) }
     }

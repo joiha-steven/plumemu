@@ -74,6 +74,8 @@ class AppGameLaunchTest {
 
         assertEquals(LaunchOutcome.Started(id, "com.celeste", "com.celeste", ChoiceSource.InstalledApp, coreToConfirm = null), outcome)
         assertEquals(listOf("com.celeste"), starts)
+        // Exact play time asks Android about this package when the play ends.
+        assertEquals("com.celeste", context.getSharedPreferences("plumemu_play_session", Context.MODE_PRIVATE).getString("started_package", null))
         val play = pendingPlay()
         assertTrue("a session is pending, the package as its emulator: $play", play is PlaySessionOutcome.TooShort)
         play as PlaySessionOutcome.TooShort
@@ -158,8 +160,8 @@ class AppGameLaunchTest {
         val entries = gameMenuEntries(facts.copy(canFixBoxArt = true)).map { it.key }
         assertEquals(
             listOf(
-                GameMenuEntryId.Play, GameMenuEntryId.Favorite, GameMenuEntryId.Hide, GameMenuEntryId.Name,
-                AppKindEntryId.ShowAsPort, AppKindEntryId.NotAGame, GameMenuEntryId.Info,
+                GameMenuEntryId.Play, GameMenuEntryId.Favorite, GameMenuEntryId.Name,
+                AppKindEntryId.ShowAsPort, AppKindEntryId.NotAGame, GameMenuEntryId.Info, GameMenuEntryId.Hide,
             ).map { it.name },
             entries,
         )

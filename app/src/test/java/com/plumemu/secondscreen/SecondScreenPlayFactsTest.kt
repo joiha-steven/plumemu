@@ -9,6 +9,8 @@ import com.plumemu.coredata.db.ScanBatch
 import com.plumemu.coredata.db.SystemEntity
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.graph.AchievementCount
+import com.plumemu.graph.StoredAchievements
+import com.plumemu.graph.StoredBadge
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -80,9 +82,12 @@ class SecondScreenPlayFactsTest {
     fun theAchievementsComeWithThePlayFactsAndOnlyThen() =
         runBlocking {
             val asked = mutableListOf<Long>()
-            val withRa = SecondScreenPlayFacts(plays = { db.playDao() }, now = { now }, achievementsOf = { id -> asked += id; AchievementCount(12, 45) })
+            val withRa = SecondScreenPlayFacts(plays = { db.playDao() }, now = { now }, achievementsOf = { id -> asked += id; StoredAchievements(12, 45, 100, 400, listOf(StoredBadge("First", null, now - 2 * 86_400_000L))) })
             val filled = withRa.fill(card("Zelda")) as SecondScreenContent.Game
             assertEquals(AchievementCount(12, 45), filled.achievements)
+            assertEquals(100, filled.ra?.pointsEarned)
+            assertEquals(2, filled.raLatestDaysAgo)
+            assertEquals(8, filled.weeks?.weekSeconds?.size)
             assertEquals(listOf(ids.getValue("Zelda")), asked)
             // The same card again (play known) reads nothing more; no reader: no count.
             assertNull(withRa.fill(filled))
@@ -95,25 +100,25 @@ class SecondScreenPlayFactsTest {
         runBlocking {
             assertEquals(
                 card("Super Metroid").copy(isPlayKnown = true, lastPlayedDaysAgo = 3, playTimeMinutes = 200),
-                facts.fill(card("Super Metroid")),
+                (facts.fill(card("Super Metroid")) as SecondScreenContent.Game).copy(weeks = null),
             )
         }
 
     @Test
     fun aGameNeverPlayedIsKnownAsNeverPlayed() =
         runBlocking {
-            assertEquals(card("Sonic").copy(isPlayKnown = true), facts.fill(card("Sonic")))
+            assertEquals(card("Sonic").copy(isPlayKnown = true), (facts.fill(card("Sonic")) as SecondScreenContent.Game).copy(weeks = null))
         }
 
     @Test
-    fun aGameWithAnIdAndAKeyGetsItsFactsAndItsPictureInTheSameFill() =
+    fun aGameWithAnIdAndAKeyGetsItsFactsAndItsDetailsInTheSameFill() =
         runBlocking {
             val front = com.plumemu.home.ArtPicture("/media/1/front.webp", 1240, 886)
             val details = com.plumemu.home.GameDetails(year = 1994, publisher = "Nintendo", genre = "Action", players = "1", description = "")
             val result = com.plumemu.home.GameArt(grid = null, large = front, details = details)
             val both = SecondScreenPlayFacts(plays = { db.playDao() }, now = { now }, resultOf = { if (it == "crc:1") result else null })
             val asked = card("Super Metroid").copy(scrapeKey = "crc:1")
-            assertEquals(asked.copy(isPlayKnown = true, lastPlayedDaysAgo = 3, playTimeMinutes = 200, art = front, details = details), both.fill(asked))
+            assertEquals(asked.copy(isPlayKnown = true, lastPlayedDaysAgo = 3, playTimeMinutes = 200, details = details), (both.fill(asked) as SecondScreenContent.Game).copy(weeks = null))
         }
 
     @Test
@@ -151,10 +156,10 @@ class SecondScreenPlayFactsTest {
      * no row of their own (the scan keeps them only in `DirectoryCatalogue.partOf`, and folds a row
      * an older scan made for one into the game's row), so the database has nothing else to read for
      * the game. Stored as the scan stores them, the card gets the game row's file, the very one
-     * `GameDao.launchTarget` starts, without its extension.
+     * `GameDao.launchTarget` starts, as stored.
      */
     @Test
-    fun aMultiFileGameGetsTheLaunchedFilesNameWithoutItsExtension() =
+    fun aMultiFileGameGetsTheLaunchedFilesName() =
         runBlocking {
             val folderId = db.scanDao().insertFolder(RomFolderEntity(treeUri = "content://t/tree/more", displayName = "More", addedAt = 0))
             val launched =
@@ -174,19 +179,11 @@ class SecondScreenPlayFactsTest {
             val games = db.scanDao().gamesInFolder(folderId).associate { it.title to it.id }
             val withFileName =
                 SecondScreenPlayFacts(plays = { db.playDao() }, now = { now }, fileNameOf = { id -> db.gameDao().launchedFileName(id) })
-            val shown =
-                mapOf(
-                    "Crash Bandicoot" to "Crash Bandicoot (USA)",
-                    "Final Fantasy VII" to "Final Fantasy VII (USA)",
-                    "Metal Gear Solid" to "Metal Gear Solid (USA) (Disc 1)",
-                    "Star Rover" to "Star Rover [0100AAAA00010000]",
-                )
-            for ((title, line) in shown) {
+            for (title in launched.keys) {
                 val id = games.getValue(title)
                 val card = withFileName.fill(SecondScreenContent.Game(title, "PlayStation", gameId = id, isPlayKnown = false)) as SecondScreenContent.Game
                 assertEquals("$title: the file Play launches", db.gameDao().launchTarget(id)?.fileName, card.fileName)
                 assertEquals("$title: the row's file", launched.getValue(title).second, card.fileName)
-                assertEquals("$title: the card's line", line, fileNameWithoutExtension(requireNotNull(card.fileName)))
             }
         }
 
@@ -207,37 +204,10 @@ class SecondScreenPlayFactsTest {
         }
 
     @Test
-    fun aSystemGetsItsNewestPlay() =
-        runBlocking {
-            val snes = SecondScreenContent.System("Super Nintendo", 2, lastPlayFrom = LastPlayLookup.InSystem("snes"))
-            assertEquals(snes.copy(lastGameTitle = "Zelda", lastPlayedDaysAgo = 1), facts.fill(snes))
-        }
-
-    @Test
-    fun aSystemNeverPlayedHasNoLastGame() =
-        runBlocking {
-            assertNull(facts.fill(SecondScreenContent.System("Mega Drive", 1, lastPlayFrom = LastPlayLookup.InSystem("md"))))
-        }
-
-    @Test
-    fun favoritesGetTheNewestFavouritePlay() =
-        runBlocking {
-            val favorites = SecondScreenContent.System("Favorites", 1, lastPlayFrom = LastPlayLookup.AmongFavorites)
-            assertEquals(favorites.copy(lastGameTitle = "Super Metroid", lastPlayedDaysAgo = 3), facts.fill(favorites))
-        }
-
-    @Test
-    fun recentGetsItsFirstGamesPlay() =
-        runBlocking {
-            val recent = SecondScreenContent.System("Recent", 2, lastPlayFrom = LastPlayLookup.FirstGame(ids.getValue("Zelda"), "Zelda"))
-            assertEquals(recent.copy(lastGameTitle = "Zelda", lastPlayedDaysAgo = 1), facts.fill(recent))
-        }
-
-    @Test
     fun cardsWithoutPlayFactsHaveNothingToRead() =
         runBlocking {
             assertNull(facts.fill(SecondScreenContent.Apps(3)))
-            assertNull(facts.fill(SecondScreenContent.System("Super Nintendo", 2)))
+            assertNull(facts.fill(SystemEntry("snes", "Super Nintendo", 2)))
             assertNull(facts.fill(SecondScreenContent.Calm))
         }
 

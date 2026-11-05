@@ -68,6 +68,8 @@ object TitleCleaner {
     private val leadingZeroNumber = Regex("""^0\d{3}\s*-\s+""")
     private const val TRIM_END = "-,;:+_ "
     private const val TRIM_START = "-+_ "
+    private const val MAX_KEPT_FORMS = 12
+    private const val MAX_KEPT_GROUPS = 3
 
     /**
      * [baseName] without its download / copy suffix, or null when it has none. A caller that sees
@@ -76,28 +78,28 @@ object TitleCleaner {
      * [clean] keeps the suffix by default, so callers that see one name never merge files.
      */
     fun withoutCopySuffix(baseName: String): String? {
-        val folded = Normalizer.normalize(baseName, Normalizer.Form.NFKC)
+        val folded = fold(baseName)
         return copySuffix.find(folded)?.let { folded.substring(0, it.range.first) }
     }
+
+    /**
+     * NFKC, except the acute accent U+00B4 used as an apostrophe: NFKC would turn it into a space and a
+     * combining accent, which breaks a dotted name ("Milon<acute>s.Secret.Castle") into two words.
+     * `MatchKey` drops it like any apostrophe.
+     */
+    private fun fold(baseName: String): String =
+        baseName.split('\u00b4').joinToString("\u00b4") { Normalizer.normalize(it, Normalizer.Form.NFKC) }
 
     /** Cleans [baseName], the file name without its extension. */
     fun clean(baseName: String, dropCopySuffix: Boolean = false): CleanTitle {
         val regions = mutableListOf<Region>()
         // Compatibility fold first: full-width letters, digits, brackets and the ideographic space
         // become their plain forms, so the region and the match key read as for an ASCII name.
-        val folded = Normalizer.normalize(baseName, Normalizer.Form.NFKC)
+        val folded = fold(baseName)
         val unmarked = SiteMarks.strip(if (dropCopySuffix) folded.replaceFirst(copySuffix, "") else folded)
-        // Leading dots belong to the title (".hack", "...Iru!"), never a separator.
-        val leadingDots = unmarked.takeWhile { it == '.' }
-        val rest = unmarked.substring(leadingDots.length)
-        val scene = sceneSplit(rest)
-        var name = leadingDots + if (scene != null) {
-            regions += scene.second
-            scene.first
-        } else {
-            spacesForSeparators(rest)
-        }
-        name = name.replaceFirst(leadingZeroNumber, "")
+        val prepared = prepare(unmarked)
+        regions += prepared.regions
+        var name = prepared.name
         val groups = bracketGroup.findAll(name).toList()
         groups.forEach { match ->
             val round = match.groups[1]?.value
@@ -116,6 +118,117 @@ object TitleCleaner {
         title = moveTrailingArticle(title)
         if (title.isEmpty()) title = folded.trim()
         return CleanTitle(title, sortName(title), regions.distinct(), disc, variant)
+    }
+
+    /** A name with its separators read: [alternatives] are readings that keep tail words of a scene name. */
+    private class Prepared(val name: String, val regions: List<Region>, val alternatives: List<Alternative>)
+
+    /** A scene reading [text] that keeps tail words; [ungated] when [NameMatcher] may take it even if the plain title is in the pack. */
+    private class Alternative(val text: String, val ungated: Boolean)
+
+    /** The kept forms of a name, and those of them [NameMatcher] takes without its region gate. */
+    internal class KeptForms(val forms: List<String>, val ungated: Set<String>)
+
+    private class KeptCollector {
+        val forms = LinkedHashSet<String>()
+        val ungated = HashSet<String>()
+        fun add(form: String, isUngated: Boolean) {
+            forms += form
+            if (isUngated) ungated += form
+        }
+    }
+
+    /** Steps 2-3 of the class KDoc on [unmarked] (site marks and copy suffix already gone). */
+    private fun prepare(unmarked: String): Prepared {
+        // Leading dots belong to the title (".hack", "...Iru!"), never a separator.
+        val leadingDots = unmarked.takeWhile { it == '.' }
+        val rest = unmarked.substring(leadingDots.length)
+        val scene = sceneSplit(rest)
+        val name = leadingDots + (scene?.title ?: spacesForSeparators(rest))
+        val alternatives = scene?.alternatives.orEmpty().map { Alternative((leadingDots + it.text).replaceFirst(leadingZeroNumber, ""), it.ungated) }
+        return Prepared(name.replaceFirst(leadingZeroNumber, ""), scene?.regions.orEmpty(), alternatives)
+    }
+
+    /**
+     * Spellings of [baseName] that keep what [clean] throws away, for a matcher that accepts one only
+     * when it equals a pack title's key (`NameCandidates`): a trailing version (`Game v1.0`); the
+     * bracket groups that are not region, language, disc or code tags (`Game (Demo)`, `(Italiano) Game`);
+     * a name that is only brackets; a domain-like start (`Amiga.it_Numero_1`); the scene tail words
+     * that can be part of a title (`Gekikame.Ninja.Den.JPN-GRP`, `Zero:.Update.EUR-GRP`). Most names give none.
+     */
+    internal fun keptForms(baseName: String): List<String> = keptFormsWithGate(baseName).forms
+
+    /** [keptForms] with the ones a region repeated by the next scene word makes ("Cruis'n.USA.USA-GRP"). */
+    internal fun keptFormsWithGate(baseName: String): KeptForms {
+        val folded = fold(baseName).replaceFirst(copySuffix, "")
+        val out = KeptCollector()
+        val unmarked = SiteMarks.strip(folded)
+        addKeptForms(prepare(unmarked), out, plain = false)
+        if (unmarked != folded) addKeptForms(prepare(folded), out, plain = true)
+        val forms = if (out.forms.size <= MAX_KEPT_FORMS) out.forms.toList() else out.forms.toList().subList(0, MAX_KEPT_FORMS)
+        return KeptForms(forms, out.ungated.filter { it in forms }.toSet())
+    }
+
+    private fun addKeptForms(prepared: Prepared, out: KeptCollector, plain: Boolean) {
+        addGroupForms(prepared.name, out, plain, ungated = false)
+        for (alternative in prepared.alternatives) {
+            addGroupForms(alternative.text, out, plain = true, ungated = alternative.ungated)
+        }
+    }
+
+    /** [plain]: also the name without any group, which [clean] would not give (a site mark or scene word kept). */
+    private fun addGroupForms(name: String, out: KeptCollector, plain: Boolean, ungated: Boolean) {
+        val groups = bracketGroup.findAll(name).toList()
+        val bare = bracketGroup.replace(name, " ").replace(spaces, " ").trim().trimEnd { it in TRIM_END }.trimStart { it in TRIM_START }
+        if (plain && bare.isNotEmpty()) out.add(moveTrailingArticle(bare), ungated)
+        if (ReleaseTags.trailingVersion.containsMatchIn(bare)) out.add(moveTrailingArticle(bare), ungated)
+        if (groups.isEmpty()) return
+        // A name that is only brackets has nothing else to be: every group but a region is its title.
+        val variants = if (bare.isEmpty()) {
+            groups.filter { Region.parseGroup(it.groups[1]?.value ?: it.value) == null }
+        } else {
+            groups.filterNot(::isSameGameGroup)
+        }
+        // A title can hold a group that looks like a version or content code: "Re Mind (DLC) Cloud Version".
+        val codeLike = groups.filter { it.groups[1]?.value?.let { round -> ReleaseTags.isVersionOrUpdate(round, square = false) } == true }
+        // A group stuck to the word before it is part of that word ("Northern Light(s)"), unless it is a region, language or
+        // dump group ("Game(USA)"); "(s)" is the plural, though "S" is also a region code.
+        val attached = groups.filter { it.range.first > 0 && name[it.range.first - 1].isLetterOrDigit() && (it.value.equals("(s)", ignoreCase = true) || !isSameGameGroup(it)) }
+        val sets = ArrayList<List<MatchResult>>()
+        if (attached.isNotEmpty()) sets += attached
+        if (variants.isNotEmpty()) {
+            sets += variants
+            if (variants.size > 1) variants.take(MAX_KEPT_GROUPS).forEach { sets += listOf(it) }
+        }
+        if (codeLike.isNotEmpty()) {
+            sets += codeLike
+            if (variants.isNotEmpty()) sets += groups.filter { it in variants || it in codeLike }
+        }
+        if (bare.isEmpty() && groups.size > 1) {
+            sets += groups
+            sets += groups.distinctBy { it.value }
+        }
+        for (set in sets) {
+            val text = withGroups(name, groups, set)
+            if (text.isEmpty()) continue
+            out.add(text, ungated)
+            if (ReleaseTags.trailingVersion.containsMatchIn(text)) {
+                out.add(text.replaceFirst(ReleaseTags.trailingVersion, "").trimEnd { it in TRIM_END }, ungated)
+            }
+        }
+    }
+
+    /** [name] with every bracket group of [groups] removed except the ones in [keep], which stay in place. */
+    private fun withGroups(name: String, groups: List<MatchResult>, keep: List<MatchResult>): String {
+        val text = StringBuilder(name.length)
+        var from = 0
+        for (group in groups) {
+            text.append(name, from, group.range.first)
+            text.append(if (group in keep) group.value else " ")
+            from = group.range.last + 1
+        }
+        text.append(name, from, name.length)
+        return text.toString().replace(spaces, " ").trim().trimEnd { it in TRIM_END }.trimStart { it in TRIM_START }
     }
 
     /**
@@ -146,7 +259,9 @@ object TitleCleaner {
      * one: no spaces, words joined by dots or underscores, `-GROUP` at the end, and a scene word
      * ([ReleaseTags.isSceneTail]) right before it.
      */
-    private fun sceneSplit(name: String): Pair<String, List<Region>>? {
+    private class Scene(val title: String, val regions: List<Region>, val alternatives: List<Alternative>)
+
+    private fun sceneSplit(name: String): Scene? {
         if (' ' in name) return null
         val match = sceneName.matchEntire(name) ?: return null
         val words = splitAt(match.groupValues[1], "._").filter { it.trimStart('.', '_').isNotEmpty() }.toMutableList()
@@ -155,11 +270,25 @@ object TitleCleaner {
         val regions = mutableListOf<Region>()
         // The platform tag comes once, last; before it only flags and regions ("Ocarina GC.NTSC.NGC").
         if (ReleaseTags.isScenePlatform(last())) words.removeAt(words.size - 1)
+        val tail = ArrayList<String>()
         while (words.size > 1 && ReleaseTags.isSceneTail(last()) && !ReleaseTags.isScenePlatform(last())) {
             ReleaseTags.sceneRegion(last())?.let { regions.addAll(0, it) }
-            words.removeAt(words.size - 1)
+            tail.add(0, words.removeAt(words.size - 1))
         }
-        return joinWords(words) to regions
+        // A tail word can be the title's own ("Ninja.Den", "Zero:.Update", "Sheep.It.Up!.-.NTSC"): the
+        // title with its first one, two, ... tail words put back, for a matcher that checks them. A
+        // form that ends at the last tail word (the region) is never made ("Super.Mario.USA.NTSC-GRP" is
+        // "Super Mario"). A form that ends at a region code with another region after it ("Ninja.Den.JPN",
+        // "Super.Mario.USA.EUR") is made, but [NameMatcher] takes it only when the plain title is not in the pack.
+        fun isRegion(i: Int) = ReleaseTags.isSceneRegionCode(tail[i].trimStart('.', '_'))
+        // A region the next word repeats is the title's own ("Cruis'n.USA.USA-GRP"): its form carries
+        // ungated, so NameMatcher takes it even when the plain title is in the pack.
+        fun repeats(i: Int) =
+            i + 1 < tail.size && ReleaseTags.sceneRegion(tail[i].trimStart('.', '_')).let { it != null && it == ReleaseTags.sceneRegion(tail[i + 1].trimStart('.', '_')) }
+        val alternatives = (1..tail.size)
+            .filter { !(isRegion(it - 1) && (it == tail.size || !isRegion(it))) }
+            .map { Alternative(joinWords(words + tail.take(it)), isRegion(it - 1) && repeats(it - 1)) }
+        return Scene(joinWords(words), regions, alternatives)
     }
 
     /** Underscores and dots as spaces in a name without spaces; see the class KDoc for the dots kept. */

@@ -13,6 +13,8 @@ import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.settings.colorSet
 import com.plumemu.settings.colorsCycle
+import com.plumemu.settings.toSetting
+import com.plumemu.settings.toThemeSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -41,6 +43,38 @@ internal class SettingsColorsTest : SettingsModelHarness() {
         assertEquals(OptionKind.Choice, SettingsOption.Colors.kind)
     }
 
+    /** Pocket, DotMatrix and Banana moved their background with the dark text #1C1C1E: the old stored one is still the set. */
+    @Test
+    fun anOldStoredBackgroundOfAMovedSetStillShowsItsNameAndDrawsTheNewOne() {
+        val moved = listOf(
+            Triple(ColorSet.Pocket, 0xCDCCC4, R.string.settings_colors_pocket),
+            Triple(ColorSet.DotMatrix, 0xB4DB11, R.string.settings_colors_dot_matrix),
+            Triple(ColorSet.Banana, 0xF2CD3C, R.string.settings_colors_banana),
+        )
+        for ((set, old, name) in moved) {
+            val stored = AppearanceSettings(background = ColorSetting.Custom(old), textColor = TextColorSetting.Dark, accent = ColorSetting.Custom(set.accentColor.value))
+            actions.settings = PlumSettings(appearance = stored)
+            assertEquals("$set reads as itself", set, stored.colorSet())
+            assertEquals("$set name in Settings", name, shown())
+            assertEquals("$set draws the new background", set.backgroundColor, stored.toThemeSettings(animationsOn = true).backgroundColor)
+            assertEquals("stored value untouched", ColorSetting.Custom(old), stored.background)
+            // A near-but-different colour is Custom.
+            val near = stored.copy(background = ColorSetting.Custom(old + 1))
+            assertNull("$set near", near.colorSet())
+            actions.settings = PlumSettings(appearance = near)
+            assertEquals("$set near shows Custom", R.string.settings_color_custom, shown())
+        }
+    }
+
+    /** The stored dark text is a name (Dark), so every dark-text set, Paper included, still reads as itself. */
+    @Test
+    fun everyDarkTextSetReadsAsItselfFromStoredDarkText() {
+        for (set in ColorSet.entries.filter { it.textMode == com.plumemu.coreui.theme.TextMode.Dark }) {
+            val stored = AppearanceSettings(background = set.background.toSetting(), textColor = TextColorSetting.Dark, accent = set.accent.toSetting())
+            assertEquals("$set", set, stored.colorSet())
+        }
+    }
+
     @Test
     fun aFreshInstallShowsPlumemuAndNoCustom() {
         actions.settings = PlumSettings.Defaults
@@ -58,7 +92,7 @@ internal class SettingsColorsTest : SettingsModelHarness() {
         assertEquals(ColorSetting.Preset("Red"), appearance.accent)
         assertEquals(R.string.settings_colors_paper, shown())
         move(Direction.Right)
-        assertEquals("not a preset: the own-colour hex", ColorSetting.Custom(0xCDCCC4), appearance.background)
+        assertEquals("not a preset: the own-colour hex", ColorSetting.Custom(0xD2D1CA), appearance.background)
         assertEquals(TextColorSetting.Dark, appearance.textColor)
         assertEquals(ColorSetting.Custom(0x8C1D4E), appearance.accent)
         assertEquals(R.string.settings_colors_pocket, shown())
@@ -95,7 +129,7 @@ internal class SettingsColorsTest : SettingsModelHarness() {
 
     @Test
     fun changingAnyOfTheThreeRowsByHandMakesItCustom() {
-        val pocket = PlumSettings.Defaults.appearance.copy(background = ColorSetting.Custom(0xCDCCC4), textColor = TextColorSetting.Dark, accent = ColorSetting.Custom(0x8C1D4E))
+        val pocket = PlumSettings.Defaults.appearance.copy(background = ColorSetting.Custom(0xD2D1CA), textColor = TextColorSetting.Dark, accent = ColorSetting.Custom(0x8C1D4E))
         assertEquals(ColorSet.Pocket, pocket.colorSet())
         for (edited in listOf(
             pocket.copy(background = ColorSetting.Custom(0xCDCCC5)),
@@ -161,14 +195,14 @@ internal class SettingsColorsTest : SettingsModelHarness() {
 
     @Test
     fun withoutOwnColoursTheCycleHasNoCustom() {
-        val onPaper = PlumSettings.Defaults.appearance.copy(background = ColorSetting.Preset("Paper"), textColor = TextColorSetting.Dark)
+        val onPaper = PlumSettings.Defaults.appearance.copy(background = ColorSetting.Preset("Paper"), textColor = TextColorSetting.Dark, accent = ColorSetting.Preset("Red"))
         assertEquals(ColorSet.entries.toList(), onPaper.colorsCycle())
         onColors(onPaper)
         repeat(ColorSet.entries.size) { move(Direction.Right) }
         assertEquals("right stops at the last set: no Custom after it", ColorSet.Cream, appearance.colorSet())
         assertNull(appearance.ownColors)
         // Own colours that are a set's (a hand-made file) bring nothing a set does not: no Custom either.
-        val keptAsSet = onPaper.copy(ownColors = OwnColors(ColorSetting.Preset("Black"), TextColorSetting.Light, ColorSetting.Preset("Red")))
+        val keptAsSet = onPaper.copy(ownColors = OwnColors(ColorSetting.Preset("Black"), TextColorSetting.Light, ColorSetting.Custom(0x3E7BE0)))
         assertFalse(null in keptAsSet.colorsCycle())
     }
 

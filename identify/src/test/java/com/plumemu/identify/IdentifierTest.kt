@@ -9,6 +9,7 @@ import com.plumemu.identify.fingerprint.Fingerprints
 import com.plumemu.identify.fingerprint.TitleKind
 import com.plumemu.identify.fingerprint.cart.N3dsReaderTest
 import com.plumemu.identify.fingerprint.nx.SwitchReaderTest
+import com.plumemu.identify.name.FileBaseName
 import com.plumemu.identify.name.HackNames
 import com.plumemu.identify.pack.ConsolePackBuilder
 import com.plumemu.identify.pack.FakeBundled
@@ -234,6 +235,15 @@ class IdentifierTest {
         assertEquals(Method.PRODUCT_CODE, result.method)
         assertEquals(2019, result.year)
         assertEquals(SwitchReaderTest.BASE, result.scrapeHints.serial)
+    }
+
+    @Test fun aCachedSwitchFileIsNamedByTheIdInItsNameWhichIsMarkedAsTakenFromTheName() {
+        val known = Fingerprints(size = 64, container = Container.XCI)
+        val result = Identifier(switchStore()).identify(IdentifyRequest("switch", "Netta [${SwitchReaderTest.BASE}].xci", "Netta", known = known))
+        assertEquals("Zork Saga Deluxe", result.title)
+        assertEquals(Method.PRODUCT_CODE, result.method)
+        assertEquals(SwitchReaderTest.BASE, result.fingerprints?.productCode)
+        assertTrue("the usage statistics must not send it", result.fingerprints!!.codeFromFileName)
     }
 
     /** The pack the tool writes with GameTDB's switchtdb: titledb's game with its id, and a name-only title (no code row). */
@@ -534,5 +544,14 @@ class IdentifierTest {
         val r = byCode("gba", "Mother 3 (Japan) [T+Eng].gba", "BPRE", CodeKind.GBA)
         assertEquals("Mother 3", r.title)
         assertEquals(Method.FILE_NAME, r.method)
+    }
+
+    @Test fun baseNameKeepsAVersionAndDropsRealExtensions() {
+        assertEquals("Tool v1.0", FileBaseName.of("Tool v1.0")) // a folder game: ".0" is no extension
+        assertEquals("Game v1.0", FileBaseName.of("Game v1.0.nkit.iso"))
+        assertEquals("Game v1.0", FileBaseName.of("dir/Game v1.0.zip"))
+        assertEquals("Game", FileBaseName.of("Game.gba.zip"))
+        assertEquals("Game", FileBaseName.of("C:\\roms\\Game.iso"))
+        assertEquals("Game.Long", FileBaseName.of("Game.Long.7z"))
     }
 }

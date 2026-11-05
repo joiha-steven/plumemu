@@ -9,6 +9,7 @@ import com.plumemu.identify.fingerprint.Fingerprints
 import com.plumemu.identify.fingerprint.extensionOf
 import com.plumemu.identify.fingerprint.nx.SwitchReader
 import com.plumemu.identify.name.HackNames
+import com.plumemu.identify.name.FileBaseName
 import com.plumemu.identify.name.NameCandidates
 import com.plumemu.identify.name.NameMatcher
 import com.plumemu.identify.name.TitleCase
@@ -34,7 +35,10 @@ import java.io.IOException
  * 3. The system's pack: CRC (the content CRC, then a zip's directory CRC when they differ), then
  *    product code (EXACT). A code counts only when it is not a
  *    dummy (it gives a `code:` fix key). When the releases found belong to two or more titles,
- *    the layer gives no answer and the next one is tried. When they are releases of one title,
+ *    the layer gives no answer and the next one is tried. Then the disc's track sizes
+ *    ([Fingerprints.trackKeys]; EXACT, [Method.TRACK_SIZES]) when they name one title and the
+ *    serial gave no answer; they also pick among the releases that share a serial, and when
+ *    they name another title than the serial, the serial wins (one log line). When they are releases of one title,
  *    those whose regions meet [IdentifyRequest.regionsFromName] are kept (all of them when none
  *    do); the result has their regions together, and their variant only when they share one.
  * 4. The header title, when the fingerprints say it is the full official title (EXACT).
@@ -129,8 +133,15 @@ class Identifier(
         }
         val code = read.productCode
         // fixKeys leaves dummy codes out ("0000", "00000000"): such a code names nothing.
-        if (!code.isNullOrBlank() && read.fixKeys().any { it.startsWith(CODE_KEY_PREFIX) }) {
-            pickRelease(pack.byCode(code), request.regionsFromName)?.let {
+        val coded = if (!code.isNullOrBlank() && read.fixKeys().any { it.startsWith(CODE_KEY_PREFIX) }) pack.byCode(code) else emptyList()
+        val tracked = byTrackKeys(pack, read)
+        if (coded.isNotEmpty() && coded.all { it.titleIndex == coded[0].titleIndex }) {
+            // Revisions or regions sharing a serial: the track sizes pick among them when they narrow it.
+            val sized = coded.filter { c -> tracked.any { it.index == c.index } }
+            if (tracked.isNotEmpty() && tracked.none { it.titleIndex == coded[0].titleIndex }) {
+                log.log("pack ${pack.systemId}: serial names release ${coded[0].index}, track sizes name release ${tracked[0].index}; serial kept")
+            }
+            pickRelease(sized.ifEmpty { coded }, request.regionsFromName)?.let {
                 if (HackNames.rejectsCodeName(request.fileName, request.cleanedTitle, it.title, read.codeKind !in NO_WORD_RULE_KINDS)) {
                     onCodeRejected()
                     return null
@@ -138,7 +149,18 @@ class Identifier(
                 return fromRelease(request, read, it, Method.PRODUCT_CODE)
             }
         }
+        // No serial answer (none, or releases of several titles): track sizes naming one title decide.
+        pickRelease(tracked, request.regionsFromName)?.let { return fromRelease(request, read, it, Method.TRACK_SIZES) }
         return null
+    }
+
+    /** The releases of the first of the disc's track keys the pack knows; empty when none is. */
+    private fun byTrackKeys(pack: NamePack, read: Fingerprints): List<PackRelease> {
+        for (key in read.trackKeys.orEmpty()) {
+            val found = pack.byTrackKey(key)
+            if (found.isNotEmpty()) return found
+        }
+        return emptyList()
     }
 
     /**
@@ -153,12 +175,17 @@ class Identifier(
             codeKind = CodeKind.SWITCH,
             titleId = titleId,
             titleKind = SwitchReader.kindOf(titleId),
+            codeFromFileName = true,
         )
     }
 
     private fun byName(pack: NamePack, cleaned: String, request: IdentifyRequest, read: Fingerprints?): Identification? {
         val candidates = NameCandidates.of(cleaned, request.systemId)
-        val match = matcherFor(pack).match(candidates, request.regionsFromName) ?: return null
+        val base = FileBaseName.of(request.fileName)
+        val kept = TitleCleaner.keptFormsWithGate(base)
+        // A hack or any other variant tag may be another game under the title's first words.
+        val droppingSubtitle = request.regionsFromName.isNotEmpty() && TitleCleaner.clean(base).variantKey.isEmpty()
+        val match = matcherFor(pack).match(candidates, request.regionsFromName, kept.forms, kept.ungated, droppingSubtitle) ?: return null
         val title = pack.title(match.titleIndex)
         return result(request, read, title.name, request.regionsFromName, Confidence.LIKELY, Method.NAME_MATCH)
             .copy(year = title.year, publisher = title.publisher)

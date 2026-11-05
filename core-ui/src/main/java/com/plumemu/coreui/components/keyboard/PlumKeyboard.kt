@@ -11,6 +11,8 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -23,7 +25,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
@@ -35,6 +40,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import com.plumemu.coreui.components.CollarSize
+import com.plumemu.coreui.components.collar
+import com.plumemu.coreui.components.drawCssCap
+import com.plumemu.coreui.theme.CssCap
+import com.plumemu.coreui.theme.KeyboardDimens
+import com.plumemu.coreui.theme.FlatFace
+import com.plumemu.coreui.theme.KeyboardCollarDimens
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumLayout
@@ -102,13 +114,13 @@ fun PlumKeyboard(
         },
         modifier = modifier.fillMaxWidth().drawBehind { drawTray(colors) },
     ) { measurables, constraints ->
-        val gap = PlumDimens.keyboardKeyGap.toPx()
+        val gap = KeyboardDimens.keyboardKeyGap.toPx()
         val screenWidth = constraints.maxWidth.toDp()
         val pitch = PlumLayout.keyboardColumnWidth(screenWidth).toPx() + gap
         val rowPitch = keyHeight.toPx() + gap
         // Cells tile the keys and their gaps: each starts half a gap before its key.
         val left = (constraints.maxWidth - PlumLayout.keyboardBlockWidth(screenWidth).toPx()) / 2 - gap / 2
-        val top = PlumDimens.keyboardTopPadding.toPx() - gap / 2
+        val top = KeyboardDimens.keyboardTopPadding.toPx() - gap / 2
         val cells = rows.flatMapIndexed { r, row -> row.map { slot -> r to slot } }
         val placed =
             measurables.zip(cells).map { (measurable, cell) ->
@@ -147,23 +159,41 @@ private fun KeyCell(
     val look = keyLook(key, focused, shift, colors)
     val icon = iconOf(key)
     val description = icon?.let { spokenName(it, labels) }
-    val halfGap = PlumDimens.keyboardKeyGap / 2
+    val halfGap = KeyboardDimens.keyboardKeyGap / 2
+    var pressed by remember { mutableStateOf(false) }
+    val capCorner = KeyboardCollarDimens.capCorner
     Box(
         modifier =
             Modifier
                 .testTag(keyboardKeyTag(id))
-                .pointerInput(id, onTap) { detectTapGestures(onTap = { onTap(id) }) }
-                .semantics(mergeDescendants = true) {
+                .pointerInput(id, onTap) {
+                    detectTapGestures(
+                        onPress = {
+                            pressed = true
+                            try {
+                                tryAwaitRelease()
+                            } finally {
+                                pressed = false
+                            }
+                        },
+                        onTap = { onTap(id) },
+                    )
+                }.semantics(mergeDescendants = true) {
                     role = Role.Button
                     if (description != null) contentDescription = description
                     onClick {
                         onTap(id)
                         true
                     }
-                }.drawBehind {
-                    drawKey(look.fill, if (focused) colors.accent else null, if (focused && key == KeyboardKey.Action) colors.onAccent else null)
-                }
-                .padding(halfGap),
+                }.padding(halfGap)
+                // The collar sits inside the key's 44 x 36, so the key's size does not change (KeyboardFitTest).
+                .drawBehind { drawWellLight(capCorner.toPx()) }
+                .collar(CollarSize.Well, focused = focused, radius = capCorner)
+                .drawBehind {
+                    // `pressed` is read here, while drawing: a press redraws this key and recomposes nothing.
+                    drawCssCap(look.face, corner = capCorner.toPx(), press = if (pressed) 1f else 0f)
+                    if (focused && key == KeyboardKey.Action) drawActionRing(colors.onAccent, capCorner.toPx())
+                },
         contentAlignment = Alignment.Center,
     ) {
         if (icon != null) {
@@ -216,19 +246,18 @@ private fun labelOf(
         KeyboardKey.Shift, KeyboardKey.Delete, KeyboardKey.Hide, KeyboardKey.Paste -> ""
     }
 
-/** A key's fill (null: none), ink and type role. */
+/** A key's cap face, ink and type role. */
 private data class KeyLook(
-    val fill: Color?,
+    val face: CssCap,
     val ink: Color,
     val role: TypeRole,
 )
 
 /**
- * The board's look: character keys plain (`text`, 400); keys with a word or icon on a `trayKey`
- * fill (`text2`, 400); the focused key on `trayKey` in `strong`, 600, with the accent ring; the
- * action key an accent button with its word in `onAccent`, 600 (focused: the accent ring around it
- * and an `onAccent` ring inside it);
- * shift in the accent while it is on.
+ * The board's look (the Search board): every key a cap in its collar; character keys on the cap
+ * colour (`text`, 400), keys with a word or icon a touch lighter (`text2`, 400); the focused key `strong`, 600,
+ * its collar's groove lit in the accent (the cap does not move); the action key an accent cap with its word in
+ * `onAccent`, 600; shift in the accent while it is on.
  */
 private fun keyLook(
     key: KeyboardKey,
@@ -236,62 +265,55 @@ private fun keyLook(
     shift: ShiftMode,
     colors: PlumComposeColors,
 ): KeyLook {
+    val seat = colors.collar.seat
+    val cap = seat.keyCap
     if (key is KeyboardKey.Character) {
         return if (focused) {
-            KeyLook(colors.trayKey, colors.strong, TypeRole.KeyboardKeyFocused)
+            KeyLook(cap, colors.strong, TypeRole.KeyboardKeyFocused)
         } else {
-            KeyLook(null, colors.text, TypeRole.KeyboardKey)
+            KeyLook(cap, colors.text, TypeRole.KeyboardKey)
         }
     }
-    // The action is the field's primary button: accent fill, onAccent word (accent text on trayKey was
-    // under 4.5:1, 3.42 with the default red on Graphite). Focused, it keeps the fill and gets the ring
-    // outside it plus an onAccent ring inside it (drawKey), since an accent ring on accent does not show.
-    if (key == KeyboardKey.Action) return KeyLook(colors.accent, colors.onAccent, TypeRole.KeyboardWordStrong)
+    // The action is the field's primary button: accent cap, its label white unless under 3:1 (`onAccentFace`).
+    if (key == KeyboardKey.Action) return KeyLook(seat.keyAccent(colors.accent), colors.onAccentFace, TypeRole.KeyboardWordStrong)
     val ink =
         when {
             key == KeyboardKey.Shift && shift != ShiftMode.Off -> colors.accent
             focused -> colors.strong
             else -> colors.text2
         }
-    return KeyLook(colors.trayKey, ink, if (focused) TypeRole.KeyboardWordStrong else TypeRole.KeyboardWord)
+    val word = seat.wordCap
+    return KeyLook(word, ink, if (focused) TypeRole.KeyboardWordStrong else TypeRole.KeyboardWord)
+}
+
+/** The hairline of light just under the well: the key's outline moved down 1 px, drawn first. */
+private fun DrawScope.drawWellLight(corner: Float) {
+    val groove = KeyboardCollarDimens.WELL_GROOVE.toPx()
+    drawRoundRect(
+        KeyboardCollarDimens.wellLight,
+        topLeft = Offset(0f, 1f),
+        size = size,
+        cornerRadius = CornerRadius(corner + groove),
+    )
 }
 
 /**
- * The key inside its cell (half a gap in on every side), its fill and, when focused, the ring just
- * outside it. [innerRing] is for the action key, whose accent fill hides the accent ring: a second
- * ring inside the fill, 3 dp in from its edge, so the focus shows without growing into the gaps.
+ * The action key focused: its accent cap hides the accent groove, so a ring in `onAccent` is drawn inside the cap,
+ * [KeyboardDimens.keyboardActionRingInset] in from its edge, so the focus shows for a gamepad user.
  */
-private fun DrawScope.drawKey(
-    fill: Color?,
-    ring: Color?,
-    innerRing: Color?,
+private fun DrawScope.drawActionRing(
+    ring: Color,
+    corner: Float,
 ) {
-    val inset = PlumDimens.keyboardKeyGap.toPx() / 2
-    val corner = PlumDimens.cornerRow.toPx()
-    val keySize = Size(size.width - inset * 2, size.height - inset * 2)
-    if (fill != null) drawRoundRect(fill, Offset(inset, inset), keySize, CornerRadius(corner))
-    if (ring != null) {
-        val width = PlumDimens.keyboardFocusRing.toPx()
-        val out = width / 2
-        drawRoundRect(
-            color = ring,
-            topLeft = Offset(inset - out, inset - out),
-            size = Size(keySize.width + out * 2, keySize.height + out * 2),
-            cornerRadius = CornerRadius(corner + out),
-            style = Stroke(width),
-        )
-    }
-    if (innerRing != null) {
-        val width = PlumDimens.keyboardFocusRing.toPx()
-        val innerInset = inset + PlumDimens.keyboardActionRingInset.toPx() + width / 2
-        drawRoundRect(
-            color = innerRing,
-            topLeft = Offset(innerInset, innerInset),
-            size = Size(size.width - innerInset * 2, size.height - innerInset * 2),
-            cornerRadius = CornerRadius((corner - (innerInset - inset)).coerceAtLeast(0f)),
-            style = Stroke(width),
-        )
-    }
+    val width = KeyboardDimens.keyboardFocusRing.toPx()
+    val inset = KeyboardDimens.keyboardActionRingInset.toPx() + width / 2
+    drawRoundRect(
+        color = ring,
+        topLeft = Offset(inset, inset),
+        size = Size(size.width - inset * 2, size.height - inset * 2),
+        cornerRadius = CornerRadius((corner - inset).coerceAtLeast(0f)),
+        style = Stroke(width),
+    )
 }
 
 /**
@@ -300,9 +322,9 @@ private fun DrawScope.drawKey(
  * 2 dp above the tray and fades over the blur, drawn as a gradient (no blur filter: see FocusRing).
  */
 private fun DrawScope.drawTray(colors: PlumComposeColors) {
-    val sigma = PlumDimens.keyboardShadowBlur.toPx() / 2
-    val edge = -(PlumDimens.keyboardShadowOffset - PlumDimens.keyboardShadowSpread).toPx()
-    val top = edge - PlumDimens.keyboardShadowBlur.toPx()
+    val sigma = KeyboardDimens.keyboardShadowBlur.toPx() / 2
+    val edge = -(KeyboardDimens.keyboardShadowOffset - KeyboardDimens.keyboardShadowSpread).toPx()
+    val top = edge - KeyboardDimens.keyboardShadowBlur.toPx()
     val stops =
         Array(SHADOW_STOPS + 1) { i ->
             val fraction = i.toFloat() / SHADOW_STOPS
@@ -312,8 +334,17 @@ private fun DrawScope.drawTray(colors: PlumComposeColors) {
             fraction to colors.trayShadow.copy(alpha = colors.trayShadow.alpha * share)
         }
     drawRect(Brush.verticalGradient(*stops, startY = top, endY = 0f), Offset(0f, top), Size(size.width, -top))
-    drawRect(colors.tray)
-    drawRect(colors.trayEdge, size = Size(size.width, PlumDimens.keyboardEdge.toPx()))
+    // The board's tray: lighter at the top, darker toward the bottom.
+    drawRect(
+        Brush.verticalGradient(
+            0f to KeyboardCollarDimens.trayTop(colors.tray),
+            KeyboardCollarDimens.TRAY_MID to colors.tray,
+            1f to KeyboardCollarDimens.trayBottom(colors.tray),
+            startY = 0f,
+            endY = size.height,
+        ),
+    )
+    drawRect(colors.trayEdge, size = Size(size.width, KeyboardDimens.keyboardEdge.toPx()))
 }
 
 private const val SHADOW_STOPS = 6

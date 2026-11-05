@@ -91,7 +91,8 @@ private suspend fun AppGraph.askAboutCore(gameId: Long, emulatorId: String?, cor
     return try {
         val game = database.gameDao().game(gameId) ?: return false
         val emulatorName = catalog()?.emulator(emulatorId)?.name ?: emulatorId
-        libraryNotices.askAboutCore(gameId.toString(), game.title, emulatorId, emulatorName, core, added, held)
+        // Off the main thread: it reads the note of cores answered No (a file).
+        withContext(Dispatchers.IO) { libraryNotices.askAboutCore(gameId.toString(), game.title, emulatorId, emulatorName, core, added, held) }
         true
     } catch (e: CancellationException) {
         throw e

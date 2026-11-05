@@ -60,10 +60,14 @@ internal abstract class SetupKeyboardPathHarness {
     @After
     fun stopModel() = modelScope.cancel()
 
-    /** Setup with one folder, Continue, then Use my account: the form, the cursor on the username. */
+    /**
+     * Setup with one folder, Continue, the look step, then "Box art and game info": the form opens with the keyboard down and the cursor
+     * on the username; [startTyping] then presses A on it (the keyboard comes up), the state most tests start from.
+     */
     protected fun showTheForm(
         swapAB: Boolean = false,
         keyboard: KeyboardChoice = KeyboardChoice.Plumemu,
+        startTyping: Boolean = true,
     ) {
         confirm = if (swapAB) KeyEvent.KEYCODE_BUTTON_B else KeyEvent.KEYCODE_BUTTON_A
         back = if (swapAB) KeyEvent.KEYCODE_BUTTON_A else KeyEvent.KEYCODE_BUTTON_B
@@ -75,8 +79,9 @@ internal abstract class SetupKeyboardPathHarness {
         }
         compose.runOnIdle { model.onPicked(PickResult.Picked(SetupFakes.ROMS_TREE)) }
         compose.waitForIdle()
-        press(confirm, confirm)
+        press(confirm, confirm, confirm)
         assertNotNull("the box art step shows its form", model.state.value.boxArt)
+        if (startTyping) press(confirm)
     }
 
     protected val form: SignInForm get() = requireNotNull(model.state.value.boxArt) { "the form is shown" }

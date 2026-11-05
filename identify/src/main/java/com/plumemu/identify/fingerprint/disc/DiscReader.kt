@@ -7,6 +7,8 @@ import com.plumemu.identify.source.RandomAccessSource
 import com.plumemu.identify.source.SiblingOpener
 import com.plumemu.identify.source.readFully
 import java.io.IOException
+import java.io.InterruptedIOException
+import java.nio.channels.ClosedByInterruptException
 import java.util.Locale
 
 /**
@@ -16,10 +18,11 @@ import java.util.Locale
  *
  * | Container | How it is found | What is read |
  * |---|---|---|
- * | CHD v5 | "MComprHD" | header SHA-1, map, the hunks holding the sectors needed (stored, `zlib`, `cdzl`, `lzma`, `cdlz`) |
- * | CSO v1 / ZSO | "CISO" / "ZISO" | v1: index and the deflate blocks needed; v2 and ZSO: a note |
+ * | CHD v5 | "MComprHD" | header SHA-1, map, the hunks holding the sectors needed (stored, `zlib`, `cdzl`, `lzma`, `cdlz`, `zstd`, `cdzs`; `cdfl`, `flac`, `huff`: a note) |
+ * | CSO v1 / v2, ZSO | "CISO" / "ZISO" | index and the deflate, LZ4 or stored blocks needed |
  * | PBP | "\0PBP" | `PARAM.SFO` |
- * | WBFS, RVZ, WIA, GCZ | magic at 0 | the copy of the GameCube / Wii disc header |
+ * | RVZ, WIA | magic at 0 | the copy of the disc header in the file head (no decompression), after its two SHA-1 checks |
+ * | WBFS, GCZ | magic at 0 | the copy of the GameCube / Wii disc header |
  * | cue sheet, `.gdi`, `.m3u` | extension | the list, then the data track or first entry via the [SiblingOpener] |
  * | `.iso`, `.gcm` | extension | GameCube / Wii header, or 2048-byte sectors |
  * | `.bin`, `.img` | extension, when the system is a disc system or unknown | as `.iso`, raw 2352-byte sectors when sector 0 starts with a sync |
@@ -33,6 +36,7 @@ internal class DiscReader(private val capBytes: Long = DEFAULT_CAP) {
     private class Found(var container: Container, val system: String?) {
         var id: DiscId? = null
         var chdSha1: String? = null
+        var chdHeader: ChdHeader? = null
         var innerName: String? = null
         var recognised = false
         val notes = ArrayList<String>()
@@ -62,12 +66,18 @@ internal class DiscReader(private val capBytes: Long = DEFAULT_CAP) {
         } else {
             // No serial to read on this system's discs, but a CHD's own SHA-1 is still a key.
             found.notes += skip
-            if (container == Container.CHD) guarded(found) { found.chdSha1 = ChdHeader.read(CappedSource(source, cap)).rawSha1 }
+            if (container == Container.CHD) guarded(found) {
+                found.chdHeader = ChdHeader.read(CappedSource(source, cap))
+                found.chdSha1 = found.chdHeader?.rawSha1
+            }
         }
-        if (!found.recognised && (container == Container.ISO || container == Container.BIN_RAW)) {
+        if (skip == null && !found.recognised && (container == Container.ISO || container == Container.BIN_RAW)) {
             notesIfNone += found.notes
             return null
         }
+        // Sizes only: opens the other track files of a sheet for their length, reads no content.
+        val tracks = trackKeysOf(source, found, system, siblings)
+        tracks.note?.let { found.notes += it }
         val id = found.id
         return Fingerprints(
             size = source.size,
@@ -79,8 +89,26 @@ internal class DiscReader(private val capBytes: Long = DEFAULT_CAP) {
             notes = found.notes,
             titleIsCanonical = id?.titleIsCanonical == true && id.title != null,
             chdSha1 = found.chdSha1,
+            trackKeys = tracks.keys,
         )
     }
+
+    /**
+     * The track keys, after the serial was read: an [IOException] sizing a track file (a sibling
+     * on a failing card) loses only these keys (incomplete, asked again later), never the serial.
+     * An interrupted read still passes through.
+     */
+    @Throws(IOException::class)
+    private fun trackKeysOf(source: RandomAccessSource, found: Found, system: String?, siblings: SiblingOpener?): TrackKeys =
+        try {
+            TrackSizes.read(source, found.container, system, siblings, found.chdHeader)
+        } catch (e: InterruptedIOException) {
+            throw e
+        } catch (e: ClosedByInterruptException) {
+            throw e
+        } catch (e: IOException) {
+            TrackKeys.incomplete("track sizes: not read (${e.javaClass.simpleName})")
+        }
 
     /**
      * Runs [step], turning [NotRead] and any other RuntimeException (a bug or a pathological
@@ -105,8 +133,7 @@ internal class DiscReader(private val capBytes: Long = DEFAULT_CAP) {
         guarded(found) {
             when (found.container) {
                 Container.CHD -> readChd(found, source)
-                Container.CSO -> readImage(found, SectorImage(CsoSource.open(source), SectorLayout.COOKED_2048))
-                Container.ZSO -> found.notes += "zso: blocks are LZ4, not read (no LZ4 decoder)"
+                Container.CSO, Container.ZSO -> readImage(found, SectorImage(CsoSource.open(source), SectorLayout.COOKED_2048))
                 Container.PBP -> found.id = PlayStationDiscs.fromPbp(source, found.notes)
                 Container.WBFS, Container.RVZ, Container.WIA, Container.GCZ ->
                     found.id = NintendoDiscs.fromContainer(source, found.container)
@@ -147,6 +174,7 @@ internal class DiscReader(private val capBytes: Long = DEFAULT_CAP) {
     @Throws(IOException::class)
     private fun readChd(found: Found, source: RandomAccessSource) {
         val header = ChdHeader.read(source)
+        found.chdHeader = header
         found.chdSha1 = header.rawSha1
         if (header.version != 5) throw NotRead("chd: version ${header.version} hunks not read")
         val chd = ChdSource(source, header)
@@ -214,6 +242,13 @@ internal class DiscReader(private val capBytes: Long = DEFAULT_CAP) {
             "psx", "ps1", "playstation", "psone", "ps2", "playstation2", "psp", "playstationportable",
             "gc", "gamecube", "ngc", "wii", "saturn", "saturnjp", "megacd", "megacdjp", "segacd", "dreamcast",
         )
+
+        /**
+         * [DISC_SYSTEMS] whose files may be a compressed container that was a note before `zstd` /
+         * `cdzs` CHD hunks, CSO v2 and ZSO were read (not GameCube and Wii: their RVZ and WIA were
+         * read already). `FingerprintReader.readerVersion` raises these.
+         */
+        val RE_READ_SYSTEMS: Set<String> = DISC_SYSTEMS - setOf("gc", "gamecube", "ngc", "wii")
 
         /** Disc systems (ids and folder names) whose discs carry no serial this module reads. */
         private val UNREAD_SYSTEMS = setOf("pcenginecd", "tg-cd", "tgcd", "3do", "neogeocd", "neogeocdjp")

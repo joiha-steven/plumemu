@@ -71,7 +71,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
         assertEquals(SettingsOption.ConfirmBottom, model.focusedOption)
         press(Action.NextSystem)
         assertEquals("Statistics has no rows yet: Accounts comes next", SettingsSection.Accounts, model.focus.section)
-        assertEquals(SettingsOption.ScraperStatus, model.focusedOption)
+        assertEquals(SettingsOption.BoxArtSource, model.focusedOption)
         press(Action.NextSystem)
         assertEquals(SettingsOption.Animations, model.focusedOption)
         press(Action.NextSystem)
@@ -85,6 +85,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
 
     @Test
     fun fontAndTextSizeStepWithLeftRightAndWrapWithA() {
+        startOnRedSans() // the steps below run Sans, Serif, Mono from Plum Sans
         openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.Font)
         press(Action.Enter)
@@ -360,7 +361,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
         press(Action.Enter)
         assertEquals(1, actions.resetsAll)
         assertEquals(SettingsOption.ResetAll, model.doneOption)
-        assertEquals(FontSetting.Sans, appearance.font)
+        assertEquals(FontSetting.Jost, appearance.font)
         assertNull("Reset all puts the text size back to not picked, which is Large", appearance.textSize)
         assertNull("Reset all puts the text weight back to not picked, which is Medium", appearance.textWeight)
         assertNull("Reset all puts the left edge back to not picked, which is Game counts", appearance.leftEdge)

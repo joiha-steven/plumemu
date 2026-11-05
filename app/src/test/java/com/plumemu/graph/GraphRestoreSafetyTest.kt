@@ -99,7 +99,7 @@ internal class GraphRestoreSafetyTest : GraphRestoreFixture() {
 
         // Refused early: the library stays busy with a write.
         deviceGate = com.plumemu.coredata.db.DatabaseGate()
-        deviceDb = com.plumemu.coredata.db.PlumDatabase.open(context, deviceGate, places.databaseFile.path)
+        deviceDb = com.plumemu.coredata.db.PlumDatabase.open(context, GraphDetailsRating, deviceGate, places.databaseFile.path)
         val (finish, writer) = holdAWrite()
         quietTimeoutMs = 300
         after.read(input(zip))

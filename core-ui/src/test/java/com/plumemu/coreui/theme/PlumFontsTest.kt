@@ -20,6 +20,21 @@ class PlumFontsTest {
     }
 
     @Test
+    fun jostMapsEveryWeightToItsFace() {
+        assertEquals(R.font.jost_400, faceFor(PlumFonts.Jost, FontWeight.Normal))
+        assertEquals(R.font.jost_500, faceFor(PlumFonts.Jost, FontWeight.Medium))
+        assertEquals(R.font.jost_600, faceFor(PlumFonts.Jost, FontWeight.SemiBold))
+        assertEquals(R.font.jost_700, faceFor(PlumFonts.Jost, FontWeight.Bold))
+        assertEquals(R.font.jost_800, faceFor(PlumFonts.Jost, FontWeight.ExtraBold))
+    }
+
+    @Test
+    fun jostIsTheDefaultFont() {
+        assertEquals(PlumFont.Jost, PlumFont.Default)
+        assertEquals(PlumFont.Jost, PlumThemeSettings.Default.font)
+    }
+
+    @Test
     fun sansMapsEveryWeightToItsFace() {
         assertEquals(R.font.plum_sans_400, faceFor(PlumFonts.Sans, FontWeight.Normal))
         assertEquals(R.font.plum_sans_500, faceFor(PlumFonts.Sans, FontWeight.Medium))
@@ -62,7 +77,13 @@ class PlumFontsTest {
         for (font in PlumFont.entries) {
             val asked = TypeRole.Badge.weightFor(font, TextMode.Light, TextWeight.Thin)
             val face = faceFor(PlumFonts.familyOf(font), FontWeight(asked).let { w -> if (font == PlumFont.Mono && asked == 600) FontWeight.SemiBold else w })
-            val expected = if (font == PlumFont.Mono) R.font.plum_mono_700 else if (font == PlumFont.Sans) R.font.plum_sans_600 else R.font.plum_serif_600
+            val expected =
+                when (font) {
+                    PlumFont.Mono -> R.font.plum_mono_700
+                    PlumFont.Sans -> R.font.plum_sans_600
+                    PlumFont.Jost -> R.font.jost_600
+                    PlumFont.Serif -> R.font.plum_serif_600
+                }
             assertEquals("$font", expected, face)
         }
     }

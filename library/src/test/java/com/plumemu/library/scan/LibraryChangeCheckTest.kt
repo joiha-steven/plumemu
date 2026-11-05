@@ -127,17 +127,15 @@ class LibraryChangeCheckTest {
         val changes = scanner().changedFolders()
 
         assertEquals(setOf(internal.id, sdCard.id), changes.changedFolderIds)
-        assertEquals("a first scan is not news", setOf(internal.id, sdCard.id), changes.neverScannedFolderIds)
         assertEquals(emptyList<String>(), internal.tree.listed + sdCard.tree.listed)
     }
 
     @Test
-    fun aScannedFolderThatChangedIsNotNeverScanned() = runTest {
+    fun aScannedFolderThatChangedIsChanged() = runTest {
         scanner().scan().toList()
         internal.touch("snes")
         val changes = scanner().changedFolders()
         assertEquals(setOf(internal.id), changes.changedFolderIds)
-        assertEquals(emptySet<Long>(), changes.neverScannedFolderIds)
     }
 
     @Test

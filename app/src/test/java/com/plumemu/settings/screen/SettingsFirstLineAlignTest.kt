@@ -18,6 +18,8 @@ import com.plumemu.coreui.components.SystemRowTags
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
+import com.plumemu.home.slabTopRow
+import kotlin.math.abs
 import com.plumemu.coreui.theme.TextSize
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
@@ -137,12 +139,12 @@ class SettingsSectionsScrollCueTest {
         assertTrue("at the last row the top fades", shown(FADE_TOP_SUFFIX))
     }
 
-    /** A fade never dims the focused row: Text weight opens at the bottom of Appearance with rows past it, and its ring is as bright at its bottom as at its top. */
+    /** A fade never dims the focused row: Text weight opens at the bottom of Appearance with rows past it, and its slab edge is as bright at its bottom as at its top. */
     @Test
     fun aFadeStopsShortOfTheFocusedRow() {
         val row = SettingsSection.Appearance.rowsIn(ShotContent.library).indexOf(SettingsOption.TextWeight)
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Medium)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Small)) {
                 SettingsAt(SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Appearance, rememberedOption = mapOf(SettingsSection.Appearance to row)), content = ShotContent.library)
             }
         }
@@ -152,13 +154,18 @@ class SettingsSectionsScrollCueTest {
         val d = compose.density.density
         val box = compose.onNodeWithTag(SettingsTags.option(SettingsOption.TextWeight), useUnmergedTree = true).getUnclippedBoundsInRoot()
         val x = ((box.left.value + (box.right.value - box.left.value) * 0.4f) * d).toInt()
-        // The ring: accent-red pixels down the row, a little past its bounds (the pill may bleed).
-        val ring =
-            ((box.top.value - 8) * d).toInt().coerceAtLeast(0)..((box.bottom.value + 8) * d).toInt().coerceAtMost(image.height - 1)
-        val reds = ring.map { android.graphics.Color.red(image.getPixel(x, it)) to android.graphics.Color.green(image.getPixel(x, it)) }.filter { (r, g) -> r - g > 80 }
-        assertTrue("the focused row's ring is drawn", reds.size >= 2)
-        val top = reds.first().first
-        val bottom = reds.last().first
-        assertTrue("the ring's bottom ($bottom) is as bright as its top ($top)", bottom >= top - 12)
+        // The slab's border: its top side is the bright line `slabTopRow` finds; the bottom side is a lighter line over the fill's dark end, a little past the row's bounds (the slab may bleed).
+        val xs = (x - 5)..(x + 5)
+        val from = ((box.top.value - 8) * d).toInt().coerceAtLeast(0)
+        val until = ((box.bottom.value + 8) * d).toInt().coerceAtMost(image.height - 1)
+        val bitmap = compose.onRoot().captureToImage()
+        val top = bitmap.slabTopRow(xs, from, until)
+        assertTrue("the focused row's slab top edge is drawn", top >= 0)
+        fun lum(y: Int) = image.getPixel(x, y).let { android.graphics.Color.red(it) + android.graphics.Color.green(it) + android.graphics.Color.blue(it) }
+        val bottom = ((top + 2 * d).toInt()..until - 2).any { y -> lum(y) - lum(y - 2) > BOTTOM_EDGE_STEP && lum(y) - lum(y + 2) > BOTTOM_EDGE_STEP }
+        assertTrue("the focused row's slab edge is drawn at its bottom (the fade does not dim it)", bottom)
     }
 }
+
+/** How much lighter (summed channels, 0..765) the slab's bottom border is than the fill above and the shadow under it, at the least. */
+private const val BOTTOM_EDGE_STEP = 12

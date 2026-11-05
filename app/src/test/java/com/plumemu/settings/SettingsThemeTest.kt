@@ -46,7 +46,7 @@ class SettingsThemeTest {
         compose.waitForIdle()
         assertEquals(BackgroundPreset.Black.color.toComposeColor(), background)
         assertEquals(true, motionOn)
-        assertEquals("Sans", fontName)
+        assertEquals("Jost", fontName)
 
         stored.value = PlumSettings(
             appearance = AppearanceSettings(ColorSetting.Preset("Paper"), TextColorSetting.Dark, font = FontSetting.Mono),

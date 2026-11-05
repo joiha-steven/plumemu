@@ -1,7 +1,5 @@
 package com.plumemu.home
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,7 +35,7 @@ internal fun TextDetails(
     val poster = entry.posterOf(game)
     WideDetailsLayout(
         cover = {
-            DetailsCover(
+            if (!textHidden || detailsCoverFitsWithSystemsOpen(PlumTheme.layout, content.hasBoxArt)) DetailsCover(
                 ArtSlot.Absent,
                 DpSize(PlumDimens.detailsColumnWidth, PlumDimens.detailsCoverHeightWide),
                 Alignment.BottomStart,
@@ -50,7 +48,7 @@ internal fun TextDetails(
         },
         titleBlock = {
             if (!textHidden) {
-                Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.titleLineGap)) {
+                TitleBlock(PlumDimens.titleLineGap) {
                     DetailsTitle(game.title)
                     SystemLine(system?.let { systemAndRegion(it, game.region) })
                 }
@@ -71,7 +69,7 @@ private fun SystemLine(text: String?) {
     if (text == null) {
         BasicText(text = "", style = PlumTheme.type.meta, maxLines = 1, modifier = Modifier.testTag(HomeTags.DETAILS_SYSTEM_PENDING))
     } else {
-        FactLine(text, Modifier.testTag(HomeTags.DETAILS_SYSTEM))
+        FactLine(text, Modifier.testTag(HomeTags.DETAILS_SYSTEM), maxLines = 1)
     }
 }
 

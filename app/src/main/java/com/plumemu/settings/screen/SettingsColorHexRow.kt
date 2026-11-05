@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -43,8 +42,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import com.plumemu.R
+import com.plumemu.coreui.components.FieldTags
 import com.plumemu.coreui.components.InlineKeyboard
-import com.plumemu.coreui.components.pressFeel
+import com.plumemu.coreui.components.fieldBoxHeight
+import com.plumemu.coreui.components.fieldContentPadding
+import com.plumemu.coreui.components.fieldCollar
+import com.plumemu.coreui.components.focusPill
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.game.focusFieldAt
@@ -55,7 +58,6 @@ import com.plumemu.keyboard.CaretLine
 import com.plumemu.keyboard.KeyboardChoice
 import com.plumemu.settings.ColorRefusal
 import com.plumemu.setup.bringIntoViewWhen
-import com.plumemu.setup.focusRing
 
 /**
  * The "+" page's Color code row: the swatch and hex of the colour shown, the field that types a code
@@ -72,8 +74,8 @@ internal fun HexRow(
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
-    val shape = RoundedCornerShape(PlumDimens.cornerRow)
     val ownKeyboard = model.hexTyping?.takeIf { it.keyboardKind == KeyboardChoice.Plumemu }
+    val editing = model.isEditingHex && isFocused
     Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.titleLineGap)) {
         Row(
             modifier =
@@ -81,9 +83,9 @@ internal fun HexRow(
                     .fillMaxWidth()
                     .testTag(SettingsTags.HEX_ROW)
                     .bringIntoViewWhen(isFocused && !model.hexOnUse, ring = PlumDimens.focusRingOutset)
-                    // Draws the row's fill; outside the ring, so the ring dips with the row.
-                    .pressFeel(isFocused && !model.hexOnUse, colors.sel2, shape, answersButton = ownKeyboard?.isTrayUp != true)
-                    .focusRing(isFocused && !model.hexOnUse, PlumDimens.cornerRow, colors.accent, colors.focusGlow)
+                    // The slab when focused, the resting fill otherwise.
+                    // While the code is typed its well carries the focus (once): the row keeps no fill behind it.
+                    .focusPill(isFocused && !model.hexOnUse && !editing, answersButton = ownKeyboard?.isTrayUp != true, rest = if (editing) null else { { colors.sel2 } })
                     .heightIn(min = PlumTheme.layout.settingsHexRowHeight)
                     .swatchTap(index, touch)
                     .padding(horizontal = PlumDimens.settingsPanelRowPadding),
@@ -95,8 +97,8 @@ internal fun HexRow(
             BasicText(stringResource(R.string.settings_hex_label), style = type.meta.copy(color = colors.muted), maxLines = 2, modifier = Modifier.weight(1f))
             when {
                 !model.isEditingHex || !isFocused -> BasicText(hex, style = type.meta.copy(color = colors.text), maxLines = 1)
-                ownKeyboard != null -> HexOwnKeyboardField(hex, ownKeyboard, model.hexText)
-                else -> HexField(hex, model, touch)
+                ownKeyboard != null -> HexWell(lit = !model.hexOnUse) { HexOwnKeyboardField(hex, ownKeyboard, model.hexText) }
+                else -> HexWell(lit = !model.hexOnUse) { HexField(hex, model, touch) }
             }
         }
         // While Plumemu's tray is up its action key uses the code: "Use this colour" shows with the tray down.
@@ -113,6 +115,18 @@ internal fun HexRow(
             }
         }
     }
+}
+
+/** The typed code's well: the shared field look (collar, accent groove when [lit]), no label column. */
+@Composable
+private fun HexWell(
+    lit: Boolean,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        Modifier.testTag(FieldTags.BOX).heightIn(min = fieldBoxHeight()).fieldCollar(focused = lit).padding(fieldContentPadding()),
+        contentAlignment = Alignment.CenterStart,
+    ) { content() }
 }
 
 /** The wrong-code line under the hex field. */
@@ -167,7 +181,6 @@ private fun UseRow(
     touch: SettingsTouch,
 ) {
     val colors = PlumTheme.colors
-    val shape = RoundedCornerShape(PlumDimens.cornerRow)
     Row(
         modifier =
             Modifier
@@ -175,8 +188,7 @@ private fun UseRow(
                 .testTag(SettingsTags.HEX_USE)
                 // Always in view while it shows: with the sliders above, the page is taller than the panel and a tap on it needs it on screen.
                 .bringIntoViewWhen(true, ring = PlumDimens.focusRingOutset)
-                .pressFeel(isFocused, colors.sel2, shape)
-                .focusRing(isFocused, PlumDimens.cornerRow, colors.accent, colors.focusGlow)
+                .focusPill(isFocused, rest = { colors.sel2 })
                 .height(PlumTheme.layout.settingsHexRowHeight)
                 .tapTarget { touch.onHexEntered(hex) }
                 .padding(horizontal = PlumDimens.settingsPanelRowPadding),
@@ -224,7 +236,7 @@ private fun HexField(
         cursorBrush = SolidColor(colors.accent),
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, keyboardType = KeyboardType.Ascii, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { touch.onHexEntered(model.hexText) }),
-        modifier = Modifier.width(PlumDimens.settingsPresetSwatch * 2).focusProperties { canFocus = up }.focusRequester(requester).testTag(SettingsTags.HEX_FIELD),
+        modifier = Modifier.widthIn(min = PlumDimens.settingsPresetSwatch * 2).focusProperties { canFocus = up }.focusRequester(requester).testTag(SettingsTags.HEX_FIELD),
         decorationBox = { field ->
             Box {
                 // The current code as a hint until the first letter is typed.

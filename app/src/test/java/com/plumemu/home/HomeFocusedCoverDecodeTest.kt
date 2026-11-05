@@ -24,6 +24,8 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import kotlinx.coroutines.CompletableDeferred
+import com.plumemu.coreui.components.CollarSize
+import com.plumemu.coreui.theme.PlumDimens
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -57,12 +59,14 @@ class HomeFocusedCoverDecodeTest {
     private lateinit var state: StripState
     private var background = Color.Unspecified
     private var tile = Color.Unspecified
+    private var accent = Color.Unspecified
 
     private fun show(source: HomeArtSource) {
         compose.setContent {
             PlumTheme(PlumThemeSettings.Default) {
                 background = PlumTheme.colors.bg
                 tile = PlumTheme.colors.sel
+                accent = PlumTheme.colors.accent
                 HomeWithArt(source, gridActions(FakeHomeContent.BOARD_SNES_INDEX, 0), gridIds = setOf("snes"), onState = { state = it })
             }
         }
@@ -95,13 +99,28 @@ class HomeFocusedCoverDecodeTest {
         assertTrue("focused again: still its picture (${centre(1)})", centre(1).near(picture))
     }
 
+    /** A size step: the picture decoded at another size stands in, so no titled tile shows while the exact decode is made. */
+    @Test
+    fun aCoverDrawsAnotherSizesPictureWhileItsOwnDecodes() {
+        val images = GatedImages(hasOtherSize = true)
+        show(FakeArtSource(coverArtSource().results.value, images = images))
+        compose.mainClock.advanceTimeBy(SETTLE_MS)
+        val seen = centre(1)
+        assertTrue("another size's picture is drawn before the exact one lands ($seen)", !seen.near(tile) && !seen.near(background))
+
+        compose.runOnIdle { images.landAll() }
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(SETTLE_MS)
+        assertTrue("the exact picture replaces it (${centre(1)})", !centre(1).near(tile))
+    }
+
     /**
-     * A box front with transparent parts (MediaSaver keeps alpha in WebP): the focused cover's larger
-     * copy shows the background through them, never the cover's own copy left in place (its hairline
-     * or picture). Read on the resting picture's top edge, inside the larger copy's transparent border.
+     * A box front with transparent parts (MediaSaver keeps alpha in WebP): the focused cover is drawn once, in place, and its
+     * collar's lit groove shows through them (no hairline of the box's own, no second copy). Read on the picture's top edge,
+     * inside its transparent border.
      */
     @Test
-    fun throughAFocusedCoversTransparentBorderOnlyTheBackgroundShows() {
+    fun throughAFocusedCoversTransparentBorderTheLitGrooveShows() {
         show(FakeArtSource(coverArtSource().results.value, images = TransparentBorderImages()))
         focus(1)
         compose.mainClock.advanceTimeBy(SETTLE_MS)
@@ -111,9 +130,12 @@ class HomeFocusedCoverDecodeTest {
                 .fetchSemanticsNode().boundsInRoot
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         val x = picture.center.x.roundToInt()
-        for (y in listOf(picture.top, picture.top + 1f, picture.top + picture.height * 0.03f)) {
+        // The focused cover is drawn larger about its collar's centre: read on the picture's top edge, lifted with it.
+        val density = compose.density.density
+        val centreY = (picture.top - CollarSize.Cover.topPadding.value * density + picture.bottom + CollarSize.Cover.bottomPadding.value * density) / 2f
+        for (y in listOf(centreY + (picture.top - centreY) * PlumDimens.FOCUSED_COVER_SCALE)) {
             val seen = pixels[x, y.roundToInt()]
-            assertTrue("at y=$y px only the background shows through ($seen)", seen.near(background))
+            assertTrue("at y=$y px the lit groove shows through ($seen)", seen.near(accent))
         }
         assertTrue("the larger copy itself is drawn (${centre(1)})", centre(1).near(Color(PICTURE)))
     }
@@ -219,6 +241,7 @@ class HomeFocusedCoverDecodeTest {
     /** Pictures that land only when the test says so, as a slow decode does. */
     private class GatedImages(
         private val pictures: FakeCoverImages = FakeCoverImages(),
+        private val hasOtherSize: Boolean = false,
     ) : CoverImages {
         private val gate = CompletableDeferred<Unit>()
         private var hasLanded = false
@@ -233,6 +256,8 @@ class HomeFocusedCoverDecodeTest {
             widthPx: Int,
             heightPx: Int,
         ): ImageBitmap? = if (hasLanded) pictures.cached(picture, widthPx, heightPx) else null
+
+        override fun cachedAnySize(picture: ArtPicture): ImageBitmap? = if (hasOtherSize) pictures.cached(picture, picture.width, picture.height) else null
 
         override suspend fun load(
             picture: ArtPicture,

@@ -21,10 +21,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * What the person picked in Settings › Appearance (and Advanced › Animations). Every token is
- * derived from these. Defaults are the app's defaults: Black, light text, Red, Plum Sans.
+ * derived from these. Defaults are the app's defaults: Black, light text, accent #3E7BE0, Jost.
  */
 @Immutable
 data class PlumThemeSettings(
@@ -35,7 +36,7 @@ data class PlumThemeSettings(
      * background (an older version, a restored backup, a hand-edited file).
      */
     val text: Rgb = TextMode.Light.color,
-    val accent: AccentChoice = AccentChoice.Preset(AccentPreset.Default),
+    val accent: AccentChoice = ColorSet.Plumemu.accent,
     val font: PlumFont = PlumFont.Default,
     /** Null until the person picks a size: then [TextSize.Default], Large. */
     val textSize: TextSize? = null,
@@ -153,7 +154,7 @@ fun PlumTheme(
             PlumTypography(settings.font, textSize, shownMode, settings.textWeight)
         }
     val layout =
-        remember(containerSize, density, textSize, settings.gridSize) {
+        remember(containerSize, density, textSize, settings.gridSize, settings.font) {
             with(density) {
                 PlumLayout(
                     width = containerSize.width.toDp(),
@@ -162,7 +163,12 @@ fun PlumTheme(
                     // A future peek-width setting must also be multiplied by the factor.
                     peek = PlumDimens.peekWidth * textSize.heightScale,
                     textScale = textSize.heightScale,
+                    hintScale = textSize.hintHeightScale,
+                    // The line of the name's 16 step: the 20 name reaches into the margins around the bar, so the content stays at the boards' place.
+                    topBarLine = (TypeRole.PlaceName.lineHeightSp(settings.font, textSize) * PLACE_NAME_STEP_SP / TypeRole.PlaceName.sizeSp).sp.toDp(),
                     gridSize = settings.gridSize,
+                    settingsThreeFit = SettingsColumns.fits(textSize, settings.font),
+                    pixelsPerDp = this.density,
                 )
             }
         }
@@ -181,6 +187,32 @@ fun PlumTheme(
         LocalPlumEdgeFade provides settings.edgeFadeOn,
         content = content,
     )
+}
+
+/**
+ * [content] with every text size of the theme's type multiplied by [scale] (the Text size setting still applies on top). Not the
+ * font scale of the density: Android bends that one for large scales, so the biggest Text sizes would come out short.
+ */
+@Composable
+fun ProvidePhysicalTextScale(
+    scale: Float,
+    content: @Composable () -> Unit,
+) {
+    val type = PlumTheme.type
+    val scaled = remember(type, scale) { PlumTypography(type.font, type.textSize, type.textMode, type.textWeight, scale, secondScreen = true) }
+    CompositionLocalProvider(LocalPlumType provides scaled, content = content)
+}
+
+/** [content] with the type of the second screen ([PlumTypography.secondScreen]); a no-op under a second-screen type already. */
+@Composable
+fun ProvideSecondScreenText(content: @Composable () -> Unit) {
+    val type = PlumTheme.type
+    if (type.secondScreen) {
+        content()
+    } else {
+        val second = remember(type) { PlumTypography(type.font, type.textSize, type.textMode, type.textWeight, type.physicalScale, secondScreen = true) }
+        CompositionLocalProvider(LocalPlumType provides second, content = content)
+    }
 }
 
 /**

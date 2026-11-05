@@ -14,11 +14,9 @@ import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.GridSize
-import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.ProvideGridSize
-import com.plumemu.coreui.theme.TextSize
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -84,17 +82,13 @@ class HomeRecompositionTest {
     private fun railLetterRuns(): Int = calls.count { it.startsWith("com.plumemu.home.RailLetter ") }
 
     /**
-     * Screen composables (`com.plumemu.home`) and shared components (TopBar, Hint, …) that ran,
-     * except the rows, the games list's items that
-     * draw them and the pages' look followers (counted on their own). Theme getters called by a recomposed row are not
-     * counted. Nor are the two scroll keepers, which emit nothing: they decide
-     * the scroll while composing the move, so it lands in the same frame (a coroutine scrolled
-     * one frame late). Nor is the details column ([detailsParts]): it shows the focused game, so a
-     * move re-runs it (with a poster, [detailsPoster], once); the tests that move beside it check it on its own.
+     * Screen composables (`com.plumemu.home`) and shared components (TopBar, Hint, ...) that ran, except the rows, the list items that draw them and the look followers. Theme getters called by a recomposed row are not counted. Nor are the two scroll keepers, which emit nothing: they decide
+     * the scroll while composing the move, so it lands in the same frame. Nor is the details column ([detailsParts]):
+     * it shows the focused game, so a move re-runs it (poster: [detailsPoster], once; [enteredCovers] may add one each).
      */
-    private fun othersThatRan(detailsPoster: Boolean = false): List<String> {
+    private fun othersThatRan(detailsPoster: Boolean = false, enteredCovers: Int = 0): List<String> {
         assertRailLettersAtMostTwo()
-        val posterRuns = calls.filter { info -> POSTER_FILES.any { "($it:" in info } }.groupingBy { it }.eachCount().filterValues { it > (if (detailsPoster) 1 else 0) }
+        val posterRuns = calls.filter { info -> POSTER_FILES.any { "($it:" in info } }.groupingBy { it }.eachCount().filterValues { it > (if (detailsPoster) 1 else 0) + enteredCovers }
         assertEquals("posters run only in the details column, once per function: $posterRuns", emptyMap<String, Int>(), posterRuns)
         val rowParts = listOf("GameRow", "SystemRow").map { "com.plumemu.coreui.components.$it " }
         // RailLetter: a move to another letter changes the look of the two letters involved (`assertRailLettersAtMostTwo`).
@@ -112,6 +106,8 @@ class HomeRecompositionTest {
             .filterNot { info -> ours.any { info.startsWith(it) } }
             .filterNot { info -> DETAILS_FILES.any { "($it:" in info } }
             .filterNot { info -> detailsPoster && POSTER_FILES.any { "($it:" in info } }
+            // The details cover's collar and shadow run with the cover, once for the new game.
+            .filterNot { info -> detailsPoster && "(Collar.kt:" in info }
     }
 
     /**
@@ -214,29 +210,28 @@ class HomeRecompositionTest {
     }
 
     /**
-     * Largest in Serif, where the wide cover gives up height to the title block (`WideDetailsLayout`): a move
-     * from a one-line to a two-line title and back re-runs the column once, all in one frame, as at Medium.
-     * The cover's height is decided while laying out, not kept in state, so no second pass follows. Real
-     * text measuring (native graphics) for these two only: the title's lines are what is tested.
+     * Where the wide cover gives up height to the title block (`WideDetailsLayout`): a move from a one-line to a two-line
+     * title and back re-runs the column once, all in one frame. The cover's height and the title's lines are decided
+     * while laying out, not kept in state, so no second pass follows. (At Largest in Serif the title is one line, by the
+     * fit rule, so this uses the default look.) Real text measuring (native graphics): the title's lines are what is tested.
      */
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun aMoveBetweenOneAndTwoTitleLinesAtLargestSerifRunsTheColumnOnceInOneFrame() = movesBetweenTitleLines("768")
+    fun aMoveBetweenOneAndTwoTitleLinesRunsTheColumnOnceInOneFrame() = movesBetweenTitleLines("768")
 
     private fun movesBetweenTitleLines(where: String) {
-        val largestSerif = PlumThemeSettings.Default.copy(textSize = TextSize.Largest, font = PlumFont.Serif)
-        val state = showAt(listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX), Action.Enter), snesTitled(ONE_LINE_TITLE, TWO_LINE_TITLE), largestSerif)
+        val state = showAt(listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX), Action.Enter), snesTitled(ONE_LINE_TITLE, TWO_LINE_TITLE))
         val oneLine = titleHeight()
         moveDownAndCount(state)
         assertTrue("$where: the second title takes more lines (${titleHeight()} vs $oneLine px)", titleHeight() > oneLine * 1.5f)
-        assertDetailsRanOnce("$where, Largest Serif, one title line to two")
+        assertDetailsRanOnce("$where, one title line to two")
         compose.runOnIdle {
             calls.clear()
             callTimes.clear()
         }
         compose.runOnIdle { state.dispatch(Action.Move(Direction.Up)) }
         compose.waitForIdle()
-        assertDetailsRanOnce("$where, Largest Serif, two title lines to one")
+        assertDetailsRanOnce("$where, two title lines to one")
     }
 
     private fun titleHeight(): Float = compose.onNodeWithTag(HomeTags.DETAILS_TITLE, useUnmergedTree = true).fetchSemanticsNode().size.height.toFloat()
@@ -479,10 +474,9 @@ class HomeRecompositionTest {
     @Test
     fun gridMoveWithLiveArtRecomposesNoCoverOnlyTheBarTitle() {
         lateinit var state: StripState
+        var layout: com.plumemu.coreui.theme.PlumLayout? = null
         compose.setContent {
-            PlumTheme {
-                ProvideGridSize(GridSize.Large) { HomeWithArt(rememberSource { coverArtSource() }, gridActions(FakeHomeContent.BOARD_SNES_INDEX, 0), gridIds = setOf("snes"), onState = { state = it }) }
-            }
+            PlumTheme { ProvideGridSize(GridSize.Large) { layout = PlumTheme.layout; HomeWithArt(rememberSource { coverArtSource() }, gridActions(FakeHomeContent.BOARD_SNES_INDEX, 0), gridIds = setOf("snes"), onState = { state = it }) } }
         }
         compose.waitForIdle()
         moveDownAndCount(state)
@@ -494,7 +488,9 @@ class HomeRecompositionTest {
                 .filterNot { info -> barTitle.any { info.substringBefore(' ').endsWith(".$it") } }
                 .filterNot { info -> info.substringBefore(' ').startsWith("com.plumemu.coreui.components.TitledHintBar.<anonymous>") }
         assertEquals("nothing else of ours recomposes", emptyList<String>(), others)
-        assertEquals("down one row of three", 3, state.focus.row)
+        val rule = boardSnesPacking(checkNotNull(layout)) // the nearest centre of the next packed row, worked out by hand
+        assertTrue("a second row to go to", rule.rows.size > 1)
+        assertEquals("down from 0 (rows ${rule.rows.take(3)})", rule.down(0), state.focus.row)
     }
 
     /** The same move in Recent's grid, where each cover keeps its system's shape: the bounds are the system grid's. */
@@ -502,11 +498,7 @@ class HomeRecompositionTest {
     fun mixedGridMoveWithLiveArtRecomposesNoCoverOnlyTheBarTitle() {
         lateinit var state: StripState
         compose.setContent {
-            PlumTheme {
-                ProvideGridSize(GridSize.Large) {
-                    HomeWithArt(rememberSource { mixedGridSource() }, gridActions(0, 1), MixedGridLibrary, gridIds = setOf(HomeContent.RECENT_ID), onState = { state = it })
-                }
-            }
+            PlumTheme { ProvideGridSize(GridSize.Large) { HomeWithArt(rememberSource { mixedGridSource() }, gridActions(0, 1), MixedGridLibrary, gridIds = setOf(HomeContent.RECENT_ID), onState = { state = it }) } }
         }
         compose.waitForIdle()
         val before = state.focus.row
@@ -519,14 +511,18 @@ class HomeRecompositionTest {
         assertEquals("covers recomposed: ${calls.filter { c -> covers.any { c.startsWith(it) } }}", 3 * enteredView, calls.count { c -> covers.any { c.startsWith(it) } })
         val barTitle = listOf("GridHintBar", "TitledHintBar", "FocusTitle", "yearAndPublisher")
         val others =
-            othersThatRan()
+            othersThatRan(enteredCovers = enteredView)
                 .filterNot { info -> covers.any { info.startsWith(it) } } // counted above, against the covers that entered
                 .filterNot { info -> barTitle.any { info.substringBefore(' ').endsWith(".$it") } }
                 .filterNot { info -> info.substringBefore(' ').startsWith("com.plumemu.coreui.components.TitledHintBar.<anonymous>") }
-        // The cells' own composables (GridCover.Cover) run for the covers that came into view and for no other.
-        val coverBodies = others.filter { it.startsWith("com.plumemu.home.GridCover.Cover ") }
+        val coverBodies = others.filter { it.startsWith("com.plumemu.home.GridCover.Cover ") } // run for the covers that came into view only
         assertTrue("GridCover.Cover ran for covers already on screen: $coverBodies", coverBodies.size <= enteredView)
-        assertEquals("nothing else of ours recomposes", emptyList<String>(), others - coverBodies.toSet())
+        val newRow = others.filter { "HomeGrid.kt" in it && "<anonymous>" in it } // a packed row item entering view
+        val partNames = listOf("GridCoverAt ", "rememberAppGameIcon ", "coverBoxShadow ", "components.collar ")
+        val coverParts = others.filter { info -> partNames.any { it in info } }
+        val runsByName = partNames.associateWith { name -> coverParts.count { name in it } } // once per cover that entered, none for the others
+        assertTrue("row items $newRow / cover parts $runsByName: at most one run per entered cover ($enteredView)", newRow.size <= enteredView && runsByName.values.all { it <= enteredView })
+        assertEquals("nothing else of ours recomposes", emptyList<String>(), others - coverBodies.toSet() - newRow.toSet() - coverParts.toSet())
         assertTrue("the focus moved down a row", state.focus.row > before)
     }
 
@@ -569,14 +565,14 @@ class HomeRecompositionTest {
     }
 }
 
-private val POSTER_FILES = listOf("HomeCovers.kt", "PosterCover.kt") // the poster cover's own files
+private val POSTER_FILES = listOf("HomeCovers.kt", "PosterCover.kt", "BoxFrontLayout.kt", "BoxFrontShapes.kt") // the poster cover's own files
 
 /**
  * The files that hold the details column (box art, text only, the play facts, the battery line under
  * them) and the number format its facts call (`CountFormat.kt`: the rating, days and minutes; the top
  * bar and the system column, its other callers, would show up as themselves, which the tests forbid).
  */
-internal val DETAILS_FILES = listOf("HomeDetails.kt", "WideDetailsLayout.kt", "HomeDetailsText.kt", "HomePlayFacts.kt", "CountFormat.kt", "PickingBatteryLine.kt")
+internal val DETAILS_FILES = listOf("HomeDetails.kt", "WideDetailsLayout.kt", "HomeDetailsText.kt", "HomePlayFacts.kt", "HomeDetailsBlock.kt", "HomeDetailsCover.kt", "CountFormat.kt", "PickingBatteryLine.kt")
 
 /** A traced call of the details column: in one of [DETAILS_FILES], of the home screen or the battery line. */
 internal fun String.isDetailsPart(): Boolean = (startsWith("com.plumemu.home.") || startsWith("com.plumemu.battery.")) && DETAILS_FILES.any { "($it:" in this }
@@ -584,9 +580,9 @@ internal fun String.isDetailsPart(): Boolean = (startsWith("com.plumemu.home.") 
 /**
  * Details functions one pass calls more than once: the box-art column's two fact lines ("1994 ·
  * Nintendo", "Action · 7.5/10") and the locale read by the rating and the count format; and
- * WideDetails' and TextDetails' three slot lambdas (cover, title block, the rest of [WideDetailsLayout]), which share one name.
+ * WideDetails' four and TextDetails' three slot lambdas (cover, title block, the facts, the tail of [WideDetailsLayout]), which share one name.
  */
-internal val CALLS_PER_PASS = mapOf("com.plumemu.home.FactLine" to 2, "com.plumemu.home.currentLocale" to 2, "com.plumemu.home.WideDetails.<anonymous>" to 3, "com.plumemu.home.TextDetails.<anonymous>" to 3)
+internal val CALLS_PER_PASS = mapOf("com.plumemu.home.FactLine" to 2, "com.plumemu.home.currentLocale" to 2, "com.plumemu.home.WideDetails.<anonymous>" to 4, "com.plumemu.home.TextDetails.<anonymous>" to 3)
 
 /** One line at Largest in Serif in the 248 details column. */
 internal const val ONE_LINE_TITLE = "Contra III"

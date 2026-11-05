@@ -148,6 +148,37 @@ class GamePanelScreenshotTest {
         shot("game_core_missing", OpenPanel(game, PanelScreen.Message(message)))
     }
 
+    private fun gbaCore(id: String, name: String) =
+        EmulatorItem("retroarch-$id", "RetroArch: $name", "com.retroarch.aarch64", isLegalRisk = false, core = "${id}_libretro_android.so")
+
+    private val gbaCores = listOf(gbaCore("mgba", "mGBA"), gbaCore("gpsp", "gpSP"), gbaCore("vbam", "VBA-M"))
+
+    /** After No to a RetroArch core: "Try <next core>?" first and focused, the other emulators after it. */
+    @Test
+    fun coreNext() {
+        val listing = sampleListing(installed = listOf(gbaCores[0], gbaCores[1], gbaCores[2], DuckStation), notInstalled = emptyList()).copy(systemName = "Game Boy Advance")
+        val message = coreMissingMessage(listing, gbaCores[0].id, gbaCores[0].name)
+        shot("game_core_next", OpenPanel(GameRef("gba-1", "Advance Wars"), PanelScreen.Message(message)))
+    }
+
+    /** An arcade set with an old MAME 2003-Plus name: the version note, MAME 2003-Plus offered first. */
+    @Test
+    fun coreNextArcadeOldName() {
+        val core = { id: String, name: String -> EmulatorItem("retroarch-$id", "RetroArch: $name", "com.retroarch.aarch64", isLegalRisk = false, core = "${id}_libretro_android.so") }
+        val cores = listOf(core("mamearcade", "MAME - Current"), core("fbneo", "FinalBurn Neo"), core("mame2003-plus", "MAME 2003-Plus"))
+        val listing = sampleListing(installed = cores, notInstalled = emptyList()).copy(systemName = "Arcade", isArcade = true, oldArcadeName = true)
+        val message = coreMissingMessage(listing, cores[0].id, cores[0].name)
+        shot("game_core_next_arcade", OpenPanel(GameRef("arcade-1", "X-Men"), PanelScreen.Message(message)))
+    }
+
+    /** After No with every core answered No: how to get one, naming the first core of the order. */
+    @Test
+    fun coreNoneLeft() {
+        val listing = sampleListing(installed = gbaCores, notInstalled = emptyList()).copy(systemName = "Game Boy Advance")
+        val message = coreMissingMessage(listing, gbaCores[2].id, gbaCores[2].name, tried = setOf(gbaCores[0].id, gbaCores[1].id))
+        shot("game_core_none_left", OpenPanel(GameRef("gba-1", "Advance Wars"), PanelScreen.Message(message)))
+    }
+
     /** First game of a system with nothing chosen: installed ones only, the recommended one first and focused. */
     @Test
     fun chooseEmulatorFirstLaunch() {

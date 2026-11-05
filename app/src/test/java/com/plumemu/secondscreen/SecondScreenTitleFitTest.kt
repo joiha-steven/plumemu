@@ -3,11 +3,10 @@ package com.plumemu.secondscreen
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.SemanticsProperties
 import kotlin.random.Random
-import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,6 +27,8 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.SecondScreenDimens
+import com.plumemu.coreui.theme.ProvideSecondScreenText
+import com.plumemu.coreui.theme.SecondScreenGameCardDimens
 import com.plumemu.coreui.theme.TextSize
 import com.plumemu.coreui.theme.TypeRole
 import com.plumemu.home.appComposeRule
@@ -63,10 +64,12 @@ class SecondScreenTitleFitTest {
         compose.setContent {
             CompositionLocalProvider(LocalDensity provides Density(density)) {
                 PlumTheme(PlumThemeSettings.Default.copy(textSize = TextSize.Medium)) {
-                    measurer = rememberTextMeasurer()
-                    titleStyle = PlumTheme.type[TypeRole.SecondTitleRoomy].copy(color = Color.White)
-                    starStyle = PlumTheme.type[TypeRole.SecondStarRoomy]
-                    gap = with(LocalDensity.current) { SecondScreenDimens.starGap.toSp() }
+                    ProvideSecondScreenText {
+                        measurer = rememberTextMeasurer()
+                        titleStyle = PlumTheme.type[TypeRole.SecondTitleRoomy].copy(color = Color.White)
+                        starStyle = PlumTheme.type[TypeRole.SecondStarRoomy]
+                        gap = with(LocalDensity.current) { SecondScreenDimens.starGap.toSp() }
+                    }
                 }
             }
         }
@@ -166,48 +169,52 @@ class SecondScreenTitleFitTest {
     }
 
     @Test
-    fun theRealCardAtAnAwkwardDensityKeepsAJustFittingTitleOnItsLines() {
-        // d = 2.0125: the 40 dp margins are 80.5 px, drawn as 81. A title that fits 3 lines one pixel wider than the real
-        // width (what dp arithmetic gave) but not at the real width must still be cut to fit what is drawn.
+    fun theRealCardAtAnAwkwardDensityKeepsAJustFittingTitleOnItsLine() {
+        // d = 2.0125: dp arithmetic and the drawn pixels differ by a pixel. A title that fits one line one pixel wider than the
+        // real width (what dp arithmetic gave) but not at the real width must still be cut to fit what is drawn.
         val density = Density(2.0125f)
-        val cardWidthPx = with(density) { 538.dp.roundToPx() }
-        val realWidth = cardWidthPx - 2 * with(density) { 40.dp.roundToPx() }
         var content by mutableStateOf<SecondScreenContent>(SecondScreenContent.Calm)
         compose.setContent {
             CompositionLocalProvider(LocalDensity provides density) {
                 PlumTheme(PlumThemeSettings.Default.copy(textSize = TextSize.Medium)) {
                     measurer = rememberTextMeasurer()
-                    titleStyle = PlumTheme.type[TypeRole.SecondTitleRoomy].copy(color = Color.White)
-                    starStyle = PlumTheme.type[TypeRole.SecondStarRoomy]
+                    titleStyle = gameStyle(TypeRole.SecondTitleRoomy, SecondScreenGameCardDimens.titleSize)
+                    starStyle = gameStyle(TypeRole.SecondStarRoomy, SecondScreenGameCardDimens.systemSize)
                     gap = with(LocalDensity.current) { SecondScreenDimens.starGap.toSp() }
                     Box(Modifier.requiredSize(538.dp, 468.dp)) { SecondScreenCard(content) }
                 }
             }
         }
         compose.waitForIdle()
+        // The title's room: from the card's left edge to the system's short name, less the gap the header keeps between them.
+        content = SecondScreenContent.Game("x", "Super Nintendo", "SNES", isFavorite = true)
+        compose.waitForIdle()
+        val card = compose.onNodeWithTag(GameCardTags.CARD).fetchSemanticsNode().boundsInRoot
+        val system = compose.onNodeWithTag(GameCardTags.SYSTEM).fetchSemanticsNode().boundsInRoot
+        val realWidth = (system.left - with(density) { SecondScreenGameCardDimens.headerItemGap.roundToPx() } - card.left).toInt()
         val random = Random(7)
         val letters = "abdefghmnoRWiltk"
         var found: String? = null
         search@ for (attempt in 0 until 3000) {
             val words = List(40) { "".padEnd(1 + random.nextInt(9), letters[random.nextInt(letters.length)]) }
-            for (count in 10..40) {
+            for (count in 2..40) {
                 val text = words.take(count).joinToString(" ")
-                val wider = fit(text, true, realWidth + 1)
-                if (wider.text.startsWith(text) && linesOf(wider, true, realWidth) > maxLines) {
+                val wider = fit(text, true, realWidth + 1, lines = 1)
+                if (wider.text.startsWith(text) && linesOf(wider, true, realWidth) > 1) {
                     found = text
                     break@search
                 }
             }
         }
         assertTrue("a title that fits one pixel wider than the real width but not at it exists", found != null)
-        content = SecondScreenContent.Game(found!!, "Super Nintendo", "USA", isFavorite = true)
+        content = SecondScreenContent.Game(found!!, "Super Nintendo", "SNES", isFavorite = true)
         compose.waitForIdle()
-        val node = compose.onNodeWithTag(SecondScreenTags.TITLE).fetchSemanticsNode()
+        val node = compose.onNodeWithTag(GameCardTags.TITLE).fetchSemanticsNode()
         val layouts = mutableListOf<TextLayoutResult>()
         node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
         val layout = layouts.single()
-        assertTrue("the title is drawn on at most $maxLines lines, not ${layout.lineCount}", layout.lineCount <= maxLines)
-        assertFalse("the drawn title overflows its lines (the star line is clipped)", layout.hasVisualOverflow)
+        assertTrue("the title is drawn on one line, not ${layout.lineCount}", layout.lineCount <= 1)
+        assertFalse("the drawn title overflows its line (the star is clipped)", layout.hasVisualOverflow)
         assertTrue(node.config[SemanticsProperties.Text].joinToString("").endsWith(FAVORITE_STAR))
     }
 }

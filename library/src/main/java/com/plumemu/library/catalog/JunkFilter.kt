@@ -11,9 +11,12 @@ internal object JunkFilter {
     private val junkExtensions = setOf(
         "txt", "nfo", "diz", "pdf", "htm", "html", "url", "log", "ini", "cfg", "xml", "json",
         "jpg", "jpeg", "png", "gif", "bmp", "webp", "mp4", "mkv",
-        "srm", "sav", "sv", "state", "auto", "oops", "rtc", "bak", "tmp", "db",
+        "bak", "tmp", "db",
         "sfv", "md5", "sha1", "crc",
     )
+
+    /** Emulators' saves, save states and clock files. */
+    private val saveExtensions = setOf("srm", "sav", "sv", "state", "auto", "oops", "rtc")
     private val saveStateExtension = Regex("""(state|st)\d+""")
 
     /** Documents that come with games or emulators, whatever the extension (`README.md` is not a Mega Drive game). */
@@ -42,14 +45,18 @@ internal object JunkFilter {
     fun isSkippedDirectory(name: String): Boolean =
         name.startsWith(".") || name.lowercase(Locale.ROOT) in skippedDirectories
 
-    fun isJunkFile(name: String): Boolean {
-        if (name.startsWith(".")) return true
+    fun isJunkFile(name: String): Boolean = kindOf(name) != null
+
+    /** Why [name] is set aside ([LeftOutReason.BIOS], [LeftOutReason.SAVE] or [LeftOutReason.JUNK]), or null when it is not junk. */
+    fun kindOf(name: String): LeftOutReason? {
+        if (name.startsWith(".")) return LeftOutReason.JUNK
         val lower = name.lowercase(Locale.ROOT)
-        if (lower == "thumbs.db" || lower == "desktop.ini") return true
+        if (lower == "thumbs.db" || lower == "desktop.ini") return LeftOutReason.JUNK
         val extension = lower.substringAfterLast('.', missingDelimiterValue = "")
-        if (extension in junkExtensions || saveStateExtension.matches(extension)) return true
-        if (lower.substringBefore('.') in documentNames) return true
-        return isBios(lower)
+        if (extension in saveExtensions || saveStateExtension.matches(extension)) return LeftOutReason.SAVE
+        if (extension in junkExtensions) return LeftOutReason.JUNK
+        if (lower.substringBefore('.') in documentNames) return LeftOutReason.JUNK
+        return if (isBios(lower)) LeftOutReason.BIOS else null
     }
 
     private fun isBios(lowerName: String): Boolean =

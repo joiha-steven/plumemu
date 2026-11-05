@@ -584,6 +584,32 @@ SYSTEM_EMULATOR_ORDER = {
             "com-omnidroid-4"],
 }
 
+# The RetroArch cores a system offers in the order players most often have them installed (the core
+# downloaded first by guides, bundled in handheld images). The app offers the next one after a "No" to
+# "Did <game> start?" (docs/modules/launching.md > Core check). Ids are emulator ids without "retroarch-";
+# cores not named keep their source order after the named ones, standalone emulators stay before every
+# core, and the system's first core stays first (it is the default core Play starts: test_convert.py
+# FirstCoreTests holds the list); FIRST_EMULATOR may still put one core first. Not a system's whole order (see SYSTEM_EMULATOR_ORDER).
+_SNES = ["snes9x", "bsnes", "snes9x2010", "mesen-s", "mednafen-supafaust", "snes9x2005-plus"]
+_GB = ["gambatte", "sameboy", "gearboy", "mgba", "tgbdual"]
+_SEGA = ["genesis-plus-gx", "picodrive", "genesis-plus-gx-wide", "blastem"]
+_ARCADE = ["fbneo", "mame2003-plus", "mame2010", "mame2003", "fbalpha2012"]
+_PCE = ["mednafen-pce-fast", "mednafen-pce", "mednafen-supergrafx", "geargrafx"]
+RETROARCH_CORE_ORDER = {
+    "nes": ["mesen", "fceumm", "nestopia", "quicknes"], "fds": ["mesen", "fceumm", "nestopia"],
+    "snes": _SNES, "snesmsu1": _SNES, "sufami": _SNES, "satellaview": _SNES,
+    "gb": _GB, "gbc": _GB,
+    "gba": ["mgba", "gpsp", "vbam", "vba-next", "mednafen-gba", "meteor"],
+    "megadrive": _SEGA, "megacd": _SEGA, "mastersystem": _SEGA, "gamegear": _SEGA, "sg-1000": _SEGA,
+    "genesismsu": _SEGA, "sega32x": ["picodrive"],
+    "nds": ["melonds", "desmume", "melondsds", "desmume2015", "noods"], "ndsi": ["melonds", "desmume", "melondsds"],
+    "psx": ["swanstation", "pcsx-rearmed", "mednafen-psx-hw", "mednafen-psx"],
+    "saturn": ["yabasanshiro", "mednafen-saturn", "yabause", "ymir"],
+    "arcade": _ARCADE, "mame": _ARCADE, "cps": _ARCADE, "cps1": _ARCADE, "cps2": _ARCADE, "cps3": _ARCADE,
+    "neogeo": ["fbneo", "geolith", "mamearcade"], "fba": ["fbalpha2012"],
+    "pcengine": _PCE, "pcenginecd": _PCE, "supergrafx": _PCE, "tg-cd": _PCE,
+}
+
 # Settings › Appearance › Accent color › By system (owner, 2026-10-25): the colour each system is known by,
 # "RRGGBB". Hardware, logo or box colour, never a name; where each comes from is listed in
 # docs/history/2026-10-25-accent-by-system.md. A system not here has none and the accent falls back.

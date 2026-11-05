@@ -46,7 +46,7 @@ import org.robolectric.annotation.Config
 /**
  * The box art question on screen, through the router like the device: by gamepad
  * (default focus, left / right, A on each button, B) and by touch (a tap on each button, the Back
- * hint). Use my account shows the form with the cursor on the username and its keyboard up (Android 9,
+ * hint). Use my account shows the form with the cursor on the username and its keyboard down (A on the field brings it up) (Android 9,
  * where Robolectric's InputMethodManager shadow sees Compose's keyboard requests).
  */
 @RunWith(RobolectricTestRunner::class)
@@ -77,8 +77,9 @@ class SetupBoxArtQuestionTest {
         }
         compose.runOnIdle { model.onPicked(PickResult.Picked(SetupFakes.ROMS_TREE)) }
         compose.waitForIdle()
-        send(Action.Enter)
-        compose.onNodeWithText(context.getString(R.string.setup_box_art_question_title)).assertIsDisplayed()
+        send(Action.Enter) // Continue: the look step
+        send(Action.Enter) // its preselected tile
+        compose.onNodeWithTag(SetupTags.control(SetupControl.UseBoxArt)).assertIsDisplayed()
     }
 
     private fun send(action: Action) {
@@ -104,23 +105,26 @@ class SetupBoxArtQuestionTest {
         showTheQuestion()
         compose.onNodeWithTag(SetupTags.BOX_ART).assertDoesNotExist()
         assertEquals(SetupControl.UseBoxArt, focus)
-        send(Action.Move(Direction.Right))
-        assertEquals(SetupControl.SkipBoxArt, focus)
-        send(Action.Move(Direction.Left))
+        send(Action.Move(Direction.Down))
+        assertEquals(SetupControl.BoxArtLibretro, focus)
+        send(Action.Move(Direction.Up))
         assertEquals(SetupControl.UseBoxArt, focus)
 
         send(Action.Enter)
         compose.onNodeWithTag(SetupTags.BOX_ART).assertIsDisplayed()
         compose.onNodeWithText(context.getString(R.string.setup_box_art_title)).assertIsDisplayed()
         assertEquals(SignInItem.Username, model.state.value.boxArt?.focus)
-        assertTrue("the form is typing on the username", model.state.value.boxArt?.inField == true)
-        assertTrue("the form opens with the keyboard up", keyboardShows)
+        assertFalse("the form opens with the keyboard down", model.state.value.boxArt?.isTyping == true)
+        assertFalse("and no keyboard is up", keyboardShows)
+        send(Action.Enter)
+        assertTrue("A on the username types in it", model.state.value.boxArt?.inField == true)
+        assertTrue("and the keyboard comes up", keyboardShows)
 
         send(Action.Back)
         compose.onNodeWithTag(SetupTags.BOX_ART).assertDoesNotExist()
         assertEquals("B from the form: the question, on Use my account", SetupControl.UseBoxArt, focus)
         send(Action.Back)
-        compose.onNodeWithText(context.getString(R.string.setup_folder_title)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.setup_look_title)).assertIsDisplayed()
     }
 
     private fun textInput(tag: String) = compose.onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag(tag)), useUnmergedTree = true)
@@ -160,9 +164,9 @@ class SetupBoxArtQuestionTest {
     }
 
     @Test
-    fun theGamepadsAOnNotNowGoesOnToTheScan() {
+    fun theGamepadsAOnBoxArtOnlyGoesOnToTheScan() {
         showTheQuestion()
-        send(Action.Move(Direction.Right))
+        send(Action.Move(Direction.Down))
         send(Action.Enter)
         compose.onNodeWithText(context.getString(R.string.setup_scan_title)).assertIsDisplayed()
         assertTrue(accounts.signIns.isEmpty())
@@ -173,16 +177,16 @@ class SetupBoxArtQuestionTest {
         showTheQuestion()
         tap(SetupTags.control(SetupControl.UseBoxArt))
         compose.onNodeWithTag(SetupTags.BOX_ART).assertIsDisplayed()
-        assertTrue("the form opens with the keyboard up", keyboardShows)
+        assertFalse("the form opens with the keyboard down", keyboardShows)
         tap(SetupTags.HINT_BACK)
-        compose.onNodeWithTag(SetupTags.BOX_ART_QUESTION).assertIsDisplayed()
+        compose.onNodeWithTag(SetupTags.control(SetupControl.UseBoxArt)).assertIsDisplayed()
         assertNull(model.state.value.boxArt)
     }
 
     @Test
-    fun aTapOnNotNowGoesOnToTheScanInOneTap() {
+    fun aTapOnPlumemusOwnCoversGoesOnToTheScanInOneTap() {
         showTheQuestion()
-        tap(SetupTags.control(SetupControl.SkipBoxArt))
+        tap(SetupTags.control(SetupControl.BoxArtOwnCovers))
         compose.onNodeWithText(context.getString(R.string.setup_scan_title)).assertIsDisplayed()
     }
 }

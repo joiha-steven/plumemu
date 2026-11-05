@@ -98,7 +98,7 @@ abstract class GameInfoScrapedFitBase(
     @Test
     fun theWholeDescriptionIsReachableWithUpAndDownAtEverySize() {
         val facts = scrapedGameFacts(FULL_SCRAPED)
-        var size by mutableStateOf(TextSize.Medium)
+        var size by mutableStateOf(TextSize.Small)
         var font by mutableStateOf(PlumFont.Sans)
         val info = InfoReadThrough(OpenPanel(GameRef("1", facts.title), PanelScreen.Info(facts)))
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { info.screen() } }

@@ -4,14 +4,10 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.view.View
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
@@ -61,8 +57,7 @@ import com.plumemu.coreui.components.GameRow
 import com.plumemu.coreui.components.InlineKeyboard
 import com.plumemu.coreui.components.GameRowLook
 import com.plumemu.coreui.theme.PlumDimens
-import com.plumemu.coreui.components.WifiStatus
-import com.plumemu.coreui.components.BatteryStatus
+import com.plumemu.coreui.components.TopBar
 import com.plumemu.coreui.components.sunkenField
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.components.rememberGlidingPill
@@ -90,30 +85,36 @@ internal fun SearchTopBar(
 ) {
     val colors = PlumTheme.colors
     val style = PlumTheme.type.topBar
-    Row(
-        modifier = Modifier.fillMaxWidth().height(PlumTheme.layout.topBarHeight).padding(horizontal = PlumDimens.stripMarginSide).testTag(SearchTags.TOP_BAR),
-        horizontalArrangement = Arrangement.spacedBy(PlumDimens.topBarItemGap),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // The typed text starts on the results' text line (strip margin + peek + row padding, the list's own
-        // tokens): the label gives it that room, and only a label wider than that (a large text size) pushes it on.
-        val queryStart = PlumTheme.layout.peek + PlumDimens.columnGap + PlumDimens.gameRowPadding
-        val labelRoom = (queryStart - PlumDimens.stripMarginSide - PlumDimens.topBarItemGap).coerceAtLeast(0.dp)
-        BasicText(stringResource(R.string.home_search_place), style = style.copy(color = colors.text2), maxLines = 1, modifier = Modifier.widthIn(min = labelRoom))
-        if (search.usesOwnKeyboard) {
-            SearchQueryLine(search, style, Modifier.weight(1f))
-        } else {
-            AndroidSearchField(search, style, Modifier.weight(1f))
-        }
-        if (search.query.isNotBlank() && search.isAnswered) {
-            val numbers = rememberCountFormat()
-            val count = search.results.size
-            BasicText(pluralStringResource(R.plurals.home_games_count, count, numbers.format(count)), style = style.copy(color = colors.muted), maxLines = 1)
-        }
-        StatusText(clock)
-        WifiStatus(wifi, style = PlumTheme.type.topBar.copy(color = PlumTheme.colors.muted), description = stringResource(R.string.wifi_connected))
-        BatteryStatus(battery, charging, PlumTheme.type.topBar.copy(color = PlumTheme.colors.muted), stringResource(R.string.battery_charging))
-    }
+    val place = stringResource(R.string.home_search_place)
+    // The typed text starts on the results' text line (strip margin + peek + row padding, the list's own
+    // tokens): the label gives it that room, and only a label wider than that (a large text size) pushes it on.
+    val queryStart = PlumTheme.layout.peek + PlumDimens.columnGap + PlumDimens.gameRowPadding
+    val labelRoom = (queryStart - PlumDimens.stripMarginSide - PlumDimens.topBarItemGap).coerceAtLeast(0.dp)
+    // The shared top bar, so the title, the bar's height and the clock sit where they do on every other screen; the field and the count go between.
+    TopBar(
+        place = place,
+        emphasis = place,
+        clock = clock,
+        battery = battery,
+        modifier = Modifier.testTag(SearchTags.TOP_BAR),
+        wifi = wifi,
+        wifiDescription = stringResource(R.string.wifi_connected),
+        charging = charging,
+        chargingDescription = stringResource(R.string.battery_charging),
+        placeMinWidth = labelRoom,
+        middle = {
+            if (search.usesOwnKeyboard) {
+                SearchQueryLine(search, style, Modifier.weight(1f))
+            } else {
+                AndroidSearchField(search, style, Modifier.weight(1f))
+            }
+            if (search.query.isNotBlank() && search.isAnswered) {
+                val numbers = rememberCountFormat()
+                val count = search.results.size
+                BasicText(pluralStringResource(R.plurals.home_games_count, count, numbers.format(count)), style = style.copy(color = colors.muted), maxLines = 1)
+            }
+        },
+    )
 }
 
 /**
@@ -225,13 +226,6 @@ private tailrec fun Context.findActivity(): Activity? =
         else -> null
     }
 
-/** The clock, read in its own scope as on the main screen's bar. */
-@Composable
-private fun StatusText(text: () -> String?) {
-    val value = text() ?: return
-    BasicText(value, style = PlumTheme.type.topBar.copy(color = PlumTheme.colors.muted), maxLines = 1)
-}
-
 /**
  * The results in the games column (where the list stands with games focused, the list's width
  * without box art): game rows in the one focus language, the star on favorites. An empty query
@@ -275,7 +269,7 @@ internal fun SearchResults(
     val panelOpen = rememberUpdatedState(isPanelOpen)
     // The focus pill is drawn by the list, so it glides from row to row; read while drawing.
     val pill =
-        rememberGlidingPill(listState, glide, rowHeight = layout.gameRowHeight, stride = layout.gameRowHeight + PlumDimens.listRowGap) {
+        rememberGlidingPill(listState, glide, rowHeight = layout.gameRowHeight, stride = layout.gameRowHeight + PlumDimens.listRowGap, blob = true) {
             if (resultLook(search, search.row, panelOpen.value) == GameRowLook.Focused) search.row else -1
         }
     pill.Provide {
@@ -290,7 +284,7 @@ internal fun SearchResults(
             val tap = remember(index, onAction) { Modifier.tapItem(Column.Games, index, onAction).testTag(SearchTags.result(index)) }
             // The tags were set per system list (withVariantTags), so two games of one title read as they do there.
             val subtitle = remember(resources, hit.row.variantTags, hit.row.variantRegion) { variantSubtitle(resources, hit.row.variantTags, hit.row.variantRegion) }
-            GameRow(title = hit.row.title, trailing = hit.row.trailing(hasBoxArt = false, showsSystem = true), look = look, modifier = tap, isFavorite = hit.row.isFavorite, subtitle = subtitle, masteredLabel = masteredLabel(hit.row.id))
+            GameRow(title = hit.row.title, trailing = hit.row.trailing(hasBoxArt = false, showsSystem = true), look = look, modifier = tap, isFavorite = hit.row.isFavorite, subtitle = subtitle, masteredLabel = masteredLabel(hit.row.id), trailingIsCode = true)
         }
     }
     }

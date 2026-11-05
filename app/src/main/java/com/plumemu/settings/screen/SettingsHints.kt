@@ -1,6 +1,7 @@
 package com.plumemu.settings.screen
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -46,8 +47,11 @@ internal fun confirmHint(model: SettingsModel): Int? {
             if (model.systems.isCarrying) R.string.settings_hint_done else R.string.settings_hint_move
         focus.column == SettingsColumn.Sections -> R.string.settings_hint_select
         focus.column == SettingsColumn.Options && model.focusedStatisticGame != null -> R.string.settings_hint_go_to
-        focus.column == SettingsColumn.Options -> model.focusedOption.let { if (it == null) R.string.settings_hint_change else rowConfirmHint(it) }
+        focus.column == SettingsColumn.Options -> model.focusedOption.let { if (it == null) R.string.settings_hint_change else if (model.canTryBoxArtAgain(it)) R.string.settings_hint_try_again else rowConfirmHint(it) }
         focus.page == PanelPage.LicenseText || focus.page == PanelPage.ReadOnly -> null
+        // Files not added: only an unknown folder's line goes somewhere.
+        focus.page == PanelPage.FilesNotAdded ->
+            R.string.settings_hint_choose.takeIf { model.content.notAdded.getOrNull(focus.panelIndex) is NotAddedItem.Folder }
         else -> R.string.settings_hint_choose
     }
 }
@@ -100,7 +104,7 @@ internal fun SettingsHints(
         if (focus.column == SettingsColumn.Options) {
             Hint(stringResource(R.string.home_key_l1_r1), stringResource(R.string.settings_hint_section), Modifier.hint(Action.NextSystem, onHint).testTag(SettingsTags.HINT_SECTION))
             val kind = model.focusedOption?.kind
-            if (layout.widthClass == WidthClass.Narrow && model.focusedOption != SettingsOption.Statistic && (kind == OptionKind.Switch || kind == OptionKind.Info || kind == OptionKind.Action)) {
+            if (layout.widthClass == WidthClass.Narrow && model.focusedOption?.isOnStatisticsPage != true && (kind == OptionKind.Switch || kind == OptionKind.Info || kind == OptionKind.Action)) {
                 Hint(
                     stringResource(R.string.settings_key_right),
                     stringResource(R.string.settings_hint_more),

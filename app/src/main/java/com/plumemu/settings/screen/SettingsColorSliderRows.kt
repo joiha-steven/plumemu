@@ -4,7 +4,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -45,7 +43,7 @@ import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.Rgb
 import com.plumemu.coreui.theme.toComposeColor
 import com.plumemu.setup.bringIntoViewWhen
-import com.plumemu.setup.focusRing
+import com.plumemu.coreui.components.focusPill
 
 /*
  * Hue, Saturation and Lightness rows of the "+" page, between the palette and
@@ -95,9 +93,8 @@ private fun ColorSliderRow(
             Modifier
                 .fillMaxWidth()
                 .bringIntoViewWhen(isFocused, ring = PlumDimens.focusRingOutset)
-                .focusRing(isFocused, PlumDimens.cornerRow, colors.accent, colors.focusGlow)
+                .focusPill(isFocused, rest = { colors.sel2 })
                 .heightIn(min = PlumTheme.layout.settingsHexRowHeight)
-                .background(colors.sel2, RoundedCornerShape(PlumDimens.cornerRow))
                 .semantics { contentDescription = spoken }
                 .testTag(SettingsTags.panelItem(index))
                 .padding(horizontal = PlumDimens.settingsPanelRowPadding, vertical = PlumDimens.settingsSliderRowPad)

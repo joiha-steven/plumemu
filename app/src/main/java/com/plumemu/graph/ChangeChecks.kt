@@ -243,8 +243,8 @@ internal class ChangeChecks(
         if (changed.isEmpty()) return
         info("Change check (${reason.label}): scanning changed folders ${changed.sorted()}")
         val stats = slot.scanFolders(changed, changes.unavailable.keys) ?: return
-        // A folder with no records yet is on its first full scan: that is setup or a new folder, not news.
-        onFound(stats.filterKeys { it !in changes.neverScannedFolderIds }.values)
+        // News is exactly what a scan stamped added_at on (setup and its first scans did not), as on the second screen.
+        onFound(stats.values.filter { it.stampedAddedAt })
         askForBoxArt(stats.values)
         backOffFoldersThatStayChanged(stats)
     }

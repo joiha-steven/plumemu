@@ -39,6 +39,8 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import com.plumemu.R
 import com.plumemu.coredata.settings.PlumSettings
+import com.plumemu.coreui.components.CollarSize
+import com.plumemu.coreui.components.collar
 import com.plumemu.coreui.theme.ButtonColors
 import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.coreui.theme.PlumColors
@@ -54,7 +56,6 @@ import com.plumemu.settings.customButtonSet
 import com.plumemu.settings.customColors
 import com.plumemu.settings.toThemeSettings
 import com.plumemu.setup.bringIntoViewWhen
-import com.plumemu.setup.focusRing
 
 /*
  * Settings › Appearance › Colors' panel: a tile per ready-made set, then Custom while
@@ -168,9 +169,11 @@ private fun ColorTile(
     ) {
         Box(
             Modifier
+                // The collar falls in the gaps around the picture, so the tiles keep their columns and gaps.
+                .collarBleed(CollarSize.Cover)
+                .collar(CollarSize.Cover, isFocused, PlumDimens.settingsPaletteCorner)
                 .fillMaxWidth()
                 .aspectRatio(PlumDimens.SETTINGS_COLOR_TILE_ASPECT)
-                .focusRing(isFocused, PlumDimens.settingsPaletteCorner, colors.accent, colors.focusGlow)
                 // Built once per size and look: drawing allocates nothing.
                 .drawWithCache { tinyHome(look, confirm, back, measurer, keyCap) }
                 .border(PlumDimens.settingsSwatchEdge, colors.chip, shape)
@@ -201,7 +204,7 @@ private class TileGlyph(
  * `muted` meta line, and the first two hints (confirm and back, by the person's letters) in the
  * set's glyph colours or the usual key face. Colours and letters are made here, once per size.
  */
-private fun CacheDrawScope.tinyHome(
+internal fun CacheDrawScope.tinyHome(
     look: ColorTileLook,
     confirm: String,
     back: String,

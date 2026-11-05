@@ -13,11 +13,14 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
+import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.CollarDimens
 import com.plumemu.coreui.theme.CoverClass
 import com.plumemu.coreui.theme.GridSize
 import com.plumemu.coreui.theme.PlumLayout
@@ -36,10 +39,9 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * Recent and Favorites as grids, measured: the square class's columns
- * and cells at every grid size, the cells even and inside the grid, and in each cell the cover at
- * its own shape (the picture's, or its system's for a game without pictures), fitted, standing on the
- * cell's bottom edge and centred across it. At the RP5's 768, the Thor's 837 and the Nova's 576.
+ * Recent and Favorites as packed grids, measured: at every grid size the square class's row
+ * height and gaps, the boxes inside the grid, and in each box the cover at its own shape
+ * (the picture's, or its system's for a game without pictures), standing on the box's bottom edge and centred across it. At the RP5's 768, the Thor's 837 and the Nova's 576.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -81,23 +83,33 @@ class HomeMixedGridBoundsTest {
             size = each
             compose.waitForIdle()
             val sized = checkNotNull(layout)
-            val columns = sized.gridColumns(CoverClass.Square)
             val label = "${entry.id} at $each, ${sized.width}"
-            assertEquals("$label: the square class's columns", columns, sized.gridColumns(MixedGridShape))
             val grid = bounds(HomeTags.GRID)
-            val first = bounds(HomeTags.cover(0))
-            val cellWidth = sized.gridCoverWidth(MixedGridShape)
-            val cellHeight = sized.gridRowHeight(MixedGridShape)
             val gap = sized.gridGap(MixedGridShape)
-            assertDp("$label: $columns columns end at the covers' span", first.left + sized.gridCoversWidth, bounds(HomeTags.cover(columns - 1)).right)
-            for (index in 0 until minOf(columns * 2, entry.count)) {
+            // The requirement changed: every row is scaled to span the grid at its own height, so cells are measured against
+            // the packing worked out in PackedExpect, not against one cell height.
+            val expected = expectedPacking(entry.rows.map { source.results.value[it.scrapeKey]?.grid?.aspect ?: entry.shapeOf(it).widthOverHeight }, sized, MixedGridShape)
+            val rowGap = sized.gridRowGap(MixedGridShape)
+            val shown = (0 until entry.count).filter { compose.onAllNodesWithTag(HomeTags.cover(it), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }.take(8)
+            assertTrue("$label: covers are shown", shown.size >= 4)
+            var before: DpRect? = null
+            for (index in shown) {
                 val cell = bounds(HomeTags.cover(index))
                 val at = "$label: cell $index"
-                assertDp("$at width", cellWidth, cell.right - cell.left)
-                assertDp("$at height", cellHeight, cell.bottom - cell.top)
-                if (index % columns > 0) assertDp("$at gap across", gap, cell.left - bounds(HomeTags.cover(index - 1)).right)
-                if (index >= columns) assertDp("$at gap down", gap, cell.top - bounds(HomeTags.cover(index - columns)).bottom)
+                assertEquals("$at height", expected.heights[expected.rowOf(index)], (cell.bottom - cell.top).value, TOLERANCE)
+                assertEquals("$at width", expected.widths[index], (cell.right - cell.left).value, TOLERANCE)
+                assertEquals("$at left", grid.left.value + expected.lefts[index], cell.left.value, TOLERANCE)
                 assertTrue("$at inside the grid across", cell.left >= grid.left - TOLERANCE.dp() && cell.right <= grid.right + TOLERANCE.dp())
+                before?.let { last ->
+                    if (abs(cell.top.value - last.top.value) < TOLERANCE) {
+                        // Boxes in a row are the board's gap apart (to the pixel's rounding).
+                        assertEquals("$at gap across is the board's", gap.value, (cell.left - last.right).value, TOLERANCE + 0.5f)
+                    } else {
+                        assertEquals("$at starts a row at the grid's left", grid.left.value, cell.left.value, TOLERANCE)
+                        assertDp("$at gap down", rowGap, cell.top - last.bottom)
+                    }
+                }
+                before = cell
                 assertCoverOnTheShelf(at, entry, index, cell, source)
             }
         }
@@ -118,9 +130,13 @@ class HomeMixedGridBoundsTest {
         val width = cover.right - cover.left
         val height = cover.bottom - cover.top
         assertEquals("$at: its own shape", aspect, width.value / height.value, ASPECT_TOLERANCE)
-        val fillsAcross = (cell.right - cell.left).value / (cell.bottom - cell.top).value <= aspect
-        if (fillsAcross) assertDp("$at: as wide as the cell", cell.right - cell.left, width) else assertDp("$at: as tall as the cell", cell.bottom - cell.top, height)
-        assertDp("$at: stands on the cell's bottom", cell.bottom, cover.bottom)
+        // The cover stands in its collar, which takes its padding of the cell.
+        val side = CollarSize.Cover.sidePadding
+        val innerWidth = cell.right - cell.left - side * 2
+        val innerHeight = cell.bottom - cell.top - CollarSize.Cover.topPadding - CollarSize.Cover.bottomPadding
+        val fillsAcross = innerWidth.value / innerHeight.value <= aspect
+        if (fillsAcross) assertDp("$at: as wide as the cell's inner room", innerWidth, width) else assertDp("$at: as tall as the cell's inner room", innerHeight, height)
+        assertDp("$at: its collar stands on the cell's bottom", cell.bottom - CollarSize.Cover.bottomPadding, cover.bottom)
         assertDp("$at: centred across", cover.left - cell.left, cell.right - cover.right)
     }
 
@@ -156,12 +172,12 @@ class HomeMixedGridBoundsTest {
     }
 
     /**
-     * The focused game without pictures (a tall NES tile in Recent): its ring is drawn around the tile's
-     * own shape grown from the bottom centre, the shelf rect of the cell, not around the whole square cell.
+     * The focused game without pictures (a tall NES tile in Recent): its collar hugs the tile's own shape (the shelf rect of the cell),
+     * not the whole square cell: the lit groove is just outside the tile's top, left and right edges.
      */
     @Test
     @Config(qualifiers = WIDE)
-    fun theRingOfATextOnlyTallTileHugsTheTileNotTheCell() {
+    fun theCollarOfATextOnlyTallTileHugsTheTileNotTheCell() {
         var accent = Color.Unspecified
         compose.setContent {
             PlumTheme {
@@ -174,24 +190,22 @@ class HomeMixedGridBoundsTest {
         val tile = coverIn(MIXED_NO_ART_INDEX, HomeTags.COVER_OWN_SHAPE)
         val cell = bounds(HomeTags.cover(MIXED_NO_ART_INDEX))
         assertTrue("a tall tile in a square cell is narrower than it", (tile.right - tile.left).value < (cell.right - cell.left).value - 1f)
-        val scale = PlumDimens.FOCUSED_COVER_SCALE
-        val width = (tile.right - tile.left).value * density
-        val height = (tile.bottom - tile.top).value * density
-        val centreX = (tile.left.value + tile.right.value) / 2f * density
-        val bottom = tile.bottom.value * density
-        val centreY = bottom - height / 2f - PlumDimens.focusedLift.value * density
-        val drawn = Rect(centreX - width * scale / 2f, centreY - height * scale / 2f, centreX + width * scale / 2f, centreY + height * scale / 2f)
+        val drawn = Rect(tile.left.value * density, tile.top.value * density, tile.right.value * density, tile.bottom.value * density)
         val pixels = compose.onRoot().captureToImage().toPixelMap()
-        val ring = (PlumDimens.focusRingGap.value + PlumDimens.focusRingWidth.value / 2f) * density
+        // The focused collar is drawn larger about its centre (never laid out larger): its groove, hugging the tile, is scaled with it.
+        val lift = PlumDimens.FOCUSED_COVER_SCALE
+        val centre = Offset(drawn.center.x, (drawn.top - CollarSize.Cover.topPadding.value * density + drawn.bottom + CollarSize.Cover.bottomPadding.value * density) / 2f)
+        fun lifted(edge: Offset) = centre + (edge - centre) * lift
+        val groove = CollarDimens.coverGroove.value * density / 2f * lift
         val sides =
             mapOf(
-                "top" to (Offset(drawn.center.x, drawn.top) to Offset(0f, -1f)),
-                "left" to (Offset(drawn.left, drawn.center.y) to Offset(-1f, 0f)),
-                "right" to (Offset(drawn.right, drawn.center.y) to Offset(1f, 0f)),
+                "top" to (lifted(Offset(drawn.center.x, drawn.top)) to Offset(0f, -1f)),
+                "left" to (lifted(Offset(drawn.left, drawn.center.y)) to Offset(-1f, 0f)),
+                "right" to (lifted(Offset(drawn.right, drawn.center.y)) to Offset(1f, 0f)),
             )
         for ((side, edgeAndOut) in sides) {
             val (edge, out) = edgeAndOut
-            assertTrue("the ring runs ${ring / density} dp outside the tile's $side edge", pixels.at(edge + out * ring).near(accent))
+            assertTrue("the groove is lit just outside the tile's $side edge (lifted with the collar)", pixels.at(edge + out * groove).near(litGroove(accent)))
         }
     }
 

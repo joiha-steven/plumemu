@@ -4,12 +4,13 @@ import com.plumemu.sound.Outcome
 
 /**
  * What the panel column does on Settings › ROM folders: a folder's page, Skip a sub-folder… and the
- * Remove confirm (`SettingsFolderPage.kt`). [SettingsPanelModel] adds the other panels on top.
+ * Remove confirm (`SettingsFolderPage.kt`); and on Library › an unknown folder. [SettingsPanelModel]
+ * adds the other panels on top.
  */
 internal abstract class SettingsFolderModel(
     initialFocus: SettingsFocus,
     work: SettingsWork,
-) : SettingsNavigation(initialFocus, work) {
+) : SettingsAccountModel(initialFocus, work) {
     /** A folder opens its page (on Skip a sub-folder…); "+ Add folder", the last item, opens the picker. */
     protected fun onFolderEnter(index: Int) {
         val folder =
@@ -48,6 +49,20 @@ internal abstract class SettingsFolderModel(
         if (!work.skipSubfolder(FolderKey(folderId, name), skip = true, content)) return feel.report(Outcome.Nothing)
         feel.report(Outcome.Activated)
         backToFolderPage(FolderPageItem.SkipOne)
+    }
+
+    /**
+     * A on Library › an unknown folder: item 0 is Ignore this folder, the others the systems. Applies
+     * to the folder the panel opened for (by id), whatever the list does meanwhile; a folder that is
+     * gone closes the panel. A second A while the answer is being saved does nothing.
+     */
+    protected fun onUnknownFolderEnter(index: Int) {
+        val key = focus.folderKey ?: return closePanel()
+        if (content.unknownFolders.none { it.key == key }) return closePanel()
+        val systemId = if (index == 0) null else (content.folderSystemChoices.getOrNull(index - 1) ?: return).id
+        if (!work.chooseFolderSystem(key, systemId, content)) return feel.report(Outcome.Nothing)
+        feel.report(Outcome.Activated)
+        closePanel()
     }
 
     /** Back on the folder's page, on [item] (its first item when the page no longer has it). */

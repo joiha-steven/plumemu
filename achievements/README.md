@@ -21,7 +21,7 @@ Namespace: `com.plumemu.achievements`.
   hash up again without reading the file, so a set added later is found. Storing the answer is
   the caller's (core-data's `ra_match`, which caches the hash by file).
 
-Depends on no other Plumemu module; `app` wires it.
+Depends on `identify` only (the zstd, LZ4 and CD parity codecs); `app` wires it.
 
 ## Files
 
@@ -38,8 +38,9 @@ Depends on no other Plumemu module; `app` wires it.
 | `account/ApiKeyCipher.kt` | `ApiKeyCipher`, AES-GCM in a versioned envelope, `KeystoreApiKeyCipher` with its own Android Keystore alias |
 | `match/RaSystems.kt` | Plumemu system id to RetroAchievements console id, every system both have; several Plumemu systems share a console (Neo Geo Pocket Color, SuperGrafx, the Arcade folders...) |
 | `match/RaMatcher.kt` | `RaMatch` and `RaMatcher`: hash first (no request for a file that cannot be hashed), then the saved or fetched game list; a stale list without the hash is a failure, never "no set" |
-| `hash/ChdImage.kt`, `hash/ChdMap.kt`, `hash/CdEcc.kt` | `.chd` version 5: header, metadata, hunks decoded on demand into a small cache (LZMA through XZ for Java); the compressed map (Huffman-coded, with its CRC) in `ChdMap.kt`; CD sync/EDC/ECC rebuilt for `cdlz`/`cdzl` sectors |
-| `hash/DiscFiles.kt` | `RawDiscFile`, `CsoDiscFile`, and `ChdTrackFile` / `ChdFlatFile` (a CHD's CD track or whole image as one flat byte range) |
+| `hash/ChdImage.kt`, `hash/ChdMap.kt` (`CdEcc` is in identify) | `.chd` version 5: header, metadata, hunks decoded on demand into a small cache (LZMA through XZ for Java); the compressed map (Huffman-coded, with its CRC) in `ChdMap.kt`; CD sync/EDC/ECC rebuilt for `cdlz`/`cdzl` sectors |
+| (identify `codec/lz4/`, `codec/zstd/`) | LZ4 and zstd decoders, used here for `.zso`, CSO v2, `.rvz`, CHD `zstd` / `cdzs` |
+| `hash/DiscFiles.kt` | `RawDiscFile`, `CsoDiscFile` (`.cso` v1/v2, `.zso`), and `ChdTrackFile` / `ChdFlatFile` (a CHD's CD track or whole image as one flat byte range) |
 | `src/main/assets/licenses/rcheevos-MIT.txt` | rcheevos' MIT licence text, shown in the app's open-source licences |
 
 Tests run against MockWebServer with fixtures in `src/test/resources/ra/`: every endpoint's good

@@ -55,6 +55,8 @@ internal fun HomeTopBar(
     charging: () -> Boolean = { false },
     /** A tap on the update pill: Settings, on the update. */
     onSettings: () -> Unit = {},
+    /** True while a game panel's keyboard tray is up (the bar keeps its base height). */
+    typing: () -> Boolean = { false },
 ) {
     // The pill is read here, not by the screen: an update found recomposes this bar only.
     val updateName by LocalUpdateFound.current.collectAsState()
@@ -97,6 +99,7 @@ internal fun HomeTopBar(
         placeAlpha = if (unlocked != null) afterGame.alpha else shown.alpha,
         pill = updateName?.let { stringResource(R.string.home_update_pill, it) },
         onPill = onSettings,
+        typing = typing,
     )
 }
 
@@ -166,6 +169,8 @@ internal fun hintsFor(
     updateWaiting: Boolean = false,
     shoulders: ShoulderKeys = ShoulderKeys.Default,
     hasDetailsStop: Boolean = false,
+    /** The empty state's focused button; null while it shows none (reading the folders): A then offers nothing. */
+    emptyButton: EmptyButton? = EmptyButton.AddFolder,
 ): List<HintSpec> {
     // While an update waits START opens Settings on it, so the hint says what it is for.
     val settings = HintSpec(R.string.home_key_start, if (updateWaiting) R.string.home_hint_update else R.string.home_hint_settings, Action.OpenSettings)
@@ -182,11 +187,17 @@ internal fun hintsFor(
             listOfNotNull(
                 when {
                     hasItems -> HintSpec(letters.confirm, R.string.home_hint_select, Action.Enter)
-                    content.asksForFolderAt(entry) -> HintSpec(letters.confirm, R.string.home_hint_add_folder, Action.Enter)
+                    content.asksForFolderAt(entry) -> emptyButton?.let { HintSpec(letters.confirm, it.label(), Action.Enter) }
                     else -> null
                 },
                 search,
                 settings,
+                // Where the focused system's games can be a grid: SELECT says which view comes next (as the games list's hint does).
+                if (hasItems && entry != null && content.hasGridFor(entry)) {
+                    HintSpec(R.string.home_key_select, if (showsGrid) R.string.home_hint_list_view else R.string.home_hint_grid_view, Action.ToggleView)
+                } else {
+                    null
+                },
             )
         // Narrow with box art and Push right to play: Right at the stop arms, so the hint is here too.
         column == Column.Details -> listOfNotNull(play, pushRight.takeIf { !showsGrid }, back, favorite, HintSpec(R.string.home_key_start, R.string.home_hint_menu, Action.Menu))
@@ -203,6 +214,7 @@ internal fun hintsFor(
             listOfNotNull(
                 play,
                 back,
+                favorite,
                 HintSpec(shoulders.sizeCap, R.string.home_hint_grid_size, Action.NextSystem, cyclesGridSize = true),
                 switchSystem(content, shoulders),
                 HintSpec(R.string.home_key_select, R.string.home_hint_list_view, Action.ToggleView),
@@ -215,6 +227,8 @@ internal fun hintsFor(
                 back,
                 favorite,
                 search,
+                // "R3 Sort" on a list the sort orders (a system's, Favorites); it gives way after Switch system and before B Back.
+                if (hasItems && entry?.kind?.followsSort == true) HintSpec(R.string.home_key_r3, R.string.home_hint_sort, Action.Sort) else null,
                 HintSpec(R.string.home_key_start, R.string.home_hint_menu, Action.Menu),
                 switchSystem(content, shoulders),
                 if (entry != null && content.hasGridFor(entry)) HintSpec(R.string.home_key_select, R.string.home_hint_grid_view, Action.ToggleView) else null,
@@ -415,11 +429,13 @@ internal fun HomeHints(
             if (isPanelTrayUp) typingHints(onLetters, actionWord, hasShift = true, letters, canPaste) else panelHints(open, letters)
         }
     }
+    // A on the empty state does what its focused button says; the reason is collected only while that message is up.
+    val emptyButton = rememberEmptyButton(column == Column.Systems && content.asksForFolderAt(entry))
     val hints =
-        searchHintsShown ?: typingHints ?: remember(content, column, entry, showsGrid, letters, shoulders, panel, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, hasDetailsStop) {
-            panel?.let { panelHints(it, letters) } ?: hintsFor(content, column, entry, showsGrid, letters, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, shoulders, hasDetailsStop)
+        searchHintsShown ?: typingHints ?: remember(content, column, entry, showsGrid, letters, shoulders, panel, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, hasDetailsStop, emptyButton) {
+            panel?.let { panelHints(it, letters) } ?: hintsFor(content, column, entry, showsGrid, letters, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, shoulders, hasDetailsStop, emptyButton)
         }
-    val drops = if (isTyping || isPanelTrayUp) TYPING_HINT_DROP_ORDER else HINT_DROP_ORDER
+    val drops = if (isTyping || isPanelTrayUp) TYPING_HINT_DROP_ORDER else if (showsGrid) GRID_HINT_DROP_ORDER else HINT_DROP_ORDER
     val dropOrder = remember(hints, drops) { drops.flatMap { action -> hints.indices.filter { hints[it].action == action } } }
     val views: @Composable () -> Unit = remember(hints, onAction, onCycleGridSize) { { hints.forEach { HintView(it, onAction, onCycleGridSize) } } }
     if (searchHintsShown == null && showsGrid && column == Column.Games && entry != null) {
@@ -461,58 +477,22 @@ private fun HintView(
         keyCap = stringResource(spec.key),
         label = stringResource(spec.label),
         modifier = tap.testTag(HomeTags.hint(spec.action)),
+        // The confirm key (A) wears the accent, as the board draws it.
+        accent = spec.action == Action.Play || spec.action == Action.Enter,
     )
 }
-
-/**
- * The grid's bar: "Mega Man X · 1993 · Capcom" from where the grid starts, the hints at the right. In
- * Recent and Favorites the meta starts with the game's system ("SNES · 1993 · Capcom"), as the list does.
- */
-@Composable
-private fun GridHintBar(
-    entry: HomeEntry,
-    state: StripState,
-    dropOrder: List<Int>,
-    dropBeforeMeta: List<Int>,
-    hints: @Composable () -> Unit,
-) {
-    val row by remember(state, entry.id) { derivedStateOf { state.focus.rowOf(entry.id) } }
-    val game = entry.rows.getOrNull(row)
-    val art = LocalHomeArt.current
-    // Through a derived state: read straight in this scope, a result that landed after the bar was
-    // first composed did not reach it (HomeCoverArtTest).
-    val details by remember(game, art) { derivedStateOf { game?.let { detailsOf(it, art.slot(it.scrapeKey)) } } }
-    TitledHintBar(
-        title = game?.title.orEmpty(),
-        meta = gridMeta(game?.systemAbbr.takeIf { entry.kind.mixesSystems }, details?.let { yearAndPublisher(it) }.orEmpty(), LocalResources.current),
-        startInset = PlumTheme.layout.peek + PlumDimens.columnGap,
-        modifier = Modifier.testTag(HomeTags.HINT_BAR),
-        dropOrder = dropOrder,
-        dropBeforeMeta = dropBeforeMeta,
-        hints = hints,
-    )
-}
-
-/** [system] (Recent and Favorites only; null or empty is left out) joined to [rest] with the same " · " as year and publisher. */
-private fun gridMeta(
-    system: String?,
-    rest: String,
-    resources: Resources,
-): String =
-    when {
-        system.isNullOrEmpty() -> rest
-        rest.isEmpty() -> system
-        else -> resources.getString(R.string.home_details_pair, system, rest)
-    }
 
 /**
  * Which hints give way first when the bar is too narrow for all of them (see [HomeHints]): L2 R2 Switch system, then
- * L1 R1 Size, B Back, and SELECT last; START Menu and Y Favorite are not in the order (only a bar still too
+ * L1 R1 Size, R3 Sort, B Back, and SELECT last; START Menu and Y Favorite are not in the order (only a bar still too
  * narrow after those would drop hints from its end). By touch SELECT's hint is the only way
  * between a list and its grid, while B has the system's back gesture;
  * `HomeViewToggleHintTest` checks SELECT stays at 576 x 432 at Largest.
  */
-private val HINT_DROP_ORDER = listOf(Action.JumpLetterNext, Action.NextSystem, Action.Back, Action.ToggleView)
+private val HINT_DROP_ORDER = listOf(Action.JumpLetterNext, Action.NextSystem, Action.Sort, Action.Back, Action.ToggleView)
+
+/** A grid's hints give way as a list's do, with Y Favorite going right after Switch system (L1 R1 Size stays at 576). */
+private val GRID_HINT_DROP_ORDER = listOf(Action.JumpLetterNext, Action.ToggleFavorite, Action.NextSystem, Action.Back, Action.ToggleView)
 
 /** The typing hints (Search's and a panel field's) give way in this order: L1 R1 Cursor, then SELECT Shift, then Y 123; A, B, X and START always stay. */
 private val TYPING_HINT_DROP_ORDER = listOf(Action.NextSystem, Action.ToggleView, Action.ToggleFavorite)
@@ -539,13 +519,35 @@ internal object HomeTags {
     /** A page of the games list (one per entry built); only the shown one has its rows in the tree. */
     const val GAMES_PAGE = "home_games_page"
     const val EMPTY_MESSAGE = "home_empty_message"
+
+    fun emptyButton(button: EmptyButton) = "home_empty_button_${button.name.lowercase()}"
+
     const val EMPTY_FAVORITES = "home_empty_favorites"
+    const val EMPTY_RECENT = "home_empty_recent"
     const val GRID = "home_grid"
     const val EDGE_FADE = "home_edge_fade"
     const val DETAILS = "home_details"
     const val DETAILS_COVER = "home_details_cover"
+
+    /** The wide details cover's box, inside its collar: the picture's or the tile's bounds. */
+    const val DETAILS_COVER_BOX = "home_details_cover_box"
+
+    /** The narrow stop's cover slot: its width is fixed from the first frame; the picture only fits inside it. */
+    const val DETAILS_COVER_SLOT = "home_details_cover_slot"
     const val DETAILS_TITLE = "home_details_title"
     const val DETAILS_FACTS = "home_details_facts"
+    const val DETAILS_BATTERY = "home_details_battery"
+
+    /** The wide details' line under the title (year and publisher). */
+    const val DETAILS_SUBTITLE = "home_details_subtitle"
+    const val DETAILS_FACT_LINE = "home_details_fact_line"
+    const val DETAILS_EMULATOR = "home_details_emulator"
+    const val DETAILS_FACT_VALUE = "home_details_fact_value"
+    const val DETAILS_APP = "home_details_app"
+    const val DETAILS_APP_PACKAGE = "home_details_app_package"
+
+    /** The five rating dots in the details block. */
+    const val DETAILS_RATING_DOTS = "home_details_rating_dots"
 
     /** The facts table's room kept empty while the play facts are read. */
     const val DETAILS_FACTS_PENDING = "home_details_facts_pending"

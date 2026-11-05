@@ -18,20 +18,20 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class SettingsKeyboardScreenshotTest {
     @Test
-    fun hexTyping() = ReferenceShots.capture("settings_hex_typing_tray") { HexTypingSettings() }
+    fun hexTyping() = ReferenceShots.capture("settings_hex_typing_tray", sizes = ReferenceShots.Size.Original + ReferenceShots.Size.FourThree) { HexTypingSettings() }
 
     @Test
-    fun hexWrongCode() = ReferenceShots.capture("settings_hex_typing_tray_wrong") { HexTypingSettings(typed = "zz", tried = true) }
+    fun hexWrongCode() = ReferenceShots.capture("settings_hex_typing_tray_wrong", sizes = ReferenceShots.Size.Original + ReferenceShots.Size.FourThree) { HexTypingSettings(typed = "zz", tried = true) }
 
     @Test
     fun fixNameTyping() = ReferenceShots.capture("settings_fix_name_typing") { NameFixTypingSettings() }
 
     // Library › Sign in to ScreenScraper: "Next" on the username, "Sign in" on the password's dots.
     @Test
-    fun signInUsernameTyping() = ReferenceShots.capture("settings_sign_in_typing_username") { SignInTypingSettings(SignInTypingShots.State.Username) }
+    fun signInUsernameTyping() = ReferenceShots.capture("settings_sign_in_typing_username", sizes = ReferenceShots.Size.Original + ReferenceShots.Size.FourThree) { SignInTypingSettings(SignInTypingShots.State.Username) }
 
     @Test
-    fun signInPasswordTyping() = ReferenceShots.capture("settings_sign_in_typing_password") { SignInTypingSettings(SignInTypingShots.State.Password) }
+    fun signInPasswordTyping() = ReferenceShots.capture("settings_sign_in_typing_password", sizes = ReferenceShots.Size.Original + ReferenceShots.Size.FourThree) { SignInTypingSettings(SignInTypingShots.State.Password) }
 
     // Accounts › RetroAchievements as it opens: the tray up on the empty user name, the key page button above it.
     @Test

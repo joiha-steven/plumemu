@@ -4,7 +4,7 @@ import com.plumemu.R
 import com.plumemu.coredata.db.AppKind
 
 /** Stable ids of the game menu's entries (row keys, tests). */
-internal enum class GameMenuEntryId { Play, PlayWith, OtherVersions, Favorite, Hide, RemoveFromRecent, Name, FixBoxArt, Info }
+internal enum class GameMenuEntryId { Play, PlayWith, OtherVersions, Favorite, SortBy, Name, FixBoxArt, Achievements, Info, RemoveFromRecent, Hide }
 
 /** Stable ids of the app-only entries, in an installed app's game menu and the Apps entry's menu. */
 internal enum class AppKindEntryId { ShowAsGame, ShowAsPort, NotAGame }
@@ -14,14 +14,14 @@ internal enum class NameEntryId { FixName, OwnName, NotAGame, BackToAutomatic }
 
 /**
  * The game menu's entries, assembled here and nowhere else: a later step adds entries by adding
- * rows to this list, without touching the panel. Name… is one such row, after Hide: the
+ * rows to this list, without touching the panel. Hide game is always last. Name… is one such row: the
  * naming entries live in its sub-panel ([nameMenuEntries]) so the menu fits a 432-high screen
- * Fix box art… follows
+ * Achievements ([GameFacts.achievementCount]) follows Box art, only with a stored set; A opens Info. Box art follows
  * it, only while box art can be asked for ([GameFacts.canFixBoxArt]). A pinned shortcut
  * ([GameFacts.isShortcut]) has neither: it has no file to name or look up. Other
  * versions follows Play with only for a row that stands for two or more copies
  * ([GameFacts.versions]), its value the version A plays now. An installed app listed as a game
- * ([GameFacts.isAppGame]) has none of Play with…, Other versions or Fix box art…, and its
+ * ([GameFacts.isAppGame]) has none of Play with…, Other versions or Box art, and its
  * Name… holds only Use my own name (and Back to automatic once one is given). It adds the person's answer
  * answer: Show as port (an Android game) or Show as game (a Ports app), and Not a game; each sends the row away.
  */
@@ -30,7 +30,7 @@ internal fun gameMenuEntries(facts: GameFacts): List<PanelRow> {
     val hasNoFile = facts.isShortcut || facts.isAppGame
     return listOfNotNull(
         PanelRow(GameMenuEntryId.Play.name, UiText.Res(R.string.game_menu_play), PanelCommand.Play),
-        if (facts.isAppGame) null else PanelRow(GameMenuEntryId.PlayWith.name, UiText.Res(R.string.game_menu_play_with), PanelCommand.OpenPlayWith),
+        if (facts.isAppGame) null else PanelRow(GameMenuEntryId.PlayWith.name, UiText.Res(R.string.game_menu_play_with), PanelCommand.OpenPlayWith, value = facts.emulator?.takeIf { it.isInstalled && !it.isNotChosenYet && it.name.isNotBlank() }?.let { UiText.Plain(it.name) }),
         facts.versions?.takeIf { it.hasOthers && !hasNoFile }?.let { versions ->
             PanelRow(GameMenuEntryId.OtherVersions.name, UiText.Res(R.string.game_menu_other_versions), PanelCommand.OpenVersions, value = versions.current?.label)
         },
@@ -39,17 +39,23 @@ internal fun gameMenuEntries(facts: GameFacts): List<PanelRow> {
         } else {
             PanelRow(GameMenuEntryId.Favorite.name, UiText.Res(R.string.game_menu_favorite), PanelCommand.SetFavorite(true))
         },
-        PanelRow(GameMenuEntryId.Hide.name, UiText.Res(R.string.game_menu_hide), PanelCommand.Hide),
-        // Only a menu opened from Recent; right after Hide, the other way to take a game off a list.
-        if (facts.canRemoveFromRecent) PanelRow(GameMenuEntryId.RemoveFromRecent.name, UiText.Res(R.string.game_menu_remove_from_recent), PanelCommand.RemoveFromRecent) else null,
+        // Only a menu opened from a system's list or Favorites: the one sort every list follows.
+        if (facts.canSort) PanelRow(GameMenuEntryId.SortBy.name, UiText.Res(R.string.game_menu_sort_by), PanelCommand.OpenSortMenu, value = facts.sort?.let { UiText.Res(it.nameRes()) }) else null,
         // An app game keeps Name… for Use my own name (nameMenuEntries); a pinned shortcut has none.
         if (facts.isShortcut) null else PanelRow(GameMenuEntryId.Name.name, UiText.Res(R.string.game_menu_name), PanelCommand.OpenNameMenu),
         if (facts.canFixBoxArt && !hasNoFile) PanelRow(GameMenuEntryId.FixBoxArt.name, UiText.Res(R.string.game_menu_fix_box_art), PanelCommand.OpenFixBoxArt) else null,
+        // Only a game with a stored set and progress (never asked of the network here); A opens Info, where the list is.
+        facts.achievementCount?.takeIf { !hasNoFile }?.let { count ->
+            PanelRow(GameMenuEntryId.Achievements.name, UiText.Res(R.string.game_menu_achievements), PanelCommand.OpenInfo, value = UiText.Res(R.string.game_menu_achievements_count, listOf(count.earned.toString(), count.total.toString())))
+        },
         // the person's answer for an installed app; the row leaves this list (the app is a port, or back in Apps).
         if (facts.isAppGame && facts.isPortApp) PanelRow(AppKindEntryId.ShowAsGame.name, UiText.Res(R.string.app_menu_show_as_game), PanelCommand.SetAppKind(AppKind.GAME)) else null,
         if (facts.isAppGame && !facts.isPortApp) PanelRow(AppKindEntryId.ShowAsPort.name, UiText.Res(R.string.app_menu_show_as_port), PanelCommand.SetAppKind(AppKind.PORT)) else null,
         if (facts.isAppGame) PanelRow(AppKindEntryId.NotAGame.name, UiText.Res(R.string.game_menu_not_a_game), PanelCommand.AskAppNotAGame) else null,
         PanelRow(GameMenuEntryId.Info.name, UiText.Res(R.string.game_menu_info), PanelCommand.OpenInfo),
+        // Only a menu opened from Recent; right before Hide, the other way to take a game off a list.
+        if (facts.canRemoveFromRecent) PanelRow(GameMenuEntryId.RemoveFromRecent.name, UiText.Res(R.string.game_menu_remove_from_recent), PanelCommand.RemoveFromRecent) else null,
+        PanelRow(GameMenuEntryId.Hide.name, UiText.Res(R.string.game_menu_hide), PanelCommand.Hide),
     )
 }
 
@@ -104,6 +110,20 @@ internal fun nameMenuContent(
     game: GameRef,
     facts: GameFacts,
 ): PanelContent = PanelContent(title = UiText.Plain(game.title), items = nameMenuEntries(facts).map { PanelItem.Row(it) })
+
+/**
+ * Sort by…: the sorts on offer ([SortChoices.options]), the one in use marked Current and focused. A pick
+ * stores the setting and closes the panel; the lists are already in the new order.
+ */
+internal fun sortMenuContent(choices: SortChoices): PanelContent =
+    PanelContent(
+        title = UiText.Res(R.string.game_sort_title),
+        items = choices.options.map { sort ->
+            PanelItem.Row(PanelRow(SORT_KEY_PREFIX + sort.name, UiText.Res(sort.nameRes()), PanelCommand.SetSort(sort), isCurrent = sort == choices.current))
+        },
+    )
+
+internal const val SORT_KEY_PREFIX = "sort:"
 
 /**
  * Not a game's confirm step: Cancel first, so it has the focus and a stray A changes nothing. The
@@ -251,3 +271,29 @@ private fun legalRiskNote(emulator: EmulatorItem): UiText? = if (emulator.isLega
 internal const val AUTOMATIC_KEY = "automatic"
 internal const val CANCEL_KEY = "cancel"
 internal const val CONFIRM_NOT_A_GAME_KEY = "confirm_not_a_game"
+
+/**
+ * [open] built again from the emulators now installed: the same panel when nothing changed, a new one
+ * (the focus kept on its row, else the nearest) when it did, null when nothing is left to say.
+ */
+internal fun refreshedEmulators(open: OpenPanel, listing: EmulatorListing): OpenPanel? {
+    val screen = open.screen
+    val content: PanelContent
+    val next: PanelScreen
+    when {
+        screen is PanelScreen.PlayWith -> {
+            next = PanelScreen.PlayWith(listing)
+            content = contentOf(open.game, next)
+        }
+        screen is PanelScreen.Message && screen.about != null -> {
+            content = launchMessage(screen.about, listing) ?: return null
+            next = screen.copy(content = content)
+        }
+        else -> return open
+    }
+    if (content == open.content) return open
+    val focusedKey = open.content.focusableRows.getOrNull(open.focus)?.key
+    val kept = content.focusableRows.indexOfFirst { it.key == focusedKey }
+    val focus = if (kept >= 0) kept else open.focus.coerceIn(0, (content.focusableRows.size - 1).coerceAtLeast(0))
+    return open.copy(screen = next, focus = focus)
+}

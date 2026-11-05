@@ -43,4 +43,16 @@ class FlatFaceTest {
             assertTrue("$name: the on knob is onAccent", colors.knobOnFace().face == colors.onAccent)
         }
     }
+
+    @Test
+    fun aPressedAccentFaceSinksToTheBoardsAccentAndTopTone() {
+        // Board (ControlsDark primary, pressed): bottom #3E7BE0 (the accent), top #3A74D3; at rest the flat fill is lighter.
+        val accent = Color(0xFF3E7BE0)
+        val face = FlatFace.accent(Color(0xFF568CE4), down = accent)
+        assertTrue("pressed bottom is the accent", face.downBottom == accent && face.downBottom != face.face)
+        val top = face.downTop.toArgb()
+        val diff = listOf(16, 8, 0).zip(listOf(0x3A, 0x74, 0xD3)).map { (shift, want) -> kotlin.math.abs(((top shr shift) and 0xFF) - want) }
+        assertTrue("pressed top ~ #3A74D3, channel diffs $diff", diff.all { it <= 2 })
+        assertTrue("the press shade is on, so the face changes when pressed", face.innerShade > 0f)
+    }
 }

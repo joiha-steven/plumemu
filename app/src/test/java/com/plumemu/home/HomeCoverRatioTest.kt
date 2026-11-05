@@ -7,7 +7,8 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.DpRect
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.components.CollarSize
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.GridSize
 import com.plumemu.coreui.theme.PlumDimens
@@ -35,7 +36,7 @@ class HomeCoverRatioTest {
     @get:Rule
     val rules = rulesAround(compose)
 
-    private fun show(content: @Composable () -> Unit) = compose.setContent { PlumTheme(MediumText.Default) { content() } }
+    private fun show(content: @Composable () -> Unit) = compose.setContent { PlumTheme(TableText.Default) { content() } }
 
     private fun pictureIn(tag: String): Rect {
         val density = compose.density.density
@@ -49,7 +50,8 @@ class HomeCoverRatioTest {
         picture: Rect,
     ) {
         assertEquals("$label: centred across the slot", (slot.left.value + slot.right.value) / 2f, (picture.left + picture.right) / 2f, EPSILON)
-        assertEquals("$label: on the slot's bottom", slot.bottom.value, picture.bottom, EPSILON)
+        // In the grid the box stands in its collar, whose bottom is the cell's (docs/design/rules.md › Grid).
+        assertEquals("$label: the collar stands on the slot's bottom", slot.bottom.value - CollarSize.Cover.bottomPadding.value, picture.bottom, EPSILON)
     }
 
     @Test
@@ -64,9 +66,9 @@ class HomeCoverRatioTest {
             val picture = pictureIn(HomeTags.DETAILS_COVER)
             // One left edge for the cover and the text under it (design/rules.md: the title never moves).
             val title = compose.onNodeWithTag(HomeTags.DETAILS_TITLE, useUnmergedTree = true).getUnclippedBoundsInRoot()
-            assertEquals("details, box $aspect: cover and title share a left edge", title.left.value, picture.left, EPSILON)
+            assertEquals("details, box $aspect: the cover's collar starts on the edge the title starts", title.left.value + com.plumemu.coreui.components.CollarSize.Cover.sidePadding.value, picture.left, EPSILON)
             assertEquals("details, box $aspect: slot and title share a left edge", title.left.value, slot.left.value, EPSILON)
-            assertEquals("details, box $aspect: on the slot's bottom", slot.bottom.value, picture.bottom, EPSILON)
+            assertEquals("details, box $aspect: in its collar on the slot's bottom", slot.bottom.value - com.plumemu.coreui.components.CollarSize.Cover.bottomPadding.value, picture.bottom, EPSILON)
         }
     }
 

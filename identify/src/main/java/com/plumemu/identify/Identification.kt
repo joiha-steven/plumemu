@@ -45,7 +45,7 @@ enum class Confidence {
 }
 
 /** Which layer gave the name, for the game's Info screen. */
-enum class Method { ARCADE_NAME, CRC, PRODUCT_CODE, HEADER_TITLE, NAME_MATCH, FILE_NAME }
+enum class Method { ARCADE_NAME, CRC, PRODUCT_CODE, TRACK_SIZES, HEADER_TITLE, NAME_MATCH, FILE_NAME }
 
 /**
  * What ScreenScraper needs so it does not read the file again.

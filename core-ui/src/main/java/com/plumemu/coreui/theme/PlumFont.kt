@@ -1,7 +1,7 @@
 package com.plumemu.coreui.theme
 
 /**
- * The three Plum fonts and their tuning row. Pure numbers; the Compose families are
+ * The four fonts and their tuning row. Pure numbers; the Compose families are
  * in [PlumFonts].
  *
  * Measured from the TTF files in `res/font/` with fontTools (`OS/2.sxHeight`, `hhea`), and the
@@ -10,6 +10,7 @@ package com.plumemu.coreui.theme
  *
  * | Font  | unitsPerEm | sxHeight      | hhea ascent / descent |
  * |-------|------------|---------------|-----------------------|
+ * | Jost  | 1000       | 460 (0.460)   | 1070 / -375           |
  * | Sans  | 2048       | 1118 (0.5459) | 1984 / -494           |
  * | Serif | 1000       | 512 (0.512); 515 in the 600 face | 1177 / -308 |
  * | Mono  | 1000       | 550 (0.550)   | 1020 / -300           |
@@ -44,11 +45,20 @@ enum class PlumFont(
      */
     val digitCentreBelowLineCentreEm: Float,
 ) {
+    /** Jost is drawn unadjusted, as the V2 drawings set it: its x-height (0.46) sits below Plum Sans' (0.546). */
+    Jost(
+        sizeFactor = 1f,
+        lineHeightEm = (1070f + 375f) / 1000f,
+        darkBackgroundWeightAdjust = 0,
+        digitHeightEm = (710f + 10f + 20f) / 1000f,
+        // Less 0.01 em: measured in the drawn bitmap, the bolt and the Wi-Fi glyph sit about half a pixel low with the metrics alone.
+        digitCentreBelowLineCentreEm = 1070f / 1000f - (710f - 10f) / 2f / 1000f - (1070f + 375f) / 1000f / 2f - 0.01f,
+    ),
     Sans(
         sizeFactor = 1f,
         lineHeightEm = (1984f + 494f) / 2048f,
         darkBackgroundWeightAdjust = 0,
-        digitHeightEm = (1510f + 20f) / 2048f,
+        digitHeightEm = (1510f + 20f + 60f) / 2048f,
         digitCentreBelowLineCentreEm = 1984f / 2048f - (1510f - 20f) / 2f / 2048f - (1984f + 494f) / 2048f / 2f,
     ),
     Serif(
@@ -68,7 +78,7 @@ enum class PlumFont(
     ;
 
     companion object {
-        val Default: PlumFont = Sans
+        val Default: PlumFont = Jost
     }
 }
 
@@ -80,8 +90,9 @@ enum class PlumFont(
 private const val BOARD_X_HEIGHT = 0.53f
 
 /**
- * Serif's digits sit lower than the hhea metrics say (0.084 em): measured in the drawn bitmap,
- * Android places Serif's line about 0.09 em higher, so 0.175 centres the Wi-Fi glyph on them
- * (`WifiTopBarAlignTest` measures ink at every size). Sans and Mono follow their hhea numbers.
+ * Serif's digits sit 0.085 em below the middle of the line (hhea ascent and the digits' height give 0.071; measured in the
+ * drawn bitmap with the glyph centred on the ink, `WifiTopBarAlignTest` at every size). The top bar is as tall as its
+ * tallest line, so its text is never squeezed into a box shorter than its line, which used to push Serif's line up
+ * by 0.09 em and to need 0.175 here.
  */
-private const val SERIF_DIGIT_CENTRE_BELOW_LINE_CENTRE = 0.175f
+private const val SERIF_DIGIT_CENTRE_BELOW_LINE_CENTRE = 0.085f

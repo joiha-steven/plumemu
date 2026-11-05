@@ -69,6 +69,7 @@
     <string name="home_hint_unfavorite">取消收藏</string>
     <!-- X: open search. -->
     <string name="home_hint_search">搜尋</string>
+    <string name="home_hint_sort">排序</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
          shown when no title matches. -->
@@ -78,6 +79,7 @@
     <string name="home_search_no_match">沒有相符的遊戲</string>
     <string name="home_search_empty">輸入遊戲名稱進行搜尋</string>
     <string name="home_favorites_empty">在遊戲上按 %1$s 即可加入我的最愛</string>
+    <string name="home_recent_empty">你玩過的遊戲會顯示在這裡</string>
     <!-- Search's hints while Plumemu's keyboard is up (B deletes, X types a space, Y changes the page, L1 R1 move the caret). -->
     <string name="home_hint_delete">刪除</string>
     <string name="home_hint_space">空白</string>
@@ -102,9 +104,13 @@
          a year and a publisher ("1994 · Nintendo"), or a genre and a player count. The games list's
          right-hand text reuses it for a year and a region ("1994 · USA"). -->
     <string name="home_details_pair">%1$s · %2$s</string>
+    <string name="home_details_publisher_year">%1$s，%2$s</string>
     <string name="home_details_last_played">上次遊玩</string>
-    <string name="home_details_play_time">遊玩時間</string>
+    <string name="home_details_play_time">已玩</string>
+    <string name="home_details_genre">類型</string>
+    <string name="home_details_rating_label">評分</string>
     <string name="home_details_emulator">模擬器</string>
+    <string name="home_details_battery">電池</string>
     <string name="home_details_never">從未</string>
     <string name="home_details_today">今天</string>
     <string name="home_details_yesterday">昨天</string>
@@ -120,9 +126,11 @@
 
     <!-- Main screen with no games at all. -->
     <string name="home_empty_title">還沒有遊戲資料夾</string>
-    <string name="home_empty_body">%1$s 新增資料夾</string>
-    <string name="home_nogames_title">還沒有找到遊戲</string>
-    <string name="home_nogames_body">請檢查資料夾裡是否有遊戲。\n%1$s</string>
+    <string name="home_empty_body_folder">請選擇存放遊戲的資料夾。Plumemu 會列出其中的遊戲。</string>
+    <string name="home_empty_files_not_added">未加入的檔案</string>
+    <string name="home_empty_choose_folder">選擇資料夾</string>
+    <string name="home_nogames_title">這裡還沒有遊戲</string>
+    <string name="home_nogames_body_files">這個資料夾裡沒有這台裝置上的模擬器能開啟的檔案。「未加入的檔案」會逐一說明原因。</string>
 
     <!-- The library could not be read (database or platform data failed); shown instead of the main screen. -->
     <string name="home_library_error_title">Plumemu 無法開啟遊戲庫</string>
@@ -137,9 +145,9 @@
     <!-- Setup, folder step. -->
     <string name="setup_folder_title">遊戲放在哪裡？</string>
     <string name="setup_folder_desc">選擇存放 ROM 的資料夾。snes、psx 這類子資料夾會自動對應到各自的平台。</string>
-    <string name="setup_folder_point_opens">Android 的資料夾選擇器會開啟 ROMs 資料夾</string>
-    <!-- “Use this folder” is the button of Android's own folder picker: write it as Android words it in your language. -->
-    <string name="setup_folder_point_use">在選擇器中輕觸「使用這個資料夾」</string>
+    <string name="setup_folder_point_opens">會開啟 Android 的資料夾選擇器。請前往你的遊戲資料夾。</string>
+    <!-- No button name: it differs by Android version. -->
+    <string name="setup_folder_point_use">接著在那裡確認該資料夾。</string>
     <string name="setup_folder_point_private">Plumemu 只能存取你選擇的資料夾</string>
     <string name="setup_choose_folder">選擇資料夾</string>
     <string name="setup_set_up_later">稍後設定</string>
@@ -188,7 +196,10 @@
     <string name="setup_ready_title">遊戲庫已準備就緒</string>
     <string name="setup_ready_desc">遊戲依名稱列出，並按平台分類。之後隨時可在「設定」中變更。</string>
     <string name="setup_ready_naming">名稱仍在補全 · 將在背景繼續</string>
-    <string name="setup_ready_empty_desc">目前沒有找到遊戲。之後可在「設定 › 遊戲庫 › ROM 資料夾」中新增資料夾。</string>
+    <string name="setup_ready_empty_desc">之後可在「設定 › 遊戲庫 › ROM 資料夾」中新增資料夾。</string>
+    <string name="setup_ready_empty_title">目前沒有找到遊戲</string>
+    <string name="setup_ready_no_folder_title">之後也可以新增遊戲</string>
+    <string name="setup_ready_no_folder_desc">準備好後，主畫面會請你選擇遊戲資料夾。</string>
     <!-- %1$s and %2$s are numbers formatted for the locale. -->
     <string name="setup_emulators_some">已為 %2$s 個平台中的 %1$s 個找到模擬器</string>
     <plurals name="setup_emulators_all">
@@ -209,8 +220,6 @@
     <string name="setup_stats_title">傳送匿名使用資料</string>
     <!-- The short form of settings_usage_statistics_body (Settings › About › Send usage statistics): the whole text does not fit the Ready step at 768 x 432 (TextSizeScreens*Test). -->
     <string name="setup_stats_body">匿名的使用次數和當機報告，絕不包含遊戲、搜尋內容或帳號。關閉後只會再傳送一次通知，之後不再傳送。</string>
-    <string name="setup_one_hand_title">向右推兩次開始遊戲</string>
-    <string name="setup_one_hand_body">按上下選擇遊戲，A 鍵照常可用。可在「設定 › 操控」中變更。</string>
     <string name="setup_stats_on">開啟</string>
     <string name="setup_stats_off">關閉</string>
     <string name="setup_start_playing">開始遊玩</string>
@@ -238,6 +247,8 @@
     <string name="home_role_yes">設為主畫面</string>
     <string name="home_role_not_now">暫時不要</string>
     <string name="home_role_unavailable">這部裝置無法直接切換主畫面應用程式。請到 Android 的「設定 › 應用程式 › 預設應用程式」中選擇 Plumemu。</string>
+    <string name="home_role_not_yet">Plumemu 尚未成為你的主畫面應用程式。請在 Android 設定中選擇它。</string>
+    <string name="home_role_open_settings">開啟設定</string>
     <string name="home_role_ok">確定</string>
     <string name="home_role_hint_select">選擇</string>
     <string name="home_role_hint_not_now">暫時不要</string>
@@ -282,12 +293,18 @@
     <!-- Game menu row: a verb, take the game out of Favorites. -->
     <string name="game_menu_unfavorite">取消收藏</string>
     <!-- Game menu row: a verb, hide the game from every list (Settings › Library › Hidden games brings it back). -->
-    <string name="game_menu_hide">隱藏</string>
+    <string name="game_menu_hide">隱藏遊戲</string>
+    <!-- Game menu row: opens Info, where the achievements are. -->
+    <string name="game_menu_achievements">成就</string>
+    <!-- Its value: earned, then total, both numbers ("12 of 40"). -->
+    <string name="game_menu_achievements_count">%1$s / %2$s</string>
     <string name="game_menu_remove_from_recent">從最近中移除</string>
     <!-- Game menu row: opens the game's facts. A short noun. -->
     <string name="game_menu_info">資訊</string>
     <!-- Fixing a game's name. -->
     <string name="game_menu_name">名稱…</string>
+    <string name="game_menu_sort_by">排序方式…</string>
+    <string name="game_sort_title">排序方式</string>
     <string name="game_menu_fix_name">修正名稱…</string>
     <string name="game_menu_own_name">自訂名稱</string>
     <string name="game_menu_not_a_game">不是遊戲</string>
@@ -296,6 +313,11 @@
     <string name="game_fix_name_prompt">輸入名稱的一部分</string>
     <string name="game_fix_name_no_match">清單中沒有相符的名稱</string>
     <string name="game_fix_name_loading">正在讀取名稱…</string>
+    <!-- Settings › Unidentified games: the closest official titles, shown above the other results; only offered, never applied. -->
+    <string name="game_fix_name_suggestions">最接近的名稱</string>
+    <string name="game_fix_name_no_suggestion">沒有接近的名稱</string>
+    <string name="game_fix_name_suggesting">正在尋找接近的名稱…</string>
+    <string name="game_fix_name_others">其他名稱</string>
     <!-- A title's regions and year under it in Fix name: "USA, Europe · 1994". -->
     <string name="game_fix_name_release">%1$s · %2$s</string>
     <string name="game_fix_name_no_list">Plumemu 目前沒有 %1$s 的名稱清單。你仍可以為這款遊戲自訂名稱。</string>
@@ -307,7 +329,7 @@
     <string name="game_own_name_empty">請先輸入名稱，名稱不能空白。</string>
     <string name="game_own_name_save">儲存名稱</string>
     <!-- Fix box art…: the game menu's entry and its panel's lines. -->
-    <string name="game_menu_fix_box_art">修正封面…</string>
+    <string name="game_menu_fix_box_art">封面</string>
     <string name="game_fix_box_art_title">修正封面</string>
     <string name="game_fix_box_art_prompt">輸入遊戲名稱</string>
     <string name="game_fix_box_art_field_label">名稱</string>
@@ -391,7 +413,7 @@
     <string name="game_info_play_time">遊玩時間</string>
     <string name="game_info_none">無</string>
     <!-- Info: nothing is chosen for the system yet; Play asks which emulator. -->
-    <string name="game_info_emulator_not_chosen">尚未選擇，開始遊戲時詢問</string>
+    <string name="game_info_emulator_not_chosen">開始遊戲時詢問</string>
     <string name="game_info_no_emulator">未安裝模擬器</string>
     <!-- %1$s is the emulator the person chose, uninstalled since. -->
     <string name="game_info_not_installed">%1$s（未安裝）</string>
@@ -471,6 +493,11 @@
     <string name="game_action_yes">是</string>
     <string name="game_action_no">否</string>
     <string name="game_core_missing_body">%1$s 沒有啟動遊戲：RetroArch 中可能沒有安裝該核心。請選擇其他模擬器，或在 RetroArch 中安裝該核心。</string>
+    <string name="game_core_next_body">%1$s 沒有啟動遊戲：RetroArch 中可能沒有安裝該核心。換一個核心也許可以。</string>
+    <string name="game_core_try_row">試試 %1$s？</string>
+    <string name="game_core_none_left_body">%1$s 沒有啟動遊戲，也沒有其他核心可試。要取得核心，請開啟 RetroArch › 線上更新 › 核心下載器，下載 %2$s。</string>
+    <string name="game_core_arcade_note">街機遊戲集是為特定版本的模擬器製作的，所以這個遊戲集可能需要換一個核心。</string>
+    <string name="game_core_arcade_old_name_note">街機遊戲集是為特定版本的模擬器製作的。這個遊戲集的名稱是 MAME 2003-Plus 使用的名稱，所以可能需要該核心。</string>
     <!-- A pinned shortcut (Steam, Windows, Shortcuts): listed, not startable by Plumemu yet. %1$s is the app that published it. -->
     <string name="game_error_shortcut_title">無法開啟捷徑</string>
     <string name="game_error_shortcut_body_app">請從它所屬的應用程式「%1$s」開啟。</string>
@@ -518,6 +545,7 @@
     <string name="settings_hint_section">切換分類</string>
     <!-- Hint bar label beside A in a list of choices: a verb, pick the focused one. -->
     <string name="settings_hint_choose">選擇</string>
+    <string name="settings_hint_try_again">重試</string>
     <!-- Narrow screens: opens the focused option's explanation as a further stop (the right button). -->
     <string name="settings_hint_more">說明</string>
     <!-- Option values: words only; the chevrons and check beside them are drawn (SettingsValueIcons.kt). -->
@@ -591,8 +619,11 @@
     <string name="settings_sort_games">遊戲排序</string>
     <string name="settings_sort_by_name">名稱</string>
     <string name="settings_sort_by_last_played">上次遊玩</string>
+    <string name="settings_sort_by_most_played">遊玩最多</string>
+    <string name="settings_sort_by_recently_added">最近加入</string>
     <string name="settings_sort_by_year">發行年份</string>
-    <string name="settings_sort_games_body">各平台清單和「收藏」的排列順序。「最近」一律將最近玩過的遊戲排在最前面。</string>
+    <string name="settings_sort_by_rating">評分</string>
+    <string name="settings_sort_games_body">各平台清單和「收藏」的排列順序。沒有排序依據的遊戲（從未遊玩、沒有年份、沒有評分）依名稱排在後面。有遊戲帶有來自 ScreenScraper 的年份或評分時，才會列出「發行年份」或「評分」。「最近」一律將最近玩過的遊戲排在最前面。</string>
     <string name="settings_recent_size">最近清單數量</string>
     <string name="settings_recent_size_body">「最近」保留多少個遊戲。滿了之後，最早玩的遊戲會從末尾掉出。遊玩時間和統計不受影響。</string>
     <string name="settings_clear_recent">清空最近…</string>
@@ -774,21 +805,57 @@
     <string name="settings_show_battery_body_two_screens">在螢幕右上角顯示電池電量，副螢幕的時鐘上也會顯示。</string>
     <!-- Second screen, picking cards. Top line: "Super Nintendo · USA"; the separator is also used in the facts line (quoted: Android trims the spaces of an unquoted string). -->
     <string name="second_screen_android_app">Android 應用程式</string>
-    <!-- The game card's played line ("DuckStation · Played 3 days ago"). %1$s is a number formatted for the locale. -->
-    <string name="second_screen_played_today">今天玩過</string>
-    <string name="second_screen_played_yesterday">昨天玩過</string>
-    <plurals name="second_screen_played_days_ago">
-        <item quantity="other">%1$s 天前玩過</item>
-    </plurals>
-    <!-- The system card: how long ago its last game was played, after the title and a " · " ("Last played Super Metroid · yesterday"). Lower case in English because it follows the title mid-line. -->
+    <string name="second_screen_app_tag">應用</string>
     <string name="second_screen_ago_today">今天</string>
     <string name="second_screen_ago_yesterday">昨天</string>
     <plurals name="second_screen_ago_days">
         <item quantity="other">%1$s 天前</item>
     </plurals>
     <string name="second_screen_not_played">還沒玩過</string>
-    <!-- %1$s is a game's title. -->
-    <string name="second_screen_last_game">上次遊玩：%1$s</string>
+    <string name="second_game_achievements">成就</string>
+    <string name="second_game_of_total">/ %1$s</string>
+    <string name="second_game_points">%1$s / %2$s 點</string>
+    <string name="second_game_latest">最新：%1$s</string>
+    <string name="second_game_play_label">遊玩時間 · 最近 8 週</string>
+    <plurals name="second_game_sessions">
+        <item quantity="other">%1$s 次遊玩</item>
+    </plurals>
+    <string name="second_game_about_session">平均每次約 %1$s</string>
+    <string name="second_game_this_week">本週</string>
+    <string name="second_screen_last_played">最近玩過</string>
+    <string name="second_screen_play_time">遊玩時間</string>
+    <string name="second_screen_played">已玩</string>
+    <string name="second_screen_achievements">成就</string>
+    <string name="second_screen_on_system">在%1$s上</string>
+    <string name="second_screen_games_played">已玩遊戲</string>
+    <string name="second_screen_mastered">已精通</string>
+    <plurals name="second_screen_points">
+        <item quantity="other">%1$s 積分</item>
+    </plurals>
+    <plurals name="second_screen_games_with_progress">
+        <item quantity="other">%1$s 個遊戲有進度</item>
+    </plurals>
+    <plurals name="second_screen_new_this_week">
+        <item quantity="other">本週新增 %1$s 個</item>
+    </plurals>
+    <string name="second_screen_opens_in">用 %1$s 開啟</string>
+    <plurals name="second_screen_files_not_added">
+        <item quantity="other">%1$s 個檔案未加入</item>
+    </plurals>
+    <string name="second_screen_last_week">上週 %1$s</string>
+    <string name="second_screen_shown_of">顯示 %1$s / %2$s</string>
+    <plurals name="second_screen_on_systems">
+        <item quantity="other">分布於 %1$s 個平台</item>
+    </plurals>
+    <string name="second_screen_when_now">剛剛</string>
+    <plurals name="second_screen_when_minutes">
+        <item quantity="other">%1$s 分鐘前</item>
+    </plurals>
+    <string name="second_screen_when_hours_short">%1$s 小時前</string>
+    <plurals name="second_screen_when_hours">
+        <item quantity="other">%1$s 小時前</item>
+    </plurals>
+    <string name="second_screen_when_last_week">上週</string>
     <!-- The second screen's in-game card: the battery line while charging ("Charging · 82%"). -->
     <string name="second_screen_charging">充電中 · %1$s</string>
     <!-- The in-game card's battery part. The time left is drawn in two sizes: the numbers
@@ -956,7 +1023,7 @@
     <string name="settings_color_adjusted_accent">已調整強調色，以保持清楚可見</string>
     <string name="settings_color_adjusted_both">已調整文字顏色和強調色，以保持清楚易讀</string>
     <string name="settings_accent_body">用於標示目前的平台、焦點圓點、開關和按鈕。「依平台」會讓每個平台使用各自的顏色。</string>
-    <string name="settings_font_body">三款 Plum 字型，大小都已調整，在小螢幕上看起來一致。</string>
+    <string name="settings_font_body">Plumemu 中所有文字使用的字型。</string>
     <string name="settings_text_size_body">變更 Plumemu 中的所有文字。Android 本身的字型大小設定也會一併套用。</string>
     <string name="settings_text_weight_body">變更 Plumemu 中所有文字的粗細。</string>
     <string name="settings_left_edge_body">瀏覽遊戲清單時，左邊緣的窄條顯示什麼：每個平台的遊戲數量、每個平台的簡短代碼，或目前清單的字母。</string>
@@ -1130,6 +1197,10 @@
     <string name="settings_statistics_with_box_art">有封面</string>
     <!-- Settings › Statistics' last line: these figures stay on the device, unlike Advanced › Send usage statistics. -->
     <string name="settings_statistics_kept_here">只保存在這台掌機上</string>
+    <string name="settings_exact_play_time">精確遊玩時間</string>
+    <string name="settings_exact_play_time_body">只計算遊戲顯示在螢幕上的時間；關閉時，在其他應用程式中的時間也會計入（最多 4 小時）。需要 Android 的「使用情況存取權」，開啟此項時會開啟該頁面。Plumemu 只查看自己的遊戲，不會傳送任何內容。</string>
+    <string name="settings_exact_play_time_needs_access">需要使用情況存取權</string>
+    <string name="settings_exact_play_time_unavailable">這台掌機沒有「使用情況存取權」頁面，無法開啟精確遊玩時間</string>
     <!-- Statistics, under the total play time. %1$s is a number already formatted for the locale. -->
     <plurals name="settings_statistics_across_games">
         <item quantity="other">共 %1$s 款遊戲</item>
@@ -1144,7 +1215,9 @@
     <!-- "38 of 412": games played, or games with box art, out of the games in the library; numbers formatted for the locale. -->
     <string name="settings_statistics_count_of">%1$s/%2$s</string>
     <string name="settings_statistics_nothing_played">還沒玩過遊戲</string>
-    <string name="settings_statistics_no_games">遊戲庫中還沒有遊戲</string>
+    <string name="settings_statistics_no_plays_title">還沒有遊玩時間</string>
+    <string name="settings_statistics_no_games_title">還沒有遊戲</string>
+    <string name="settings_statistics_no_games_body">Plumemu 找到遊戲後會開始記錄遊玩時間</string>
     <string name="settings_statistics_unreadable">無法讀取遊玩統計</string>
     <string name="settings_statistics_unreadable_detail">請關閉「設定」再重新開啟。</string>
     <string name="settings_version">版本</string>
@@ -1190,7 +1263,7 @@
     <string name="report_error_refused">伺服器不接受這則回報，請檢查電子郵件地址。你寫的內容已保留，可以再試一次。</string>
     <string name="report_error_unavailable">這個版本無法傳送回報。請使用「匯出記錄檔」，再自行傳送檔案。</string>
     <string name="report_error_not_saved">無法在這部裝置上儲存這則回報。</string>
-    <string name="settings_privacy_body">你的遊戲庫、設定和遊玩時間都儲存在這部裝置上 Plumemu 自己的儲存空間中，絕不會傳送出去。只有在你開啟這項功能（「設定 › 關於 › 傳送使用資料」）時，Plumemu 才會向開發者傳送匿名的使用次數和當機報告：國家或地區、裝置型號、Android 和應用程式版本、使用過哪些畫面和設定，以及依平台統計的遊玩時間。絕不包含遊戲名稱、搜尋字詞或你的 ScreenScraper 帳號。當機報告可能包含檔案路徑。關閉後只會傳送一次匿名的「已關閉」通知，之後不再傳送任何資料。問題回報只會在你於「回報問題」中按下「傳送」時傳送，可能包含你選擇附上的記錄檔（含檔案路徑）。已傳送的資料會無限期保存。Plumemu 每天會在連上 Wi-Fi 時詢問一次 plumemu-app.stevensdesk.com 是否有新版本；代管該網站的 Cloudflare 會看到你的 IP 位址。可透過上方的「每天檢查更新」關閉這項功能。這項每日檢查也會從同一台伺服器下載更新後的平台資料（系統和模擬器清單），不會額外傳送任何內容。如果你使用 ScreenScraper 帳號，Plumemu 會將每款遊戲的檔案名稱、大小和檢查碼傳送給 ScreenScraper 來尋找封面；這些資訊找不到結果時，還會傳送遊戲名稱。如果你使用 RetroAchievements 帳號，Plumemu 會在你開啟遊戲資訊時、玩完遊戲後，以及連上 Wi-Fi 時每天一次，將你的使用者名稱、金鑰和每款遊戲的 RetroAchievements 編號傳送給 retroachievements.org；徽章圖片來自 media.retroachievements.org。金鑰以加密方式儲存在這部裝置上，絕不會進入備份或記錄檔。登出後就不再傳送。</string>
+    <string name="settings_privacy_body">你的遊戲庫、設定和遊玩時間都儲存在這部裝置上 Plumemu 自己的儲存空間中，絕不會傳送出去。只有在你開啟這項功能（「設定 › 關於 › 傳送使用資料」）時，Plumemu 才會向開發者傳送匿名的使用次數和當機報告：國家或地區、裝置型號、Android 和應用程式版本、使用過哪些畫面和設定，以及依平台統計的遊玩時間。絕不包含遊戲名稱、搜尋字詞或你的 ScreenScraper 帳號。當機報告可能包含檔案路徑。關閉後只會傳送一次匿名的「已關閉」通知，之後不再傳送任何資料。問題回報只會在你於「回報問題」中按下「傳送」時傳送，可能包含你選擇附上的記錄檔（含檔案路徑）。已傳送的資料會無限期保存。Plumemu 每天會在連上 Wi-Fi 時詢問一次 plumemu-app.stevensdesk.com 是否有新版本；代管該網站的 Cloudflare 會看到你的 IP 位址。可透過上方的「每天檢查更新」關閉這項功能。這項每日檢查也會從同一台伺服器下載更新後的平台資料（系統和模擬器清單），不會額外傳送任何內容。如果你使用 ScreenScraper 帳號，Plumemu 會將每款遊戲的檔案名稱、大小和檢查碼傳送給 ScreenScraper 來尋找封面；這些資訊找不到結果時，還會傳送遊戲名稱。如果你使用 RetroAchievements 帳號，Plumemu 會在你開啟遊戲資訊時、玩完遊戲後，以及連上 Wi-Fi 時每天一次，將你的使用者名稱、金鑰和每款遊戲的 RetroAchievements 編號傳送給 retroachievements.org；徽章圖片來自 media.retroachievements.org。金鑰以加密方式儲存在這部裝置上，絕不會進入備份或記錄檔。登出後就不再傳送。 精確遊玩時間（在「設定」\u203A「統計」中開啟後）會透過 Android 的使用情況存取權取得該次遊玩時間段內的事件，只保留從 Plumemu 啟動的遊戲或應用程式以及螢幕的事件；除遊玩時間長度外不儲存任何內容，也絕不會傳送。</string>
     <!-- Updates -->
     <string name="settings_update_available">有可用的更新</string>
     <string name="settings_update_value_downloading">正在下載…</string>
@@ -1253,11 +1326,20 @@
     <string name="setup_box_art_desc">封面和遊戲資訊來自 ScreenScraper，需要你在 screenscraper.fr 註冊的免費帳號。也可以稍後在「設定 › 帳號 › ScreenScraper」中登入。</string>
     <string name="setup_box_art_skip">略過</string>
     <!-- The question before the sign-in form. -->
-    <string name="setup_box_art_question_title">要從 ScreenScraper 取得封面嗎？</string>
-    <string name="setup_box_art_question_desc">封面需要 screenscraper.fr 的免費帳號。也可以稍後在「設定 › 帳號 › ScreenScraper」中設定。</string>
-    <string name="setup_box_art_use">使用我的帳號</string>
-    <string name="setup_box_art_not_now">暫時不要</string>
+    <string name="setup_confirm_title">用哪個按鍵確認？</string>
+    <string name="setup_confirm_desc">A 確認，B 返回。想反過來用？請選擇「使用 B」。</string>
+    <string name="setup_confirm_keep">使用 A</string>
+    <string name="setup_confirm_use_b">使用 B</string>
+    <string name="setup_confirm_active_a">確認鍵：A</string>
+    <string name="setup_confirm_active_b">確認鍵：B</string>
+    <string name="setup_confirm_again_desc">用方向鍵選擇你平常使用的按鍵。選擇目前正在使用的那個會繼續。</string>
+    <string name="setup_look_title">選擇外觀</string>
+    <string name="setup_look_desc">選擇你喜歡的顏色。之後可隨時在「設定 › 外觀」中更改。</string>
+    <string name="setup_box_art_question_title">封面圖</string>
+    <string name="setup_box_art_question_desc">Plumemu 從哪裡取得遊戲封面。之後可隨時在「設定 › 帳號 › 封面圖」中更改。</string>
     <string name="setup_ready_box_art">封面：正在背景下載</string>
+    <string name="setup_ready_box_art_offline">封面：連上網路後開始</string>
+    <string name="setup_ready_box_art_sign_in">封面：請在「設定 › 帳號」中重新登入</string>
     <string name="account_username">使用者名稱</string>
     <string name="account_password">密碼</string>
     <!-- What the keyboard shows as the field's name (EditorInfo.hintText), even in a full-screen editor. -->
@@ -1291,12 +1373,14 @@
     <!-- Sign out's confirm: what happens to box art. -->
     <string name="settings_sign_out_confirm_title">登出 ScreenScraper？</string>
     <string name="settings_sign_out_confirm_body">封面將不再顯示，下載也會停止。已儲存的圖片會留在此裝置上，重新登入後即可恢復顯示。</string>
+    <string name="settings_ra_sign_out_confirm_title">登出 RetroAchievements？</string>
+    <string name="settings_ra_sign_out_confirm_body">使用者名稱、金鑰和此處顯示的進度將從此裝置移除。成就仍保留在 retroachievements.org。使用金鑰重新登入即可查看。</string>
     <string name="settings_account_not_available">封面：這個版本不支援</string>
     <string name="settings_account_not_available_body">這個版本的 Plumemu 在建置時未連接 ScreenScraper，因此不會顯示封面和遊戲資訊。其他功能都能正常使用。</string>
     <string name="settings_account_refused">密碼錯誤：請重新登入</string>
     <string name="settings_account_daily_limit">已達每日上限，%1$s 恢復。</string>
-    <string name="settings_box_art_running">正在下載封面 %1$s/%2$s</string>
-    <string name="settings_box_art_running_left">正在下載封面 %1$s/%2$s · %3$s</string>
+    <string name="settings_box_art_running">正在下載封面 · %1$s/%2$s</string>
+    <string name="settings_box_art_running_left">正在下載封面 · %1$s/%2$s · %3$s</string>
     <string name="settings_box_art_running_no_counts">正在下載封面</string>
     <string name="settings_box_art_left_under_a_minute">剩不到一分鐘</string>
     <string name="settings_box_art_left_minutes">約剩 %1$s\u00A0分鐘</string>
@@ -1311,10 +1395,14 @@
     <string name="settings_box_art_retrying_at">沒有網路連線，將於 %1$s 重試</string>
     <string name="settings_box_art_retrying">沒有網路連線，稍後將重試</string>
     <string name="settings_box_art_starting">準備中…</string>
-    <string name="settings_box_art_done">完成：%2$s 款遊戲中有 %1$s 款已有封面</string>
+    <string name="settings_box_art_done">封面：%2$s 款遊戲中有 %1$s 款</string>
     <string name="settings_box_art_some">%2$s 款遊戲中有 %1$s 款已有封面</string>
     <string name="settings_box_art_empty">還沒有遊戲。Plumemu 找到你的遊戲後才會下載封面。</string>
     <string name="settings_box_art_unreadable">Plumemu 無法讀取封面的下載進度。</string>
+    <string name="settings_box_art_none_found">找不到這些遊戲的封面</string>
+    <string name="settings_box_art_failed_offline">沒有網路：無法下載封面</string>
+    <string name="settings_box_art_failed_server">封面伺服器沒有回應</string>
+    <string name="settings_box_art_short_no_answer">沒有回應</string>
     <string name="settings_box_art_fact_requests">今日請求次數：%1$s/%2$s</string>
     <string name="settings_box_art_fact_requests_used_up">今日請求次數：%1$s/%2$s · 已達每日上限</string>
     <string name="settings_box_art_fact_requests_only">今日請求次數：%1$s</string>
@@ -1392,6 +1480,20 @@
     <string name="settings_unknown_folder_body_none">請選擇此資料夾所屬的機種。</string>
     <string name="settings_unknown_folder_body_answered">選擇其他機種即可更改你的答案。</string>
     <string name="settings_unknown_folder_failed">無法儲存該答案。未做任何變更。</string>
+    <string name="settings_files_not_added_title">未加入的檔案</string>
+    <string name="settings_files_not_added_body">資料夾中未加入遊戲庫的檔案及原因。</string>
+    <string name="settings_files_not_added_none">所有檔案都已在遊戲庫中</string>
+    <string name="settings_files_not_added_no_system">不在任何主機的資料夾中</string>
+    <string name="settings_files_not_added_unmatched_system">%1$s 的模擬器無法開啟這些檔案</string>
+    <string name="settings_files_not_added_unmatched">沒有模擬器能開啟這些檔案</string>
+    <string name="settings_files_not_added_bios">BIOS 與韌體</string>
+    <string name="settings_files_not_added_saves">存檔與即時存檔</string>
+    <string name="settings_files_not_added_junk">備註、圖片與隱藏檔案</string>
+    <string name="settings_files_not_added_folder">%1$s · %2$s</string>
+    <plurals name="settings_files_not_added_more">
+        <item quantity="one">以及另外 %1$s 個檔案</item>
+        <item quantity="other">以及另外 %1$s 個檔案</item>
+    </plurals>
     <plurals name="home_notice_unknown_folders">
         <item quantity="other">%1$s個未知資料夾</item>
     </plurals>
@@ -1462,4 +1564,15 @@
         <item quantity="other">+%1$s 個成就</item>
     </plurals>
     <string name="achievement_mastered">已全部完成</string>
+
+    <!-- Settings › Accounts › Box art: where box art comes from. -->
+    <string name="settings_box_art_source">封面</string>
+    <string name="settings_box_art_source_body">Plumemu 從哪裡取得封面。按 A 選擇。</string>
+    <string name="settings_box_art_source_screenscraper">封面和遊戲資訊</string>
+    <string name="settings_box_art_source_screenscraper_line">封面，另有年份、評分、類型、發行商和簡介。需要免費的 ScreenScraper 帳號。</string>
+    <string name="settings_box_art_source_libretro">僅封面</string>
+    <string name="settings_box_art_source_libretro_line">透過 Wi-Fi 從 libretro 取得盒裝正面。沒有詳細資訊，不需帳號。</string>
+    <string name="settings_box_art_source_own">Plumemu 內建封面</string>
+    <string name="settings_box_art_source_own_line">不連網。Plumemu 為每個遊戲繪製海報封面。</string>
+    <string name="settings_box_art_source_failed">Plumemu 無法儲存。請重試。</string>
 </resources>

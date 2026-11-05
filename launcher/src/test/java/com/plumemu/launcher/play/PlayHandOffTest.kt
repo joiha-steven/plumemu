@@ -48,6 +48,8 @@ class PlayHandOffTest {
 
         override fun realtimeMs() = 50_000L
 
+        override fun uptimeMs() = 50_000L
+
         override fun bootCount() = 7
     }
 

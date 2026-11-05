@@ -25,7 +25,7 @@ class SetupBoxArtScreenshotTest {
     private fun shot(
         name: String,
         state: AccountShots.State,
-    ) = ReferenceShots.capture(name) { SetupAt(SetupFakes.boxArt(AccountShots.form(state))) }
+    ) = ReferenceShots.capture(name, sizes = ReferenceShots.Size.Original + ReferenceShots.Size.FourThree) { SetupAt(SetupFakes.boxArt(AccountShots.form(state))) }
 
     @Test fun question() = ReferenceShots.capture("setup_box_art_question") { SetupAt(SetupFakes.boxArtQuestion) }
 

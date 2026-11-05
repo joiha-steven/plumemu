@@ -74,7 +74,7 @@ internal object ArtworkFakes {
             description =
                 "Samus Aran returns to planet Zebes to recover a stolen Metroid larva, exploring a vast " +
                     "connected world and gaining new abilities along the way.",
-            play = PlayFacts(lastPlayedDaysAgo = 1, playTimeMinutes = 252, emulator = "Snes9x · RetroArch"),
+            play = PlayFacts(lastPlayedDaysAgo = 1, playTimeMinutes = 252, emulator = "Snes9x · RetroArch", batteryMinutesOnCharge = 165.0, batteryPercentPerHour = 30.0),
         )
 
     /** Details for [title], the [index]-th game of its list. */

@@ -3,6 +3,7 @@ package com.plumemu.graph
 import com.plumemu.account.RaAccountStatus
 import com.plumemu.achievements.account.ApiKeyCipher
 import com.plumemu.achievements.account.SignInCheck
+import com.plumemu.achievements.api.RaMedia
 import com.plumemu.achievements.api.RaResult
 import com.plumemu.achievements.api.WebApiKey
 import com.plumemu.achievements.api.RetroAchievementsClient
@@ -168,6 +169,27 @@ internal class GraphAchievements(
         if (!isSignedIn.first()) return null
         val row = guarded("read the stored achievements of game $gameId") { raDao().observeProgress(gameId).first() } ?: return null
         return if (row.achievementsTotal > 0) AchievementCount(maxOf(row.awardedSoftcore, row.awardedHardcore), row.achievementsTotal) else null
+    }
+
+    /**
+     * [storedCountOf] with the points and the latest [RECENT_BADGES] unlocks the stored list holds (Info and after-game reads fill them):
+     * the second screen's game card. The database only, never the network. Null: signed out, not matched, nothing stored, or an empty set.
+     */
+    suspend fun storedFactsOf(gameId: Long): StoredAchievements? {
+        if (!isSignedIn.first()) return null
+        val row = guarded("read the stored achievements of game $gameId") { raDao().observeProgress(gameId).first() } ?: return null
+        if (row.achievementsTotal <= 0) return null
+        val recent = guarded("read the latest achievements of game $gameId") { raDao().observeRecentAchievements(row.raGameId, RECENT_BADGES).first() }.orEmpty()
+        return StoredAchievements(
+            earned = maxOf(row.awardedSoftcore, row.awardedHardcore),
+            total = row.achievementsTotal,
+            pointsEarned = row.pointsEarned,
+            pointsTotal = row.pointsTotal,
+            recent = recent.mapNotNull { achievement ->
+                val at = maxOf(achievement.earnedAt ?: 0L, achievement.earnedHardcoreAt ?: 0L).takeIf { it > 0 } ?: return@mapNotNull null
+                StoredBadge(achievement.title, achievement.badgeName?.let(RaMedia::badge), at)
+            },
+        )
     }
 
     /** [gameId]'s achievements and the person's progress; stores the match and the progress row. */
@@ -347,9 +369,12 @@ internal class GraphAchievements(
 
         /**
          * Rises when the matcher or the hasher learns to answer differently for files it could not
-         * place (1: name matching; raise it when more formats become hashable), so [redoOldMatchesOnce] clears those cache rows.
+         * place (1: name matching; 2: CSO v2, ZSO, CHD zstd, cdzs, RVZ and WIA hashed; raise it when more formats become hashable), so [redoOldMatchesOnce] clears those cache rows.
          */
-        const val MATCHER_VERSION = 1
+        const val MATCHER_VERSION = 2
+
+        /** The badges the second screen's game card shows. */
+        const val RECENT_BADGES = 5
     }
 }
 

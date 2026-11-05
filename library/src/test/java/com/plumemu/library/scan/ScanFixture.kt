@@ -21,6 +21,9 @@ internal class ScanFixture(parent: File, fileIdsByName: Boolean = false, copyFix
     val roms = File(parent, "ROMs").also { if (copyFixtures) File("src/test/fixtures/roms").copyRecursively(it) else it.mkdirs() }
     val permissions = FakeFolderPermissions().apply { held += TREE_URI }
     var now = 42L
+
+    /** First-run setup finished (the app's `setupCompleted`): until then no scan writes `added_at`. */
+    var setupDone = true
     val folderId: Long
 
     init {
@@ -38,7 +41,7 @@ internal class ScanFixture(parent: File, fileIdsByName: Boolean = false, copyFix
         naming: GameNaming? = null,
         rules: List<SystemRule> = TestRules.ALL,
         namingReaders: Int = NAMING_READERS,
-    ) = LibraryScanner(db, permissions, { tree }, rules, settings, batchSize, clock = { now }, naming = naming, namingReaders = namingReaders)
+    ) = LibraryScanner(db, permissions, { tree }, rules, settings, batchSize, clock = { now }, naming = naming, namingReaders = namingReaders, isSetupDone = { setupDone })
 
     suspend fun scan(scanner: LibraryScanner = scanner()): ScanStats {
         tree.listed.clear()

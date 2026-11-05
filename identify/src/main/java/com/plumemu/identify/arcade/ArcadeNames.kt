@@ -15,6 +15,9 @@ object ArcadeSystems {
     /** The system id of the shared arcade pack. */
     const val PACK_ID = "arcade"
 
+    /** The pack source of the records of old MAME 2003-Plus short names (the build tool's "Arcade aliases"). */
+    const val OLD_NAME_SOURCE = "MAME 2003-Plus set names"
+
     val IDS: Set<String> = setOf(
         "arcade", "mame", "fba", "fbneo", "neogeo", "cps", "cps1", "cps2", "cps3",
         "atomiswave", "naomi", "naomi2", "naomigd", "stv", "model2", "model3",
@@ -179,6 +182,8 @@ object ArcadeTitles {
  * @property title the pack's title: MAME's full description ("Zork Fighters (Japan 961201)").
  * @property hide true for BIOS, device and other non-game sets: the scan leaves them out (I3).
  * @property parent the parent's short name for a clone, so clones can be grouped with it.
+ * @property oldName2003Plus true when the short name is in the pack only as an old MAME 2003-Plus
+ *   name (an alias record), not as a name of the current MAME: the set is likely made for that emulator.
  */
 data class ArcadeName(
     val shortName: String,
@@ -191,6 +196,7 @@ data class ArcadeName(
     val isMechanical: Boolean,
     val isClone: Boolean,
     val hide: Boolean,
+    val oldName2003Plus: Boolean = false,
 ) {
     /** The title a list shows ([ArcadeTitles.shortTitle] of [title]). */
     val shortTitle: String get() = ArcadeTitles.shortTitle(title)
@@ -219,5 +225,6 @@ class ArcadeLookup(private val pack: NamePack) {
         isMechanical = entry.isMechanical,
         isClone = entry.isClone,
         hide = entry.isBios || entry.isDevice || entry.isNotAGame,
+        oldName2003Plus = entry.source?.name == ArcadeSystems.OLD_NAME_SOURCE,
     )
 }

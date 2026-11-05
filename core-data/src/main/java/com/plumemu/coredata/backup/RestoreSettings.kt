@@ -9,6 +9,8 @@ import com.plumemu.coredata.settings.PlumSettings
  *
  * - `setupCompleted` comes from the file only with its library (an Everything file), and never
  *   sends the person back to first-run setup: true when either side says so.
+ * - `setupQuestionsSkipped` is always cleared: the restored settings hold the answers its
+ *   questions would collect, so setup never reopens because of a restore.
  * - `homeRoleAsked`, `rescanAfterReset` and `inGameDriftNoteShown` stay this device's: the home-app
  *   question and the second screen's note are about this device, and a reset's pending scan is about
  *   the library this device has.
@@ -23,7 +25,7 @@ object RestoreSettings {
         onDevice: PlumSettings,
         withLibrary: Boolean,
     ): PlumSettings {
-        val device = onDevice.flags
+        val device = onDevice.flags.copy(setupQuestionsSkipped = false)
         val flags =
             if (withLibrary) {
                 device.copy(

@@ -54,6 +54,8 @@ data class CoreQuestion(
     val emulatorName: String,
     val core: CoreToConfirm,
     val added: AddedSession?,
+    /** Cores of this game already answered No in this attempt (the one asked about is not in it); never offered again. */
+    val tried: Set<String> = emptySet(),
 ) {
     private val collected = CopyOnWriteArrayList(listOfNotNull(added))
 
@@ -75,7 +77,9 @@ data class CoreQuestion(
  * sees after a restart is simply the library. Fed by change checks only, so the first full scan
  * after setup and a manual rescan stay silent.
  */
-class LibraryNotices {
+class LibraryNotices internal constructor(private val coreTries: CoreTriesStore) {
+    constructor() : this(CoreTriesStore.InMemory())
+
     private val mutableNotice = MutableStateFlow<LibraryNotice?>(null)
     private val mutableNewGameSystems = MutableStateFlow<Set<String>>(emptySet())
     private val mutablePickerMissing = MutableStateFlow(false)
@@ -134,9 +138,15 @@ class LibraryNotices {
                 same.collect(added)
                 return
             }
-            val question = CoreQuestion(++serial, gameKey, gameTitle, emulatorId, emulatorName, core, added)
+            val tried = coreTries.take(gameKey, emulatorId)
+            val question = CoreQuestion(++serial, gameKey, gameTitle, emulatorId, emulatorName, core, added, tried)
             if (mutableCoreQuestion.value == null) mutableCoreQuestion.value = question else waitingQuestions.addLast(question)
         }
+    }
+
+    /** [emulatorId] was offered after No for [gameKey]; its own question will carry [tried]. */
+    fun expectCoreTry(gameKey: String, emulatorId: String, tried: Set<String>) {
+        synchronized(lock) { coreTries.expect(gameKey, emulatorId, tried) }
     }
 
     /** The home asked [question] (or could not, and will not try again): the next waiting one follows. */
@@ -186,12 +196,13 @@ class LibraryNotices {
     }
 
     /**
-     * A change check ended with [stats] (one per scanned folder); nothing is shown when nothing was added or removed
-     * and no unknown folder is new. Only change checks come here: the full scan after an upgrade that made every
-     * folder be listed again reports every existing unknown folder as new, and it never reaches this.
+     * A change check, or the scan of a folder added in Settings, ended with [stats] (one per scanned folder, only those whose
+     * scan stamped added_at); nothing is shown when nothing was added or removed and no unknown folder is new. The full scan
+     * after an upgrade that made every folder be listed again reports every existing unknown folder as new: it never
+     * reaches this, and when a folder add is merged into such a pass [StartupWork] passes the additions only.
      */
     fun checked(stats: Collection<ScanStats>) {
-        val added = stats.sumOf { it.gamesAdded }
+        val added = stats.sumOf { it.listedAddedBySystem.values.sum() }
         val removed = stats.sumOf { it.gamesRemoved }
         val unknown = stats.flatMap { found -> found.newUnknownFolders.map { it.relativePath } }.distinct()
         if (added <= 0 && removed <= 0) {
@@ -206,7 +217,7 @@ class LibraryNotices {
             }
             return
         }
-        val systems = stats.flatMap { it.addedBySystem.filterValues { n -> n > 0 }.keys }.distinct()
+        val systems = stats.flatMap { it.listedAddedBySystem.filterValues { n -> n > 0 }.keys }.distinct()
         mutableNewGameSystems.update { it + systems }
         // An unknown-only notice that this one replaces keeps its folder names for after it.
         mutableNotice.value?.takeIf { it.added <= 0 && it.removed <= 0 }?.let { pendingUnknown = (pendingUnknown + it.unknownFolders).distinct() }
@@ -229,3 +240,13 @@ class LibraryNotices {
         mutableNewGameSystems.update { it - systemId }
     }
 }
+
+/**
+ * What the home is told after a pass over every folder that included a folder added in Settings: the scans that stamped
+ * added_at, additions only. A pass that merged a folder add with another reason (Startup, Manual) tells too, so a Rescan
+ * merged with a folder add shows the notice; acceptable, it shows only games that pass added. Removals, folds and "new"
+ * unknown folders are dropped: the pass lists every folder, and after an upgrade that lists everything again they
+ * would read as news.
+ */
+internal fun Collection<ScanStats>.newGamesOnly(): List<ScanStats> =
+    filter { it.stampedAddedAt }.map { it.copy(gamesRemoved = 0, removedBySystem = emptyMap(), newUnknownFolders = emptyList()) }

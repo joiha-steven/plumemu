@@ -13,6 +13,8 @@ import com.plumemu.settings.CachedAppearance
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Column
@@ -27,6 +29,7 @@ import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableIntStateOf
@@ -199,8 +202,11 @@ private fun MainContent(
     ClosePasteMenuOnActions(input)
     // Laid out for the full screen: the system bars are hidden (the top bar has its own clock
     // and battery). Only a display cutout, where a device has one, is kept clear.
+    // Hoisted from the main screen: setup comes back for its skipped questions only while Settings is closed.
+    val settingsOpen = rememberSaveable { mutableStateOf(false) }
+    val reopensSetup = reopensSkippedSetup(setup, settings.flags.setupQuestionsSkipped, isOnHome = state is HomeState.Ready && !settingsOpen.value)
     Box(Modifier.fillMaxSize().background(PlumTheme.colors.bg).windowInsetsPadding(WindowInsets.displayCutout)) {
-        if (setup != null && !settings.flags.setupCompleted) {
+        if (setup != null && (!settings.flags.setupCompleted || reopensSetup)) {
             hasShownSetup[0] = true
             FollowSetupOnSecondScreen(secondScreen, setup.model)
             TrackScreen(ScreenId.Setup)
@@ -208,7 +214,7 @@ private fun MainContent(
             return@Box
         }
         when (state) {
-            is HomeState.Ready -> HomeWithSettings(state, settings, input, callbacks, letters, setup?.homeRole, settingsHost, secondScreen, homePresses, landsOnStart = hasShownSetup[0], startTarget = landOnStart)
+            is HomeState.Ready -> HomeWithSettings(state, settings, input, callbacks, letters, setup?.homeRole, settingsHost, secondScreen, homePresses, settingsOpen, landsOnStart = hasShownSetup[0], startTarget = landOnStart)
             HomeState.Failed -> {
                 TrackError(ScreenId.Home, LibraryReadError.LibraryUnreadable)
                 LibraryErrorWithSettings(settings, input, letters, onRetry, settingsHost, secondScreen, homePresses)
@@ -238,12 +244,15 @@ private fun HomeWithSettings(
     settingsHost: SettingsHost?,
     secondScreen: SecondScreenFeed?,
     homePresses: HomePresses?,
+    settingsOpen: MutableState<Boolean>,
     landsOnStart: Boolean,
     startTarget: HomeLandingTarget? = null,
 ) {
-    var isSettingsOpen by rememberSaveable { mutableStateOf(false) }
+    var isSettingsOpen by settingsOpen
     // START or the pill while an update waits: Settings opens on About › Update available instead of its start page.
     var opensOnUpdate by rememberSaveable { mutableStateOf(false) }
+    // The home's empty state "Files not added": Settings opens on Library › Files not added.
+    var opensOnFilesNotAdded by rememberSaveable { mutableStateOf(false) }
     // Counts the times the main screen must return to its landing point (HomeScreen compares it
     // with the count it last obeyed, kept in its own saved state). Setup's end is the first one.
     var landingRequest by rememberSaveable { mutableIntStateOf(if (landsOnStart || startTarget != null) 1 else 0) }
@@ -269,7 +278,7 @@ private fun HomeWithSettings(
                 landingRequest++
             }
         }
-    val homeCallbacks = remember(callbacks, settingsHost) { if (settingsHost == null) callbacks else callbacks.copy(onSettings = { opensOnUpdate = callbacks.updateFound.value != null; isSettingsOpen = true }) }
+    val homeCallbacks = remember(callbacks, settingsHost) { if (settingsHost == null) callbacks else callbacks.copy(onSettings = { opensOnUpdate = callbacks.updateFound.value != null; opensOnFilesNotAdded = false; isSettingsOpen = true }, onFilesNotAdded = { opensOnUpdate = false; opensOnFilesNotAdded = true; isSettingsOpen = true }) }
     val showsSettings = isSettingsOpen && settingsHost != null
     // Settings covers the whole screen: composing the main screen under it re-ran its layout on
     // every colour Settings previews (19% janky frames walking the palette on the Android 6
@@ -287,7 +296,7 @@ private fun HomeWithSettings(
         }
     }
     if (showsSettings && settingsHost != null) {
-        SettingsOverHome(settingsHost, settings, input, secondScreen, opensOnUpdate, showOnHome) { isSettingsOpen = false }
+        SettingsOverHome(settingsHost, settings, input, secondScreen, opensOnUpdate, showOnHome, opensOnFilesNotAdded) { isSettingsOpen = false }
     }
 }
 
@@ -300,6 +309,7 @@ private fun SettingsOverHome(
     secondScreen: SecondScreenFeed?,
     opensOnUpdate: Boolean = false,
     showOnHome: (systemId: String, gameId: Long) -> Unit = { _, _ -> },
+    opensOnFilesNotAdded: Boolean = false,
     close: () -> Unit,
 ) {
     // The second screen shows the figures Settings reads for its Statistics page: handed over
@@ -312,11 +322,25 @@ private fun SettingsOverHome(
     val libraryReset by settingsHost.libraryReset.collectAsStateWithLifecycle()
     val saveFailed by settingsHost.saveFailed.collectAsStateWithLifecycle()
     val folderAdd by settingsHost.folderAdd.collectAsStateWithLifecycle()
-    val content by settingsHost.content.collectAsStateWithLifecycle(SettingsContent())
+    // A repeat opening starts from the last content; the first one holds the rows back (below) until it arrives.
+    val liveContent by settingsHost.content.collectAsStateWithLifecycle(remember(settingsHost) { settingsHost.remembered() })
+    var holdOver by remember(settingsHost) { mutableStateOf(false) }
+    val content = liveContent
     // Right on the first frame; refreshed whenever Settings comes back (the person may have changed it outside).
     var isHomeApp by remember(settingsHost) { mutableStateOf(settingsHost.activity.isHomeApp()) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(settingsHost, lifecycle) { lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { isHomeApp = settingsHost.activity.isHomeApp() } }
+    var hasUsageAccess by remember(settingsHost) { mutableStateOf(settingsHost.activity.isUsageAccessGranted()) }
+    LaunchedEffect(settingsHost, lifecycle) { lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { hasUsageAccess = settingsHost.activity.isUsageAccessGranted() } }
+    if (content == null && !holdOver) {
+        // First content not here yet: the background shows, and Back still closes. A slow read draws from the empty content after the deadline.
+        LaunchedEffect(Unit) {
+            delay(SETTINGS_CONTENT_WAIT_MS)
+            holdOver = true
+        }
+        LaunchedEffect(input) { input.actions.collect { if (it == Action.Back) currentClose() } }
+        return
+    }
     FadeIn(Unit) {
         // Statistics' covers decode through the home screen's loader; nothing is observed (not live).
         ProvideHomeArt(settingsHost.statistics.art, hasBoxArt = false) {
@@ -326,9 +350,10 @@ private fun SettingsOverHome(
                 actions,
                 settingsHost.versionName,
                 status = SettingsStatus(libraryReset, saveFailed, folderAdd),
-                content = content.copy(isHomeApp = isHomeApp),
+                content = (content ?: SettingsContent()).copy(isHomeApp = isHomeApp, hasUsageAccess = hasUsageAccess),
                 onStatistics = onStatistics,
                 opensOnUpdate = opensOnUpdate,
+                opensOnFilesNotAdded = opensOnFilesNotAdded,
                 showOnHome = showOnHome,
             )
         }
@@ -336,6 +361,9 @@ private fun SettingsOverHome(
 }
 
 private const val HOME_STATE_KEY = "home"
+
+/** How long a first opening of Settings waits for its content before drawing without it. */
+private const val SETTINGS_CONTENT_WAIT_MS = 300L
 
 /**
  * The main screen, and over it, once, the home screen question (after the library
@@ -359,7 +387,7 @@ private fun HomeWithRolePrompt(
     val isHomeAlready = remember(needsAsking) { needsAsking && homeRole?.isHomeApp() == true }
     if (isHomeAlready) LaunchedEffect(Unit) { homeRole?.markAsked() }
     val prompt = remember(homeRole) { homeRole?.let(::HomeRolePromptState) }
-    val showsPrompt = prompt != null && !prompt.isClosed && !isHomeAlready && (needsAsking || prompt.showsUnavailable)
+    val showsPrompt = prompt != null && !prompt.isClosed && !isHomeAlready && (needsAsking || prompt.keepsShowing)
     val scope = rememberCoroutineScope()
     val quiet = remember { InputRouter(scope, onDebug = {}) }
     // "What's new" after an update: waits for a quiet main screen (no game panel, no search, not over the home-app question), then once.
@@ -487,12 +515,13 @@ internal fun LibraryError(
         }
     }
     val send = remember(input) { { action: Action -> input.send(action) } }
-    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().padding(bottom = PlumDimens.footerBelow)) {
         CentredMessage(
             title = stringResource(R.string.home_library_error_title),
             body = stringResource(R.string.home_library_error_body),
             modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = PlumDimens.stripMarginSide).testTag(MainScreenTags.LIBRARY_ERROR),
         )
+        Spacer(Modifier.height(PlumDimens.footerGap))
         HintBar {
             Hint(
                 keyCap = stringResource(letters.confirm),

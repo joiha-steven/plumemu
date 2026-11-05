@@ -38,14 +38,19 @@ class SetupSecondScreenTest {
         runCurrent()
     }
 
+    /** Continue on the folders, the look step's tile, then the box art step's first choice: the next step. */
+    private fun TestScope.passLookAndBoxArt(model: SetupModel) {
+        repeat(3) { press(model, Action.Enter) }
+    }
+
     @Test
-    fun withoutASecondScreenContinueGoesStraightToTheScanAndTwoDotsShow() = runTest {
+    fun withoutASecondScreenBoxArtGoesStraightToTheScanAndFourDotsShow() = runTest {
         val model = modelWithAFolder()
-        assertEquals(2, model.state.value.stepDots)
-        press(model, Action.Enter)
+        assertEquals("folders, look, box art, library", 4, model.state.value.stepDots)
+        passLookAndBoxArt(model)
         assertEquals(SetupStep.Scan, model.state.value.step)
-        assertEquals(2, model.state.value.stepDots)
-        assertEquals("the scan shares the library's dot", 1, model.state.value.stepDotIndex)
+        assertEquals(4, model.state.value.stepDots)
+        assertEquals("the scan shares the library's dot", 3, model.state.value.stepDotIndex)
         assertNull(source.secondScreenAnswer)
     }
 
@@ -53,15 +58,15 @@ class SetupSecondScreenTest {
     fun aBuiltInScreenIsAskedAboutWithUseItFocusedAndAIsStoredAsOn() = runTest {
         source.secondScreenQuestion.value = ScreenKind.BuiltIn
         val model = modelWithAFolder()
-        assertEquals("the dot counts on the folder step already", 3, model.state.value.stepDots)
+        assertEquals("the dot counts on the folder step already", 5, model.state.value.stepDots)
         val scansBefore = source.scanRequests
-        press(model, Action.Enter) // Continue
+        passLookAndBoxArt(model)
 
         val asked = model.state.value
         assertEquals(SetupStep.SecondScreen, asked.step)
         assertEquals(SetupControl.UseSecondScreen, asked.focus)
         assertEquals(listOf(SetupControl.UseSecondScreen, SetupControl.SkipSecondScreen), asked.controls)
-        assertEquals(1, asked.stepDotIndex)
+        assertEquals(3, asked.stepDotIndex)
         assertEquals("the scan runs while the question shows", scansBefore + 1, source.scanRequests)
         assertTrue(asked.isScanning)
 
@@ -69,8 +74,8 @@ class SetupSecondScreenTest {
         assertEquals(true, source.secondScreenAnswer)
         val after = model.state.value
         assertEquals(SetupStep.Scan, after.step)
-        assertEquals("the answered step keeps its dot", 3, after.stepDots)
-        assertEquals(2, after.stepDotIndex)
+        assertEquals("the answered step keeps its dot", 5, after.stepDots)
+        assertEquals(4, after.stepDotIndex)
 
         source.endScan()
         runCurrent()
@@ -81,7 +86,7 @@ class SetupSecondScreenTest {
     fun anUnsureScreenStartsOnNotNowAndAIsStoredAsOff() = runTest {
         source.secondScreenQuestion.value = ScreenKind.Unsure
         val model = modelWithAFolder()
-        press(model, Action.Enter)
+        passLookAndBoxArt(model)
         assertEquals(SetupControl.SkipSecondScreen, model.state.value.focus)
         press(model, Action.Enter)
         assertEquals(false, source.secondScreenAnswer)
@@ -93,13 +98,15 @@ class SetupSecondScreenTest {
         source.secondScreenQuestion.value = ScreenKind.Unsure
         val model = modelWithAFolder()
         press(model, Action.TapItem(Column.Games, 2)) // Continue (the folder card is 0, Add another folder 1)
+        press(model, Action.Enter) // the look step's tile
+        press(model, Action.TapItem(Column.Games, 1)) // Box art only
         assertEquals(SetupStep.SecondScreen, model.state.value.step)
         press(model, Action.TapItem(Column.Games, 0)) // Use it
         assertEquals("a tap on Use it, though Not now had the focus", true, source.secondScreenAnswer)
 
         val other = FakeSetupSource().apply { secondScreenQuestion.value = ScreenKind.BuiltIn }
         val second = modelWithAFolder(other)
-        press(second, Action.Enter)
+        passLookAndBoxArt(second)
         press(second, Action.TapItem(Column.Games, 1)) // Not now
         assertEquals("a tap on Not now, though Use it had the focus", false, other.secondScreenAnswer)
     }
@@ -108,7 +115,7 @@ class SetupSecondScreenTest {
     fun leftRightUpAndDownWalkTheTwoButtons() = runTest {
         source.secondScreenQuestion.value = ScreenKind.BuiltIn
         val model = modelWithAFolder()
-        press(model, Action.Enter)
+        passLookAndBoxArt(model)
         press(model, Action.Move(Direction.Right))
         assertEquals(SetupControl.SkipSecondScreen, model.state.value.focus)
         press(model, Action.Move(Direction.Right))
@@ -126,7 +133,7 @@ class SetupSecondScreenTest {
     fun aScanThatEndsWhileTheQuestionShowsWaitsForTheAnswerThenTheLibraryShows() = runTest {
         source.secondScreenQuestion.value = ScreenKind.BuiltIn
         val model = modelWithAFolder()
-        press(model, Action.Enter)
+        passLookAndBoxArt(model)
         source.endScan()
         runCurrent()
         assertEquals("the question stays until answered", SetupStep.SecondScreen, model.state.value.step)
@@ -136,20 +143,20 @@ class SetupSecondScreenTest {
     }
 
     @Test
-    fun backGoesToTheFoldersLeavesTheScanRunningAndContinueAsksAgain() = runTest {
+    fun backGoesToBoxArtLeavesTheScanRunningAndContinuingAsksAgain() = runTest {
         source.secondScreenQuestion.value = ScreenKind.BuiltIn
         val model = modelWithAFolder()
-        press(model, Action.Enter)
+        passLookAndBoxArt(model)
         press(model, Action.Back)
         val back = model.state.value
-        assertEquals(SetupStep.Folders, back.step)
-        assertEquals(SetupControl.Continue, back.focus)
+        assertEquals(SetupStep.BoxArt, back.step)
+        assertEquals(SetupControl.BoxArtLibretro, back.focus)
         assertTrue("the scan goes on", source.scan.value.isBusy)
         assertNull(source.secondScreenAnswer)
 
         source.endScan()
         runCurrent()
-        assertEquals("a scan that ends meanwhile does not jump past the folders", SetupStep.Folders, model.state.value.step)
+        assertEquals("a scan that ends meanwhile does not jump past the step", SetupStep.BoxArt, model.state.value.step)
         press(model, Action.Enter)
         assertEquals(SetupStep.SecondScreen, model.state.value.step)
     }
@@ -158,21 +165,21 @@ class SetupSecondScreenTest {
     fun theScreenGoingAwayWhileAskedSkipsToTheScanAndItsDot() = runTest {
         source.secondScreenQuestion.value = ScreenKind.Unsure
         val model = modelWithAFolder()
-        press(model, Action.Enter)
+        passLookAndBoxArt(model)
         assertEquals(SetupStep.SecondScreen, model.state.value.step)
 
         source.secondScreenQuestion.value = null
         runCurrent()
         val skipped = model.state.value
         assertEquals(SetupStep.Scan, skipped.step)
-        assertEquals("no step, no dot", 2, skipped.stepDots)
+        assertEquals("no step, no dot", 4, skipped.stepDots)
         assertNull("nothing stored", source.secondScreenAnswer)
 
         // It stays skipped if the screen comes back during the scan, and so does its dot.
         source.secondScreenQuestion.value = ScreenKind.Unsure
         runCurrent()
         assertEquals(SetupStep.Scan, model.state.value.step)
-        assertEquals("the dot does not come back without the question", 2, model.state.value.stepDots)
+        assertEquals("the dot does not come back without the question", 4, model.state.value.stepDots)
         source.endScan()
         runCurrent()
         assertEquals(SetupStep.Ready, model.state.value.step)
@@ -182,7 +189,7 @@ class SetupSecondScreenTest {
     fun anAnswerThatCannotBeStoredSaysSoAndSetupGoesOn() = runTest {
         source.secondScreenQuestion.value = ScreenKind.BuiltIn
         val model = modelWithAFolder()
-        press(model, Action.Enter)
+        passLookAndBoxArt(model)
         source.saveFailure = IllegalStateException("disk")
         press(model, Action.Enter)
         assertEquals(SetupMessage.SaveFailed, model.state.value.message)

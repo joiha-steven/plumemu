@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,7 +38,9 @@ import androidx.compose.ui.unit.Dp
 import com.plumemu.R
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.PlumSettings
+import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.components.borderDrawn
+import com.plumemu.coreui.components.collar
 import com.plumemu.coreui.components.focusPillSample
 import com.plumemu.coreui.components.pressFeel
 import com.plumemu.coreui.theme.ColorRole
@@ -51,7 +54,6 @@ import com.plumemu.settings.ColorRefusal
 import com.plumemu.settings.colorSet
 import com.plumemu.settings.toRgb
 import com.plumemu.settings.toThemeSettings
-import com.plumemu.setup.focusRing
 
 /*
  * Background and Accent: the presets with "+" for your own colour, then (after "+") the palette of
@@ -107,55 +109,68 @@ private fun PresetsPage(
         }
         return
     }
-    Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap)) {
-        PanelTitle(stringResource(option.label))
-        PanelBody(stringResource(bodyOf(kind)))
-        FlowRow(
-            modifier = Modifier.onRowTextLine().padding(vertical = PlumDimens.settingsSwatchInset),
-            horizontalArrangement = Arrangement.spacedBy(PlumDimens.settingsPresetSwatchGap),
-            verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPresetSwatchGap),
-        ) {
-            val corner = if (isBackground) PlumDimens.settingsPresetSwatchCorner else PlumDimens.settingsPresetSwatch / 2
-            swatches.forEachIndexed { i, color ->
-                Swatch(color, PlumDimens.settingsPresetSwatch, corner, isFocused = i == focusedIndex, edge = isBackground, Modifier.swatchTap(i, touch))
-            }
-            if (kind == ColorKind.Accent) {
-                BySystemTile(isFocused = ColorPages.bySystemIndex == focusedIndex, corner = corner, Modifier.swatchTap(ColorPages.bySystemIndex, touch))
-            }
-            val add = if (kind == ColorKind.Accent) swatches.size + 1 else swatches.size
-            Box(
-                modifier =
-                    Modifier
-                        .size(PlumDimens.settingsPresetSwatch)
-                        .pressFeel(add == focusedIndex, null, RoundedCornerShape(corner))
-                        .focusRing(add == focusedIndex, corner, colors.accent, colors.focusGlow)
-                        .border(PlumDimens.switchOffRing, colors.chip, RoundedCornerShape(corner))
-                        .swatchTap(add, touch),
-                contentAlignment = Alignment.Center,
+    PanelHeaderYields(
+        Modifier.fillMaxHeight(),
+        PlumDimens.settingsPanelGap,
+        // The look preview comes first where it fits whole with the swatches; the swatches win, then the title and text.
+        leading = { LookPreviewPart(PreviewKind.Look, settings.appearance.edgeFade) },
+        header = listOf({ PanelTitle(stringResource(option.label)) }, { PanelBody(stringResource(bodyOf(kind))) }),
+        main = {
+            FlowRow(
+                modifier = Modifier.onRowTextLine().padding(vertical = PlumDimens.settingsSwatchInset),
+                horizontalArrangement = Arrangement.spacedBy(PlumDimens.settingsPresetSwatchGap),
+                verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPresetSwatchGap),
             ) {
-                BasicText(stringResource(R.string.settings_color_add_glyph), style = PlumTheme.type.settingsSwatchGlyph.copy(color = colors.text2))
-            }
-        }
-        if (inPanel) ColorNotice(model)
-        if (isBackground) {
-            val isText = kind == ColorKind.Text
-            val name = if (isText) stringResource(textColorName(settings.appearance.textColor, theme.backgroundColor)) else colorName(settings.appearance.background, isBackground = true, settings.appearance.colorSet())
-            // The name first, then the sample rows one by one (direct children, so they drop from the end), each only if it still fits under the swatches.
-            RowsThatFit(Modifier, PlumDimens.listRowGap) {
-                // 12 under the name plus the rows' 4 top padding, less the 2 gap the rows are stacked with.
-                Box(Modifier.padding(bottom = PlumDimens.settingsPanelGap + PlumDimens.settingsPreviewTopPadding - PlumDimens.listRowGap)) {
-                    ColorNameLine(name, (if (isText) theme.textColor else theme.backgroundColor).toHex())
+                val corner = if (isBackground) PlumDimens.settingsPresetSwatchCorner else PlumDimens.settingsPresetSwatch / 2
+                swatches.forEachIndexed { i, color ->
+                    Swatch(color, corner, isFocused = i == focusedIndex, Modifier.swatchTap(i, touch), size = Modifier.size(PlumDimens.settingsPresetSwatch), bleed = true)
                 }
-                PreviewRows()
+                if (kind == ColorKind.Accent) {
+                    BySystemTile(isFocused = ColorPages.bySystemIndex == focusedIndex, corner = corner, Modifier.swatchTap(ColorPages.bySystemIndex, touch))
+                }
+                val add = if (kind == ColorKind.Accent) swatches.size + 1 else swatches.size
+                val addShape = RoundedCornerShape(corner)
+                Box(
+                    modifier =
+                        Modifier
+                            // Outside the collar, so the whole key dips with a press.
+                            .pressFeel(add == focusedIndex, null, addShape)
+                            .collarBleed(CollarSize.Key)
+                            .collar(CollarSize.Key, add == focusedIndex, corner)
+                            .size(PlumDimens.settingsPresetSwatch)
+                            .border(PlumDimens.switchOffRing, colors.chip, addShape)
+                            .swatchTap(add, touch),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    // Unbounded: at the largest sizes the font's own line is taller than the 40 dp swatch, and the glyph stays centred in it.
+                    BasicText(stringResource(R.string.settings_color_add_glyph), Modifier.wrapContentSize(unbounded = true), style = PlumTheme.type.settingsSwatchGlyph.copy(color = colors.text2))
+                }
             }
-        } else {
-            // Name and hex like the other two pages (By system has no single colour: no hex); with the sample, left out from the end when there is no room.
-            RowsThatFit(Modifier, PlumDimens.settingsPanelGap) {
-                ColorNameLine(colorName(settings.appearance.accent, isBackground = false, settings.appearance.colorSet()), theme.accentColor.toHex().takeUnless { settings.appearance.accent is ColorSetting.BySystem })
-                AccentSampleRow()
+        },
+        rest = {
+            Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap)) {
+            if (inPanel) ColorNotice(model)
+            if (isBackground) {
+                val isText = kind == ColorKind.Text
+                val name = if (isText) stringResource(textColorName(settings.appearance.textColor, theme.backgroundColor)) else colorName(settings.appearance.background, isBackground = true, settings.appearance.colorSet())
+                // The name first, then the sample rows one by one (direct children, so they drop from the end), each only if it still fits under the swatches.
+                RowsThatFit(Modifier, PlumDimens.listRowGap) {
+                    // 12 under the name plus the rows' 4 top padding, less the 2 gap the rows are stacked with.
+                    Box(Modifier.padding(bottom = PlumDimens.settingsPanelGap + PlumDimens.settingsPreviewTopPadding - PlumDimens.listRowGap)) {
+                        ColorNameLine(name, (if (isText) theme.textColor else theme.backgroundColor).toHex())
+                    }
+                    PreviewRows()
+                }
+            } else {
+                // Name and hex like the other two pages (By system has no single colour: no hex); with the sample, left out from the end when there is no room.
+                RowsThatFit(Modifier, PlumDimens.settingsPanelGap) {
+                    ColorNameLine(colorName(settings.appearance.accent, isBackground = false, settings.appearance.colorSet()), theme.accentColor.toHex().takeUnless { settings.appearance.accent is ColorSetting.BySystem })
+                    AccentSampleRow()
+                }
             }
-        }
-    }
+            }
+        },
+    )
 }
 
 /** Accent color › By system: a dot of four systems' colours, right after the presets. */
@@ -170,11 +185,12 @@ private fun BySystemTile(
     val shape = RoundedCornerShape(corner)
     BySystemDisc(
         modifier
-            .size(PlumDimens.settingsPresetSwatch)
             .semantics { contentDescription = name }
-            // Outside the ring and the clip, so the ring dips with the tile.
+            // Outside the collar and the clip, so the whole tile dips with a press.
             .pressFeel(isFocused, null, shape)
-            .focusRing(isFocused, corner, colors.accent, colors.focusGlow)
+            .collarBleed(CollarSize.Key)
+            .collar(CollarSize.Key, isFocused, corner)
+            .size(PlumDimens.settingsPresetSwatch)
             .clip(shape)
             .border(PlumDimens.settingsSwatchEdge, colors.chip, shape),
     )

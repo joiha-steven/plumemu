@@ -61,6 +61,9 @@ internal class LineSnaps {
     /** The first rest at or past [value] (px); [value] itself when it is past the last line (content, not text, is at the top then). */
     fun restAtOrPast(value: Int): Int = offsets.firstOrNull { it >= value } ?: value
 
+    /** True at a rest, or at most [reach] past the block's end (the scroll's end can fall just past it, where no line is left to reach). */
+    fun isRest(value: Int, reach: Int): Boolean = offsets.binarySearch(value) >= 0 || (offsets.isNotEmpty() && value - offsets.last() in 0..reach)
+
     private companion object {
         const val PARTS = 2
     }
@@ -85,5 +88,19 @@ internal class LineSnapReveal(
         // Never past the scroll's end (a request that cannot be met keeps the scroll asking), and the item stays below the top.
         val distance = minOf((rest - now).toFloat(), maxOf((scroll.maxValue - now).toFloat(), needed))
         return if (offset - distance < 0f) needed else distance
+    }
+}
+
+/** [inner] seen through the window without the shadow room [room] added on top and below it. */
+@OptIn(ExperimentalFoundationApi::class)
+internal class WithoutRoom(
+    private val inner: BringIntoViewSpec,
+    private val room: () -> Float,
+) : BringIntoViewSpec {
+    override val scrollAnimationSpec: AnimationSpec<Float> get() = inner.scrollAnimationSpec
+
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+        val by = room()
+        return inner.calculateScrollDistance(offset - by, size, containerSize - by * 2)
     }
 }

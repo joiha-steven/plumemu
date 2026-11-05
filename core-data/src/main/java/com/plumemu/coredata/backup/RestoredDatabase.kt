@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.plumemu.coredata.db.DetailsRating
 import com.plumemu.coredata.db.PlumDatabase
 import com.plumemu.coredata.db.PlumMigrations
 import com.plumemu.coredata.db.ScrapedPictures
@@ -41,10 +42,12 @@ object RestoredDatabase {
         file: File,
         fromRoot: String?,
         toRoot: String,
+        /** Reads a stored details JSON for the schema 16 migration ([PlumMigrations.migration15To16]). */
+        rating: DetailsRating,
     ): Prepared {
         val room =
             Room.databaseBuilder(context.applicationContext, PlumDatabase::class.java, file.absolutePath)
-                .addMigrations(*PlumMigrations.ALL)
+                .addMigrations(*PlumMigrations.all(rating))
                 .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
                 .build()
         val prepared =

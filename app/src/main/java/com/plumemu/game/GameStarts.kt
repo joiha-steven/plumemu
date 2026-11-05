@@ -59,7 +59,7 @@ internal class GameStarts(
                 // Still "starting" while the no-emulator message's list is read: a second A shows the notice.
                 val emulators = if (outcome is LaunchOutcome.NoEmulatorForSystem) listing() else null
                 val content = if (outcome == null) noStartMessage() else launchMessage(outcome, emulators)
-                val message = content?.let { OpenPanel(game, PanelScreen.Message(it)) }
+                val message = content?.let { OpenPanel(game, PanelScreen.Message(it, about = outcome.takeIf { it is LaunchOutcome.EmulatorMissing || it is LaunchOutcome.NoEmulatorForSystem })) }
                 val current = panel()
                 when {
                     current != null && current === startingNotice -> show(message)

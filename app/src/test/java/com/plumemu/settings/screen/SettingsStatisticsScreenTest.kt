@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -106,8 +107,14 @@ class SettingsStatisticsScreenTest {
         text: String,
     ) = compose.onNode(hasText(text) and hasAnyAncestor(hasTestTag(tag)), useUnmergedTree = true)
 
-    private fun statisticsCrumb() =
-        context.getString(R.string.settings_crumb, context.getString(R.string.settings_title), context.getString(R.string.settings_section_statistics))
+    /** The top bar draws the place name and the section as two texts. */
+    private fun assertStatisticsCrumb() {
+        // In three columns the section is in its column and the bar says "Settings" only.
+        val three = compose.onAllNodesWithTag(SettingsTags.SECTIONS_DIVIDER, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        for (part in if (three) listOf(R.string.settings_title) else listOf(R.string.settings_title, R.string.settings_section_statistics)) {
+            compose.onNode(hasText(context.getString(part)) and hasAnyAncestor(hasTestTag(SettingsTags.TOP_BAR)), useUnmergedTree = true).assertIsDisplayed()
+        }
+    }
 
     @Test
     fun theButtonsWalkTheGamesAndAChangesNothingOnThePageAndBGoesBack() {
@@ -116,14 +123,14 @@ class SettingsStatisticsScreenTest {
         assertEquals("read once, as Settings opens", 1, source.reads)
         repeat(SettingsSection.Statistics.shownIndex) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
-        compose.onNodeWithText(statisticsCrumb()).assertIsDisplayed()
+        assertStatisticsCrumb()
         textUnder(StatisticsTags.tile(StatisticTile.Total), context.getString(R.string.settings_statistics_total)).assertIsDisplayed()
         compose.onNodeWithTag(StatisticsTags.figure(StatisticTile.Total), useUnmergedTree = true).assertTextEquals("23\u00A0h 10\u00A0min").assertIsDisplayed()
         compose.onNodeWithTag(StatisticsTags.figure(StatisticTile.Week), useUnmergedTree = true).assertTextEquals("2\u00A0h 10\u00A0min").assertIsDisplayed()
         textUnder(StatisticsTags.game(0), "Super Metroid").assertIsDisplayed()
         repeat(6) { send(Action.Move(Direction.Down)) }
         send(Action.Move(Direction.Right))
-        compose.onNodeWithText(statisticsCrumb()).assertIsDisplayed()
+        assertStatisticsCrumb()
         assertEquals("nothing is written", 0, writes)
         assertEquals("moving and pressing reads nothing again", 1, source.reads)
         send(Action.Back)
@@ -167,7 +174,7 @@ class SettingsStatisticsScreenTest {
         compose.waitForIdle()
         compose.onNodeWithTag(StatisticsTags.system(0)).performScrollTo().performClick()
         compose.waitForIdle()
-        compose.onNodeWithText(statisticsCrumb()).assertIsDisplayed()
+        assertStatisticsCrumb()
         assertEquals(0, writes)
         compose.onNodeWithTag(SettingsTags.HINT_BACK).performClick()
         compose.waitForIdle()

@@ -3,6 +3,9 @@ package com.plumemu.coreui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,7 +20,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.drawscope.inset
+import com.plumemu.coreui.theme.HintKeyDimens
+import com.plumemu.coreui.theme.PlumLayout
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.Layout
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -34,13 +39,19 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.ButtonColors
 import com.plumemu.coreui.theme.ColorMath
@@ -59,7 +70,7 @@ import com.plumemu.coreui.theme.toComposeColor
 
 /**
  * Top bar. [place] is the whole "where you are" text ("18 systems · 1,284 games"); its first
- * occurrence of [emphasis] ("18 systems") is drawn in `text2`, the rest in `muted`. [clock] and
+ * occurrence of [emphasis] ("18 systems") is drawn bold and bright, the rest small and `muted` ([PlaceText]). [clock] and
  * [battery] are read only by their own texts, so a minute tick redraws the clock alone; the
  * battery is left out while unknown, and either is left out while switched off (null). [wifi] says
  * whether the Wi-Fi glyph shows, between the clock and the battery (the callers pass false with
@@ -83,33 +94,31 @@ fun TopBar(
     pill: String? = null,
     /** A tap on the pill. */
     onPill: () -> Unit = {},
+    /** True while a keyboard tray is up: the bar keeps [PlumLayout.topBarHeightTyping] and the place name is drawn in the top bar's size. */
+    typing: () -> Boolean = { false },
+    /** Search's query field and count: given, the place text keeps its own width (at least [placeMinWidth]) and this fills the room after it. */
+    middle: (@Composable RowScope.() -> Unit)? = null,
+    placeMinWidth: Dp = 0.dp,
 ) {
     val colors = PlumTheme.colors
+    val compact = typing()
+    val barHeight = if (compact) PlumTheme.layout.topBarHeightTyping else PlumTheme.layout.topBarHeight
     // The colour is read while drawing (`color` below): a moved theme colour redraws the bar and recomposes nothing.
     val style = PlumTheme.type.topBar
-    val muted: () -> Color = { colors.muted }
-    // The emphasised words are in `text2`, a colour that moves with a slider's preview, and a span's colour is a value
-    // read in composition. So the place is drawn twice, one over the other: [text] with the emphasis made
-    // transparent (in `muted`) and [emphasised] with everything else transparent (in `text2`); both colours are read while drawing.
-    val text =
-        remember(place, emphasis) { placeWithOnly(place, emphasis, keepEmphasis = false) }
-    val emphasised =
-        remember(place, emphasis) { if (emphasis.isEmpty() || !place.contains(emphasis)) null else placeWithOnly(place, emphasis, keepEmphasis = true) }
-    val text2: () -> Color = { colors.text2 }
+    // The clock and status read at the bar's own step (13), one above the games list's year and tag.
+    val status = style
+    val ink: () -> Color = { colors.text2 }
     Row(
-        modifier = modifier.fillMaxWidth().height(PlumTheme.layout.topBarHeight).padding(horizontal = PlumDimens.stripMarginSide),
+        modifier = modifier.fillMaxWidth().height(barHeight).padding(horizontal = PlumDimens.stripMarginSide),
         horizontalArrangement = Arrangement.spacedBy(PlumDimens.topBarItemGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.weight(1f).graphicsLayer { alpha = placeAlpha() }) {
-            BasicText(text = text, style = style, color = muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            // Same text, same width, so the same line and the same cut; read once by the semantics (the one above).
-            if (emphasised != null) BasicText(text = emphasised, style = style, color = text2, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.clearAndSetSemantics { })
-        }
-        if (pill != null) TopBarPill(pill, style, onPill)
-        StatusText(clock, style, muted)
-        WifiStatus(wifi, style, wifiDescription, muted)
-        BatteryStatus(battery, charging, style, chargingDescription, muted)
+        PlaceText(place, emphasis, placeAlpha, if (middle == null) Modifier.weight(1f) else Modifier.widthIn(min = placeMinWidth), compact)
+        middle?.invoke(this)
+        if (pill != null) TopBarPill(pill, style, barHeight, onPill)
+        StatusText(clock, status, ink)
+        WifiStatus(wifi, status, wifiDescription, ink)
+        BatteryStatus(battery, charging, status, chargingDescription, ink)
     }
 }
 
@@ -118,13 +127,14 @@ fun TopBar(
 private fun TopBarPill(
     text: String,
     style: TextStyle,
+    height: Dp,
     onTap: () -> Unit,
 ) {
     val colors = PlumTheme.colors
     Box(
         Modifier
             .testTag(TopBarTags.PILL)
-            .height(PlumTheme.layout.topBarHeight)
+            .height(height)
             .background(colors.accent, CircleShape)
             .semantics {
                 role = Role.Button
@@ -138,27 +148,6 @@ private fun TopBarPill(
         contentAlignment = Alignment.Center,
     ) {
         BasicText(text = text, style = style.copy(color = colors.onAccent), maxLines = 1)
-    }
-}
-
-/** [place] with the first [emphasis] kept (or, with [keepEmphasis] false, everything but it) and the rest transparent: a text colour is not read from here. */
-private fun placeWithOnly(
-    place: String,
-    emphasis: String,
-    keepEmphasis: Boolean,
-): AnnotatedString {
-    val start = if (emphasis.isEmpty()) -1 else place.indexOf(emphasis)
-    if (start < 0) return AnnotatedString(place)
-    val end = start + emphasis.length
-    val hidden = SpanStyle(color = Color.Transparent)
-    return buildAnnotatedString {
-        append(place)
-        if (keepEmphasis) {
-            addStyle(hidden, 0, start)
-            addStyle(hidden, end, place.length)
-        } else {
-            addStyle(hidden, start, end)
-        }
     }
 }
 
@@ -176,6 +165,7 @@ fun WifiStatus(
 /**
  * The battery percentage read in its own scope like the texts beside it, left out while unknown (null), with the
  * charging bolt before it while [charging] says the device is on its charger; [chargingDescription] is the bolt's spoken name.
+ * There is no battery drawing: a low level (not charging) shows on the number, in the danger colour.
  */
 @Composable
 fun BatteryStatus(
@@ -186,9 +176,14 @@ fun BatteryStatus(
     color: () -> Color = { style.color },
 ) {
     val value = battery() ?: return
-    Row(horizontalArrangement = Arrangement.spacedBy(PlumDimens.topBarChargingGap), verticalAlignment = Alignment.CenterVertically) {
-        if (charging()) ChargingGlyph(style, color, chargingDescription, Modifier.testTag(TopBarTags.CHARGING))
-        BasicText(text = value, style = style, color = color, maxLines = 1)
+    val colors = PlumTheme.colors
+    val low = !charging() && isLowBattery(value)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (charging()) {
+            ChargingGlyph(style, color, chargingDescription, Modifier.testTag(TopBarTags.CHARGING))
+            Spacer(Modifier.width(PlumDimens.topBarChargingGap))
+        }
+        BasicText(text = value, style = style, color = if (low) ({ readableDanger(colors.danger, colors.bg, colors.strong) }) else color, maxLines = 1, modifier = Modifier.testTag(TopBarTags.BATTERY_TEXT))
     }
 }
 
@@ -207,6 +202,9 @@ object TopBarTags {
 
     /** The charging bolt before the battery percentage. */
     const val CHARGING = "top_bar_charging"
+
+    /** The battery percentage. */
+    const val BATTERY_TEXT = "top_bar_battery_text"
 }
 
 /** A status text read in its own scope: a new value recomposes this text only. */
@@ -228,10 +226,37 @@ fun HintBar(
 ) {
     Row(
         modifier = modifier.fillMaxWidth().height(PlumTheme.layout.hintBarHeight).padding(horizontal = PlumDimens.stripMarginSide),
-        horizontalArrangement = Arrangement.spacedBy(PlumDimens.hintGap),
+        horizontalArrangement = HintGapArrangement,
         verticalAlignment = Alignment.CenterVertically,
         content = content,
     )
+}
+
+/** The gap between [count] hints of [sum] px in [room] px: the board's, shrunk toward the tight gap only as far as it takes to fit. */
+internal fun hintGapFor(
+    sum: Int,
+    count: Int,
+    room: Int,
+    board: Int,
+    tight: Int,
+): Int = if (count < 2) board else ((room - sum) / (count - 1)).coerceIn(tight, board)
+
+/** Hints from the start, [hintGapFor] apart. */
+private object HintGapArrangement : Arrangement.Horizontal {
+    override fun Density.arrange(
+        totalSize: Int,
+        sizes: IntArray,
+        layoutDirection: LayoutDirection,
+        outPositions: IntArray,
+    ) {
+        val gap = hintGapFor(sizes.sum(), sizes.size, totalSize, PlumDimens.hintGapBoard.roundToPx(), PlumDimens.hintGap.roundToPx())
+        var x = 0
+        val rtl = layoutDirection == LayoutDirection.Rtl
+        sizes.forEachIndexed { index, size ->
+            outPositions[index] = if (rtl) totalSize - x - size else x
+            x += size + gap
+        }
+    }
 }
 
 /**
@@ -252,6 +277,7 @@ fun FittingHintBar(
         modifier = modifier.fillMaxWidth().height(PlumTheme.layout.hintBarHeight).padding(horizontal = PlumDimens.stripMarginSide),
     ) { measurables, constraints ->
         val gap = PlumDimens.hintGap.roundToPx()
+        val boardGap = PlumDimens.hintGapBoard.roundToPx()
         val placeables = measurables.map { it.measure(Constraints(maxHeight = constraints.maxHeight)) }
         val shown = BooleanArray(placeables.size) { true }
         fun width(): Int = placeables.indices.filter { shown[it] }.let { kept -> kept.sumOf { placeables[it].width } + gap * (kept.size - 1).coerceAtLeast(0) }
@@ -261,12 +287,14 @@ fun FittingHintBar(
             shown[index] = false
         }
         val height = constraints.maxHeight
+        val kept = placeables.indices.filter { shown[it] }
+        val spread = hintGapFor(kept.sumOf { placeables[it].width }, kept.size, constraints.maxWidth, boardGap, gap)
         layout(constraints.maxWidth, height) {
             var x = 0
             placeables.forEachIndexed { index, placeable ->
                 if (!shown[index]) return@forEachIndexed
                 placeable.placeRelative(x, (height - placeable.height) / 2)
-                x += placeable.width + gap
+                x += placeable.width + spread
             }
         }
     }
@@ -294,11 +322,10 @@ fun TitledHintBar(
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
-    val style = type.gridFocusTitle.copy(color = colors.text)
-    val small = type.smallFact
-    val withMeta = remember(title, meta, colors.muted, small) { focusTitle(title, meta, colors.muted, small) }
-    val titleOnly = remember(title) { AnnotatedString(title) }
     val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val boardLook = remember(title, meta, colors, type, density) { InfoLook(type.infoLineTitle.copy(color = colors.text), title, meta, colors.infoMeta, type.infoLineMeta, measurer, density) }
+    val fallbackLook = remember(title, meta, colors, type, density) { InfoLook(type.gridFocusTitle.copy(color = colors.text), title, meta, colors.infoMeta, type.smallFact, measurer, density) }
     SubcomposeLayout(
         modifier =
             modifier
@@ -309,28 +336,19 @@ fun TitledHintBar(
         val gap = PlumDimens.gridHintGap.roundToPx()
         val height = constraints.maxHeight
         val hintPlaceables = subcompose(HINTS_SLOT, hints).map { it.measure(Constraints(maxHeight = height)) }
-        val shown = BooleanArray(hintPlaceables.size) { true }
+        val widths = hintPlaceables.map { it.width }
+        fun plan(look: InfoLook) = planInfoLine(look, meta.isNotEmpty(), widths, gap, constraints.maxWidth, dropOrder, dropBeforeMeta, measurer)
+        // One rule: the title takes the board's size, or steps down so that no hint key is dropped. A key named in dropBeforeMeta
+        // gives way to the meta by design, so losing only those does not step the title down unless the step would keep them all.
+        val board = plan(boardLook)
+        val chosen = if (board.lossless) board else plan(fallbackLook).let { if (it.lossless || !board.acceptable) it else board }
+        val shown = chosen.shown
         fun hintsWidth(): Int = hintPlaceables.indices.filter { shown[it] }.let { kept -> kept.sumOf { hintPlaceables[it].width } + gap * kept.size }
-        fun fits(text: AnnotatedString): Boolean = measurer.measure(text, style, maxLines = 1).size.width + hintsWidth() <= constraints.maxWidth
-        if (meta.isNotEmpty() && !fits(withMeta)) {
-            // The meta matters more than these hints: leave them out when that is what lets the meta stay.
-            val before = dropBeforeMeta.filter { it in hintPlaceables.indices && it != 0 }
-            before.forEach { shown[it] = false }
-            if (!fits(withMeta)) before.forEach { shown[it] = true }
-        }
-        val text = if (meta.isNotEmpty() && fits(withMeta)) withMeta else titleOnly
-        if (text === titleOnly) {
-            // Keep the first hint (A) whatever happens: the bar always says what A does.
-            for (index in dropOrder.filter { it in hintPlaceables.indices && it != 0 }) {
-                if (fits(titleOnly)) break
-                shown[index] = false
-            }
-        }
         val titleWidth = (constraints.maxWidth - hintsWidth()).coerceAtLeast(0)
         val titlePlaceable =
             subcompose(TITLE_SLOT) {
-                BasicText(text = text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }.single().measure(Constraints(maxWidth = titleWidth, maxHeight = height))
+                BasicText(text = chosen.text, style = chosen.style, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }.single().measure(Constraints(maxWidth = titleWidth)) // its line may be taller than the bar (Serif 23); the bar keeps its height
         layout(constraints.maxWidth, height) {
             titlePlaceable.placeRelative(0, (height - titlePlaceable.height) / 2)
             var x = constraints.maxWidth - hintsWidth() + gap
@@ -343,23 +361,82 @@ fun TitledHintBar(
     }
 }
 
+/** The title's style with its text parts: [meta] after it, in [muted] at [metaStyle]. */
+private class InfoLook(
+    val style: TextStyle,
+    val title: String,
+    val meta: String,
+    val muted: Color,
+    val metaStyle: TextStyle,
+    measurer: TextMeasurer,
+    density: Density,
+) {
+    val withMeta: AnnotatedString = focusTitle(title, meta, muted, metaStyle, gapLetterSpacing(style, measurer, density))
+    val titleOnly: AnnotatedString = AnnotatedString(title)
+}
+
+/** What a [InfoLook] shows on one bar: the [text], which hints stay, and whether every hint stayed. */
+private class InfoPlan(val style: TextStyle, val text: AnnotatedString, val shown: BooleanArray, val lossless: Boolean, val acceptable: Boolean)
+
+/** Which hints and which text stay at [look] in [maxWidth]; see [TitledHintBar] for the order things leave in. */
+private fun planInfoLine(
+    look: InfoLook,
+    hasMeta: Boolean,
+    hintWidths: List<Int>,
+    gap: Int,
+    maxWidth: Int,
+    dropOrder: List<Int>,
+    dropBeforeMeta: List<Int>,
+    measurer: TextMeasurer,
+): InfoPlan {
+    val shown = BooleanArray(hintWidths.size) { true }
+    fun hintsWidth(): Int = hintWidths.indices.filter { shown[it] }.let { kept -> kept.sumOf { hintWidths[it] } + gap * kept.size }
+    fun fits(text: AnnotatedString): Boolean = measurer.measure(text, look.style, maxLines = 1).size.width + hintsWidth() <= maxWidth
+    if (hasMeta && !fits(look.withMeta)) {
+        // The meta matters more than these hints: leave them out when that is what lets the meta stay.
+        val before = dropBeforeMeta.filter { it in hintWidths.indices && it != 0 }
+        before.forEach { shown[it] = false }
+        if (!fits(look.withMeta)) before.forEach { shown[it] = true }
+    }
+    val withMeta = hasMeta && fits(look.withMeta)
+    if (!withMeta) {
+        // Keep the first hint (A) whatever happens: the bar always says what A does.
+        for (index in dropOrder.filter { it in hintWidths.indices && it != 0 }) {
+            if (fits(look.titleOnly)) break
+            shown[index] = false
+        }
+    }
+    val text = if (withMeta) look.withMeta else look.titleOnly
+    return InfoPlan(look.style, text, shown, shown.all { it }, shown.indices.all { shown[it] || it in dropBeforeMeta })
+}
+
 private const val HINTS_SLOT = "hints"
 private const val TITLE_SLOT = "title"
 
-/** "Mega Man X · 1993 · Capcom": the title 13 / 600 in `text`, the meta after it 13 in [muted]. */
+/** Extra spacing that makes one space in [style] as wide as the board's gap between the title and the text after it. */
+private fun gapLetterSpacing(
+    style: TextStyle,
+    measurer: TextMeasurer,
+    density: Density,
+): TextUnit =
+    with(density) {
+        val space = measurer.measure(" ", style, maxLines = 1).size.width
+        (PlumDimens.infoLineGap.toPx() - space).coerceAtLeast(0f).toSp()
+    }
+
+/** "Mega Man X  1993 · Capcom": the title in `text`, a gap, then the meta in [muted] at [small] (no dot between title and meta, as the board). */
 private fun focusTitle(
     title: String,
     meta: String,
     muted: Color,
     small: TextStyle,
+    gap: TextUnit,
 ): AnnotatedString =
     buildAnnotatedString {
         append(title)
         if (meta.isNotEmpty()) {
-            withStyle(SpanStyle(color = muted, fontSize = small.fontSize, fontWeight = small.fontWeight)) {
-                append(" · ")
-                append(meta)
-            }
+            withStyle(SpanStyle(letterSpacing = gap)) { append(" ") }
+            withStyle(SpanStyle(color = muted, fontSize = small.fontSize, fontWeight = small.fontWeight)) { append(meta) }
         }
     }
 
@@ -379,6 +456,8 @@ fun Hint(
     label: String,
     modifier: Modifier = Modifier,
     hasDot: Boolean = false,
+    /** The confirm key wears the accent (board: Hint keys); a ready-made button set's own colour still wins. */
+    accent: Boolean = false,
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
@@ -386,7 +465,6 @@ fun Hint(
     // Without a ready-made button set the cap's colours are theme colours, read while drawing (a colour slider's
     // preview moves them without recomposing the hint); with one, the look is read here, as that set seldom changes.
     val setLook = if (buttons?.forKeyCap(keyCap) != null) keyCapLook(keyCap, buttons, colors) else null
-    val setFace = remember(setLook?.fill) { setLook?.fill?.let { FlatFace.accent(it) } }
     val press = rememberHintPress(keyCap)
     Row(
         modifier = modifier.height(PlumTheme.layout.hintBarHeight).trackTouch(press),
@@ -396,34 +474,46 @@ fun Hint(
         Box(
             modifier =
                 Modifier
+                    // The key's collar (CollarSize.Hint) is drawn outside the cap's bounds, so the bar keeps its height:
+                    // sideways it has room in the layout, up and down it reaches past the bar like the focus ring.
+                    .padding(horizontal = HintKeyDimens.collarSide)
+                    .drawBehind {
+                        val l = CollarSize.Hint.lip.toPx() + CollarSize.Hint.groove.toPx()
+                        val b = CollarSize.Hint.lipBottom.toPx() + CollarSize.Hint.grooveBottom.toPx()
+                        inset(-l, -l, -l, -b) {
+                            drawCollar(colors.collar, CollarSize.Hint, cornerRadius = size.height.minus(l + b) / 2, glow = colors.partGlow)
+                        }
+                    }
                     .testTag(HINT_KEY_CAP_TAG) // outside the layer: its bounds stay the resting cap's
                     // Pressed (design/rules.md › Shapes and motion › Pressed): only the cap dips, and
                     // `press.progress` is read in the layer and draw blocks, never in composition.
-                    .graphicsLayer { translationY = PlumDimens.flatEdge.toPx() * press.progress.value }
+                    .graphicsLayer { translationY = colors.collar.seat.hintCap.travel.toPx() * press.progress.value }
                     .height(PlumTheme.layout.keyCapHeight)
                     .defaultMinSize(minWidth = PlumDimens.keyCapMinWidth)
-                    // The flat face (design/rules.md › Controls): one draw block. Pressed: the face fills with the text colour.
+                    // The board's hint CAP (ACCENT CAP for confirm or a button set's colour). Pressed: 1.33 dp down in the capDown face, the letter kept.
                     .drawBehind {
-                        drawFlatFace(setFace ?: colors.keyFace, colors.text.copy(alpha = press.progress.value), press = press.progress.value, moveFace = false)
+                        val seat = colors.collar.seat
+                        val fill = setLook?.fill
+                        val cap = if (fill != null) seat.hintAccent(fill) else if (accent) seat.hintAccent(colors.accent) else seat.hintCap
+                        drawCssCap(cap, press = press.progress.value, moveFace = false)
                     }
-                    // The board's border-box: 1.5 border + 5 padding on each side (text + 13).
-                    // Compose draws the border inside the box, so the padding covers both.
-                    .padding(horizontal = PlumDimens.keyCapPadding + PlumDimens.keyCapBorder),
+                    // One glyph (A, B) keeps the board's 22.67 round key; only a word (START, L1 R1) takes the 8.67 padding.
+                    .padding(horizontal = if (keyCap.length > 1) HintKeyDimens.capPadding else 0.dp),
             contentAlignment = Alignment.Center,
         ) {
             BasicText(
                 text = keyCap,
                 style = type.keyCap,
                 maxLines = 1,
-                color = { lerp(setLook?.letter ?: colors.strong, colors.bg, press.progress.value) },
+                color = { setLook?.letter ?: if (accent) colors.onAccentFace else colors.text },
             )
         }
-        BasicText(text = label, style = type.hintLabel, color = { colors.muted }, maxLines = 1)
+        BasicText(text = label, style = type.hintLabel, color = { colors.hintLabel }, maxLines = 1)
         if (hasDot) Box(Modifier.size(PlumDimens.hintDot).drawBehind { drawCircle(colors.accent) }.testTag(HINT_DOT_TAG))
     }
 }
 
-/** How a key cap in a button set is drawn: its flat [fill] (the printed letter's colour) and its [letter]. Caps without a set use the theme's `key` face and `strong`. */
+/** How a key cap in a button set is drawn: its flat [fill] (the printed letter's colour) and its [letter]. Caps without a set use the theme's `key` face and `text`. */
 data class KeyCapLook(
     val fill: Color?,
     val letter: Color,
@@ -432,7 +522,7 @@ data class KeyCapLook(
 /**
  * [keyCap]'s look. While [buttons] are in use (the set the person last picked) an A, B, X or Y cap's flat face is its
  * printed letter's colour and its letter white or dark as [com.plumemu.coreui.theme.ButtonColor] says. Every other cap,
- * and every cap without [buttons], has no fill of its own: the theme's `key` face with `strong`. A fill close to the
+ * and every cap without [buttons], has no fill of its own: the theme's `key` face with `text`. A fill close to the
  * background (a yellow B on Banana) still stands off by its edge and shadow.
  */
 fun keyCapLook(
@@ -440,6 +530,6 @@ fun keyCapLook(
     buttons: ButtonColors?,
     colors: PlumComposeColors,
 ): KeyCapLook {
-    val glyph = buttons?.forKeyCap(keyCap) ?: return KeyCapLook(fill = null, letter = colors.strong)
+    val glyph = buttons?.forKeyCap(keyCap) ?: return KeyCapLook(fill = null, letter = colors.text)
     return KeyCapLook(fill = glyph.fill.toComposeColor(), letter = glyph.letter.toComposeColor())
 }

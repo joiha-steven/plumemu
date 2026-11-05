@@ -13,6 +13,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
@@ -20,9 +21,10 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.strip.StripState
+import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumDimens
-import com.plumemu.coreui.testing.MediumText
+import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.theme.PlumTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -49,7 +51,7 @@ class HomeCoverArtTest {
     @get:Rule
     val rules = rulesAround(compose)
 
-    private fun show(content: @androidx.compose.runtime.Composable () -> Unit) = compose.setContent { PlumTheme(MediumText.Default) { content() } }
+    private fun show(content: @androidx.compose.runtime.Composable () -> Unit) = compose.setContent { PlumTheme(TableText.Default) { content() } }
 
     private fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot()
 
@@ -71,7 +73,7 @@ class HomeCoverArtTest {
             node.config.any { (key, value) -> key.name == "TestTag" && (value as? String)?.let { it.startsWith(prefix) && it.removePrefix(prefix).all(Char::isDigit) } == true }
         }
 
-    /** [pictures] but the focused cover's, which is drawn [com.plumemu.coreui.theme.PlumDimens.FOCUSED_COVER_SCALE] larger. */
+    /** [pictures] without the focused cover's (its groove is lit; the box is where it is at rest). */
     private fun restingPictures(focusedIndex: Int): List<Pair<Rect, Rect>> {
         val focused = bounds(HomeTags.cover(focusedIndex))
         return pictures().filterNot { abs(it.first.left - focused.left.value) < EPSILON && abs(it.first.top - focused.top.value) < EPSILON }
@@ -84,10 +86,13 @@ class HomeCoverArtTest {
         val shown = restingPictures(focusedIndex)
         assertTrue("$label: pictures drawn", shown.size >= 3)
         for ((cell, picture) in shown) {
-            assertEquals("$label: a cover stands on its cell's bottom (the shelf)", cell.bottom, picture.bottom, EPSILON)
+            // The box stands in its collar; the collar stands on the cell's bottom and fills the cell one way.
+            val side = CollarSize.Cover.sidePadding.value
+            val bottom = CollarSize.Cover.bottomPadding.value
+            assertEquals("$label: a collar stands on its cell's bottom (the shelf)", cell.bottom - bottom, picture.bottom, EPSILON)
             assertEquals("$label: centred across its cell", cell.left - picture.left, picture.right - cell.right, EPSILON)
             assertTrue("$label: never wider or taller than its cell", picture.width <= cell.width + EPSILON && picture.height <= cell.height + EPSILON)
-            assertTrue("$label: fills its cell one way (fitted, not shrunk)", abs(picture.width - cell.width) < EPSILON || abs(picture.height - cell.height) < EPSILON)
+            assertTrue("$label: fills its cell one way (fitted, not shrunk)", abs(picture.width - (cell.width - 2 * side)) < EPSILON || abs(picture.height - (cell.height - CollarSize.Cover.topPadding.value - bottom)) < EPSILON)
         }
         // One shelf per row: every cover of a row ends on the same line.
         shown.groupBy { it.first.top }.values.forEach { row -> assertEquals("$label: one bottom line per row", 1, row.map { Math.round(it.second.bottom * 10) }.distinct().size) }
@@ -98,15 +103,14 @@ class HomeCoverArtTest {
     fun wideGridCoversStandOnShelves() {
         show { CoverGridBoard(rememberSource { coverArtSource() }) }
         assertShelf("768x432 Super Nintendo", MEGA_MAN_X)
-        // The focused cover is drawn larger by the grid (over its clip), not by its layout: a pixel
-        // just above its resting top is the picture's, not the gap's (HomeFocusedCoverTest measures it all).
+        // The focused cover is drawn larger over its neighbours (the lift, never layout): a pixel just left of its resting box is its own picture, not the collar's groove.
         val density = compose.density.density
         val resting = pictures().first { (cell, _) -> abs(cell.left - bounds(HomeTags.cover(MEGA_MAN_X)).left.value) < EPSILON && abs(cell.top - bounds(HomeTags.cover(MEGA_MAN_X)).top.value) < EPSILON }.second
         val pixels = compose.onRoot().captureToImage().toPixelMap()
-        val above = pixels[(resting.center.x * density).toInt(), ((resting.top - 1f) * density).toInt()]
-        val inside = pixels[(resting.center.x * density).toInt(), ((resting.top + 1f) * density).toInt()]
-        val alike = abs(above.red - inside.red) < 0.1f && abs(above.green - inside.green) < 0.1f && abs(above.blue - inside.blue) < 0.1f
-        assertTrue("the focused cover is drawn larger than its place ($above above its top, $inside inside)", alike)
+        val beside = pixels[(resting.left * density - 1f).toInt(), (resting.center.y * density).toInt()]
+        val inside = pixels[(resting.left * density + 2f).toInt(), (resting.center.y * density).toInt()]
+        val alike = abs(beside.red - inside.red) < 0.1f && abs(beside.green - inside.green) < 0.1f && abs(beside.blue - inside.blue) < 0.1f
+        assertTrue("the focused cover is drawn larger than its place ($beside beside its edge, $inside inside)", alike)
     }
 
     @Test
@@ -143,7 +147,7 @@ class HomeCoverArtTest {
         // Donkey Kong Country 2's saved box front is 1.36 wide for one high; the cell is about 1.40.
         assertEquals("the slot has the picture's shape", 1.36f, slot.width / slot.height, ASPECT_SLACK)
         assertTrue("narrower than its cell", slot.width < box.width - 1f)
-        assertEquals("on the shelf", box.bottom, slot.bottom, EPSILON)
+        assertEquals("on the shelf", box.bottom - CollarSize.Cover.bottomPadding.value, slot.bottom, EPSILON)
     }
 
     @Test
@@ -152,17 +156,17 @@ class HomeCoverArtTest {
         show {
             CoverGridBoard(rememberSource { coverArtSource() })
         }
-        compose.onNodeWithText("Mega Man X · 1993 · Capcom", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Mega Man X 1993 · Capcom", useUnmergedTree = true).assertExists()
     }
 
-    /** At 768 the focused game's year and publisher stay and "L2 R2 Switch system" gives way; "L1 R1 Size" stays. */
+    /** At 768 the focused game's year and publisher and "L1 R1 Size" stay; "L2 R2 Switch system" is the first to go, so it is never kept without Size (in Jost it still fits here). */
     @Test
     @Config(qualifiers = WIDE)
-    fun at768AGameGridKeepsYearAndPublisherAndSizeAndDropsSwitchSystem() {
+    fun at768AGameGridKeepsYearAndPublisherAndSize() {
         show { CoverGridBoard(rememberSource { coverArtSource() }) }
-        compose.onNodeWithText("Mega Man X · 1993 · Capcom", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Mega Man X 1993 · Capcom", useUnmergedTree = true).assertExists()
         assertTrue("L1 R1 Size stays", isPlaced(Action.NextSystem))
-        assertTrue("L2 R2 Switch system gave way", !isPlaced(Action.JumpLetterNext))
+        assertTrue("Switch system is not kept over Size", !isPlaced(Action.JumpLetterNext) || isPlaced(Action.NextSystem))
     }
 
     /** At 576 the grid bar keeps "L1 R1 Size" if anything and drops "L2 R2 Switch system" first (never the reverse). */
@@ -184,7 +188,7 @@ class HomeCoverArtTest {
         show {
             CoverGridBoard(rememberSource { coverArtSource() })
         }
-        compose.onNodeWithText("Mega Man X · 1993 · Capcom", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Mega Man X 1993 · Capcom", useUnmergedTree = true).assertExists()
         assertTrue("Size stays on the Thor", isPlaced(Action.NextSystem))
     }
 
@@ -198,7 +202,7 @@ class HomeCoverArtTest {
         compose.waitForIdle()
         compose.runOnIdle { source.results.value = all }
         compose.waitForIdle()
-        compose.onNodeWithText("1994 · Nintendo", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Nintendo, 1994", useUnmergedTree = true).assertExists()
         assertTrue("the list's years", compose.onAllNodes(hasText("1993", substring = true) and hasAnyAncestor(hasTestTag(HomeTags.GAMES)), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
     }
 
@@ -214,14 +218,14 @@ class HomeCoverArtTest {
         compose.runOnIdle { source.results.value = all }
         compose.waitForIdle()
         assertTrue("the covers land", pictures().size >= 3)
-        compose.onNodeWithText("Mega Man X · 1993 · Capcom", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Mega Man X 1993 · Capcom", useUnmergedTree = true).assertExists()
     }
 
     @Test
     @Config(qualifiers = WIDE)
     fun aGameWithoutArtWearsItsPosterInsideItsCell() {
         show { CoverGridBoard(rememberSource { coverArtSource(noArt = setOf("EarthBound")) }) }
-        val poster = compose.onNode(hasContentDescription("EarthBound") and hasTestTag(HomeTags.cover(2)), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val poster = compose.onNode(hasContentDescription("EarthBound") and hasAnyAncestor(hasTestTag(HomeTags.cover(2))), useUnmergedTree = true).getUnclippedBoundsInRoot()
         assertTrue("it is a poster cover", compose.onAllNodes(hasTestTag(HomeTags.POSTER_COVER) and hasAnyAncestor(hasTestTag(HomeTags.cover(2))), useUnmergedTree = true).fetchSemanticsNodes().size == 1)
         val cell = bounds(HomeTags.cover(2))
         assertTrue("the poster inside its cell", poster.left >= cell.left && poster.right <= cell.right && poster.top >= cell.top && poster.bottom <= cell.bottom)
@@ -233,14 +237,19 @@ class HomeCoverArtTest {
         show { CoverDetailsBoard(rememberSource { coverArtSource() }) }
         val slot = bounds(HomeTags.DETAILS_COVER)
         val picture = pictureIn(slot)
-        assertEquals("bottom left of the 248x178 slot: the title below never moves", slot.left.value, picture.left, EPSILON)
-        assertEquals("on the slot's bottom", slot.bottom.value, picture.bottom, EPSILON)
-        assertEquals("178 high (Super Metroid's box is wider than tall but narrower than the slot)", 178f, picture.height, EPSILON)
-        compose.onNodeWithText("1994 · Nintendo", useUnmergedTree = true).assertExists()
+        val collar = com.plumemu.coreui.components.CollarSize.Cover
+        assertEquals("on the left edge of the 248x178 slot", slot.left.value + CollarSize.Cover.sidePadding.value, picture.left, EPSILON)
+        assertEquals("in its collar on the slot's bottom: the title below never moves", slot.bottom.value - collar.bottomPadding.value, picture.bottom, EPSILON)
+        assertEquals("the slot's height less the collar (Super Metroid's box is wider than tall but narrower than the slot)", (slot.bottom - slot.top).value - collar.topPadding.value - collar.bottomPadding.value, picture.height, EPSILON)
+        compose.onNodeWithText("Nintendo, 1994", useUnmergedTree = true).assertExists()
         // The rating (17 of 20) is not in the result: it is read with the synopsis, once the focus has rested.
         compose.mainClock.advanceTimeBy(SETTLE_MS)
         compose.waitForIdle()
-        compose.onNodeWithText("Action, Adventure · 8.5/10", useUnmergedTree = true).assertExists()
+        // The details block: the genre under GENRE (first genre alone when the list does not fit one line), the number and five dots under RATING (spoken as one "Rating, 8.5/10").
+        compose.onNodeWithText("Action", substring = true, useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("8.5", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag(HomeTags.DETAILS_RATING_DOTS, useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription("Rating, 8.5/10", useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -263,31 +272,48 @@ class HomeCoverArtTest {
         show { RealCoverDetails("psp", PERSONA_3_PORTABLE, source) }
         val slot = bounds(HomeTags.DETAILS_COVER)
         val column = bounds(HomeTags.DETAILS)
-        assertEquals("the slot keeps its 178 height", PlumDimens.detailsCoverHeightWide.value, (slot.bottom - slot.top).value, EPSILON)
+        // The cover is what the held title and facts block leave of the column (at most 178): the same for every game, so it never changes when data arrives.
+        val slotHeight = (slot.bottom - slot.top).value
+        assertTrue("the slot is at most its full height and at least its floor: $slotHeight", slotHeight <= PlumDimens.detailsCoverHeightWide.value + EPSILON && slotHeight >= PlumDimens.detailsCoverMinWide.value - EPSILON)
         val portrait = pictureIn(slot)
-        assertEquals("a portrait box fills the slot's height", PlumDimens.detailsCoverHeightWide.value, portrait.height, EPSILON)
+        val collar = com.plumemu.coreui.components.CollarSize.Cover
+        assertEquals("a portrait box fills the slot's height less its collar", slotHeight - collar.topPadding.value - collar.bottomPadding.value, portrait.height, EPSILON)
         assertEquals("at its own shape (PSP, 0.58 wide for one high)", 0.58f, portrait.width / portrait.height, ASPECT_SLACK)
-        assertEquals("on the column's left edge, as the title below", column.left.value, portrait.left, EPSILON)
+        assertEquals("on the column's left edge, where the title starts", column.left.value + CollarSize.Cover.sidePadding.value, portrait.left, EPSILON)
         val titleTop = bounds(HomeTags.DETAILS_TITLE).top
         // The same game's box saved again much wider than the slot (1.6): shorter, the title stays.
         compose.runOnIdle { source.withLargeAspect("psp", PERSONA_3_PORTABLE, 1.6f) }
         compose.waitForIdle()
         val wide = pictureIn(bounds(HomeTags.DETAILS_COVER))
         assertEquals("the wide box at its shape", 1.6f, wide.width / wide.height, ASPECT_SLACK)
-        assertEquals("on the slot's bottom", slot.bottom.value, wide.bottom, EPSILON)
+        assertEquals("in its collar on the slot's bottom", slot.bottom.value - collar.bottomPadding.value, wide.bottom, EPSILON)
         assertEquals("the title has not moved", titleTop, bounds(HomeTags.DETAILS_TITLE).top)
     }
 
+    // The box's shape is stored when the focus lands (the shapes pass has run): the slot is as wide as the box, so the freed width is the text's.
     @Test
     @Config(qualifiers = NARROW)
     fun narrowDetailsGiveAPortraitBoxsFreedWidthToTheText() {
-        show { RealCoverDetails("psp", PERSONA_3_PORTABLE) }
+        show { RealCoverDetails("psp", PERSONA_3_PORTABLE, storedAspect = 0.58f) }
         val box = bounds(HomeTags.DETAILS_COVER)
         val height = (box.bottom - box.top).value
         assertEquals("the slot's full height", PlumDimens.detailsStopCoverHeight.value, height, EPSILON)
         assertEquals("the box's own shape", 0.58f, (box.right - box.left).value / height, ASPECT_SLACK)
-        assertTrue("narrower than the slot", (box.right - box.left) < PlumDimens.detailsStopCoverWidth)
+        assertTrue("narrower than the full slot", (box.right - box.left) < PlumDimens.detailsStopCoverWidth)
         assertEquals("the box hugs the column's right edge and the freed width is the text's", bounds(HomeTags.DETAILS).right.value, box.right.value, EPSILON)
+    }
+
+    // Only the picture knows the shape: the slot has the system's shape from the first frame and the text keeps its width; the box fits inside the slot.
+    @Test
+    @Config(qualifiers = NARROW)
+    fun narrowDetailsKeepTheTextWidthWhenOnlyThePictureKnowsItsShape() {
+        show { RealCoverDetails("psp", PERSONA_3_PORTABLE) }
+        val slot = bounds(HomeTags.DETAILS_COVER_SLOT)
+        val box = bounds(HomeTags.DETAILS_COVER)
+        assertEquals("the slot hugs the column's right edge", bounds(HomeTags.DETAILS).right.value, slot.right.value, EPSILON)
+        assertEquals("the box's own shape", 0.58f, (box.right - box.left).value / (box.bottom - box.top).value, ASPECT_SLACK)
+        assertTrue("the box lies inside its slot", box.left >= slot.left - EPSILON.dp && box.right <= slot.right + EPSILON.dp && box.bottom <= slot.bottom + EPSILON.dp)
+        assertEquals("the box hugs the column's right edge as a stored one does", bounds(HomeTags.DETAILS).right.value, box.right.value, EPSILON)
     }
 
     @Test

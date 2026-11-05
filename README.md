@@ -15,12 +15,12 @@ handhelds.</p>
 </p>
 
 <p align="center">
-  <b>0.1.1</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket Classic ·
+  <b>0.1.2</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket Classic ·
   <a href="../../releases">Download</a> · <a href="https://plumemu.stevensdesk.com">Website</a>
 </p>
 
 <p align="center">
-  0.1.1 adds RetroAchievements, a drawn cover for every game so the grid works without an account, and a calmer, softer look. The source is open: GPL-3.0, see <a href="#source">Source</a>.
+  0.1.2 brings a new look, a setup that fits your handheld, box art without an account, and a list of the files left out of your library, each with its reason. The source is open: GPL-3.0, see <a href="#source">Source</a>.
 </p>
 
 ---
@@ -39,7 +39,7 @@ your list, not five. You pick which copy plays from the game's menu.
 have, chooses one for each system and adds new games by itself. There are no platform files to
 import, no theme engine to learn and no scraper to configure before the first game.
 
-**Light enough for the handheld you already own.** An 8.2 MB download that runs on Android 6.0
+**Light enough for the handheld you already own.** A 9.3 MB download that runs on Android 6.0
 and 2 GB devices, fits 4:3 screens as well as 16:9, opens 10,000 games in about a quarter
 of a second and uses no CPU while it waits.
 
@@ -61,7 +61,7 @@ game file.
 | Game names | Read from the game itself, offline, about 29,000 arcade sets |
 | Duplicates | Regions, revisions and arcade clones folded into one row |
 | Setup | Pick a folder; emulators found and chosen for you |
-| Covers | A drawn cover for every game; real box art with a free ScreenScraper account |
+| Covers | A drawn cover for every game; real box art with no account, or game details too with a free ScreenScraper account |
 | Runs on | Android 6.0 and later, 2 GB devices, 16:9 and 4:3 screens |
 | Second screen | Details and battery time left on the AYN Thor |
 | Achievements | RetroAchievements shown per game |
@@ -89,9 +89,10 @@ game file.
 - **Covers for every game.** A game without box art gets a drawn poster cover with its title, so
   every system, Recent and Favorites can use the grid, with no account. Android games and Ports
   show their app icon as a cover card.
-- **Real box art, if you want it.** Sign in with your own free
+- **Real box art, if you want it.** Choose Box art only and Plumemu fetches box fronts over Wi-Fi
+  from libretro's public server, with no account. Or sign in with your own free
   [ScreenScraper](https://www.screenscraper.fr) account (Settings › Accounts › ScreenScraper) and
-  Plumemu fetches box art and game details over Wi-Fi. A wrong cover is replaced from the game
+  Plumemu fetches box art and game details too. A wrong cover is replaced from the game
   menu. The ScreenScraper panel shows the space used, picks the Box art region and has Clear box
   art; a daily cleanup removes orphaned images, and games that keep failing on the server stop
   retrying after 3 days.
@@ -101,7 +102,10 @@ game file.
   trophy in the list. Plumemu only shows them; your emulator awards them. The key is kept
   encrypted on the device, and Sign out deletes it.
 - **Details and sorting.** Info shows the year, publisher, developer, genre, players, the whole
-  description and, with RetroAchievements, the game's achievements. Sort games has a Year order.
+  description and, with RetroAchievements, the game's achievements. Sort games by name, last played, year, most played, recently added or rating, right from the
+  list.
+- **Nothing goes missing quietly.** Settings › Library › Files not added lists every file left out
+  of your library, with the reason, and Unidentified games suggests the closest official titles.
 - **Recent that you control.** Take one game out of Recent from its menu, choose how many it keeps
   (10, 20 or 50) and clear it, all in Settings › Library. Your play time and statistics stay.
 - **Skip a sub-folder.** Settings › Library › ROM folders can leave out a sub-folder (a folder of
@@ -124,7 +128,7 @@ game file.
   its charger. A game you have played says "2 h on this charge" before you start it. Its options
   are in Settings › Second screen, which appears only on a handheld that has one. Everything still
   works on one screen.
-- **Light enough for old handhelds.** An 8.2 MB download that runs on Android 6.0, opens your
+- **Light enough for old handhelds.** A 9.3 MB download that runs on Android 6.0, opens your
   library in about a quarter of a second and uses no CPU while it sits on the home screen.
   [Measured](#light-on-the-hardware) on a slow emulator with 10,000 games.
 - **Smooth.** Every list and grid glides over 200 ms and slows into place, and the selection pill
@@ -231,7 +235,7 @@ can. These figures were measured with 0.0.7-beta (the download size is the curre
 
 | | |
 |---|---|
-| Download | 8.2 MB |
+| Download | 9.3 MB |
 | Start to your library | 0.25 s |
 | Memory | 63 MB |
 | CPU while it sits on the home screen | almost none (one CPU tick in 60 s); the clock redraws once a minute |
@@ -321,11 +325,12 @@ official build can send, and to whom:
 
 | What | Sent to | When | Turn it off |
 |---|---|---|---|
-| Usage statistics and crash reports: device model, Android and Plumemu versions, a random install number, which screens and settings are used, play time by system. Never game titles or search words. | The developer (`plumemu.stevensdesk.com`) | Only after you switch it on | Settings › About › Send usage statistics |
+| Usage statistics and crash reports: device model, Android and Plumemu versions, a random install number, which screens and settings are used, play time by system. For a game Plumemu could not name, once: its system, size, checksum and any code read from the game. Never game titles, file names or search words. | The developer (`plumemu.stevensdesk.com`) | Only after you switch it on | Settings › About › Send usage statistics |
 | A problem report: what you wrote, an e-mail if you give one, the log unless you untick it | The developer | Only when you press Send | Do not press Send |
 | An update check: a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | Once a day on Wi-Fi, or when you press Check for updates | Settings › About › Check for updates daily |
 | Box art lookups: your ScreenScraper account, and each game's file name, size, checksum and title | [ScreenScraper](https://www.screenscraper.fr) | Only while you are signed in, on Wi-Fi | Settings › Accounts › ScreenScraper: Sign out or Pause |
 | Box art ScreenScraper lacks: a Steam game's title, or a game's file name | Steam (Valve) and the libretro thumbnail server | Only while you are signed in to ScreenScraper, on Wi-Fi | The same |
+| Box art with no account: a game's name, in the picture's address | The libretro thumbnail server | Only if you choose Box art only, on Wi-Fi | Settings › Accounts › Box art: Plumemu's own covers |
 | Achievements: your RetroAchievements user name, your Web API key and the RetroAchievements number of a game, found from a hash of the game file that Plumemu computes on the handheld (no file leaves it). Badge pictures are plain downloads with no account data | [RetroAchievements](https://retroachievements.org) (`retroachievements.org`, badges from `media.retroachievements.org`) | Only while you are signed in: when a game's Info opens, after you play, and once a day on Wi-Fi | Settings › Accounts › RetroAchievements: Sign out deletes your name, key and progress |
 | Platform data (the list of systems and emulators): a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | In the same daily update check | Settings › About › Check for updates daily |
 

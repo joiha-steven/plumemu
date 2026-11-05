@@ -14,6 +14,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performTouchInput
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreui.components.SystemRowTags
@@ -78,7 +79,9 @@ class HomeNoticeTest {
     fun newGamesInOneSystemNameItThenTheHeaderFadesBack() {
         show()
         post(LibraryNotice(1, added = 24, removed = 0, addedSystems = listOf(firstSystem.id)))
-        compose.onNodeWithText("+24 games · ${firstSystem.name}", substring = true, useUnmergedTree = true).assertExists()
+        // The notice is two texts now (bold lead, small tail), the board's name and count.
+        compose.onNodeWithText("+24 games", useUnmergedTree = true).assertExists()
+        compose.onNode(hasText(firstSystem.name.orEmpty(), substring = true) and hasAnyAncestor(hasTestTag(HomeTags.TOP_BAR)), useUnmergedTree = true).assertExists()
         compose.mainClock.advanceTimeBy(NOTICE_SHOWN_MS + 600)
         compose.onNodeWithText(usual(), substring = true, useUnmergedTree = true).assertExists()
         assertEquals("the graph is told it was shown, so the screen never shows it twice", 1, shown.size)
@@ -110,7 +113,8 @@ class HomeNoticeTest {
         show()
         val ids = content.entries.filter { it.kind == EntryKind.System }.take(3).map { it.id }
         post(LibraryNotice(1, added = 24, removed = 0, addedSystems = ids))
-        compose.onNodeWithText("+24 games · 3 systems", substring = true, useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("+24 games", useUnmergedTree = true).assertExists()
+        compose.onNode(hasText("3 systems") and hasAnyAncestor(hasTestTag(HomeTags.TOP_BAR)), useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -124,7 +128,7 @@ class HomeNoticeTest {
     fun oneNewGameIsSingular() {
         show()
         post(LibraryNotice(1, added = 1, removed = 0, addedSystems = listOf(firstSystem.id)))
-        compose.onNodeWithText("+1 game ·", substring = true, useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("+1 game", useUnmergedTree = true).assertExists()
     }
 
     @Test

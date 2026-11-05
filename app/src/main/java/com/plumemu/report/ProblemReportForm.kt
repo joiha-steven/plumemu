@@ -71,11 +71,13 @@ internal sealed interface ReportStep {
 @Stable
 internal class ProblemReportForm(
     val keyboardKind: KeyboardChoice = KeyboardChoice.Android,
+    /** Where the typed words are kept between openings; null keeps nothing. The form starts from it. */
+    private val draft: ReportDraft? = null,
 ) {
-    var text: String by mutableStateOf("")
+    var text: String by mutableStateOf(draft?.text.orEmpty())
         private set
 
-    var email: String by mutableStateOf("")
+    var email: String by mutableStateOf(draft?.email.orEmpty())
         private set
 
     var includeDetails: Boolean by mutableStateOf(true)
@@ -84,9 +86,10 @@ internal class ProblemReportForm(
     var focus: ReportItem by mutableStateOf(ReportItem.Text)
         private set
 
-    /** The report is on its way: the fields and buttons wait. */
-    var isSending: Boolean by mutableStateOf(false)
-        private set
+    private var sendingHere: Boolean by mutableStateOf(false)
+
+    /** The report is on its way (sent from this form, or from an earlier one still waiting): the fields and buttons wait. */
+    val isSending: Boolean get() = sendingHere || draft?.isSending == true
 
     /** What the last Send ended in; null before one and while one runs. */
     var result: ReportResult? by mutableStateOf(null)
@@ -119,9 +122,10 @@ internal class ProblemReportForm(
     /** The cursor is on a text field (typing or not) and nothing is being sent. */
     val isOnField: Boolean get() = !isSending && focus.isField
 
-    val textKeys = FieldKeys("", capitalizesFirst = true)
+    // Started from the draft's words so the caret sits at their end, not at the start.
+    val textKeys = FieldKeys(text, capitalizesFirst = true)
 
-    val emailKeys = FieldKeys("", capitalizesFirst = false)
+    val emailKeys = FieldKeys(email, capitalizesFirst = false)
 
     /** The fields as Plumemu's keyboard types into them; null with Android's keyboard. */
     val typing: ReportTyping? = if (keyboardKind == KeyboardChoice.Plumemu) ReportTyping(this) else null
@@ -146,6 +150,7 @@ internal class ProblemReportForm(
         if (changed.length > ProblemReports.MAX_TEXT_CHARS && text.length >= ProblemReports.MAX_TEXT_CHARS) return
         text = changed.take(ProblemReports.MAX_TEXT_CHARS)
         textKeys.caret = text.length
+        draft?.text = text
         mistake = null
     }
 
@@ -153,6 +158,7 @@ internal class ProblemReportForm(
         if (isSending) return
         email = changed.take(ProblemReports.MAX_EMAIL_CHARS + 1)
         emailKeys.caret = email.length
+        draft?.email = email
         mistake = null
     }
 
@@ -245,9 +251,20 @@ internal class ProblemReportForm(
         keyboard.stop()
     }
 
+    init {
+        // Opened while an earlier form's send is on its way: that send's answer reaches this form.
+        if (draft?.isSending == true) draft.watcher = ::applyResult
+    }
+
     /** The graph's answer to the last [ReportStep.Submit]. */
     fun showResult(answer: ReportResult) {
-        isSending = false
+        sendingHere = false
+        draft?.finishSend(answer)
+        applyResult(answer)
+    }
+
+    private fun applyResult(answer: ReportResult) {
+        sendingHere = false
         keyboard.stop()
         result = answer
         when (answer) {
@@ -255,6 +272,8 @@ internal class ProblemReportForm(
                 // The words are gone from the device's memory too; a new report starts empty.
                 text = ""
                 email = ""
+                textKeys.caret = 0
+                emailKeys.caret = 0
                 mistake = null
                 focus = ReportItem.Done
             }
@@ -311,7 +330,8 @@ internal class ProblemReportForm(
             keyboard.stop()
             return ReportStep.Stay(moved = true)
         }
-        isSending = true
+        sendingHere = true
+        draft?.beginSend(text, email)
         keyboard.stop()
         mistake = null
         result = null

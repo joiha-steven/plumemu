@@ -44,7 +44,8 @@ enum class ScrapeMatchedBy {
  *   stores it and never reads it (core-data does not depend on scraper).
  * - [title], [year], [publisher], [players], [genre] are copied out of the details for the
  *   screens and later filters, which read them without decoding the JSON. [genre] is the main
- *   genre's English name.
+ *   genre's English name. [rating] (schema 16) is the details' rating out of 20, 1 to 20 or null
+ *   (the scraper's `GameDetails.listedRating`), for the Rating sort.
  * - [pictures] is [ScrapedPictures]' JSON of every saved file (kind, size name, path, pixels).
  *   One column rather than a child table: the pictures are always written and read with their
  *   row, never looked up on their own, and a REPLACE of the row then cannot leave stale picture
@@ -96,6 +97,8 @@ data class ScrapedGameEntity(
     @ColumnInfo(name = "support_attempts", defaultValue = "0") val supportAttempts: Int = 0,
     /** Schema v4. */
     @ColumnInfo(name = "ask_again", defaultValue = "0") val askAgain: Boolean = false,
+    /** Schema v16: out of 20, 1 to 20; null for none. */
+    val rating: Int? = null,
 )
 
 /** What a screen reads of a scraped game: everything but the details JSON. */

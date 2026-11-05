@@ -9,8 +9,8 @@ package com.plumemu.coreui.theme
 enum class TextMode(
     val color: Rgb,
 ) {
-    Light(Rgb(0xEDEDED)),
-    Dark(Rgb(0x17181A)),
+    Light(Rgb(0xEBE7DD)),
+    Dark(Rgb(0x1C1C1E)),
     ;
 
     companion object {
@@ -30,12 +30,12 @@ enum class TextMode(
 enum class BackgroundPreset(
     val color: Rgb,
 ) {
-    Graphite(Rgb(0x0E0F11)),
+    Graphite(Rgb(0x111214)),
     Black(Rgb(0x000000)),
     Midnight(Rgb(0x0B1220)),
     Plum(Rgb(0x1A1020)),
     Forest(Rgb(0x0E1A14)),
-    Paper(Rgb(0xF4F3EF)),
+    Paper(Rgb(0xECE8DF)),
     Sand(Rgb(0xEEE6D6)),
     Mist(Rgb(0xE8ECF0)),
 }

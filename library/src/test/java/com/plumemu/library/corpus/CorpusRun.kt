@@ -32,6 +32,10 @@ internal data class CorpusScan(
     val walkNanos: Long,
     val namingNanos: Long,
     val identifyLog: List<String>,
+    /** Files the scan left out (Settings › Library › Files not added), by reason code; each checked to have exactly one reason. */
+    val leftOut: Map<String, Int> = emptyMap(),
+    /** Every row the scan stored, one per file the scan kept (shown or not); the device listing run counts names from these. */
+    val rows: List<GameEntity> = emptyList(),
 ) {
     val totalNanos get() = walkNanos + namingNanos
     val gameOfPath: Map<String, ShownGame> by lazy { shown.flatMap { g -> g.paths.map { it to g } }.toMap() }
@@ -72,8 +76,10 @@ internal object CorpusRun {
             // Arcade sets the pack knows are grouped by the pass, never by the catalogue's file-name rule.
             val arcadeGroups = arcadeGroups(rows, naming.naming)
             val owned = arcadeGroups.values.flatten().mapTo(HashSet()) { it.documentId }
-            val shown = shownGames(rows, membership(fixture, rules, owned).filterKeys { it !in owned } + arcadeMembership(arcadeGroups))
-            return CorpusScan(shown, walkEnd - start, end - walkEnd, naming.log.toList())
+            val members = membership(fixture, rules, owned).filterKeys { it !in owned } + arcadeMembership(arcadeGroups)
+            val shown = shownGames(rows, members)
+            val inGames = (rows.map { it.documentId } + members.keys).mapTo(HashSet(), ::pathOf)
+            return CorpusScan(shown, walkEnd - start, end - walkEnd, naming.log.toList(), leftOutChecked(corpus, fixture, inGames), rows)
         } finally {
             fixture.close()
         }
@@ -233,6 +239,27 @@ internal object CorpusRun {
         return shownRows.values.map { ShownGame(it, members[it.documentId].orEmpty()) }
     }
 
+    /**
+     * Every corpus file the walk reads is in a game (a row, or a file a row stands for) or was left
+     * out with exactly one reason, never both; files past the stored cap are counted instead.
+     * Directories the walk skips (`bios/`, `media/`, hidden ones) are not read. Returns the count by reason.
+     */
+    private fun leftOutChecked(corpus: Corpus, fixture: ScanFixture, inGames: Set<String>): Map<String, Int> {
+        val stored = runBlocking { fixture.db.leftOutFileDao().inFolder(fixture.folderId) }
+        val byPath = stored.mapNotNull { row -> row.relativePath?.let { key(it) to row } }.groupBy({ it.first }, { it.second })
+        val twice = byPath.filterValues { it.size > 1 }.keys
+        check(twice.isEmpty()) { "${corpus.name}: files left out with more than one reason: ${twice.take(5)}" }
+        val inBoth = byPath.keys.filter { it in inGames }
+        check(inBoth.isEmpty()) { "${corpus.name}: files in a game and left out too: ${inBoth.take(5)}" }
+        val read = corpus.rows.map { key(it.path) }.filter { path -> path.split('/').dropLast(1).none(JunkFilter::isSkippedDirectory) }
+        val missing = read.filter { it !in inGames && it !in byPath }
+        val counted = stored.sumOf { it.more }
+        check(missing.size == counted) {
+            "${corpus.name}: ${missing.size} files neither in a game nor left out ($counted counted past the cap): ${missing.take(5)}"
+        }
+        return stored.groupingBy { it.reason }.fold(0) { total, row -> total + if (row.relativePath == null) row.more else 1 }
+    }
+
     /** `FileSystemDocumentTree` ids are `fs:` and the path below `ROMs`. */
-    private fun pathOf(documentId: String): String = key(documentId.removePrefix("fs:"))
+    fun pathOf(documentId: String): String = key(documentId.removePrefix("fs:"))
 }

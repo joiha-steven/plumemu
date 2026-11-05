@@ -5,6 +5,7 @@ import com.plumemu.usage.restoreEventOf
 import com.plumemu.usage.VersionSeen
 import com.plumemu.R
 import com.plumemu.coredata.account.ScraperAccountStore
+import com.plumemu.report.ReportDraft
 import com.plumemu.scraper.DeveloperCredentials
 import com.plumemu.scraper.PauseStore
 import com.plumemu.scraper.Scraper
@@ -18,6 +19,7 @@ import android.net.Uri
 import com.plumemu.BuildConfig
 import java.io.File
 import com.plumemu.settings.screen.SettingsActivityActions
+import com.plumemu.settings.screen.SettingsContent
 import com.plumemu.settings.screen.SettingsHost
 import kotlinx.coroutines.Job
 import android.content.Context
@@ -36,6 +38,7 @@ import com.plumemu.coredata.db.BoxFrontShapes
 import com.plumemu.coredata.backup.RestoredDatabase
 import com.plumemu.coredata.db.DatabaseGate
 import com.plumemu.coredata.db.PlumDatabase
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SecondScreenSettings
 import com.plumemu.coredata.settings.SettingsRepository
@@ -58,7 +61,6 @@ import com.plumemu.settings.AppearanceCache
 import com.plumemu.settings.settleButtonSet
 import com.plumemu.secondscreen.AndroidDisplaySource
 import com.plumemu.secondscreen.SecondScreenDisplays
-import com.plumemu.secondscreen.SecondScreenSwitchCache
 import com.plumemu.setup.SetupModel
 import com.plumemu.telemetry.ProblemReports
 import com.plumemu.telemetry.TelemetrySink
@@ -83,6 +85,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -146,13 +150,6 @@ class AppGraph(
         }
     }
 
-    /** The second-screen switch for `MainActivity.onCreate` (layout C's first frame); kept equal to the stored one. */
-    internal val secondScreenSwitchCache: SecondScreenSwitchCache by lazy {
-        SecondScreenSwitchCache(app).also { cache ->
-            appScope.launch(io) { settings.filterNotNull().map { it.secondScreen.enabled }.distinctUntilChanged().collect(cache::write) }
-        }
-    }
-
     /** Tells the second screen of the Activity that is up when an emulator is started (`MainActivity` sets the target). */
     internal val gameStarts = GameStartRelay()
 
@@ -172,7 +169,7 @@ class AppGraph(
      * a restore that a process death stopped puts the files back before the first open, and a
      * restore shuts the file while it swaps it.
      */
-    val database: PlumDatabase by lazy { PlumDatabase.open(app, databaseGate) }
+    val database: PlumDatabase by lazy { PlumDatabase.open(app, GraphDetailsRating, databaseGate) }
 
     private val databaseGate = DatabaseGate { restoreFiles.recoverMovingFiles() }
 
@@ -180,12 +177,17 @@ class AppGraph(
     private val platformDataLoad = RetryingLazy { withContext(io) { guarded("platform data") { loadPlatformData(app) } } }
     private val launchingLoad = RetryingLazy {
         val catalog = catalog() ?: return@RetryingLazy null
-        withContext(io) { guarded("launching") { Launching.create(app, database, catalog, gameStarts, playBattery) } }
+        withContext(io) { guarded("launching") { Launching.create(app, database, catalog, gameStarts, playBattery, exactPlayTimeFor(app, settingsStore, log)) } }
     }
     private val scannerLoad = RetryingLazy {
         val catalog = catalog() ?: return@RetryingLazy null
         withContext(io) {
-            guarded("library scanner") { LibraryScanner.forDevice(app, database, systemRulesOf(catalog), naming = naming) }
+            guarded("library scanner") {
+                // A setup state that cannot be read counts as not done: a game then has no added time, never a wrong one.
+                LibraryScanner.forDevice(app, database, systemRulesOf(catalog), naming = naming, isSetupDone = {
+                    guarded("setup state for the scan") { settingsStore.readOnce().flags.setupCompleted } ?: false
+                })
+            }
         }
     }
 
@@ -263,13 +265,13 @@ class AppGraph(
             // grid, details and years only with box art set up (credentials and an
             // account). The account file alone (not the pause read of `status`), read from the
             // moment the content is first asked for, alongside the library's queries.
-            hasBoxArt = scraperAccounts.isSignedIn.stateIn(appScope, SharingStarted.Eagerly, null).filterNotNull(),
+            hasBoxArt = boxArtOn.stateIn(appScope, SharingStarted.Eagerly, null).filterNotNull(),
             // Each system's shape from the person's saved large box fronts, once
             // enough are stored (built on collection, like every Room read here).
             coverRatios = flow { emitAll(BoxFrontShapes.observe(database, ScrapeMediaSizes.Large.name)) },
             extraAbbrs = mapOf(ShortcutFiling.SHORTCUTS to app.getString(R.string.shortcuts_system_abbr)),
         )
-        attempts.flatMapLatest { source.states }.stateIn(appScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+        attempts.flatMapLatest { merge(source.states, keepArtAspects(boxArtOn, artAspectPasses { database }, log, { Log.i(TAG, it) })) }.stateIn(appScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
     }
 
     private val attempts = MutableStateFlow(0)
@@ -292,7 +294,7 @@ class AppGraph(
         attempts.value++
     }
 
-    val libraryNotices = LibraryNotices() // what change checks found, for the home (memory only)
+    val libraryNotices = LibraryNotices(SharedPreferencesCoreTries(app)) // what change checks found, for the home (memory only)
     val startup: StartupWork by lazy { StartupWork(appScope, settings, GraphStartupTasks(), onScanEnded = ::trackScan, onChangesFound = libraryNotices::checked) }
 
     /** In-app updates: checked from [startup]'s front hook and Settings › About. */
@@ -347,7 +349,7 @@ class AppGraph(
             readSettings = { settingsStore.readOnce() },
             writeSettings = { transform -> settingsStore.update(transform) },
             accounts = scraperAccounts,
-            prepareDatabase = { file, fromRoot, toRoot -> RestoredDatabase.prepare(app, file, fromRoot, toRoot) },
+            prepareDatabase = { file, fromRoot, toRoot -> RestoredDatabase.prepare(app, file, fromRoot, toRoot, GraphDetailsRating) },
             closeDatabase = {
                 withContext(io) { waitForBoxArtToStop(app, QUIET_TIMEOUT_MS) && databaseGate.closeWhenQuiet(database, QUIET_TIMEOUT_MS) }
             },
@@ -373,6 +375,11 @@ class AppGraph(
     /** Settings › Library and Emulators: folders, scan, emulator choices (one per process). */
     internal val settingsLibrary: GraphSettingsLibrary by lazy { GraphSettingsLibrary(this, app, io) }
 
+    /** Report a problem's unsent words, kept for the process (memory only). */
+    private val reportDraft: ReportDraft by lazy { ReportDraft() }
+
+    @Volatile private var rememberedSettingsContent: SettingsContent? = null
+
     /** What Settings needs from the graph; [activity] adds the picker and the home-app screens. */
     internal fun settingsHost(
         versionName: String,
@@ -394,7 +401,9 @@ class AppGraph(
                     .combine(combine(restore.state, restore.wayBack, ::Pair)) { content, (restoreState, wayBack) -> content.copy(restore = restoreState, wayBack = wayBack) }
                     .combine(updates.view) { content, update -> content.copy(update = update) }
                     .combine(achievements.status) { content, ra -> content.copy(raAccount = ra) }.withPlatformData(platformDataLoad)
-                    .combine(boxArtFiles.facts) { content, facts -> content.copy(boxArtBytes = facts.bytes, boxArtGivenUp = facts.givenUp) },
+                    .combine(boxArtFiles.facts) { content, facts -> content.copy(boxArtBytes = facts.bytes, boxArtGivenUp = facts.givenUp) }
+                    .onEach { if (!it.loadFailed) rememberedSettingsContent = it },
+            remembered = { rememberedSettingsContent },
             folderAdd = settingsLibrary.folderAdd,
             library = settingsLibrary,
             names = settingsLibrary.names,
@@ -408,7 +417,7 @@ class AppGraph(
                     plays = { database.playDao() },
                     scraped = { database.scrapedGameDao() },
                     catalog = ::catalog,
-                    hasBoxArt = { scraperAccounts.isSignedIn.first() },
+                    hasBoxArt = { boxArtOn.first() },
                     art = homeArt,
                     io = io,
                     log = log,
@@ -418,6 +427,7 @@ class AppGraph(
             restoreWork = restoreWorkOf(restore),
             updates = settingsUpdateActions(updates),
             problemReports = problemReportActionsOf(problemReports, appScope, Dispatchers.Main.immediate),
+            reportDraft = reportDraft,
         )
 
     /**
@@ -446,7 +456,7 @@ class AppGraph(
             main = Dispatchers.Main,
             log = log,
             onSignedIn = { scrapes.requestRun() },
-            onSignedOut = { scrapes.cancelRuns() },
+            onSignedOut = { scrapes.signedOut() },
         )
     }
 
@@ -456,27 +466,16 @@ class AppGraph(
      * nothing until a run or Settings asks.
      */
     internal val scrapes: GraphScrapes by lazy {
-        GraphScrapes(
-            accounts = scraperAccounts,
-            librarySource = { libraryScrapeSource },
-            // Not backed up: pictures are large and the next run downloads them again.
-            mediaDir = { File(app.noBackupFilesDir, SCRAPE_MEDIA_FOLDER) },
-            enqueue = { ScrapeScheduler.enqueue(app, wifiOnly = true) },
-            cancel = { ScrapeScheduler.cancel(app) },
-            inputs = deviceScrapeStatusInputs(app, { database }, { scraperPauseStore }),
-            retryMark = { scrapeRetryMark },
-            scope = appScope,
-            io = io,
-            log = log,
-            // Read from the store itself: a worker started right after Resume must see the write.
-            paused = settingsStore.settings.map { it.library.boxArtPaused }.distinctUntilChanged(),
-            writePaused = { isPaused -> settingsStore.update { it.copy(library = it.library.copy(boxArtPaused = isPaused)) } },
-            clearBoxArt = { onDone -> boxArtFiles.clear(onDone) },
-            holdForPlay = { content.held.holds(HeldWork.BoxArt) },
-        )
+        graphScrapesFor(app, this, { libraryScrapeSource }, { File(app.noBackupFilesDir, SCRAPE_MEDIA_FOLDER) }, { scrapeRetryMark }, { scraperPauseStore }, io, log)
     }
+
+    private val boxArtOn: Flow<Boolean> by lazy { boxArtShown(scraperAccounts.isSignedIn, settings) }
     /** The saved box-art pictures: their size, Clear box art and the daily sweep ([GraphBoxArt]). */
     internal val boxArtFiles: GraphBoxArt by lazy { graphBoxArt(app, this, { File(app.noBackupFilesDir, SCRAPE_MEDIA_FOLDER) }, io, log) }
+    /** The second screen's system and Recent figures ([GraphSystemFigures]): reads only, nothing built until asked. */
+    internal val systemFigures: GraphSystemFigures by lazy {
+        GraphSystemFigures(games = { database.gameDao() }, plays = { database.playDao() }, leftOut = { database.leftOutFileDao() }, io = io, arcadeGames = arcadeGamesOf { naming })
+    }
     /** RetroAchievements ([GraphAchievements]): nothing of it is built while signed out. */
     internal val achievements: GraphAchievements by lazy { graphAchievementsFor(app, this, io, log) }
     /** Settings › Accounts › RetroAchievements: sign in and out over [achievements]. */

@@ -2,12 +2,13 @@ package com.plumemu.home
 
 import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -43,7 +44,10 @@ import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.fadingIn
 import com.plumemu.coreui.theme.rememberContentFade
 import com.plumemu.game.AppActions
+import com.plumemu.game.SortActions
 import com.plumemu.game.GameActions
+import com.plumemu.game.TypingScreen
+import com.plumemu.game.isTrayUp
 import com.plumemu.game.GameMenuController
 import com.plumemu.game.GamePanelOverlay
 import com.plumemu.game.PanelKeyboardTray
@@ -80,6 +84,8 @@ import kotlinx.coroutines.flow.StateFlow
 internal data class HomeCallbacks(
     /** Opens the Apps entry's rows (through the game panel's controller, which shows a failure). Games are played through [games]. */
     val apps: AppActions = AppActions.None,
+    /** Sort by… (the game menu, and R3): the sort every games list follows (`GraphSortActions`). */
+    val sorts: SortActions = SortActions.None,
     /** Play and the game menu (START or a long press on a game): launches, choices, marks. */
     val games: GameActions = GameActions.None,
     /** Settings (START on the system column, or the hint). */
@@ -102,6 +108,8 @@ internal data class HomeCallbacks(
     val onWhatsNewShown: (Long) -> Unit = {},
     /** A on "No game folder yet" (or a tap on it): opens the folder picker, as Settings › Library › Add folder does. */
     val onAddFolder: () -> Unit = {},
+    /** The empty state's "Files not added" (A or a tap): opens Settings on Library › Files not added. */
+    val onFilesNotAdded: () -> Unit = {},
     /** What change checks found: the top bar's "+24 games" notice and the dots on systems (`MainScreen` provides it as [LocalHomeNotices]). */
     val notices: HomeNotices = HomeNotices(),
     /** The trophy on mastered games, the line after a game and Info's badges (`MainScreen` provides them as [LocalHomeAchievements] and the others); empty signed out. */
@@ -158,10 +166,8 @@ internal fun HomeScreen(
     val marks = remember { FavoriteMarks() }
     val shown by remember(content, marks) { derivedStateOf { marks.shown(content) } }
     LaunchedEffect(content, marks) { marks.settle(content) }
-    // Layout C: while the second screen's window is up its card holds the details, so the lists
-    // drop their column. Read here once (it changes only when the window comes or goes), never in a row.
-    val detailsOnSecondScreen = secondScreen?.isWindowShown?.collectAsState()?.value == true
-    val state = rememberHomeStripState(shown, gridViews.ids, PlumTheme.motion.isOn, detailsOnSecondScreen)
+    // The top screen lays out as if there were no second screen: its window never removes the details column.
+    val state = rememberHomeStripState(shown, gridViews.ids, PlumTheme.motion.isOn)
     // Each system's list position, kept here beside the focus: the games pages leave the composition while search, a grid or an empty library shows.
     val positions = rememberGamesPagePositions()
     val search = rememberSearchState(keyboard).also { ApplyPushRightToPlay(bars.pushRightToPlay, state, it) }
@@ -171,7 +177,7 @@ internal fun HomeScreen(
     // read the first one's mark (two quick presses end where they started).
     val markedNow = remember(marks) { { marks.shown(currentLive) } }
     val currentCallbacks by rememberUpdatedState(callbacks)
-    val menu = rememberGameMenuController(callbacks.games, callbacks.apps, keyboard)
+    val menu = rememberGameMenuController(callbacks.games, callbacks.apps, keyboard, callbacks.sorts)
     val toggleView = remember(gridViews, state, menu) { { id: String -> gridViews.toggle(id, currentCallbacks.onGridView) { showSaveFailed(currentContent, state, menu) } } }
     val gridSizeKeys = rememberGridSizeKeys(
         gridViews.ids,
@@ -196,7 +202,7 @@ internal fun HomeScreen(
     FollowSearchResults(search, shown)
     FollowMenuGame(menu, shown, state, isSearchOpen = search.isOpen)
     // Read in its own effect only: the top screen never recomposes for the bottom one.
-    if (secondScreen != null) FollowHomeOnSecondScreen(secondScreen, shown, state, search, menu, gridViews.ids)
+    if (secondScreen != null) FollowHomeOnSecondScreen(secondScreen, shown, state, search, menu)
     val onAction = remember(router) { { action: Action -> router.send(action) } }
     // Switched off: nothing ticks or listens for it.
     val clock = if (bars.showClock) rememberClockText() else null
@@ -229,7 +235,6 @@ internal fun HomeScreen(
             showHints = bars.showHints, pushRightToPlay = bars.pushRightToPlay, showSystemInfo = bars.showSystemInfo,
             search = search,
             positions = positions,
-            detailsOnSecondScreen = detailsOnSecondScreen,
             onCycleGridSize = { gridSizeKeys.cycle(feel) },
             onKeyboardEvent = menu::onKeyboardEvent,
         )
@@ -331,30 +336,24 @@ internal fun textEntryFor(
 /**
  * The strip state for [content] with the systems in [gridIds] shown as grids: the grid's columns
  * go to core-input's focus rules, and the geometry follows whether the focused system is a grid
- * (its games column is then the grid area). With [detailsOnSecondScreen] the lists have no
- * details column and no details stop (layout C); the change applies in the composition that
- * sees it, so the strip and the focus switch in the same frame. Shared by [HomeScreen] and the
- * test harness.
+ * (its games column is then the grid area). Shared by [HomeScreen] and the test harness.
  */
 @Composable
 internal fun rememberHomeStripState(
     content: HomeContent,
     gridIds: Set<String>,
     isMotionOn: Boolean,
-    detailsOnSecondScreen: Boolean = false,
 ): StripState {
     val layout = PlumTheme.layout
     // Set after the state exists (below); a change re-measures the details stop one frame later,
     // long before the person can press Right after SELECT.
     var focusedShowsGrid by remember { mutableStateOf(false) }
     val geometry =
-        remember(layout, content.hasBoxArt, focusedShowsGrid, detailsOnSecondScreen) {
-            homeStripGeometry(layout, content.hasBoxArt, focusedShowsGrid, detailsOnSecondScreen)
+        remember(layout, content.hasBoxArt, focusedShowsGrid) {
+            homeStripGeometry(layout, content.hasBoxArt, focusedShowsGrid)
         }
     val strip =
-        remember(content, gridIds, layout, detailsOnSecondScreen) {
-            content.stripWith(gridIds, layout).let { if (detailsOnSecondScreen) it.withDetailsOnSecondScreen(content, gridIds) else it }
-        }
+        remember(content, gridIds, layout) { content.stripWith(gridIds, layout) }
     val state = rememberStripState(strip, geometry, isMotionOn, PlumTheme.motion.slideSpec())
     FollowFocusedGrid(state, content, gridIds) { focusedShowsGrid = it }
     return state
@@ -444,8 +443,7 @@ internal fun HomeContent.entry(id: String): HomeEntry? =
  * The screen's layout for a given [state]: top bar, strip, hint bar, inside the strip margins
  * (14 top, 12 bottom, 10 between), and the game [panel] over the strip when one is open. [clock]
  * and [battery] are read only by their texts (null: not shown); without [showHints] the strip takes
- * the hint bar's place. [detailsOnSecondScreen]: the second screen's window is up, so a list shows
- * without its details column (pass the same value to [rememberHomeStripState]). Tests and
+ * the hint bar's place. Tests and
  * screenshots drive it with their own state.
  */
 @Composable
@@ -466,7 +464,6 @@ internal fun HomeLayout(
     showSystemInfo: Boolean = true,
     search: SearchState? = null,
     positions: GamesPagePositions = rememberGamesPagePositions(),
-    detailsOnSecondScreen: Boolean = false,
     onCycleGridSize: () -> Unit = {},
     /** Taps on the keys of a panel field's tray (Plumemu's keyboard): the game panel's controller. */
     onKeyboardEvent: (KeyboardEvent) -> Unit = {},
@@ -479,12 +476,12 @@ internal fun HomeLayout(
             modifier
                 .fillMaxSize()
                 .background(PlumTheme.colors.bg)
-                .padding(top = PlumDimens.stripMarginTop, bottom = PlumDimens.stripMarginBottom),
-        verticalArrangement = Arrangement.spacedBy(PlumDimens.barGap),
+                .padding(top = PlumDimens.stripMarginTop, bottom = if (showHints) PlumDimens.footerBelow else PlumDimens.stripMarginBottom),
     ) {
         Box(Modifier.fadingIn(searchFade)) {
-            if (searching && search != null) SearchTopBar(search, clock, battery, wifi, charging) else HomeTopBar(content, state, clock, battery, wifi, charging, onSettings = { onAction(Action.OpenSettings) })
+            if (searching && search != null) SearchTopBar(search, clock, battery, wifi, charging) else HomeTopBar(content, state, clock, battery, wifi, charging, onSettings = { onAction(Action.OpenSettings) }, typing = { (panel?.screen as? TypingScreen)?.typing?.isTrayUp == true })
         }
+        Spacer(Modifier.height(PlumDimens.barGap))
         Box(Modifier.fillMaxWidth().weight(1f)) {
             Box(Modifier.fillMaxSize().fadingIn(searchFade)) {
                 if (searching && search != null) {
@@ -498,13 +495,12 @@ internal fun HomeLayout(
                         Modifier.fillMaxSize(),
                         isPanelOpen = panel != null,
                         positions = positions,
-                        detailsOnSecondScreen = detailsOnSecondScreen,
                         showSystemInfo = showSystemInfo,
                     )
                 }
             }
             // Plumemu's keyboard over the results' lower part, down to the screen's bottom; the hint bar is drawn on it.
-            val below = if (showHints) PlumDimens.barGap + PlumTheme.layout.hintBarHeight + PlumDimens.stripMarginBottom else PlumDimens.stripMarginBottom
+            val below = if (showHints) PlumTheme.layout.footerZone else PlumDimens.stripMarginBottom
             if (searching && search != null && search.usesOwnKeyboard) {
                 SearchKeyboardTray(search, belowContent = below)
             }
@@ -512,7 +508,10 @@ internal fun HomeLayout(
             // A panel's field typed with Plumemu's keyboard: its tray over the panel, the same place as Search's.
             PanelKeyboardTray(panel, onKeyboardEvent, belowContent = below)
         }
-        if (showHints) HomeHints(content, state, gridIds, onAction, panel, search, onCycleGridSize, pushRightToPlay)
+        if (showHints) {
+            Spacer(Modifier.height(PlumDimens.footerGap))
+            HomeHints(content, state, gridIds, onAction, panel, search, onCycleGridSize, pushRightToPlay)
+        }
     }
 }
 

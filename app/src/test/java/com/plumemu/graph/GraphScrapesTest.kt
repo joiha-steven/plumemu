@@ -78,6 +78,8 @@ internal class GraphScrapesTest : GraphScrapesHarness() {
 
         assertTrue(accounts.signOutNow())
 
+        // The stop reads the source first (Box art only would keep its run), so it lands a moment later.
+        withTimeout(5_000) { while (runs().isNotEmpty()) delay(10) }
         assertEquals(emptyList<WorkInfo>(), runs())
         assertNull(scrapes.scraperWork())
     }

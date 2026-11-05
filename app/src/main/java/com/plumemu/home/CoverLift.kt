@@ -51,7 +51,7 @@ internal const val NO_COVER = -1
  * One cover that is drawn larger over the grid's clip (design/rules.md › Grid): the focused one,
  * or one that was and is still shrinking back. [layer] holds the cover's own drawing, recorded by its
  * cell while it has a slot; the grid's ring pass draws it [grow] (0..1) of the way to
- * its scale ([PlumDimens.FOCUSED_COVER_SCALE] for covers, [PlumDimens.FOCUSED_ICON_SCALE] for Apps icons). [index] is snapshot state: a cell's draw block reads it, so a cell
+ * its scale ([PlumDimens.FOCUSED_ICON_SCALE] for Apps icons, [PlumDimens.FOCUSED_COVER_SCALE] for a cover's collar, [drawLiftedCover]; the cell also reads [grow] as the collar's groove light). [index] is snapshot state: a cell's draw block reads it, so a cell
  * redraws (and records) when it gains or loses its slot, and nothing recomposes.
  */
 internal class LiftSlot(
@@ -134,7 +134,7 @@ internal fun rememberCoverLift(
 
 /**
  * Makes the lifts follow the focus of a grid ([entryId]'s games): the cover that has it grows ([lift]) and, once focus has
- * rested on it, [sweep] plays; [travel] sends the ring from the cell the focus left. The grid's opening focus is already lifted ([CoverLift.opening]): nothing to grow or sweep.
+ * rested on it, [sweep] plays; [travel] (null: none) sends the ring from the cell the focus left. The grid's opening focus is already lifted ([CoverLift.opening]): nothing to grow or sweep.
  * Shared by the cover grid and the Apps grid.
  */
 @Composable
@@ -143,9 +143,9 @@ internal fun FollowFocusLift(
     entryId: String,
     panelOpen: State<Boolean>,
     lift: CoverLift,
-    sweep: FocusSweep,
+    sweep: FocusSweep?,
     motionOn: State<Boolean>,
-    travel: FocusTravel,
+    travel: FocusTravel?,
 ) {
     LaunchedEffect(state, entryId) {
         var first = true
@@ -157,8 +157,8 @@ internal fun FollowFocusLift(
             first = false
             if (isOpening) return@collectLatest
             lift.moveTo(index)
-            travel.moved(index)
-            if (index == NO_COVER) sweep.stop() else sweep.play(motionOn.value)
+            travel?.moved(index)
+            if (sweep != null) if (index == NO_COVER) sweep.stop() else sweep.play(motionOn.value)
         }
     }
 }

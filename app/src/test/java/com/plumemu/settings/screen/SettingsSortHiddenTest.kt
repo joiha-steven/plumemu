@@ -21,27 +21,81 @@ internal class SettingsSortHiddenTest : SettingsModelHarness() {
     private val sort: SortGamesSetting get() = actions.settings.library.sortGames
 
     @Test
-    fun sortGamesStepsThroughNameLastPlayedAndYearByEveryInput() {
+    fun sortGamesStepsThroughTheChoicesOnOfferByEveryInput() {
+        // No game has a year in this library (SettingsContent.hasYear is false): Year is not a choice.
         openSection(SettingsSection.Library)
         focusOption(SettingsOption.SortGames)
         assertEquals(SortGamesSetting.Name, sort)
         press(Action.Enter)
         assertEquals("A goes to the next value", SortGamesSetting.LastPlayed, sort)
         press(Action.Enter)
-        assertEquals(SortGamesSetting.Year, sort)
+        assertEquals(SortGamesSetting.MostPlayed, sort)
         press(Action.Enter)
-        assertEquals("and wraps", SortGamesSetting.Name, sort)
-        move(Direction.Right)
-        move(Direction.Right)
-        assertEquals(SortGamesSetting.Year, sort)
-        move(Direction.Right)
-        assertEquals("right stops at the end", SortGamesSetting.Year, sort)
-        move(Direction.Left)
-        move(Direction.Left)
+        assertEquals(SortGamesSetting.RecentlyAdded, sort)
+        press(Action.Enter)
+        assertEquals("and wraps past the end, Year being hidden", SortGamesSetting.Name, sort)
+        repeat(5) { move(Direction.Right) }
+        assertEquals("right stops at the end", SortGamesSetting.RecentlyAdded, sort)
+        repeat(5) { move(Direction.Left) }
         assertEquals(SortGamesSetting.Name, sort)
         val row = SettingsSection.Library.rowsIn(model.content).indexOf(SettingsOption.SortGames)
         model.onTapValue(row, actions.shown, wide)
         assertEquals("a tap on the value steps it", SortGamesSetting.LastPlayed, sort)
+    }
+
+    @Test
+    fun sortGamesStepsOntoYearWhileSomeGameHasOneAndOffItAfterTheYearsAreGone() {
+        model.content = SettingsContent(hasYear = true)
+        openSection(SettingsSection.Library)
+        focusOption(SettingsOption.SortGames)
+        repeat(4) { move(Direction.Right) }
+        assertEquals("with years Year is the last choice", SortGamesSetting.Year, sort)
+        move(Direction.Right)
+        assertEquals("right stops on it", SortGamesSetting.Year, sort)
+        model.content = SettingsContent(hasYear = false)
+        assertEquals("the sort in use stays listed", SortGamesSetting.Year, sort)
+        move(Direction.Left)
+        assertEquals(SortGamesSetting.RecentlyAdded, sort)
+        move(Direction.Right)
+        assertEquals("Year is gone once it is not in use", SortGamesSetting.RecentlyAdded, sort)
+        press(Action.Enter)
+        assertEquals("A wraps to Name", SortGamesSetting.Name, sort)
+    }
+
+    @Test
+    fun sortGamesStepsOntoRatingWhileSomeGameHasOneAndOffItAfterTheRatingsAreGone() {
+        // Ratings but no years: Rating follows Recently added directly.
+        model.content = SettingsContent(hasRating = true)
+        openSection(SettingsSection.Library)
+        focusOption(SettingsOption.SortGames)
+        repeat(4) { move(Direction.Right) }
+        assertEquals("with ratings Rating is the last choice", SortGamesSetting.Rating, sort)
+        move(Direction.Right)
+        assertEquals("right stops on it", SortGamesSetting.Rating, sort)
+        model.content = SettingsContent(hasRating = false)
+        assertEquals("the sort in use stays listed", SortGamesSetting.Rating, sort)
+        move(Direction.Left)
+        assertEquals(SortGamesSetting.RecentlyAdded, sort)
+        move(Direction.Right)
+        assertEquals("Rating is gone once it is not in use", SortGamesSetting.RecentlyAdded, sort)
+        press(Action.Enter)
+        assertEquals("A wraps to Name", SortGamesSetting.Name, sort)
+    }
+
+    @Test
+    fun sortGamesListsYearThenRatingWhenGamesHaveBoth() {
+        model.content = SettingsContent(hasYear = true, hasRating = true)
+        openSection(SettingsSection.Library)
+        focusOption(SettingsOption.SortGames)
+        repeat(4) { move(Direction.Right) }
+        assertEquals(SortGamesSetting.Year, sort)
+        move(Direction.Right)
+        assertEquals(SortGamesSetting.Rating, sort)
+        press(Action.Enter)
+        assertEquals("A wraps from Rating to Name", SortGamesSetting.Name, sort)
+        val row = SettingsSection.Library.rowsIn(model.content).indexOf(SettingsOption.SortGames)
+        repeat(5) { model.onTapValue(row, actions.shown, wide) }
+        assertEquals("five taps step to Rating", SortGamesSetting.Rating, sort)
     }
 
     @Test

@@ -163,6 +163,25 @@ abstract class PlayDao {
     @Query("SELECT COALESCE(SUM(play.total_seconds), 0) FROM play JOIN game ON game.id = play.game_id")
     abstract suspend fun totalSeconds(): Long
 
+    /** [totalSeconds] of one system's games (the second screen's system card): the same rows and filters, 0 when none was played. */
+    @Query(
+        "SELECT COALESCE(SUM(play.total_seconds), 0) FROM play JOIN game ON game.id = play.game_id WHERE game.system_id = :systemId",
+    )
+    abstract suspend fun totalSecondsInSystem(systemId: String): Long
+
+    /**
+     * The ids of the game rows with play in [[from], [to]) by [secondsPlayedBetween]'s rule: the
+     * share of a session's seconds inside the range must be above 0, so a session ending exactly
+     * at [from] or starting at [to] does not count. One id per row: the caller groups copies.
+     */
+    @Query(
+        "SELECT game_id FROM play_session WHERE ended_at >= :from AND (started_at < :to OR ended_at < :to) GROUP BY game_id " +
+            "HAVING SUM(CASE WHEN ended_at <= started_at THEN " +
+            "CASE WHEN ended_at >= :from AND ended_at < :to THEN seconds ELSE 0 END " +
+            "ELSE seconds * (MIN(ended_at, :to) - MAX(started_at, :from)) / (ended_at - started_at) END) > 0",
+    )
+    abstract suspend fun gameIdsPlayedBetween(from: Long, to: Long): List<Long>
+
     /**
      * Settings › Statistics' copies: every game in a directory, system and file sort name that holds
      * a played game, and for a played game alone in its directory (one game per folder) every game

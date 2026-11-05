@@ -8,6 +8,7 @@ import com.plumemu.identify.fingerprint.TitleKind
 import com.plumemu.identify.source.ByteArraySource
 import com.plumemu.identify.source.CountingSource
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -32,6 +33,7 @@ class SwitchReaderTest {
         assertEquals(CodeKind.SWITCH, read.codeKind)
         assertTrue(read.notes.toString(), read.notes.any { "file name says 0100ABCD00020000" in it })
         assertEquals(listOf("code:SWITCH:$BASE"), read.fixKeys())
+        assertFalse("read from the content", read.codeFromFileName)
     }
 
     @Test fun contentMetaNamedByATitleIdGivesItAndOneNamedByAContentIdDoesNot() {
@@ -55,6 +57,7 @@ class SwitchReaderTest {
         assertEquals(DLC, read.titleId)
         assertEquals(BASE, read.productCode)
         assertEquals(TitleKind.DLC, read.titleKind)
+        assertTrue("taken from the file name", read.codeFromFileName)
     }
 
     @Test fun mergedNspIsNamedByItsGame() {
@@ -71,6 +74,7 @@ class SwitchReaderTest {
         assertEquals(Container.XCI, read.container)
         assertEquals(BASE, read.titleId)
         assertTrue("read ${counting.bytesRead} bytes", counting.bytesRead <= 64)
+        assertTrue("taken from the file name", read.codeFromFileName)
         assertNull(read(xci, "Zork Saga.xci").titleId)
     }
 
