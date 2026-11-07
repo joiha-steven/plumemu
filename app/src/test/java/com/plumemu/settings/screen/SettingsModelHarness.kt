@@ -89,7 +89,6 @@ internal abstract class SettingsModelHarness {
         var homeOpened = 0
         val removed = mutableListOf<Long>()
         val chosen = mutableListOf<Pair<String, String?>>()
-        var detections = 0
 
         /** Callbacks held back until a test answers them, as the graph does later on the main thread. */
         val callbacks = mutableListOf<(Boolean) -> Unit>()
@@ -170,11 +169,6 @@ internal abstract class SettingsModelHarness {
             val waiting = listings.toList()
             listings.clear()
             waiting.forEach { it.second(names) }
-        }
-
-        override fun detectEmulators(onDone: (Boolean) -> Unit) {
-            detections++
-            callbacks += onDone
         }
 
         /** What Android's question left behind: set, the next open reports "still not the home app". */
@@ -424,9 +418,45 @@ internal abstract class SettingsModelHarness {
         assertEquals(SettingsColumn.Options, model.focus.column)
     }
 
+    /** On [item]'s row in Colors' panel, where a Background or Text color page goes back to. */
+    protected fun assertOnColorsRow(
+        item: Int,
+        what: String = "back on its row in Colors' panel",
+    ) = assertEquals(what, PanelPage.ColorSets to item, model.focus.page to model.focus.panelIndex)
+
+    /** By touch, from Appearance's options: Colors opens, a first tap focuses [option]'s row, a second opens its page. */
+    protected fun tapIntoColorPage(option: SettingsOption) {
+        model.onTapValue(model.focus.section.rowsIn(model.content).indexOf(SettingsOption.Colors), actions.settings, wide)
+        val item = checkNotNull(ColorPages.kindOf(option)?.let(::colorsRowItemOf)) { "$option is not a row of Colors' panel" }
+        repeat(2) { model.onTapPanelItem(item, actions.settings, wide) }
+    }
+
     protected fun focusOption(option: SettingsOption) {
         // Downward only, bounded by the rows on screen: an option above the focus, or a focus that
         // is not in the options column, fails with the reason instead of looping forever.
+        // Background and Text color are rows of Colors' panel: A on Colors, then through the tiles to the row.
+        val row = ColorPages.kindOf(option)?.let(::colorsRowItemOf)
+        if (row == null && model.focus.page == PanelPage.ColorSets) press(Action.Back)
+        if (row != null) {
+            if (model.focus.page != PanelPage.ColorSets) {
+                val colors = model.focus.section.rowsIn(model.content).indexOf(SettingsOption.Colors)
+                repeat(model.focus.section.rowsIn(model.content).size) { if (model.focusedOption != SettingsOption.Colors) move(if (model.optionIndex > colors) Direction.Up else Direction.Down) }
+                press(Action.Enter)
+            }
+            repeat(colorSetsPanelEntries(actions.shown).size + 2) { if (model.focus.panelIndex != row) move(if (model.focus.panelIndex == COLORS_TEXT_ITEM) Direction.Up else Direction.Down) }
+            assertEquals("focusOption($option): the row was not reached", row, model.focus.panelIndex)
+            return
+        }
+        // An item of Back up and restore's or Reset…'s list: A on its row, then down to the item.
+        listItemOf(option)?.let { (row, item) ->
+            if (model.focus.column != SettingsColumn.Panel) {
+                focusOption(row)
+                press(Action.Enter)
+            }
+            repeat(item) { move(Direction.Down) }
+            assertEquals("focusOption($option): the item was not reached", item, model.focus.panelIndex)
+            return
+        }
         assertEquals("focusOption($option) needs the focus in the options column", SettingsColumn.Options, model.focus.column)
         repeat(model.focus.section.rowsIn(model.content).size) { if (model.focusedOption != option) move(Direction.Down) }
         assertEquals("focusOption($option): not reached moving down from the focus", option, model.focusedOption)
@@ -444,6 +474,8 @@ internal abstract class SettingsModelHarness {
         geometry: SettingsGeometry = wide,
     ) {
         assertEquals("pickInColorsPanel needs the Colors row focused", SettingsOption.Colors, model.focusedOption)
+        // From one of the panel's rows it is already open, but on no tile: leave and open it again on the current one.
+        if (model.focus.page == PanelPage.ColorSets) press(Action.Back, geometry)
         press(Action.Enter, geometry)
         assertEquals("A on Colors opens its panel", PanelPage.ColorSets, model.focus.page)
         val entries = colorSetsPanelEntries(actions.shown)

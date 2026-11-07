@@ -5,7 +5,6 @@ import com.plumemu.coredata.db.GameDao
 import com.plumemu.coredata.db.GameListRow
 import com.plumemu.coredata.db.SystemGameCount
 import com.plumemu.coredata.settings.LeftEdgeSetting
-import com.plumemu.coredata.settings.RecentSizeSetting
 import com.plumemu.coredata.settings.SortGamesSetting
 import com.plumemu.home.GameRowModel
 import com.plumemu.home.HomeContent
@@ -87,8 +86,6 @@ class LibraryHomeContent(
     private val appGames: Flow<Map<String, String>?> = flowOf(null),
     /** Game id to package of the app games (`AppGameDao.observePackages`): their rows carry the package (`GameRowModel.appPackage`). */
     private val appPackages: Flow<Map<Long, String>> = flowOf(emptyMap()),
-    /** Settings' Recent size: how many games Recent keeps; a change queries Recent again. */
-    private val recentSize: Flow<RecentSizeSetting> = flowOf(RecentSizeSetting.Twenty),
 ) {
     val content: Flow<HomeContent> =
         flow { emit(SystemNames(catalog(), extraAbbrs)) }
@@ -204,9 +201,7 @@ class LibraryHomeContent(
     ): Flow<SystemGames> = games.observeSystemGames(id, order).map { rows -> SystemGames(id, name, withVariantTags(rows.map { toRow(it, names.abbrOf(it.systemId)) })) }
 
     private fun recent(names: SystemNames): Flow<List<GameRowModel>> =
-        recentSize
-            .distinctUntilChanged()
-            .flatMapLatest { size -> games.observeRecent(size.games) }
+        games.observeRecent(RECENT_GAMES)
             .map { rows -> withVariantTags(rows.map { toRow(it, names.abbrOf(it.systemId)) }) }
 
     private fun favorites(
@@ -256,6 +251,9 @@ class LibraryHomeContent(
     companion object {
         private const val TAG = "PlumHome"
         private const val MAX_CAUSES = 4
+
+        /** How many games Recent shows, newest first; the play history itself is never trimmed. */
+        const val RECENT_GAMES = 50
 
         /** A failed read of the covers' shapes is tried again after this long. */
         const val COVER_RETRY_MILLIS = 30_000L

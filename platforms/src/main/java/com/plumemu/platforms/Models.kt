@@ -118,6 +118,8 @@ data class Emulator(
      * shortcut to WinNative: neither is offered, recommended or used for the other's files.
      */
     val accepts: Set<String>? = null,
+    /** The project's own download page, always http or https; null when the data holds none. */
+    val page: String? = null,
 ) {
     val allPackages: List<PackageVariant> get() = listOf(primary) + variants
 

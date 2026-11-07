@@ -130,7 +130,7 @@ class GamePanelScreenshotTest {
 
     @Test
     fun emulatorMissing() {
-        val outcome = LaunchOutcome.EmulatorMissing(6, EmulatorOffer("duckstation", "DuckStation", "com.github.stenzek.duckstation"), ChoiceSource.PersonForGame)
+        val outcome = LaunchOutcome.EmulatorMissing(6, EmulatorOffer("duckstation", "DuckStation", "https://example.org/duckstation"), ChoiceSource.PersonForGame)
         shot("game_error_emulator_missing", OpenPanel(game, PanelScreen.Message(launchMessage(outcome, null)!!)))
     }
 
@@ -183,9 +183,9 @@ class GamePanelScreenshotTest {
     @Test
     fun chooseEmulatorFirstLaunch() {
         val offers = listOf(
-            EmulatorOffer("snes9x", "Snes9x EX+", "com.explusalpha.Snes9xPlus"),
-            EmulatorOffer("retroarch-snes9x", "RetroArch: Snes9x", "com.retroarch.aarch64"),
-            EmulatorOffer("retroarch-bsnes-mercury-accuracy", "RetroArch: bsnes-mercury Accuracy", "com.retroarch.aarch64"),
+            EmulatorOffer("snes9x", "Snes9x EX+", null),
+            EmulatorOffer("retroarch-snes9x", "RetroArch: Snes9x", null),
+            EmulatorOffer("retroarch-bsnes-mercury-accuracy", "RetroArch: bsnes-mercury Accuracy", null),
         )
         val message = launchMessage(LaunchOutcome.EmulatorNotChosen(6, "snes", "Super Nintendo", offers, "snes9x"), sampleListing().copy(systemName = "Super Nintendo"))!!
         shot("game_choose_emulator_first", OpenPanel(game, PanelScreen.Message(message)))

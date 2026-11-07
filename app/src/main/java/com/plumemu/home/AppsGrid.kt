@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -40,8 +41,10 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.platform.LocalDensity
@@ -57,15 +60,13 @@ import androidx.compose.ui.unit.sp
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.strip.StripState
+import androidx.compose.ui.graphics.graphicsLayer
 import com.plumemu.coreinput.tapItem
-import com.plumemu.coreui.components.CoverShadow
 import com.plumemu.coreui.components.TouchPressScale
 import com.plumemu.coreui.components.FocusTravel
-import com.plumemu.coreui.components.drawGridFocusRing
+import com.plumemu.coreui.components.drawCoverFocusMark
 import com.plumemu.coreui.components.rememberFocusTravel
 import com.plumemu.coreui.components.rememberConfirmPressScale
-import com.plumemu.coreui.components.CoverGlowColor
-import com.plumemu.coreui.components.rememberCoverShadow
 import com.plumemu.coreui.components.rememberTouchPressScale
 import com.plumemu.coreui.components.listEdgeFadeMask
 import com.plumemu.coreui.theme.CoverClass
@@ -82,7 +83,7 @@ import kotlin.math.floor
 
 /*
  * Apps as a grid of icons (Apps has a grid too, but its size cannot be
- * changed). One fixed size: the icon is AppsGridDimens.appsGridIcon whatever Settings › Grid size says, and
+ * changed). One fixed size: the icon is AppsGridDimens.appsGridTileIcon whatever size the grids use, and
  * L1 / R1 do nothing in this grid (GridSizeKeys takes them; the system is switched with L2 / R2). No box art is needed: the icons come
  * from Android (HomeAppIcons). Focus, scroll and the ring are a game grid's (HomeGrid.kt).
  */
@@ -102,11 +103,11 @@ internal fun appsGridColumns(layout: PlumLayout): Int {
 }
 
 /**
- * A row of the Apps grid: the tile's padding, the icon, the gap and two lines of the name in [nameLineHeight],
+ * A row of the Apps grid: the tile's padding, the icon, the gap and one line of the name in [nameLineHeight],
  * rounded up to a whole dp so every row is the same height.
  */
 internal fun appsGridRowHeight(nameLineHeight: Dp): Dp =
-    Dp(ceil((AppsGridDimens.appsGridTilePadding * 2 + AppsGridDimens.appsGridIcon + AppsGridDimens.appsGridNameGap + nameLineHeight * 2).value))
+    Dp(ceil((AppsGridDimens.appsGridTilePadding * 2 + AppsGridDimens.appsGridTileIcon + AppsGridDimens.appsGridNameGap + nameLineHeight).value))
 
 /** The name under an app's icon: the meta size (13 at Medium), following the text size and font. */
 @Composable
@@ -123,7 +124,7 @@ internal fun appsGridNameLine(
 
 /**
  * The Apps entry as a grid, with the cover grid's gaps and lift but no card (apps are not put inside a frame):
- * icons and names stand on the background; the focused tile glows in its icon's colour, grows [PlumDimens.FOCUSED_ICON_SCALE], rises and gets one light sweep. Tiles
+ * icons and names stand on the background; the focused icon gets the cover's ring and one light sweep; nothing grows, so names keep their line. Tiles
  * start where the list starts and span the grid's whole width, as a game grid's covers do. The focused
  * tile is drawn by the grid over its clip, with its ring ([appsFocusRing], the cover grid's [CoverLift] and
  * [FocusSweep]), so a move recomposes no tile and reloads no icon.
@@ -143,11 +144,16 @@ internal fun AppsGrid(
     val gap = layout.gridGap(CoverClass.Square)
     val nameStyle = appsGridNameStyle()
     val rowHeight = appsGridRowHeight(appsGridNameLine(nameStyle, density))
+    val rowGap = AppsGridDimens.appsGridRowGap
     val rowCount = (entry.rows.size + columns - 1) / columns
     // Every row one height: where each stands in px, for the scroll rules (the cover grid's rows may differ).
-    val spans = remember(rowCount, rowHeight, gap, density) { derivedStateOf { RowSpans.uniform(rowCount, with(density) { rowHeight.roundToPx() }, with(density) { gap.roundToPx() }) } }
-    val stripPx = with(density) { layout.appsStripHeight.roundToPx() }
-    val iconPx = with(density) { AppsGridDimens.appsGridIcon.roundToPx() }
+    val spans = remember(rowCount, rowHeight, rowGap, density) { derivedStateOf { RowSpans.uniform(rowCount, with(density) { rowHeight.roundToPx() }, with(density) { rowGap.roundToPx() }) } }
+    val rowPx = with(density) { rowHeight.roundToPx() }
+    val gapPx = with(density) { rowGap.roundToPx() }
+    // Whole rows only: the window is as high as the rows that fit whole in the strip (AppsGridWindow.kt).
+    // Whole rows clear of the fade on the hint bar.
+    val stripPx = wholeRowsPx(with(density) { (layout.appsStripHeight + LocalBarRoom.current.taller + LocalBarRoom.current.bottom - PlumDimens.listFadeBand).roundToPx() }, rowPx, gapPx)
+    val iconPx = with(density) { AppsGridDimens.appsGridTileIcon.roundToPx() }
     val icons = LocalHomeAppIcons.current
     // Raised after a package change: the tiles on screen ask for their icons again (read here, not per tile).
     val generation by icons.generation.collectAsState()
@@ -158,29 +164,31 @@ internal fun AppsGrid(
         // Read once without observing: the grid must not recompose on every move.
         val opening = Snapshot.withoutReadObservation { state.focus.rowOf(entry.id) }
         val gridState = rememberLazyGridState(initialFirstVisibleItemIndex = spans.value.firstShowing(opening / columns, stripPx) * columns)
-        val viewport = rememberGridViewportPx(gridState, layout.appsStripHeight)
-        val glide = rememberListGlide(stride = rowHeight + gap, slabRoom = false)
+        // The room under the window, down to the hint bar: the tiles run through it and under the bar.
+        val belowWindow = (LocalBarRoom.current.height - PlumDimens.appsGridTopGap - with(density) { stripPx.toDp() }).coerceAtLeast(0.dp)
+        // The window is stripPx by definition: measured back from the padding it could round a px short of its last row, and the grid would scroll onto a row that stands whole.
+        val viewport = rememberUpdatedState(stripPx)
+        val glide = rememberListGlide(stride = rowHeight + rowGap, slabRoom = false)
         val touch = rememberTouchPressScale()
+        val spread = LocalAppsSpread.current
         val confirmScale = rememberConfirmPressScale { if (state.focus.column == Column.Games && !panelOpen.value) state.focus.rowOf(entry.id) else null }
         // The tile focused as the grid opens is lifted in the first frame (no grow, no sweep), as in the cover grid.
         val motionOn = rememberUpdatedState(PlumTheme.motion.isOn)
         val openingFocus = Snapshot.withoutReadObservation { if (state.focus.column == Column.Games && !panelOpen.value) opening else NO_COVER }
         val lift = rememberCoverLift(openingFocus) { motionOn.value }
-        val shadow = rememberCoverShadow()
-        // The glow's colour per app, from its icon (AppTile writes it as the icon lands).
-        val glowColors = remember(entry.id, icons) { CoverGlowColors(icons.glowDispatcher) }
         val travel = rememberFocusTravel()
-        val ring = appsFocusRing(state, entry, gridState, glide, lift, panelOpen, touch, confirmScale, shadow, glowColors, motionOn, travel)
-        // Under the ring: the focused cover is drawn over the mask (it never stands in a fade), the rows cut at an edge fade.
-        val fades = remember(gridState, glide, state, entry.id) { GridEdgeFades(gridState, glide, minShown = CUT_ROW_MIN_SHOWN) { state.focus.rowOf(entry.id) } }
+        val ring = appsFocusRing(state, entry, gridState, glide, lift, panelOpen, touch, confirmScale, motionOn, travel, spread, columns)
+        // Under the ring: the focused cover is drawn over the mask, a row showing too little of itself at a bar is left out.
+        val fades = remember(gridState, glide, state, entry.id) { GridEdgeFades(gridState, glide, with(density) { PlumDimens.appsGridTopGap.roundToPx().toFloat() }) { state.focus.rowOf(entry.id) } }
+        FollowBarRunner(fades)
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
             state = gridState,
             flingBehavior = rememberRowSnapFling(gridState),
-            modifier = modifier.padding(top = PlumDimens.appsGridTopGap - PlumDimens.barGap).fadingIn(fade).then(ring).listEdgeFadeMask(fades, PlumTheme.edgeFadeOn).testTag(HomeTags.GRID).then(glide.modifier),
-            contentPadding = PaddingValues(top = glide.extra, bottom = glide.extra + rememberGridLeftover(spans, viewport)),
+            modifier = modifier.fadingIn(fade).then(ring).listEdgeFadeMask(fades, true).testTag(HomeTags.GRID).then(glide.modifier),
+            contentPadding = PaddingValues(top = glide.extra + PlumDimens.appsGridTopGap, bottom = glide.extra + belowWindow + rememberGridLeftover(spans, viewport)),
             horizontalArrangement = Arrangement.spacedBy(gap),
-            verticalArrangement = Arrangement.spacedBy(gap),
+            verticalArrangement = Arrangement.spacedBy(rowGap),
         ) {
             itemsIndexed(entry.rows, key = { _, row -> row.id }) { index, row ->
                 val tap = remember(index, onAction) { Modifier.tapItem(Column.Games, index, onAction).testTag(HomeTags.cover(index)) }
@@ -192,20 +200,19 @@ internal fun AppsGrid(
                         touch.modifier(index).drawWithContent {
                             val slot = lift.slotOf(index)
                             if (slot == null) {
-                                // A finger on it dips this tile alone, about its centre.
-                                val dip = touch.scaleOf(index)
-                                withTransform({ scale(dip, dip, center) }) { this@drawWithContent.drawContent() }
+                                drawTileDipped(touch.scaleOf(index))
                                 return@drawWithContent
                             }
-                            // Whole in place too, under its larger copy (as a cover: see GamesGrid); the ring pass hides it
-                            // with a plate of the background colour.
+                            // Whole in place, name included; the ring pass only redraws the icon while it dips.
                             drawContent()
                             slot.layer.record { this@drawWithContent.drawContent() }
                             slot.recordedEntryId = entry.id
                             slot.recordedIndex = index
                         }
                     }
-                AppTile(row, icons, generation, iconPx, rowHeight, nameStyle, glowColors, { lift.slotOf(index)?.isFocused == true }, tap.then(look))
+                // Beside the systems the preview's columns are drawn spread to the right margin: the cell's layer carries its touch target with it.
+                val spreadBy = remember(spread, index, columns) { if (spread == null) Modifier else Modifier.graphicsLayer { translationX = spread.shiftOf(index % columns) } }
+                AppTile(row, icons, generation, iconPx, rowHeight, nameStyle, { lift.slotOf(index)?.isFocused == true }, spreadBy.then(tap).then(look))
             }
         }
         KeepFocusedCellVisible(gridState, columns, spans, viewport, glide) { state.focus.rowOf(entry.id) }
@@ -213,10 +220,9 @@ internal fun AppsGrid(
 }
 
 /**
- * The focused tile's lift, read while drawing (the focus, the scroll, the glide, the animations): the tile (recorded
- * into its [LiftSlot]) drawn larger about its centre over the grid's clip with its deeper shadow, the one light sweep
- * and the ring, and the one it left shrinking back. The same pass as the cover grid's `focusRing`, the figures from
- * the same tokens; a move only redraws.
+ * The focus on a tile, read while drawing (the focus, the scroll, the glide, the animations): the one light sweep on
+ * the focused icon and its ring, which travels from the tile left. The icon and its ring dip on a press, redrawn from
+ * the tile's [LiftSlot]; the name never moves. A move only redraws.
  */
 @Composable
 private fun appsFocusRing(
@@ -228,10 +234,10 @@ private fun appsFocusRing(
     panelOpen: State<Boolean>,
     touch: TouchPressScale,
     confirmScale: () -> Float,
-    shadow: CoverShadow,
-    glowColors: CoverGlowColors,
     motionOn: State<Boolean>,
     travel: FocusTravel,
+    spread: AppsSpread?,
+    columns: Int,
 ): Modifier {
     val colors = PlumTheme.colors
     val sweep = remember { FocusSweep() }
@@ -244,15 +250,19 @@ private fun appsFocusRing(
             val item = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return
             // While the rows glide the lift is cut where the tiles are cut; at rest it may reach into the bar gaps.
             val shift = glide.offset
-            val cell = Rect(Offset(item.offset.x.toFloat(), item.offset.y + shift), Size(item.size.width.toFloat(), item.size.height.toFloat()))
-            val scale = 1f + (PlumDimens.FOCUSED_ICON_SCALE - 1f) * slot.grow.value
-            val lift = PlumDimens.focusedLift.toPx() * slot.grow.value
-            val tile = Rect(Offset.Zero, cell.size * scale).let { it.translate(cell.center - it.center - Offset(0f, lift)) }
-            val corner = PlumDimens.cornerRow * scale
+            // Where the cell is drawn: the Apps preview spreads its columns, and the ring and the lifted tile stand on the cell.
+            val spreadX = spread?.shiftOf(index % columns) ?: 0f
+            val cell = Rect(Offset(item.offset.x + spreadX, item.offset.y + PlumDimens.appsGridTopGap.toPx() + shift), Size(item.size.width.toFloat(), item.size.height.toFloat()))
+            // The focus stands on the icon, as on a cover, but neither grows: every name stays on its row's line,
+            // and the ring has the room between the icon and its name.
+            val iconSide = AppsGridDimens.appsGridTileIcon.toPx()
+            val iconCentre = Offset(cell.center.x, cell.top + AppsGridDimens.appsGridTilePadding.toPx() + iconSide / 2)
+            val icon = Rect(iconCentre, iconSide / 2)
+            val corner = iconSide * AppsGridDimens.APPS_ICON_CORNER_SHARE
             val drawCover = slot.recordedIndex == index && slot.recordedEntryId == entry.id
-            // The ring and the lifted tile dip with the confirm button or a finger (the cell's own copy stays: a plate hides it).
+            // The ring and the icon dip with the confirm button or a finger; the name stays where it is.
             val pressed = if (slot.isFocused) minOf(confirmScale(), touch.scaleOf(index)) else 1f
-            // The ring travels from the tile it left (rules.md > Focus and current); the tile itself grows in place.
+            // The ring travels from the tile it left (rules.md > Focus and current).
             val ringShift =
                 if (slot.isFocused) {
                     ringDrawn = true
@@ -261,24 +271,18 @@ private fun appsFocusRing(
                     Offset.Zero
                 }
             val drawFocused: DrawScope.() -> Unit = {
-                if (pressed < 1f && drawCover) drawRoundRect(colors.bg, cell.topLeft, cell.size, CornerRadius(PlumDimens.cornerRow.toPx()))
-                withTransform({ scale(pressed, pressed, pivot = tile.center) }) {
+                if (pressed < 1f && drawCover) drawRect(colors.bg, icon.topLeft, icon.size)
+                withTransform({ scale(pressed, pressed, pivot = iconCentre) }) {
                     if (drawCover) {
-                        // The plate (background colour) hides the in-place copy; the glow is drawn over it, so inside the
-                        // ring it is the same tint as around it and no frame shows. No shadow: only the glow, in the icon's
-                        // average colour (the tile's own `sel` while there is none: loading, no icon).
-                        drawRoundRect(colors.bg, topLeft = tile.topLeft, size = tile.size, cornerRadius = CornerRadius(corner.toPx()))
-                        with(shadow) {
-                            drawGlow(tile, corner.toPx(), entry.rows.getOrNull(index)?.let { glowColors[it.id] } ?: CoverGlowColor.lifted(colors.sel), slot.grow.value)
+                        if (pressed < 1f) {
+                            clipRect(icon.left, icon.top, icon.right, icon.bottom) {
+                                translate(cell.left, cell.top) { drawLayer(slot.layer) }
+                            }
                         }
-                        withTransform({
-                            translate(cell.left, cell.top - lift)
-                            scale(scale, scale, pivot = cell.size.center)
-                        }) { drawLayer(slot.layer) }
                     }
                     if (slot.isFocused) {
-                        if (sweep.progress.isRunning) drawSweep(tile, corner.toPx(), sweep.progress.value)
-                        drawGridFocusRing(tile.topLeft + ringShift, tile.size, corner, colors.accent, colors.bg, colors.focusGlow)
+                        if (sweep.progress.isRunning) drawSweep(icon, corner, sweep.progress.value)
+                        drawCoverFocusMark(icon.topLeft + ringShift, icon.size, corner, colors.accent, colors.bg, 1f)
                     }
                 }
             }
@@ -292,6 +296,20 @@ private fun appsFocusRing(
         for (slot in lift.slots) if (slot.index != NO_COVER && slot.isFocused) drawLifted(slot)
         if (!ringDrawn) travel.reset()
     }
+}
+
+/** A resting tile under a finger: the icon dips alone, so the name stays on its row's line. */
+private fun ContentDrawScope.drawTileDipped(dip: Float) {
+    if (dip >= 1f) {
+        drawContent()
+        return
+    }
+    val iconSide = AppsGridDimens.appsGridTileIcon.toPx()
+    val iconBottom = AppsGridDimens.appsGridTilePadding.toPx() + iconSide
+    clipRect(bottom = iconBottom) {
+        withTransform({ scale(dip, dip, Offset(center.x, iconBottom - iconSide / 2)) }) { this@drawTileDipped.drawContent() }
+    }
+    clipRect(top = iconBottom) { this@drawTileDipped.drawContent() }
 }
 
 /** What a tile shows for its icon: nothing while it loads, the picture, or the stand-in when there is none. */
@@ -324,7 +342,7 @@ internal fun rememberTileIcon(
 }
 
 /**
- * One app: its icon (square, centred) and its name centred under it, at most two lines and "…" after.
+ * One app: its icon (square, centred) and its name centred under it, on one line and "…" after.
  * The icon is taken from memory while composing when it is there, else loaded once per tile (keyed by the
  * row, the size and the icons' generation, never by the focus).
  */
@@ -336,19 +354,16 @@ internal fun AppTile(
     iconPx: Int,
     height: Dp,
     nameStyle: TextStyle,
-    glowColors: CoverGlowColors?,
     isFocused: () -> Boolean,
     modifier: Modifier,
 ) {
     val colors = PlumTheme.colors
     val icon = rememberTileIcon(row.iconKey, iconPx, icons, generation)
-    // The glow's colour is the icon's average, found once per icon that lands.
-    (icon as? TileIcon.Picture)?.let { shown -> if (glowColors != null) LaunchedEffect(row.id, shown) { glowColors.learn(row.id, shown.image, replace = true) } }
     Column(
         modifier = modifier.height(height).padding(vertical = AppsGridDimens.appsGridTilePadding),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        val iconModifier = Modifier.size(AppsGridDimens.appsGridIcon)
+        val iconModifier = Modifier.size(AppsGridDimens.appsGridTileIcon)
         when (val shown = icon) {
             is TileIcon.Picture -> Image(shown.image, contentDescription = null, modifier = iconModifier.testTag(HomeTags.APP_ICON))
             TileIcon.Missing -> AppIconStandIn(row.title, iconModifier)
@@ -364,7 +379,7 @@ internal fun AppTile(
     }
 }
 
-/** An app's name, at most two lines and "…" after, drawn only while [shown] says so (read while drawing). */
+/** An app's name, on one line and "…" after (the hint bar names the focused app in full), drawn only while [shown] says so (read while drawing). */
 @Composable
 private fun AppName(
     title: String,
@@ -377,7 +392,7 @@ private fun AppName(
         text = title,
         style = style,
         color = { color() },
-        maxLines = 2,
+        maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier.fillMaxWidth().drawWithContent { if (shown()) drawContent() },
     )
@@ -414,4 +429,3 @@ internal fun firstLetterOf(title: String): String {
 private const val FOCUSED_NAME_WEIGHT_STEP = 100
 
 /** A row of the Apps grid cut by an edge stays (faded) only while this share of it shows; less is left out whole, as no sliver of an icon or a name may stand there. */
-private const val CUT_ROW_MIN_SHOWN = 0.75f

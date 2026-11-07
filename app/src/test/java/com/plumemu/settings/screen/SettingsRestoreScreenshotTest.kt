@@ -38,7 +38,7 @@ class SettingsRestoreScreenshotTest {
 
     /** The Undo row is listed only with a set, so its place comes from the rows shown. */
     private fun undoAt(content: SettingsContent): SettingsFocus {
-        val index = SettingsSection.Advanced.rowsIn(content).indexOf(SettingsOption.UndoRestore)
+        val index = SettingsSection.Advanced.rowsIn(content).indexOf(SettingsOption.BackupAndRestore)
         return SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Advanced, rememberedOption = mapOf(SettingsSection.Advanced to index))
     }
 

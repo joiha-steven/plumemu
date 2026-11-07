@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.unit.Density
@@ -57,11 +59,11 @@ abstract class SettingsSectionsFitLabelsBase(private val isWide: Boolean) {
         }
         val problems = mutableListOf<String>()
         for (eachFont in PlumFont.entries) {
-            // Three columns (768): every size that keeps them. Otherwise (two columns, 576): Medium and Large in Jost and Sans.
+            // Three columns (768): every size that keeps them. Otherwise (two columns, 576): the smallest in Jost and Sans; larger, a long label takes two lines (the test below).
             val sizes =
                 when {
                     isWide && SettingsColumns.fits(TextSize.Small, eachFont) -> TextSize.entries.filter { SettingsColumns.fits(it, eachFont) }
-                    eachFont == PlumFont.Jost || eachFont == PlumFont.Sans -> listOf(TextSize.Small, TextSize.Large)
+                    eachFont == PlumFont.Jost || eachFont == PlumFont.Sans -> listOf(TextSize.Small)
                     else -> emptyList()
                 }
             for (each in sizes) {
@@ -83,6 +85,35 @@ abstract class SettingsSectionsFitLabelsBase(private val isWide: Boolean) {
                             }
                         }
                     }
+                }
+            }
+        }
+        assertTrue(problems.size.toString() + " problems:\n" + problems.distinct().take(20).joinToString("\n"), problems.isEmpty())
+    }
+
+    /** Past the sizes the test above holds to one line the column is too narrow for the longest label: every label stays whole, in at most two lines, inside its row. */
+    @Test
+    fun noLabelIsCutAtAnySize() {
+        var size by mutableStateOf(TextSize.Small)
+        var font by mutableStateOf(PlumFont.Jost)
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { SettingsAt(SettingsFocus(column = SettingsColumn.Sections, section = SettingsSection.Library), content = ShotContent.library) } }
+        val problems = mutableListOf<String>()
+        val sections = SettingsSection.shownIn(ShotContent.library)
+        for (eachFont in PlumFont.entries) {
+            for (each in TextSize.entries) {
+                font = eachFont
+                size = each
+                compose.waitForIdle()
+                val rows = sections.map { compose.onNodeWithTag(SettingsTags.section(it), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot }
+                for (label in compose.onAllNodesWithTag(SystemRowTags.LABEL, useUnmergedTree = true).fetchSemanticsNodes()) {
+                    val results = mutableListOf<TextLayoutResult>()
+                    label.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+                    val text = results.first()
+                    val words = label.config[SemanticsProperties.Text].joinToString()
+                    // The label's own text cut shorter (with its "…"), whatever the line count.
+                    if (text.layoutInput.text.text != words || text.lineCount > 2 || text.didOverflowHeight) problems += "$each $eachFont: '$words' is cut to '${text.layoutInput.text.text}'"
+                    val row = rows.minBy { kotlin.math.abs(it.center.y - label.boundsInRoot.center.y) }
+                    if (label.boundsInRoot.height > 0f && (label.boundsInRoot.top < row.top - 0.5f || label.boundsInRoot.bottom > row.bottom + 0.5f)) problems += "$each $eachFont: '$words' ${label.boundsInRoot} outside its row $row"
                 }
             }
         }

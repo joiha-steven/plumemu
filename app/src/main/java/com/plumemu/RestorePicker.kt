@@ -7,7 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.plumemu.graph.AppGraph
 
 /**
- * Android's open picker for Settings › Advanced › Restore… (`ACTION_OPEN_DOCUMENT`; no permission:
+ * Android's open picker for Settings › Advanced › Back up and restore › Restore… (`ACTION_OPEN_DOCUMENT`; no permission:
  * the picker grants read access to the one file). Its answer starts the reading in the graph, which
  * outlives the Activity. Made while the Activity is constructed (a result launcher must be
  * registered before it starts).

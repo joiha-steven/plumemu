@@ -21,8 +21,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -38,7 +36,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -206,7 +203,7 @@ private fun Body(
         val hasForm = state.boxArt != null
         val bleedBottom = if (hasForm) PlumDimens.focusRingOutset else PlumDimens.footerGap
         // The form's scroll ends at Plumemu's tray, where its fields are placed by `aboveTray`: no resting on lines there.
-        if (PlumTheme.layout.widthClass == WidthClass.Wide) WideBody(title, trayCut, bleedBottom, content) else NarrowBody(title, trayCut, bleedBottom, !hasForm, content)
+        if (PlumTheme.layout.widthClass == WidthClass.Wide) WideBody(title, trayCut, bleedBottom, !hasForm, state, content) else NarrowBody(title, trayCut, bleedBottom, !hasForm, content)
     }
 }
 
@@ -250,13 +247,19 @@ private fun WideBody(
     title: StepTitle,
     trayCut: Modifier,
     bleedBottom: Dp,
+    restsOnCards: Boolean,
+    state: SetupUiState,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val snaps = remember { LineSnaps() }.takeIf { restsOnCards }
     Row(Modifier.fillMaxSize().padding(top = PlumDimens.setupTopPaddingWide)) {
-        TitleBlock(title, PlumDimens.setupTitleGapWide, Modifier.width(PlumDimens.setupTitleColumnWidth))
+        TitleBlock(title, PlumDimens.setupTitleGapWide, Modifier.width(PlumDimens.setupTitleColumnWidth), counts = state.takeIf { it.countsInTitle })
         Spacer(Modifier.width(PlumDimens.setupMainGapWide))
-        ScrollingColumn(Modifier.weight(1f).then(trayCut), bleedBottom) {
-            Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.setupContentGap), content = content)
+        ScrollingColumn(Modifier.weight(1f).then(trayCut), bleedBottom, snaps) {
+            val column = Modifier.then(if (snaps == null) Modifier else with(snaps) { Modifier.anchoring() })
+            CompositionLocalProvider(LocalLineSnaps provides snaps) {
+                Column(column, verticalArrangement = Arrangement.spacedBy(PlumDimens.setupContentGap), content = content)
+            }
         }
     }
 }
@@ -275,7 +278,9 @@ private fun NarrowBody(
         if (snaps != null) with(snaps) { Spacer(Modifier.height(PlumDimens.setupTopPaddingNarrow).anchoring()) } else Spacer(Modifier.height(PlumDimens.setupTopPaddingNarrow))
         TitleBlock(title, PlumDimens.setupTitleGapNarrow, Modifier.fillMaxWidth(), snaps)
         Spacer(Modifier.height(PlumDimens.setupMainGapNarrow))
-        Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.setupContentGap), content = content)
+        CompositionLocalProvider(LocalLineSnaps provides snaps) {
+            Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.setupContentGap), content = content)
+        }
     }
 }
 
@@ -303,7 +308,7 @@ private fun ScrollingColumn(
     if (snaps == null) LaunchedEffect(Unit) { extra.intValue = 0 }
     if (snaps != null) {
         // The scroll's end is where a focused last button sits the bar gap above the hints; when that is half way through a
-        // line of the title, a little more room under the content moves the end to the next line (what is added is at most a line).
+        // line of the title, a little more room under the content moves the end to the next line (what is added is up to the distance to the next rest: a line of the title, or a whole card).
         LaunchedEffect(snaps) {
             snapshotFlow { Triple(sizes.value.height, viewport.intValue, snaps.version) }.collect { (content, area, _) ->
                 val base = content + ring * 2 - area
@@ -328,7 +333,7 @@ private fun ScrollingColumn(
     // middle that extra frame is cut back (the rows beyond would show under the hint bar): only an end that rests keeps its room.
     val room = SlabDimens.listEndRoom
     val roomPx = with(density) { room.toPx() }
-    val fadePx = with(density) { PlumDimens.listEdgeFade.toPx() }
+    val fadePx = with(density) { PlumDimens.listFadeBand.toPx() }
     // A reveal measures the window as it was without the room.
     val reveal = remember(baseReveal, roomPx) { WithoutRoom(baseReveal) { roomPx } }
     CompositionLocalProvider(LocalBringIntoViewSpec provides reveal) {
@@ -383,6 +388,8 @@ private fun TitleBlock(
     gap: androidx.compose.ui.unit.Dp,
     modifier: Modifier,
     snaps: LineSnaps? = null,
+    /** The wide Ready step's counts, which sit under the description so the scroll never hides them. */
+    counts: SetupUiState? = null,
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
@@ -410,6 +417,7 @@ private fun TitleBlock(
                 textModifier = Modifier.testTag(SetupTags.NAMING_LINE),
             )
         }
+        if (counts != null) LibraryCounts(counts)
     }
 }
 
@@ -521,64 +529,6 @@ internal fun Modifier.setupControl(
         .bringIntoViewWhen(state.focus == control, above = state.aboveLastButton, ring = PlumDimens.focusRingOutset, below = PlumDimens.footerGap - PlumDimens.focusRingOutset)
         .then(if (index >= 0) Modifier.tapItem(StripColumn.Games, index, onAction) else Modifier)
         .testTag(SetupTags.control(control))
-}
-
-/**
- * Asks the enclosing scroll to show this item while [isFocused] (setup's controls, the home screen question's buttons).
- * [above] is what sits above it and may change its place (a block that appears, a line that wraps): a new value asks again.
- * [ring] is how far the focus ring reaches past the item: that much more is brought into view, so the ring is not cut at the scroll's edge.
- * [below] is how much under the item must show too (a field over Plumemu's tray: the row or line under it); a new value asks again.
- */
-@Composable
-internal fun Modifier.bringIntoViewWhen(isFocused: Boolean, above: Any? = null, ring: Dp = 0.dp, below: Dp = 0.dp): Modifier {
-    val requester = remember { BringIntoViewRequester() }
-    val size = remember { arrayOf(IntSize.Zero) }
-    val outset = with(LocalDensity.current) { ring.toPx() }
-    val under = with(LocalDensity.current) { below.toPx() }
-    // Again when the type changes (size or font): the item grows and may no longer be in view.
-    val type = PlumTheme.type
-    LaunchedEffect(isFocused, type, above, under) {
-        if (!isFocused) return@LaunchedEffect
-        if ((outset > 0f || under > 0f) && size[0] != IntSize.Zero) {
-            requester.bringIntoView(Rect(-outset, -outset, size[0].width + outset, size[0].height + outset + under))
-            // When the scroll is too short for both, the item itself wins: the request above may have cut its top.
-            if (under > 0f) requester.bringIntoView(Rect(-outset, -outset, size[0].width + outset, size[0].height + outset))
-        } else {
-            requester.bringIntoView()
-        }
-    }
-    return onSizeChanged { size[0] = it }.bringIntoViewRequester(requester)
-}
-
-internal object SetupTags {
-    const val SCREEN = "setup_screen"
-    const val SCROLL = "setup_scroll"
-    const val TITLE = "setup_title"
-    const val DESCRIPTION = "setup_description"
-    const val HINTS = "setup_hints"
-    const val HINT_CONFIRM = "setup_hint_confirm"
-    const val HINT_BACK = "setup_hint_back"
-    const val FOLDER_CARD = "setup_folder_card"
-    const val MESSAGE = "setup_message"
-    const val PROGRESS = "setup_progress"
-    const val SCAN_PULSE = "setup_scan_pulse"
-    const val SCAN_LINE = "setup_scan_line"
-    const val GAME_COUNT = "setup_game_count"
-    const val SYSTEM_COUNT = "setup_system_count"
-    const val NAMING_LINE = "setup_naming_line"
-    const val NAMING_PULSE = "setup_naming_pulse"
-    const val EMULATORS = "setup_emulators"
-    const val USAGE_SWITCH = "setup_usage_switch"
-    const val FOUND = "setup_found"
-    const val DOT = "setup_dot"
-    const val BOX_ART = "setup_box_art"
-    const val LOOK_TILE = "setup_look_tile"
-    const val BOX_ART_COMING = "setup_box_art_coming"
-    const val NOTE = "setup_note"
-    const val TRAY = "setup_keyboard_tray"
-    const val TYPING_HINTS = "setup_typing_hints"
-
-    fun control(control: SetupControl): String = "setup_control_${control.name}"
 }
 
 /** Erases what is drawn from [from] to [to] (px), fully at the cut end, to nothing at the other: the fade of a scroll's cut edge. */

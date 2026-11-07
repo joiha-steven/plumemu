@@ -38,7 +38,7 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
         move(Direction.Down) // 5 per row: under Black, Sand
         assertEquals(ColorSetting.Preset("Sand"), appearance.background)
         press(Action.Enter)
-        assertEquals("A chooses and goes back to the options", SettingsColumn.Options, model.focus.column)
+        assertOnColorsRow(COLORS_BACKGROUND_ITEM, "A chooses and goes back to its row")
         assertEquals(ColorSetting.Preset("Sand"), appearance.background)
         press(Action.Enter)
         assertEquals("opens again at the current one", 6, model.focus.panelIndex)
@@ -91,7 +91,7 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
         move(Direction.Right)
         move(Direction.Right)
         press(Action.Enter)
-        assertEquals(SettingsColumn.Options, model.focus.column)
+        assertOnColorsRow(COLORS_BACKGROUND_ITEM)
         val chosen = backgroundGrid.size - 2 * ColorPages.PALETTE_COLUMNS + 2
         assertEquals(ColorSetting.Custom(backgroundGrid[chosen].value), appearance.background)
         press(Action.Enter)
@@ -242,12 +242,12 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
     fun aTapOnASwatchBesideTheOptionsAppliesItAndASecondTapChooses() {
         model.onTapSection(SettingsSection.Appearance)
         model.onTapSection(SettingsSection.Appearance)
-        model.onTapOption(SettingsSection.Appearance.options.indexOf(SettingsOption.Background), actions.settings, wide) // under Colors
+        tapIntoColorPage(SettingsOption.Background)
         model.onTapPanelItem(5, actions.settings, wide)
-        assertEquals(SettingsColumn.Panel, model.focus.column)
+        assertEquals(PanelPage.BackgroundPresets, model.focus.page)
         assertEquals(ColorSetting.Preset("Paper"), appearance.background)
         model.onTapPanelItem(5, actions.settings, wide)
-        assertEquals(SettingsColumn.Options, model.focus.column)
+        assertEquals("the page is done: back on its row in Colors' panel", PanelPage.ColorSets to COLORS_BACKGROUND_ITEM, model.focus.page to model.focus.panelIndex)
         assertEquals(ColorSetting.Preset("Paper"), appearance.background)
     }
 
@@ -376,7 +376,7 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
         openBackgroundPanel()
         move(Direction.Down)
         press(Action.Enter)
-        assertEquals(SettingsColumn.Options, model.focus.column)
+        assertOnColorsRow(COLORS_BACKGROUND_ITEM)
         assertEquals(TextColorSetting.Dark, appearance.textColor)
     }
 
@@ -386,7 +386,7 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
             val index = ColorPages.backgroundPresets.indexOfFirst { it.name == name }
             model.onTapSection(SettingsSection.Appearance)
             model.onTapSection(SettingsSection.Appearance)
-            model.onTapOption(SettingsSection.Appearance.options.indexOf(SettingsOption.Background), actions.settings, wide) // under Colors
+            tapIntoColorPage(SettingsOption.Background)
             model.onTapPanelItem(index, actions.settings, wide)
             assertEquals(name, expected, appearance.textColor)
             press(Action.Back)
@@ -443,7 +443,8 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
         assertEquals("changing accent leaves text and background", TextColorSetting.Dark, appearance.textColor)
         assertEquals(ColorSetting.Preset("Paper"), appearance.background)
         press(Action.Back)
-        while (model.focusedOption != SettingsOption.Background) move(Direction.Up)
+        move(Direction.Up)
+        focusOption(SettingsOption.Background)
         press(Action.Enter)
         move(Direction.Right)
         assertEquals("the next background change keeps a text that still reads", TextColorSetting.Dark, appearance.textColor)
@@ -482,16 +483,37 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
 
     @Test
     fun leftFromTheLeftmostItemOfEveryColourPageReturnsToItsRow() {
-        for ((option, name) in listOf(SettingsOption.Background to "Background", SettingsOption.TextColor to "Text color", SettingsOption.Accent to "Accent color")) {
-            openSection(SettingsSection.Appearance)
+        openSection(SettingsSection.Appearance)
+        focusOption(SettingsOption.Accent)
+        press(Action.Enter)
+        assertLeftReturnsToTheRow(SettingsOption.Accent, "Accent color presets")
+        press(Action.Enter)
+        openPlus()
+        assertLeftReturnsToTheRow(SettingsOption.Accent, "Accent color custom grid")
+        move(Direction.Up)
+        for ((option, item) in listOf(SettingsOption.Background to COLORS_BACKGROUND_ITEM, SettingsOption.TextColor to COLORS_TEXT_ITEM)) {
             focusOption(option)
             press(Action.Enter)
-            assertLeftReturnsToTheRow(option, "$name presets")
+            assertLeftReturnsToItsRowInColors(option, item, "presets")
             press(Action.Enter)
             openPlus()
-            assertLeftReturnsToTheRow(option, "$name custom grid")
-            move(Direction.Left) // on to the sections column for the next option
-            assertEquals(SettingsColumn.Sections, model.focus.column)
+            assertLeftReturnsToItsRowInColors(option, item, "custom grid")
+            move(Direction.Left) // out of Colors' panel, to the Colors row
+            assertEquals(SettingsOption.Colors, model.focusedOption)
+            assertEquals(SettingsColumn.Options, model.focus.column)
         }
     }
+
+    private fun assertLeftReturnsToItsRowInColors(
+        option: SettingsOption,
+        item: Int,
+        what: String,
+    ) {
+        repeat(geometryColumnsReach) { if (model.focus.page != PanelPage.ColorSets) move(Direction.Left) }
+        assertEquals("$option $what: Left lands in Colors' panel", PanelPage.ColorSets, model.focus.page)
+        assertEquals("$option $what: on its row", item, model.focus.panelIndex)
+    }
+
+    /** Enough Lefts to cross any colour page's widest row. */
+    private val geometryColumnsReach = ColorPages.PALETTE_COLUMNS + 1
 }

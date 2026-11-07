@@ -73,7 +73,7 @@ fun PlumSwitch(
                 if (lit < 1f) drawCssFace(CssFace(listOf(seat.well), listOf(seat.wellShade)), at, track, trackH / 2, 1f - lit)
                 if (lit > 0f) {
                     val accent = colors.accent
-                    drawCssShadows(listOf(CssShadow(colors.partGlow, 0.dp, CollarDimens.grooveGlowBlur)), at, track, trackH / 2, lit)
+                    drawCssShadows(listOf(CssShadow(colors.partGlow, 0.dp, CollarDimens.grooveGlowBlur, glow = true)), at, track, trackH / 2, lit)
                     drawCssFace(CssFace(listOf(accent, SeatLook.accentLight(accent)), listOf(seat.switchOnShade)), at, track, trackH / 2, lit)
                 }
                 val knob = D.switchKnob.toPx()

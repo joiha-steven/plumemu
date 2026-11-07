@@ -1,6 +1,7 @@
 package com.plumemu.settings.screen
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,16 +11,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.CacheDrawScope
 import androidx.compose.ui.draw.DrawResult
@@ -30,6 +32,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -37,17 +42,22 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.plumemu.R
 import com.plumemu.coredata.settings.PlumSettings
+import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.components.CollarSize
+import com.plumemu.coreui.components.ListEdgeFade
 import com.plumemu.coreui.components.collar
 import com.plumemu.coreui.theme.ButtonColors
 import com.plumemu.coreui.theme.ColorSet
-import com.plumemu.coreui.theme.PlumColors
 import com.plumemu.coreui.theme.FlatFace
+import com.plumemu.coreui.theme.PlumColors
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.SlabDimens
+import com.plumemu.coreui.theme.WidthClass
 import com.plumemu.coreui.theme.toComposeColor
 import com.plumemu.settings.LocalButtonLetters
 import com.plumemu.settings.colorSet
@@ -61,8 +71,42 @@ import com.plumemu.setup.bringIntoViewWhen
  * Settings › Appearance › Colors' panel: a tile per ready-made set, then Custom while
  * there is one, each a tiny home screen in that set's own colours with its name under it. D-pad
  * moves, A (or a second tap) uses the set through the row's own write and closes the panel, B goes
- * back to the row. Nothing applies while the cursor moves: the tiles are the preview.
+ * back to the row. Nothing applies while the cursor moves: the tiles are the preview. Under the
+ * tiles two rows, Background and Text color, open their colour pages.
  */
+
+/** Colors' panel items of the two rows under the tiles. Fixed, past any tile: a row's place holds while Custom comes and goes. */
+internal const val COLORS_BACKGROUND_ITEM = 1000
+internal const val COLORS_TEXT_ITEM = 1001
+
+/** The option of Colors' panel item [index] when it is a row; null for a tile. */
+internal fun colorsRowOption(index: Int): SettingsOption? =
+    when (index) {
+        COLORS_BACKGROUND_ITEM -> SettingsOption.Background
+        COLORS_TEXT_ITEM -> SettingsOption.TextColor
+        else -> null
+    }
+
+/** The item of [kind]'s row in Colors' panel; null for Accent color, a row of the list. */
+internal fun colorsRowItemOf(kind: ColorKind): Int? =
+    when (kind) {
+        ColorKind.Background -> COLORS_BACKGROUND_ITEM
+        ColorKind.Text -> COLORS_TEXT_ITEM
+        ColorKind.Accent -> null
+    }
+
+/** Where [direction] goes from item [index] of Colors' panel: down the [count] tiles' grid, then the two rows; [index] itself at an edge. */
+internal fun colorSetsItemAfter(
+    index: Int,
+    count: Int,
+    columns: Int,
+    direction: Direction,
+): Int =
+    when (index) {
+        COLORS_BACKGROUND_ITEM -> if (direction == Direction.Up) count - 1 else if (direction == Direction.Down) COLORS_TEXT_ITEM else index
+        COLORS_TEXT_ITEM -> if (direction == Direction.Up) COLORS_BACKGROUND_ITEM else index
+        else -> PanelGrid(count, columns).move(index, direction).let { if (it == index && direction == Direction.Down) COLORS_BACKGROUND_ITEM else it }
+    }
 
 /** The tiles of the panel, in the row's cycle order: every set, then Custom (null) while there is one. */
 internal fun colorSetsPanelEntries(settings: PlumSettings): List<ColorSet?> = settings.appearance.colorsCycle()
@@ -87,36 +131,122 @@ internal fun ColorSetsPanel(
                 if (focus.column == SettingsColumn.Panel && focus.page == PanelPage.ColorSets) focus.panelIndex else NO_TILE
             }
         }
-    Column(
-        Modifier.fillMaxHeight().verticalScroll(rememberScrollState()).testTag(SettingsTags.COLOR_SETS_PANEL),
-        verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap),
-    ) {
-        PanelTitle(stringResource(R.string.settings_colors))
-        PanelBody(stringResource(R.string.settings_colors_panel_help))
-        Column(
-            modifier = Modifier.fillMaxWidth().onRowTextLine().ringRoomAboveAndBelow(),
-            verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsColorTileGap),
-        ) {
-            entries.indices.chunked(columns).forEach { indices ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PlumDimens.settingsColorTileGap)) {
-                    for (index in indices) {
-                        val entry = entries[index]
-                        ColorTile(
-                            index = index,
-                            look = looks[index],
-                            name = stringResource(colorTileName(entry)),
-                            isCurrent = entry == current,
-                            focusedIndex = focusedIndex,
-                            touch = touch,
-                            modifier = Modifier.weight(1f),
-                        )
+    val scroll = rememberScrollState()
+    val anchors = remember { FocusAnchors() }
+    Box(Modifier.fillMaxHeight().onPlaced { anchors.panel = it }) {
+        // A rest leaves no more of a block or tile row above the window than the shared peek: the panel opens on Custom with whole tiles.
+        PanelScrollColumn(PlumDimens.settingsPanelGap, scroll = scroll, tag = SettingsTags.COLOR_SETS_PANEL, endRoom = 0.dp, tail = EdgePeek, fades = false) {
+            PanelTitle(stringResource(R.string.settings_colors))
+            PanelBody(stringResource(R.string.settings_colors_panel_help))
+            Column(
+                modifier = Modifier.fillMaxWidth().onRowTextLine().ringRoomAboveAndBelow(),
+                verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsColorTileGap),
+            ) {
+                entries.indices.chunked(columns).forEach { indices ->
+                    Row(Modifier.fillMaxWidth().panelBlock(), horizontalArrangement = Arrangement.spacedBy(PlumDimens.settingsColorTileGap)) {
+                        for (index in indices) {
+                            val entry = entries[index]
+                            ColorTile(
+                                index = index,
+                                look = looks[index],
+                                name = stringResource(colorTileName(entry)),
+                                isCurrent = entry == current,
+                                focusedIndex = focusedIndex,
+                                touch = touch,
+                                modifier = Modifier.weight(1f).then(anchors.place(index)),
+                            )
+                        }
+                        // A short last row keeps the tiles' width and their columns.
+                        repeat(columns - indices.size) { Spacer(Modifier.weight(1f)) }
                     }
-                    // A short last row keeps the tiles' width and their columns.
-                    repeat(columns - indices.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
+            Column(Modifier.padding(bottom = SlabDimens.listEndRoom), verticalArrangement = Arrangement.spacedBy(PlumDimens.listRowGap)) {
+                ColorPageRow(COLORS_BACKGROUND_ITEM, SettingsOption.Background, settings, focusedIndex, touch, anchors.place(COLORS_BACKGROUND_ITEM))
+                ColorPageRow(COLORS_TEXT_ITEM, SettingsOption.TextColor, settings, focusedIndex, touch, anchors.place(COLORS_TEXT_ITEM))
+            }
         }
+        ColorSetsPanelEndFade(scroll, anchors, focusedIndex, Modifier.align(Alignment.BottomCenter))
+        ColorSetsPanelTopFade(scroll, Modifier.align(Alignment.TopCenter))
     }
+}
+
+/** Softens whatever the window cuts at the bottom. Its own scope: reaching the end redraws the fade alone, never the tiles. */
+@Composable
+private fun ColorSetsPanelEndFade(
+    scroll: ScrollState,
+    anchors: FocusAnchors,
+    focusedIndex: () -> Int,
+    modifier: Modifier,
+) {
+    val density = LocalDensity.current
+    val fadePx = with(density) { PlumDimens.listFadeBand.toPx() }
+    val overhangPx = with(density) { maxOf(PlumDimens.focusRingOutset, SlabDimens.maxOverhang).toPx() }
+    // Read while drawing, with the scroll: a finger can bring the focused tile down to the fade.
+    val reach =
+        remember(scroll, anchors, focusedIndex, fadePx, overhangPx) {
+            {
+                scroll.value
+                anchors.roomBelow(focusedIndex())?.let { fadeReachOver(it, overhangPx, fadePx) } ?: 1f
+            }
+        }
+    if (scroll.canScrollForward) ListEdgeFade(atBottom = true, modifier.testTag(SettingsTags.COLOR_SETS_PANEL + FADE_BOTTOM_SUFFIX), reach)
+}
+
+/** The top edge's fade once the tiles scrolled. Its own scope, as the end's. */
+@Composable
+private fun ColorSetsPanelTopFade(
+    scroll: ScrollState,
+    modifier: Modifier,
+) {
+    if (scroll.canScrollBackward) ListEdgeFade(atBottom = false, modifier.testTag(SettingsTags.COLOR_SETS_PANEL + FADE_TOP_SUFFIX))
+}
+
+/** How much of the bottom fade may be drawn with [room] px under the focused item, whose focus reaches [overhang] past it: it stops short of the focus. */
+internal fun fadeReachOver(
+    room: Float,
+    overhang: Float,
+    fadePx: Float,
+): Float = ((room - overhang) / fadePx).coerceIn(0f, 1f)
+
+/** Where the panel's items are, read while drawing: a scroll moves them without a composition. */
+private class FocusAnchors {
+    private val items = HashMap<Int, LayoutCoordinates>()
+    private val places = HashMap<Int, Modifier>()
+    var panel: LayoutCoordinates? = null
+
+    fun place(index: Int): Modifier = places.getOrPut(index) { Modifier.onPlaced { items[index] = it } }
+
+    /** Px between item [index]'s bottom and the panel's; null when nothing is known of it (no focus in the panel). */
+    fun roomBelow(index: Int): Float? {
+        val box = panel?.takeIf { it.isAttached } ?: return null
+        val item = items[index]?.takeIf { it.isAttached } ?: return null
+        return box.size.height - box.localBoundingBoxOf(item, clipBounds = false).bottom
+    }
+}
+
+/** Background or Text color under the tiles: the colour's dot and name, as on a colour row. Its page's swatches are built only when it opens. */
+@Composable
+private fun ColorPageRow(
+    item: Int,
+    option: SettingsOption,
+    settings: PlumSettings,
+    focusedIndex: () -> Int,
+    touch: SettingsTouch,
+    anchor: Modifier,
+) {
+    val isFocused by remember(item, focusedIndex) { derivedStateOf { focusedIndex() == item } }
+    val tap = remember(item, touch) { Modifier.tapTarget { touch.onPanelItem(item) }.testTag(SettingsTags.panelItem(item)) }
+    // The 248 dp panel beside the options cannot hold a label and a long colour name on one line.
+    val stacked = PlumTheme.layout.widthClass == WidthClass.Wide
+    OptionRow(
+        option = option,
+        value = optionValue(option, settings, versionName = ""),
+        look = if (isFocused) OptionLook.Focused else OptionLook.Normal,
+        modifier = anchor.bringIntoViewWhen(isFocused, ring = SlabDimens.listEndRoom, below = PlumDimens.listFadeBand).then(tap),
+        verticalPadding = if (stacked) PlumDimens.settingsTwoLineRowPadding else 0.dp,
+        valueBelow = stacked,
+    )
 }
 
 private const val NO_TILE = -1
@@ -164,7 +294,7 @@ private fun ColorTile(
     val shape = RoundedCornerShape(PlumDimens.settingsPaletteCorner)
     val tap = remember(index, touch) { Modifier.tapTarget { touch.onPanelItem(index) }.testTag(SettingsTags.panelItem(index)) }
     Column(
-        modifier.bringIntoViewWhen(isFocused, ring = PlumDimens.focusRingOutset).then(tap),
+        modifier.bringIntoViewWhen(isFocused, ring = PlumDimens.focusRingOutset, below = PlumDimens.listFadeBand).then(tap),
         verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsColorTileNameGap),
     ) {
         Box(

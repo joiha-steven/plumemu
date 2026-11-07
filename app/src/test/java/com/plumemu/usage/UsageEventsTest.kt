@@ -3,6 +3,7 @@ package com.plumemu.usage
 import com.plumemu.coredata.backup.BackupKind
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.FontSetting
+import com.plumemu.coredata.settings.GridSizeSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coredata.settings.LeftEdgeSetting
@@ -46,12 +47,44 @@ class UsageEventsTest {
         val after =
             before.copy(
                 appearance = before.appearance.copy(background = ColorSetting.Preset("Paper"), textSize = null),
-                homeScreen = before.homeScreen.copy(showClock = false),
+                homeScreen = before.homeScreen.copy(showClock = false, showBattery = false),
             )
         val fields = settingChanges(before, after).map { it.wireFields() }
         assertEquals(true, mapOf("key" to "background", "value" to "paper") in fields)
         assertEquals(true, mapOf("key" to "text_size", "value" to "large") in fields)
-        assertEquals(true, mapOf("key" to "show_clock", "value" to "off") in fields)
+        assertEquals(true, mapOf("key" to "clock_and_battery", "value" to "off") in fields)
+    }
+
+    @Test
+    fun clockAndBatterySendsOneEventOnlyWhenTheRowsValueChanges() {
+        fun home(clock: Boolean, battery: Boolean) = PlumSettings().let { it.copy(homeScreen = it.homeScreen.copy(showClock = clock, showBattery = battery)) }
+        fun fields(before: PlumSettings, after: PlumSettings) = settingChanges(before, after).map { it.wireFields() }
+        val on = listOf(mapOf("key" to "clock_and_battery", "value" to "on"))
+        val off = listOf(mapOf("key" to "clock_and_battery", "value" to "off"))
+        assertEquals(off, fields(home(true, true), home(false, false)))
+        assertEquals(off, fields(home(true, false), home(false, false)))
+        assertEquals(off, fields(home(false, true), home(false, false)))
+        assertEquals(on, fields(home(false, false), home(true, true)))
+        assertEquals("a restore that moves one key leaves the row on", emptyList<Any>(), fields(home(true, true), home(false, true)))
+    }
+
+    @Test
+    fun aGridSizeFromTheMainScreenKeepsItsKey() {
+        val before = PlumSettings()
+        val after = before.copy(appearance = before.appearance.copy(gridSize = GridSizeSetting.Large))
+        assertEquals(listOf(mapOf("key" to "grid_size", "value" to "large")), settingChanges(before, after).map { it.wireFields() })
+    }
+
+    @Test
+    fun retiredSettingsSendNothing() {
+        val before = PlumSettings()
+        val after =
+            before.copy(
+                appearance = before.appearance.copy(edgeFade = false),
+                controls = before.controls.copy(holdToScrollFaster = false),
+                library = before.library.copy(scanOnStartup = false),
+            )
+        assertEquals(emptyList<Any>(), settingChanges(before, after))
     }
 
     @Test
@@ -109,7 +142,7 @@ class UsageEventsTest {
 
     @Test
     fun launchOutcomesAsResultsAndEmulators() {
-        val offer = EmulatorOffer("duckstation", "DuckStation", "com.github.stenzek.duckstation")
+        val offer = EmulatorOffer("duckstation", "DuckStation", null)
         assertEquals(LaunchResult.Ok, launchResultOf(LaunchOutcome.Started(1, "duckstation", "pkg", ChoiceSource.PersonForGame, null)))
         assertEquals("duckstation", launchEmulatorIdOf(LaunchOutcome.Started(1, "duckstation", "pkg", ChoiceSource.PersonForGame, null)))
         assertEquals(LaunchResult.EmulatorMissing, launchResultOf(LaunchOutcome.EmulatorMissing(1, offer, ChoiceSource.PersonForGame)))

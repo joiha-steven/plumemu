@@ -45,7 +45,7 @@ class SettingsSecondScreenRowsTest {
         stored: PlumSettings = settings,
     ) {
         val content = SettingsContent().withSecondScreen(screen, stored.secondScreen)
-        val section = if (option == SettingsOption.ShowBattery) SettingsSection.HomeScreen else SettingsSection.SecondScreen
+        val section = if (option == SettingsOption.ClockAndBattery) SettingsSection.HomeScreen else SettingsSection.SecondScreen
         val rows = section.rowsIn(content)
         val focus =
             SettingsFocus(
@@ -58,9 +58,9 @@ class SettingsSecondScreenRowsTest {
 
     @Test
     fun withoutASecondScreenNoSectionListsTheRows() {
-        show(null, SettingsOption.ShowBattery)
+        show(null, SettingsOption.ClockAndBattery)
         // The focused row's label shows twice: the row and its panel's title.
-        compose.onAllNodesWithText(text(R.string.settings_show_battery))[0].assertIsDisplayed()
+        compose.onAllNodesWithText(text(R.string.settings_clock_battery))[0].assertIsDisplayed()
         compose.onNodeWithText(text(R.string.settings_second_screen)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.settings_second_screen_in_game)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.settings_section_second_screen)).assertDoesNotExist()

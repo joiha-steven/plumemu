@@ -230,8 +230,7 @@ internal class ChangeChecks(
 
     private suspend fun check(reason: Reason) {
         val s = settings() ?: return
-        // Find new games automatically off: the person scans when they choose (Settings › Rescan library).
-        if (!s.flags.setupCompleted || !s.library.scanOnStartup) return
+        if (!s.flags.setupCompleted) return
         val changes = changedFolders(null) ?: return
         slot.showUnavailable(changes.unavailable.keys)
         if (changes.unavailable.isNotEmpty()) afterUnavailable(reason, changes.unavailable.keys)

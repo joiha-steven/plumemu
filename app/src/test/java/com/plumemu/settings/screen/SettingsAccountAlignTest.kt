@@ -31,7 +31,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The ScreenScraper rows sit in Library's column like every other row, measured: each row starts
- * and ends where ROM folders does, its label starts on the same line, rows are one gap apart; in
+ * and ends where Game folders does, its label starts on the same line, rows are one gap apart; in
  * the sign-in panel the fields and buttons start on the panel's edge and the title, the field
  * labels and the message on the row-text line 14 in, like a list row's text,
  * and the title's top is the panel's top, as in every other panel. At all six text sizes.
@@ -63,9 +63,9 @@ abstract class SettingsAccountAlignBase {
         }
         val libraryLabels =
             mapOf(
-                SettingsOption.RomFolders to "ROM folders",
+                SettingsOption.RomFolders to "Game folders",
                 SettingsOption.SortGames to "Sort games",
-                SettingsOption.SystemOrder to "System order",
+                SettingsOption.FilesNotAdded to "Files not added",
             )
         val accountLabels = mapOf(SettingsOption.ScraperAccount to "ScreenScraper", SettingsOption.RetroAchievementsAccount to "RetroAchievements")
         val problems = mutableListOf<String>()
@@ -75,20 +75,20 @@ abstract class SettingsAccountAlignBase {
             compose.waitForIdle()
             val at = "$label ${each.name}"
             val reference = bounds(SettingsTags.option(SettingsOption.RomFolders))
-            val referenceLabel = labelLeft(SettingsOption.RomFolders, "ROM folders")
+            val referenceLabel = labelLeft(SettingsOption.RomFolders, "Game folders")
             fun check(labels: Map<SettingsOption, String>) {
                 for ((option, text) in labels) {
                     val row = bounds(SettingsTags.option(option))
                     if (!near(row.left.value, reference.left.value) || !near(row.right.value, reference.right.value)) {
-                        problems += "$at: $option row ${row.left}..${row.right}, ROM folders ${reference.left}..${reference.right}"
+                        problems += "$at: $option row ${row.left}..${row.right}, Game folders ${reference.left}..${reference.right}"
                     }
                     val left = labelLeft(option, text)
-                    if (!near(left, referenceLabel)) problems += "$at: $option label at $left, ROM folders' at $referenceLabel"
+                    if (!near(left, referenceLabel)) problems += "$at: $option label at $left, Game folders' at $referenceLabel"
                 }
             }
             check(libraryLabels)
-            // System order follows Sort games; Systems is listed only with systems, which this library has not.
-            val order = listOf(SettingsOption.SortGames, SettingsOption.SystemOrder)
+            // Files not added follows Sort games: Systems is listed only with systems, which this library has not.
+            val order = listOf(SettingsOption.SortGames, SettingsOption.FilesNotAdded)
             order.zipWithNext().forEach { (above, below) ->
                 val gap = bounds(SettingsTags.option(below)).top.value - bounds(SettingsTags.option(above)).bottom.value
                 if (!near(gap, PlumDimens.listRowGap.value)) problems += "$at: gap $above to $below is $gap"

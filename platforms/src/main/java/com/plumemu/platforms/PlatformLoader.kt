@@ -47,7 +47,7 @@ object PlatformLoader {
                 decodeList(source, root, "emulators", RawEmulator.serializer()),
                 decodeKnownApps(source, root),
             )
-            return PlatformLoadResult.Loaded(CatalogBuilder(source).build(raw))
+            return PlatformLoadResult.Loaded(CatalogBuilder(source, log).build(raw))
         } catch (e: RejectedException) {
             e.failure
         }

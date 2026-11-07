@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import com.plumemu.account.AccountStatus
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.account.SignInTags
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
@@ -41,7 +42,7 @@ internal class SettingsSignInKeyboardTest : SettingsModelHarness() {
     val rules = rulesAround(compose)
 
     private lateinit var router: InputRouter
-    private val content = SettingsContent(account = AccountStatus.SignedOut)
+    private val content = SettingsContent(account = AccountStatus.SignedOut, chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper)
 
     // Typed as the interface: the Compose compiler gives the large FakeActions no `$stable`
     // field, and a composable call typed FakeActions reads it (NoSuchFieldError).

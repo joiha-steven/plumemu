@@ -176,7 +176,7 @@ internal fun noTitleListContent(list: TitleList): PanelContent {
  * "Play with": Automatic (naming what it starts, or saying Play asks while nothing is chosen for
  * the system) first, then each installed emulator, the
  * person's current choice with the "Current" badge; after the "Not installed" heading, the others
- * with "Get it". Legal-risk emulators carry the legal-risk line wherever they are listed. When
+ * ([notInstalledItems]). Legal-risk emulators carry the legal-risk line wherever they are listed. When
  * Automatic would start the person's system choice and that is not installed, Automatic cannot be
  * picked (it would fail the same way) and the body says so.
  */
@@ -208,8 +208,8 @@ internal fun playWithContent(listing: EmulatorListing): PanelContent {
     }
     val content = PanelContent(title = UiText.Res(R.string.game_play_with_title), body = body, items = rows)
     if (content.focusableRows.isNotEmpty()) return content
-    // Nothing to pick or get (only legal-risk emulators, none installed): say why, and keep one
-    // focused row, Back to the menu.
+    // Nothing to pick or get (none installed, and each one legal-risk or without a page): say why,
+    // and keep one focused row, Back to the menu.
     return content.copy(
         body = body + UiText.Res(R.string.game_error_no_emulator_offered_body),
         items = rows + PanelItem.Row(PanelRow(INFO_BACK_KEY, UiText.Res(R.string.game_action_back), PanelCommand.Back)),
@@ -238,27 +238,31 @@ private fun automaticRow(listing: EmulatorListing): PanelItem? {
 }
 
 /**
- * Emulators to get: the "Not installed" heading, then each with "Get it" (a chosen one marked
- * current). Legal-risk ones get no "Get it": they are not on Google Play, and Plumemu downloads only
- * from a project's own page, which the platform data does not hold yet; they show
- * with the legal-risk line only and cannot be chosen.
+ * Emulators to get: the "Not installed" heading, then each with "Get it", which opens the project's
+ * own page (a chosen one marked current). An emulator the data holds no page for is left out: a row
+ * nobody can act on is a dead end, and one after the last pickable row cannot be reached by gamepad.
+ * Two show anyway, with no "Get it" and passed over by the cursor and a tap: the current choice, so
+ * the person sees what is chosen, and a legal-risk one with its line, never offered whatever the
+ * data holds. Nothing left: no heading either.
  */
 internal fun notInstalledItems(
     emulators: List<EmulatorItem>,
     currentEmulatorId: String? = null,
     withHeading: Boolean = true,
 ): List<PanelItem> {
-    if (emulators.isEmpty()) return emptyList()
+    val shown = emulators.filter { it.pageToOffer != null || it.isLegalRisk || it.id == currentEmulatorId }
+    if (shown.isEmpty()) return emptyList()
     val heading = if (withHeading) listOf(PanelItem.Heading(UiText.Res(R.string.game_play_with_not_installed))) else emptyList()
     return heading +
-        emulators.map { emulator ->
+        shown.map { emulator ->
+            val page = emulator.pageToOffer
             PanelItem.Row(
                 PanelRow(
                     key = "get:${emulator.id}",
                     label = UiText.Plain(emulator.name),
-                    command = PanelCommand.GetEmulator(emulator.packageName, emulator.name),
-                    isEnabled = !emulator.isLegalRisk,
-                    value = if (emulator.isLegalRisk) null else UiText.Res(R.string.game_get_it),
+                    command = if (page != null) PanelCommand.GetEmulator(page, emulator.name) else PanelCommand.Nothing,
+                    isEnabled = page != null,
+                    value = if (page != null) UiText.Res(R.string.game_get_it) else null,
                     isCurrent = emulator.id == currentEmulatorId,
                     note = legalRiskNote(emulator),
                 ),

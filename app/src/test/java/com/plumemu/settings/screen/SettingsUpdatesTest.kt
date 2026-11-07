@@ -44,25 +44,34 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
     }
 
     private fun focusHere(option: SettingsOption) {
-        while (about.focusedOption != option) pressHere(Action.Move(Direction.Down))
+        repeat(SettingsSection.About.options.size) { if (about.focusedOption != option) pressHere(Action.Move(Direction.Down)) }
+        assertEquals(option, about.focusedOption)
     }
     private val release = UpdateManifest(41, "0.0.3-alpha", "https://plumemu-app.stevensdesk.com/update/p.apk", 9_800_000, "ab".repeat(32), 23, "2026-10-23", listOf("One."), null)
     private val found = UpdateView(lastCheck = LastCheck(1, CheckOutcome.Found), found = release)
 
     @Test
-    fun aboutListsTheCheckAndTheSwitchAndUpdateAvailableOnlyWhileFound() {
-        val rows = SettingsSection.About.rowsIn(SettingsContent())
-        assertEquals(listOf(SettingsOption.Version, SettingsOption.CheckForUpdates, SettingsOption.CheckUpdatesDaily, SettingsOption.UsageStatistics, SettingsOption.Licenses, SettingsOption.Privacy, SettingsOption.ReportProblem), rows)
-        val withUpdate = SettingsSection.About.rowsIn(SettingsContent(update = found))
-        assertEquals(SettingsOption.UpdateAvailable, withUpdate[1])
-        assertEquals(rows.size + 1, withUpdate.size)
+    fun aboutHasOneUpdatesRowWhetherOrNotAnUpdateIsFound() {
+        val rows = listOf(SettingsOption.Version, SettingsOption.Updates, SettingsOption.UsageStatistics, SettingsOption.Licenses, SettingsOption.Privacy, SettingsOption.ReportProblem)
+        assertEquals(rows, SettingsSection.About.rowsIn(SettingsContent(hasStatistics = true, hasUpdates = true)))
+        assertEquals(rows, SettingsSection.About.rowsIn(SettingsContent(hasStatistics = true, hasUpdates = true, update = found)))
     }
+
+    private fun openPanel() {
+        openAbout()
+        focusHere(SettingsOption.Updates)
+        pressHere(Action.Enter)
+        assertEquals(PanelPage.Update, about.focus.page)
+    }
+
+    private fun itemAtCursor() = updatesPanelItems(about.content.update).getOrNull(about.focus.panelIndex)
 
     @Test
     fun theSwitchIsOnByDefaultAndFlipsTheStoredValue() {
         assertTrue(SettingsOption.CheckUpdatesDaily.switchValue(actions.settings))
-        openAbout()
-        focusHere(SettingsOption.CheckUpdatesDaily)
+        openPanel()
+        pressHere(Action.Move(Direction.Down))
+        assertEquals(UpdatePanelItem.CheckDaily, itemAtCursor())
         pressHere(Action.Enter)
         assertFalse(actions.settings.updates.checkDaily)
         pressHere(Action.Enter)
@@ -70,46 +79,40 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
     }
 
     @Test
-    fun aOnCheckForUpdatesChecksNow() {
-        openAbout()
-        focusHere(SettingsOption.CheckForUpdates)
+    fun aOnCheckNowChecksNow() {
+        openPanel()
+        assertEquals(UpdatePanelItem.CheckNow, itemAtCursor())
         pressHere(Action.Enter)
         assertEquals(listOf("check"), updateCalls)
     }
 
     @Test
-    fun updateAvailableOpensItsPanelAndUpdateStartsIt() {
+    fun theUpdatesRowOpensItsPanelOnUpdateAndUpdateStartsIt() {
         about.content = about.content.copy(update = found)
-        openAbout()
-        focusHere(SettingsOption.UpdateAvailable)
-        pressHere(Action.Enter)
-        assertEquals(PanelPage.Update, about.focus.page)
+        openPanel()
         assertEquals(SettingsColumn.Panel, about.focus.column)
+        assertEquals(UpdatePanelItem.Update, itemAtCursor())
         pressHere(Action.Enter)
         assertEquals(listOf("update"), updateCalls)
     }
 
     @Test
-    fun theCursorStaysOnCheckForUpdatesWhenTheUpdateRowAppears() {
-        openAbout()
-        focusHere(SettingsOption.CheckForUpdates)
+    fun theCursorStaysOnCheckNowWhenACheckFindsAnUpdate() {
+        openPanel()
         pressHere(Action.Enter)
         about.content = about.content.copy(update = found)
-        assertEquals(SettingsOption.CheckForUpdates, about.focusedOption)
+        assertEquals(UpdatePanelItem.CheckNow, itemAtCursor())
         pressHere(Action.Enter)
-        assertEquals(listOf("check", "check"), updateCalls)
+        assertEquals("A checks again, it does not start the update", listOf("check", "check"), updateCalls)
     }
 
     @Test
-    fun theUpdatePanelClosesWhenItsRowGoes() {
+    fun anUpdateThatGoesLeavesThePanelOnItsFirstItem() {
         about.content = about.content.copy(update = found)
-        openAbout()
-        focusHere(SettingsOption.UpdateAvailable)
-        pressHere(Action.Enter)
-        assertEquals(PanelPage.Update, about.focus.page)
+        openPanel()
         about.content = about.content.copy(update = UpdateView())
-        assertEquals(SettingsColumn.Options, about.focus.column)
-        assertEquals(null, about.focus.page)
+        assertEquals(PanelPage.Update, about.focus.page)
+        assertEquals(UpdatePanelItem.CheckNow, itemAtCursor())
     }
 
     @Test
@@ -133,9 +136,7 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
     @Test
     fun onMobileDataTheFirstButtonDownloadsAnywayAndTheCursorStartsOnIt() {
         about.content = about.content.copy(update = found)
-        openAbout()
-        focusHere(SettingsOption.UpdateAvailable)
-        pressHere(Action.Enter)
+        openPanel()
         about.content = about.content.copy(update = found.copy(step = UpdateStep.AskMetered))
         assertEquals(0, about.focus.panelIndex)
         pressHere(Action.Enter)
@@ -149,9 +150,7 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
     @Test
     fun whileItDownloadsTheOnlyButtonIsCancel() {
         about.content = about.content.copy(update = found)
-        openAbout()
-        focusHere(SettingsOption.UpdateAvailable)
-        pressHere(Action.Enter)
+        openPanel()
         about.content = about.content.copy(update = found.copy(step = UpdateStep.Downloading(1_000, 9_800_000)))
         pressHere(Action.Enter)
         assertEquals(listOf("cancel"), updateCalls)
@@ -160,9 +159,7 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
     @Test
     fun upAndDownPastTheButtonsScrollTheNotesWithoutMovingFocus() {
         about.content = about.content.copy(update = found)
-        openAbout()
-        focusHere(SettingsOption.UpdateAvailable)
-        pressHere(Action.Enter)
+        openPanel()
         val before = about.updateNotes.presses
         pressHere(Action.Move(Direction.Down))
         pressHere(Action.Move(Direction.Down))
@@ -173,11 +170,67 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
     }
 
     @Test
+    fun atTheNotesEndDownGoesOnToCheckNowAndTheSwitch() {
+        about.content = about.content.copy(update = found)
+        openPanel()
+        about.updateNotes.canScroll = { false }
+        val before = about.updateNotes.presses
+        pressHere(Action.Move(Direction.Down))
+        assertEquals(UpdatePanelItem.CheckNow, itemAtCursor())
+        pressHere(Action.Move(Direction.Down))
+        assertEquals(UpdatePanelItem.CheckDaily, itemAtCursor())
+        assertEquals(before, about.updateNotes.presses)
+    }
+
+    private val dailyIndex get() = updatesPanelItems(about.content.update).indexOf(UpdatePanelItem.CheckDaily)
+
+    @Test
+    fun oneTapChangesTheDailySwitchInTheOpenPanel() {
+        openPanel()
+        val before = actions.settings
+        about.onTapPanelItem(dailyIndex, actions.shown, wide)
+        assertEquals(UpdatePanelItem.CheckDaily, itemAtCursor())
+        assertFalse("the first tap flips it", SettingsOption.CheckUpdatesDaily.switchValue(actions.settings) == SettingsOption.CheckUpdatesDaily.switchValue(before))
+    }
+
+    @Test
+    fun oneTapChangesTheDailySwitchBesideItsRowAndBesideAnUpdate() {
+        about.content = about.content.copy(update = found)
+        openAbout()
+        focusHere(SettingsOption.Updates)
+        assertEquals(SettingsColumn.Options, about.focus.column)
+        val before = actions.settings
+        about.onTapPanelItem(dailyIndex, actions.shown, wide)
+        assertEquals(PanelPage.Update, about.focus.page)
+        assertFalse(SettingsOption.CheckUpdatesDaily.switchValue(actions.settings) == SettingsOption.CheckUpdatesDaily.switchValue(before))
+    }
+
+    @Test
+    fun aTapOnCheckNowStillTakesTwoLikeEveryButton() {
+        openPanel()
+        val checkNow = updatesPanelItems(about.content.update).indexOf(UpdatePanelItem.CheckNow)
+        about.onTapPanelItem(dailyIndex, actions.shown, wide)
+        about.onTapPanelItem(checkNow, actions.shown, wide)
+        assertTrue(updateCalls.isEmpty())
+        about.onTapPanelItem(checkNow, actions.shown, wide)
+        assertEquals(1, updateCalls.size)
+    }
+
+    @Test
+    fun thePillOpensThePanelOnUpdateOnlyWhileOneWaits() {
+        val before = about.focus
+        assertFalse(about.openUpdate(actions.shown, wide))
+        assertEquals(before, about.focus)
+        about.content = about.content.copy(update = found)
+        assertTrue(about.openUpdate(actions.shown, wide))
+        assertEquals(PanelPage.Update, about.focus.page)
+        assertEquals(UpdatePanelItem.Update, itemAtCursor())
+    }
+
+    @Test
     fun withTwoButtonsDownMovesToTheSecondBeforeScrolling() {
         about.content = about.content.copy(update = found.copy(step = UpdateStep.AskMetered))
-        openAbout()
-        focusHere(SettingsOption.UpdateAvailable)
-        pressHere(Action.Enter)
+        openPanel()
         val before = about.updateNotes.presses
         pressHere(Action.Move(Direction.Down))
         assertEquals(1, about.focus.panelIndex)

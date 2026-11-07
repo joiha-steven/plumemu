@@ -78,17 +78,14 @@ internal object FocusHalo {
     const val LIGHT_BACKGROUND = 0.5
     const val LIGHTNESS_MIN = 0.50
     const val LIGHTNESS_MAX = 0.66
-    const val PEAK = 0.32
-    const val LIGHT_PART_PEAK = 0.24
-
-    /** Peak alpha of the accent halo round a lifted grid cover, on every theme: strong enough to read as a glow on Graphite. */
-    const val COVER_PEAK = 0.55f
+    const val PEAK = 0.32 * Depth.GLOW
+    const val LIGHT_PART_PEAK = 0.24 * Depth.GLOW
 
     /** Peak alpha of the accent blob under a focused row's slab on a light theme (the Paper board's measured 0.5; dark themes use [look]). */
     const val LIGHT_SLAB_PEAK = 0.5
 
     /** The focused slab's glow, the boards' `0 0 22px rgba(accent, 0.3)`: the accent at 0.3 on every theme. */
-    const val SLAB_GLOW = 0.3
+    const val SLAB_GLOW = 0.3 * Depth.GLOW
     const val BRIGHT_FACTOR = 0.5
     const val BRIGHT_FROM = 0.45
     const val BRIGHT_TO = 0.80

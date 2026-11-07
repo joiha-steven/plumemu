@@ -42,14 +42,18 @@ internal fun confirmHint(model: SettingsModel): Int? {
         model.nameFix.open?.typing?.inField == true && focus.page == PanelPage.FixName -> R.string.account_hint_type
         focus.page == PanelPage.ScraperSignIn -> model.signIn.form?.let { signInConfirmHint(it, R.string.settings_cancel) }
         focus.page == PanelPage.ProblemReport -> model.report.form?.let(::reportConfirmHint)
-        // Library › Systems: A picks the system up, and drops it while carried.
+        // Library › Systems: A picks the system up, and drops it while carried; on System order it changes the order.
         focus.column == SettingsColumn.Panel && focus.page == PanelPage.Systems ->
-            if (model.systems.isCarrying) R.string.settings_hint_done else R.string.settings_hint_move
+            if (model.systems.isCarrying) R.string.settings_hint_done else if (focus.panelIndex == SYSTEM_ORDER_ITEM) R.string.settings_hint_change else R.string.settings_hint_move
+        // Colors' panel: a tile is chosen, the rows under the tiles change a colour as a colour row does.
+        focus.page == PanelPage.ColorSets -> colorsRowOption(focus.panelIndex)?.let(::rowConfirmHint) ?: R.string.settings_hint_choose
+        model.isTextBlocked -> null
         focus.column == SettingsColumn.Sections -> R.string.settings_hint_select
         focus.column == SettingsColumn.Options && model.focusedStatisticGame != null -> R.string.settings_hint_go_to
         focus.column == SettingsColumn.Options -> model.focusedOption.let { if (it == null) R.string.settings_hint_change else if (model.canTryBoxArtAgain(it)) R.string.settings_hint_try_again else rowConfirmHint(it) }
         focus.page == PanelPage.LicenseText || focus.page == PanelPage.ReadOnly -> null
-        // Files not added: only an unknown folder's line goes somewhere.
+        focus.page == PanelPage.Update && updatesPanelItems(model.content.update).getOrNull(focus.panelIndex) == UpdatePanelItem.CheckDaily -> R.string.settings_hint_change
+        // Files not added: only an unknown folder's line opens something.
         focus.page == PanelPage.FilesNotAdded ->
             R.string.settings_hint_choose.takeIf { model.content.notAdded.getOrNull(focus.panelIndex) is NotAddedItem.Folder }
         else -> R.string.settings_hint_choose
@@ -95,7 +99,7 @@ internal fun SettingsHints(
         Hint(back, stringResource(backLabel), Modifier.hint(Action.Back, onHint).testTag(SettingsTags.HINT_BACK))
         if (inSystems && !isCarrying) {
             // Y is the one-press toggle elsewhere too (Favorite); a tap on the hint does the same, so touch can hide.
-            val focused = model.systems.rows(model.content, settings).getOrNull(focus.panelIndex)
+            val focused = model.systems.rows(model.content, settings).getOrNull(focus.panelIndex - FIRST_SYSTEM_ITEM)
             if (focused != null) {
                 val label = if (focused.id in settings.library.hiddenSystems) R.string.settings_hint_show else R.string.settings_hint_hide
                 Hint(stringResource(letters.favorite), stringResource(label), Modifier.hint(Action.ToggleFavorite, onHint).testTag(SettingsTags.HINT_HIDE))
@@ -104,12 +108,17 @@ internal fun SettingsHints(
         if (focus.column == SettingsColumn.Options) {
             Hint(stringResource(R.string.home_key_l1_r1), stringResource(R.string.settings_hint_section), Modifier.hint(Action.NextSystem, onHint).testTag(SettingsTags.HINT_SECTION))
             val kind = model.focusedOption?.kind
-            if (layout.widthClass == WidthClass.Narrow && model.focusedOption?.isOnStatisticsPage != true && (kind == OptionKind.Switch || kind == OptionKind.Info || kind == OptionKind.Action)) {
+            // A panel's text may run past the wide panel too: then Right is the way to scroll it, or Y on a choice, where Right steps the value.
+            val hasMore = layout.widthClass == WidthClass.Narrow || model.panelTextScrolls
+            if (hasMore && model.focusedOption?.isOnStatisticsPage != true && (kind == OptionKind.Switch || kind == OptionKind.Info || kind == OptionKind.Action)) {
                 Hint(
                     stringResource(R.string.settings_key_right),
                     stringResource(R.string.settings_hint_more),
                     Modifier.hint(Action.Move(Direction.Right), onHint).testTag(SettingsTags.HINT_MORE),
                 )
+            }
+            if (model.panelTextScrolls && kind == OptionKind.Choice) {
+                Hint(stringResource(letters.favorite), stringResource(R.string.settings_hint_more), Modifier.hint(Action.ToggleFavorite, onHint).testTag(SettingsTags.HINT_MORE))
             }
         }
     }

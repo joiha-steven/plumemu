@@ -1,19 +1,21 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.snapshots.Snapshot
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.layout.boundsInRoot
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.AppsGridDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumTheme
@@ -31,10 +33,10 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * The focused tile's lift in the Apps grid (docs/design/rules.md › Apps grid), the cover grid's
- * ([HomeCoverLiftTest]) driven by the compose test clock and read from the pixels: the tile focused as the grid
- * opens has its ring at full scale in the first frame with no grow and no sweep; a focus move grows and sweeps;
- * with animations off nothing grows (it snaps) and nothing sweeps; and a grid at rest writes no state.
+ * The focus in the Apps grid (docs/design/rules.md › Apps grid), driven by the compose test clock and read from the pixels:
+ * the cover's thin ring on the icon, whole in the first frame the grid opens, travelling on a move (`GridFocusTravelFramesTest`)
+ * with one light sweep after it, and snapping with animations off. Nothing grows, lifts or glows: every name keeps its row's line at every frame, a press dips
+ * the icon alone, the ring clears the name, and a grid at rest writes no state.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -71,102 +73,151 @@ class AppsGridLiftTest {
     /** The tile [index] at rest (its layout place), in px. */
     private fun resting(index: Int): Rect = compose.onNodeWithTag(HomeTags.cover(index), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
 
-    /** [rest] grown about its centre by [scale] and raised in step with it (the full lift at the full scale), the way the Apps grid draws the focused tile. */
-    private fun grown(
-        rest: Rect,
-        scale: Float,
-    ): Rect {
-        val lift = PlumDimens.focusedLift.value * compose.density.density * (scale - 1f) / (PlumDimens.FOCUSED_ICON_SCALE - 1f)
-        return Rect(rest.center.x - rest.width * scale / 2f, rest.center.y - rest.height * scale / 2f - lift, rest.center.x + rest.width * scale / 2f, rest.center.y + rest.height * scale / 2f - lift)
+    /** The icon of the tile at [rest], in px. */
+    private fun iconOf(rest: Rect): Rect {
+        val density = compose.density.density
+        val side = AppsGridDimens.appsGridTileIcon.value * density
+        val top = rest.top + AppsGridDimens.appsGridTilePadding.value * density
+        return Rect(rest.center.x - side / 2f, top, rest.center.x + side / 2f, top + side)
     }
 
-    private fun ringAt(
-        rest: Rect,
-        scale: Float,
-    ): Boolean {
+    private fun ringOn(rest: Rect): Boolean {
         val density = compose.density.density
-        val top = grown(rest, scale).let { Offset(it.center.x, it.top - (PlumDimens.focusRingGap.value + PlumDimens.focusRingWidth.value / 2f) * density) }
-        val p = compose.onRoot().captureToImage().toPixelMap()[top.x.roundToInt(), top.y.roundToInt()]
+        val icon = iconOf(rest)
+        val y = icon.top - (PlumDimens.focusRingGap.value + PlumDimens.focusRingWidth.value / 2f) * density
+        val p = compose.onRoot().captureToImage().toPixelMap()[icon.center.x.roundToInt(), y.roundToInt()]
         return abs(p.red - accent.red) < 0.12f && abs(p.green - accent.green) < 0.12f && abs(p.blue - accent.blue) < 0.12f
     }
 
-    /** The pixels of the focused tile's whole neighbourhood (ring, lifted copy, its shadow), to compare frame with frame. */
-    private fun around(rest: Rect): List<Int> {
-        val density = compose.density.density
-        val area = grown(rest, PlumDimens.FOCUSED_ICON_SCALE)
-        val pad = 24f * density
+    /** The pixels of the tile's neighbourhood, to compare frame with frame. */
+    private fun around(rest: Rect): List<Int> = pixelsIn(rest.inflate(24f * compose.density.density))
+
+    private fun pixelsIn(area: Rect): List<Int> {
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         val out = ArrayList<Int>()
-        for (y in (area.top - pad).roundToInt()..(area.bottom + pad).roundToInt()) {
-            for (x in (area.left - pad).roundToInt()..(area.right + pad).roundToInt()) out += pixels[x.coerceIn(0, pixels.width - 1), y.coerceIn(0, pixels.height - 1)].hashCode()
+        for (y in area.top.roundToInt()..area.bottom.roundToInt()) {
+            for (x in area.left.roundToInt()..area.right.roundToInt()) out += pixels[x.coerceIn(0, pixels.width - 1), y.coerceIn(0, pixels.height - 1)].hashCode()
         }
         return out
     }
 
-    /**
-     * [index] is lifted from the first frame: no grow, no sweep. [strict] (the grid just opened): the ring is at full scale in
-     * the first frame and every pixel around the tile stays put until the sweep's time has passed. Otherwise (a new grid
-     * size or system: the grid fades in and its pictures may be re-picked for the new size) only that no light band crosses it.
-     */
-    private fun assertLiftedInTheFirstFrame(
-        label: String,
-        index: Int,
-        strict: Boolean,
-    ) {
-        val rest = resting(index)
-        if (strict) {
-            assertTrue("$label: the ring is at full scale in the first frame", ringAt(rest, PlumDimens.FOCUSED_ICON_SCALE))
-            val first = around(rest)
-            compose.mainClock.advanceTimeBy(PlumMotion.FOCUS_SWEEP_REST_MS - 40L)
-            assertEquals("$label: nothing moved after the first frame (no grow, no sweep yet)", first, around(rest))
-            compose.mainClock.advanceTimeBy(PlumMotion.FOCUS_SWEEP_REST_MS + PlumMotion.FOCUS_SWEEP_MS.toLong())
-            assertEquals("$label: and no sweep played once the rest delay was over", first, around(rest))
-        } else {
-            compose.mainClock.advanceTimeBy(PlumMotion.FOCUS_SWEEP_REST_MS + PlumMotion.FOCUS_SWEEP_MS / 2L + 20L)
-            val mid = around(resting(index))
-            compose.mainClock.advanceTimeBy(3L * PlumMotion.FOCUS_SWEEP_MS)
-            assertEquals("$label: no light band crosses the tile", mid, around(resting(index)))
-            assertTrue("$label: the ring is at full scale", ringAt(resting(index), PlumDimens.FOCUSED_ICON_SCALE))
-        }
+    /** How far (0..255, the largest channel) the pixel at ([x], [y]) is from the background. */
+    private fun level(
+        pixels: PixelMap,
+        x: Float,
+        y: Float,
+    ): Int {
+        val p = pixels[x.roundToInt(), y.roundToInt()]
+        return (maxOf(abs(p.red - background.red), abs(p.green - background.green), abs(p.blue - background.blue)) * 255f).roundToInt()
+    }
+
+    /** The band of [rest] under its icon and the ring's room: only the name stands there. */
+    private fun nameBand(rest: Rect): Rect {
+        val under = iconOf(rest).bottom + (PlumDimens.focusRingOutset.value + 0.5f) * compose.density.density
+        return Rect(rest.left, under, rest.right, rest.bottom)
+    }
+
+    /** The last pixel row of the name's ink in the tile at [rest]. */
+    private fun nameBottom(rest: Rect): Int {
+        val band = nameBand(rest)
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        return (band.bottom.toInt() downTo band.top.toInt()).first { y -> (band.left.toInt()..band.right.toInt()).any { x -> level(pixels, x.toFloat(), y.toFloat()) > 60 } }
     }
 
     @Test
-    fun theTileFocusedAsTheGridOpensIsLiftedInTheFirstFrame() {
+    fun theTileFocusedAsTheGridOpensHasItsRingInTheFirstFrame() {
         open(focus = 8)
         frame()
-        assertLiftedInTheFirstFrame("opening", 8, strict = true)
+        val rest = resting(8)
+        assertTrue("the ring is whole in the first frame", ringOn(rest))
+        val first = around(rest)
+        compose.mainClock.advanceTimeBy(PlumMotion.FOCUS_SWEEP_REST_MS - 40L)
+        assertEquals("nothing moved after the first frame", first, around(rest))
+        compose.mainClock.advanceTimeBy(PlumMotion.FOCUS_SWEEP_REST_MS + PlumMotion.FOCUS_SWEEP_MS.toLong())
+        assertEquals("and no sweep played once the rest delay was over", first, around(rest))
     }
 
     @Test
-    fun aFocusMoveGrowsAndThenSweeps() {
+    fun aFocusMoveBringsTheRingThenSweeps() {
         open(focus = 8)
         compose.mainClock.advanceTimeBy(1000)
         move(Direction.Right)
         frame()
         frame()
         val next = resting(9)
-        assertTrue("two frames in, the tile is still growing", !ringAt(next, PlumDimens.FOCUSED_ICON_SCALE))
-        compose.mainClock.advanceTimeBy(PlumMotion.FOCUS_GROW_MS + 40L)
-        assertTrue("grown after 150 ms", ringAt(next, PlumDimens.FOCUSED_ICON_SCALE))
+        compose.mainClock.advanceTimeBy(PlumMotion.GLIDE_MS + 40L)
+        assertTrue("the ring has landed", ringOn(next))
         val before = around(next)
-        compose.mainClock.advanceTimeBy(PlumMotion.FOCUS_SWEEP_REST_MS + PlumMotion.FOCUS_SWEEP_MS / 2L)
-        assertNotEquals("the light band is crossing the tile", before, around(next))
+        // To the middle of the band, counted from the landing.
+        compose.mainClock.advanceTimeBy(PlumMotion.FOCUS_SWEEP_REST_MS + PlumMotion.FOCUS_SWEEP_MS / 2L - PlumMotion.GLIDE_MS - 40L)
+        assertNotEquals("the light band is crossing the icon", before, around(next))
     }
 
     @Test
-    fun withAnimationsOffThereIsNoGrowAndNoSweep() {
+    fun withAnimationsOffTheRingSnapsAndNothingSweeps() {
         open(focus = 8, animationsOn = false)
         compose.mainClock.advanceTimeBy(1000)
         move(Direction.Right)
         frame()
         frame()
         val next = resting(9)
-        assertTrue("it snaps to full scale", ringAt(next, PlumDimens.FOCUSED_ICON_SCALE))
+        assertTrue("it snaps", ringOn(next))
         val snapped = around(next)
         compose.mainClock.advanceTimeBy(PlumMotion.FOCUS_SWEEP_REST_MS + PlumMotion.FOCUS_SWEEP_MS / 2L)
         assertEquals("no sweep halfway through where it would play", snapped, around(next))
         compose.mainClock.advanceTimeBy(5 * PlumMotion.FOCUS_SWEEP_MS.toLong())
         assertEquals("and none after", snapped, around(next))
+    }
+
+    @Test
+    fun everyNameKeepsItsLineAtEveryFrameOfAMove() {
+        open(focus = 8)
+        compose.mainClock.advanceTimeBy(1000)
+        val next = resting(9)
+        val line = nameBottom(next)
+        move(Direction.Right)
+        repeat(14) { step ->
+            frame()
+            assertTrue("frame $step: the name stays on its line", abs(nameBottom(next) - line) <= 1)
+        }
+    }
+
+    @Test
+    fun theFocusedIconDoesNotGrow() {
+        open(focus = 8)
+        compose.mainClock.advanceTimeBy(1000)
+        val icon = iconOf(resting(8))
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val outside = level(pixels, icon.left - compose.density.density, icon.center.y)
+        assertTrue("the ring's gap stands right outside the icon's rest (was $outside)", outside <= 1)
+    }
+
+    private fun assertAPressDipsTheIconNotTheName(index: Int) {
+        open(focus = 8)
+        compose.mainClock.advanceTimeBy(1000)
+        val rest = resting(index)
+        val name = pixelsIn(nameBand(rest))
+        val icon = pixelsIn(iconOf(rest))
+        compose.onNodeWithTag(HomeTags.cover(index), useUnmergedTree = true).performTouchInput { down(center) }
+        compose.mainClock.advanceTimeBy(PRESS_MS)
+        assertNotEquals("the icon dips", icon, pixelsIn(iconOf(rest)))
+        assertEquals("the name stays", name, pixelsIn(nameBand(rest)))
+    }
+
+    @Test
+    fun aPressOnTheFocusedTileDipsTheIconNotTheName() = assertAPressDipsTheIconNotTheName(8)
+
+    @Test
+    fun aPressOnARestingTileDipsTheIconNotTheName() = assertAPressDipsTheIconNotTheName(9)
+
+    @Test
+    fun theRingClearsTheName() {
+        open(focus = 8)
+        compose.mainClock.advanceTimeBy(1000)
+        val rest = resting(8)
+        val band = nameBand(rest)
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        for (x in band.left.toInt()..band.right.toInt()) assertTrue("nothing touches the ring's outer edge", level(pixels, x.toFloat(), band.top) <= 1)
     }
 
     @Test
@@ -191,70 +242,32 @@ class AppsGridLiftTest {
         }
     }
 
-    /** How much brighter (0..255, the largest channel) the pixel at ([x], [y]) is than the background. */
-    private fun brighterThanBackground(
-        x: Float,
-        y: Float,
-    ): Int {
-        val p = compose.onRoot().captureToImage().toPixelMap()[x.roundToInt(), y.roundToInt()]
-        return (maxOf(p.red - background.red, p.green - background.green, p.blue - background.blue) * 255f).roundToInt()
+    private fun assertNoGlowOrHalo(theme: PlumThemeSettings) {
+        open(focus = 8, theme = theme)
+        compose.mainClock.advanceTimeBy(1000)
+        val density = compose.density.density
+        val rest = resting(8)
+        val icon = iconOf(rest)
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val beside = level(pixels, icon.left - (PlumDimens.focusRingOutset.value + HALO_PROBE_DP) * density, icon.center.y)
+        assertTrue("beside the ring: no glow, no halo (was $beside)", beside <= 1)
+        val under = level(pixels, rest.center.x, rest.bottom + density)
+        assertTrue("under the tile: no glow (was $under)", under <= 1)
+        val plate = level(pixels, rest.left + 2f * density, rest.bottom - 2f * density)
+        assertTrue("no plate behind the name (was $plate)", plate <= 1)
     }
 
     @Test
-    fun theFocusedTileGlowsAndTheOthersDoNot() {
-        open(focus = 8)
-        compose.mainClock.advanceTimeBy(1000)
-        val focused = grown(resting(8), PlumDimens.FOCUSED_ICON_SCALE)
-        val probe = 6f * compose.density.density
-        val glow = brighterThanBackground(focused.center.x, focused.bottom + probe)
-        assertTrue("6 dp under the focused tile is at least 20 levels brighter than the background (was $glow)", glow >= 20)
-        val other = resting(9)
-        val level = brighterThanBackground(other.center.x, other.bottom + probe)
-        assertTrue("no glow under another tile (was $level)", level <= 1)
-    }
-
-    /** How far (0..255, the largest channel) the pixel at the focused tile's left, just outside its ring, is from the background. */
-    private fun haloBesideFocusedTile(): Int {
-        val tile = grown(resting(8), PlumDimens.FOCUSED_ICON_SCALE)
-        val x = tile.left - (PlumDimens.focusRingOutset.value + HALO_PROBE_DP) * compose.density.density
-        val p = compose.onRoot().captureToImage().toPixelMap()[x.roundToInt(), tile.center.y.roundToInt()]
-        return (maxOf(abs(p.red - background.red), abs(p.green - background.green), abs(p.blue - background.blue)) * 255f).roundToInt()
-    }
+    fun theFocusedTileHasNoGlowOrHaloOnGraphite() = assertNoGlowOrHalo(TableText.Graphite)
 
     @Test
-    fun theFocusedTileHasTheFocusHaloOnGraphite() {
-        open(focus = 8, theme = TableText.Graphite)
-        compose.mainClock.advanceTimeBy(1000)
-        val halo = haloBesideFocusedTile()
-        // The tile's own glow gives about 20 here; the halo adds about 35 more.
-        assertTrue("beside the ring the focused tile has a halo (was $halo)", halo >= 40)
-    }
-
-    @Test
-    fun theFocusedTileHasNoHaloOnPaper() {
-        open(focus = 8, theme = TableText.Paper)
-        compose.mainClock.advanceTimeBy(1000)
-        val halo = haloBesideFocusedTile()
-        // Only the tile's own glow reaches here (about 5), no halo.
-        assertTrue("beside the ring the focused tile has no halo (was $halo)", halo <= 10)
-    }
-
-    @Test
-    fun theGlowIsWholeAtOnceWithAnimationsOff() {
-        open(focus = 8, animationsOn = false)
-        compose.mainClock.advanceTimeBy(1000)
-        move(Direction.Right)
-        frame()
-        frame()
-        val next = grown(resting(9), PlumDimens.FOCUSED_ICON_SCALE)
-        assertTrue("the glow is there at once", brighterThanBackground(next.center.x, next.bottom + 6f * compose.density.density) >= 20)
-    }
+    fun theFocusedTileHasNoGlowOrHaloOnPaper() = assertNoGlowOrHalo(TableText.Paper)
 
     @Test
     fun noTileIsFramedAtRest() {
         open(focus = 8)
         compose.mainClock.advanceTimeBy(1000)
-        // A tile far from the focused one, so its neighbourhood holds no glow: its edge and the gap around it are the background.
+        // Its edge and the gap around it are the background.
         val tile = resting(0)
         val density = compose.density.density
         val pixels = compose.onRoot().captureToImage().toPixelMap()
@@ -270,5 +283,6 @@ class AppsGridLiftTest {
     private companion object {
         const val IDLE_MS = 5_000L
         const val HALO_PROBE_DP = 3f
+        const val PRESS_MS = 500L
     }
 }

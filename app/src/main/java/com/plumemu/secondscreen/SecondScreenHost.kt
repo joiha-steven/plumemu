@@ -105,6 +105,17 @@ internal class SecondScreenHost(
     private var wanted: Want = Want(null, "not started")
     private var window: SecondScreenWindow? = null
 
+    /** Tries again once the quick tries are used up. */
+    private val late =
+        LateShowTries(
+            context,
+            mainHandler,
+            warn,
+            LATE_RETRY_MS,
+            isWanted = { displayId -> following != null && window == null && wanted.displayId == displayId },
+            tryNow = { displayId -> show(displayId, wanted.reason, SHOW_ATTEMPTS) },
+        )
+
     /** What the window draws; the window's composition reads it. */
     private val mode = MutableStateFlow(WindowMode.Picking)
 
@@ -164,6 +175,7 @@ internal class SecondScreenHost(
         following = null
         if (activityInFront.value === this) activityInFront.value = null
         wanted = Want(null, "activity destroyed")
+        late.stop()
         sync("activity destroyed")
     }
 
@@ -210,6 +222,7 @@ internal class SecondScreenHost(
         val target = wanted.displayId
         val current = window
         if (current != null && current.displayId == target) return
+        late.stop()
         if (current != null) dismiss(current, reason)
         if (target != null) {
             show(target, reason)
@@ -246,12 +259,14 @@ internal class SecondScreenHost(
             undoFailedShow(next, displayId)
             val retries = attempt < SHOW_ATTEMPTS
             warn("Second screen window: could not show on display $displayId (${e.javaClass.simpleName})${if (retries) ", trying again" else ""}")
-            if (retries) retryShow(displayId, reason, attempt + 1)
+            if (retries) retryShow(displayId, reason, attempt + 1) else late.start(displayId)
             return
         }
         feed.hasArtRoom = SecondScreenDimens.forShorterSide(shorterSideDp(display)).showsArt
         windowHolder.value = this
-        info("Second screen window: shown on display $displayId ($reason)")
+        val wasLate = late.isActive
+        late.stop()
+        info("Second screen window: shown on display $displayId (${if (wasLate) "late try, " else ""}$reason)")
         // Shown picking: nothing more to say; shown in game (a display changed during a game): said once.
         loggedMode = WindowMode.Picking
         followIfPicking()
@@ -421,6 +436,9 @@ internal class SecondScreenHost(
         /** Tries of one `show()` Android refuses, [SHOW_RETRY_MS] apart: about a second in all, then none until the next change. */
         const val SHOW_ATTEMPTS = 5
         const val SHOW_RETRY_MS = 250L
+
+        /** After those, one more try each [LATE_RETRY_MS] and on each display change, while the same window is wanted (`LateShowTries`). */
+        const val LATE_RETRY_MS = 5_000L
 
         /** Benchmark builds only (`BuildConfig.BENCHMARK_CONTENT`): show the window even on an Unsure screen. */
         const val EXTRA_BENCHMARK_SECOND_SCREEN = "com.plumemu.benchmark.SECOND_SCREEN"

@@ -65,8 +65,12 @@ internal fun HomeTopBar(
     val systemIndex by remember(state) { derivedStateOf { state.focus.systemIndex } }
     val entry = content.entries.getOrNull(systemIndex)
     val numbers = rememberCountFormat()
+    val isAsking = content.systemCount == 0 && (column == Column.Systems || entry == null)
     val (lead, count) =
-        if (column == Column.Systems || entry == null) {
+        if (isAsking) {
+            // Nothing to count yet: the empty state below is the invitation.
+            stringResource(R.string.app_name) to null
+        } else if (column == Column.Systems || entry == null) {
             pluralStringResource(R.plurals.home_systems_count, content.systemCount, numbers.format(content.systemCount)) to
                 pluralStringResource(R.plurals.home_games_count, content.gameCount, numbers.format(content.gameCount))
         } else {
@@ -85,8 +89,10 @@ internal fun HomeTopBar(
         place =
             if (noticeLead != null) {
                 if (noticeTail != null) stringResource(R.string.home_place, noticeLead, noticeTail) else noticeLead
-            } else {
+            } else if (count != null) {
                 stringResource(R.string.home_place, lead, count)
+            } else {
+                lead
             },
         emphasis = noticeLead ?: lead,
         clock = clock,
@@ -187,7 +193,8 @@ internal fun hintsFor(
             listOfNotNull(
                 when {
                     hasItems -> HintSpec(letters.confirm, R.string.home_hint_select, Action.Enter)
-                    content.asksForFolderAt(entry) -> emptyButton?.let { HintSpec(letters.confirm, it.label(), Action.Enter) }
+                    // The only button says it itself; with two, the hint says which one A presses.
+                    content.asksForFolderAt(entry) -> emptyButton?.takeIf { it != EmptyButton.AddFolder }?.let { HintSpec(letters.confirm, it.label(), Action.Enter) }
                     else -> null
                 },
                 search,

@@ -75,6 +75,33 @@ class KeyboardFocusLookTest {
         assertEquals(plain.width, focused.width)
     }
 
+    /** A focused letter or word key wears the accent cap: nothing on the keyboard is stronger than the key the cursor is on. */
+    private fun checkFocusedKeyIsAccent(
+        settings: PlumThemeSettings,
+        key: String,
+    ) {
+        val colors = PlumComposeColors.from(PlumColors.derive(settings.backgroundColor, settings.textMode, settings.accentColor))
+        val onKey = KeyboardState(spec.startModel().let { it.focusOn(it.idOf(key)) })
+        compose.setContent { PlumTheme(settings) { KeyboardOnScreen(onKey, spec) } }
+        compose.waitForIdle()
+        val image = compose.onNodeWithTag(keyboardKeyTag(onKey.model.idOf(key))).captureToImage().toPixelMap()
+        val px = compose.density.density
+        val x = ((KeyboardDimens.keyboardKeyGap.value / 2 + CollarSize.Well.lip.value + CollarSize.Well.groove.value + KeyboardDimens.keyboardActionRingInset.value + KeyboardDimens.keyboardFocusRing.value + 1f) * px).toInt()
+        val c = image[x, image.height / 2]
+        val light = com.plumemu.coreui.theme.SeatLook.accentLight(colors.accent)
+        fun between(v: Float, a: Float, b: Float) = v >= minOf(a, b) - 0.03f && v <= maxOf(a, b) + 0.03f
+        assertTrue("$key: $c is not on the accent cap", between(c.red, colors.accent.red, light.red) && between(c.green, colors.accent.green, light.green) && between(c.blue, colors.accent.blue, light.blue))
+    }
+
+    @Test
+    fun focusedLetterKeyIsTheAccentCapOnGraphite() = checkFocusedKeyIsAccent(PlumThemeSettings.Graphite, "q")
+
+    @Test
+    fun focusedLetterKeyIsTheAccentCapOnPaper() = checkFocusedKeyIsAccent(PlumThemeSettings.Paper, "q")
+
+    @Test
+    fun focusedWordKeyIsTheAccentCapOnGraphite() = checkFocusedKeyIsAccent(PlumThemeSettings.Graphite, "SPACE")
+
     @Test
     fun focusedActionKeyShowsAnInnerRingOnGraphite() = check(PlumThemeSettings.Graphite)
 

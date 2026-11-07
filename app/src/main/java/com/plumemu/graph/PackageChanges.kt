@@ -14,7 +14,7 @@ import androidx.core.content.ContextCompat
  * Recents, recreated while stopped).
  *
  * While Plumemu is started a receiver listens (nothing listens in the background).
- * A change while it was stopped (an emulator installed from the store) is found at the next
+ * A change while it was stopped (an emulator installed meanwhile) is found at the next
  * start: from Android 8 by asking what changed since the stop; before Android 8 there is no such
  * question, so any stop counts as a possible change.
  */

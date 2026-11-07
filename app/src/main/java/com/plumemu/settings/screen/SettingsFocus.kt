@@ -15,10 +15,10 @@ internal interface SettingsActions {
     /** One read-change-write of the store (two quick changes never lose each other). */
     fun update(transform: (PlumSettings) -> PlumSettings)
 
-    /** Advanced › Reset all settings, after its confirm step. */
+    /** Advanced › Reset… › Reset all settings, after its confirm step. */
     fun resetAllSettings()
 
-    /** Advanced › Reset library, after its confirm step: forget games and person data, keep folders, rescan. */
+    /** Advanced › Reset… › Reset library, after its confirm step: forget games and person data, keep folders, rescan. */
     fun resetLibrary()
 
     /** Back from the sections column: the main screen, with its focus where it was. */
@@ -33,7 +33,7 @@ internal interface SettingsActions {
         onDone: (Boolean) -> Unit,
     )
 
-    /** Library › Rescan library: false when a scan already runs (nothing new is started). */
+    /** Library › Rescan library, which also looks for new emulators: false when a scan already runs (nothing new is started). */
     fun rescanLibrary(): Boolean
 
     /** The focus left Rescan library (or Settings closed): its last result is forgotten. */
@@ -75,9 +75,6 @@ internal interface SettingsActions {
         onDone: (List<String>?) -> Unit,
     ) = onDone(null)
 
-    /** Emulators › Detect new emulators: asks Android again and refreshes the defaults. */
-    fun detectEmulators(onDone: (Boolean) -> Unit)
-
     /**
      * Home screen › Use as home screen: Android's home-app question, or its home settings when
      * Plumemu already is the home app (to switch back). False when this device offers neither.
@@ -87,7 +84,7 @@ internal interface SettingsActions {
     /** Statistics › Exact play time: Android's Usage access screen; false when this device has none. */
     fun openUsageAccess(): Boolean = false
 
-    /** Advanced › Export logs: Android's share sheet with the log file; [onDone] gets false when it could not open. */
+    /** Report a problem's Share log (Advanced › Export logs in a build with no report): Android's share sheet with the log file; [onDone] gets false when it could not open. */
     fun exportLogs(onDone: (Boolean) -> Unit) = onDone(false)
 
     /** Opens [url] in the device's browser; false when none could. */
@@ -129,13 +126,13 @@ internal interface SettingsActions {
     /** Statistics' figures, read once per opening ([rememberStatistics]). */
     val statistics: SettingsStatisticsSource get() = SettingsStatisticsSource.None
 
-    /** Advanced › Back up…: the save picker, Cancel, forgetting the last result. */
+    /** Back up and restore › Back up…: the save picker, Cancel, forgetting the last result. */
     val backup: SettingsBackupActions get() = SettingsBackupActions.None
 
-    /** Advanced › Restore… and Undo last restore: the open picker, Cancel, Restore, Undo, Forget the copy. */
+    /** Back up and restore › Restore… and Undo restore: the open picker, Cancel, Restore, Undo, Forget the copy. */
     val restore: SettingsRestoreActions get() = SettingsRestoreActions.None
 
-    /** About's updates: Check for updates, Update and its steps. */
+    /** About › Updates: Check now, Update and its steps. */
     val updates: SettingsUpdateActions get() = SettingsUpdateActions.None
 }
 
@@ -235,20 +232,22 @@ internal data class PanelGrid(
                 PanelPage.BackgroundPresets, PanelPage.AccentPresets, PanelPage.TextPresets -> PanelGrid(ColorPages.presetCount(page, ColorPages.backgroundOf(settings)), geometry.presetColumns)
                 PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom ->
                     PanelGrid(paletteSize + ColorSlider.entries.size + 1, ColorPages.PALETTE_COLUMNS)
-                PanelPage.Confirm -> PanelGrid(2, 2)
+                PanelPage.Confirm, PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm -> PanelGrid(2, 2)
+                PanelPage.Reset -> PanelGrid(ResetPanelItem.entries.size, 1)
+                PanelPage.BackupRestore -> PanelGrid(backupRestoreItems(content).size, 1)
                 PanelPage.Backup -> PanelGrid(backupPanelItems(content.backup).size, 1)
-                PanelPage.Update -> updatePanelItems(content.update).takeIf { it.isNotEmpty() }?.let { PanelGrid(it.size, 1) }
+                PanelPage.Update -> PanelGrid(updatesPanelItems(content.update).size, 1)
                 PanelPage.Restore -> PanelGrid(restorePanelItems(content.restore).size, 1)
                 PanelPage.UndoRestore -> PanelGrid(undoPanelItems(content, focus.undoAsk).size, 1)
                 PanelPage.Licenses -> PanelGrid(LicenseNotices.all.size, 1)
-                PanelPage.BoxArtSource -> PanelGrid(boxArtSourceChoices(content.account).size, 1)
+                PanelPage.BoxArtSource -> PanelGrid(boxArtPanelEntries(content).size, 1)
                 PanelPage.ScraperAccount -> PanelGrid(accountPageItems(content).size, 1)
                 PanelPage.RaAccount -> PanelGrid(raPageItems(content).size, 1)
                 PanelPage.ScraperSystems -> PanelGrid(systemsPickCount(content, focus), 1)
                 PanelPage.ScraperConfirm -> PanelGrid(BoxArtConfirmItem.entries.size, 1)
                 PanelPage.ScraperSignOutConfirm, PanelPage.RaSignOutConfirm -> PanelGrid(SignOutConfirmItem.entries.size, 1)
                 PanelPage.ScraperClearConfirm -> PanelGrid(ClearConfirmItem.entries.size, 1)
-                PanelPage.Systems -> PanelGrid(content.librarySystems.size, 1)
+                PanelPage.Systems -> PanelGrid(FIRST_SYSTEM_ITEM + content.librarySystems.size, 1)
                 PanelPage.UnknownFolder -> PanelGrid(1 + content.folderSystemChoices.size, 1)
                 PanelPage.LicenseText, PanelPage.ReadOnly, PanelPage.FixName, PanelPage.ScraperSignIn, PanelPage.ProblemReport -> null
             }

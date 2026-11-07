@@ -16,7 +16,7 @@ internal class SettingsBoxArtRetryTest : SettingsModelHarness() {
 
     private fun show(
         boxArt: ScrapeStatus,
-        account: AccountStatus = AccountStatus.SignedOut,
+        account: AccountStatus = AccountStatus.SignedIn("plumtester"),
     ) {
         model.content = model.content.copy(account = account, boxArt = boxArt)
         openSection(SettingsSection.Accounts)

@@ -79,7 +79,9 @@ class HomeEdgesTest {
         val hints = bounds(HomeTags.HINT_BAR)
         assertEquals("no room left empty under the systems list", strip.bottom.value, systems.bottom.value, 0.5f)
         assertEquals("the hint bar is one line of keys", barHeight, hints.bottom.value - hints.top.value, 0.5f)
-        assertEquals("the footer gap, nothing more, between the list and the hint bar", PlumDimens.footerGap.value, hints.top.value - strip.bottom.value, 0.5f)
+        // The column runs to the hint bar (its rows go under the bottom fade); the strip's slot keeps the footer gap.
+        assertEquals("the column runs to the hint bar", hints.top.value, strip.bottom.value, 0.5f)
+        assertEquals("the footer gap, nothing more, between the slot and the hint bar", PlumDimens.footerGap.value, hints.top.value - strip.slot().bottom.value, 0.5f)
     }
 
     @Test

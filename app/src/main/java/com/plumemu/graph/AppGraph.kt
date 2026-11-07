@@ -257,7 +257,6 @@ class AppGraph(
             showApps = settings.filterNotNull().map { it.homeScreen.showApps }.distinctUntilChanged(),
             appGames = appGames.marked, appPackages = flow { emitAll(database.appGameDao().observePackages()) }, log = log,
             sort = settings.filterNotNull().map { it.library.sortGames }.distinctUntilChanged(),
-            recentSize = settings.filterNotNull().map { it.library.recentSize }.distinctUntilChanged(),
             leftEdge = settings.filterNotNull().map { it.appearance.leftEdge }.distinctUntilChanged(),
             // Settings › Library › System order and Systems: the column follows at once.
             arrangement = settings.filterNotNull().map { SystemArrangement.of(it.library) }.distinctUntilChanged(),
@@ -396,11 +395,11 @@ class AppGraph(
             content =
                 combine(settingsLibrary.content, secondScreens.current, settings, scraperAccounts.status, scrapes.statusWithLimits) { content, screen, stored, account, boxArt ->
                     content.withSecondScreen(screen, stored?.secondScreen ?: SecondScreenSettings())
-                        .copy(account = account, boxArt = boxArt.first, accountLimits = boxArt.second)
+                        .copy(account = account, chosenBoxArtSource = stored?.library?.boxArtSource, boxArt = boxArt.first, accountLimits = boxArt.second)
                 }.combine(backup.state) { content, backupState -> content.copy(backup = backupState) }
                     .combine(combine(restore.state, restore.wayBack, ::Pair)) { content, (restoreState, wayBack) -> content.copy(restore = restoreState, wayBack = wayBack) }
                     .combine(updates.view) { content, update -> content.copy(update = update) }
-                    .combine(achievements.status) { content, ra -> content.copy(raAccount = ra) }.withPlatformData(platformDataLoad)
+                    .combine(achievements.status) { content, ra -> content.copy(raAccount = ra) }.withPlatformData(platformDataLoad).withVibrator(app, io)
                     .combine(boxArtFiles.facts) { content, facts -> content.copy(boxArtBytes = facts.bytes, boxArtGivenUp = facts.givenUp) }
                     .onEach { if (!it.loadFailed) rememberedSettingsContent = it },
             remembered = { rememberedSettingsContent },

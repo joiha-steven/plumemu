@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -26,6 +26,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -36,6 +38,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -58,6 +61,36 @@ import com.plumemu.keyboard.CaretLine
 import com.plumemu.keyboard.KeyboardChoice
 import com.plumemu.settings.ColorRefusal
 import com.plumemu.setup.bringIntoViewWhen
+
+/**
+ * The row's dot, label and code: the code at the end, the label beside it. The label takes what it needs: where the three do not fit a line (Largest in the narrow column) the dot,
+ * which only repeats the sliders' colour, gives way before the words wrap; two lines only where the label does not fit even so.
+ */
+@Composable
+private fun HexRowLine(
+    modifier: Modifier,
+    content: @Composable () -> Unit,
+) {
+    val gap = PlumDimens.settingsPresetSwatchGap
+    Layout(content, modifier) { (dot, label, code), constraints ->
+        val width = constraints.maxWidth
+        val gapPx = gap.roundToPx()
+        val codePlaced = code.measure(Constraints(maxWidth = width))
+        val dotPlaced = dot.measure(Constraints())
+        val room = width - codePlaced.width - gapPx
+        val needs = label.maxIntrinsicWidth(Constraints.Infinity)
+        val dotWidth = dotPlaced.width + gapPx
+        val hidesDot = needs + dotWidth > room && needs <= room
+        val start = if (hidesDot) 0 else dotWidth
+        val labelPlaced = label.measure(Constraints(maxWidth = (room - start).coerceAtLeast(0)))
+        val height = maxOf(dotPlaced.height, labelPlaced.height, codePlaced.height)
+        layout(width, height) {
+            if (!hidesDot) dotPlaced.place(0, (height - dotPlaced.height) / 2)
+            labelPlaced.place(start, (height - labelPlaced.height) / 2)
+            codePlaced.place(width - codePlaced.width, (height - codePlaced.height) / 2)
+        }
+    }
+}
 
 /**
  * The "+" page's Color code row: the swatch and hex of the colour shown, the field that types a code
@@ -89,16 +122,16 @@ internal fun HexRow(
                     .heightIn(min = PlumTheme.layout.settingsHexRowHeight)
                     .swatchTap(index, touch)
                     .padding(horizontal = PlumDimens.settingsPanelRowPadding),
-            horizontalArrangement = Arrangement.spacedBy(PlumDimens.settingsPresetSwatchGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(PlumDimens.settingsValueDot).background(color, CircleShape).border(PlumDimens.switchOffRing, colors.chip, CircleShape))
-            // May take two lines where the code leaves it little room (Largest in Plum Serif).
-            BasicText(stringResource(R.string.settings_hex_label), style = type.meta.copy(color = colors.muted), maxLines = 2, modifier = Modifier.weight(1f))
-            when {
-                !model.isEditingHex || !isFocused -> BasicText(hex, style = type.meta.copy(color = colors.text), maxLines = 1)
-                ownKeyboard != null -> HexWell(lit = !model.hexOnUse) { HexOwnKeyboardField(hex, ownKeyboard, model.hexText) }
-                else -> HexWell(lit = !model.hexOnUse) { HexField(hex, model, touch) }
+            HexRowLine(Modifier.weight(1f)) {
+                Box(Modifier.size(PlumDimens.settingsValueDot).background(color, CircleShape).border(PlumDimens.switchOffRing, colors.chip, CircleShape))
+                BasicText(stringResource(R.string.settings_hex_label), style = type.meta.copy(color = colors.muted), maxLines = 2)
+                when {
+                    !model.isEditingHex || !isFocused -> BasicText(hex, style = type.meta.copy(color = colors.text), maxLines = 1)
+                    ownKeyboard != null -> HexWell(lit = !model.hexOnUse) { HexOwnKeyboardField(hex, ownKeyboard, model.hexText) }
+                    else -> HexWell(lit = !model.hexOnUse) { HexField(hex, model, touch) }
+                }
             }
         }
         // While Plumemu's tray is up its action key uses the code: "Use this colour" shows with the tray down.
@@ -109,7 +142,7 @@ internal fun HexRow(
             if (showsError) HexError()
         } else if (showsUse || showsError) {
             // Above the tray only the height left: what is under the field scrolls, the field stays whole.
-            Column(Modifier.verticalScroll(rememberScrollState()).testTag(SettingsTags.HEX_UNDER), verticalArrangement = Arrangement.spacedBy(PlumDimens.titleLineGap)) {
+            PanelScrollColumn(PlumDimens.titleLineGap, tag = SettingsTags.HEX_UNDER, fillsHeight = false, bringRoom = 0.dp, endRoom = 0.dp) {
                 if (showsUse) UseRow(model.hexOnUse, hex = model.hexText, model.hexRefusal, touch)
                 if (showsError) HexError()
             }

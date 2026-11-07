@@ -3,6 +3,8 @@ package com.plumemu.home
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.layout.boundsInRoot
@@ -18,6 +20,7 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.coreui.theme.LocalGlideClock
 import com.plumemu.coreui.theme.PlumMotion
+import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -53,11 +56,14 @@ abstract class GridFocusTravelFramesBase {
 
     private enum class Kind { Covers, Apps }
 
+    private var isApps = false
+
     private fun open(
         kind: Kind,
         focus: Int,
         animationsOn: Boolean = true,
     ) {
+        isApps = kind == Kind.Apps
         compose.setContent {
             CompositionLocalProvider(LocalGlideClock provides { compose.mainClock.currentTime * 1_000_000L }) {
                 PlumTheme(TableText.Default.copy(animationsOn = animationsOn)) {
@@ -91,7 +97,9 @@ abstract class GridFocusTravelFramesBase {
     private fun move(direction: Direction) = compose.runOnIdle { checkNotNull(state).dispatch(Action.Move(direction)) }
 
     /** Where cell [index] is drawn now (its layout place and the glide's translation). */
-    private fun cell(index: Int): Rect = compose.onNodeWithTag(HomeTags.cover(index), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+    /** The cell's place, not clipped by the window: the Apps grid's window ends on a whole row, so the row below it is wholly outside (and clipped to nothing). */
+    private fun cell(index: Int): Rect =
+        compose.onNodeWithTag(HomeTags.cover(index), useUnmergedTree = true).fetchSemanticsNode().let { Rect(it.positionInRoot, it.size.toSize()) }
 
     /** The accent, or the lit groove beside a picture (the accent a shade darker under the art's shadow). */
     private fun Color.isRing(): Boolean =
@@ -104,7 +112,9 @@ abstract class GridFocusTravelFramesBase {
         var minX = Int.MAX_VALUE
         var maxX = -1
         var maxY = -1
-        for (y in grid.top.toInt() until grid.bottom.toInt() step 2) {
+        // The Apps grid's window ends on a whole row: the ring of its last visible row reaches below it (into the bar gap), as on screen.
+        val reach = if (isApps) with(compose.density) { PlumDimens.barGap.toPx() } else 0f
+        for (y in grid.top.toInt() until minOf(pixels.height, (grid.bottom + reach).toInt()) step 2) {
             for (x in grid.left.toInt() until pixels.width step 2) {
                 val p = pixels[x, y]
                 if (p.isRing()) {

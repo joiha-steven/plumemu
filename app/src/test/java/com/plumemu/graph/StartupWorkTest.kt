@@ -166,11 +166,11 @@ class StartupWorkTest {
     }
 
     @Test
-    fun noRescanWhenScanOnStartupIsOff() = runTest {
+    fun aStoredScanOnStartupOffNoLongerStopsTheStartupRescan() = runTest {
         work(settings(scanOnStartup = false)).onContentShown()
         runCurrent()
-        assertFalse(done.toString(), "scan" in done)
-        assertTrue("detection still runs", "detect" in done)
+        assertTrue(done.toString(), "scan" in done)
+        assertTrue("detection runs too", "detect" in done)
     }
 
     @Test
@@ -513,13 +513,5 @@ class StartupWorkTest {
         assertTrue("scanned", "scan" in done)
         assertTrue("the flag is cleared once the scan ends", "flag off" in done)
         assertFalse(settings.value?.flags?.rescanAfterReset == true)
-    }
-
-    @Test
-    fun withScanOnStartupOffAndNoResetPendingNothingIsScanned() = runTest {
-        val work = work(settings(scanOnStartup = false))
-        work.onContentShown()
-        runCurrent()
-        assertFalse("scan" in done)
     }
 }

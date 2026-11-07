@@ -159,8 +159,12 @@ class DatabaseGateTest {
                 // passed before the writer had even woken, so the close ran ahead of it.
                 woke.await(5, java.util.concurrent.TimeUnit.SECONDS)
                 val deadline = System.currentTimeMillis() + 5_000
-                while (writer.state == Thread.State.RUNNABLE || writer.state == Thread.State.NEW) {
-                    if (System.currentTimeMillis() > deadline) break
+                // Inside beginTransaction, not just not RUNNABLE: under load a class load or a safepoint
+                // also reads as not RUNNABLE, and the close then ran ahead of the writer in CI.
+                while (writer.state == Thread.State.RUNNABLE || writer.state == Thread.State.NEW ||
+                    writer.stackTrace.none { it.methodName == "beginTransaction" }
+                ) {
+                    if (System.currentTimeMillis() > deadline) throw AssertionError("the writer never queued: ${writer.stackTrace.take(12)}")
                     Thread.sleep(5)
                 }
             }

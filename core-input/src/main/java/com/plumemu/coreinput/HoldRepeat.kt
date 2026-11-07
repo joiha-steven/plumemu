@@ -20,7 +20,7 @@ internal object HoldRepeat {
     const val FIRST_REPEAT_DELAY_MS = 300L
 
     /**
-     * With "Hold to scroll faster" off: 12.5 moves a second, slow enough to read titles going by.
+     * The steady pace, for an input that does not speed up: 12.5 moves a second, slow enough to read titles going by.
      */
     const val CONSTANT_INTERVAL_MS = 80L
 

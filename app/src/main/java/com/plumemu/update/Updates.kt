@@ -85,7 +85,7 @@ class Updates(
     private val inspector: ApkInspector,
     private val installer: UpdateInstaller,
     private val wallClock: () -> Long,
-    /** Told each check that ended ([manual]: Settings' Check for updates), for the statistics (`update_check`). */
+    /** Told each check that ended ([manual]: Settings' Check now), for the statistics (`update_check`). */
     private val onChecked: (manual: Boolean, outcome: CheckOutcome) -> Unit = { _, _ -> },
     /**
      * The platform data check ([PlatformDataUpdater.check]) run after each update check in the same job, with "daily"
@@ -189,7 +189,7 @@ class Updates(
         }
     }
 
-    /** Settings › About › Check for updates: ignores the switch and the 24 h, still needs a network. */
+    /** Settings › About › Updates › Check now: ignores the switch and the 24 h, still needs a network. */
     fun checkNow(): Job =
         scope.launch {
             loaded()
@@ -235,7 +235,7 @@ class Updates(
     /**
      * The platform data check, after the update check has ended and shown its result: its own job, one at a
      * time, and never in the way of [startUpdate] (which only looks at the update and check jobs). Only on the
-     * network the daily check needs (Wi-Fi or Ethernet, not metered), also when the person pressed Check for updates.
+     * network the daily check needs (Wi-Fi or Ethernet, not metered), also when the person pressed Check now.
      */
     private suspend fun runDataCheck(manual: Boolean) {
         val label = if (manual) "manual" else "daily"

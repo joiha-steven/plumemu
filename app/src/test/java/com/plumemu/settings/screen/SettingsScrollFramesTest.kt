@@ -175,7 +175,7 @@ class SettingsScrollFramesTest {
     fun optionsColumn() {
         val systems = List(SYSTEMS) { SystemEmulators("system$it", "System $it", automatic = null, chosen = null, installed = emptyList()) }
         showSettings(SettingsHost(versionName = "test", update = {}, resetAllSettings = {}, resetLibrary = {}, content = flowOf(SettingsContent(systems = systems))))
-        send(*Array(SettingsSection.Emulators.shownIndex) { Action.Move(Direction.Down) }, Action.Enter) // Emulators › its rows
+        send(*Array(SettingsSection.shownIn(SettingsContent(systems = systems)).indexOf(SettingsSection.Emulators)) { Action.Move(Direction.Down) }, Action.Enter) // Emulators › its rows
         val rows = SettingsSection.Emulators.rowsIn(SettingsContent(systems = systems))
         val lines =
             walk("Emulators options", rows.size - 1, SettingsTags.OPTION_LIST) { i ->
@@ -197,7 +197,7 @@ class SettingsScrollFramesTest {
         send(Action.Enter) // Library's options
         val rows = SettingsSection.Library.rowsIn(content)
         repeat(rows.indexOf(SettingsOption.Systems)) { send(Action.Move(Direction.Down)) }
-        send(Action.Enter, Action.Enter) // into the panel, then pick the first system up
+        send(Action.Enter, Action.Move(Direction.Down), Action.Enter) // into the panel, past System order, then pick the first system up
         compose.onNodeWithTag(SettingsTags.HINT_MOVE, useUnmergedTree = true).assertExists()
         val lines = walk("Systems carried", systems.size - 1, SettingsTags.SYSTEMS_LIST) { SettingsTags.panelItem(it) to 0 }
         println(lines.joinToString("\n"))
@@ -205,22 +205,21 @@ class SettingsScrollFramesTest {
     }
 
     /**
-     * Device bug, build 644: at the last row of Library, R1 to another section, a few moves,
+     * Device bug, build 644: at the last row of a long section, R1 to another section, a few moves,
      * L1 back showed the list from the top with the remembered row hidden under the hint bar. The focused
      * row must be whole inside the list once a section is shown.
      */
     @Test
     fun theRememberedRowIsInViewWhenASectionIsShownAgain() {
-        val folders = List(12) { SettingsFolderRow(FolderKey(1, "Folder $it"), it + 1, FolderAnswer.Unanswered) }
-        val content = SettingsContent(unknownFolders = folders)
+        val systems = List(14) { SystemEmulators("system$it", "System $it", null, null, emptyList()) }
+        val content = SettingsContent(systems = systems)
         showSettings(SettingsHost(versionName = "test", update = {}, resetAllSettings = {}, resetLibrary = {}, content = flowOf(content)))
-        send(Action.Enter) // Library's options
-        val rows = SettingsSection.Library.rowsIn(content)
-        repeat(rows.size - 1) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.shownIn(content).indexOf(SettingsSection.Emulators)) { send(Action.Move(Direction.Down)) }
+        send(Action.Enter) // the long section's options
+        repeat(systems.size - 1) { send(Action.Move(Direction.Down)) }
         send(Action.NextSystem, Action.Move(Direction.Down), Action.Move(Direction.Down), Action.PreviousSystem)
-        val last = folders.last().key
         val list = compose.onNodeWithTag(SettingsTags.OPTION_LIST, useUnmergedTree = true).getBoundsInRoot()
-        val row = compose.onNodeWithTag(SettingsTags.unknownFolder(last), useUnmergedTree = true).getBoundsInRoot()
+        val row = compose.onNodeWithTag(SettingsTags.system(systems.lastIndex), useUnmergedTree = true).getBoundsInRoot()
         assertTrue("row $row not inside list $list", row.top >= list.top - SLACK.dp && row.bottom <= list.bottom + SLACK.dp)
     }
 }

@@ -2,7 +2,6 @@ package com.plumemu.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListLayoutInfo
@@ -43,6 +42,7 @@ import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.components.GameRowLook
 import com.plumemu.coreui.components.GlidingPillHost
+import com.plumemu.coreui.components.drawWithEndMoved
 import com.plumemu.coreui.components.rememberGlidingPill
 import com.plumemu.coreui.theme.rememberListGlide
 import kotlin.math.abs
@@ -91,12 +91,14 @@ internal fun GamesPages(
     // The shown page's pill draws its halo from here, outside the lazy row's clip (the pill is as wide as the column): read while drawing.
     val halos = remember { PageHalos() }
     val probe = remember(pages, prefetch) { GamesPagesProbe(pages, { prefetch.ahead }, { prefetch.pending }) }
+    val stretch = LocalListStretch.current
     LazyRow(
         state = pages,
         modifier =
             modifier.semantics { this[GamesPagesInfo] = probe }.drawBehind {
-                content.entries.getOrNull(state.focus.systemIndex)?.let { halos.hosts[it.id]?.drawHalo(this) }
-            },
+                val host = content.entries.getOrNull(state.focus.systemIndex)?.let { halos.hosts[it.id] } ?: return@drawBehind
+                if (stretch == null) host.drawHalo(this) else drawWithEndMoved(stretch.rowEndShift()) { host.drawHalo(this) }
+            }.overflowingSlot(stretch),
         userScrollEnabled = false,
     ) {
         itemsIndexed(content.entries, key = { _, entry -> entry.id }, contentType = { _, _ -> GAMES_PAGE }) { index, entry ->
@@ -211,6 +213,7 @@ private fun EntryGames(
     modifier: Modifier,
 ) {
     val fit = PlumTheme.layout.listRowsThatFit
+    val rest = barRows(PlumTheme.layout.gameRowHeight + PlumDimens.listRowGap, PlumDimens.listRowGap)
     // The band is the list's first item (it scrolls with the list): there for
     // a system the platform data knows while Settings › System info is on, whichever column is focused, so
     // nothing appears or goes on Enter or Back and no row moves under a finger. Only the lazy list's item
@@ -238,9 +241,11 @@ private fun EntryGames(
     // The list's width as the strip lays it out (its own width and the bleed, narrow preview and full-width cases included), known before the page is shown.
     val density = LocalDensity.current
     val listPillWidthPx = LocalGamesListWidthPx.current.takeIf { it > 0 } ?: with(density) { homeGamesWidth(layout, hasBoxArt, showsGrid = false).roundToPx() + PlumDimens.gamesListBleed.roundToPx() }
+    val stretch = LocalListStretch.current
+    val endMovedPx = remember(stretch) { stretch?.let { it::rowEndShift } }
     // The focus pill is drawn by the list, so it glides from row to row; read while drawing.
     val pill =
-        rememberGlidingPill(listState, glide, rowHeight = layout.gameRowHeight, stride = layout.gameRowHeight + PlumDimens.listRowGap, haloOutside = true, blob = true, warmWidthPx = listPillWidthPx) {
+        rememberGlidingPill(listState, glide, rowHeight = layout.gameRowHeight, stride = layout.gameRowHeight + PlumDimens.listRowGap, haloOutside = true, blob = true, warmWidthPx = listPillWidthPx, endMovedPx = endMovedPx) {
             val row = state.focus.rowOf(entry.id)
             if (gameLook(state.focus, entry.id, row, panelOpen.value) == GameRowLook.Focused) row + bandItems else -1
         }
@@ -248,13 +253,16 @@ private fun EntryGames(
         halos.hosts[entry.id] = pill
         onDispose { if (halos.hosts[entry.id] === pill) halos.hosts.remove(entry.id) }
     }
-    val rowStridePx = with(LocalDensity.current) { (layout.gameRowHeight + PlumDimens.listRowGap).toPx() }
-    val fades = remember(listState, glide, state, entry.id, bandItems, rowStridePx) { gamesListFades(listState, glide, rowStridePx) { state.focus.rowOf(entry.id) + bandItems } }
+    val barRoom = LocalBarRoom.current
+    val topRoomPx = with(density) { barRoom.top.toPx() }
+    val rowGapPx = with(density) { PlumDimens.listRowGap.toPx() }
+    val clips = remember(listState, glide, state, entry.id, bandItems, rowGapPx, topRoomPx, isShown) { BarRunClips(listState, glide, topRoomPx, gapBelow = rowGapPx, isShown = isShown) { state.focus.rowOf(entry.id) + bandItems } }
+    FollowBarRunner(clips)
     pill.Provide {
         LazyColumn(
             state = listState,
-            modifier = modifier.listHeightAtMost(PlumTheme.layout.listRowsHeightPx(LocalDensity.current)).then(pill.modifier).then(glide.withFadeMask(fades, PlumTheme.edgeFadeOn)),
-            contentPadding = PaddingValues(vertical = glide.extra),
+            modifier = modifier.backToSlot(stretch).then(pill.modifier).overflowingSlot(stretch).then(glide.withFadeMask(clips, isOn = false, hidesCutRows = true)),
+            contentPadding = stretch.listPadding(top = glide.extra + barRoom.top, bottom = glide.extra + with(density) { rest.below.toDp() }),
             // No spacing: each game row carries its own gap (its tap area).
         ) {
             if (info != null) item(key = SYSTEM_BAND_KEY, contentType = SYSTEM_BAND_KEY) { SystemInfoBand(info, visibleWidth, isPeeking = { state.focus.column == com.plumemu.coreinput.Column.Details }) }
@@ -264,7 +272,15 @@ private fun EntryGames(
         }
     }
     // The first row is brought in with the band above it, so the list shows its top.
-    KeepFocusedVisible(listState, glide, trailingGap = PlumDimens.listRowGap, countsSteps = true) { state.focus.rowOf(entry.id).let { if (it == 0) 0 else it + bandItems } }
+    // Rows added above, removed or moved (the game just played goes to the top of Recent): the list keeps its first row by key, so the focus is brought into view again.
+    // A scan that changes the rows while a finger holds the list away from the focused row must not throw it back: the key follows the rows only while that row is laid out.
+    val rowsKey = remember(listState) { arrayOf<Any?>(entry.rowIds) }
+    Snapshot.withoutReadObservation {
+        val focusIndex = state.focus.rowOf(entry.id).let { if (it == 0) 0 else it + bandItems }
+        val shown = listState.layoutInfo.visibleItemsInfo
+        if (shown.isEmpty() || shown.any { it.index == focusIndex }) rowsKey[0] = entry.rowIds
+    }
+    KeepFocusedVisible(listState, glide, contentKey = rowsKey[0], trailingGap = PlumDimens.listRowGap, countsSteps = true, snapsToRows = true, bandPx = rest.inset) { state.focus.rowOf(entry.id).let { if (it == 0) 0 else it + bandItems } }
     FollowArt(entry.rows) { listState.firstVisibleItemIndex - bandItems }
 }
 
@@ -443,13 +459,3 @@ internal class GamesPagesProbe(
  */
 internal val GamesPagesInfo = SemanticsPropertyKey<GamesPagesProbe>("GamesPagesInfo")
 
-/**
- * Measures the content [maxPx] tall at most while the node keeps the size it was given (the page fills its parent): the list ends on a whole
- * row, and the room left under it stays empty. Placed after the page's own size, before the glide's clip.
- */
-internal fun Modifier.listHeightAtMost(maxPx: Int): Modifier =
-    layout { measurable, constraints ->
-        val height = minOf(constraints.maxHeight, maxPx)
-        val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
-        layout(constraints.constrainWidth(placeable.width), constraints.constrainHeight(height)) { placeable.place(0, 0) }
-    }

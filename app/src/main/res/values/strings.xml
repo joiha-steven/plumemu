@@ -7,7 +7,7 @@
     <string name="home_entry_recent">Recent</string>
     <string name="home_entry_favorites">Favorites</string>
     <string name="home_entry_apps">Apps</string>
-    <!-- The system column's three-letter codes in the peek (Settings > Home screen > Left edge > System codes); letters of the alphabet, not translated. -->
+    <!-- The system column's three-letter codes in the peek (Settings > Home screen > Left strip > System codes); letters of the alphabet, not translated. -->
     <string name="home_code_recent" translatable="false">REC</string>
     <string name="home_code_favorites" translatable="false">FAV</string>
     <string name="home_code_apps" translatable="false">APP</string>
@@ -159,6 +159,7 @@
     <string name="home_empty_choose_folder">Choose folder</string>
     <string name="home_nogames_title">No games here yet</string>
     <string name="home_nogames_body_files">The folder has no files an emulator on this device opens. Files not added says why for each one.</string>
+    <string name="home_nogames_body_no_files">This folder holds no game files. Choose the folder that has your games.</string>
 
     <!-- The library could not be read (database or platform data failed); shown instead of the main screen. -->
     <string name="home_library_error_title">Plumemu could not open its library</string>
@@ -185,7 +186,7 @@
     <string name="setup_add_folder">+ Add another folder</string>
     <string name="setup_add_folder_sub">An SD card, or games kept somewhere else</string>
     <string name="setup_continue">Continue</string>
-    <string name="setup_folder_note">Add or remove folders later in Settings › Library › ROM folders.</string>
+    <string name="setup_folder_note">Add or remove folders later in Settings › Library › Game folders.</string>
     <!-- A picked folder's name on its card: where it is, then its path ("Internal storage › ROMs"). -->
     <string name="setup_folder_internal">Internal storage</string>
     <string name="setup_folder_removable">SD card</string>
@@ -228,7 +229,7 @@
     <string name="setup_ready_desc">Games are listed by name, sorted by system. Change anything later in Settings.</string>
     <!-- A quiet line on the library-ready step while the games are still being named. Keep it short; it sits under the description. -->
     <string name="setup_ready_naming">Names are still being filled in · keeps going in the background</string>
-    <string name="setup_ready_empty_desc">Add a folder later in Settings › Library › ROM folders.</string>
+    <string name="setup_ready_empty_desc">Add a folder later in Settings › Library › Game folders.</string>
     <string name="setup_ready_empty_title">No games found yet</string>
     <string name="setup_ready_no_folder_title">You can add games later</string>
     <string name="setup_ready_no_folder_desc">Home will ask for your games folder whenever you are ready.</string>
@@ -379,7 +380,7 @@
     <string name="game_fix_box_art_waiting">Still saving. Box art downloading in the background may go first; this can take a minute.</string>
     <string name="game_fix_box_art_daily_limit">ScreenScraper\'s daily limit has been reached. Try again after %1$s.</string>
     <string name="game_fix_box_art_server_closed">ScreenScraper is closed for now. Try again after %1$s.</string>
-    <string name="game_fix_box_art_sign_in_again">ScreenScraper refused your password. Sign in again in Settings › Accounts › ScreenScraper.</string>
+    <string name="game_fix_box_art_sign_in_again">ScreenScraper refused your password. Sign in again in Settings › Box art &amp; accounts › ScreenScraper.</string>
     <string name="game_fix_box_art_offline">No connection. Check your Wi-Fi and try again.</string>
     <string name="game_fix_box_art_no_wifi">Not connected to Wi-Fi. Box art is looked up on Wi-Fi only.</string>
     <string name="game_fix_box_art_server_error">ScreenScraper could not answer (code %1$s). Try again later.</string>
@@ -425,7 +426,7 @@
     <!-- %1$s is the emulator chosen for every game of the system, %2$s the system's name. -->
     <string name="game_play_with_system_choice_missing">%1$s, chosen for all %2$s games, is not installed. Pick one for this game.</string>
     <string name="game_play_with_not_installed">Not installed</string>
-    <!-- Value at the right of an emulator that is not installed: opens its store page. -->
+    <!-- Value at the right of an emulator that is not installed: opens its project's page. -->
     <string name="game_get_it">Get it</string>
     <!-- Badge on the emulator this game uses now. -->
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
@@ -514,8 +515,8 @@
     <string name="game_app_kind_later_body">It will take effect when Plumemu next reads the installed apps.</string>
     <string name="game_rename_box_art_title">Name saved, box art not looked up</string>
     <string name="game_rename_box_art_no_wifi">Not connected to Wi-Fi.</string>
-    <string name="game_rename_box_art_sign_in">Sign in to ScreenScraper in Settings › Accounts › ScreenScraper.</string>
-    <string name="game_rename_box_art_paused">Box art is paused. Resume it in Settings › Accounts › ScreenScraper.</string>
+    <string name="game_rename_box_art_sign_in">Sign in to ScreenScraper in Settings › Box art &amp; accounts › Box art.</string>
+    <string name="game_rename_box_art_paused">Box art is paused. Resume it in Settings › Box art &amp; accounts › ScreenScraper.</string>
     <string name="game_rename_box_art_daily_limit">ScreenScraper\'s daily limit has been reached. Try again after %1$s.</string>
     <string name="game_rename_box_art_server_closed">ScreenScraper is closed until %1$s.</string>
     <string name="game_error_internal_title">The game could not be started</string>
@@ -552,9 +553,9 @@
     <!-- After Hide in the game menu; %1$s is the game's title. -->
     <string name="game_hidden_title">Game hidden</string>
     <string name="game_hidden_body">%1$s is hidden from every list. Bring it back in Settings › Library › Hidden games.</string>
-    <string name="game_error_store_title">The store page could not be opened</string>
+    <string name="game_error_page_title">The download page could not be opened</string>
     <!-- %1$s is an emulator's name. -->
-    <string name="game_error_store_body">No app store or web browser on this device could open it. Get %1$s from its project\'s page.</string>
+    <string name="game_error_page_body">No web browser on this device could open it. Get %1$s from its project\'s page.</string>
     <!-- Opening an app of the Apps entry failed. %1$s is the app's name. -->
     <string name="app_error_missing_title">%1$s is no longer installed</string>
     <string name="app_error_missing_body">It was uninstalled or turned off since the list was read. It leaves the Apps list now.</string>
@@ -597,7 +598,7 @@
     <string name="settings_switch_off">Off</string>
 
     <!-- Library -->
-    <string name="settings_rom_folders">ROM folders</string>
+    <string name="settings_rom_folders">Game folders</string>
     <string name="settings_library_unreadable">Plumemu could not read your folders and emulators. Close and reopen Settings to try again.</string>
     <plurals name="settings_folders_count">
         <item quantity="one">%1$s folder</item>
@@ -626,7 +627,7 @@
     <string name="settings_skip_subfolder_unreadable">Plumemu could not read this folder. If it is on an SD card, check that the card is in.</string>
     <string name="settings_skip_subfolder_none">This folder has no sub-folders to skip.</string>
     <string name="settings_rescan">Rescan library</string>
-    <string name="settings_rescan_body">Reads your folders again and adds or removes what changed.</string>
+    <string name="settings_rescan_body">Reads your folders again and looks for new emulators.</string>
     <!-- Value of Rescan library while a scan runs. -->
     <string name="settings_rescan_running">Reading…</string>
     <!-- Rescan library's panel while a scan runs. No total is known during the walk. -->
@@ -657,14 +658,13 @@
         <item quantity="one">%1$s file removed</item>
         <item quantity="other">%1$s files removed</item>
     </plurals>
-    <!-- %1$s is the folder as the ROM folders list names it ("SD card › Games"). -->
+    <!-- %1$s is the folder as the Game folders list names it ("SD card › Games"). -->
     <string name="settings_rescan_revoked">%1$s: Plumemu lost access to it. Pick the folder again.</string>
     <string name="settings_rescan_missing">%1$s: not found. Is the SD card in?</string>
     <string name="settings_rescan_read_failed">%1$s: could not be read. Try again.</string>
     <string name="settings_rescan_a_folder">A folder</string>
     <string name="settings_rescan_failed">Could not read your games. Try again.</string>
     <string name="settings_rescan_busy">Already reading your games.</string>
-    <string name="settings_scan_on_startup">Find new games automatically</string>
     <string name="settings_sort_games">Sort games</string>
     <string name="settings_sort_by_name">Name</string>
     <string name="settings_sort_by_last_played">Last played</string>
@@ -673,11 +673,6 @@
     <string name="settings_sort_by_year">Year</string>
     <string name="settings_sort_by_rating">Rating</string>
     <string name="settings_sort_games_body">How every system\'s list and Favorites are ordered. Games with nothing to sort by (never played, no year, no rating) come after the others, by name. Year and Rating are listed once a game has one from ScreenScraper. Recent always shows the last game played first.</string>
-    <string name="settings_recent_size">Recent size</string>
-    <string name="settings_recent_size_10" translatable="false">10</string>
-    <string name="settings_recent_size_20" translatable="false">20</string>
-    <string name="settings_recent_size_50" translatable="false">50</string>
-    <string name="settings_recent_size_body">How many games Recent keeps. When it is full, the game played longest ago drops off the end. Play time and statistics are not affected.</string>
     <string name="settings_clear_recent">Clear Recent…</string>
     <string name="settings_clear_recent_body">Recent is emptied. A game comes back to it when you play it again. Play time and statistics stay.</string>
     <string name="settings_clear_recent_confirm">Clear</string>
@@ -737,12 +732,11 @@
     <string name="settings_name_fix_failed">That name could not be saved. Nothing was changed.</string>
     <string name="settings_name_fix_game_gone">That game is no longer in your library.</string>
     <string name="settings_rename_box_art_no_wifi">Name saved, box art not looked up. Not connected to Wi-Fi.</string>
-    <string name="settings_rename_box_art_sign_in">Name saved, box art not looked up. Sign in to ScreenScraper in Settings › Accounts › ScreenScraper.</string>
-    <string name="settings_rename_box_art_paused">Name saved, box art not looked up. Box art is paused. Resume it in Settings › Accounts › ScreenScraper.</string>
+    <string name="settings_rename_box_art_sign_in">Name saved, box art not looked up. Sign in to ScreenScraper in Settings › Box art &amp; accounts › Box art.</string>
+    <string name="settings_rename_box_art_paused">Name saved, box art not looked up. Box art is paused. Resume it in Settings › Box art &amp; accounts › ScreenScraper.</string>
     <string name="settings_rename_box_art_daily_limit">Name saved, box art not looked up. ScreenScraper\'s daily limit has been reached. Try again later.</string>
     <string name="settings_rename_box_art_server_closed">Name saved, box art not looked up. ScreenScraper is closed for now.</string>
     <string name="settings_titles_unreadable">Could not read the name list for %1$s. Try again later.</string>
-    <string name="settings_scan_on_startup_body">Looks for new and removed games when Plumemu starts and when you come back to it. Only folders that changed are read again.</string>
 
     <!-- Emulators. %1$s is a system's name, %2$s the confirm button's letter. -->
     <string name="settings_emulators_body">Used when you press %2$s on a %1$s game. You can still pick another emulator for a single game from its menu › Play with…</string>
@@ -756,15 +750,8 @@
         <item quantity="other">%1$s emulators found on this device</item>
     </plurals>
     <string name="settings_emulator_choice_failed">This choice could not be saved.</string>
-    <string name="settings_detect_emulators">Detect new emulators</string>
-    <string name="settings_detect_body">Plumemu notices new emulators by itself. Use this if one is missing.</string>
-    <string name="settings_detect_running">Checking…</string>
-    <string name="settings_detect_done">Done. Suggestions follow what is installed now.</string>
-    <string name="settings_detect_failed">Installed emulators could not be checked.</string>
 
     <!-- Controls -->
-    <string name="settings_hold_to_scroll">Hold to scroll faster</string>
-    <string name="settings_hold_to_scroll_body">Hold up or down and the cursor speeds up through long lists. Off: it moves at one steady pace.</string>
     <string name="settings_push_right">Push right twice to play</string>
     <string name="settings_push_right_body">Play with one hand: in a list of games, push right twice to start the selected game. The first push marks it, the second (within two seconds) starts it; any other button cancels. A still works. On narrow screens the details column is then reached by touch. Turn it off here any time.</string>
     <string name="settings_show_hints">Show button hints</string>
@@ -784,10 +771,9 @@
     <string name="settings_home_unavailable">This device has no screen for choosing the home app. Choose Plumemu in Android\'s Settings › Apps › Default apps.</string>
     <string name="settings_show_apps">Show Android apps</string>
     <string name="settings_show_apps_body">Every Android app on the device is listed under “Apps”, right below Favorites. Off: the Apps entry is not shown.</string>
-    <string name="settings_clock">Show clock</string>
-    <string name="settings_clock_body">The time at the top right of the screen.</string>
-    <string name="settings_edge_fade">Fade list edges</string>
-    <string name="settings_edge_fade_body">Lists and grids on the home screen fade out at the top and bottom where there is more to scroll. Off, they end in a straight line.</string>
+    <string name="settings_clock_battery">Clock and battery</string>
+    <string name="settings_clock_battery_body">The time and battery level at the top right of the screen.</string>
+    <string name="settings_clock_battery_body_two_screens">The time and battery level at the top right of the screen. The battery also shows on the second screen\'s clock.</string>
     <!-- The band over a system's games list ("Nintendo · Home console · 1990–2003". -->
     <string name="system_kind_console">Home console</string>
     <string name="system_kind_handheld">Handheld</string>
@@ -864,9 +850,6 @@
     <string name="system_about_fbneo">Based on FinalBurn and old versions of MAME. It emulates Capcom CPS-1, CPS-2, CPS-3, Neo Geo and Sega System 16 boards.</string>
     <string name="settings_system_info">System info</string>
     <string name="settings_system_info_body">A badge, one line about the system (maker, kind, years) and a few words on what it was, at the top of its games list.</string>
-    <string name="settings_show_battery">Show battery</string>
-    <string name="settings_show_battery_body">The battery level at the top right of the screen.</string>
-    <string name="settings_show_battery_body_two_screens">The battery level at the top right of the screen. Also on the second screen\'s clock.</string>
     <!-- Second screen, picking cards. Top line: "Super Nintendo · USA"; the separator is also used in the facts line (quoted: Android trims the spaces of an unquoted string). -->
     <string name="second_screen_separator" translatable="false">" · "</string>
     <string name="second_screen_android_app">Android app</string>
@@ -965,7 +948,7 @@
     <!-- %1$s is the time of day charging was first seen. -->
     <string name="in_game_battery_charging_since">since %1$s</string>
     <string name="in_game_battery_measuring">Measuring battery use…</string>
-    <!-- Shown once for a minute the first time the in-game card shows; also ends Settings › Second screen › In game's text. -->
+    <!-- Shown once for a minute the first time the in-game card shows; also ends Settings › Second screen › During a game's text. -->
     <string name="in_game_drift_note">Moves a little every minute to protect the screen</string>
     <!-- The picking line of a game measured before: "2 h on this charge · 30% an hour"; charging: the pace only. %1$s is a duration or a percentage. The pace's spaces do not break, so "an hour" never wraps alone. -->
     <!-- "on this charge" means: the time the battery's current charge still allows (time left), not time already played. -->
@@ -983,7 +966,7 @@
     <string name="second_screen_setup_question">Plumemu can show the game you are on here.</string>
     <string name="settings_second_screen">Use second screen</string>
     <string name="settings_second_screen_body">Shows the game you are on. Nothing there is needed to play.</string>
-    <string name="settings_second_screen_in_game">In game</string>
+    <string name="settings_second_screen_in_game">During a game</string>
     <string name="settings_second_screen_in_game_body">What the second screen shows while a game runs. Emulators that use two screens take it by themselves. The card moves a little every minute to protect the screen.</string>
     <string name="settings_second_screen_clock">Clock and battery</string>
     <string name="settings_second_screen_black">Black</string>
@@ -991,7 +974,7 @@
     <!-- Appearance -->
     <!-- Ready-made colour sets (never a console's or a brand's name. -->
     <string name="settings_colors">Colors</string>
-    <string name="settings_colors_panel_help">Choose a set. Your own colors stay under Custom.</string>
+    <string name="settings_colors_panel_help">Pick a set. To make your own, change Background or Text color below. Your own colors stay under Custom.</string>
     <string name="settings_colors_plumemu" translatable="false">Plumemu</string>
     <string name="settings_colors_paper">Paper</string>
     <string name="settings_colors_pocket">Pocket</string>
@@ -1008,7 +991,7 @@
     <string name="settings_font">Font</string>
     <string name="settings_text_size">Text size</string>
     <string name="settings_text_weight">Text weight</string>
-    <string name="settings_left_edge">Left edge</string>
+    <string name="settings_left_edge">Left strip</string>
     <string name="settings_grid_size">Grid size</string>
     <string name="settings_bg_graphite">Graphite</string>
     <string name="settings_bg_black">Black</string>
@@ -1113,7 +1096,7 @@
     <string name="settings_font_body">The typeface for all text in Plumemu.</string>
     <string name="settings_text_size_body">Changes all text in Plumemu. Android\'s own font size applies on top.</string>
     <string name="settings_text_weight_body">Changes how heavy all text in Plumemu is drawn.</string>
-    <string name="settings_left_edge_body">What the narrow strip at the left edge shows while you are in a games list: how many games each system has, a short code for each system, or the letters of the list you are in.</string>
+    <string name="settings_left_edge_body">What the narrow strip on the left shows while you are in a games list: how many games each system has, a short code for each system, or the letters of the list you are in.</string>
     <string name="settings_grid_size_body">How big covers are in the grid view, for every system and for Recent and Favorites. Small shows the most games at once, Large the fewest.</string>
     <!-- Sample lines in the colour and font panels (the board's). -->
     <string name="settings_sample_game_1" translatable="false">Mega Man X</string>
@@ -1123,26 +1106,27 @@
     <string name="settings_sample_year_2" translatable="false">1994</string>
     <string name="settings_sample_year_3" translatable="false">1995</string>
 
-    <!-- Controls (the confirm button, Sounds, Vibration) and Advanced (Animations); Send usage statistics is under About -->
+    <!-- Controls (the confirm button, Button sounds, Vibration) and Advanced (Animations); Send usage statistics is under About -->
     <string name="settings_confirm_bottom">Confirm with B</string>
     <string name="settings_confirm_bottom_detail">Circle on PlayStation-style pads</string>
     <string name="settings_confirm_bottom_body">Off: A confirms and B goes back. On: B confirms and A goes back (on PlayStation-style pads the cross confirms when off, the circle when on). Hints follow at once.</string>
     <string name="settings_animations">Animations</string>
     <string name="settings_animations_body">Slides and small movements. Off: screens change at once. Also off while Android\'s animations are off.</string>
-    <string name="settings_sounds">Sounds</string>
+    <string name="settings_sounds">Button sounds</string>
     <string name="settings_sounds_body">Soft clicks as you move around and press buttons, at the media volume. Choose Off, Quiet or Loud.</string>
     <string name="settings_sounds_off">Off</string>
     <string name="settings_sounds_quiet">Quiet</string>
     <string name="settings_sounds_loud">Loud</string>
     <string name="settings_vibration">Vibration</string>
-    <string name="settings_vibration_body">A light tick as you move and a firmer click when you confirm. Off: no vibration. A device without a vibrator ignores it.</string>
+    <string name="settings_vibration_body">A light tick as you move and a firmer click when you confirm. Off: no vibration.</string>
     <string name="settings_usage_statistics">Send usage statistics</string>
     <!-- setup_stats_body is its short form; settings_privacy_body and the public PRIVACY.md say the same (change them together). -->
     <string name="settings_usage_statistics_body">Anonymous usage counts and crash reports, sent only once you switch it on: country, device model, Android and app versions, which screens and settings you use, how long you play (by system, never by game). Never game titles, search words or your ScreenScraper account. Crash reports may contain file paths. Off: Plumemu sends one anonymous \u201Cswitched off\u201D count, then nothing.</string>
     <string name="settings_reset_all">Reset all settings</string>
     <string name="settings_reset_all_body">Puts every setting back to how it came. Your library, your folders and first-run setup are kept.</string>
     <string name="settings_reset_all_done">Settings reset.</string>
-    <!-- Settings › Advanced › Back up… -->
+    <!-- Settings › Advanced › Back up and restore › Back up… -->
+    <string name="settings_backup_and_restore">Back up and restore</string>
     <string name="settings_backup">Back up…</string>
     <string name="settings_backup_title">Back up</string>
     <string name="settings_backup_body">Saves a copy in a file you choose. Settings: every setting and your ScreenScraper account. Everything: also your library, favorites, play time, emulator choices and box art.</string>
@@ -1183,7 +1167,7 @@
     <!-- A file name; %1$s is the date (YYYY-MM-DD). Avoid / \ : * ? " < > | so every file system accepts it. -->
     <string name="settings_backup_file_settings">Plumemu settings %1$s.zip</string>
     <string name="settings_backup_file_everything">Plumemu backup %1$s.zip</string>
-    <!-- Settings › Advanced › Restore… and Undo last restore -->
+    <!-- Settings › Advanced › Back up and restore › Restore… and Undo restore -->
     <string name="settings_restore">Restore…</string>
     <string name="settings_restore_title">Restore</string>
     <string name="settings_restore_body">Puts back a file made with Back up. A Settings file changes the settings and your ScreenScraper account. An Everything file replaces the library and settings on this device. Undo restore can then put back what this device had just before.</string>
@@ -1217,7 +1201,7 @@
     <string name="settings_restore_sign_in_again">The file has no usable ScreenScraper password: sign in again afterwards.</string>
     <string name="settings_restore_running">Restoring…</string>
     <string name="settings_restore_running_restart">Restoring… Plumemu restarts when it is done.</string>
-    <string name="settings_restore_done_everything">Restored everything from %1$s. Folders from another device must be picked again in Library › ROM folders.</string>
+    <string name="settings_restore_done_everything">Restored everything from %1$s. Folders from another device must be picked again in Library › Game folders.</string>
     <string name="settings_restore_done_settings">Restored the settings from %1$s.</string>
     <string name="settings_restore_failed">The restore failed. Everything was put back as it was.</string>
     <string name="settings_restore_failed_not_put_back">The restore failed, and not everything could be put back yet. Plumemu tries again when it next starts.</string>
@@ -1264,12 +1248,13 @@
     <string name="settings_undo_done">The last restore was undone.</string>
     <string name="settings_undo_failed">The undo failed. Everything was left as it was.</string>
     <string name="settings_reset_library">Reset library</string>
-    <!-- Settings › Advanced › Export logs: shares the app's log file with Android's share sheet. -->
+    <string name="settings_reset_row">Reset…</string>
+    <!-- Report a problem › Share log (Settings › Advanced › Export logs in a build with no report form): shares the app's log file with Android's share sheet. -->
     <string name="settings_export_logs">Export logs</string>
     <string name="settings_export_logs_body">Shares Plumemu\'s log file only where you choose, to send with a problem report. It may contain folder and file names.</string>
     <string name="settings_export_logs_failed">The log could not be shared.</string>
     <string name="settings_export_logs_chooser">Share log</string>
-    <string name="settings_reset_library_body">Forgets every game with its favorites and play time, then reads your folders again. The folders stay. This cannot be undone, so back up first in Settings › Advanced › Back up…</string>
+    <string name="settings_reset_library_body">Forgets every game with its favorites and play time, then reads your folders again. The folders stay. This cannot be undone, so back up first in Settings › Advanced › Back up and restore.</string>
     <string name="settings_reset_library_done">Library forgotten. Reading your folders again.</string>
     <string name="settings_reset_library_forgetting">Forgetting your library…</string>
     <string name="settings_reset_library_failed">The library could not be reset. Nothing was removed.</string>
@@ -1324,6 +1309,7 @@
     <string name="settings_version">Version</string>
     <string name="settings_version_line">Version %1$s</string>
     <string name="settings_platform_data">Platform data</string>
+    <string name="settings_platform_data_line" translatable="false">%1$s · %2$s</string>
     <string name="settings_platform_data_value">Version %1$d · %2$s</string>
     <string name="settings_platform_data_body">The list of systems and emulators Plumemu knows. It comes with the app. When Plumemu checks for updates it also downloads a newer list from the same place, and uses it the next time it starts.</string>
     <!-- Settings › Appearance › Language (docs/conventions/translation.md › Choosing a language). -->
@@ -1350,6 +1336,7 @@
     <string name="report_email_hint">Your email, if you want an answer (optional)</string>
     <string name="report_details">Include the log and device details</string>
     <string name="report_send">Send</string>
+    <string name="report_share_log">Share log</string>
     <string name="report_sends_all">Sends your text, email (if given), the log, device details and your anonymous install ID.</string>
     <string name="report_sends_details">Sends your text, email (if given), the log and device details.</string>
     <string name="report_sends_id">Sends your text, email (if given) and your anonymous install ID.</string>
@@ -1364,12 +1351,13 @@
     <string name="report_error_refused">The server did not accept this report. Check the email address. Your words are kept, so you can try again.</string>
     <string name="report_error_unavailable">This build cannot send reports. Use Export logs and send the file yourself.</string>
     <string name="report_error_not_saved">The report could not be saved on this device.</string>
-    <string name="settings_privacy_body">Your library, settings and play time stay in Plumemu\'s own storage on this device, and are never sent. Only if you switch it on (Settings \u203A About \u203A Send usage statistics), Plumemu sends anonymous usage counts and crash reports to the developer: country, device model, Android and app versions, which screens and settings you use, how long you play by system. Never game titles, search words or your ScreenScraper account. Crash reports may contain file paths. Switching it off sends one anonymous \u201Cswitched off\u201D count, then nothing. Problem reports are sent only when you press Send in Report a problem, and may contain the log you choose to attach, with file paths. What is sent is kept with no time limit. Once a day on Wi-Fi Plumemu asks plumemu-app.stevensdesk.com whether there is a newer version; Cloudflare, which hosts it, sees your IP address. Switch it off with Check for updates daily, above. The same daily check also downloads updated platform data (the list of systems and emulators) from the same host; nothing extra is sent. With a ScreenScraper account, Plumemu sends ScreenScraper each game\'s file name, size and checksums, and its title when those find nothing, to find box art. With a RetroAchievements account, Plumemu sends retroachievements.org your user name, your key and each game\'s RetroAchievements number, when you open a game\'s Info, after you play, and once a day on Wi-Fi; badge pictures come from media.retroachievements.org. The key is stored encrypted on this device, never in a backup or a log. Signing out stops it. Exact play time, if you switch it on in Settings \u203A Statistics, asks Android\'s Usage access for the events of the play\'s time window and keeps only those of the game or app you started from Plumemu and of the screen; nothing is stored beyond the play\'s length, and nothing is sent.</string>
+    <string name="settings_privacy_body">Your library, settings and play time stay in Plumemu\'s own storage on this device, and are never sent. Only if you switch it on (Settings \u203A About \u203A Send usage statistics), Plumemu sends anonymous usage counts and crash reports to the developer: country, device model, Android and app versions, which screens and settings you use, how long you play by system. For a game Plumemu cannot name, it also sends, once per install, the system, how the file is stored, its size, its CRC-32 and the product code or disc serial read from the game. Never game titles, search words or your ScreenScraper account. Crash reports may contain file paths. Switching it off sends one anonymous \u201Cswitched off\u201D count, then nothing. Problem reports are sent only when you press Send in Report a problem, and may contain the log you choose to attach, with file paths. What is sent is kept with no time limit. Once a day on Wi-Fi Plumemu asks plumemu-app.stevensdesk.com whether there is a newer version; Cloudflare, which hosts it, sees your IP address. Switch it off in Settings › About › Updates. The same daily check also downloads updated platform data (the list of systems and emulators) from the same host; nothing extra is sent. With a ScreenScraper account, Plumemu sends ScreenScraper each game\'s file name, size and checksums, and its title when those find nothing, to find box art. With Box art only, Plumemu downloads box fronts from libretro\'s public server, thumbnails.libretro.com, on Wi-Fi, with the game\'s name in the address; that server sees your IP address. With a RetroAchievements account, Plumemu sends retroachievements.org your user name, your key and each game\'s RetroAchievements number, when you open a game\'s Info, after you play, and once a day on Wi-Fi; badge pictures come from media.retroachievements.org. The key is stored encrypted on this device, never in a backup or a log. Signing out stops it. Exact play time, if you switch it on in Settings \u203A Statistics, asks Android\'s Usage access for the events of the play\'s time window and keeps only those of the game or app you started from Plumemu and of the screen; nothing is stored beyond the play\'s length, and nothing is sent.</string>
     <!-- Updates -->
-    <string name="settings_update_available">Update available</string>
     <string name="settings_update_value_downloading">Downloading…</string>
     <string name="settings_update_value_installing">Installing…</string>
-    <string name="settings_check_updates">Check for updates</string>
+    <string name="settings_update_value_available">%1$s available</string>
+    <string name="settings_updates">Updates</string>
+    <string name="settings_updates_check_now">Check now</string>
     <string name="settings_check_updates_body">Asks Plumemu\'s update server now whether there is a newer Plumemu. On mobile data Plumemu asks before downloading an update.</string>
     <string name="settings_check_updates_daily">Check for updates daily</string>
     <string name="settings_check_updates_daily_body">Once a day on Wi-Fi, when you come back to Plumemu, it asks plumemu-app.stevensdesk.com whether there is a newer version. Cloudflare, which hosts it, sees your device\'s IP address. The same check also downloads updated platform data (the list of systems and emulators) from the same host. Nothing else is sent. An update installs only when you choose Update.</string>
@@ -1385,6 +1373,7 @@
     <string name="settings_update_checking">Checking for updates…</string>
     <string name="settings_update_no_permission_screen">This device has no screen Plumemu can open for this. Allow Plumemu to install apps in Android\'s Settings (Apps › Plumemu, or Security), then come back.</string>
     <string name="settings_check_updates_line">Last checked %1$s. %2$s</string>
+    <string name="settings_check_updates_last">Last checked %1$s</string>
     <string name="settings_check_updates_up_to_date">Plumemu is up to date.</string>
     <string name="settings_check_updates_found">Plumemu %1$s is available.</string>
     <string name="settings_check_updates_needs_android">The newest Plumemu needs a newer Android version than this device has.</string>
@@ -1393,6 +1382,7 @@
     <string name="settings_check_updates_http">The update server had a problem. Try again later.</string>
     <string name="settings_check_updates_bad_manifest">The update server sent something Plumemu cannot read. Try again later.</string>
     <string name="settings_update_title">Plumemu %1$s → %2$s</string>
+    <string name="settings_update_title_short" translatable="false">%1$s → %2$s</string>
     <string name="settings_update_notes_new">New</string>
     <string name="settings_update_notes_improved">Improved</string>
     <string name="settings_update_notes_fixed">Fixed</string>
@@ -1450,7 +1440,7 @@
 
     <!-- ScreenScraper account: setup's box art step and Settings › Library. -->
     <string name="setup_box_art_title">Box art from ScreenScraper</string>
-    <string name="setup_box_art_desc">Box art and game info come from ScreenScraper, with your own free account from screenscraper.fr. You can also sign in later in Settings › Accounts › ScreenScraper.</string>
+    <string name="setup_box_art_desc">Box art and game info come from ScreenScraper, with your own free account from screenscraper.fr. You can also sign in later in Settings › Box art &amp; accounts › Box art.</string>
     <string name="setup_box_art_skip">Skip</string>
     <!-- The question before the sign-in form. -->
     <string name="setup_confirm_title">Which button confirms?</string>
@@ -1463,10 +1453,10 @@
     <string name="setup_look_title">Pick a look</string>
     <string name="setup_look_desc">Choose your colors. You can change them any time in Settings › Appearance.</string>
     <string name="setup_box_art_question_title">Box art</string>
-    <string name="setup_box_art_question_desc">Where Plumemu gets box art for your games. You can change this any time in Settings › Accounts › Box art.</string>
+    <string name="setup_box_art_question_desc">Where Plumemu gets box art for your games. You can change this any time in Settings › Box art &amp; accounts › Box art.</string>
     <string name="setup_ready_box_art">Box art: downloading in the background</string>
     <string name="setup_ready_box_art_offline">Box art: starts when you are online</string>
-    <string name="setup_ready_box_art_sign_in">Box art: sign in again in Settings › Accounts</string>
+    <string name="setup_ready_box_art_sign_in">Box art: sign in again in Settings › Box art &amp; accounts</string>
     <string name="account_username">Username</string>
     <string name="account_password">Password</string>
     <!-- What the keyboard shows as the field's name (EditorInfo.hintText), even in a full-screen editor. -->
@@ -1558,6 +1548,8 @@
     <string name="settings_box_art_clear">Clear box art…</string>
     <string name="settings_box_art_clear_title">Clear box art?</string>
     <string name="settings_box_art_clear_body">Covers disappear until they are downloaded again with Download missing. Your own picks are kept, and you stay signed in to ScreenScraper.</string>
+    <string name="settings_box_art_clear_body_libretro">Covers disappear until they are downloaded again with Download missing. Your own picks are kept.</string>
+    <string name="settings_box_art_clear_body_own">Saved covers are deleted and Plumemu\'s own covers show instead. Your own picks are kept.</string>
     <string name="settings_box_art_clear_confirm">Clear box art</string>
     <string name="settings_box_art_clear_failed">Plumemu could not clear box art. Try again.</string>
     <string name="settings_box_art_clear_in_use">Box art cannot be cleared while a backup or a restore is using it. Try again when it has finished.</string>
@@ -1584,7 +1576,7 @@
     <!-- The ScreenScraper panel's button for the box art region: "Box art region: USA"; A goes to the next region. -->
     <string name="settings_box_art_region_value">Box art region: %1$s</string>
     <string name="settings_box_art_region_body">Which region\'s box art to show when a game has none for its own region.</string>
-    <!-- Region names for box art (Settings › Accounts › ScreenScraper, its Box art region button). -->
+    <!-- Region names for box art (Settings › Box art & accounts › ScreenScraper, its Box art region button). -->
     <string name="settings_region_usa">USA</string>
     <string name="settings_region_europe">Europe</string>
     <string name="settings_region_japan">Japan</string>
@@ -1597,9 +1589,7 @@
     <string name="app_menu_show_as_port">Show as port</string>
     <string name="app_tool_error_body">Android could not open that screen. Try again in a moment.</string>
 
-    <!-- Library › an unknown folder (a folder whose name matches no system): its row, side panel and the home notice. %1$s is the folder's name or a number. -->
-    <string name="settings_unknown_folder_title">Unknown folder</string>
-    <string name="settings_unknown_folder">Unknown folder: %1$s</string>
+    <!-- Library › Files not added › an unknown folder (a folder whose name matches no system): its line, side panel and the home notice. %1$s is the folder's name or a number. -->
     <plurals name="settings_unknown_folder_files">
         <item quantity="one">%1$s file</item>
         <item quantity="other">%1$s files</item>
@@ -1619,12 +1609,18 @@
     <string name="settings_files_not_added_title">Files not added</string>
     <string name="settings_files_not_added_body">Files in your folders that are not in the library, and why.</string>
     <string name="settings_files_not_added_none">Every file is in the library</string>
+    <string name="settings_files_not_added_nothing">No files to show</string>
     <string name="settings_files_not_added_no_system">Not in a system\'s folder</string>
     <string name="settings_files_not_added_unmatched_system">No %1$s emulator opens these</string>
     <string name="settings_files_not_added_unmatched">No emulator opens these</string>
     <string name="settings_files_not_added_bios">BIOS and firmware</string>
     <string name="settings_files_not_added_saves">Saves and save states</string>
     <string name="settings_files_not_added_junk">Notes, pictures and hidden files</string>
+    <string name="settings_files_not_added_answered">Folders you answered</string>
+    <plurals name="settings_files_not_added_waiting">
+        <item quantity="one">%1$s folder to sort</item>
+        <item quantity="other">%1$s folders to sort</item>
+    </plurals>
     <string name="settings_files_not_added_folder">%1$s · %2$s</string>
     <plurals name="settings_files_not_added_more">
         <item quantity="one">and %1$s more file</item>
@@ -1637,14 +1633,14 @@
     <string name="home_notice_unknown_folder">Unknown folder: %1$s</string>
     <string name="home_notice_unknown_where">Settings › Library</string>
 
-    <!-- Settings › Accounts › RetroAchievements -->
-    <string name="settings_section_accounts">Accounts</string>
+    <!-- Settings › Box art & accounts › RetroAchievements -->
+    <string name="settings_section_accounts">Box art &amp; accounts</string>
     <string name="settings_ra_title">RetroAchievements</string>
     <string name="settings_ra_value_refused">Sign in again</string>
     <string name="settings_ra_refused">RetroAchievements did not accept your key. It may have been reset on the site. Sign in again with the new key.</string>
     <string name="settings_ra_help_where">Achievements come from retroachievements.org with your own account. Plumemu only shows your progress; your emulator unlocks them.</string>
     <string name="settings_ra_help_key">Your Web API key: on retroachievements.org open Settings, then Keys, and copy it here. Never your password. It is stored encrypted on this device.</string>
-    <!-- Settings > Accounts > RetroAchievements sign-in form: the button under Sign in / Cancel that opens the site's key page in the browser, and the line shown when no browser could open it. -->
+    <!-- Settings > Box art & accounts > RetroAchievements sign-in form: the button under Sign in / Cancel that opens the site's key page in the browser, and the line shown when no browser could open it. -->
     <string name="settings_ra_open_key_page">Open the key page</string>
     <string name="settings_ra_no_browser">No browser could open retroachievements.org/settings. Open it on another device and type the key here.</string>
     <string name="settings_ra_privacy">Your user name, your key and the game\'s RA number go to retroachievements.org.</string>
@@ -1706,7 +1702,7 @@
     </plurals>
     <string name="achievement_mastered">Mastered</string>
 
-    <!-- Settings › Accounts › Box art: where box art comes from. -->
+    <!-- Settings › Box art & accounts › Box art: where box art comes from. -->
     <string name="settings_box_art_source">Box art</string>
     <string name="settings_box_art_source_body">Where Plumemu gets box art. Press A to choose.</string>
     <string name="settings_box_art_source_screenscraper">Box art and game info</string>

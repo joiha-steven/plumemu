@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import com.plumemu.R
@@ -20,6 +21,7 @@ import com.plumemu.home.BOARD_CLOCK
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -107,9 +109,8 @@ class SettingsSectionsStatusTest {
     }
 
     @Test
-    fun emulatorsThatCannotBeReadGiveTheSameLine() {
-        show(optionsAt(SettingsOption.DetectEmulators), SettingsContent(loadFailed = true))
-        compose.onNodeWithTag(SettingsTags.LOAD_FAILED).assertIsDisplayed()
+    fun whenNothingCanBeReadEmulatorsLeavesAndLibrarySaysSo() {
+        assertFalse(SettingsSection.Emulators in SettingsSection.shownIn(SettingsContent(loadFailed = true)))
     }
 
     @Test
@@ -132,12 +133,12 @@ class SettingsSectionsStatusTest {
         show(focus, SettingsContent(systems = many), PlumThemeSettings.Graphite.copy(animationsOn = false))
         assertTrue("the rows are longer than the column", scroll().maxValue() > 0f)
         compose.mainClock.autoAdvance = false
-        repeat(many.size) { press(Action.Move(Direction.Down)) } // to Detect new emulators, the last row
+        repeat(many.size - 1) { press(Action.Move(Direction.Down)) } // to the last system's row
         repeat(4) { frame() }
         val jumped = scroll().value()
         assertEquals("at the end of the list", scroll().maxValue(), jumped, 0f)
         compose.mainClock.advanceTimeBy(1_000)
         assertEquals("nothing left to animate", jumped, scroll().value(), 0f)
-        compose.onNodeWithTag(SettingsTags.option(SettingsOption.DetectEmulators)).assertIsDisplayed()
+        compose.onAllNodesWithText("System 14")[0].assertIsDisplayed()
     }
 }

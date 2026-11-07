@@ -1,6 +1,5 @@
 package com.plumemu.settings.screen
 
-import com.plumemu.coredata.settings.RecentSizeSetting
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import org.junit.Assert.assertEquals
@@ -9,8 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Settings › Library › Recent size and Clear Recent…: the size steps 10 / 20 / 50 from 20, and
- * Clear asks first with Cancel focused, says play time and statistics stay, then reports the count or the failure.
+ * Settings › Library › Clear Recent…: it asks first with Cancel focused, says play time and statistics stay, then reports the count or the failure.
  */
 internal class SettingsRecentTest : SettingsModelHarness() {
     private val library = SettingsSection.Library.rowsIn(SettingsContent())
@@ -23,23 +21,10 @@ internal class SettingsRecentTest : SettingsModelHarness() {
     }
 
     @Test
-    fun theTwoRowsAreLastInThatOrder() {
-        assertEquals(listOf(SettingsOption.RecentSize, SettingsOption.ClearRecent), library.takeLast(2))
+    fun clearRecentIsLast() {
+        assertEquals(SettingsOption.ClearRecent, library.last())
         val everyRow = SettingsContent(hiddenGames = listOf(SettingsGame(1, "x", "y")), unidentifiedGames = listOf(SettingsGame(2, "x", "y")))
-        assertEquals(listOf(SettingsOption.HiddenGames, SettingsOption.RecentSize, SettingsOption.ClearRecent), SettingsSection.Library.rowsIn(everyRow).takeLast(3))
-        assertEquals(OptionKind.Choice, SettingsOption.RecentSize.kind)
-    }
-
-    @Test
-    fun theSizeStartsAtTwentyAndStepsThroughTenTwentyFifty() {
-        openSection(SettingsSection.Library)
-        focusOption(SettingsOption.RecentSize)
-        assertEquals(RecentSizeSetting.Twenty, actions.settings.library.recentSize)
-        move(Direction.Right)
-        assertEquals(RecentSizeSetting.Fifty, actions.settings.library.recentSize)
-        move(Direction.Left)
-        move(Direction.Left)
-        assertEquals(RecentSizeSetting.Ten, actions.settings.library.recentSize)
+        assertEquals(listOf(SettingsOption.HiddenGames, SettingsOption.ClearRecent), SettingsSection.Library.rowsIn(everyRow).takeLast(2))
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.plumemu.settings.screen
 
 import com.plumemu.account.AccountStatus
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.account.RaAccountStatus
 import com.plumemu.account.SignInItem
 import com.plumemu.account.SignInKind
@@ -23,7 +24,7 @@ import org.junit.Test
 internal class SettingsRaAccountTest : SettingsModelHarness() {
     @Before
     fun scraperIsInThisBuild() {
-        model.content = model.content.copy(account = AccountStatus.SignedOut)
+        model.content = model.content.copy(account = AccountStatus.SignedOut, chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper)
     }
 
     private fun show(status: RaAccountStatus) {

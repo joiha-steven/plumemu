@@ -26,12 +26,12 @@ internal class FakeGameActions(
     val removedFromRecent = mutableListOf<String>()
     val choices = mutableListOf<Pair<String, String?>>()
     val systemChoices = mutableListOf<Pair<String, String>>()
-    val storePages = mutableListOf<String>()
+    val downloadPages = mutableListOf<String>()
     var rescans = 0
 
     /** When set, a launch waits for it (a launch still running). */
     var launchGate: CompletableDeferred<Unit>? = null
-    var storeOpens = true
+    var pageOpens = true
     var writeError: Exception? = null
     var readError: Exception? = null
     var onHide: (String) -> Unit = {}
@@ -135,9 +135,9 @@ internal class FakeGameActions(
         systemChoices += gameKey to emulatorId
     }
 
-    override fun openStorePage(packageName: String): Boolean {
-        storePages += packageName
-        return storeOpens
+    override fun openDownloadPage(url: String): Boolean {
+        downloadPages += url
+        return pageOpens
     }
 
     override fun rescanLibrary(): Boolean {
@@ -298,10 +298,13 @@ internal class FakeGameActions(
     }
 }
 
-internal val DuckStation = EmulatorItem("duckstation", "DuckStation", "com.github.stenzek.duckstation", isLegalRisk = false)
-internal val Beetle = EmulatorItem("retroarch_mednafen_psx", "RetroArch (Beetle PSX)", "com.retroarch.aarch64", isLegalRisk = false)
-internal val Epsxe = EmulatorItem("epsxe", "ePSXe", "com.epsxe.ePSXe", isLegalRisk = false)
-internal val RiskyEmu = EmulatorItem("risky", "Risky Emu", "org.example.risky", isLegalRisk = true)
+internal val DuckStation = EmulatorItem("duckstation", "DuckStation", "com.github.stenzek.duckstation", isLegalRisk = false, page = "https://example.org/duckstation")
+internal val Beetle = EmulatorItem("retroarch_mednafen_psx", "RetroArch (Beetle PSX)", "com.retroarch.aarch64", isLegalRisk = false, page = "https://example.org/retroarch")
+internal val Epsxe = EmulatorItem("epsxe", "ePSXe", "com.epsxe.ePSXe", isLegalRisk = false, page = "https://example.org/epsxe")
+
+/** An emulator the data holds no page for. */
+internal val NoPageEmu = EmulatorItem("nopage", "No Page Emu", "org.example.nopage", isLegalRisk = false)
+internal val RiskyEmu = EmulatorItem("risky", "Risky Emu", "org.example.risky", isLegalRisk = true, page = "https://example.org/risky")
 
 /** Made-up titles for Fix name…. */
 internal val sampleTitles = listOf(

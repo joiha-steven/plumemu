@@ -116,11 +116,11 @@ class PlumColorsTest {
     /** The upward shadow: 45 % black with light text, 7 % with dark text, whatever the background. */
     @Test
     fun trayShadowFollowsTheTextMode() {
-        assertEquals(0.45, graphite.trayShadowAlpha, 0.0)
-        assertEquals(0.07, paper.trayShadowAlpha, 0.0)
+        assertEquals(0.45 * Depth.SHADOW, graphite.trayShadowAlpha, 0.0)
+        assertEquals(0.07 * Depth.SHADOW, paper.trayShadowAlpha, 0.0)
         // Dark text on a dark custom background still casts the faint shadow: the text decides.
-        assertEquals(0.07, PlumColors.derive(Rgb(0x202020), TextMode.Dark).trayShadowAlpha, 0.0)
-        assertEquals(0.45, PlumColors.derive(BackgroundPreset.Sand.color, TextMode.Light).trayShadowAlpha, 0.0)
+        assertEquals(0.07 * Depth.SHADOW, PlumColors.derive(Rgb(0x202020), TextMode.Dark).trayShadowAlpha, 0.0)
+        assertEquals(0.45 * Depth.SHADOW, PlumColors.derive(BackgroundPreset.Sand.color, TextMode.Light).trayShadowAlpha, 0.0)
     }
 
     @Test

@@ -1,12 +1,16 @@
 package com.plumemu.coreui.components
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
@@ -19,7 +23,9 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import com.plumemu.coreui.theme.MaskOpaque
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
@@ -61,7 +67,7 @@ fun ListEdgeFade(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(PlumDimens.listEdgeFade)
+                .height(PlumDimens.listFadeBand)
                 .drawBehind {
                     val band = size.height * reach().coerceIn(0f, 1f)
                     if (band <= 0f) return@drawBehind
@@ -77,6 +83,27 @@ fun ListEdgeFade(
                 },
     )
 }
+
+/**
+ * The fade across the whole screen where content runs under a bar (design/rules.md › Lists that scroll): one [ListEdgeFade] tight under the top bar, one tight on the hint bar, the
+ * same height and curve. Put it over the content, in a box whose edges are [topGap] below the top bar and [bottomGap] above the hint bar. [topShows] is read while drawing.
+ */
+@Composable
+fun BoxScope.BarFades(
+    topGap: Dp,
+    bottomGap: Dp,
+    topShows: () -> Boolean,
+    /** Share of the band the bottom fade takes: less over a lifted cover's ring standing in it. */
+    bottomReach: () -> Float = { 1f },
+) {
+    if (!PlumTheme.edgeFadeOn) return
+    val reach = remember(topShows) { { if (topShows()) 1f else 0f } }
+    ListEdgeFade(atBottom = false, Modifier.align(Alignment.TopCenter).offset(y = -topGap).testTag(BAR_FADE_TOP), reach)
+    ListEdgeFade(atBottom = true, Modifier.align(Alignment.BottomCenter).offset(y = bottomGap).testTag(BAR_FADE_BOTTOM), bottomReach)
+}
+
+const val BAR_FADE_TOP = "bar_fade_top"
+const val BAR_FADE_BOTTOM = "bar_fade_bottom"
 
 /**
  * Where a scrolling list fades at its edges right now (design/rules.md › Lists that scroll), read while
@@ -105,15 +132,16 @@ interface EdgeFades {
     /** How much of the bottom edge is hidden outright, in px, as [clearTop]. */
     fun clearBottom(height: Float): Float = 0f
 
-    /** The share of a faded end that is fully clear ([EDGE_CLEAR_SHARE]); 0 for a list whose last row fades whole (a games list). */
-    val clearShare: Float get() = EDGE_CLEAR_SHARE
 }
 
 /** The [EdgeFades] of a node drawn with [listEdgeFadeMask], for tests. */
 val EdgeFadesKey = SemanticsPropertyKey<EdgeFades>("EdgeFades")
 
+/** The [EdgeFades] of a node that clears the room past its window or hides cut rows, with or without a ramp (set whenever [listEdgeFadeMaskInRoom] draws), for tests. */
+val EdgeClearsKey = SemanticsPropertyKey<EdgeFades>("EdgeClears")
+
 /**
- * Fades the content itself to transparent over [PlumDimens.listEdgeFade] at the top and bottom edges [fades] asks
+ * Fades the content itself to transparent over [PlumDimens.listFadeBand] at the top and bottom edges [fades] asks
  * for: an alpha mask (offscreen layer, `DstIn` gradient), so it is right on any background and a cover's
  * shadow fades with it, where [ListEdgeFade] paints the background over the rows. Put it on the list's visible
  * bounds (before a glide's taller layout). Draws only; touches pass through. With [isOn] false (the person turned
@@ -127,7 +155,7 @@ fun Modifier.listEdgeFadeMask(
         .graphicsLayer { compositingStrategy = if (fades.canScroll) CompositingStrategy.Offscreen else CompositingStrategy.Auto }
         .drawWithContent {
             drawContent()
-            val fadePx = PlumDimens.listEdgeFade.toPx()
+            val fadePx = PlumDimens.listFadeBand.toPx()
             val top = fades.top(fadePx, size.height).coerceIn(0f, size.height)
             val bottom = fades.bottom(fadePx, size.height).coerceIn(0f, size.height)
             val clearTop = fades.clearTop(size.height).coerceIn(0f, size.height)
@@ -135,12 +163,12 @@ fun Modifier.listEdgeFadeMask(
             if (clearTop > 0f) drawRect(Color.Transparent, size = Size(size.width, clearTop), blendMode = BlendMode.DstIn)
             if (clearBottom > 0f) drawRect(Color.Transparent, topLeft = Offset(0f, size.height - clearBottom), size = Size(size.width, clearBottom), blendMode = BlendMode.DstIn)
             if (top > 0f) {
-                drawRect(maskBrush(atBottom = false, from = 0f, length = top, clearShare = fades.clearShare), size = Size(size.width, top), blendMode = BlendMode.DstIn)
+                drawRect(maskBrush(atBottom = false, from = 0f, length = top), size = Size(size.width, top), blendMode = BlendMode.DstIn)
             }
             if (bottom > 0f) {
                 val from = size.height - bottom
                 drawRect(
-                    maskBrush(atBottom = true, from = from, length = bottom, clearShare = fades.clearShare),
+                    maskBrush(atBottom = true, from = from, length = bottom),
                     topLeft = Offset(0f, from),
                     size = Size(size.width, bottom),
                     blendMode = BlendMode.DstIn,
@@ -158,15 +186,18 @@ internal fun Modifier.listEdgeFadeMaskInRoom(
     rampsOn: Boolean = true,
     room: () -> Float,
 ): Modifier =
-    // The semantics key says a fade is drawn: absent when only cut rows are hidden.
-    (if (rampsOn) this.semantics { this[EdgeFadesKey] = fades } else this)
+    // EdgeFadesKey says a fade is drawn: absent when only cut rows are hidden.
+    this.semantics {
+        this[EdgeClearsKey] = fades
+        if (rampsOn) this[EdgeFadesKey] = fades
+    }
         .graphicsLayer { compositingStrategy = if (fades.canScroll) CompositingStrategy.Offscreen else CompositingStrategy.Auto }
         .drawWithContent {
             drawContent()
             val pad = room()
             val height = size.height - 2f * pad
             if (height <= 0f) return@drawWithContent
-            val fadePx = PlumDimens.listEdgeFade.toPx()
+            val fadePx = PlumDimens.listFadeBand.toPx()
             val top = if (rampsOn) fades.top(fadePx, height).coerceIn(0f, height) else 0f
             val bottom = if (rampsOn) fades.bottom(fadePx, height).coerceIn(0f, height) else 0f
             val clearTop = fades.clearTop(height).coerceIn(0f, height)
@@ -175,13 +206,13 @@ internal fun Modifier.listEdgeFadeMaskInRoom(
             if (clearBottom > 0f) drawRect(Color.Transparent, topLeft = Offset(0f, pad + height - clearBottom), size = Size(size.width, clearBottom + pad), blendMode = BlendMode.DstIn)
             if (top > 0f) {
                 drawRect(Color.Transparent, size = Size(size.width, pad), blendMode = BlendMode.DstIn)
-                drawRect(maskBrush(atBottom = false, from = pad, length = top, clearShare = fades.clearShare), topLeft = Offset(0f, pad), size = Size(size.width, top), blendMode = BlendMode.DstIn)
+                drawRect(maskBrush(atBottom = false, from = pad, length = top), topLeft = Offset(0f, pad), size = Size(size.width, top), blendMode = BlendMode.DstIn)
             }
             if (bottom > 0f) {
                 val from = pad + height - bottom
                 drawRect(Color.Transparent, topLeft = Offset(0f, pad + height), size = Size(size.width, pad), blendMode = BlendMode.DstIn)
                 drawRect(
-                    maskBrush(atBottom = true, from = from, length = bottom, clearShare = fades.clearShare),
+                    maskBrush(atBottom = true, from = from, length = bottom),
                     topLeft = Offset(0f, from),
                     size = Size(size.width, bottom),
                     blendMode = BlendMode.DstIn,
@@ -189,19 +220,14 @@ internal fun Modifier.listEdgeFadeMaskInRoom(
             }
         }
 
-/** The share of a fade next to its edge that is fully clear: a row cut there shows no sliver, only whole rows and the ramp before the cut one. */
-const val EDGE_CLEAR_SHARE = 0.3f
-
-/** The mask ramp over [length] px from [from] (at the bottom: opaque to clear; at the top: clear to opaque), clear on the share next to the edge. */
+/** The mask ramp over [length] px from [from], the same curve as [ListEdgeFade]: at the bottom opaque to clear, at the top clear to opaque. */
 internal fun maskBrush(
     atBottom: Boolean,
     from: Float,
     length: Float,
-    clearShare: Float = EDGE_CLEAR_SHARE,
-): Brush {
-    return if (atBottom) {
-        Brush.verticalGradient(0f to MaskOpaque, 1f - clearShare to Color.Transparent, 1f to Color.Transparent, startY = from, endY = from + length)
+): Brush =
+    if (atBottom) {
+        Brush.verticalGradient(0f to MaskOpaque, 1f to Color.Transparent, startY = from, endY = from + length)
     } else {
-        Brush.verticalGradient(0f to Color.Transparent, clearShare to Color.Transparent, 1f to MaskOpaque, startY = from, endY = from + length)
+        Brush.verticalGradient(0f to Color.Transparent, 1f to MaskOpaque, startY = from, endY = from + length)
     }
-}

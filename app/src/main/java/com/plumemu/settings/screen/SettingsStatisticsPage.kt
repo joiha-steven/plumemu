@@ -64,6 +64,12 @@ import kotlin.math.roundToInt
  * whole: past the first or last game, or on a page with no game, Up and Down scroll it ([StatisticsScroll]).
  */
 
+/** The place of the lists' top among the page's measured rows, whose other keys are stops. */
+private const val LISTS_TOP = -1
+
+/** The place of the first row of tiles among the page's measured rows, the next rows below it. */
+private const val TILE_ROWS_TOP = -2
+
 /** Statistics' game stops: one per most-played game; none before the figures arrive, on a failed read or with nothing played. The Exact play time switch comes after them. */
 internal fun statisticStopsOf(state: StatisticsState): Int =
     when (state) {
@@ -224,7 +230,7 @@ private fun ScrollingPage(
             if (!figures.hasPlayed) {
                 EmptyPage(figures, tileWidth, isCompact = perRow == StatisticsDimens.NARROW_TILES_PER_ROW)
             } else {
-                Tiles(figures, perRow, isCompact = perRow == StatisticsDimens.NARROW_TILES_PER_ROW)
+                Tiles(figures, perRow, isCompact = perRow == StatisticsDimens.NARROW_TILES_PER_ROW, onRowPlaced = { row, place -> rows[TILE_ROWS_TOP - row] = place })
                 val most: @Composable (Modifier) -> Unit = { place -> MostPlayed(games, figures.hasBoxArt, model, touch, rows, place) }
                 val systems: @Composable (Modifier) -> Unit = { place -> Systems(figures.topSystems, figures.totalSeconds, place) }
                 if (isWide) {
@@ -261,7 +267,8 @@ private fun FollowStatisticsFocus(
     val density = LocalDensity.current
     val step = with(density) { (PlumTheme.layout.rowHeight * STEP_ROWS).roundToPx() }
     // The focused game stays clear of the edge fades too, not only inside the window: a row under a fade reads as cut.
-    val fade = with(density) { PlumDimens.listEdgeFade.roundToPx() }
+    val fade = with(density) { PlumDimens.listFadeBand.roundToPx() }
+    val tileGap = with(density) { PlumDimens.settingsPanelGap.roundToPx() }
 
     fun focused(): IntRange? = spanOf(model.optionIndex)?.let { (it.first - fade).coerceAtLeast(0)..(it.last + fade) }
     LaunchedEffect(model, scroll, stopCount) {
@@ -273,7 +280,7 @@ private fun FollowStatisticsFocus(
                 when {
                     index == 0 && span.last + 1 <= viewport -> 0
                     index == stopCount - 1 && span.first >= scroll.maxValue -> scroll.maxValue
-                    else -> keepVisible(scroll.value, viewport, span).coerceIn(0, scroll.maxValue)
+                    else -> restOnBlock(keepVisible(scroll.value, viewport, span), restStops(spanOf, tileGap), span, viewport, fade).coerceIn(0, scroll.maxValue)
                 }
             if (target != scroll.value) scroll.animateScrollBy((target - scroll.value).toFloat(), motion.glideSpec())
         }
@@ -295,6 +302,30 @@ private fun FollowStatisticsFocus(
     }
 }
 
+/**
+ * Where keeping the focused game in view would stop inside the tiles ([target]), the page rests on the next of [stops] that still shows
+ * the game: a row of tiles or the lists stand at the top, no tile is cut in half with its label scrolled away. A scroll within [slack]
+ * stays: it only sinks the first tiles' top under the edge fade, and their figures stay on screen.
+ */
+internal fun restOnBlock(
+    target: Int,
+    stops: List<Int>,
+    span: IntRange,
+    viewport: Int,
+    slack: Int,
+): Int = if (target <= slack) target else stops.firstOrNull { it >= target && span.last - it < viewport } ?: target
+
+/** Where the page can rest, top to bottom: each row of tiles but the first, then the lists, [gap] above them. */
+private fun restStops(
+    spanOf: (Int) -> IntRange?,
+    gap: Int,
+): List<Int> =
+    buildList {
+        var row = 1
+        while (true) add(spanOf(TILE_ROWS_TOP - row++)?.first ?: break)
+        spanOf(LISTS_TOP)?.let { add(it.first) }
+    }.map { it - gap }
+
 /** A small heading over a list ("Most played"): not a stop, on the rows' text line. */
 @Composable
 private fun Heading(text: String) {
@@ -310,7 +341,7 @@ private fun MostPlayed(
     touch: SettingsTouch,
     rows: HashMap<Int, LayoutCoordinates>,
     modifier: Modifier,
-) = Column(modifier.testTag(StatisticsTags.MOST_PLAYED), verticalArrangement = Arrangement.spacedBy(PlumDimens.listRowGap)) {
+) = Column(modifier.onPlaced { rows[LISTS_TOP] = it }.testTag(StatisticsTags.MOST_PLAYED), verticalArrangement = Arrangement.spacedBy(PlumDimens.listRowGap)) {
     Heading(stringResource(R.string.settings_statistics_most_played))
     val longest = games.firstOrNull()?.seconds?.takeIf { it > 0 } ?: 1L
     games.forEachIndexed { index, game ->

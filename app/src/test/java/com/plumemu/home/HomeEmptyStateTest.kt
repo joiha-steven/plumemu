@@ -92,6 +92,15 @@ class HomeEmptyStateTest {
     }
 
     @Test
+    fun anEmptyLibraryInvitesOnceAndCountsNothing() {
+        show(EmptyLibrary.NoFolder)
+        val bar = compose.onAllNodesWithText("Plumemu", substring = true, useUnmergedTree = true).fetchSemanticsNodes()
+        assertTrue("the top bar names the app", bar.isNotEmpty())
+        assertTrue("no count of nothing", compose.onAllNodesWithText("0 systems", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+        assertEquals("the button is the only invitation", 1, compose.onAllNodesWithText("Add folder", useUnmergedTree = true).fetchSemanticsNodes().size)
+    }
+
+    @Test
     fun noFolderTapOnTheButtonAddsAFolderAndLeftRightDoNothing() {
         show(EmptyLibrary.NoFolder)
         press(right)
@@ -108,6 +117,36 @@ class HomeEmptyStateTest {
         press(Action.Enter)
         assertEquals(1, filesNotAdded)
         assertEquals(0, folderAsked)
+    }
+
+    /** A folder with no files to report: the only button is Choose folder, the primary one, and A presses it from the column. */
+    @Test
+    fun noFilesOffersOnlyChooseFolderAsThePrimaryAndAOpensThePicker() {
+        show(EmptyLibrary.NoFiles)
+        assertTrue(hasTag(EmptyButton.ChooseFolder))
+        assertTrue(!hasTag(EmptyButton.FilesNotAdded) && !hasTag(EmptyButton.AddFolder))
+        press(Action.Enter)
+        assertEquals(1, folderAsked)
+        assertEquals(0, filesNotAdded)
+    }
+
+    @Test
+    fun noFilesKeepsTheFocusRulesRightEntersTheButtonLeftReturns() {
+        val notices = show(EmptyLibrary.NoFiles)
+        assertTrue("the hint names the primary button from the column", hintShows("Choose folder"))
+        press(right)
+        assertTrue(notices.emptyFocus.inButtons)
+        press(right)
+        assertTrue("Right at the only button stays on it", notices.emptyFocus.inButtons)
+        press(Action.Enter)
+        assertEquals(1, folderAsked)
+        press(left)
+        assertTrue("Left returns to the column", !notices.emptyFocus.inButtons)
+        press(Action.Enter)
+        assertEquals(2, folderAsked)
+        tap(EmptyButton.ChooseFolder)
+        assertEquals(3, folderAsked)
+        assertEquals(0, filesNotAdded)
     }
 
     @Test

@@ -6,6 +6,8 @@ import android.content.ContextWrapper
 import android.view.View
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -36,6 +38,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -57,12 +60,18 @@ import com.plumemu.coreui.components.GameRow
 import com.plumemu.coreui.components.InlineKeyboard
 import com.plumemu.coreui.components.GameRowLook
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.components.TopBar
 import com.plumemu.coreui.components.sunkenField
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.components.rememberGlidingPill
 import com.plumemu.coreui.theme.rememberListGlide
+import com.plumemu.home.BarRunClips
+import com.plumemu.home.FollowBarRunner
 import com.plumemu.home.KeepFocusedVisible
+import com.plumemu.home.LocalBarRoom
+import com.plumemu.home.barRows
+import com.plumemu.home.inStrip
 import com.plumemu.home.masteredLabel
 import com.plumemu.home.rememberCountFormat
 import com.plumemu.home.variantSubtitle
@@ -89,7 +98,9 @@ internal fun SearchTopBar(
     // The typed text starts on the results' text line (strip margin + peek + row padding, the list's own
     // tokens): the label gives it that room, and only a label wider than that (a large text size) pushes it on.
     val queryStart = PlumTheme.layout.peek + PlumDimens.columnGap + PlumDimens.gameRowPadding
-    val labelRoom = (queryStart - PlumDimens.stripMarginSide - PlumDimens.topBarItemGap).coerceAtLeast(0.dp)
+    // The field's well and collar are drawn past its text: the bar's gap is kept from what is drawn, on both sides.
+    val fieldReach = PlumDimens.searchFieldInsetX + CollarSize.Field.sidePadding
+    val labelRoom = (queryStart - PlumDimens.stripMarginSide - PlumDimens.topBarItemGap - fieldReach).coerceAtLeast(0.dp)
     // The shared top bar, so the title, the bar's height and the clock sit where they do on every other screen; the field and the count go between.
     TopBar(
         place = place,
@@ -104,9 +115,9 @@ internal fun SearchTopBar(
         placeMinWidth = labelRoom,
         middle = {
             if (search.usesOwnKeyboard) {
-                SearchQueryLine(search, style, Modifier.weight(1f))
+                SearchQueryLine(search, style, Modifier.weight(1f).padding(horizontal = fieldReach))
             } else {
-                AndroidSearchField(search, style, Modifier.weight(1f))
+                AndroidSearchField(search, style, Modifier.weight(1f).padding(horizontal = fieldReach))
             }
             if (search.query.isNotBlank() && search.isAnswered) {
                 val numbers = rememberCountFormat()
@@ -250,7 +261,7 @@ internal fun SearchResults(
             else -> null
         }
     if (line != null) {
-        Box(modifier.then(listModifier)) {
+        Box(modifier.then(listModifier).inStrip()) {
             Box(Modifier.height(PlumTheme.layout.gameRowHeight).padding(horizontal = PlumDimens.gameRowPadding), contentAlignment = Alignment.CenterStart) {
                 BasicText(
                     stringResource(line.first),
@@ -265,6 +276,13 @@ internal fun SearchResults(
     }
     val listState = rememberLazyListState()
     val glide = rememberListGlide(stride = PlumTheme.layout.gameRowHeight + PlumDimens.listRowGap)
+    val density = LocalDensity.current
+    val barRoom = LocalBarRoom.current
+    val rest = barRows(layout.gameRowHeight + PlumDimens.listRowGap, PlumDimens.listRowGap)
+    val rowGapPx = with(density) { PlumDimens.listRowGap.toPx() }
+    val topRoomPx = with(density) { barRoom.top.toPx() }
+    val clips = remember(listState, glide, search, rowGapPx, topRoomPx) { BarRunClips(listState, glide, topRoomPx, gapBelow = rowGapPx) { if (search.inField) -1 else search.row } }
+    FollowBarRunner(clips)
     // Read by each row's derived look, so opening the game panel recomposes only the focused row.
     val panelOpen = rememberUpdatedState(isPanelOpen)
     // The focus pill is drawn by the list, so it glides from row to row; read while drawing.
@@ -273,10 +291,12 @@ internal fun SearchResults(
             if (resultLook(search, search.row, panelOpen.value) == GameRowLook.Focused) search.row else -1
         }
     pill.Provide {
+    // The list runs under the bars as the games list does (BarRunClips, barRows).
+    Box(modifier.then(listModifier).testTag(SearchTags.RESULTS)) {
     LazyColumn(
         state = listState,
-        modifier = modifier.then(listModifier).testTag(SearchTags.RESULTS).then(pill.modifier).then(glide.modifier),
-        contentPadding = PaddingValues(vertical = glide.extra),
+        modifier = Modifier.fillMaxSize().testTag(SearchTags.ROWS).then(pill.modifier).then(glide.withFadeMask(clips, isOn = false, hidesCutRows = true)),
+        contentPadding = PaddingValues(top = glide.extra + barRoom.top, bottom = glide.extra + with(density) { rest.below.toDp() }),
         // No spacing: each game row carries its own gap (its tap area).
     ) {
         itemsIndexed(results, key = { _, hit -> hit.row.id }) { index, hit ->
@@ -288,7 +308,8 @@ internal fun SearchResults(
         }
     }
     }
-    KeepFocusedVisible(listState, glide) { if (search.inField) 0 else search.row }
+    }
+    KeepFocusedVisible(listState, glide, trailingGap = PlumDimens.listRowGap, snapsToRows = true, bandPx = rest.inset) { if (search.inField) 0 else search.row }
 }
 
 private fun resultLook(
@@ -306,6 +327,7 @@ private fun resultLook(
 internal object SearchTags {
     const val TOP_BAR = "search_top_bar"
     const val FIELD = "search_field"
+    const val ROWS = "search_rows"
     const val RESULTS = "search_results"
     const val NO_MATCH = "search_no_match"
 

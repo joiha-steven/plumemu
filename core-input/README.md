@@ -36,7 +36,7 @@ buttons after the confirm setting (below).
 
 | Action | Gamepad | Touch | Main screen | Settings |
 |---|---|---|---|---|
-| `Move(direction)` | D-pad, left stick, hat; held: repeats, faster with "Hold to scroll faster" | Tap an item (`TapItem`) moves focus there; swipes and flings are the list's own scrolling | Move in a column; Left/Right change column | Move in a column |
+| `Move(direction)` | D-pad, left stick, hat; held: repeats, faster the longer it is held | Tap an item (`TapItem`) moves focus there; swipes and flings are the list's own scrolling | Move in a column; Left/Right change column | Move in a column |
 | `Enter` | A, D-pad centre, Enter | Tap the focused system again; a hint | Open the games; on a game: play | Open the option |
 | `Back` | B, Back, Escape | System back gesture; "B Back" hint | One column left | One column left |
 | `NextSystem` / `PreviousSystem` | R1 / L1 | Tap another system in the system column's visible edge | Next / previous system (wraps) | Next / previous section |

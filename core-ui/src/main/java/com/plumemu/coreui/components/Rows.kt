@@ -190,7 +190,7 @@ private inline fun RowScope.RowEnd(
     val colors = PlumTheme.colors
     val type = PlumTheme.type
     val scale = PlumTheme.layout.textScale
-    val gone = Modifier.hiddenWhile(hidden)
+    val gone = Modifier.hiddenWhile(hidden).shiftedBy(LocalRowEndShift.current)
     if (region != null) {
         Spacer(Modifier.width(PlumDimens.rowTrailingGap))
         BasicText(text = trailing, style = yearStyle(look, colors, type).copy(textAlign = TextAlign.End), maxLines = 1, modifier = gone.width(PlumDimens.rowYearColumn * scale).alignBy(LastBaseline))

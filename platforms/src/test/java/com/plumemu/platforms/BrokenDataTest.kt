@@ -40,6 +40,36 @@ class BrokenDataTest {
     }
 
     @Test
+    fun aWebPageIsKept() {
+        for (url in listOf("https://github.com/azahar-emu/azahar/releases", "http://example.org/download", "HTTPS://example.org/")) {
+            val log = RecordingLog()
+            val result = load(withEmulatorField("\"page\":\"$url\""), log) as PlatformLoadResult.Loaded
+            assertEquals(url, result.catalog.emulators.single().page)
+            assertEquals(emptyList<String>(), log.lines)
+        }
+    }
+
+    @Test
+    fun anEmulatorWithoutAPageLoadsWithNone() {
+        assertEquals(null, (load(valid) as PlatformLoadResult.Loaded).catalog.emulators.single().page)
+    }
+
+    @Test
+    fun aPageThatIsNotAWebPageCountsAsNoneAndTheFileStillLoads() {
+        val notPages = listOf(
+            "javascript:alert(1)", "market://details?id=com.example.emu", "intent://x#Intent;end", "file:///sdcard/a.apk",
+            "content://a/b", "https://", "https:example.org", " https://example.org/", "https://exa mple.org/", "",
+        )
+        for (url in notPages) {
+            val log = RecordingLog()
+            val result = load(withEmulatorField("\"page\":\"$url\""), log)
+            assertTrue("[$url] must not reject the file", result is PlatformLoadResult.Loaded)
+            assertEquals("[$url]", null, (result as PlatformLoadResult.Loaded).catalog.emulators.single().page)
+            assertOneLogLine(log, "e1", "page")
+        }
+    }
+
+    @Test
     fun invalidJsonIsRejected() {
         val (failure, log) = failureOf("{ this is not json")
         assertTrue(failure is PlatformFailure.NotJson)

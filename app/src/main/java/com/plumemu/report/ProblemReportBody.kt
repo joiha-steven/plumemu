@@ -5,13 +5,17 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -44,17 +48,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.plumemu.R
+import com.plumemu.account.unplaced
 import com.plumemu.coreinput.Action
 import com.plumemu.coreui.components.FieldRow
-import com.plumemu.account.unplaced
 import com.plumemu.coreui.components.FieldRowFrame
-import com.plumemu.coreui.components.fieldLine
-import com.plumemu.coreui.components.fieldBoxHeight
-import com.plumemu.coreui.theme.FieldDimens
 import com.plumemu.coreui.components.OptionRow
 import com.plumemu.coreui.components.OptionRowLook
+import com.plumemu.coreui.components.fieldBoxHeight
+import com.plumemu.coreui.components.fieldLine
+import com.plumemu.coreui.theme.FieldDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.game.paste
 import com.plumemu.home.search.hideSystemBars
 import com.plumemu.keyboard.CaretLine
@@ -68,6 +73,7 @@ import com.plumemu.telemetry.ReportResult
  * a report was sent or saved, that line and Done. [onTap] gets the item's place in
  * [ProblemReportForm.items]; [onAction] gets the Android keyboard's Done as an Enter.
  * [statisticsOn] decides whether the anonymous install id goes with the report.
+ * [shareLogFailure] says why Share log could not share; it stands under that button.
  */
 @Composable
 internal fun ProblemReportBody(
@@ -77,6 +83,7 @@ internal fun ProblemReportBody(
     onAction: (Action) -> Unit,
     gap: Dp,
     modifier: Modifier = Modifier,
+    shareLogFailure: String? = null,
 ) {
     Column(modifier.testTag(ReportTags.FORM), verticalArrangement = Arrangement.spacedBy(gap)) {
         if (form.isFinished) {
@@ -95,10 +102,15 @@ internal fun ProblemReportBody(
         val layout = PlumTheme.layout
         // What must show under a field typed over Plumemu's tray: the next row.
         val belowField = FieldDimens.gap + fieldBoxHeight()
-        Column(verticalArrangement = Arrangement.spacedBy(FieldDimens.gap)) {
-            Field(form, ReportItem.Text, textFocus, onTap, onAction, labelWidth, belowField)
-            Field(form, ReportItem.Email, emailFocus, onTap, onAction, labelWidth, belowField)
-            DetailsRow(form, onTap)
+        BoxWithConstraints {
+            // Beside a label that takes much of a narrow panel a field has no width for words: the labels go above their fields.
+            val labelRoom = labelWidth + PlumDimens.gameRowPadding + FieldDimens.gap
+            val labelsAbove = labelRoom > maxWidth * LABEL_MAX_SHARE
+            Column(verticalArrangement = Arrangement.spacedBy(FieldDimens.gap)) {
+                Field(form, ReportItem.Text, textFocus, onTap, onAction, labelWidth, belowField, labelsAbove)
+                Field(form, ReportItem.Email, emailFocus, onTap, onAction, labelWidth, belowField, labelsAbove)
+                DetailsRow(form, onTap)
+            }
         }
         Line(stringResource(sendsLine(form.includeDetails, statisticsOn)), ReportTags.SENDS, isQuiet = true)
         when {
@@ -107,7 +119,31 @@ internal fun ProblemReportBody(
             form.result != null -> Line(reportResultText(form.result), ReportTags.STATUS, isQuiet = false)
             form.isAtLimit -> Line(stringResource(R.string.report_at_limit), ReportTags.STATUS, isQuiet = false)
         }
-        Buttons(form, onTap, listOf(ReportItem.Send to R.string.report_send, ReportItem.Leave to R.string.settings_cancel))
+        FormButtons(form, onTap, shareLogFailure)
+    }
+}
+
+/**
+ * Send, Cancel and Share log, as wide as each other, then why Share log failed and what it shares: on Share log both lines are
+ * brought into view with it, the failure also when it comes later. Like the buttons they keep their room, unseen, under Plumemu's tray.
+ */
+@Composable
+private fun FormButtons(
+    form: ProblemReportForm,
+    onTap: (Int) -> Unit,
+    shareLogFailure: String?,
+) {
+    val isOnShareLog = form.focus == ReportItem.ShareLog && !form.isSending
+    val shareButton = remember { BringIntoViewRequester() }
+    Column(
+        if (form.isTrayUp) Modifier.unplaced() else Modifier,
+        verticalArrangement = Arrangement.spacedBy(PlumDimens.titleLineGap),
+    ) {
+        Buttons(form, onTap, listOf(ReportItem.Send to R.string.report_send, ReportItem.Leave to R.string.settings_cancel, ReportItem.ShareLog to R.string.report_share_log), shareButton)
+        if (shareLogFailure != null) Line(shareLogFailure, ReportTags.SHARE_LOG_FAILURE, isQuiet = false, Modifier.bringIntoViewWhen(isOnShareLog))
+        // Past its end room: this line ends the form, no scroll is left under it and no fade over it. Where the text is too large for all of it, the focused button stays whole.
+        Line(stringResource(R.string.settings_export_logs_body), ReportTags.SHARE_LOG_LINE, isQuiet = true, Modifier.bringIntoViewWhen(isOnShareLog, above = shareLogFailure, below = SlabDimens.listEndRoom * 2, thenShows = shareButton))
+        Spacer(Modifier.height(SlabDimens.listEndRoom))
     }
 }
 
@@ -136,6 +172,7 @@ internal fun reportConfirmHint(form: ProblemReportForm): Int? =
             ReportItem.Send -> R.string.report_send
             ReportItem.Leave -> R.string.settings_cancel
             ReportItem.Done -> R.string.settings_hint_done
+            ReportItem.ShareLog -> R.string.report_share_log
         }
     }
 
@@ -189,8 +226,33 @@ private fun Field(
     onAction: (Action) -> Unit,
     labelWidth: Dp,
     belowWhileTyping: Dp,
+    labelsAbove: Boolean,
 ) {
-    if (form.typing != null) return OwnKeyboardField(form, item, onTap, labelWidth, belowWhileTyping)
+    val isEmail = item == ReportItem.Email
+    val label = stringResource(if (isEmail) R.string.report_email_label else R.string.report_text_label)
+    if (labelsAbove) {
+        Column {
+            val colors = PlumTheme.colors
+            BasicText(label, style = PlumTheme.type.settingsOption, color = { colors.muted }, maxLines = 1, modifier = Modifier.padding(start = PlumDimens.gameRowPadding))
+            FieldOf(form, item, requester, onTap, onAction, null, labelWidth, belowWhileTyping)
+        }
+    } else {
+        FieldOf(form, item, requester, onTap, onAction, label, labelWidth, belowWhileTyping)
+    }
+}
+
+@Composable
+private fun FieldOf(
+    form: ProblemReportForm,
+    item: ReportItem,
+    requester: FocusRequester,
+    onTap: (Int) -> Unit,
+    onAction: (Action) -> Unit,
+    label: String?,
+    labelWidth: Dp,
+    belowWhileTyping: Dp,
+) {
+    if (form.typing != null) return OwnKeyboardField(form, item, onTap, label, labelWidth, belowWhileTyping)
     val isEmail = item == ReportItem.Email
     val focused = form.focus == item && !form.isSending
     // Only the field being typed in can take the input focus, or Android's window focus would bring its keyboard up.
@@ -201,7 +263,7 @@ private fun Field(
         onValueChange = if (isEmail) form::onEmailChange else form::onTextChange,
         look = if (focused) OptionRowLook.Focused else OptionRowLook.Normal,
         placeholder = "",
-        label = stringResource(if (isEmail) R.string.report_email_label else R.string.report_text_label),
+        label = label,
         labelWidth = labelWidth,
         keyboardHint = stringResource(if (isEmail) R.string.report_email_hint else R.string.report_text_hint),
         modifier = Modifier.bringIntoViewWhen(focused).pointerInput(index) { awaitEachGesture { awaitFirstDown(pass = PointerEventPass.Initial).also { onTap(index) } } }
@@ -231,6 +293,7 @@ private fun OwnKeyboardField(
     form: ProblemReportForm,
     item: ReportItem,
     onTap: (Int) -> Unit,
+    label: String?,
     labelWidth: Dp,
     belowWhileTyping: Dp,
 ) {
@@ -249,7 +312,7 @@ private fun OwnKeyboardField(
         }
     FieldRowFrame(
         look = if (focused) OptionRowLook.Focused else OptionRowLook.Normal,
-        label = stringResource(if (isEmail) R.string.report_email_label else R.string.report_text_label),
+        label = label,
         labelWidth = labelWidth,
         modifier =
             Modifier
@@ -329,6 +392,7 @@ private fun Buttons(
     form: ProblemReportForm,
     onTap: (Int) -> Unit,
     buttons: List<Pair<ReportItem, Int>>,
+    shareButton: BringIntoViewRequester? = null,
 ) {
     // As wide as the widest, one over the other: the panel is narrow. With the tray up over a field they keep their room, unseen: no strip above the tray.
     Column((if (form.isTrayUp) Modifier.unplaced() else Modifier).width(IntrinsicSize.Max), verticalArrangement = Arrangement.spacedBy(PlumDimens.setupButtonGap)) {
@@ -338,9 +402,11 @@ private fun Buttons(
                 text = stringResource(label),
                 isPrimary = at == 0,
                 isFocused = form.focus == item && !form.isSending,
+                maxLines = 2,
                 modifier =
                     Modifier
                         .fillMaxWidth()
+                        .then(if (item == ReportItem.ShareLog && shareButton != null) Modifier.bringIntoViewRequester(shareButton) else Modifier)
                         .bringIntoViewWhen(form.focus == item)
                         .reportTap(index, onTap)
                         .testTag(ReportTags.item(item)),
@@ -367,6 +433,7 @@ private fun Line(
     text: String,
     tag: String,
     isQuiet: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     val colors = PlumTheme.colors
     BasicText(
@@ -374,7 +441,7 @@ private fun Line(
         style = PlumTheme.type.setupNote.copy(color = if (isQuiet) colors.muted else colors.text),
         maxLines = LINE_LINES,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(horizontal = PlumDimens.gameRowPadding).testTag(tag),
+        modifier = modifier.padding(horizontal = PlumDimens.gameRowPadding).testTag(tag),
     )
 }
 
@@ -386,6 +453,8 @@ internal object ReportTags {
     const val SENDS = "report_sends"
     const val STATUS = "report_status"
     const val RESULT = "report_result"
+    const val SHARE_LOG_LINE = "report_share_log_line"
+    const val SHARE_LOG_FAILURE = "report_share_log_failure"
 
     fun item(item: ReportItem): String = "report_item_${item.name}"
 
@@ -394,5 +463,8 @@ internal object ReportTags {
     fun placeholder(item: ReportItem): String = "report_placeholder_${item.name}"
 }
 
-/** The "sends" line takes up to 4 lines at the larger text sizes; a status line 4, as the sign-in form's. */
-private const val LINE_LINES = 4
+/** The most of the form's width a label and its gaps may take beside a field. */
+private const val LABEL_MAX_SHARE = 0.4f
+
+/** Room for the whole line at Largest on a 432-high screen: the form scrolls, so a line is never cut short. */
+private const val LINE_LINES = 8

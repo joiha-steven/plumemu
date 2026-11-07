@@ -5,6 +5,9 @@ import androidx.compose.animation.core.snap
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.ScrollState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
@@ -19,6 +22,7 @@ import androidx.compose.ui.text.TextLayoutResult
  * (at 576 x 432 the Ready step once rested with only "Settings." of the paragraph showing).
  * The narrow layout scrolls the title with the content, so the scroll to a focused button can end half way through
  * a paragraph. A rest is one of: not scrolled, or a line of the title or the description at the top.
+ * A card of the content ([restCard]) is a rest too: the scroll never ends with a card cut by the top.
  * Offsets are scroll values in pixels, measured from [anchor] (the content's first item).
  */
 internal class LineSnaps {
@@ -26,6 +30,8 @@ internal class LineSnaps {
     private val textTops = FloatArray(PARTS)
     private val lineTops = Array(PARTS) { FloatArray(0) }
     private var offsets = IntArray(0)
+    private var textEnd = Int.MAX_VALUE
+    private val cardTops = HashMap<String, Float>()
 
     /** Changes when the offsets do, so a reader of it is asked again. */
     var version by mutableIntStateOf(0)
@@ -42,6 +48,18 @@ internal class LineSnaps {
             rebuild()
         }
 
+    /** A card of the content: the top of the visible area may rest on its top. */
+    fun Modifier.card(key: String): Modifier =
+        onGloballyPositioned { coordinates ->
+            val from = anchor?.takeIf { it.isAttached } ?: return@onGloballyPositioned
+            cardTops[key] = from.localPositionOf(coordinates, Offset.Zero).y
+            rebuild()
+        }
+
+    fun dropCard(key: String) {
+        if (cardTops.remove(key) != null) rebuild()
+    }
+
     fun layoutOf(part: Int, layout: TextLayoutResult) {
         // Every line's top, and the last line's bottom: a text that ends at the top of the visible area is whole gone, not cut.
         lineTops[part] = FloatArray(layout.lineCount + 1) { if (it < layout.lineCount) layout.getLineTop(it) else layout.getLineBottom(layout.lineCount - 1) }
@@ -51,6 +69,9 @@ internal class LineSnaps {
     private fun rebuild() {
         val all = mutableListOf(0)
         for (part in 0 until PARTS) for (top in lineTops[part]) all += (textTops[part] + top).toInt()
+        // Where the block's last line ends: the scroll's end can fall a little past it (see [isRest]).
+        textEnd = all.max()
+        for (top in cardTops.values) all += top.toInt()
         val sorted = all.filter { it >= 0 }.distinct().sorted().toIntArray()
         if (!sorted.contentEquals(offsets)) {
             offsets = sorted
@@ -61,11 +82,14 @@ internal class LineSnaps {
     /** The first rest at or past [value] (px); [value] itself when it is past the last line (content, not text, is at the top then). */
     fun restAtOrPast(value: Int): Int = offsets.firstOrNull { it >= value } ?: value
 
-    /** True at a rest, or at most [reach] past the block's end (the scroll's end can fall just past it, where no line is left to reach). */
-    fun isRest(value: Int, reach: Int): Boolean = offsets.binarySearch(value) >= 0 || (offsets.isNotEmpty() && value - offsets.last() in 0..reach)
+    /** True at a rest (to a pixel), or at most [reach] past the block's end (the scroll's end can fall just past it, where no line is left to reach). */
+    fun isRest(value: Int, reach: Int): Boolean = offsets.any { value - it in 0..ROUNDING } || value - textEnd in 0..reach
 
     private companion object {
         const val PARTS = 2
+
+        /** A scroll lands on a whole pixel at or just past a rest that was cut to one. */
+        const val ROUNDING = 1
     }
 }
 
@@ -103,4 +127,15 @@ internal class WithoutRoom(
         val by = room()
         return inner.calculateScrollDistance(offset - by, size, containerSize - by * 2)
     }
+}
+
+/** The steps' scroll hands its [LineSnaps] down, so a card of any step can mark itself a rest; null where nothing rests on lines. */
+internal val LocalLineSnaps = compositionLocalOf<LineSnaps?> { null }
+
+/** Marks this item a card the scroll rests on whole (see [LineSnaps.card]); [key] tells the cards of a step apart. */
+@Composable
+internal fun Modifier.restCard(key: String): Modifier {
+    val snaps = LocalLineSnaps.current ?: return this
+    DisposableEffect(snaps, key) { onDispose { snaps.dropCard(key) } }
+    return with(snaps) { card(key) }
 }

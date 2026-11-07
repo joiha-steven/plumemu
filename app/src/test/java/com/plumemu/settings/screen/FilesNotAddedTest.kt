@@ -4,14 +4,14 @@ import com.plumemu.coredata.db.LeftOutFileEntity
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * Settings › Library › Files not added: the stored rows grouped by reason (unknown folders as one
  * line each, a "more" line past the cap), the empty page, the row's count, and A on a folder line
- * going to that folder's row.
+ * opening that folder's page.
  */
 internal class FilesNotAddedTest : SettingsModelHarness() {
     private val xbox = SettingsFolderRow(FolderKey(1, "Xbox 360"), 4, FolderAnswer.Unanswered)
@@ -52,6 +52,8 @@ internal class FilesNotAddedTest : SettingsModelHarness() {
                 NotAddedItem.Folder(xbox.key, 4),
                 NotAddedItem.File(1, "Halo", "Halo 2.iso"),
                 NotAddedItem.File(1, "", "Mystery.iso"),
+                NotAddedItem.Heading(NotAddedGroup.AnsweredFolders, null),
+                NotAddedItem.Folder(halo.key, 0, halo.answer),
                 NotAddedItem.Heading(NotAddedGroup.Unmatched, "psx"),
                 NotAddedItem.File(1, "psx", "tool.exe"),
                 NotAddedItem.Heading(NotAddedGroup.Unmatched, null),
@@ -72,24 +74,38 @@ internal class FilesNotAddedTest : SettingsModelHarness() {
     }
 
     @Test
-    fun anAnsweredFolderOrOneWithNothingLeftOutHasNoFolderLine() {
+    fun everyFolderHasItsLineEvenWithNothingLeftOut() {
         val items = notAddedItems(rows.filter { !it.directoryPath.startsWith("Xbox 360") }, listOf(xbox, halo))
-        assertTrue(items.none { it is NotAddedItem.Folder })
-        val answered = notAddedItems(rows, listOf(xbox.copy(answer = FolderAnswer.Ignored)))
-        assertTrue("an ignored folder's files are listed one by one", answered.none { it is NotAddedItem.Folder })
-        assertTrue(NotAddedItem.File(1, "Xbox 360", "Halo 3.iso") in answered)
+        assertEquals(listOf(NotAddedItem.Folder(xbox.key, xbox.files), NotAddedItem.Folder(halo.key, 0, halo.answer)), items.filterIsInstance<NotAddedItem.Folder>())
+    }
+
+    /** Files not added's row says "1 folder to sort": the page must not answer that every file is in (the page's test is in SettingsSingleScreensTest). */
+    @Test
+    fun aWaitingFolderWithNoFileCountedStillListsItsLine() {
+        val waiting = SettingsFolderRow(FolderKey(1, "Misc ROMs"), 0, FolderAnswer.Unanswered)
+        val items = notAddedItems(emptyList(), listOf(waiting))
+        assertEquals(0, notAddedCount(items))
+        assertTrue(items.any { it is NotAddedItem.Folder && it.answer == FolderAnswer.Unanswered })
+    }
+
+    @Test
+    fun anIgnoredFoldersFilesAreListedOneByOneUnderItsOwnLine() {
+        val ignored = xbox.copy(answer = FolderAnswer.Ignored)
+        val items = notAddedItems(rows, listOf(ignored))
+        assertEquals(listOf(NotAddedItem.Folder(xbox.key, 0, FolderAnswer.Ignored)), items.filterIsInstance<NotAddedItem.Folder>())
+        assertTrue(NotAddedItem.File(1, "Xbox 360", "Halo 3.iso") in items)
     }
 
     @Test
     fun aFolderOfTheSameNameInAnotherPickedFolderIsNotAbsorbed() {
         val items = notAddedItems(listOf(row("Xbox 360/a.iso", "no_system", folder = 2), row("Xbox 3600/b.iso", "no_system")), listOf(xbox))
-        assertTrue(items.none { it is NotAddedItem.Folder })
+        assertEquals("its count is the folder's own", listOf(NotAddedItem.Folder(xbox.key, xbox.files)), items.filterIsInstance<NotAddedItem.Folder>())
         assertEquals(2, items.count { it is NotAddedItem.File })
     }
 
     @Test
     fun nothingLeftOutIsAnEmptyPageAndAnEmptyRowValue() {
-        assertEquals(emptyList<NotAddedItem>(), notAddedItems(emptyList(), listOf(xbox)))
+        assertEquals(emptyList<NotAddedItem>(), notAddedItems(emptyList(), emptyList()))
         assertEquals(0, notAddedCount(emptyList()))
         model.content = SettingsContent()
         assertTrue("the row stays: it says every file is in the library", SettingsOption.FilesNotAdded in SettingsSection.Library.rowsIn(model.content))
@@ -108,26 +124,51 @@ internal class FilesNotAddedTest : SettingsModelHarness() {
         assertEquals(SettingsOption.FilesNotAdded, model.focusedOption)
         press(Action.Enter)
         assertEquals(PanelPage.FilesNotAdded, model.focus.page)
-        assertEquals(0, model.focus.panelIndex)
     }
 
     @Test
-    fun aOnAFolderLineGoesToThatFoldersRow() {
+    fun theCursorOpensOnTheFirstRealLineAndNeverStopsOnAHeading() {
         openPage()
-        move(Direction.Down)
+        assertTrue("a heading comes first", model.content.notAdded.first() is NotAddedItem.Heading)
+        assertEquals(1, model.focus.panelIndex)
+        repeat(model.content.notAdded.size + 2) {
+            move(Direction.Down)
+            assertFalse("Down stopped on a heading", model.content.notAdded[model.focus.panelIndex] is NotAddedItem.Heading)
+        }
+        repeat(model.content.notAdded.size + 2) {
+            move(Direction.Up)
+            assertFalse("Up stopped on a heading", model.content.notAdded[model.focus.panelIndex] is NotAddedItem.Heading)
+        }
+        assertEquals("Up ends on the first real line", 1, model.focus.panelIndex)
+    }
+
+    @Test
+    fun aTapOnAHeadingMovesNothing() {
+        openPage()
+        val heading = model.content.notAdded.indexOfLast { it is NotAddedItem.Heading }
+        val before = model.focus
+        model.onTapPanelItem(heading, actions.shown, wide)
+        assertEquals(before, model.focus)
+    }
+
+    @Test
+    fun aOnAFolderLineOpensThatFoldersPageAndBReturnsToTheLine() {
+        openPage()
         assertEquals(1, model.focus.panelIndex)
         press(Action.Enter)
-        assertEquals(SettingsColumn.Options, model.focus.column)
-        assertNull(model.focus.page)
-        assertEquals(SettingsOption.UnknownFolder, model.focusedOption)
-        assertEquals(xbox, model.content.unknownFolderAtRow(model.optionIndex))
+        assertEquals(PanelPage.UnknownFolder, model.focus.page)
+        assertEquals(SettingsColumn.Panel, model.focus.column)
+        assertEquals(xbox.key, model.focus.folderKey)
+        assertEquals(SettingsOption.FilesNotAdded, model.focusedOption)
+        press(Action.Back)
+        assertEquals(PanelPage.FilesNotAdded, model.focus.page)
+        assertEquals(1, model.focus.panelIndex)
     }
 
     @Test
     fun aOnAFileDoesNothingAndTheCursorStopsAtTheLastLine() {
         openPage()
-        move(Direction.Down)
-        move(Direction.Down)
+        repeat(2) { move(Direction.Down) }
         val before = model.focus
         press(Action.Enter)
         assertEquals(before, model.focus)

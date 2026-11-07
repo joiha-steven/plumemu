@@ -22,6 +22,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
@@ -56,11 +58,13 @@ internal fun Tiles(
     perRow: Int,
     showsDays: Boolean = true,
     isCompact: Boolean = false,
+    /** Told where each row of tiles stands, by its index. */
+    onRowPlaced: (Int, LayoutCoordinates) -> Unit = { _, _ -> },
 ) {
     val tiles = tilesOf(figures)
     Column(Modifier.fillMaxWidth().testTag(StatisticsTags.TILES), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap)) {
-        for (row in tiles.chunked(perRow)) {
-            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap)) {
+        tiles.chunked(perRow).forEachIndexed { index, row ->
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max).onPlaced { onRowPlaced(index, it) }, horizontalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap)) {
                 for (tile in row) Tile(tile, figures, Modifier.weight(1f).fillMaxHeight(), showsDays, isCompact)
                 repeat(perRow - row.size) { Spacer(Modifier.weight(1f)) }
             }
@@ -258,6 +262,8 @@ private fun WeekBars(
  */
 internal fun narrowWeekdays(locale: Locale): List<String> {
     val calendar = Calendar.getInstance(locale)
+    // Midday: the format may hold another time zone than the calendar (a test's ICU), and a time near midnight would name the day beside it.
+    calendar.set(Calendar.HOUR_OF_DAY, MIDDAY)
     val first = calendar.firstDayOfWeek
     val format: (Date) -> String =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -297,3 +303,5 @@ private const val MIN_DAY_SHARE = 0.15f
 private const val MIN_BAR_SHARE = 0.02f
 
 private const val PERCENT = 100
+
+private const val MIDDAY = 12

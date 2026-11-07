@@ -19,7 +19,9 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.theme.CollarDimens
 import com.plumemu.coreui.theme.GridSize
+import com.plumemu.coreui.theme.AppsGridDimens
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.focusedCoverScale
 import com.plumemu.coreui.theme.PlumTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -33,7 +35,7 @@ import kotlin.math.roundToInt
 
 /**
  * The focused item of a grid stays whole inside the screen's room for it at the first and last column and the first and last row,
- * at 768x432 and 576x432. Apps grid: the lifted tile and its ring (gap and accent band) stay under the top bar, above the hint
+ * at 768x432 and 576x432. Apps grid: the focused icon and its ring (gap and accent band) stay under the top bar, above the hint
  * bar, between the screen's side margin and the grid's right edge, and the ring is really drawn on the pixels just outside it.
  * Cover grid (the collar look): the box stays in its cell (layout), is drawn larger, its groove lights in the accent, and the larger collar
  * with its ring stays inside the same room.
@@ -110,19 +112,21 @@ class GridFocusBoundsTest {
         }
     }
 
-    private fun appsLifted(rest: Rect): Rect {
-        val s = PlumDimens.FOCUSED_ICON_SCALE
-        val lift = PlumDimens.focusedLift.value * compose.density.density
-        return Rect(rest.center.x - rest.width * s / 2f, rest.center.y - rest.height * s / 2f - lift, rest.center.x + rest.width * s / 2f, rest.center.y + rest.height * s / 2f - lift)
+    /** The focused tile's icon, in px: the ring stands on it and nothing grows. */
+    private fun appsIcon(rest: Rect): Rect {
+        val d = compose.density.density
+        val side = AppsGridDimens.appsGridTileIcon.value * d
+        val top = rest.top + AppsGridDimens.appsGridTilePadding.value * d
+        return Rect(rest.center.x - side / 2f, top, rest.center.x + side / 2f, top + side)
     }
 
     private fun assertApps(label: String) {
         show { AppsGridBoard(focused = 0, onState = { state = it }) }
         compose.waitForIdle()
         val last = AppsGridApps.lastIndex
-        for (index in listOf(0, 6, 7, last)) assertRoomFor("$label apps $index", index, ::appsLifted)
-        assertRoomFor("$label apps last column of the first row", appsColumnCount - 1, ::appsLifted)
-        assertRoomFor("$label apps first column of the last row", last - last % appsColumnCount, ::appsLifted)
+        for (index in listOf(0, 6, 7, last)) assertRoomFor("$label apps $index", index, ::appsIcon)
+        assertRoomFor("$label apps last column of the first row", appsColumnCount - 1, ::appsIcon)
+        assertRoomFor("$label apps first column of the last row", last - last % appsColumnCount, ::appsIcon)
     }
 
     private var appsColumnCount = 0
@@ -135,22 +139,28 @@ class GridFocusBoundsTest {
         return box.translate(-cell.left.value * d, -cell.top.value * d)
     }
 
-    /** The collar (px) round the box as laid out, drawn [PlumDimens.FOCUSED_COVER_SCALE] larger about its centre. */
+    /** The collar (px) round the box as laid out, drawn [focusedCoverScale] larger about its centre. */
     private fun liftedCollar(box: Rect): Rect {
         val d = compose.density.density
         val collar = Rect(
             box.left - CollarSize.Cover.sidePadding.value * d, box.top - CollarSize.Cover.topPadding.value * d,
             box.right + CollarSize.Cover.sidePadding.value * d, box.bottom + CollarSize.Cover.bottomPadding.value * d,
         )
-        val s = PlumDimens.FOCUSED_COVER_SCALE
+        val s = focusedCoverScale(collar.maxDimension / d)
         return Rect(collar.center.x - collar.width * s / 2f, collar.center.y - collar.height * s / 2f, collar.center.x + collar.width * s / 2f, collar.center.y + collar.height * s / 2f)
     }
 
     /** The box (px) as laid out, drawn larger about its collar's centre. */
+    /** The longest side of the collar round [box], px: what the scale is worked out from. */
+    private fun liftBase(box: Rect): Float {
+        val d = compose.density.density
+        return maxOf(box.width + 2 * CollarSize.Cover.sidePadding.value * d, box.height + (CollarSize.Cover.topPadding + CollarSize.Cover.bottomPadding).value * d)
+    }
+
     private fun liftedAboutCollar(box: Rect): Rect {
         val d = compose.density.density
         val c = Rect(box.left, box.top - CollarSize.Cover.topPadding.value * d, box.right, box.bottom + CollarSize.Cover.bottomPadding.value * d).center
-        val s = PlumDimens.FOCUSED_COVER_SCALE
+        val s = focusedCoverScale(liftBase(box) / d)
         return Rect(c.x + (box.left - c.x) * s, c.y + (box.top - c.y) * s, c.x + (box.right - c.x) * s, c.y + (box.bottom - c.y) * s)
     }
 
@@ -212,7 +222,7 @@ class GridFocusBoundsTest {
                 val box = resting(index)
                 val after = boxInCell(index)
                 assertTrue("$label $size $index: the box stays in its cell ($before vs $after)", abs(before.left - after.left) < 0.5f && abs(before.top - after.top) < 0.5f && abs(before.width - after.width) < 0.5f && abs(before.height - after.height) < 0.5f)
-                assertTrue("$label $size $index: the groove is lit in the accent", near(grooveAt(liftedAboutCollar(box), compose.onRoot().captureToImage().toPixelMap(), PlumDimens.FOCUSED_COVER_SCALE), litGroove(accent)))
+                assertTrue("$label $size $index: the groove is lit in the accent", near(grooveAt(liftedAboutCollar(box), compose.onRoot().captureToImage().toPixelMap(), focusedCoverScale(liftBase(box) / d)), litGroove(accent)))
                 val side = CollarSize.Cover.sidePadding.value * d
                 // The ring (outset) round the larger collar; the halo may fade into the gaps.
                 val reach = PlumDimens.focusRingOutset.value * d

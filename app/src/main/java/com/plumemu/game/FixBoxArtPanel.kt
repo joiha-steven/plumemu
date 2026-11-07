@@ -25,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -55,6 +56,7 @@ import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.TextSize
 import com.plumemu.coreui.theme.rememberListGlide
 import com.plumemu.home.ArtPicture
+import com.plumemu.home.BarRunClips
 import com.plumemu.home.KeepFocusedVisible
 import com.plumemu.home.LocalHomeArt
 import com.plumemu.home.fitInside
@@ -94,7 +96,7 @@ internal fun FixBoxArtBody(
     val line = fixBoxArtLine(state)
     val rows = fixBoxArtRows(state)
     val listState = rememberLazyListState()
-    val glide = rememberListGlide(stride = PlumTheme.layout.rowHeight + PlumDimens.panelRowGap)
+    val glide = rememberListGlide(stride = PlumTheme.layout.rowHeight + PlumDimens.panelRowGap, shadowPastEnds = true)
     // What a store (a pick or No box art) says is drawn under the picked row, inside its list item,
     // so the focused row keeps it on screen: an error must be seen, however deep the row is. The
     // search phases' line is the list's first item (the cursor is on Search then, at the top, and
@@ -105,11 +107,14 @@ internal fun FixBoxArtBody(
     val lineItems = if (topLine == null) 0 else 1
     // The size of each thumbnail file, kept here: a row scrolled out and back draws a decoded picture at once.
     val pictures = remember(state) { mutableStateMapOf<String, ArtPicture>() }
-    val pill = rememberPanelPill(listState, glide, if (state.cursor < 0) -1 else state.cursor + lineItems)
+    val focusedItem = if (state.cursor < 0) -1 else state.cursor + lineItems
+    val pill = rememberPanelPill(listState, glide, focusedItem)
+    val latestFocus = rememberUpdatedState(focusedItem)
+    val clips = remember(listState, glide) { BarRunClips(listState, glide, topRoom = 0f, ramps = true) { latestFocus.value } }
     pill.Provide {
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxWidth().testTag(FixBoxArtTags.ROWS).then(pill.modifier).then(glide.modifier),
+        modifier = Modifier.fillMaxWidth().testTag(FixBoxArtTags.ROWS).then(pill.modifier).then(glide.withFadeMask(clips, isOn = true, hidesCutRows = true)),
         contentPadding = PaddingValues(vertical = glide.extra),
         verticalArrangement = Arrangement.spacedBy(PlumDimens.panelRowGap),
     ) {

@@ -15,6 +15,7 @@ import com.plumemu.account.UtcTimeZone
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
 import org.junit.Assert.assertEquals
@@ -29,7 +30,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Settings › Accounts › Box art in the third column (832x468): the Current badge shares the title's line and the detail below
- * keeps the column's whole width; with the second option focused the list starts on the first (no blank band); with the third focused the option cut by the top edge is hidden, never left as a body without its title.
+ * keeps the column's whole width; with the second option focused a part of the first shows under the fade; with the third focused the option cut by the top edge fades into it over the edge's last 12 dp, no hard slice at the edge and nothing of it above; never left as a body without its title.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -67,17 +68,15 @@ class SettingsBoxArtSourceFitTest {
     }
 
     @Test
-    fun theFirstOptionStaysWhenTheSecondIsFocusedSoNoBlankBandOpens() {
+    fun theOptionAboveShowsUnderTheFadeWhenTheSecondIsFocused() {
         open(1)
-        val intro = compose.onNodeWithText("Where Plumemu gets box art", substring = true, useUnmergedTree = true).getUnclippedBoundsInRoot()
         val first = compose.onNodeWithTag(SettingsTags.panelItem(0), useUnmergedTree = true).getUnclippedBoundsInRoot()
         val list = compose.onNodeWithTag(SettingsTags.PANEL_LIST, useUnmergedTree = true).getUnclippedBoundsInRoot()
-        assertTrue("the first option $first starts at the list's top ${list.top}, whole", first.top >= list.top - 1.dp)
-        assertTrue("no band between the intro ${intro.bottom} and the first option ${first.top}", first.top - intro.bottom < 40.dp)
+        assertTrue("part of the first option $first shows under the list's top ${list.top}", first.bottom >= list.top + EdgePeek - 1.dp)
     }
 
     @Test
-    fun anOptionCutByTheTopEdgeIsHidden() {
+    fun anOptionCutByTheTopEdgeFadesIn() {
         open(2)
         val list = compose.onNodeWithTag(SettingsTags.PANEL_LIST, useUnmergedTree = true).getUnclippedBoundsInRoot()
         val cut = compose.onNodeWithTag(SettingsTags.panelItem(0), useUnmergedTree = true).getUnclippedBoundsInRoot()
@@ -90,9 +89,19 @@ class SettingsBoxArtSourceFitTest {
         val y0 = (list.top.value * density).toInt()
         val y1 = (cut.bottom.value * density).toInt()
         assertTrue("the cut part is $y0 to $y1", y1 > y0)
+        // The list's top edge is plain page: the option's ink comes in over the band below it, no hard slice.
+        var atEdge = 0
+        for (y in y0 until minOf(y0 + density.toInt(), y1)) for (x in x0 until x1) if (far(image.getPixel(x, y), bg)) atEdge++
+        assertEquals("pixels of the cut option in the first dp at the list's top edge", 0, atEdge)
+        // Deeper in, the option is faded, not hidden: some of its ink shows.
+        var inside = 0
+        for (y in y0 + density.toInt() until y1) for (x in x0 until x1) if (far(image.getPixel(x, y), bg)) inside++
+        assertTrue("the cut option shows none of its ink below the first dp: it is hidden, not faded", inside > 0)
+        // And nothing of it above the list's window.
+        val above = y0 - (SlabDimens.listEndRoom.value * density).toInt() / 2
         var stray = 0
-        for (y in y0 until y1) for (x in x0 until x1) if (far(image.getPixel(x, y), bg)) stray++
-        assertEquals("pixels of the cut option inside the list", 0, stray)
+        for (y in above until y0) for (x in x0 until x1) if (far(image.getPixel(x, y), bg)) stray++
+        assertEquals("pixels of the cut option above the list's window", 0, stray)
     }
 
     /** Ink, not the slab's soft glow or a gradient: a channel off by more than 40. */

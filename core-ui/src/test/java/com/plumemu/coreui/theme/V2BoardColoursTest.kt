@@ -1,13 +1,15 @@
 package com.plumemu.coreui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * Colour tokens against the values measured on the V2 design boards, within 2 per channel.
- * The expected values are the board's, never this code's output.
+ * The expected values are the board's, never this code's output; a tone the board mixes from the page is drawn [Depth.RAISE] of the way
+ * there (`raised`).
  */
 class V2BoardColoursTest {
     private fun Color.hex() = toArgb() and 0xFFFFFF
@@ -19,6 +21,29 @@ class V2BoardColoursTest {
     ) {
         val gap = (0..2).maxOf { shift -> kotlin.math.abs(((board shr (8 * shift)) and 0xFF) - ((ours shr (8 * shift)) and 0xFF)) }
         assertTrue("$what: board #%06X, ours #%06X (max channel gap $gap)".format(board, ours), gap <= 2)
+    }
+
+    /** The page moved [t] of the way to the board's [board] tone. */
+    private fun raised(
+        page: Int,
+        board: Int,
+        t: Float = Depth.RAISE,
+    ) = lerp(Color(page or 0xFF000000.toInt()), Color(board or 0xFF000000.toInt()), t).hex()
+
+    /** The tone that lies [boardOff] between [key] and [boardGroove] on the board, on the way from [key] to [groove] instead. */
+    private fun between(
+        key: Int,
+        boardGroove: Int,
+        boardOff: Int,
+        groove: Int,
+    ): Int {
+        var out = 0
+        for (shift in intArrayOf(16, 8, 0)) {
+            val k = (key shr shift) and 0xFF
+            val share = (k - ((boardOff shr shift) and 0xFF)).toDouble() / (k - ((boardGroove shr shift) and 0xFF))
+            out = (out shl 8) or Math.round(k + (((groove shr shift) and 0xFF) - k) * share).toInt()
+        }
+        return out
     }
 
     private val graphite = PlumThemeSettings.Graphite
@@ -47,13 +72,14 @@ class V2BoardColoursTest {
     @Test
     fun graphiteCollarAndKeyTonesAreTheBoards() {
         val c = colours(graphite)
-        near("button lip", 0x202126, c.collar.lipMid.hex())
-        near("button groove", 0x0B0C0C, c.collar.groove.hex())
+        near("button lip", raised(0x111214, 0x202126), c.collar.lipMid.hex())
+        near("button groove", raised(0x111214, 0x0B0C0C), c.collar.groove.hex())
         near("Secondary top", 0x2A2C31, c.collar.cap.hex())
         near("Secondary bottom", 0x232529, c.collar.capBottom.hex())
         near("Secondary middle (the flat face reads between top and bottom)", 0x27292D, c.collar.capBottom.hex())
         near("disabled label", 0x6F737B, c.collar.offText.hex())
-        near("disabled face", 0x18191C, c.keyOff.face.hex())
+        // The off face lies between the key and the groove by the board's share; the groove is at Depth.
+        near("disabled face", between(0x2A2C31, 0x0B0C0C, 0x18191C, raised(0x111214, 0x0B0C0C)), c.keyOff.face.hex())
         near("empty-state disc", 0x0A0B0D, c.collar.well.hex())
         near("field well", 0x07080A, FieldDimens.well(c.bg).hex())
         near("keyboard tray", 0x18191C, c.tray.hex())
@@ -89,9 +115,9 @@ class V2BoardColoursTest {
     @Test
     fun paperGroovesAreTheBoards() {
         val c = colours(paper)
-        near("slider track and off switch (Paper)", 0xD7D0C3, c.collar.groove.hex())
-        near("button groove ring at press and off, slider locked", 0xCCC4B8, c.collar.ring.hex())
-        near("Graphite ring stays the groove", 0x0B0C0C, colours(graphite).collar.ring.hex())
+        near("slider track and off switch (Paper)", raised(0xECE8DF, 0xD7D0C3), c.collar.groove.hex())
+        near("button groove ring at press and off, slider locked", raised(0xECE8DF, 0xCCC4B8), c.collar.ring.hex())
+        near("Graphite ring stays the groove", raised(0x111214, 0x0B0C0C), colours(graphite).collar.ring.hex())
     }
 
     /** The darkest pixel (the groove ring) of a row of a recorded golden, between columns [x0] and [x1]. */

@@ -110,8 +110,8 @@ class SettingsColumnsNavigationTest {
         open()
         tag(SettingsTags.section(SettingsSection.Appearance)).performClick()
         tag(SettingsTags.section(SettingsSection.Appearance)).performClick()
-        tag(SettingsTags.option(SettingsOption.Background)).performClick() // its options, on Background
-        send(Action.Move(Direction.Right)) // into Background's panel
+        tag(SettingsTags.option(SettingsOption.Accent)).performClick() // its options, on Accent color
+        send(Action.Move(Direction.Right)) // into Accent color's panel
         assertSectionsVisible(SettingsSection.Appearance)
         send(Action.Back)
         assertSectionsVisible(SettingsSection.Appearance)
@@ -122,7 +122,7 @@ class SettingsColumnsNavigationTest {
         open()
         tag(SettingsTags.section(SettingsSection.Appearance)).performClick()
         tag(SettingsTags.section(SettingsSection.Appearance)).performClick() // the second tap enters its options
-        tag(SettingsTags.option(SettingsOption.Background)).performClick() // an option is focused
+        tag(SettingsTags.option(SettingsOption.Accent)).performClick() // an option is focused
         assertSectionsVisible(SettingsSection.Appearance)
         tag(SettingsTags.section(SettingsSection.Advanced)).performScrollTo().performClick() // the sections scroll at the default size
         compose.waitForIdle()
@@ -138,7 +138,12 @@ class SettingsColumnsNavigationTest {
         open()
         tag(SettingsTags.section(SettingsSection.Appearance)).performClick()
         tag(SettingsTags.section(SettingsSection.Appearance)).performClick()
-        tag(SettingsTags.option(SettingsOption.Background)).performClick()
+        tag(SettingsTags.value(SettingsOption.Colors)).performClick()
+        compose.waitForIdle()
+        repeat(2) {
+            tag(SettingsTags.panelItem(COLORS_BACKGROUND_ITEM)).performScrollTo().performClick()
+            compose.waitForIdle()
+        }
         tag(SettingsTags.panelItem(0)).performClick()
         compose.waitForIdle()
         assertEquals(ColorSetting.Preset("Graphite"), settings.value.appearance.background)

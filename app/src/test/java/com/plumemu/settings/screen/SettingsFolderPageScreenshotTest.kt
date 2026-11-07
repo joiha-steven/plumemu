@@ -7,7 +7,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Settings › ROM folders › a folder: its page with skipped sub-folders, and Skip a sub-folder… listed, reading and unreadable. */
+/** Settings › Game folders › a folder: its page with skipped sub-folders, and Skip a sub-folder… listed, reading and unreadable. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])

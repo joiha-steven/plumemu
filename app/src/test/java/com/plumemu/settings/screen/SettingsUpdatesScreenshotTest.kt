@@ -56,7 +56,7 @@ class SettingsUpdatesScreenshotTest {
     private fun foundWith(manifest: UpdateManifest, step: UpdateStep = UpdateStep.Idle) = SettingsContent(update = found.copy(found = manifest, step = step))
     private val withUpdate = SettingsContent(update = found)
 
-    /** About › Update available, the second row while one is found. */
+    /** About › Updates, the second row. */
     private val onUpdateRow = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1))
     private val inPanel = onUpdateRow.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0)
 
@@ -90,9 +90,12 @@ class SettingsUpdatesScreenshotTest {
     fun checkRowAfterAFailure() =
         shot(
             "settings_update_check_failed",
-            optionsAt(SettingsOption.CheckForUpdates),
+            optionsAt(SettingsOption.Updates),
             SettingsContent(update = UpdateView(lastCheck = LastCheck(checkedAt, CheckOutcome.Failed(CheckFailure.Offline)))),
         )
 
-    @Test fun dailySwitch() = shot("settings_update_daily", optionsAt(SettingsOption.CheckUpdatesDaily), withUpdate)
+    /** The panel with nothing found, and the daily switch with what it sends brought into view. */
+    @Test fun nothingFound() = shot("settings_update_nothing_found", inPanel, SettingsContent(update = UpdateView(lastCheck = LastCheck(checkedAt, CheckOutcome.UpToDate))))
+
+    @Test fun dailySwitch() = shot("settings_update_daily", inPanel.copy(panelIndex = updatesPanelItems(found).indexOf(UpdatePanelItem.CheckDaily)), withUpdate)
 }

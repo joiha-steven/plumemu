@@ -50,7 +50,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings › Appearance › Text color at every text size, the way
+ * Settings › Appearance › Colors › Text color at every text size, the way
  * `SettingsStatisticsFitTest` checks Statistics: no text is ellipsized, clipped, too short or on top
  * of another, and what the cursor is on is fully on screen: the presets panel, the own-colour page,
  * a refused hex code with its "Use" row, and the notice that a background moved the text.

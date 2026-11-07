@@ -391,15 +391,14 @@ class StartupWorkChangeCheckTest {
     }
 
     @Test
-    fun noCheckWhenScanOnStartupIsOff() = runTest {
+    fun aStoredScanOnStartupOffNoLongerStopsTheCheck() = runTest {
         changes = changed(1)
         val work = started(settings(scanOnStartup = false))
 
         work.onStart()
-        work.onStorageMounted()
         runCurrent()
 
-        assertEquals(emptyList<String>(), done.toList())
+        assertTrue(done.toString(), done.isNotEmpty())
     }
 
     @Test

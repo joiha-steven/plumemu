@@ -206,7 +206,7 @@ class HomeContentTest {
         val noGames = FakeHomeContent.noGames()
         val recent = noGames.entries[0]
         val apps = noGames.entries[2]
-        assertEquals("an empty library asks for a folder, with nothing to open", listOf(R.string.home_hint_add_folder, R.string.home_hint_settings), hintsFor(noGames, Column.Systems, recent).map { it.label })
+        assertEquals("the empty state's Add folder button asks for the folder, so the bar does not repeat it", listOf(R.string.home_hint_settings), hintsFor(noGames, Column.Systems, recent).map { it.label })
         assertEquals(listOf(R.string.home_hint_select, R.string.home_hint_settings, R.string.home_hint_grid_view), hintsFor(noGames, Column.Systems, apps).map { it.label })
         // Apps' grid of icons needs no box art: SELECT is offered on the Apps list too.
         assertEquals(

@@ -1,6 +1,7 @@
 package com.plumemu.settings.screen
 
 import com.plumemu.account.AccountStatus
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.account.SignInForm
 import com.plumemu.account.SignInItem
 import com.plumemu.account.SignInResult
@@ -21,7 +22,8 @@ import org.junit.Test
  */
 internal class SettingsAccountTest : SettingsModelHarness() {
     private fun show(account: AccountStatus) {
-        model.content = model.content.copy(account = account)
+        // Signed out, ScreenScraper as the source: its row is listed, and signs in.
+        model.content = model.content.copy(account = account, chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper.takeIf { account == AccountStatus.SignedOut })
     }
 
     private fun library() = SettingsSection.Library.rowsIn(model.content)
@@ -87,8 +89,7 @@ internal class SettingsAccountTest : SettingsModelHarness() {
     fun theAccountsSectionComesBeforeAdvanced() {
         show(AccountStatus.SignedOut)
         assertEquals(SettingsSection.Advanced.ordinal - 1, SettingsSection.Accounts.ordinal)
-        val rows = library()
-        assertEquals(rows.indexOf(SettingsOption.SortGames) + 1, rows.indexOf(SettingsOption.SystemOrder))
+        assertFalse("System order is in the Systems panel", SettingsOption.SystemOrder in library())
     }
 
     @Test

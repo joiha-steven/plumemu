@@ -3,6 +3,45 @@
 What changed in each version of Plumemu, newest first. Downloads are under
 [Releases](../../releases).
 
+## 0.1.3 (7 November 2026)
+
+One calmer glass look, lists that run under the bars, a shorter Settings and a faster menu.
+
+### New
+
+- Lists, menus and panels now run under the top and bottom bars and fade out there, instead of stopping short.
+- Covers sit in a glass frame with wider gaps, and the focused cover glints once as it lands.
+- The Apps grid has larger icons, one-line names and a thin focus ring.
+- Rescan library also looks for new emulators, so Detect new emulators is gone.
+
+### Improved
+
+- One glass look on every colour set, with tighter shadows, and a focused cover never covers its neighbour.
+- Settings is shorter: about 40 rows instead of 53, with Updates, Back up and restore and Reset each in one place.
+- Background and Text color now sit under Colors, System order under Systems and unknown folders under Files not added.
+- Renamed: Game folders, Left strip, Button sounds, During a game, and Box art & accounts.
+- Removed options now have fixed behaviour: Find new games is always on, list edges always fade, Recent keeps 50 games.
+- Hold to scroll faster is always on, Clock and battery is one switch, and Grid size shows when button hints are off.
+- With the systems focused, the games list now runs to the right margin.
+- The game menu, the list and Settings open with fewer slow frames, and a long Settings explanation scrolls.
+
+### Fixed
+
+- Get it opens the emulator's own page in your browser, and emulators with no page are no longer listed.
+- A folder with no games says so on the home screen, and Files not added no longer contradicts it.
+- Report a problem keeps every line whole and its form scrolls, also at the largest text size.
+- Setup's last step opens with whole cards, and the Apps preview reaches the right margin.
+
+### Known issues
+
+- Wii games in RVZ or WIA are not checked for achievements, and 3DS, MS-DOS and Arduboy games show none yet.
+- The second screen is tested on the AYN Thor only.
+- Most translations other than French have not yet been read by a native speaker.
+
+### Not in this version
+
+- No screenshots or videos of games yet.
+
 ## 0.1.2 (6 November 2026)
 
 A new look, a setup that fits your handheld, and box art without an account.

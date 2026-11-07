@@ -42,7 +42,7 @@ import com.plumemu.coreinput.tapItem
 import com.plumemu.coreui.components.Hint
 import com.plumemu.coreui.components.HintBar
 import com.plumemu.coreui.components.PanelTitleWithDot
-import com.plumemu.coreui.components.panelChrome
+import com.plumemu.coreui.components.raisedCard
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.WidthClass
@@ -224,7 +224,7 @@ internal fun HomeRolePromptLayout(
             Column(
                 Modifier
                     .widthIn(max = PlumDimens.homeRolePromptWidth)
-                    .panelChrome({ colors.sel2 })
+                    .raisedCard()
                     // Scrolls when the text is large and the screen short; the focused button comes into view.
                     .testTag(HomeRoleTags.SCROLL)
                     .verticalScroll(rememberScrollState())

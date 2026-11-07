@@ -101,7 +101,7 @@ internal class SettingsSortHiddenTest : SettingsModelHarness() {
     @Test
     fun hiddenGamesIsListedOnlyWhileSomeAreHidden() {
         assertFalse(SettingsOption.HiddenGames in SettingsSection.Library.rowsIn(SettingsContent()))
-        assertEquals(SettingsOption.HiddenGames, SettingsSection.Library.rowsIn(SettingsContent(hiddenGames = hidden)).dropLast(2).last()) // the two Recent rows come after
+        assertEquals(SettingsOption.HiddenGames, SettingsSection.Library.rowsIn(SettingsContent(hiddenGames = hidden)).dropLast(1).last()) // Clear Recent… comes after
     }
 
     @Test

@@ -1,81 +1,71 @@
 package com.plumemu.settings.screen
 
-import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithText
-import androidx.test.core.app.ApplicationProvider
-import com.plumemu.R
-import com.plumemu.account.AccountStatus
-import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.GridSizeSetting
-import com.plumemu.coredata.settings.PlumSettings
-import com.plumemu.coredata.settings.SetupFlags
-import com.plumemu.coredata.settings.TextSizeSetting
-import com.plumemu.coredata.settings.TextWeightSetting
-import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.theme.PlumTheme
-import com.plumemu.home.appComposeRule
-import com.plumemu.home.rulesAround
-import org.junit.Rule
+import com.plumemu.coreinput.Action
+import com.plumemu.coreinput.Direction
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
-/** Settings › Home screen › Grid size on screen: its label, its value and its explanation, and no row without box art. */
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
-class SettingsGridSizeRowTest {
-    private val compose = appComposeRule()
+/** Home screen › Grid size: touch's way to the size, listed only while the tappable Size hint is gone. */
+internal class SettingsGridSizeRowTest : SettingsModelHarness() {
+    private val hintsOff = SettingsContent(hasNoButtonHints = true)
 
-    @get:Rule
-    val rules = rulesAround(compose)
-
-    private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-
-    private fun text(id: Int) = context.getString(id)
-
-    private fun value(id: Int) = text(id)
-
-    /** Settings › Appearance with [option] focused, [account] and [stored] settings. */
-    private fun show(
-        account: AccountStatus,
-        option: SettingsOption,
-        stored: PlumSettings = PlumSettings(flags = SetupFlags(setupCompleted = true)),
-    ) {
-        val content = SettingsContent(account = account)
-        val rows = SettingsSection.HomeScreen.rowsIn(content)
-        val focus =
-            SettingsFocus(
-                column = SettingsColumn.Options,
-                section = SettingsSection.HomeScreen,
-                rememberedOption = mapOf(SettingsSection.HomeScreen to rows.indexOf(option).coerceAtLeast(0)),
-            )
-        compose.setContent { PlumTheme { SettingsAt(focus, stored, content) } }
+    @Test
+    fun theRowIsListedOnlyWithHintsOff() {
+        assertFalse(SettingsOption.GridSize in SettingsSection.HomeScreen.rowsIn(SettingsContent()))
+        assertEquals(SettingsOption.GridSize, SettingsSection.HomeScreen.rowsIn(hintsOff).last())
     }
 
     @Test
-    fun signedInTheRowShowsMediumAndExplainsItself() {
-        // The default; text size at Large and weight Bold, so the one "‹ Medium ›" on screen is the grid size's.
-        val stored = PlumSettings(appearance = AppearanceSettings(textSize = TextSizeSetting.Large, textWeight = TextWeightSetting.Bold), flags = SetupFlags(setupCompleted = true))
-        show(AccountStatus.SignedIn("plumtester"), SettingsOption.GridSize, stored)
-        compose.onAllNodesWithText(text(R.string.settings_grid_size)).assertCountEquals(2) // the row and its panel's title
-        compose.onNodeWithText(value(R.string.settings_size_medium)).assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.settings_grid_size_body)).assertIsDisplayed()
+    fun itStepsTheStoredSize() {
+        model.content = hintsOff
+        openSection(SettingsSection.HomeScreen)
+        focusOption(SettingsOption.GridSize)
+        assertEquals(GridSizeSetting.Medium, appearance.gridSize)
+        move(Direction.Right)
+        assertEquals(GridSizeSetting.Large, appearance.gridSize)
+        move(Direction.Left)
+        move(Direction.Left)
+        assertEquals(GridSizeSetting.Small, appearance.gridSize)
+        model.onTapValue(SettingsSection.HomeScreen.rowsIn(hintsOff).indexOf(SettingsOption.GridSize), actions.settings, wide)
+        assertEquals("a tap on the value steps too", GridSizeSetting.Medium, appearance.gridSize)
     }
 
     @Test
-    fun aPickedSizeIsTheRowsValue() {
-        // Small, not the default, at Large text so the one "‹ Small ›" on screen is the grid size's.
-        val stored = PlumSettings(appearance = AppearanceSettings(gridSize = GridSizeSetting.Small, textSize = TextSizeSetting.Large), flags = SetupFlags(setupCompleted = true))
-        show(AccountStatus.SignedIn("plumtester"), SettingsOption.GridSize, stored)
-        compose.onNodeWithText(value(R.string.settings_size_small)).assertIsDisplayed()
+    fun whenItLeavesWhileFocusedTheCursorLandsOnTheRowAbove() {
+        model.content = hintsOff
+        openSection(SettingsSection.HomeScreen)
+        focusOption(SettingsOption.GridSize)
+        model.content = SettingsContent()
+        assertEquals(SettingsColumn.Options, model.focus.column)
+        assertEquals(SettingsOption.LeftEdge, model.focusedOption)
+        move(Direction.Up)
+        assertEquals("the cursor still walks", SettingsOption.SystemInfo, model.focusedOption)
     }
 
     @Test
-    fun withoutAnAccountTheRowIsThereToo() {
-        show(AccountStatus.SignedOut, SettingsOption.GridSize)
-        compose.onAllNodesWithText(text(R.string.settings_grid_size))[0].assertIsDisplayed()
+    fun whenItLeavesUnderItsOpenPanelThePanelClosesWithIt() {
+        model.content = hintsOff
+        openSection(SettingsSection.HomeScreen)
+        focusOption(SettingsOption.GridSize)
+        press(Action.Move(Direction.Right), narrow) // steps it: a choice has no panel stop
+        assertNull(model.focus.page)
+        val open = model.focus.copy(column = SettingsColumn.Panel, page = PanelPage.ReadOnly)
+        val kept = SettingsListPages.homeScreenFocusKept(open, hintsOff, SettingsContent())
+        assertEquals(SettingsColumn.Options, kept?.column)
+        assertNull(kept?.page)
+    }
+
+    @Test
+    fun anotherRowOfTheSectionStaysWhereItIs() {
+        model.content = hintsOff
+        openSection(SettingsSection.HomeScreen)
+        focusOption(SettingsOption.ShowApps)
+        model.content = SettingsContent()
+        assertEquals(SettingsOption.ShowApps, model.focusedOption)
+        assertTrue(SettingsSection.HomeScreen.rowsIn(model.content).isNotEmpty())
     }
 }

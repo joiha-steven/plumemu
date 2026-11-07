@@ -117,7 +117,7 @@ class GameLauncherTest {
     fun aPathEmulatorOnAFolderWithoutPathNeedsAFilePath() = runTest {
         installed += "com.ra"
         val id = game(USB_TREE)
-        assertEquals(LaunchOutcome.NeedsFilePath(id, EmulatorOffer("ra-snes9x", "RetroArch: Snes9x", "com.ra")), launcher.launch(id))
+        assertEquals(LaunchOutcome.NeedsFilePath(id, EmulatorOffer("ra-snes9x", "RetroArch: Snes9x", null)), launcher.launch(id))
         assertTrue(started.isEmpty())
     }
 
@@ -177,12 +177,12 @@ class GameLauncherTest {
     }
 
     @Test
-    fun anUninstalledChosenEmulatorIsReportedWithItsStorePackage() = runTest {
+    fun anUninstalledChosenEmulatorIsReportedWithItsPage() = runTest {
         val id = game()
         db.emulatorChoiceDao().setPersonSystemChoice("snes", "snes9x")
         installed += "com.ra"
         assertEquals(
-            LaunchOutcome.EmulatorMissing(id, EmulatorOffer("snes9x", "Snes9x EX+", "com.snes9x"), ChoiceSource.PersonForSystem),
+            LaunchOutcome.EmulatorMissing(id, EmulatorOffer("snes9x", "Snes9x EX+", "https://example.org/snes9x"), ChoiceSource.PersonForSystem),
             launcher.launch(id),
         )
         assertTrue(started.isEmpty())
@@ -196,10 +196,10 @@ class GameLauncherTest {
             LaunchOutcome.EmulatorNotChosen(
                 id, "snes", "Super Nintendo",
                 listOf(
-                    EmulatorOffer("ra-snes9x", "RetroArch: Snes9x", "com.ra"),
-                    EmulatorOffer("risky", "Risky", "com.risky", isLegalRisk = true),
-                    EmulatorOffer("ra-bsnes", "RetroArch: bsnes", "com.ra"),
-                    EmulatorOffer("snes9x", "Snes9x EX+", "com.snes9x"),
+                    EmulatorOffer("ra-snes9x", "RetroArch: Snes9x", null),
+                    EmulatorOffer("risky", "Risky", null, isLegalRisk = true),
+                    EmulatorOffer("ra-bsnes", "RetroArch: bsnes", null),
+                    EmulatorOffer("snes9x", "Snes9x EX+", "https://example.org/snes9x"),
                 ),
                 "ra-snes9x",
             ),
@@ -215,7 +215,7 @@ class GameLauncherTest {
         installed += "com.risky"
         val id = game(systemChoice = null)
         assertEquals(
-            LaunchOutcome.EmulatorNotChosen(id, "snes", "Super Nintendo", listOf(EmulatorOffer("risky", "Risky", "com.risky", isLegalRisk = true)), null),
+            LaunchOutcome.EmulatorNotChosen(id, "snes", "Super Nintendo", listOf(EmulatorOffer("risky", "Risky", null, isLegalRisk = true)), null),
             launcher.launch(id),
         )
         assertTrue(started.isEmpty())
@@ -245,9 +245,9 @@ class GameLauncherTest {
             LaunchOutcome.NoEmulatorForSystem(
                 id, "snes",
                 listOf(
-                    EmulatorOffer("ra-snes9x", "RetroArch: Snes9x", "com.ra"),
-                    EmulatorOffer("ra-bsnes", "RetroArch: bsnes", "com.ra"),
-                    EmulatorOffer("snes9x", "Snes9x EX+", "com.snes9x"),
+                    EmulatorOffer("ra-snes9x", "RetroArch: Snes9x", null),
+                    EmulatorOffer("ra-bsnes", "RetroArch: bsnes", null),
+                    EmulatorOffer("snes9x", "Snes9x EX+", "https://example.org/snes9x"),
                 ),
             ),
             launcher.launch(id),

@@ -24,7 +24,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings › Appearance › Text color: the presets panel, its own-colour
+ * Settings › Appearance › Colors › Text color: the presets panel, its own-colour
  * page on a dark and a light background, a hex code refused with the nearest readable colour, and
  * the line saying a background choice moved the text. Graphite is the dark and Paper the light shot.
  */

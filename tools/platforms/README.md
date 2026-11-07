@@ -154,7 +154,11 @@ JVM test `ConverterTest` runs the converter and compares with the committed asse
    every extension of a system with RetroArch cores by one of those cores..
    The converter fails unless it is a non-empty list of distinct lowercase extensions, each of one
    of the emulator's systems (`common.check_accepts`). Absent: every extension of its systems.
-17. **Whole order.** `SYSTEM_EMULATOR_ORDER` replaces a system's emulator order and must name exactly
+17. **Download pages.** `DOWNLOAD_PAGES` in `tables.py` maps a package to the project's own page, written as the
+   emulator's optional `page`: the row of its own package, else of its first variant that has one. The converter
+   fails on a link that is not https, on a host in `NOT_DOWNLOAD_HOSTS` (the Play Store, sites that re-host APKs), and
+   on a row whose package no emulator lists. Without a row an emulator has no page and the app does not list it to get.
+18. **Whole order.** `SYSTEM_EMULATOR_ORDER` replaces a system's emulator order and must name exactly
    its emulators (steam: GameNative, GameHub Lite, DroidDeck, WinNative; atari7800 and dos: Omnidroid last, so RetroArch stays the default).
 
 ## What is skipped (never guessed)

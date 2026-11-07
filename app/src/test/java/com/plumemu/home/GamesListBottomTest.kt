@@ -19,8 +19,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The games list ends on a whole row, above the hint bar: it is as tall as the rows that fit (`listRowsHeight`), the last whole row is
- * the one the bottom fade covers, and its bottom keeps the bar gap above the hint bar (the room left under the last row stays empty).
+ * The games list runs to the hint bar and shows the rows that fit between the bars whole (`listRowsHeight`); the last whole row ends at or above the
+ * hint bar (its end may stand in the bottom fade), and the next row runs on under the bar, showing no more than the room left.
  */
 abstract class GamesListBottomBase {
     protected val compose = appComposeRule()
@@ -52,20 +52,23 @@ abstract class GamesListBottomBase {
         val rowsHeight = (last.bottom.value - first.top.value)
         val expected = fits * (first.bottom.value - first.top.value)
         assertTrue("rows span $rowsHeight dp of $expected", rowsHeight <= expected + 0.5f)
-        assertTrue("last whole row ends at ${last.bottom.value}, above the hint bar at ${hint.top.value} by the footer gap", last.bottom.value <= hint.top.value - PlumDimens.footerGap.value + 0.5f)
+        assertTrue("last whole row ends at ${last.bottom.value}, not above the hint bar at ${hint.top.value}", last.bottom.value <= hint.top.value + 0.5f)
+        // The row after it runs under the bar: what shows of it is the room left, and a row showing under a third of itself is left out by the list (ListsUnderBarsTest, SystemsColumnSliversTest).
+        val next = shown.firstOrNull { it > whole.last() }?.let { compose.onNodeWithTag(HomeTags.game(it), useUnmergedTree = true).getBoundsInRoot() }
+        if (next != null && next.bottom.value > next.top.value) assertTrue("the next row shows ${next.bottom.value - next.top.value} dp, from ${next.top.value} to ${next.bottom.value}", next.bottom.value <= hint.top.value + 0.5f && next.top.value >= last.bottom.value - 0.5f)
     }
 }
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
 class GamesListBottom768Test : GamesListBottomBase() {
-    @Test fun theListEndsOnARowAboveTheHintBar() = listEndsOnARowAboveTheHintBar(fits = 7)
+    @Test fun theListEndsOnARowAboveTheHintBar() = listEndsOnARowAboveTheHintBar(fits = 8)
 }
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w576dp-h432dp-land-xhdpi")
 class GamesListBottom576Test : GamesListBottomBase() {
-    @Test fun theListEndsOnARowAboveTheHintBar() = listEndsOnARowAboveTheHintBar(fits = 7)
+    @Test fun theListEndsOnARowAboveTheHintBar() = listEndsOnARowAboveTheHintBar(fits = 8)
 }
 
 @RunWith(RobolectricTestRunner::class)

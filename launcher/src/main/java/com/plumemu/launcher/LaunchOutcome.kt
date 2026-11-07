@@ -3,11 +3,12 @@ package com.plumemu.launcher
 import com.plumemu.launcher.choice.ChoiceSource
 
 /**
- * An emulator a message can name and offer from its store page (`market://details?id=<packageName>`).
- * [name] and [packageName] are null for a chosen emulator the platform data no longer lists.
- * [isLegalRisk]: nothing starts before the person chooses; such an emulator is never offered from a store.
+ * An emulator a message can name and offer from its project's download page.
+ * [name] is null for a chosen emulator the platform data no longer lists; [page] is null then too,
+ * and for an emulator the data holds no page for.
+ * [isLegalRisk]: nothing starts before the person chooses; such an emulator is never offered to download.
  */
-data class EmulatorOffer(val emulatorId: String, val name: String?, val packageName: String?, val isLegalRisk: Boolean = false)
+data class EmulatorOffer(val emulatorId: String, val name: String?, val page: String?, val isLegalRisk: Boolean = false)
 
 /** Why the game's file could not be reached. */
 enum class FileProblem {

@@ -1,5 +1,6 @@
 package com.plumemu.coreui.theme
 
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -33,6 +34,29 @@ internal object ColorMath {
             val v = channel / 255.0
             if (v <= 0.03928) v / 12.92 else ((v + 0.055) / 1.055).pow(2.4)
         }
+
+    /** Perceived lightness, CIE L* (0..100). */
+    fun lightness(c: Rgb): Double {
+        val y = luminance(c)
+        return if (y > 216.0 / 24389.0) 116.0 * Math.cbrt(y) - 16.0 else y * 24389.0 / 27.0
+    }
+
+    /** The share of the way from [under] to [ink] that moves perceived lightness [step] L*, or all the way when [ink] lies nearer than that. */
+    fun shareForLightness(
+        under: Rgb,
+        ink: Rgb,
+        step: Double,
+    ): Double {
+        val start = lightness(under)
+        var low = 0.0
+        var high = 1.0
+        if (abs(lightness(ink) - start) <= step) return high
+        repeat(LIGHTNESS_STEPS) {
+            val share = (low + high) / 2
+            if (abs(lightness(mix(under, ink, share)) - start) < step) low = share else high = share
+        }
+        return high
+    }
 
     /** WCAG relative luminance, with the board's 0.03928 threshold. */
     fun luminance(c: Rgb): Double = 0.2126 * linearOfChannel[c.red] + 0.7152 * linearOfChannel[c.green] + 0.0722 * linearOfChannel[c.blue]
@@ -100,4 +124,6 @@ internal object ColorMath {
             }
         return Triple(sector / 6, saturation, lightness)
     }
+
+    private const val LIGHTNESS_STEPS = 12
 }

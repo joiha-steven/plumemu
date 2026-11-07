@@ -35,7 +35,7 @@ had it on, keep the choice they have; the same switch turns it off.)
 Settings › About › Report a problem sends a report only when you press Send. It holds what you
 wrote, an e-mail address if you give one, and, unless you untick it, Plumemu's log and device
 details. The log may contain file and folder names. You see what will be sent before you press
-Send. Settings › Advanced › Export logs only shares the log file where you choose; Plumemu sends
+Send. Share log in Report a problem only shares the log file where you choose; Plumemu sends
 nothing itself. Reports are kept by the developer, with no time limit.
 
 Two other things go over the network: the update check, below, which carries nothing about you,
@@ -46,7 +46,7 @@ to RetroAchievements.
 
 Once a day, on Wi-Fi or Ethernet that is not metered, when Plumemu comes to the front, it asks
 `plumemu-app.stevensdesk.com` whether there is a newer version. It also asks when you press
-Settings › About › Check for updates.
+Check for updates in Settings › About › Updates.
 
 - **What is sent**: a plain HTTPS request for one file, `update/latest.json`. No identifier, no
   account, nothing about your library, your device or the version you have.
@@ -62,7 +62,7 @@ Settings › About › Check for updates.
   second yes), from the same server.
 - **What stays on the device**: when it last checked and what it found, in storage that is never
   backed up.
-- **Turn it off** with Settings › About › Check for updates daily. Check for updates then runs only
+- **Turn it off** with Settings › About › Updates. Check for updates then runs only
   when you press it.
 
 ## Box art (only if you choose it)
@@ -91,7 +91,7 @@ address, as for any web request. Choose Plumemu's own covers and no box art serv
   (`thumbnails.libretro.com`). Nothing else, and no account, goes to either.
 - **What stays on the device**: the box art and details it sends back, and your password,
   encrypted with a key that never leaves the device.
-- **Sign out** in Settings › Accounts › ScreenScraper removes the account from the device.
+- **Sign out** in Settings › Box art & accounts › ScreenScraper removes the account from the device.
 - Your ScreenScraper account is never written to Plumemu's logs.
 
 ## Achievements (only if you sign in to RetroAchievements)
@@ -111,7 +111,7 @@ contact RetroAchievements at all.
 - **What stays on the device**: the game list it downloads, your progress and the games it matched,
   and your key, encrypted with a key that never leaves the device. The key is never written to
   Plumemu's logs and never put in a backup; after a restore you sign in again.
-- **Sign out** in Settings › Accounts › RetroAchievements deletes your name, your key and your
+- **Sign out** in Settings › Box art & accounts › RetroAchievements deletes your name, your key and your
   progress from the device.
 
 ## Battery use

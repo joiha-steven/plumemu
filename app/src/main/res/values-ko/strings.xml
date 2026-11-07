@@ -131,6 +131,7 @@
     <string name="home_empty_choose_folder">폴더 선택</string>
     <string name="home_nogames_title">아직 게임이 없어요</string>
     <string name="home_nogames_body_files">이 폴더에는 이 기기의 에뮬레이터가 여는 파일이 없어요. “추가되지 않은 파일”에서 파일마다 이유를 볼 수 있어요.</string>
+    <string name="home_nogames_body_no_files">이 폴더에는 게임 파일이 없어요. 게임이 들어 있는 폴더를 선택해 주세요.</string>
 
     <!-- The library could not be read (database or platform data failed); shown instead of the main screen. -->
     <string name="home_library_error_title">라이브러리를 열 수 없어요</string>
@@ -157,7 +158,7 @@
     <string name="setup_add_folder">+ 다른 폴더 추가</string>
     <string name="setup_add_folder_sub">SD 카드나 다른 곳에 둔 게임</string>
     <string name="setup_continue">계속</string>
-    <string name="setup_folder_note">폴더는 나중에 설정 › 라이브러리 › ROM 폴더에서 추가하거나 삭제할 수 있어요.</string>
+    <string name="setup_folder_note">폴더는 나중에 설정 › 라이브러리 › 게임 폴더에서 추가하거나 삭제할 수 있어요.</string>
     <!-- A picked folder's name on its card: where it is, then its path ("Internal storage › ROMs"). -->
     <string name="setup_folder_internal">내장 저장공간</string>
     <string name="setup_folder_removable">SD 카드</string>
@@ -196,7 +197,7 @@
     <string name="setup_ready_title">라이브러리가 준비됐어요</string>
     <string name="setup_ready_desc">게임은 기종별로, 이름순으로 정리돼요. 언제든 설정에서 바꿀 수 있어요.</string>
     <string name="setup_ready_naming">이름을 계속 채우는 중 · 백그라운드에서 계속돼요</string>
-    <string name="setup_ready_empty_desc">나중에 설정 › 라이브러리 › ROM 폴더에서 폴더를 추가하세요.</string>
+    <string name="setup_ready_empty_desc">나중에 설정 › 라이브러리 › 게임 폴더에서 폴더를 추가하세요.</string>
     <string name="setup_ready_empty_title">아직 찾은 게임이 없어요</string>
     <string name="setup_ready_no_folder_title">게임은 나중에 추가할 수 있어요</string>
     <string name="setup_ready_no_folder_desc">준비되면 홈 화면에서 게임 폴더를 선택하세요.</string>
@@ -344,7 +345,7 @@
     <string name="game_fix_box_art_waiting">아직 저장하고 있어요. 백그라운드에서 받는 박스 아트를 먼저 처리하면 1분 정도 걸릴 수 있어요.</string>
     <string name="game_fix_box_art_daily_limit">ScreenScraper의 하루 한도에 도달했어요. %1$s 이후에 다시 시도하세요.</string>
     <string name="game_fix_box_art_server_closed">지금은 ScreenScraper를 이용할 수 없어요. %1$s 이후에 다시 시도하세요.</string>
-    <string name="game_fix_box_art_sign_in_again">ScreenScraper에서 비밀번호를 거부했어요. 설정 › 계정 › ScreenScraper에서 다시 로그인하세요.</string>
+    <string name="game_fix_box_art_sign_in_again">ScreenScraper에서 비밀번호를 거부했어요. 설정 › 박스 아트 및 계정 › ScreenScraper에서 다시 로그인하세요.</string>
     <string name="game_fix_box_art_offline">인터넷에 연결되어 있지 않아요. Wi-Fi를 확인한 다음 다시 시도하세요.</string>
     <string name="game_fix_box_art_no_wifi">Wi-Fi에 연결되어 있지 않아요. 박스 아트는 Wi-Fi에서만 찾아요.</string>
     <string name="game_fix_box_art_server_error">ScreenScraper가 응답하지 못했어요(코드 %1$s). 나중에 다시 시도하세요.</string>
@@ -390,7 +391,7 @@
     <!-- %1$s is the emulator chosen for every game of the system, %2$s the system's name. -->
     <string name="game_play_with_system_choice_missing">%2$s 게임 전체에 지정한 %1$s 에뮬레이터가 설치되어 있지 않아요. 이 게임에 쓸 에뮬레이터를 고르세요.</string>
     <string name="game_play_with_not_installed">설치 안 됨</string>
-    <!-- Value at the right of an emulator that is not installed: opens its store page. -->
+    <!-- Value at the right of an emulator that is not installed: opens its project's page. -->
     <string name="game_get_it">받기</string>
     <!-- Badge on the emulator this game uses now. -->
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
@@ -479,8 +480,8 @@
     <string name="game_app_kind_later_body">Plumemu가 설치된 앱을 다시 읽을 때 적용됩니다.</string>
     <string name="game_rename_box_art_title">이름은 저장했지만 박스 아트는 찾지 않았어요</string>
     <string name="game_rename_box_art_no_wifi">Wi-Fi에 연결되어 있지 않아요.</string>
-    <string name="game_rename_box_art_sign_in">설정 › 계정 › ScreenScraper에서 로그인하세요.</string>
-    <string name="game_rename_box_art_paused">박스 아트 다운로드가 일시중지되어 있어요. 설정 › 계정 › ScreenScraper에서 다시 시작하세요.</string>
+    <string name="game_rename_box_art_sign_in">설정 › 박스 아트 및 계정 › 박스 아트에서 로그인하세요.</string>
+    <string name="game_rename_box_art_paused">박스 아트 다운로드가 일시중지되어 있어요. 설정 › 박스 아트 및 계정 › ScreenScraper에서 다시 시작하세요.</string>
     <string name="game_rename_box_art_daily_limit">ScreenScraper의 하루 한도에 도달했어요. %1$s 이후에 다시 시도하세요.</string>
     <string name="game_rename_box_art_server_closed">%1$s까지 ScreenScraper를 이용할 수 없어요.</string>
     <string name="game_error_internal_title">게임을 시작할 수 없어요</string>
@@ -510,9 +511,9 @@
     <!-- After Hide in the game menu; %1$s is the game's title. -->
     <string name="game_hidden_title">게임을 숨겼어요</string>
     <string name="game_hidden_body">%1$s 항목이 모든 목록에서 빠졌어요. 설정 › 라이브러리 › 숨긴 게임에서 되돌릴 수 있어요.</string>
-    <string name="game_error_store_title">스토어 페이지를 열 수 없어요</string>
+    <string name="game_error_page_title">다운로드 페이지를 열 수 없어요</string>
     <!-- %1$s is an emulator's name. -->
-    <string name="game_error_store_body">이 기기의 앱 스토어나 웹 브라우저로 열 수 없었어요. %1$s 프로젝트 페이지에서 받으세요.</string>
+    <string name="game_error_page_body">이 기기의 웹 브라우저로 열 수 없었어요. %1$s 프로젝트 페이지에서 받으세요.</string>
     <!-- Opening an app of the Apps entry failed. %1$s is the app's name. -->
     <string name="app_error_missing_title">%1$s 앱이 더 이상 설치되어 있지 않아요</string>
     <string name="app_error_missing_body">목록을 불러온 뒤 삭제되었거나 사용 중지되었어요. 앱 목록에서 빠져요.</string>
@@ -553,7 +554,7 @@
     <string name="settings_switch_off">꺼짐</string>
 
     <!-- Library -->
-    <string name="settings_rom_folders">ROM 폴더</string>
+    <string name="settings_rom_folders">게임 폴더</string>
     <string name="settings_library_unreadable">폴더와 에뮬레이터 정보를 불러오지 못했어요. 설정을 닫았다가 다시 열어 보세요.</string>
     <plurals name="settings_folders_count">
         <item quantity="other">폴더 %1$s개</item>
@@ -581,7 +582,7 @@
     <string name="settings_skip_subfolder_unreadable">이 폴더를 읽지 못했습니다. SD 카드에 있다면 카드가 꽂혀 있는지 확인하세요.</string>
     <string name="settings_skip_subfolder_none">이 폴더에는 건너뛸 하위 폴더가 없습니다.</string>
     <string name="settings_rescan">라이브러리 다시 스캔</string>
-    <string name="settings_rescan_body">폴더를 다시 읽고 바뀐 게임을 추가하거나 삭제해요.</string>
+    <string name="settings_rescan_body">폴더를 다시 읽고 새 에뮬레이터도 찾아요.</string>
     <!-- Value of Rescan library while a scan runs. -->
     <string name="settings_rescan_running">스캔 중…</string>
     <!-- Rescan library's panel while a scan runs. No total is known during the walk. -->
@@ -608,14 +609,13 @@
     <plurals name="settings_rescan_removed">
         <item quantity="other">삭제된 파일 %1$s개</item>
     </plurals>
-    <!-- %1$s is the folder as the ROM folders list names it ("SD card › Games"). -->
+    <!-- %1$s is the folder as the Game folders list names it ("SD card › Games"). -->
     <string name="settings_rescan_revoked">%1$s: 접근 권한이 사라졌어요. 폴더를 다시 선택하세요.</string>
     <string name="settings_rescan_missing">%1$s: 찾을 수 없어요. SD 카드가 꽂혀 있나요?</string>
     <string name="settings_rescan_read_failed">%1$s: 읽지 못했어요. 다시 시도하세요.</string>
     <string name="settings_rescan_a_folder">폴더 하나</string>
     <string name="settings_rescan_failed">게임을 불러오지 못했어요. 다시 시도하세요.</string>
     <string name="settings_rescan_busy">이미 게임을 불러오는 중이에요.</string>
-    <string name="settings_scan_on_startup">새 게임 자동으로 찾기</string>
     <string name="settings_sort_games">게임 정렬</string>
     <string name="settings_sort_by_name">이름순</string>
     <string name="settings_sort_by_last_played">최근 플레이순</string>
@@ -624,8 +624,6 @@
     <string name="settings_sort_by_year">출시 연도순</string>
     <string name="settings_sort_by_rating">평점순</string>
     <string name="settings_sort_games_body">기종별 목록과 즐겨찾기의 정렬 방식이에요. 정렬 기준이 없는 게임(플레이한 적 없음, 연도 없음, 평점 없음)은 이름순으로 뒤에 놓여요. 출시 연도와 평점은 ScreenScraper의 값이 있는 게임이 있을 때만 나와요. 최근 플레이에는 항상 마지막으로 한 게임이 맨 위에 나와요.</string>
-    <string name="settings_recent_size">최근 플레이 개수</string>
-    <string name="settings_recent_size_body">최근 플레이에 보관할 게임 수예요. 가득 차면 가장 오래전에 한 게임부터 빠져요. 플레이 시간과 통계는 그대로예요.</string>
     <string name="settings_clear_recent">최근 플레이 비우기…</string>
     <string name="settings_clear_recent_body">최근 플레이를 비워요. 게임을 다시 하면 목록에 돌아와요. 플레이 시간과 통계는 남아요.</string>
     <string name="settings_clear_recent_confirm">비우기</string>
@@ -679,12 +677,11 @@
     <string name="settings_name_fix_failed">이름을 저장하지 못했어요. 아무것도 바뀌지 않았어요.</string>
     <string name="settings_name_fix_game_gone">그 게임은 더 이상 라이브러리에 없어요.</string>
     <string name="settings_rename_box_art_no_wifi">이름은 저장했지만 박스 아트는 찾지 않았어요. Wi-Fi에 연결되어 있지 않아요.</string>
-    <string name="settings_rename_box_art_sign_in">이름은 저장했지만 박스 아트는 찾지 않았어요. 설정 › 계정 › ScreenScraper에서 로그인하세요.</string>
-    <string name="settings_rename_box_art_paused">이름은 저장했지만 박스 아트는 찾지 않았어요. 박스 아트 다운로드가 일시중지되어 있어요. 설정 › 계정 › ScreenScraper에서 다시 시작하세요.</string>
+    <string name="settings_rename_box_art_sign_in">이름은 저장했지만 박스 아트는 찾지 않았어요. 설정 › 박스 아트 및 계정 › 박스 아트에서 로그인하세요.</string>
+    <string name="settings_rename_box_art_paused">이름은 저장했지만 박스 아트는 찾지 않았어요. 박스 아트 다운로드가 일시중지되어 있어요. 설정 › 박스 아트 및 계정 › ScreenScraper에서 다시 시작하세요.</string>
     <string name="settings_rename_box_art_daily_limit">이름은 저장했지만 박스 아트는 찾지 않았어요. ScreenScraper의 하루 한도에 도달했어요. 나중에 다시 시도하세요.</string>
     <string name="settings_rename_box_art_server_closed">이름은 저장했지만 박스 아트는 찾지 않았어요. 지금은 ScreenScraper를 이용할 수 없어요.</string>
     <string name="settings_titles_unreadable">%1$s의 이름 목록을 읽지 못했어요. 나중에 다시 시도하세요.</string>
-    <string name="settings_scan_on_startup_body">Plumemu를 시작하거나 다시 돌아올 때 새로 생기거나 없어진 게임을 찾아요. 바뀐 폴더만 다시 읽어요.</string>
 
     <!-- Emulators. %1$s is a system's name, %2$s the confirm button's letter. -->
     <string name="settings_emulators_body">%1$s 게임에서 %2$s 버튼을 누르면 이 에뮬레이터로 실행해요. 게임 하나만 다른 에뮬레이터로 실행하려면 그 게임의 메뉴 › 에뮬레이터 지정…에서 고르세요.</string>
@@ -697,15 +694,8 @@
         <item quantity="other">이 기기에서 에뮬레이터 %1$s개를 찾았어요</item>
     </plurals>
     <string name="settings_emulator_choice_failed">선택을 저장하지 못했어요.</string>
-    <string name="settings_detect_emulators">새 에뮬레이터 찾기</string>
-    <string name="settings_detect_body">새 에뮬레이터는 Plumemu가 알아서 찾아요. 빠진 에뮬레이터가 있을 때 사용하세요.</string>
-    <string name="settings_detect_running">확인 중…</string>
-    <string name="settings_detect_done">완료했어요. 지금 설치된 에뮬레이터에 맞춰 추천해요.</string>
-    <string name="settings_detect_failed">설치된 에뮬레이터를 확인하지 못했어요.</string>
 
     <!-- Controls -->
-    <string name="settings_hold_to_scroll">길게 눌러 빠르게 스크롤</string>
-    <string name="settings_hold_to_scroll_body">위나 아래를 길게 누르면 긴 목록에서 커서가 점점 빨라져요. 끄면 항상 같은 속도로 움직여요.</string>
     <string name="settings_push_right">오른쪽 두 번 눌러 플레이</string>
     <string name="settings_push_right_body">한 손으로 플레이할 수 있어요. 게임 목록에서 오른쪽을 두 번 누르면 선택한 게임이 시작돼요. 한 번 누르면 실행 준비가 되고, 2초 안에 한 번 더 누르면 시작돼요. 다른 버튼을 누르면 취소돼요. A 버튼도 그대로 쓸 수 있어요. 화면이 좁은 기기에서는 이때 세부 정보 열을 터치로 열어요. 언제든 여기서 끌 수 있어요.</string>
     <string name="settings_show_hints">버튼 가이드 표시</string>
@@ -721,10 +711,9 @@
     <string name="settings_home_unavailable">이 기기에는 홈 앱을 고르는 화면이 없어요. Android 설정 › 앱 › 기본 앱에서 Plumemu를 선택하세요.</string>
     <string name="settings_show_apps">Android 앱 표시</string>
     <string name="settings_show_apps_body">기기의 모든 Android 앱을 즐겨찾기 바로 아래 ‘앱’에 보여 줘요. 끄면 ‘앱’ 항목이 표시되지 않아요.</string>
-    <string name="settings_clock">시계 표시</string>
-    <string name="settings_clock_body">화면 오른쪽 위에 시간을 표시해요.</string>
-    <string name="settings_edge_fade">목록 가장자리 흐리게</string>
-    <string name="settings_edge_fade_body">홈 화면의 목록과 격자는 더 스크롤할 내용이 있을 때 위아래 가장자리가 흐려져요. 끄면 가장자리가 반듯하게 끝나요.</string>
+    <string name="settings_clock_battery">시계 및 배터리</string>
+    <string name="settings_clock_battery_body">화면 오른쪽 위에 시간과 배터리 잔량을 표시해요.</string>
+    <string name="settings_clock_battery_body_two_screens">화면 오른쪽 위에 시간과 배터리 잔량을 표시해요. 배터리 잔량은 보조 화면의 시계에도 표시돼요.</string>
     <!-- The band over a system's games list ("Nintendo · Home console · 1990–2003". -->
     <string name="system_kind_console">가정용 게임기</string>
     <string name="system_kind_handheld">휴대용 게임기</string>
@@ -800,9 +789,6 @@
     <string name="system_about_fbneo">FinalBurn과 예전 MAME 버전을 바탕으로 해요. 캡콤 CPS-1, CPS-2, CPS-3, 네오지오, 세가 System 16 기판을 에뮬레이션해요.</string>
     <string name="settings_system_info">기종 정보</string>
     <string name="settings_system_info_body">게임 목록 맨 위에 기종 배지, 한 줄 요약(제조사, 종류, 연도), 그 기종에 관한 짧은 소개를 보여 줘요.</string>
-    <string name="settings_show_battery">배터리 표시</string>
-    <string name="settings_show_battery_body">화면 오른쪽 위에 배터리 잔량을 표시해요.</string>
-    <string name="settings_show_battery_body_two_screens">화면 오른쪽 위에 배터리 잔량을 표시해요. 보조 화면의 시계에도 표시돼요.</string>
     <!-- Second screen, picking cards. Top line: "Super Nintendo · USA"; the separator is also used in the facts line (quoted: Android trims the spaces of an unquoted string). -->
     <string name="second_screen_android_app">Android 앱</string>
     <string name="second_screen_app_tag">앱</string>
@@ -886,7 +872,7 @@
     <!-- %1$s is the time of day charging was first seen. -->
     <string name="in_game_battery_charging_since">%1$s부터</string>
     <string name="in_game_battery_measuring">배터리 사용량 측정 중…</string>
-    <!-- Shown once for a minute the first time the in-game card shows; also ends Settings › Second screen › In game's text. -->
+    <!-- Shown once for a minute the first time the in-game card shows; also ends Settings › Second screen › During a game's text. -->
     <string name="in_game_drift_note">화면을 보호하기 위해 1분마다 조금씩 움직여요</string>
     <!-- The picking line of a game measured before: "2 h on this charge · 30% an hour"; charging: the pace only. %1$s is a duration or a percentage. The pace's spaces do not break, so "an hour" never wraps alone. -->
     <string name="battery_line_on_charge">남은 배터리로 %1$s</string>
@@ -903,7 +889,7 @@
     <string name="second_screen_setup_question">Plumemu가 여기에 지금 고른 게임을 보여 줄 수 있어요.</string>
     <string name="settings_second_screen">보조 화면 사용</string>
     <string name="settings_second_screen_body">지금 고른 게임을 보여 줘요. 플레이하는 데 꼭 필요하지는 않아요.</string>
-    <string name="settings_second_screen_in_game">게임 중</string>
+    <string name="settings_second_screen_in_game">게임하는 동안</string>
     <string name="settings_second_screen_in_game_body">게임 중에 보조 화면에 표시할 내용이에요. 두 화면을 쓰는 에뮬레이터는 보조 화면을 알아서 사용해요. 화면을 보호하기 위해 카드가 1분마다 조금씩 움직여요.</string>
     <string name="settings_second_screen_clock">시계와 배터리</string>
     <string name="settings_second_screen_black">검은 화면</string>
@@ -911,7 +897,7 @@
     <!-- Appearance -->
     <!-- Ready-made colour sets (never a console's or a brand's name. -->
     <string name="settings_colors">색상 테마</string>
-    <string name="settings_colors_panel_help">테마를 고르세요. 직접 만든 색상은 ‘사용자 지정’에 남아 있어요.</string>
+    <string name="settings_colors_panel_help">테마를 고르세요. 직접 만들려면 아래의 ‘배경’이나 ‘글자 색상’을 바꾸세요. 직접 만든 색상은 ‘사용자 지정’에 남아 있어요.</string>
     <string name="settings_colors_paper">종이</string>
     <string name="settings_colors_pocket">포켓</string>
     <string name="settings_colors_dot_matrix">도트 매트릭스</string>
@@ -927,7 +913,7 @@
     <string name="settings_font">글꼴</string>
     <string name="settings_text_size">글자 크기</string>
     <string name="settings_text_weight">글자 굵기</string>
-    <string name="settings_left_edge">왼쪽 가장자리</string>
+    <string name="settings_left_edge">왼쪽 띠</string>
     <string name="settings_grid_size">그리드 크기</string>
     <string name="settings_bg_graphite">그래파이트</string>
     <string name="settings_bg_black">검정</string>
@@ -1026,7 +1012,7 @@
     <string name="settings_font_body">Plumemu의 모든 글자에 쓰는 글꼴이에요.</string>
     <string name="settings_text_size_body">Plumemu의 모든 글자 크기를 바꿔요. Android의 글꼴 크기 설정도 함께 적용돼요.</string>
     <string name="settings_text_weight_body">Plumemu의 모든 글자 굵기를 바꿔요.</string>
-    <string name="settings_left_edge_body">게임 목록을 보고 있을 때 왼쪽 가장자리의 좁은 띠에 표시할 내용: 기종별 게임 수, 기종별 짧은 코드, 또는 현재 목록의 글자.</string>
+    <string name="settings_left_edge_body">게임 목록을 보고 있을 때 왼쪽의 좁은 띠에 표시할 내용: 기종별 게임 수, 기종별 짧은 코드, 또는 현재 목록의 글자.</string>
     <string name="settings_grid_size_body">그리드 보기에서 커버의 크기예요. 모든 기종과 최근 플레이, 즐겨찾기에 적용돼요. ‘작게’는 한 번에 가장 많은 게임을, ‘크게’는 가장 적은 게임을 보여 줘요.</string>
     <!-- Sample lines in the colour and font panels (the board's). -->
 
@@ -1036,13 +1022,13 @@
     <string name="settings_confirm_bottom_body">끄면 A로 확인하고 B로 뒤로 가요. 켜면 B로 확인하고 A로 뒤로 가요. PlayStation 패드에서는 끄면 ×, 켜면 ○로 확인해요. 버튼 가이드도 바로 바뀌어요.</string>
     <string name="settings_animations">애니메이션</string>
     <string name="settings_animations_body">화면 전환과 작은 움직임 효과예요. 끄면 화면이 바로 바뀌어요. Android 애니메이션이 꺼져 있을 때도 꺼져요.</string>
-    <string name="settings_sounds">효과음</string>
+    <string name="settings_sounds">버튼 소리</string>
     <string name="settings_sounds_body">이동하거나 버튼을 누를 때 부드러운 클릭음이 나며, 미디어 볼륨을 따라요. 끔, 작게, 크게 중에서 고를 수 있어요.</string>
     <string name="settings_sounds_off">끔</string>
     <string name="settings_sounds_quiet">작게</string>
     <string name="settings_sounds_loud">크게</string>
     <string name="settings_vibration">진동</string>
-    <string name="settings_vibration_body">이동할 때는 가볍게, 확인할 때는 더 강하게 진동해요. 끄면 진동하지 않아요. 진동 모터가 없는 기기에서는 적용되지 않아요.</string>
+    <string name="settings_vibration_body">이동할 때는 가볍게, 확인할 때는 더 강하게 진동해요. 끄면 진동하지 않아요.</string>
     <string name="settings_usage_statistics">사용 통계 보내기</string>
     <!-- setup_stats_body is its short form; settings_privacy_body and the public PRIVACY.md say the same (change them together). -->
     <string name="settings_usage_statistics_body">직접 켠 경우에만 익명 사용 집계와 오류 보고를 보내요. 국가, 기기 모델, Android 버전과 앱 버전, 사용하는 화면과 설정, 플레이 시간(게임별이 아닌 기종별)이 포함돼요. 게임 제목, 검색어, ScreenScraper 계정은 보내지 않아요. 오류 보고에는 파일 경로가 들어 있을 수 있어요. 끄면 Plumemu가 익명으로 “꺼짐” 집계를 한 번 보내고, 그 뒤로는 아무것도 보내지 않아요.</string>
@@ -1050,6 +1036,7 @@
     <string name="settings_reset_all_body">모든 설정을 처음 상태로 되돌려요. 라이브러리, 폴더, 초기 설정은 그대로 남아요.</string>
     <string name="settings_reset_all_done">설정을 초기화했어요.</string>
     <!-- Settings › Advanced › Back up… -->
+    <string name="settings_backup_and_restore">백업 및 복원</string>
     <string name="settings_backup">백업…</string>
     <string name="settings_backup_title">백업</string>
     <string name="settings_backup_body">선택한 파일에 사본을 저장해요. ‘설정’은 모든 설정과 ScreenScraper 계정을, ‘전체’는 여기에 더해 라이브러리, 즐겨찾기, 플레이 시간, 에뮬레이터 선택, 박스 아트까지 저장해요.</string>
@@ -1117,7 +1104,7 @@
     <string name="settings_restore_sign_in_again">이 파일에는 쓸 수 있는 ScreenScraper 비밀번호가 없어요. 복원한 뒤 다시 로그인하세요.</string>
     <string name="settings_restore_running">복원 중…</string>
     <string name="settings_restore_running_restart">복원 중… 완료되면 Plumemu가 다시 시작돼요.</string>
-    <string name="settings_restore_done_everything">%1$s의 전체 백업을 복원했어요. 다른 기기의 폴더는 라이브러리 › ROM 폴더에서 다시 선택하세요.</string>
+    <string name="settings_restore_done_everything">%1$s의 전체 백업을 복원했어요. 다른 기기의 폴더는 라이브러리 › 게임 폴더에서 다시 선택하세요.</string>
     <string name="settings_restore_done_settings">%1$s의 설정을 복원했어요.</string>
     <string name="settings_restore_failed">복원하지 못했어요. 모두 원래대로 되돌렸어요.</string>
     <string name="settings_restore_failed_not_put_back">복원하지 못했고, 아직 모두 원래대로 되돌리지 못했어요. 다음에 Plumemu를 시작할 때 다시 시도해요.</string>
@@ -1164,12 +1151,13 @@
     <string name="settings_undo_done">지난 복원을 취소했어요.</string>
     <string name="settings_undo_failed">복원을 취소하지 못했어요. 모두 그대로 두었어요.</string>
     <string name="settings_reset_library">라이브러리 초기화</string>
+    <string name="settings_reset_row">초기화…</string>
     <!-- Settings › Advanced › Export logs: shares the app's log file with Android's share sheet. -->
     <string name="settings_export_logs">로그 내보내기</string>
     <string name="settings_export_logs_body">문제 신고에 첨부할 수 있도록 Plumemu의 로그 파일을 원하는 곳으로만 공유해요. 폴더와 파일 이름이 들어 있을 수 있어요.</string>
     <string name="settings_export_logs_failed">로그를 공유하지 못했어요.</string>
     <string name="settings_export_logs_chooser">로그 공유</string>
-    <string name="settings_reset_library_body">모든 게임을 즐겨찾기, 플레이 시간과 함께 지우고 폴더를 다시 스캔해요. 폴더는 그대로 남아요. 되돌릴 수 없으니 먼저 설정 › 고급 › 백업…에서 백업하세요.</string>
+    <string name="settings_reset_library_body">모든 게임을 즐겨찾기, 플레이 시간과 함께 지우고 폴더를 다시 스캔해요. 폴더는 그대로 남아요. 되돌릴 수 없으니 먼저 설정 › 고급 › 백업 및 복원에서 백업하세요.</string>
     <string name="settings_reset_library_done">라이브러리를 초기화했어요. 폴더를 다시 스캔하고 있어요.</string>
     <string name="settings_reset_library_forgetting">라이브러리 초기화 중…</string>
     <string name="settings_reset_library_failed">라이브러리를 초기화하지 못했어요. 아무것도 삭제되지 않았어요.</string>
@@ -1249,6 +1237,7 @@
     <string name="report_email_hint">답변 받을 이메일(선택)</string>
     <string name="report_details">로그와 기기 정보 포함</string>
     <string name="report_send">보내기</string>
+    <string name="report_share_log">로그 공유</string>
     <string name="report_sends_all">입력한 내용, 이메일(입력한 경우), 로그, 기기 정보, 익명 설치 ID를 보내요.</string>
     <string name="report_sends_details">입력한 내용, 이메일(입력한 경우), 로그, 기기 정보를 보내요.</string>
     <string name="report_sends_id">입력한 내용, 이메일(입력한 경우), 익명 설치 ID를 보내요.</string>
@@ -1263,12 +1252,13 @@
     <string name="report_error_refused">서버에서 이 신고를 받지 않았어요. 이메일 주소를 확인하세요. 입력한 내용은 남아 있으니 다시 시도할 수 있어요.</string>
     <string name="report_error_unavailable">이 빌드에서는 신고를 보낼 수 없어요. ‘로그 내보내기’로 파일을 직접 보내 주세요.</string>
     <string name="report_error_not_saved">이 기기에 신고를 저장하지 못했어요.</string>
-    <string name="settings_privacy_body">라이브러리, 설정, 플레이 시간은 이 기기의 Plumemu 전용 저장공간에만 있고, 밖으로 보내지 않아요. 직접 켠 경우에만(설정 › 정보 › 사용 통계 보내기) Plumemu는 개발자에게 익명 사용 집계와 오류 보고를 보내요. 국가, 기기 모델, Android 버전과 앱 버전, 사용하는 화면과 설정, 기종별 플레이 시간이 포함돼요. 게임 제목, 검색어, ScreenScraper 계정은 보내지 않아요. 오류 보고에는 파일 경로가 들어 있을 수 있어요. 끄면 익명으로 “꺼짐” 집계를 한 번 보내고, 그 뒤로는 아무것도 보내지 않아요. 문제 신고는 ‘문제 신고’에서 ‘보내기’를 눌렀을 때만 보내며, 첨부하기로 고른 로그와 그 안의 파일 경로가 포함될 수 있어요. 보낸 정보는 기한 없이 보관해요. Plumemu는 하루에 한 번 Wi-Fi에서 plumemu-app.stevensdesk.com에 새 버전이 있는지 확인해요. 이 서버를 호스팅하는 Cloudflare는 IP 주소를 볼 수 있어요. 위의 ‘매일 업데이트 확인’에서 끌 수 있어요. 같은 매일 확인에서 같은 서버로부터 최신 플랫폼 데이터(기종과 에뮬레이터 목록)도 내려받아요. 그 밖에는 아무것도 보내지 않아요. ScreenScraper 계정을 쓰면 박스 아트를 찾기 위해 Plumemu가 ScreenScraper에 게임마다 파일 이름, 크기, 체크섬을 보내고, 이것으로 찾지 못하면 제목도 보내요. RetroAchievements 계정을 쓰면 Plumemu가 retroachievements.org에 사용자 이름, 키, 게임마다 RetroAchievements 번호를 보내요. 게임 정보를 열 때, 플레이한 뒤, 그리고 Wi-Fi에서 하루에 한 번이에요. 배지 그림은 media.retroachievements.org에서 받아요. 키는 이 기기에 암호화해 저장하고 백업이나 로그에는 절대 넣지 않아요. 로그아웃하면 보내지 않아요. 설정 \u203A 통계에서 정확한 플레이 시간을 켜면, Plumemu는 Android의 사용 기록 접근에서 플레이 시간대의 이벤트를 받아 Plumemu에서 시작한 게임이나 앱과 화면에 관한 것만 남깁니다. 플레이 시간의 길이 외에는 저장하지 않으며 전송하지 않습니다.</string>
+    <string name="settings_privacy_body">라이브러리, 설정, 플레이 시간은 이 기기의 Plumemu 전용 저장공간에만 있고, 밖으로 보내지 않아요. 직접 켠 경우에만(설정 › 정보 › 사용 통계 보내기) Plumemu는 개발자에게 익명 사용 집계와 오류 보고를 보내요. 국가, 기기 모델, Android 버전과 앱 버전, 사용하는 화면과 설정, 기종별 플레이 시간이 포함돼요. Plumemu가 이름을 알아내지 못한 게임은 기종, 파일 저장 방식, 크기, CRC-32, 게임에서 읽은 제품 코드나 디스크 시리얼도 설치당 한 번 보내요. 게임 제목, 검색어, ScreenScraper 계정은 보내지 않아요. 오류 보고에는 파일 경로가 들어 있을 수 있어요. 끄면 익명으로 “꺼짐” 집계를 한 번 보내고, 그 뒤로는 아무것도 보내지 않아요. 문제 신고는 ‘문제 신고’에서 ‘보내기’를 눌렀을 때만 보내며, 첨부하기로 고른 로그와 그 안의 파일 경로가 포함될 수 있어요. 보낸 정보는 기한 없이 보관해요. Plumemu는 하루에 한 번 Wi-Fi에서 plumemu-app.stevensdesk.com에 새 버전이 있는지 확인해요. 이 서버를 호스팅하는 Cloudflare는 IP 주소를 볼 수 있어요. 설정 › 정보 › 업데이트에서 끌 수 있어요. 같은 매일 확인에서 같은 서버로부터 최신 플랫폼 데이터(기종과 에뮬레이터 목록)도 내려받아요. 그 밖에는 아무것도 보내지 않아요. ScreenScraper 계정을 쓰면 박스 아트를 찾기 위해 Plumemu가 ScreenScraper에 게임마다 파일 이름, 크기, 체크섬을 보내고, 이것으로 찾지 못하면 제목도 보내요. 박스 아트만 쓰면 Plumemu는 Wi-Fi에서 libretro의 공개 서버(thumbnails.libretro.com)에서 박스 앞면을 내려받아요. 주소에 게임 이름이 들어가고, 이 서버는 IP 주소를 볼 수 있어요. RetroAchievements 계정을 쓰면 Plumemu가 retroachievements.org에 사용자 이름, 키, 게임마다 RetroAchievements 번호를 보내요. 게임 정보를 열 때, 플레이한 뒤, 그리고 Wi-Fi에서 하루에 한 번이에요. 배지 그림은 media.retroachievements.org에서 받아요. 키는 이 기기에 암호화해 저장하고 백업이나 로그에는 절대 넣지 않아요. 로그아웃하면 보내지 않아요. 설정 \u203A 통계에서 정확한 플레이 시간을 켜면, Plumemu는 Android의 사용 기록 접근에서 플레이 시간대의 이벤트를 받아 Plumemu에서 시작한 게임이나 앱과 화면에 관한 것만 남깁니다. 플레이 시간의 길이 외에는 저장하지 않으며 전송하지 않습니다.</string>
     <!-- Updates -->
-    <string name="settings_update_available">업데이트 있음</string>
     <string name="settings_update_value_downloading">다운로드 중…</string>
     <string name="settings_update_value_installing">설치 중…</string>
-    <string name="settings_check_updates">업데이트 확인</string>
+    <string name="settings_update_value_available">%1$s 사용 가능</string>
+    <string name="settings_updates">업데이트</string>
+    <string name="settings_updates_check_now">지금 확인</string>
     <string name="settings_check_updates_body">Plumemu 업데이트 서버에 새 버전이 있는지 지금 확인해요. 모바일 데이터를 쓰는 중이면 업데이트를 받기 전에 물어봐요.</string>
     <string name="settings_check_updates_daily">매일 업데이트 확인</string>
     <string name="settings_check_updates_daily_body">하루에 한 번 Wi-Fi에서 Plumemu로 돌아올 때 plumemu-app.stevensdesk.com에 새 버전이 있는지 확인해요. 이 서버를 호스팅하는 Cloudflare는 기기의 IP 주소를 볼 수 있어요. 같은 확인에서 같은 서버로부터 최신 플랫폼 데이터(기종과 에뮬레이터 목록)도 내려받아요. 그 밖에는 아무것도 보내지 않아요. 업데이트는 ‘업데이트’를 선택해야만 설치돼요.</string>
@@ -1284,6 +1274,7 @@
     <string name="settings_update_checking">업데이트 확인 중…</string>
     <string name="settings_update_no_permission_screen">이 기기에는 Plumemu가 열 수 있는 해당 설정 화면이 없어요. Android 설정(앱 › Plumemu 또는 보안)에서 Plumemu의 앱 설치를 허용한 다음 돌아오세요.</string>
     <string name="settings_check_updates_line">마지막 확인: %1$s. %2$s</string>
+    <string name="settings_check_updates_last">마지막 확인: %1$s</string>
     <string name="settings_check_updates_up_to_date">Plumemu가 최신 버전이에요.</string>
     <string name="settings_check_updates_found">Plumemu %1$s 버전이 나왔어요.</string>
     <string name="settings_check_updates_needs_android">최신 Plumemu를 쓰려면 이 기기보다 새로운 Android 버전이 필요해요.</string>
@@ -1323,7 +1314,7 @@
 
     <!-- ScreenScraper account: setup's box art step and Settings › Library. -->
     <string name="setup_box_art_title">ScreenScraper 박스 아트</string>
-    <string name="setup_box_art_desc">박스 아트와 게임 정보는 ScreenScraper에서 가져오며, screenscraper.fr의 무료 개인 계정이 필요해요. 나중에 설정 › 계정 › ScreenScraper에서 로그인해도 돼요.</string>
+    <string name="setup_box_art_desc">박스 아트와 게임 정보는 ScreenScraper에서 가져오며, screenscraper.fr의 무료 개인 계정이 필요해요. 나중에 설정 › 박스 아트 및 계정 › 박스 아트에서 로그인해도 돼요.</string>
     <string name="setup_box_art_skip">건너뛰기</string>
     <!-- The question before the sign-in form. -->
     <string name="setup_confirm_title">어떤 버튼으로 선택하나요?</string>
@@ -1336,10 +1327,10 @@
     <string name="setup_look_title">스타일 고르기</string>
     <string name="setup_look_desc">색상을 고르세요. 설정 › 화면 스타일에서 언제든 바꿀 수 있어요.</string>
     <string name="setup_box_art_question_title">박스 아트</string>
-    <string name="setup_box_art_question_desc">게임의 박스 아트를 가져올 곳입니다. 설정 › 계정 › 박스 아트에서 언제든 바꿀 수 있어요.</string>
+    <string name="setup_box_art_question_desc">게임의 박스 아트를 가져올 곳입니다. 설정 › 박스 아트 및 계정 › 박스 아트에서 언제든 바꿀 수 있어요.</string>
     <string name="setup_ready_box_art">박스 아트: 백그라운드에서 다운로드 중</string>
     <string name="setup_ready_box_art_offline">박스 아트: 온라인이 되면 시작돼요</string>
-    <string name="setup_ready_box_art_sign_in">박스 아트: 설정 › 계정에서 다시 로그인하세요</string>
+    <string name="setup_ready_box_art_sign_in">박스 아트: 설정 › 박스 아트 및 계정에서 다시 로그인하세요</string>
     <string name="account_username">사용자 이름</string>
     <string name="account_password">비밀번호</string>
     <!-- What the keyboard shows as the field's name (EditorInfo.hintText), even in a full-screen editor. -->
@@ -1429,6 +1420,8 @@
     <string name="settings_box_art_clear">박스 아트 지우기…</string>
     <string name="settings_box_art_clear_title">박스 아트를 지울까요?</string>
     <string name="settings_box_art_clear_body">‘없는 박스 아트 받기’로 다시 받을 때까지 박스 아트가 보이지 않아요. 직접 고른 박스 아트는 그대로 남고, ScreenScraper에는 로그인된 상태로 있어요.</string>
+    <string name="settings_box_art_clear_body_libretro">‘없는 박스 아트 받기’로 다시 받을 때까지 박스 아트가 보이지 않아요. 직접 고른 박스 아트는 그대로 남아요.</string>
+    <string name="settings_box_art_clear_body_own">저장된 박스 아트를 지우고 Plumemu 기본 커버를 대신 보여 줘요. 직접 고른 박스 아트는 그대로 남아요.</string>
     <string name="settings_box_art_clear_confirm">박스 아트 지우기</string>
     <string name="settings_box_art_clear_failed">박스 아트를 지우지 못했어요. 다시 시도하세요.</string>
     <string name="settings_box_art_clear_in_use">백업이나 복원이 사용 중이라 박스 아트를 지울 수 없어요. 끝난 뒤에 다시 시도하세요.</string>
@@ -1450,7 +1443,7 @@
     <string name="settings_box_art_region">박스 아트 지역</string>
     <string name="settings_box_art_region_value">박스 아트 지역: %1$s</string>
     <string name="settings_box_art_region_body">게임에 출시 지역의 박스 아트가 없을 때 어느 지역의 박스 아트를 보여 줄지 정해요.</string>
-    <!-- Region names for box art (Settings › Accounts › ScreenScraper › Box art region). -->
+    <!-- Region names for box art (Settings › Box art & accounts › ScreenScraper › Box art region). -->
     <string name="settings_region_usa">북미</string>
     <string name="settings_region_europe">유럽</string>
     <string name="settings_region_japan">일본</string>
@@ -1464,8 +1457,6 @@
     <string name="app_tool_error_body">Android에서 해당 화면을 열지 못했어요. 잠시 후 다시 시도하세요.</string>
 
     <!-- Library › an unknown folder (a folder whose name matches no system): its row, side panel and the home notice. %1$s is the folder's name or a number. -->
-    <string name="settings_unknown_folder_title">알 수 없는 폴더</string>
-    <string name="settings_unknown_folder">알 수 없는 폴더: %1$s</string>
     <plurals name="settings_unknown_folder_files">
         <item quantity="other">파일 %1$s개</item>
     </plurals>
@@ -1483,12 +1474,17 @@
     <string name="settings_files_not_added_title">추가되지 않은 파일</string>
     <string name="settings_files_not_added_body">폴더에 있지만 라이브러리에 없는 파일과 그 이유입니다.</string>
     <string name="settings_files_not_added_none">모든 파일이 라이브러리에 있습니다</string>
+    <string name="settings_files_not_added_nothing">표시할 파일이 없습니다</string>
     <string name="settings_files_not_added_no_system">시스템 폴더 밖에 있음</string>
     <string name="settings_files_not_added_unmatched_system">%1$s 에뮬레이터로 열 수 없는 파일</string>
     <string name="settings_files_not_added_unmatched">어떤 에뮬레이터로도 열 수 없는 파일</string>
     <string name="settings_files_not_added_bios">BIOS 및 펌웨어</string>
     <string name="settings_files_not_added_saves">세이브 및 상태 저장</string>
     <string name="settings_files_not_added_junk">메모, 사진, 숨김 파일</string>
+    <string name="settings_files_not_added_answered">답변한 폴더</string>
+    <plurals name="settings_files_not_added_waiting">
+        <item quantity="other">정리할 폴더 %1$s개</item>
+    </plurals>
     <string name="settings_files_not_added_folder">%1$s · %2$s</string>
     <plurals name="settings_files_not_added_more">
         <item quantity="one">외 %1$s개 파일</item>
@@ -1500,8 +1496,8 @@
     <string name="home_notice_unknown_folder">알 수 없는 폴더: %1$s</string>
     <string name="home_notice_unknown_where">설정 › 라이브러리</string>
 
-    <!-- Settings › Accounts › RetroAchievements -->
-    <string name="settings_section_accounts">계정</string>
+    <!-- Settings › Box art & accounts › RetroAchievements -->
+    <string name="settings_section_accounts">박스 아트 및 계정</string>
     <string name="settings_ra_title">RetroAchievements</string>
     <string name="settings_ra_value_refused">다시 로그인</string>
     <string name="settings_ra_refused">RetroAchievements가 키를 받아들이지 않았습니다. 사이트에서 키가 초기화되었을 수 있습니다. 새 키로 다시 로그인하세요.</string>
@@ -1565,7 +1561,7 @@
     </plurals>
     <string name="achievement_mastered">마스터함</string>
 
-    <!-- Settings › Accounts › Box art: where box art comes from. -->
+    <!-- Settings › Box art & accounts › Box art: where box art comes from. -->
     <string name="settings_box_art_source">박스 아트</string>
     <string name="settings_box_art_source_body">Plumemu가 박스 아트를 가져올 곳입니다. A를 눌러 고르세요.</string>
     <string name="settings_box_art_source_screenscraper">박스 아트와 게임 정보</string>

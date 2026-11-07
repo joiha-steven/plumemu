@@ -30,6 +30,7 @@ import com.plumemu.coreui.theme.CollarDimens
 import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.coreui.theme.GridSize
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.focusedCoverScale
 import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.theme.PlumTheme
 import androidx.compose.ui.graphics.ImageBitmap
@@ -101,7 +102,7 @@ class HomeFocusedCoverTest {
             picture.left - CollarSize.Cover.sidePadding.value * d, picture.top - CollarSize.Cover.topPadding.value * d,
             picture.right + CollarSize.Cover.sidePadding.value * d, picture.bottom + CollarSize.Cover.bottomPadding.value * d,
         )
-        val s = PlumDimens.FOCUSED_COVER_SCALE
+        val s = focusedCoverScale(maxOf(collar.width, collar.height) / d)
         val c = collar.center
         return Rect(c.x + (picture.left - c.x) * s, c.y + (picture.top - c.y) * s, c.x + (picture.right - c.x) * s, c.y + (picture.bottom - c.y) * s)
     }
@@ -185,7 +186,7 @@ class HomeFocusedCoverTest {
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         // Past the picture's antialiased last pixel, still inside the art.
         val inside = 4f
-        val groove = CollarDimens.coverGroove.value * density * PlumDimens.FOCUSED_COVER_SCALE
+        val groove = CollarDimens.coverGroove.value * density * focusedCoverScale(maxOf(drawn.width, drawn.height) / density)
         val sides =
             mapOf(
                 "top" to (Offset(drawn.center.x, drawn.top) to Offset(0f, -1f)),
@@ -272,27 +273,35 @@ class HomeFocusedCoverTest {
         assertTrue("the focus moved: game 1's box does not grow (${box.height})", box.height / compose.density.density <= (cell(1).bottom - cell(1).top).value - CollarSize.Cover.topPadding.value - CollarSize.Cover.bottomPadding.value + EPSILON)
     }
 
-    /**
-     * No other cover draws outside the grid: the rows cut by the grid's top and bottom edges end
-     * there (the gaps to the bars are the strip's background), at rest and while the rows glide.
-     * The focused cover [focused] and its ring (with its glow) may: their columns are left out.
-     */
-    private fun assertOnlyTheFocusedCoverLeavesTheGrid(
-        label: String,
-        focused: Int,
-    ) {
+    /** The pixel lines 2 dp inside the top bar's foot and the hint bar's head (what the grid's edges meet), across the grid's width. */
+    private fun barLines(): List<List<androidx.compose.ui.graphics.Color>> {
         val density = compose.density.density
         val grid = compose.onNodeWithTag(HomeTags.GRID, useUnmergedTree = true).getUnclippedBoundsInRoot()
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         val left = (grid.left.value * density).roundToInt()
         val right = (grid.right.value * density).roundToInt()
+        return listOf(grid.top.value * density - 2f * density, grid.bottom.value * density + 2f * density).map { y -> (left until right).map { pixels[it, y.roundToInt()] } }
+    }
+
+    /**
+     * No cover draws into a bar: the grid runs from bar to bar, its rows go through the gaps and under the bars' fades, and end at the bars. The lines just inside
+     * the bars hold what the bars draw (the hint keys' collars reach up into the hint bar's head), which the rows must not change: they equal the [reference] lines
+     * taken in another scroll state. The focused cover [focused] and its ring (with its glow) may: their columns are left out.
+     */
+    private fun assertOnlyTheFocusedCoverLeavesTheGrid(
+        label: String,
+        focused: Int,
+        reference: List<List<androidx.compose.ui.graphics.Color>>,
+    ) {
+        val density = compose.density.density
+        val grid = compose.onNodeWithTag(HomeTags.GRID, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val left = (grid.left.value * density).roundToInt()
         val ring = cell(focused)
         val margin = (PlumDimens.focusRingOutset.value + GLOW_DP) * density
         val ringColumns = (ring.left.value * density - margin)..(ring.right.value * density + margin)
-        for (outside in listOf(grid.top.value * density - 2f * density, grid.bottom.value * density + 2f * density)) {
-            val y = outside.roundToInt()
-            val foreign = (left until right).filterNot { it.toFloat() in ringColumns || pixels[it, y].near(background) }.map { "$it ${pixels[it, y]}" }
-            assertEquals("$label: nothing drawn ${if (outside < grid.top.value * density) "above" else "below"} the grid at y=$y px", emptyList<String>(), foreign)
+        barLines().zip(reference).forEachIndexed { line, (now, before) ->
+            val foreign = now.indices.filterNot { (left + it).toFloat() in ringColumns || now[it].near(before[it]) }.map { "${left + it} ${now[it]} was ${before[it]}" }
+            assertEquals("$label: nothing drawn into the ${if (line == 0) "top" else "hint"} bar", emptyList<String>(), foreign)
         }
     }
 
@@ -314,11 +323,17 @@ class HomeFocusedCoverTest {
             compose.waitForIdle()
         }
         compose.mainClock.advanceTimeBy(SETTLE_MS)
-        assertOnlyTheFocusedCoverLeavesTheGrid("$label at rest", state.focus.rowOf(state.focus.systemIndex.let { CoverArtLibrary.entries[it].id }))
+        val reference = barLines()
+        assertOnlyTheFocusedCoverLeavesTheGrid("$label at rest", state.focus.rowOf(state.focus.systemIndex.let { CoverArtLibrary.entries[it].id }), reference)
+        // Another scroll state at rest: the rows cut at the edges are others.
+        compose.runOnIdle { state.dispatch(Action.Move(com.plumemu.coreinput.Direction.Down)) }
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(SETTLE_MS)
+        assertOnlyTheFocusedCoverLeavesTheGrid("$label at rest, a row further", state.focus.rowOf(state.focus.systemIndex.let { CoverArtLibrary.entries[it].id }), reference)
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { state.dispatch(Action.Move(com.plumemu.coreinput.Direction.Down)) }
         compose.mainClock.advanceTimeBy(GLIDE_PART_MS)
-        assertOnlyTheFocusedCoverLeavesTheGrid("$label while gliding", state.focus.rowOf(CoverArtLibrary.entries[state.focus.systemIndex].id))
+        assertOnlyTheFocusedCoverLeavesTheGrid("$label while gliding", state.focus.rowOf(CoverArtLibrary.entries[state.focus.systemIndex].id), reference)
         compose.mainClock.autoAdvance = true
     }
 

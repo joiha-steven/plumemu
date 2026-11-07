@@ -11,21 +11,42 @@ internal object SettingsListPages {
         )
 
     /**
-     * Library › Files not added › line [index]: on an unknown folder's line, the cursor goes to that
-     * folder's row in Library (its panel beside it, A answers there); null on any other line.
+     * Library › Files not added › line [index]: on an unknown folder's line, that folder's page, on its
+     * current answer; null on any other line.
      */
-    fun toUnknownFolderRow(
+    fun toUnknownFolder(
         index: Int,
         content: SettingsContent,
         focus: SettingsFocus,
     ): SettingsFocus? {
         val folder = (content.notAdded.getOrNull(index) as? NotAddedItem.Folder)?.folder ?: return null
-        val place = content.unknownFolders.indexOfFirst { it.key == folder }
-        val first = SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.UnknownFolder)
-        if (place < 0 || first < 0) return null
-        val row = SettingsSection.Library to first + place
-        return focus.copy(column = SettingsColumn.Options, page = null, panelIndex = 0, rememberedOption = focus.rememberedOption + row)
+        val row = content.unknownFolders.firstOrNull { it.key == folder } ?: return null
+        return focus.copy(page = PanelPage.UnknownFolder, panelIndex = answerIndex(row, content), folderKey = folder)
     }
+
+    /** Back to Files not added, on the line of the folder that was open (the first line when it left). */
+    fun backToFilesNotAdded(
+        focus: SettingsFocus,
+        content: SettingsContent,
+    ): SettingsFocus = focus.copy(page = PanelPage.FilesNotAdded, panelIndex = lineOf(focus.folderKey, content).coerceAtLeast(0), folderKey = null)
+
+    /** Where [folder]'s line is in Files not added; -1 when it has none. */
+    private fun lineOf(
+        folder: FolderKey?,
+        content: SettingsContent,
+    ): Int = content.notAdded.indexOfFirst { it is NotAddedItem.Folder && it.folder == folder }
+
+    /** The line of Files not added the cursor stays on: the same line when it is still there, else the nearest. */
+    fun filesNotAddedLineAfter(
+        at: Int,
+        before: SettingsContent,
+        after: SettingsContent,
+    ): Int {
+        val key = before.notAdded.getOrNull(at)?.key
+        val kept = after.notAdded.indexOfFirst { it.key == key }
+        return if (kept >= 0) kept else at.coerceAtMost(after.notAdded.lastIndex)
+    }
+
     /** Back to the folders list, on the folder the confirm was about (or the nearest item when it left). */
     fun backToFolders(
         focus: SettingsFocus,
@@ -52,23 +73,11 @@ internal object SettingsListPages {
         return if (games.size <= 1) null else focus.copy(panelIndex = index.coerceAtMost(games.size - 2))
     }
 
-    /**
-     * The unknown folder the panel is about: by the id kept in the focus while it is open, else the one
-     * under the cursor in Library's rows (the wide panel previews it beside the row).
-     */
+    /** The unknown folder the panel is about, by the id kept in the focus; null when it left. */
     fun unknownFolderAt(
         focus: SettingsFocus,
         content: SettingsContent,
-    ): SettingsFolderRow? {
-        if (focus.column == SettingsColumn.Panel && focus.page == PanelPage.UnknownFolder) {
-            return content.unknownFolders.firstOrNull { it.key == focus.folderKey }
-        }
-        return if (focus.section == SettingsSection.Library && focus.optionIn(content) == SettingsOption.UnknownFolder) {
-            content.unknownFolderAtRow(focus.optionIndexIn(content))
-        } else {
-            null
-        }
-    }
+    ): SettingsFolderRow? = content.unknownFolders.firstOrNull { it.key == focus.folderKey }
 
     /** The panel item of the folder's current answer: 0 is Ignore this folder, then the systems. */
     fun answerIndex(
@@ -81,8 +90,8 @@ internal object SettingsListPages {
         }
 
     /**
-     * Library's rows after [before] became [after]: the cursor stays on the same option, and on the same unknown folder
-     * by id (answering moves a folder below the unknown ones). Null when nothing moves. A folder that left closes its panel.
+     * Library's rows after [before] became [after]: the cursor stays on the same option. Null when nothing moves. An option that
+     * left closes its panel.
      */
     fun libraryFocusKept(
         focus: SettingsFocus,
@@ -95,22 +104,50 @@ internal object SettingsListPages {
         val rowsAfter = library.rowsIn(after)
         val at = focus.rememberedOption[library] ?: return null
         val option = rowsBefore.getOrNull(at) ?: return null
-        val now =
-            if (option == SettingsOption.UnknownFolder) {
-                val key = before.unknownFolderAtRow(at)?.key
-                val first = rowsAfter.indexOf(SettingsOption.UnknownFolder)
-                val place = after.unknownFolders.indexOfFirst { it.key == key }
-                if (first >= 0 && place >= 0) first + place else -1
-            } else {
-                rowsAfter.indexOf(option)
-            }
+        val now = rowsAfter.indexOf(option)
         if (now < 0) {
-            val panelOpen = focus.column == SettingsColumn.Panel
             val moved = focus.rememberedOption + (library to at.coerceAtMost((rowsAfter.size - 1).coerceAtLeast(0)))
-            return if (panelOpen) focus.copy(column = SettingsColumn.Options, page = null, panelIndex = 0, rememberedOption = moved) else focus.copy(rememberedOption = moved)
+            return focus.leavingPanel(moved)
         }
         return if (now == at) null else focus.copy(rememberedOption = focus.rememberedOption + (library to now))
     }
+
+    /**
+     * Accounts' rows after [before] became [after]: ScreenScraper comes and goes with the source and the account. The cursor
+     * stays on the same option; when ScreenScraper itself left it lands on Box art, and its panel closes.
+     */
+    fun accountsFocusKept(
+        focus: SettingsFocus,
+        before: SettingsContent,
+        after: SettingsContent,
+    ): SettingsFocus? {
+        val accounts = SettingsSection.Accounts
+        if (focus.section != accounts) return null
+        val at = (focus.rememberedOption[accounts] ?: 0).coerceAtLeast(0)
+        val rowsAfter = accounts.rowsIn(after)
+        val option = accounts.rowsIn(before).getOrNull(at) ?: return null
+        val now = rowsAfter.indexOf(option)
+        if (now < 0) return focus.leavingPanel(focus.rememberedOption + (accounts to rowsAfter.indexOf(SettingsOption.BoxArtSource).coerceAtLeast(0)))
+        return if (now == at) null else focus.copy(rememberedOption = focus.rememberedOption + (accounts to now))
+    }
+
+    /** Grid size, Home screen's last row, left because the button hints came back: the cursor lands on the row above it. */
+    fun homeScreenFocusKept(
+        focus: SettingsFocus,
+        before: SettingsContent,
+        after: SettingsContent,
+    ): SettingsFocus? {
+        val home = SettingsSection.HomeScreen
+        if (focus.section != home) return null
+        val rowsAfter = home.rowsIn(after)
+        val wasOnIt = home.rowsIn(before).getOrNull(focus.rememberedOption[home] ?: 0) == SettingsOption.GridSize
+        if (!wasOnIt || SettingsOption.GridSize in rowsAfter) return null
+        return focus.leavingPanel(focus.rememberedOption + (home to rowsAfter.lastIndex))
+    }
+
+    /** The row under an open panel left: [remembered] is the row the cursor lands on, in the options column if a panel was open. */
+    private fun SettingsFocus.leavingPanel(remembered: Map<SettingsSection, Int>): SettingsFocus =
+        if (column == SettingsColumn.Panel) copy(column = SettingsColumn.Options, page = null, panelIndex = 0, rememberedOption = remembered) else copy(rememberedOption = remembered)
 
     /** The system of the focused Emulators row: system rows come first, in [SettingsContent.systems] order. */
     fun systemAt(

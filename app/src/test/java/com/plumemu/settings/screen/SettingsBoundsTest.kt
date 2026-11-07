@@ -50,15 +50,15 @@ class SettingsBoundsTest {
     @Test
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
     fun threeColumnsKeepTheSectionsWithAnOptionFocused() {
-        show(optionsAt(SettingsOption.Background))
+        show(optionsAt(SettingsOption.Accent))
         compose.onNodeWithTag(SettingsTags.SECTIONS).assertLeftPositionInRootIsEqualTo(0.dp).assertWidthIsEqualTo(three)
-        compose.onNodeWithTag(SettingsTags.OPTIONS).assertLeftPositionInRootIsEqualTo(optionsLeft).assertWidthIsEqualTo(314.67.dp)
+        compose.onNodeWithTag(SettingsTags.OPTIONS).assertLeftPositionInRootIsEqualTo(optionsLeft).assertWidthIsEqualTo(298.17.dp)
         compose.onNodeWithTag(SettingsTags.PANEL).assertLeftPositionInRootIsEqualTo(panelLeft).assertWidthIsEqualTo(SettingsThreeDimens.panelWidth)
-        compose.onNodeWithTag(SettingsTags.option(SettingsOption.Background)).assertHeightIsEqualTo(40.dp)
-        // Colors, Background and Text color under Language.
+        compose.onNodeWithTag(SettingsTags.option(SettingsOption.Accent)).assertHeightIsEqualTo(40.dp)
+        // Colors, Accent color and Font under Language.
         val first = compose.onNodeWithTag(SettingsTags.option(SettingsOption.Colors)).getBoundsInRoot()
-        val second = compose.onNodeWithTag(SettingsTags.option(SettingsOption.Background)).getBoundsInRoot()
-        val third = compose.onNodeWithTag(SettingsTags.option(SettingsOption.TextColor)).getBoundsInRoot()
+        val second = compose.onNodeWithTag(SettingsTags.option(SettingsOption.Accent)).getBoundsInRoot()
+        val third = compose.onNodeWithTag(SettingsTags.option(SettingsOption.Font)).getBoundsInRoot()
         assertEquals("rows 42 apart (40 + 2)", 42f, (second.top - first.top).value, 0.01f)
         assertEquals("rows 42 apart (40 + 2)", 42f, (third.top - second.top).value, 0.01f)
         // Language is the first row, above Colors: top 14 + bar 23 (grows with the place name line) + gap 10.
@@ -71,9 +71,9 @@ class SettingsBoundsTest {
     @Test
     @Config(qualifiers = "w832dp-h468dp-land-xhdpi")
     fun threeColumnsAt832GiveTheRestToTheOptions() {
-        show(optionsAt(SettingsOption.Background))
+        show(optionsAt(SettingsOption.Accent))
         compose.onNodeWithTag(SettingsTags.SECTIONS).assertWidthIsEqualTo(three)
-        compose.onNodeWithTag(SettingsTags.OPTIONS).assertLeftPositionInRootIsEqualTo(optionsLeft).assertWidthIsEqualTo(378.67.dp)
+        compose.onNodeWithTag(SettingsTags.OPTIONS).assertLeftPositionInRootIsEqualTo(optionsLeft).assertWidthIsEqualTo(362.17.dp)
         compose.onNodeWithTag(SettingsTags.PANEL).assertLeftPositionInRootIsEqualTo(832.dp - 24.dp - SettingsThreeDimens.panelWidth).assertWidthIsEqualTo(SettingsThreeDimens.panelWidth)
     }
 
@@ -89,7 +89,7 @@ class SettingsBoundsTest {
     @Test
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
     fun twoColumnsAtLargestOptionsSlideTheSectionsAwayWithThePanelBeside() {
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) { SettingsAt(optionsAt(SettingsOption.Background)) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) { SettingsAt(optionsAt(SettingsOption.Accent)) } }
         compose.onNodeWithTag(SettingsTags.OPTIONS).assertLeftPositionInRootIsEqualTo(24.dp).assertWidthIsEqualTo(448.dp)
         compose.onNodeWithTag(SettingsTags.PANEL).assertLeftPositionInRootIsEqualTo(496.dp).assertWidthIsEqualTo(248.dp)
     }
@@ -97,7 +97,7 @@ class SettingsBoundsTest {
     @Test
     @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
     fun narrowOptionsTakeTheWidthLessBothMargins() {
-        show(optionsAt(SettingsOption.Background))
+        show(optionsAt(SettingsOption.Accent))
         compose.onNodeWithTag(SettingsTags.OPTIONS).assertLeftPositionInRootIsEqualTo(24.dp).assertWidthIsEqualTo(528.dp)
     }
 

@@ -118,7 +118,7 @@ fun PlumSlider(
                 val corner = D.sliderLipCorner.toPx()
                 val f = focus.value
                 // The collar is the LIP alone (`padding: 7px 8px 8px`); focused it glows `0 0 22px`.
-                if (f > 0f) drawCssShadows(listOf(CssShadow(colors.partGlow, 0.dp, CollarDimens.glowBlur)), Offset(0f, lipTop), lipSize, corner, f)
+                if (f > 0f) drawCssShadows(listOf(CssShadow(colors.partGlow, 0.dp, CollarDimens.glowBlur, glow = true)), Offset(0f, lipTop), lipSize, corner, f)
                 drawLip(seat, Offset(0f, lipTop), lipSize, corner)
                 val trackAt = Offset(lip, trackTop)
                 val trackW = size.width - 2 * lip
@@ -135,7 +135,7 @@ fun PlumSlider(
                         // The fill runs to the knob's centre: `linear-gradient(accent, accentLight)`, `inset 0 1px 2px .35`, `0 0 10px` glow.
                         val fillW = (cx - trackAt.x).coerceIn(trackH, trackW)
                         val fillSize = Size(fillW, trackH)
-                        drawCssShadows(listOf(CssShadow(colors.partGlow, 0.dp, D.fillGlowBlur)), trackAt, fillSize, trackR)
+                        drawCssShadows(listOf(CssShadow(colors.partGlow, 0.dp, D.fillGlowBlur, glow = true)), trackAt, fillSize, trackR)
                         drawCssFace(CssFace(listOf(accent, SeatLook.accentLight(accent)), listOf(seat.focusShade)), trackAt, fillSize, trackR)
                     }
                 }
@@ -143,7 +143,7 @@ fun PlumSlider(
                 val ringAt = Offset(cx - r, cy - r)
                 // Focused, the knob's 2 px ring turns accent with a `0 0 14px` glow.
                 if (f > 0f) {
-                    drawCssShadows(listOf(CssShadow(colors.partGlow, 0.dp, D.knobGlowBlur)), ringAt, Size(2 * r, 2 * r), r, f)
+                    drawCssShadows(listOf(CssShadow(colors.partGlow, 0.dp, D.knobGlowBlur, glow = true)), ringAt, Size(2 * r, 2 * r), r, f)
                     drawCircle(accent.copy(alpha = accent.alpha * f), r, Offset(cx, cy))
                 }
                 val knobAt = Offset(cx - knob / 2, cy - knob / 2)

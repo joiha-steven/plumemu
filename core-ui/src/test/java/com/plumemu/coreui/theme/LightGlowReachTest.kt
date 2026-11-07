@@ -15,8 +15,9 @@ class LightGlowReachTest {
         return d
     }
 
+    /** The board's 12.5 dp, its peak at [Depth.SHADOW] (a weaker glow fades out sooner: 10 dp), at [Depth.GLOW_REACH]. */
     @Test
-    fun sliderGlowReachesAbout12DpAlone() = assertEquals(12.5f, reach(CollarDimens.sliderLightGlowSigma.value, FocusHalo.LIGHT_PART_PEAK.toFloat()), 1f)
+    fun sliderGlowReachesAboutSixDpAlone() = assertEquals(10f * Depth.GLOW_REACH, reach(CollarDimens.sliderLightGlowSigma.value, FocusHalo.LIGHT_PART_PEAK.toFloat()), 1f)
 
     @Test
     fun coverHazeReachesTheBoardsTwentyDp() = assertEquals(20f, reach(CollarDimens.coverLightGlowSigma.value, CollarDimens.COVER_LIGHT_GLOW_ALPHA), 1.5f)

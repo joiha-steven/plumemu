@@ -209,15 +209,22 @@ class PlumLayoutTest {
                 }
             }
         }
-        assertEquals(86.7917f, thor.copy(gridSize = GridSize.Small).gridCoverWidth(CoverShape(0.73f)).value, 0.01f)
+        val thorSmall = thor.copy(gridSize = GridSize.Small)
+        assertEquals(gapped(86.7917f, thorSmall.gridColumns(CoverShape(0.73f))), thorSmall.gridCoverWidth(CoverShape(0.73f)).value, 0.01f)
     }
+
+    /** A cover width the board gave with gaps of 10 px (6.67 dp), as it is with the gaps now [PlumDimens.gridGapAcross]: the columns share what the wider gaps take. */
+    private fun gapped(
+        board: Float,
+        columns: Int,
+    ) = board - (PlumDimens.gridGapAcross.value - 10f / 1.5f) * (columns - 1) / columns
 
     /** The narrowest grid on the Nova (576) still shows whole rows with titles: Small tall, five 78.4 wide. */
     @Test
     fun narrowGridsStayUsable() {
         val novaSmall = nova.copy(gridSize = GridSize.Small)
-        assertEquals(90.6667f, novaSmall.gridCoverWidth(CoverShape(0.73f)).value, 0.01f)
-        assertEquals(155.5556f, novaSmall.gridCoverWidth(CoverShape.Landscape).value, 0.01f)
+        assertEquals(gapped(90.6667f, novaSmall.gridColumns(CoverShape(0.73f))), novaSmall.gridCoverWidth(CoverShape(0.73f)).value, 0.01f)
+        assertEquals(gapped(155.5556f, novaSmall.gridColumns(CoverShape.Landscape)), novaSmall.gridCoverWidth(CoverShape.Landscape).value, 0.01f)
         for (size in GridSize.entries) {
             for (shape in listOf(CoverShape.Landscape, CoverShape(1.12f), CoverShape(0.575f))) {
                 assertTrue(nova.copy(gridSize = size).gridRowsThatFit(shape) >= 1)
@@ -236,16 +243,16 @@ class PlumLayoutTest {
     @Test
     fun gridCoverWidthSharesTheSpanAfterTheGaps() {
         // `colW = (gridW − gap × (cols − 1)) / cols`: the columns and gaps are exactly the grid's width.
-        // The gap between collars is the Covers board's 10 px, 6.67 dp, for every class.
+        // The gap between collars is 18 dp for every class (the board's were 6.67 across, 9.33 down; the numbers below are the board's, less what the wider gap takes).
         val landscape = listOf(219.5556f, 242.5556f, 282.1667f, 236.6667f)
         val portrait = listOf(129.0667f, 117.9444f, 137.75f, 115f)
         boardLandscape.zip(listOf(rp5, thor, rp4Pro, nova)).forEachIndexed { i, (large, layout) ->
-            assertEquals(landscape[i], large.gridCoverWidth(CoverShape.Landscape).value, 0.01f)
-            assertEquals(portrait[i], layout.gridCoverWidth(CoverShape.Portrait).value, 0.01f)
+            assertEquals(gapped(landscape[i], large.gridColumns(CoverShape.Landscape)), large.gridCoverWidth(CoverShape.Landscape).value, 0.01f)
+            assertEquals(gapped(portrait[i], layout.gridColumns(CoverShape.Portrait)), layout.gridCoverWidth(CoverShape.Portrait).value, 0.01f)
         }
-        assertEquals(6.67f, rp5.gridGap(CoverShape.Landscape).value, 0.01f)
-        assertEquals(6.67f, rp5.gridGap(CoverShape.Portrait).value, 0.01f)
-        assertEquals(9.33f, rp5.gridRowGap(CoverShape.Portrait).value, 0.01f)
+        assertEquals(18f, rp5.gridGap(CoverShape.Landscape).value, 0.01f)
+        assertEquals(18f, rp5.gridGap(CoverShape.Portrait).value, 0.01f)
+        assertEquals(18f, rp5.gridRowGap(CoverShape.Portrait).value, 0.01f)
     }
 
     @Test
@@ -278,8 +285,8 @@ class PlumLayoutTest {
 
     /**
      * The focused cover's collar halo (the cover itself does not move) reaches [PlumDimens.focusHaloReach] past its collar:
-     * it stays inside the grid's top gap; it may overlap a neighbour's gap, which is the board's 10 px across and 14 px down
-     * (6.67 and 9.33 dp) between collars, for every cover class.
+     * it stays inside the grid's top gap; it may overlap a neighbour's gap, which is 18 dp across and down
+     * between collars, for every cover class.
      */
     @Test
     fun theGridGapsHoldTheHaloAndKeepCollarsApart() {
@@ -288,8 +295,8 @@ class PlumLayoutTest {
         for (size in GridSize.entries) {
             for (layout in at(size)) {
                 for (shape in listOf(CoverShape(0.575f), CoverShape.Portrait, CoverShape(1f), CoverShape(1.12f), CoverShape.Landscape)) {
-                    assertEquals("$size ${layout.width} $shape: collars are 6.67 dp apart across", 10f / 1.5f, layout.gridGap(shape).value, 0.01f)
-                    assertEquals("$size ${layout.width} $shape: collars are 9.33 dp apart down", 14f / 1.5f, layout.gridRowGap(shape).value, 0.01f)
+                    assertEquals("$size ${layout.width} $shape: collars are 18 dp apart across", 18f, layout.gridGap(shape).value, 0.01f)
+                    assertEquals("$size ${layout.width} $shape: collars are 18 dp apart down", 18f, layout.gridRowGap(shape).value, 0.01f)
                 }
             }
         }
@@ -321,12 +328,14 @@ class PlumLayoutTest {
         // `floor((area + 12) / 142)` at Medium: the Thor about 5 (by design), 3 to 6 elsewhere.
         assertEquals(listOf(4, 5, 4, 3), layouts.map { it.gridColumns(CoverClass.Square) })
         assertEquals(listOf(4, 5, 4, 3), layouts.map { it.gridColumns(nds) })
-        assertEquals(6.67f, rp5.gridGap(nds).value, 0.01f)
+        assertEquals(18f, rp5.gridGap(nds).value, 0.01f)
         val widths = listOf(163f, 142.8667f, 137.75f, 155.5556f)
-        layouts.forEachIndexed { i, layout -> assertEquals(widths[i], layout.gridCoverWidth(nds).value, 0.01f) }
+        layouts.forEachIndexed { i, layout -> assertEquals(gapped(widths[i], layout.gridColumns(nds)), layout.gridCoverWidth(nds).value, 0.01f) }
         // A row is as tall as its shape makes a box of that width: DS 1.12 is shorter than Game Boy 1.0.
         layouts.forEach { assertTrue(it.gridRowHeight(nds) < it.gridRowHeight(CoverShape(1f))) }
-        assertEquals((163f - 8f) / 1.12f + 8.6667f, rp5.gridRowHeight(nds).value, 0.01f)
+        val cover = rp5.gridCoverWidth(nds).value
+        assertEquals(gapped(163f, rp5.gridColumns(nds)), cover, 0.01f)
+        assertEquals((cover - 8f) / 1.12f + 8.6667f, rp5.gridRowHeight(nds).value, 0.01f)
     }
 
     @Test
@@ -344,8 +353,8 @@ class PlumLayoutTest {
         // Two columns (where three do not fit the text size), then three columns on the wide screens.
         assertEquals(448.dp, rp5.copy(settingsThreeFit = false).settingsOptionsWidth)
         assertEquals(517.dp, thor.copy(settingsThreeFit = false).settingsOptionsWidth)
-        assertEquals(314.67f, rp5.settingsOptionsWidth.value, 0.01f)
-        assertEquals(383.67f, thor.settingsOptionsWidth.value, 0.01f)
+        assertEquals(298.17f, rp5.settingsOptionsWidth.value, 0.01f)
+        assertEquals(367.17f, thor.settingsOptionsWidth.value, 0.01f)
         assertEquals(619.dp, rp4Pro.settingsOptionsWidth)
         assertEquals(528.dp, nova.settingsOptionsWidth)
     }

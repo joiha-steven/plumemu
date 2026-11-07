@@ -157,8 +157,17 @@ internal class SettingsModel(
                 Action.Enter, Action.Play -> Cause.Enter
                 else -> Cause.Move
             }
+        val move = action as? Action.Move
+        isHeldMove = move?.isRepeat == true
+        // A held key stays where its press landed: its repeats must not open a page's writes or step the row it left a panel for.
+        if (isHeldMove && hasPressCrossed) return@act
+        val before = focus
         handle(action, settings, geometry)
+        if (move != null && !move.isRepeat) hasPressCrossed = focus.column != before.column || focus.page != before.page
     }
+
+    /** The last press of a direction changed column or page: its repeats do nothing. */
+    private var hasPressCrossed = false
 
     private fun handle(
         action: Action,
@@ -266,6 +275,7 @@ internal class SettingsModel(
             if (!openPanel(option, settings, geometry)) return@tapped
         }
         val page = focus.page ?: return@tapped
+        if (page == PanelPage.FilesNotAdded && content.notAdded.getOrNull(index) is NotAddedItem.Heading) return@tapped
         // Colors opens on the current set's tile: a first tap on that tile only enters the panel there,
         // like a tap on any other tile; the second tap uses it.
         if (page == PanelPage.ColorSets && opensNow) {
@@ -274,8 +284,11 @@ internal class SettingsModel(
         }
         if (page == PanelPage.ScraperSignIn) return@tapped onSignInAction(Action.TapItem(InputColumn.Details, index))
         if (page == PanelPage.ProblemReport) return@tapped onReportAction(Action.TapItem(InputColumn.Details, index))
-        // A system's checkmark follows the first tap, like a switch; the picker's buttons take two like every button.
-        if (page == PanelPage.ScraperSystems && systemsPickActionAt(content, index) == null) {
+        // A system's checkmark and the daily switch follow the first tap, like a switch; the picker's buttons take two like every button.
+        val isSwitch =
+            (page == PanelPage.ScraperSystems && systemsPickActionAt(content, index) == null) ||
+                (page == PanelPage.Update && updatesPanelItems(content.update).getOrNull(index) == UpdatePanelItem.CheckDaily)
+        if (isSwitch) {
             focusPanelItem(index)
             onPanelEnter(settings)
             return@tapped
@@ -349,7 +362,27 @@ internal class SettingsModel(
         geometry: SettingsGeometry,
     ) = tapped {
         if (!inSystemsPage(settings, geometry) || systems.isCarrying) return@tapped
-        focusPanelItem(index)
+        focusPanelItem(FIRST_SYSTEM_ITEM + index)
+    }
+
+    /** A tap on the System order item: the first focuses it, like any row; once focused, the next value. */
+    fun onTapSystemOrder(
+        settings: PlumSettings,
+        geometry: SettingsGeometry,
+    ) = tapped {
+        val wasFocused = focus.column == SettingsColumn.Panel && focus.page == PanelPage.Systems && focus.panelIndex == SYSTEM_ORDER_ITEM
+        if (!inSystemsPage(settings, geometry) || systems.isCarrying) return@tapped
+        if (wasFocused) stepSystemOrder(+1, wrap = true, settings, geometry) else focusPanelItem(SYSTEM_ORDER_ITEM)
+    }
+
+    /** A tap on System order's value: the next value at once, like an option row's. */
+    fun onTapSystemOrderValue(
+        settings: PlumSettings,
+        geometry: SettingsGeometry,
+    ) = tapped {
+        if (!inSystemsPage(settings, geometry) || systems.isCarrying) return@tapped
+        if (focus.panelIndex != SYSTEM_ORDER_ITEM) focusPanelItem(SYSTEM_ORDER_ITEM)
+        stepSystemOrder(+1, wrap = true, settings, geometry)
     }
 
     fun onTapSystemHidden(
@@ -358,7 +391,7 @@ internal class SettingsModel(
         geometry: SettingsGeometry,
     ) = tapped {
         if (!inSystemsPage(settings, geometry) || systems.isCarrying) return@tapped
-        focusPanelItem(index)
+        focusPanelItem(FIRST_SYSTEM_ITEM + index)
         toggleSystemHidden(systems.rows(content, settings), settings)
     }
 
@@ -368,7 +401,7 @@ internal class SettingsModel(
         geometry: SettingsGeometry,
     ) = tapped {
         if (!inSystemsPage(settings, geometry) || systems.isCarrying) return@tapped
-        focusPanelItem(index)
+        focusPanelItem(FIRST_SYSTEM_ITEM + index)
         pickUpSystem(systems.rows(content, settings), settings)
     }
 
@@ -376,7 +409,7 @@ internal class SettingsModel(
     fun onSystemDragStep(step: Int) =
         feel.act {
             cause = Cause.Move
-            if (systems.isCarrying) carrySystemTo(focus.panelIndex + step)
+            if (systems.isCarrying) carrySystemTo(focusedSystemIndex + step)
         }
 
     fun onSystemDragEnd() =
@@ -451,11 +484,13 @@ internal class SettingsModel(
                             OptionKind.Choice -> stepChoice(option, +1, wrap = false, settings, geometry)
                             OptionKind.Swatch, OptionKind.Opens -> openPanel(option, settings, geometry)
                             // The explanation, as a further stop on narrow screens (wide shows it already).
-                            OptionKind.Switch, OptionKind.Info, OptionKind.Action -> if (geometry.isNarrow && !option.isOnStatisticsPage) openPanel(option, settings, geometry)
+                            OptionKind.Switch, OptionKind.Info, OptionKind.Action -> if ((geometry.isNarrow || panelTextScrolls) && !option.isOnStatisticsPage) openPanel(option, settings, geometry)
                         }
                 }
             Action.Enter -> activate(option, settings, geometry)
             Action.Back -> backToSections()
+            // Right steps a choice, so a choice's long text opens by the key Systems' hide uses.
+            Action.ToggleFavorite -> if (option.kind == OptionKind.Choice && panelTextScrolls) openPanel(option, settings, geometry)
             Action.NextSystem -> changeSection(+1, SettingsColumn.Options)
             Action.PreviousSystem -> changeSection(-1, SettingsColumn.Options)
             else -> Unit
@@ -504,17 +539,8 @@ internal class SettingsModel(
                 // A press on a running scan is acknowledged too (the repo has no "nothing happened" sound): its notice shows under the progress.
                 feel.report(Outcome.Activated)
             }
-            SettingsOption.DetectEmulators ->
-                if (!work.isDetecting(content)) {
-                    work.detectEmulators()
-                    feel.report(Outcome.Activated)
-                }
             SettingsOption.UseAsHome -> {
                 work.openHomeSettings()
-                feel.report(Outcome.Activated)
-            }
-            SettingsOption.CheckForUpdates -> {
-                actions.updates.checkNow()
                 feel.report(Outcome.Activated)
             }
             SettingsOption.ExportLogs -> {
@@ -522,33 +548,6 @@ internal class SettingsModel(
                 feel.report(Outcome.Activated)
             }
             else -> Unit
-        }
-    }
-
-    private fun stepChoice(
-        option: SettingsOption,
-        step: Int,
-        wrap: Boolean,
-        settings: PlumSettings,
-        geometry: SettingsGeometry,
-    ) {
-        val count = option.choiceCount(settings, content.sortValues)
-        val raw = option.choiceIndex(settings, geometry.defaultTextSize, content.sortValues) + step
-        // At the end of a list a press changes nothing, and says nothing. The Sounds row is silent itself: Off must not
-        // click, and the screen plays one confirm at the new volume once the level is stored (SettingsScreen).
-        if (option == SettingsOption.Sounds) {
-            feel.hush()
-        } else if (wrap || raw in 0 until count) {
-            feel.report(if (cause == Cause.Move) Outcome.Moved else Outcome.Activated)
-        }
-        // A set picked by stepping replaces whatever the colour panels wrote before.
-        if (option == SettingsOption.Colors) custom.forgetWritten()
-        // From the stored value inside the write: presses faster than the store answers each count.
-        actions.update { stored ->
-            val raw = option.choiceIndex(stored, geometry.defaultTextSize, content.sortValues) + step
-            // Colors has one value more while there is a custom look: count what is stored too.
-            val storedCount = option.choiceCount(stored, content.sortValues)
-            option.withChoice(stored, if (wrap) Math.floorMod(raw, storedCount) else raw.coerceIn(0, storedCount - 1), content.sortValues)
         }
     }
 
@@ -561,34 +560,31 @@ internal class SettingsModel(
         val (page, index) =
             when (option) {
                 SettingsOption.Colors -> PanelPage.ColorSets to colorSetsPanelEntries(settings).indexOf(settings.appearance.colorSet()).coerceAtLeast(0)
-                SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent -> ColorPages.openingFor(option, custom.withWritten(settings))
-                SettingsOption.ResetAll, SettingsOption.ResetLibrary, SettingsOption.ClearRecent -> PanelPage.Confirm to CONFIRM_CANCEL
-                SettingsOption.Backup -> PanelPage.Backup to 0
-                SettingsOption.UpdateAvailable -> PanelPage.Update to 0
-                SettingsOption.Restore -> PanelPage.Restore to 0
-                SettingsOption.UndoRestore -> PanelPage.UndoRestore to 0
+                SettingsOption.Accent -> ColorPages.openingFor(option, custom.withWritten(settings))
+                SettingsOption.ClearRecent -> PanelPage.Confirm to CONFIRM_CANCEL
+                SettingsOption.Reset -> PanelPage.Reset to 0
+                SettingsOption.BackupAndRestore -> PanelPage.BackupRestore to 0
+                SettingsOption.Updates -> PanelPage.Update to 0
                 SettingsOption.Licenses -> PanelPage.Licenses to 0
                 SettingsOption.Language -> PanelPage.Language to languagePanelIndex(settings.appearance.language)
                 SettingsOption.ReportProblem -> return openReport().let { true }
                 SettingsOption.RomFolders -> PanelPage.Folders to 0
-                SettingsOption.HiddenGames, SettingsOption.UnidentifiedGames, SettingsOption.FilesNotAdded -> SettingsListPages.listPageOf.getValue(option) to 0
+                SettingsOption.HiddenGames, SettingsOption.UnidentifiedGames -> SettingsListPages.listPageOf.getValue(option) to 0
+                SettingsOption.FilesNotAdded -> PanelPage.FilesNotAdded to content.notAdded.indexOfFirst { it !is NotAddedItem.Heading }.coerceAtLeast(0)
                 SettingsOption.SystemEmulator -> PanelPage.Emulators to (systemAtFocus()?.currentIndex ?: 0)
-                SettingsOption.Systems -> PanelPage.Systems to 0
-                SettingsOption.UnknownFolder -> PanelPage.UnknownFolder to (SettingsListPages.unknownFolderAt(focus, content)?.let { SettingsListPages.answerIndex(it, content) } ?: 0)
+                SettingsOption.Systems -> PanelPage.Systems to FIRST_SYSTEM_ITEM
                 SettingsOption.BoxArtSource -> PanelPage.BoxArtSource to boxArtSourceChoices(content.account).indexOf(boxArtSourceIn(settings, content.account)).coerceAtLeast(0)
                 SettingsOption.ScraperAccount -> if (content.account is AccountStatus.SignedIn) PanelPage.ScraperAccount to 0 else return openSignIn().let { true }
                 SettingsOption.RetroAchievementsAccount -> if (raIsSignedIn(content)) PanelPage.RaAccount to 0 else return openRaSignIn().let { true }
-                else -> if (geometry.isNarrow) PanelPage.ReadOnly to 0 else return false
+                else -> if (geometry.isNarrow || panelTextScrolls) PanelPage.ReadOnly to 0 else return false
             }
         doneOption = null
         // A count from an earlier Clear must not read as the answer to this ask.
         if (option == SettingsOption.ClearRecent && work.notice?.first == SettingsOption.ClearRecent) work.clearNotice()
-        if (SettingsCustomColor.isCustomPage(page)) {
-            enterCustomPage(page, settings)
+        if (ColorPages.kindOf(page) != null) {
+            openColourPage(page, index, settings)
         } else {
-            // The panel remembers what it opened with, so browsing presets settles from it.
-            if (ColorPages.kindOf(page) != null) custom.open(page, settings)
-            moveTo(focus.copy(column = SettingsColumn.Panel, page = page, panelIndex = index, systemId = systemAtFocus()?.systemId, folderKey = SettingsListPages.unknownFolderAt(focus, content)?.key, undoAsk = null))
+            moveTo(focus.copy(column = SettingsColumn.Panel, page = page, panelIndex = index, systemId = systemAtFocus()?.systemId, undoAsk = null))
         }
         return true
     }

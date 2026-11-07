@@ -103,7 +103,7 @@ class HomeCoverArtTest {
     fun wideGridCoversStandOnShelves() {
         show { CoverGridBoard(rememberSource { coverArtSource() }) }
         assertShelf("768x432 Super Nintendo", MEGA_MAN_X)
-        // The focused cover is drawn larger over its neighbours (the lift, never layout): a pixel just left of its resting box is its own picture, not the collar's groove.
+        // The focused cover is drawn larger (the lift, never layout): a pixel just left of its resting box is its own picture, not the collar's groove.
         val density = compose.density.density
         val resting = pictures().first { (cell, _) -> abs(cell.left - bounds(HomeTags.cover(MEGA_MAN_X)).left.value) < EPSILON && abs(cell.top - bounds(HomeTags.cover(MEGA_MAN_X)).top.value) < EPSILON }.second
         val pixels = compose.onRoot().captureToImage().toPixelMap()

@@ -4,7 +4,7 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Where Settings keeps its three columns on a wide screen (docs/design/rules.md › Settings): the sections column is a fixed
- * 196 dp, so a section label ("Pantalla de inicio") stays whole on one line only up to some text size, and a wide font
+ * 212.5 dp, so a section label ("Box art & accounts") stays whole on one line only up to some text size, and a wide font
  * (Mono, Serif) fits less. Pinned by `SettingsColumnsFitTest` in English, Vietnamese, French and Spanish.
  */
 object SettingsColumns {
@@ -29,10 +29,13 @@ object SettingsThreeDimens {
     /**
      * The sections column up to its divider. Sized from the longest label: every section's label starts at
      * [LeftColumnDimens.sectionLabelStart] (the slab's left edge 16 + 23.33, after the accent bar), and keeps [LeftColumnDimens.systemLabelEndClear] clear of the divider; the widest label measured in any
-     * language at the largest size that keeps three columns is 148.5 dp (Spanish "Pantalla de inicio" in Jost at 1.2), rounded up to 152 with the label start and the clear.
+     * language at the largest size that keeps three columns is 165 dp (English "Box art & accounts" in Jost at 1.2), so the column is 212.5 with the label start and the clear.
      * `SettingsSectionsFitLabelsTest` measures every label and fails if this is too small.
      */
-    val sectionsWidth = 196.dp
+    val sectionsWidth = 212.5.dp
+
+    /** The most of an options row a value takes: under half, so "ScreenScraper" stays on one line beside "Signed in as …" at 768. */
+    const val VALUE_SHARE = 0.47f
 
     /** The divider to the options column, and the options to the right column. */
     val optionsGap = 10.dp

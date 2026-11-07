@@ -45,8 +45,6 @@ internal interface SettingsLibraryActions {
         onDone: (Boolean) -> Unit,
     )
 
-    fun detectEmulators(onDone: (Boolean) -> Unit)
-
     /** A picker answer is coming: [SettingsHost.folderAdd] goes back to idle. */
     fun startFolderPick()
 
@@ -106,8 +104,6 @@ internal interface SettingsLibraryActions {
             emulatorId: String?,
             onDone: (Boolean) -> Unit,
         ) = onDone(false)
-
-        override fun detectEmulators(onDone: (Boolean) -> Unit) = onDone(false)
 
         override fun startFolderPick() = Unit
 
@@ -212,7 +208,7 @@ internal class SettingsHost(
     val backupWork: BackupWork = BackupWork.None,
     /** Advanced › Restore… and Undo last restore (the picker is [activity]'s). */
     val restoreWork: RestoreWork = RestoreWork.None,
-    /** About's Check for updates and Update. */
+    /** About › Updates: Check now and Update. */
     val updates: SettingsUpdateActions = SettingsUpdateActions.None,
     /** About › Report a problem. */
     val problemReports: ProblemReportActions = ProblemReportActions.None,
@@ -253,8 +249,6 @@ internal class SettingsHost(
                 emulatorId: String?,
                 onDone: (Boolean) -> Unit,
             ) = library.chooseEmulator(systemId, emulatorId, onDone)
-
-            override fun detectEmulators(onDone: (Boolean) -> Unit) = library.detectEmulators(onDone)
 
             override fun openHomeSettings(onNotHome: () -> Unit): Boolean = activity.openHomeSettings(onNotHome)
 

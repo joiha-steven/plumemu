@@ -74,7 +74,11 @@ internal sealed interface PanelCommand {
      */
     data class PlayWith(val emulatorId: String?, val forSystem: Boolean = false) : PanelCommand
 
-    data class GetEmulator(val packageName: String, val name: String) : PanelCommand
+    /** Opens [url], the page of the emulator called [name], in a browser. */
+    data class GetEmulator(val url: String, val name: String) : PanelCommand
+
+    /** A row that only shows a name; it is disabled, so neither a key nor a tap can run this. */
+    data object Nothing : PanelCommand
 
     /** Sort by…: the sorts of the games list, the one in use marked. */
     data object OpenSortMenu : PanelCommand

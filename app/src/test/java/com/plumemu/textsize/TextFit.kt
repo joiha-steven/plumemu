@@ -1,5 +1,6 @@
 package com.plumemu.textsize
 
+import com.plumemu.settings.screen.SettingsTags
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -36,10 +37,16 @@ internal class FitAllowance(
     val oneLine: Set<String> = emptySet(),
     /** Exact texts that may end in an ellipsis wherever they are: one named case of a long title at a size and font where no mechanism leaves it room. */
     val ellipsisTexts: Set<String> = emptySet(),
+    /**
+     * Tags of the bars the home lists and grids run under (design/rules.md › Lists that scroll): a text in a [scrollTags] list may overlap a text in one of these
+     * bars, as a row going under the bar does. Two texts of the lists, or two of the bars, may not.
+     */
+    val barTags: Set<String> = emptySet(),
 )
 
 /** Game titles the home list cuts at Largest in Serif and Mono: the list's room is about 3 dp short of the whole title there, with the year alone and nothing left to give up. */
-internal val LONG_TITLES = setOf("Donkey Kong Country 2")
+// Rows now show under both bars, so more of the fixture is on screen: its Zelda and its filler titles.
+internal val LONG_TITLES = setOf("Donkey Kong Country 2", "Zelda: A Link to the Past") + (9..99).map { "Super Nintendo title $it" }
 
 /** The details column's texts that hold one line and end in an ellipsis rather than grow: a late value must not move anything. */
 internal val DETAILS_ONE_LINE = setOf(HomeTags.DETAILS_SUBTITLE, HomeTags.DETAILS_FACT_LINE, HomeTags.DETAILS_EMULATOR, HomeTags.DETAILS_FACT_VALUE)
@@ -60,7 +67,8 @@ private fun SemanticsNode.isUnder(tags: Set<String>): Boolean = tags.any { hasAn
  * - shorter than one line, everywhere (a node's size does not depend on the scroll position), by more than the
  *   12% a font's line box keeps as leading around its glyphs: the bars are 18 and 22 dp for Plum Sans, and Serif
  *   and Mono lines are taller;
- * - overlapped by another text by more than a pixel in both directions.
+ * - overlapped by another text by more than a pixel in both directions, unless one is a row of a scrolling list and the other is in a bar the list
+ *   runs under ([FitAllowance.barTags]).
  * A text with nothing drawn (a row scrolled out of view) is not on screen and is skipped.
  */
 internal fun textProblems(
@@ -102,16 +110,23 @@ internal fun textProblems(
         val firstLine = layout.getLineBottom(0) - layout.getLineTop(0)
         if (node.size.height + 1f < firstLine * (1f - LINE_LEADING_SLACK)) problems += "'$text' is shorter than one line (${node.size.height} < $firstLine px)"
     }
+    // A panel list erases the room past an edge it continues over ([PanelListFades]), and past an edge it does not no row lies: its text draws only inside the list.
+    val panelList = generateSequence(listOf(root)) { level -> level.flatMap { it.children }.takeIf { it.isNotEmpty() } }.flatten()
+        .firstOrNull { SemanticsProperties.TestTag in it.config && it.config[SemanticsProperties.TestTag] == SettingsTags.PANEL_LIST }
+    fun drawn(node: SemanticsNode) = if (panelList != null && node.hasAncestorTagged(SettingsTags.PANEL_LIST)) node.boundsInRoot.intersect(panelList.boundsInRoot) else node.boundsInRoot
     for (a in texts.indices) {
         for (b in a + 1 until texts.size) {
-            val x = texts[a].second.boundsInRoot
-            val y = texts[b].second.boundsInRoot
+            val x = drawn(texts[a].second)
+            val y = drawn(texts[b].second)
             val overlapW = minOf(x.right, y.right) - maxOf(x.left, y.left)
             val overlapH = minOf(x.bottom, y.bottom) - maxOf(x.top, y.top)
             // A system count under the letter rail is faded out (games focused): the rail takes its place in the peek.
             val countUnderRail = (texts[a].second.hasAncestorTagged(SystemRowTags.COUNT) && texts[b].second.hasAncestorTagged(HomeTags.RAIL)) ||
                 (texts[b].second.hasAncestorTagged(SystemRowTags.COUNT) && texts[a].second.hasAncestorTagged(HomeTags.RAIL))
-            if (overlapW > 1f && overlapH > 1f && !countUnderRail) problems += "'${texts[a].first}' overlaps '${texts[b].first}' ($overlapW x $overlapH px)"
+            val nodeA = texts[a].second
+            val nodeB = texts[b].second
+            val rowUnderBar = (nodeA.isUnder(allow.scrollTags) && nodeB.isUnder(allow.barTags)) || (nodeB.isUnder(allow.scrollTags) && nodeA.isUnder(allow.barTags))
+            if (overlapW > 1f && overlapH > 1f && !countUnderRail && !rowUnderBar) problems += "'${texts[a].first}' overlaps '${texts[b].first}' ($overlapW x $overlapH px)"
         }
     }
     return problems

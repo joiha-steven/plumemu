@@ -27,10 +27,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/**
- * The small colour dots on the Background, Text color and Accent option rows follow a finger on a colour
- * slider, read while drawing, so the move recomposes no row.
- */
+/** What a finger on a colour slider does to the option rows' colour dots. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
@@ -41,10 +38,12 @@ class SettingsOptionSwatchFollowsDragTest {
     val rules = rulesAround(compose)
 
     private val preview = ColorPreview()
-    private var stored: PlumSettings = PlumSettings()
+    private val dragged get() = stored.appearance.copy(background = ColorSetting.Custom(0x203050), textColor = TextColorSetting.Custom(0xE8D8C8), accent = ColorSetting.Custom(0xF0A060))
+    private val still = PlumSettings().let { it.copy(advanced = it.advanced.copy(animations = false)) }
+    private var stored: PlumSettings = still
 
     private fun open() {
-        compose.setContent { SettingsTheme(stored, null, preview) { SettingsAt(optionsAt(SettingsOption.Background), stored) } }
+        compose.setContent { SettingsTheme(stored, null, preview) { SettingsAt(optionsAt(SettingsOption.TextColor), stored) } }
         compose.waitForIdle()
     }
 
@@ -57,22 +56,43 @@ class SettingsOptionSwatchFollowsDragTest {
         return Color(image.asAndroidBitmap().getPixel(x, image.height / 2))
     }
 
+    /** A finger on a slider means the "+" page is up, and that page covers the options column: no dot is on screen to follow it. */
+    private fun assertNoRowDotOn(
+        option: SettingsOption,
+        page: PanelPage,
+    ) {
+        compose.setContent { SettingsTheme(stored, null, preview) { SettingsAt(panelAt(option, page, 0), stored) } }
+        compose.waitForIdle()
+        compose.runOnIdle { preview.show(dragged, fingerDown = true) }
+        compose.waitForIdle()
+        for (row in listOf(SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent)) {
+            compose.onNodeWithTag(SettingsTags.value(row), useUnmergedTree = true).assertDoesNotExist()
+        }
+    }
+
     @Test
-    fun theDotsOfBackgroundTextAndAccentFollowTheFingerBeforeTheLift() {
+    fun aFingerOnTheBackgroundsPlusPageHasNoRowDotToMove() = assertNoRowDotOn(SettingsOption.Background, PanelPage.BackgroundCustom)
+
+    @Test
+    fun aFingerOnTheTextColorsPlusPageHasNoRowDotToMove() = assertNoRowDotOn(SettingsOption.TextColor, PanelPage.TextCustom)
+
+    @Test
+    fun aFingerOnTheAccentsPlusPageHasNoRowDotToMove() = assertNoRowDotOn(SettingsOption.Accent, PanelPage.AccentCustom)
+
+    /** Should a preview reach the list, the Accent row reads it while drawing: exactly its colour, with no recomposition of the row. */
+    @Test
+    fun theAccentDotReadsThePreviewWhileDrawing() {
         open()
-        val before = mapOf(SettingsOption.Background to dotOf(SettingsOption.Background), SettingsOption.TextColor to dotOf(SettingsOption.TextColor), SettingsOption.Accent to dotOf(SettingsOption.Accent))
-        val dragged = stored.appearance.copy(background = ColorSetting.Custom(0x203050), textColor = TextColorSetting.Custom(0xE8D8C8), accent = ColorSetting.Custom(0xF0A060))
+        val before = dotOf(SettingsOption.Accent).toArgb()
         compose.runOnIdle { preview.show(dragged, fingerDown = true) }
         val shown = preview.over(stored).toThemeSettings()
-        assertEquals(shown.backgroundColor.toComposeColor().toArgb(), dotOf(SettingsOption.Background).toArgb())
-        assertEquals(shown.textColor.toComposeColor().toArgb(), dotOf(SettingsOption.TextColor).toArgb())
         assertEquals(shown.accentColor.toComposeColor().toArgb(), dotOf(SettingsOption.Accent).toArgb())
-        before.forEach { (option, colour) -> assertNotEquals("$option moved", colour.toArgb(), dotOf(option).toArgb()) }
+        assertNotEquals(before, dotOf(SettingsOption.Accent).toArgb())
     }
 
     @Test
     fun aDraggedAccentReplacesTheBySystemDiscAndPuttingItBackBringsTheDiscBack() {
-        stored = PlumSettings().let { it.withAppearance { a -> a.copy(accent = ColorSetting.BySystem(ColorSetting.Preset("Red"))) } }
+        stored = still.let { it.withAppearance { a -> a.copy(accent = ColorSetting.BySystem(ColorSetting.Preset("Red"))) } }
         open()
         val disc = compose.onAllNodesWithTag(SettingsTags.VALUE_BY_SYSTEM, useUnmergedTree = true)
         disc.assertCountEquals(1)
@@ -88,7 +108,7 @@ class SettingsOptionSwatchFollowsDragTest {
 
     @Test
     fun aDraggedBackgroundKeepsTheAccentsBySystemDisc() {
-        stored = PlumSettings().let { it.withAppearance { a -> a.copy(accent = ColorSetting.BySystem(ColorSetting.Preset("Red"))) } }
+        stored = still.let { it.withAppearance { a -> a.copy(accent = ColorSetting.BySystem(ColorSetting.Preset("Red"))) } }
         open()
         val disc = compose.onAllNodesWithTag(SettingsTags.VALUE_BY_SYSTEM, useUnmergedTree = true)
         compose.runOnIdle { preview.show(stored.appearance.copy(background = ColorSetting.Custom(0x203050)), fingerDown = true) }

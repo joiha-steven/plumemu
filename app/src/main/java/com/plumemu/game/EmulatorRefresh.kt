@@ -5,7 +5,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
- * Reads a system's emulators again for the open panel when packages may have changed (back from the store).
+ * Reads a system's emulators again for the open panel when packages may have changed (back from a download).
  * Only a Play with list or a message about emulators to get is rebuilt ([refreshedEmulators]); a panel with a
  * text field, the menu and every other message are left alone. One read at a time; the newest wins.
  * The menu behind the panel is brought along: its "Play with" value names the emulator the game starts now ([withMenuEmulator]).

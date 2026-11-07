@@ -88,7 +88,7 @@ object UpdateGate {
         return now - lastSuccessAt >= DAY_MS
     }
 
-    /** The person's Check for updates: any network will do; the switch and the 24 h are not asked. */
+    /** The person's Check now: any network will do; the switch and the 24 h are not asked. */
     fun canCheckNow(network: NetworkKind): Boolean = network != NetworkKind.None
 }
 

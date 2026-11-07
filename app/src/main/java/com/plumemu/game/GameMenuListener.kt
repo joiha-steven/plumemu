@@ -41,7 +41,7 @@ internal fun rememberGameMenuController(
     val scope = rememberCoroutineScope()
     val controller = remember(actions, apps, sorts, scope) { GameMenuController(actions, scope, apps, sorts) }
     SideEffect { controller.keyboardKind = keyboard }
-    // Back from the store (or a package change meanwhile): a panel about emulators shows what is installed now.
+    // Back from a download (or a package change meanwhile): a panel about emulators shows what is installed now.
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, controller) {
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) controller.emulatorsMayHaveChanged() }

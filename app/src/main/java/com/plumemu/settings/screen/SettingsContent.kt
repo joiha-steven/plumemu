@@ -9,6 +9,7 @@ import com.plumemu.platforms.PlatformDataVersion
 import com.plumemu.account.AccountStatus
 import com.plumemu.account.RaAccountStatus
 import com.plumemu.content.OrderFacts
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.coredata.settings.SecondScreenSettings
 import com.plumemu.graph.BackupState
 import com.plumemu.graph.BuildFeatures
@@ -51,10 +52,12 @@ internal data class SettingsContent(
     val isHomeApp: Boolean = false,
     /** Android's Usage access is granted to Plumemu (asked by the screen each time it comes back, like [isHomeApp]). */
     val hasUsageAccess: Boolean = false,
+    /** The device can vibrate (`withVibrator`): Controls lists Vibration only then; the last row, so a late "no" moves nothing. */
+    val hasVibrator: Boolean = true,
+    /** Show button hints is off: the grid's tappable Size hint is gone, so Home screen lists Grid size for touch. */
+    val hasNoButtonHints: Boolean = false,
     /** Folders whose removal runs in the process (it may have been asked for in an earlier Settings). */
     val removingFolderIds: Set<Long> = emptySet(),
-    /** A detection runs in the process. */
-    val isDetecting: Boolean = false,
     /** Folders and emulators could not be read; Settings says so (opening it again reads anew). */
     val loadFailed: Boolean = false,
     /** Some listed game has a year from ScreenScraper: Sort games lists Year only then (or while it is the sort in use). */
@@ -71,6 +74,8 @@ internal data class SettingsContent(
     val isSecondScreenOn: Boolean = false,
     /** The ScreenScraper account: its row, its status line and the box art region are listed from it. */
     val account: AccountStatus = AccountStatus.NotInThisBuild,
+    /** The stored box art choice, null while none was made; with [account] it gives the source in force ([boxArtSourceIn]). */
+    val chosenBoxArtSource: BoxArtSourceSetting? = null,
     /** The RetroAchievements account (Accounts › RetroAchievements): its row's value and its panel. */
     val raAccount: RaAccountStatus = RaAccountStatus.SignedOut,
     /** The box-art run (`AppGraph.scrapeStatus`): the account row's value and its panel's status line. */
@@ -93,7 +98,7 @@ internal data class SettingsContent(
     val hasUpdates: Boolean = BuildFeatures.hasUpdates,
     /** About's updates (`AppGraph.updates`): the last check, what it found, and an update under way. */
     val update: UpdateView = UpdateView(),
-    /** The platform data in use (`withPlatformData`): About's "Platform data" row; null until read, and then no row. */
+    /** The platform data in use (`withPlatformData`): named in Version's panel; null until read, and then not named. */
     val platformData: PlatformDataVersion? = null,
     /** Advanced › Restore… (`AppGraph.restore`): reading, the confirm, replacing, or how the last one ended. */
     val restore: RestoreState = RestoreState.Idle,
@@ -105,7 +110,7 @@ internal data class SettingsContent(
      */
     val librarySystems: List<LibrarySystem> = emptyList(),
     /**
-     * Library › Unknown folders: first the folders whose name matches no system (A answers), then the answered
+     * Files not added's folder lines: first the folders whose name matches no system (A answers), then the answered
      * ones, so an answer can be changed ([SettingsFolderRow]); each group by picked folder then name.
      */
     val unknownFolders: List<SettingsFolderRow> = emptyList(),
@@ -125,21 +130,17 @@ internal data class SettingsContent(
     /** Which of Year and Rating Sort games lists now ([hasYear], [hasRating]). */
     val sortValues: SortChoices.Values get() = SortChoices.Values(hasYear, hasRating)
 
-    /** False for a row that needs a statistics server or an update manifest this build does not have. */
+    /** False for a row that needs a statistics server or an update manifest this build does not have (Export logs: one that a statistics server replaces). */
     fun isInThisBuild(option: SettingsOption): Boolean =
         when (option) {
             SettingsOption.UsageStatistics, SettingsOption.ReportProblem -> hasStatistics
-            SettingsOption.CheckForUpdates, SettingsOption.CheckUpdatesDaily, SettingsOption.UpdateAvailable -> hasUpdates
+            SettingsOption.Updates -> hasUpdates
+            // Report a problem's Share log does it where there is a form.
+            SettingsOption.ExportLogs -> !hasStatistics
             else -> true
         }
 
     fun system(id: String?): SystemEmulators? = systems.firstOrNull { it.systemId == id }
-
-    /** The unknown-folder row drawn as row [rowIndex] of Library's rows (null when that row is another option). */
-    fun unknownFolderAtRow(rowIndex: Int): SettingsFolderRow? {
-        val first = SettingsSection.Library.rowsIn(this).indexOf(SettingsOption.UnknownFolder)
-        return if (first < 0) null else unknownFolders.getOrNull(rowIndex - first)
-    }
 
     fun folder(id: Long?): SetupFolder? = folders.firstOrNull { it.id == id }
 
@@ -179,7 +180,7 @@ internal sealed interface FolderAnswer {
     data class OfSystem(val id: String, val name: String) : FolderAnswer
 }
 
-/** One row of Library › Unknown folders: the folder, the files in it no system claims (0 once answered) and its answer. */
+/** One unknown folder: the folder, the files in it no system claims (0 once answered) and its answer. */
 @Immutable
 internal data class SettingsFolderRow(
     val key: FolderKey,
@@ -252,8 +253,6 @@ internal enum class SettingsNotice(
     NoFolderPicker(R.string.setup_message_no_picker),
     FolderRemoveFailed(R.string.settings_folder_remove_failed),
     EmulatorChoiceFailed(R.string.settings_emulator_choice_failed),
-    DetectDone(R.string.settings_detect_done),
-    DetectFailed(R.string.settings_detect_failed),
     HomeRoleUnavailable(R.string.settings_home_unavailable),
 
     /** Use as home screen: Android's question closed and Plumemu is still not the home app. */

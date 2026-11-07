@@ -274,7 +274,7 @@ class GameMenuControllerTest {
         }
 
     @Test
-    fun getItOpensTheStorePageOrSaysItCannot() =
+    fun getItOpensTheEmulatorsPageOrSaysItCannot() =
         runMenu {
             val actions = FakeGameActions()
             val menu = controller(actions)
@@ -283,11 +283,11 @@ class GameMenuControllerTest {
             menu.onAction(Action.Enter)
             menu.down(3) // ePSXe, not installed
             menu.onAction(Action.Enter)
-            assertEquals(listOf(Epsxe.packageName), actions.storePages)
+            assertEquals(listOf(Epsxe.page), actions.downloadPages)
             assertTrue("the list stays for when the person comes back", menu.panel!!.screen is PanelScreen.PlayWith)
-            actions.storeOpens = false
+            actions.pageOpens = false
             menu.onAction(Action.Enter)
-            assertEquals(UiText.Res(R.string.game_error_store_title), menu.panel!!.content.title)
+            assertEquals(UiText.Res(R.string.game_error_page_title), menu.panel!!.content.title)
             menu.onAction(Action.Back)
             assertTrue("Back returns to the list", menu.panel!!.screen is PanelScreen.PlayWith)
         }
@@ -395,8 +395,8 @@ class GameMenuControllerTest {
         runMenu {
             var chosen = false
             val offers = listOf(
-                EmulatorOffer("duckstation", "DuckStation", "com.github.stenzek.duckstation"),
-                EmulatorOffer("retroarch_mednafen_psx", "RetroArch (Beetle PSX)", "com.retroarch.aarch64"),
+                EmulatorOffer("duckstation", "DuckStation", null),
+                EmulatorOffer("retroarch_mednafen_psx", "RetroArch (Beetle PSX)", null),
             )
             val actions = FakeGameActions(outcome = { key -> if (chosen) FakeGameActions.started(key) else LaunchOutcome.EmulatorNotChosen(7, "psx", "PlayStation", offers, "duckstation") })
             var listingReads = 0
@@ -417,7 +417,7 @@ class GameMenuControllerTest {
     @Test
     fun backingOutOfTheFirstLaunchQuestionStoresNothingAndStartsNothing() =
         runMenu {
-            val offers = listOf(EmulatorOffer("duckstation", "DuckStation", "com.github.stenzek.duckstation"))
+            val offers = listOf(EmulatorOffer("duckstation", "DuckStation", null))
             val actions = FakeGameActions(outcome = { LaunchOutcome.EmulatorNotChosen(7, "psx", "PlayStation", offers, "duckstation") })
             val menu = controller(actions)
             menu.play(game)
@@ -432,7 +432,7 @@ class GameMenuControllerTest {
     @Test
     fun onlyLegalRiskEmulatorsInstalledLetThePersonPickOne() =
         runMenu {
-            val risky = listOf(EmulatorOffer("risky", "Risky Emu", "org.example.risky", isLegalRisk = true))
+            val risky = listOf(EmulatorOffer("risky", "Risky Emu", null, isLegalRisk = true))
             val actions = FakeGameActions(outcome = { LaunchOutcome.EmulatorNotChosen(7, "switch", "Switch", risky, null) })
             val menu = controller(actions)
             menu.play(game)

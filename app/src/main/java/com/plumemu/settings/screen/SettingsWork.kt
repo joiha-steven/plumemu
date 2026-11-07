@@ -18,8 +18,8 @@ import com.plumemu.game.RenameBoxArtNotice
 import com.plumemu.game.TitleList
 
 /**
- * What Settings started outside the store and how it went: the folder being removed,
- * a detection running, and one plain line ([notice]) for the option that tried something. Results
+ * What Settings started outside the store and how it went: the folder being removed
+ * and one plain line ([notice]) for the option that tried something. Results
  * arrive on the main thread through the [actions]' callbacks.
  */
 @Stable
@@ -36,9 +36,6 @@ internal class SettingsWork(
 
     /** Folders asked to be removed whose removal has not ended (it waits for a running scan). */
     var removing: Set<Long> by mutableStateOf(emptySet())
-        private set
-
-    var isDetecting: Boolean by mutableStateOf(false)
         private set
 
     /** The scan moved on: its "already reading" notice is stale. */
@@ -74,9 +71,6 @@ internal class SettingsWork(
         folderId: Long,
         content: SettingsContent,
     ): Boolean = folderId in removing || folderId in content.removingFolderIds
-
-    /** A detection runs, started here or in an earlier Settings of the process. */
-    fun isDetecting(content: SettingsContent): Boolean = isDetecting || content.isDetecting
 
     /** Rescan library: a scan, or "Already reading your games" when one runs. */
     fun rescan() {
@@ -148,7 +142,7 @@ internal class SettingsWork(
         answering = answering + key
         actions.chooseFolderSystem(key.folderId, key.relativePath, systemId) { stored ->
             answering = answering - key
-            if (!stored) notice = SettingsOption.UnknownFolder to SettingsNotice.FolderAnswerFailed
+            if (!stored) notice = SettingsOption.FilesNotAdded to SettingsNotice.FolderAnswerFailed
         }
         return true
     }
@@ -202,16 +196,6 @@ internal class SettingsWork(
     ) {
         actions.chooseEmulator(systemId, emulatorId) { stored ->
             if (!stored) notice = SettingsOption.SystemEmulator to SettingsNotice.EmulatorChoiceFailed
-        }
-    }
-
-    /** Detect new emulators; a second press while it runs does nothing more. */
-    fun detectEmulators() {
-        if (isDetecting) return
-        isDetecting = true
-        actions.detectEmulators { detected ->
-            isDetecting = false
-            notice = SettingsOption.DetectEmulators to (if (detected) SettingsNotice.DetectDone else SettingsNotice.DetectFailed)
         }
     }
 
@@ -271,16 +255,17 @@ internal class SettingsWork(
         actions.accounts.signOut { done -> if (!done) notice = SettingsOption.ScraperAccount to SettingsNotice.SignOutFailed }
     }
 
-    /** Download missing or Re-download for [systemIds] (null: all); a failure is said in the account's panel. */
+    /** Download missing or Re-download for [systemIds] (null: all); a failure is said in [row]'s panel. */
     fun askAgain(
         which: AskAgain,
         systemIds: Set<String>?,
+        row: SettingsOption = SettingsOption.ScraperAccount,
     ) {
-        actions.boxArt.askAgain(which, systemIds) { marked -> if (!marked) notice = SettingsOption.ScraperAccount to SettingsNotice.BoxArtAskFailed }
+        actions.boxArt.askAgain(which, systemIds) { marked -> if (!marked) notice = row to SettingsNotice.BoxArtAskFailed }
     }
 
-    /** Clear box art, after its confirm; a failure is said in the account's panel. */
-    fun clearBoxArt() {
+    /** Clear box art, after its confirm; a failure is said in [row]'s panel. */
+    fun clearBoxArt(row: SettingsOption) {
         actions.boxArt.clearBoxArt { result ->
             val failure =
                 when (result) {
@@ -289,7 +274,7 @@ internal class SettingsWork(
                     BoxArtClearResult.RunStillGoing -> SettingsNotice.BoxArtClearRunGoing
                     BoxArtClearResult.Failed -> SettingsNotice.BoxArtClearFailed
                 }
-            if (failure != null) notice = SettingsOption.ScraperAccount to failure
+            if (failure != null) notice = row to failure
         }
     }
 
@@ -306,9 +291,12 @@ internal class SettingsWork(
         }
     }
 
-    /** Pause or Resume; a failure is said in the account's panel. */
-    fun setBoxArtPaused(isPaused: Boolean) {
-        actions.boxArt.setPaused(isPaused) { stored -> if (!stored) notice = SettingsOption.ScraperAccount to SettingsNotice.BoxArtPauseFailed }
+    /** Pause or Resume; a failure is said in [row]'s panel. */
+    fun setBoxArtPaused(
+        isPaused: Boolean,
+        row: SettingsOption,
+    ) {
+        actions.boxArt.setPaused(isPaused) { stored -> if (!stored) notice = row to SettingsNotice.BoxArtPauseFailed }
     }
 
     /** Accounts › Box art: store the choice; the graph makes the run follow it. A failure is said under the row. */
@@ -316,28 +304,28 @@ internal class SettingsWork(
         actions.boxArt.setSource(source) { stored -> if (!stored) notice = SettingsOption.BoxArtSource to SettingsNotice.BoxArtSourceFailed }
     }
 
-    /** The focus left Back up…: how the last backup ended is not shown again. */
+    /** The focus left the row after Back up…'s page was open: how the last backup ended is not shown again. */
     fun leaveBackup() = actions.backup.forgetResult()
 
-    /** Advanced › Back up…: the save picker for [kind]; the graph starts the backup with its answer. */
+    /** Back up…: the save picker for [kind]; the graph starts the backup with its answer. */
     fun startBackup(kind: BackupKind) {
         // A result still shown would read as the answer to this new choice.
         actions.backup.forgetResult()
         if (!actions.backup.pick(kind)) notice = SettingsOption.Backup to SettingsNotice.NoSavePicker
     }
 
-    /** The focus left Restore… or Undo last restore: how the last one ended is not shown again. */
+    /** The focus left the row after Restore…'s or Undo's page was open: how the last one ended is not shown again. */
     fun leaveRestore() = actions.restore.forgetResult()
 
-    /** Advanced › Restore…: the open picker; the graph reads the file with its answer. */
+    /** Restore…: the open picker; the graph reads the file with its answer. */
     fun startRestore() {
         actions.restore.forgetResult()
         if (!actions.restore.pick()) notice = SettingsOption.Restore to SettingsNotice.NoOpenPicker
     }
 
-    /** Advanced › Export logs: Android's share sheet with the log file; a failure is said under the row. */
-    fun exportLogs() {
-        actions.exportLogs { shared -> if (!shared) notice = SettingsOption.ExportLogs to SettingsNotice.ExportLogsFailed }
+    /** Export logs, or Report a problem's Share log: Android's share sheet with the log file; a failure is said in [row]'s panel until a share works. */
+    fun exportLogs(row: SettingsOption = SettingsOption.ExportLogs) {
+        actions.exportLogs { shared -> if (shared) unsay(SettingsNotice.ExportLogsFailed) else notice = row to SettingsNotice.ExportLogsFailed }
     }
 
     /**

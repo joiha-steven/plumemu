@@ -76,6 +76,8 @@ internal class GraphSettingsLibrary(
     private val permissions: FolderPermissions = AndroidFolderPermissions(context.applicationContext.contentResolver),
     private val log: (String) -> Unit = { Log.w(TAG, it) },
     private val info: (String) -> Unit = { Log.i(TAG, it) },
+    /** One detection and its defaults; a test passes one that fails. Null: Android's answer, [detectAndRefreshDefaults]. */
+    private val findEmulators: (suspend () -> Unit)? = null,
 ) : SettingsLibraryActions {
     private val romFolders by lazy { RomFolders(graph.database.scanDao(), permissions) }
 
@@ -127,15 +129,10 @@ internal class GraphSettingsLibrary(
     /** Folders whose removal was asked for and has not ended, for every Settings of the process. */
     private val removing = MutableStateFlow<Set<Long>>(emptySet())
 
-    private val detecting = MutableStateFlow(false)
-
     /** The running removal of each folder and the running detection; a repeated ask joins it. */
     private val runningLock = Any()
     private val removals = HashMap<Long, Deferred<Boolean>>()
     private var detection: Deferred<Boolean>? = null
-
-    /** A detection runs (one at a time in the process). */
-    val isDetecting: StateFlow<Boolean> = detecting.asStateFlow()
 
     private val installed: Flow<InstalledEmulators?> = flow { emitAll(graph.launching()?.detector?.installed ?: flowOf(null)) }
 
@@ -160,7 +157,7 @@ internal class GraphSettingsLibrary(
             }
         val systems = combine(games.observeSystemsWithGames(), installed, choicesChanged) { rows, found, _ -> Triple(rows, found, systemsOf(rows, found)) }
         val shown =
-            combine(folders, graph.startup.scanState, systems, removing, detecting) { folderList, scan, (rows, found, emulators), gone, checking ->
+            combine(folders, graph.startup.scanState, systems, removing) { folderList, scan, (rows, found, emulators), gone ->
                 SettingsContent(
                     folders = folderList,
                     isScanning = scan.isBusy,
@@ -170,7 +167,6 @@ internal class GraphSettingsLibrary(
                     librarySystems = librarySystemsOf(graph.catalog(), rows),
                     emulatorAppCount = found?.packages?.size,
                     removingFolderIds = gone,
-                    isDetecting = checking,
                 )
             }
         // Which sorts have values (Year, Rating): Sort games lists those only.
@@ -351,6 +347,8 @@ internal class GraphSettingsLibrary(
     override fun rescanLibrary(): Boolean {
         if (graph.startup.scanState.value.isBusy) return false
         graph.startup.requestScan(ScanTrigger.Manual)
+        // Beside the scan, not in it: a failed detection is logged and leaves the scan alone.
+        detectEmulators()
         return true
     }
 
@@ -378,14 +376,14 @@ internal class GraphSettingsLibrary(
         }
     }
 
-    override fun detectEmulators(onDone: (Boolean) -> Unit) {
+    /** Asks Android which emulators are installed and refreshes the defaults; [onDone] gets whether that worked. */
+    internal fun detectEmulators(onDone: (Boolean) -> Unit = {}) {
         // One at a time for the process: a second ask (a Settings opened again) joins the running one.
         val (run, joined) =
             synchronized(runningLock) {
                 detection?.let { return@synchronized it to true }
                 val started = graph.appScope.async(start = CoroutineStart.LAZY) { runDetection() }
                 detection = started
-                detecting.value = true
                 started to false
             }
         if (!joined) run.start()
@@ -397,20 +395,21 @@ internal class GraphSettingsLibrary(
 
     private suspend fun runDetection(): Boolean =
         try {
-            attempt("emulator detection") {
-                val catalog = checkNotNull(graph.catalog()) { "platform data is not read" }
-                val launching = checkNotNull(graph.launching()) { "launching is not set up" }
-                val found = launching.detector.detect(catalog)
-                val systems = graph.database.gameDao().observeSystemsWithGames().first().map { it.id }
-                launching.choices.refreshDefaults(systems, found)
-            }
+            attempt("emulator detection") { findEmulators?.invoke() ?: detectAndRefreshDefaults() }
         } finally {
             synchronized(runningLock) {
                 detection = null
-                detecting.value = false
             }
             choicesChanged.update { it + 1 }
         }
+
+    private suspend fun detectAndRefreshDefaults() {
+        val catalog = checkNotNull(graph.catalog()) { "platform data is not read" }
+        val launching = checkNotNull(graph.launching()) { "launching is not set up" }
+        val found = launching.detector.detect(catalog)
+        val systems = graph.database.gameDao().observeSystemsWithGames().first().map { it.id }
+        launching.choices.refreshDefaults(systems, found)
+    }
 
     private suspend fun attempt(
         what: String,

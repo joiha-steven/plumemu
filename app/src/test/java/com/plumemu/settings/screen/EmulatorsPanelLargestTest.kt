@@ -51,14 +51,14 @@ abstract class EmulatorsPanelLargestBase {
         assertTrue(failures.joinToString("\n"), failures.isEmpty())
     }
 
-    /** The same for the other panels built as a header over a list: Language, ROM folders and Box art source. */
+    /** The same for the other panels built as a header over a list: Language, Game folders and Box art source. */
     @Test
     fun otherListPanelsKeepAWholeFirstRowAtLargest() {
         val account = AccountShotContent.of(AccountStatus.SignedOut)
         val cases =
             listOf(
                 Triple("Language", panelAt(SettingsOption.Language, PanelPage.Language, 0), ShotContent.library),
-                Triple("ROM folders", panelAt(SettingsOption.RomFolders, PanelPage.Folders, 0), ShotContent.library),
+                Triple("Game folders", panelAt(SettingsOption.RomFolders, PanelPage.Folders, 0), ShotContent.library),
                 Triple("Box art source", AccountShotContent.focusOn(account, SettingsOption.BoxArtSource, PanelPage.BoxArtSource), account),
             )
         var case by mutableStateOf(cases.first())

@@ -35,6 +35,8 @@ import kotlin.math.abs
  * when the cursor arrives, and a long value or name stays clear of its label.
  */
 abstract class SettingsValuesAlignBase {
+    protected open val signedInGoesUnder = false
+
     protected val compose = appComposeRule()
 
     @get:Rule
@@ -101,7 +103,8 @@ abstract class SettingsValuesAlignBase {
 
     protected fun everyValueEndsOnOneLine() =
         inBothThemes { name, problems ->
-            val ends = listOf(ValueRow.CycleFocused, ValueRow.CycleResting, ValueRow.CycleLong, ValueRow.SubPage, ValueRow.SubPageBare, ValueRow.SignedIn, ValueRow.SignedInLongName, ValueRow.Toggle)
+            // "Signed in as …" does not fit beside ScreenScraper in three columns: it goes whole under the label.
+            val ends = listOfNotNull(ValueRow.CycleFocused, ValueRow.CycleResting, ValueRow.CycleLong, ValueRow.SubPage, ValueRow.SubPageBare, ValueRow.SignedIn.takeUnless { signedInGoesUnder }, ValueRow.SignedInLongName, ValueRow.Toggle)
             val first = bounds(ValueRow.CycleFocused.valueTag).right.value
             for (row in ends) {
                 val end = bounds(row.valueTag).right.value
@@ -158,6 +161,8 @@ abstract class SettingsValuesAlignBase {
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
 class SettingsValuesAlign768Test : SettingsValuesAlignBase() {
+    override val signedInGoesUnder = true
+
     @Test fun chevronsAreCentred() = chevronsAreCentredOnTheText()
 
     @Test fun gapsAreEqual() = theGapsEitherSideOfTheTextAreEqual()

@@ -27,7 +27,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.plumemu.R
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.account.AccountStatus
 import com.plumemu.account.SignInBody
@@ -35,6 +37,7 @@ import com.plumemu.account.SignInForm
 import com.plumemu.account.SignInKind
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.keyboard.KeyboardChoice
 import com.plumemu.keyboard.aboveTray
 import com.plumemu.setup.SetupButton
@@ -50,12 +53,17 @@ import kotlin.math.roundToInt
 
 /**
  * Accounts' ScreenScraper row: without developer credentials only the status line ("Not
- * available in this build"); otherwise the account row (its value says how box art is going).
+ * available in this build"); otherwise the account row (its value says how box art is going),
+ * while an account is signed in, a refused one too, or ScreenScraper is the source in force. A
+ * person on another source who never signed in sees no sign-in they do not need: choosing "Box art
+ * and game info" opens the form from Box art's panel.
  */
 internal fun accountRowsIn(content: SettingsContent): List<SettingsOption> =
     when (content.account) {
         AccountStatus.NotInThisBuild -> listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperStatus)
-        AccountStatus.SignedOut, is AccountStatus.SignedIn -> listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount)
+        is AccountStatus.SignedIn -> listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount)
+        AccountStatus.SignedOut ->
+            listOfNotNull(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount.takeIf { boxArtSourceIn(content) == BoxArtSourceSetting.ScreenScraper })
     }
 
 /** ScreenScraper refused the stored password: Settings offers to sign in again. */
@@ -153,7 +161,7 @@ internal fun ScraperAccountPanel(
     // so a panel the person scrolled by touch is left alone).
     var buttonsTop by remember { mutableIntStateOf(0) }
     AccountPanelScroll(PlumDimens.settingsPanelGap) {
-        PanelTitle(stringResource(R.string.settings_account_title))
+        WordPanelTitle(stringResource(R.string.settings_account_title))
         if (account is AccountStatus.SignedIn) {
             BasicText(
                 stringResource(R.string.account_signed_in_as, account.username),
@@ -172,12 +180,7 @@ internal fun ScraperAccountPanel(
                 accountPageItems(content).forEachIndexed { index, item ->
                     val focused = inPanel && model.focus.panelIndex == index
                     SetupButton(
-                        text =
-                            if (item == AccountPageItem.BoxArtRegion) {
-                                stringResource(R.string.settings_box_art_region_value, stringResource(choiceName(SettingsOption.BoxArtRegion, settings.library.boxArtRegion.ordinal)))
-                            } else {
-                                stringResource(accountPageItemText(item, isPausedByPerson(content)))
-                            },
+                        text = accountPageItemWords(item, settings, content),
                         isPrimary = item == AccountPageItem.SignInAgain || item == AccountPageItem.DownloadMissing,
                         isFocused = focused,
                         maxLines = 2,
@@ -190,6 +193,19 @@ internal fun ScraperAccountPanel(
         }
     }
 }
+
+/** What [item]'s button says; the region's names the one in force. */
+@Composable
+internal fun accountPageItemWords(
+    item: AccountPageItem,
+    settings: PlumSettings,
+    content: SettingsContent,
+): String =
+    if (item == AccountPageItem.BoxArtRegion) {
+        stringResource(R.string.settings_box_art_region_value, stringResource(choiceName(SettingsOption.BoxArtRegion, settings.library.boxArtRegion.ordinal)))
+    } else {
+        stringResource(accountPageItemText(item, isPausedByPerson(content)))
+    }
 
 private fun accountPageItemText(
     item: AccountPageItem,
@@ -223,8 +239,8 @@ internal fun SignInPage(
     // tray at Largest in Mono on 375 high the password, the gap and Sign in need 1 dp more than the panel's
     // 10 left once Sign in's label went from 15 to 16.
     val gap = PlumDimens.setupContentGap
-    AccountPanelScroll(gap, Modifier.aboveTray({ form.isTrayUp }, covers)) {
-        PanelTitle(title)
+    AccountPanelScroll(gap, Modifier.aboveTray({ form.isTrayUp }, covers), isForm = true) {
+        WordPanelTitle(title)
         SignInBody(form, R.string.settings_cancel, onTap = touch.onPanelItem, onAction = touch.onHint, gap = gap, below = below)
     }
 }
@@ -238,17 +254,19 @@ internal fun SignInPage(
 internal fun AccountPanelScroll(
     gap: Dp,
     modifier: Modifier = Modifier,
+    /** A form above the keyboard tray, which keeps every px for the field and the line under it. */
+    isForm: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier
-            .fillMaxHeight()
-            .bleedSideways(PlumDimens.focusRingOutset)
-            .verticalScroll(rememberScrollState())
-            // No room above the title: it starts where every other panel's does (the first item is never focused).
-            .padding(start = PlumDimens.focusRingOutset, end = PlumDimens.focusRingOutset, bottom = PlumDimens.focusRingOutset)
-            .testTag(SettingsTags.ACCOUNT_PANEL),
-        verticalArrangement = Arrangement.spacedBy(gap),
+    PanelScrollColumn(
+        gap,
+        modifier,
+        window = Modifier.bleedSideways(PlumDimens.focusRingOutset),
+        // No room above the title: it starts where every other panel's does (the first item is never focused).
+        inside = Modifier.padding(start = PlumDimens.focusRingOutset, end = PlumDimens.focusRingOutset, bottom = PlumDimens.focusRingOutset),
+        tag = SettingsTags.ACCOUNT_PANEL,
+        bringRoom = if (isForm) 0.dp else EdgePeek,
+        endRoom = if (isForm) 0.dp else SlabDimens.listEndRoom,
         content = content,
     )
 }
@@ -265,7 +283,7 @@ private fun Modifier.bleedSideways(by: Dp): Modifier =
 @Composable
 internal fun ScraperStatusPanel(model: SettingsModel) {
     Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
-        PanelTitle(stringResource(R.string.settings_account_title))
+        WordPanelTitle(stringResource(R.string.settings_account_title))
         boxArtLineOf(model.content.account, model.content.boxArt)?.let { PanelFact(boxArtLineText(it), Modifier.testTag(SettingsPanelTags.STATUS)) }
         PanelBody(stringResource(R.string.settings_account_not_available_body))
     }

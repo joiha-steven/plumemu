@@ -17,6 +17,7 @@ import com.plumemu.launcher.LaunchOutcome
 import com.plumemu.settings.colorSet
 import com.plumemu.settings.screen.SettingsOption
 import com.plumemu.settings.screen.SettingsSection
+import com.plumemu.settings.screen.switchValue
 import com.plumemu.telemetry.LaunchFrom
 import com.plumemu.telemetry.LaunchResult
 import com.plumemu.telemetry.ScreenId
@@ -121,7 +122,7 @@ internal fun settingChanges(
 ): List<TelemetryEvent.SettingChanged> =
     buildList {
         fun choice(
-            option: SettingsOption,
+            option: Enum<*>,
             old: Enum<*>,
             new: Enum<*>,
         ) {
@@ -146,26 +147,22 @@ internal fun settingChanges(
         choice(SettingsOption.TextWeight, a.textWeight ?: TextWeightSetting.Default, b.textWeight ?: TextWeightSetting.Default)
         choice(SettingsOption.LeftEdge, a.leftEdge ?: LeftEdgeSetting.Default, b.leftEdge ?: LeftEdgeSetting.Default)
         choice(SettingsOption.GridSize, a.gridSize, b.gridSize)
-        switch(SettingsOption.EdgeFade, a.edgeFade, b.edgeFade)
         val c = before.controls
         val d = after.controls
         switch(SettingsOption.ConfirmBottom, c.confirmButton == ConfirmButtonSetting.Bottom, d.confirmButton == ConfirmButtonSetting.Bottom)
-        switch(SettingsOption.HoldToScrollFaster, c.holdToScrollFaster, d.holdToScrollFaster)
         switch(SettingsOption.ShowButtonHints, c.showButtonHints, d.showButtonHints)
         choice(SettingsOption.Keyboard, c.keyboard, d.keyboard)
         choice(SettingsOption.SwitchSystemWith, c.switchSystemWith, d.switchSystemWith)
         switch(SettingsOption.PushRightToPlay, c.pushRightToPlay, d.pushRightToPlay)
         val l = before.library
         val m = after.library
-        switch(SettingsOption.ScanOnStartup, l.scanOnStartup, m.scanOnStartup)
         choice(SettingsOption.SortGames, l.sortGames, m.sortGames)
         choice(SettingsOption.BoxArtRegion, l.boxArtRegion, m.boxArtRegion)
         choice(SettingsOption.SystemOrder, l.systemOrder, m.systemOrder)
         val h = before.homeScreen
         val i = after.homeScreen
         switch(SettingsOption.ShowApps, h.showApps, i.showApps)
-        switch(SettingsOption.ShowClock, h.showClock, i.showClock)
-        switch(SettingsOption.ShowBattery, h.showBattery, i.showBattery)
+        switch(SettingsOption.ClockAndBattery, SettingsOption.ClockAndBattery.switchValue(before), SettingsOption.ClockAndBattery.switchValue(after))
         if (before.secondScreen.enabled != after.secondScreen.enabled && after.secondScreen.enabled != null) {
             add(TelemetryEvent.SettingChanged(SettingsOption.SecondScreen, after.secondScreen.enabled == true))
         }

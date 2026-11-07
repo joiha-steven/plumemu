@@ -78,8 +78,11 @@ class HomeBoundsTest {
         assertDp("top bar y = margin 14", 14.dp, top.top)
         assertDp("top bar height: the place name's line", TableText.TopBarHeight, top.bottom - top.top)
         val strip = bounds(HomeTags.STRIP)
-        assertDp("content starts at 14 + the bar + 10", 14.dp + TableText.TopBarHeight + 10.dp, strip.top)
-        assertDp("content ends the footer gap above the hint bar", height - PlumDimens.footerBelow - 22.dp - PlumDimens.footerGap, strip.bottom)
+        // The strip runs from bar to bar (rows go under both); its slot, where what does not scroll stands, keeps the gaps.
+        assertDp("the strip starts at the top bar's foot: 14 + the bar", 14.dp + TableText.TopBarHeight, strip.top)
+        assertDp("the strip ends at the hint bar's head", height - PlumDimens.footerBelow - 22.dp, strip.bottom)
+        assertDp("content starts at 14 + the bar + 10", 14.dp + TableText.TopBarHeight + 10.dp, strip.slot().top)
+        assertDp("content ends the footer gap above the hint bar", height - PlumDimens.footerBelow - 22.dp - PlumDimens.footerGap, strip.slot().bottom)
         val hints = bounds(HomeTags.HINT_BAR)
         assertDp("hint bar height 22", 22.dp, hints.bottom - hints.top)
         assertDp("hint bar bottom at height − 9", height - PlumDimens.footerBelow, hints.bottom)
@@ -104,8 +107,8 @@ class HomeBoundsTest {
         val drawn = compose.onAllNodesWithTag(GAME_ROW_DRAWN_TAG, useUnmergedTree = true)[0].getUnclippedBoundsInRoot()
         assertDp("game rows drawn 38", 38.dp, drawn.bottom - drawn.top)
         assertDp("the drawn row starts with its tap area", first.top, drawn.top)
-        val listWidth = if (width >= WIDE_MIN) width - 368.dp else width - 96.dp
-        assertDp("no-art list: width − 368 beside the text-only details (wide), width − 96 (narrow), plus the 8 it reaches into the gap", listWidth + PlumDimens.gamesListBleed, first.right - first.left)
+        // With the systems focused there is no room for the details, so the rows run to the right margin: 24, 200, 24 and the margin less the 14 the rows end past their text.
+        assertDp("no-art list: to the right margin, plus the 8 it reaches into the gap", width - 258.dp + PlumDimens.gamesListBleed, first.right - first.left)
         assertDp("rows 40 apart (38 and the 2 gap)", TableText.StripTop + 40.dp, bounds(HomeTags.game(1)).top)
         assertDp("hint starts at the margin", 24.dp, bounds(HomeTags.hint(Action.Enter)).left)
     }
@@ -137,7 +140,7 @@ class HomeBoundsTest {
     ) {
         val hintLeft = bounds(HomeTags.hint(hint)).left
         val labelLeft = compose.onNodeWithText(label, useUnmergedTree = true).getUnclippedBoundsInRoot().left
-        assertDp("$label: cap width (label − hint − collar padding − gap 6)", width, labelLeft - hintLeft - HintKeyDimens.collarSide * 2 - 6.dp)
+        assertDp("$label: cap width (label − hint − collar padding − gap)", width, labelLeft - hintLeft - HintKeyDimens.collarSide * 2 - PlumDimens.hintKeyGap)
     }
 
     @Test

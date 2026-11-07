@@ -40,7 +40,7 @@ import org.robolectric.annotation.GraphicsMode
  * own numbers: RP5-2-games (details 248 beside the 400 list, cover 248×178, gap 12),
  * Nova-3-details (strip at `56 − 648`, details `width − 104` = 472, cover 228×164, text 20 to its
  * right), RP5-3 / RP5-4 and their Nova versions (grid `width − 96` less the 4 dp padding;
- * columns 3 / 5 and 2 / 4; gaps 6.67 across and 9.33 down between collars; the bar's title at 72).
+ * columns 3 / 5 and 2 / 4; gaps between collars are the grid tokens (PlumDimens.gridGapAcross / gridGapDown); the bar's title at 72).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -170,7 +170,7 @@ class HomeArtBoundsTest {
     @Config(qualifiers = WIDE)
     fun wideLandscapeGrid() {
         show { ArtGridLandscapeBoard() }
-        assertGrid(span = 672.dp, aspect = 1.4f, rowHeight = 159.77.dp, gap = 6.667.dp, rowGap = 9.333.dp)
+        assertGrid(span = 672.dp, aspect = 1.4f, rowHeight = 154.37.dp, gap = PlumDimens.gridGapAcross, rowGap = PlumDimens.gridGapDown)
         assertTrue("three boxes inside the covers' span 672", bounds(HomeTags.cover(2)).right <= 72.dp + 672.dp + TOLERANCE.dp)
         val title = compose.onNodeWithText("Mega Man X 1993 · Capcom", useUnmergedTree = true).getUnclippedBoundsInRoot()
         assertDp("the bar's title starts where the grid does", 72.dp, title.left)
@@ -183,7 +183,7 @@ class HomeArtBoundsTest {
         // Focus on the first row: with the cover grid's 10 dp shorter strip (top gap 20) two 161 rows no longer both fit at
         // 576x432, so the board's focus on row 2 scrolls the grid and this test could not read the first row where it rests.
         show { ProvideGridSize(GridSize.Large) { HomeAt(FakeHomeContent.withArtwork(), gridActions(FakeHomeContent.BOARD_SNES_INDEX, 0), gridIds = setOf("snes")) } }
-        assertGrid(span = 480.dp, aspect = 1.4f, rowHeight = 172.dp, gap = 6.667.dp, rowGap = 9.333.dp)
+        assertGrid(span = 480.dp, aspect = 1.4f, rowHeight = 167.95.dp, gap = PlumDimens.gridGapAcross, rowGap = PlumDimens.gridGapDown)
         assertTrue("two boxes inside the covers' span 480", bounds(HomeTags.cover(1)).right <= 72.dp + 480.dp + TOLERANCE.dp)
     }
 
@@ -192,7 +192,7 @@ class HomeArtBoundsTest {
     fun widePortraitGrid() {
         // Medium takes five tall columns at 768 (672 wide): a box is 129.07 wide, 163.88 tall (the shape's picture inside the collar).
         show { ProvideGridSize(GridSize.Medium) { HomeAt(FakeHomeContent.withArtwork(), gridActions(PSP_INDEX, 0), gridIds = setOf("psp")) } }
-        assertGrid(span = 672.dp, aspect = 0.78f, rowHeight = 163.88.dp, gap = 6.667.dp, rowGap = 9.333.dp)
+        assertGrid(span = 672.dp, aspect = 0.78f, rowHeight = 152.25.dp, gap = PlumDimens.gridGapAcross, rowGap = PlumDimens.gridGapDown)
     }
 
     @Test
@@ -200,7 +200,7 @@ class HomeArtBoundsTest {
     fun narrowPortraitGrid() {
         // Medium takes four tall columns at 576 (480 wide): 115 wide, 145.85 tall. Focus on the first row, so the grid rests there.
         show { ProvideGridSize(GridSize.Medium) { HomeAt(FakeHomeContent.withArtwork(), gridActions(PSP_INDEX, 0), gridIds = setOf("psp")) } }
-        assertGrid(span = 480.dp, aspect = 0.78f, rowHeight = 145.85.dp, gap = 6.667.dp, rowGap = 9.333.dp)
+        assertGrid(span = 480.dp, aspect = 0.78f, rowHeight = 135.0.dp, gap = PlumDimens.gridGapAcross, rowGap = PlumDimens.gridGapDown)
     }
 
     /**
@@ -236,10 +236,10 @@ class HomeArtBoundsTest {
     @Config(qualifiers = WIDE)
     fun wideSquareGrid() {
         show { ProvideGridSize(GridSize.Medium) { ArtGridSquareBoard() } }
-        // Medium takes four square columns at 768 (672 wide): 163 wide, (163 − 8) / 1.12 + 8.667 = 147.06 tall.
-        assertGrid(span = 672.dp, aspect = 1.12f, rowHeight = 147.06.dp, gap = 6.667.dp, rowGap = 9.333.dp)
+        // Medium takes four square columns at 768 (672 wide), as wide as its gaps leave them.
+        assertGrid(span = 672.dp, aspect = 1.12f, rowHeight = 139.55.dp, gap = PlumDimens.gridGapAcross, rowGap = PlumDimens.gridGapDown)
         assertTrue("four boxes inside the covers' span 672", bounds(HomeTags.cover(3)).right <= 72.dp + 672.dp + TOLERANCE.dp)
-        assertEvenTilesInsideTheGrid(columns = 4, gap = 6.667.dp, rowGap = 9.333.dp)
+        assertEvenTilesInsideTheGrid(columns = 4, gap = PlumDimens.gridGapAcross, rowGap = PlumDimens.gridGapDown)
     }
 
     @Test
@@ -247,9 +247,9 @@ class HomeArtBoundsTest {
     fun narrowSquareGrid() {
         show { ProvideGridSize(GridSize.Medium) { ArtGridSquareBoard() } }
         // Medium takes three square columns at 576 (480 wide): 155.56 wide, 140.41 tall, filling the span.
-        assertGrid(span = 480.dp, aspect = 1.12f, rowHeight = 140.41.dp, gap = 6.667.dp, rowGap = 9.333.dp)
+        assertGrid(span = 480.dp, aspect = 1.12f, rowHeight = 133.66.dp, gap = PlumDimens.gridGapAcross, rowGap = PlumDimens.gridGapDown)
         assertTrue("three boxes inside the covers' span 480", bounds(HomeTags.cover(2)).right <= 72.dp + 480.dp + TOLERANCE.dp)
-        assertEvenTilesInsideTheGrid(columns = 3, gap = 6.667.dp, rowGap = 9.333.dp)
+        assertEvenTilesInsideTheGrid(columns = 3, gap = PlumDimens.gridGapAcross, rowGap = PlumDimens.gridGapDown)
     }
 
     /**

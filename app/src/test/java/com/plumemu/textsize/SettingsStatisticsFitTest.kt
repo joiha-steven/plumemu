@@ -1,5 +1,10 @@
 package com.plumemu.textsize
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.plumemu.coreui.theme.StatisticsDimens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +33,7 @@ import com.plumemu.settings.screen.StatisticTile
 import com.plumemu.settings.screen.StatisticsShots
 import com.plumemu.settings.screen.StatisticsState
 import com.plumemu.settings.screen.StatisticsTags
+import com.plumemu.settings.screen.Tiles
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -137,13 +143,23 @@ abstract class SettingsStatisticsFitBase(
     ): @Composable () -> Unit = { StatisticsShots.WithCovers { SettingsAt(StatisticsShots.focusAt(focusAt), content = StatisticsShots.contentOf(figures)) } }
 
     @Test
-    fun theFirstGameAndTheTiles() =
+    fun theFirstGameIsClearOfTheFades() =
         check(
             "statistics_first_game",
             ignoring = nameCut,
-            extra = { root, label, size, font -> figures()(root, label, size, font) + clearOfFades(root, label, 0) },
+            extra = { root, label, _, _ -> clearOfFades(root, label, 0) },
             screen = played(0),
         )
+
+    /** The tiles as they stand at the page's top, Up from the first game where it rests on the lists. */
+    private fun tiles(figures: PlayStatistics = StatisticsShots.played): @Composable () -> Unit =
+        {
+            val perRow = if (widthDp >= 768) StatisticsDimens.WIDE_TILES_PER_ROW else StatisticsDimens.NARROW_TILES_PER_ROW
+            StatisticsShots.WithCovers { Box(Modifier.width((widthDp - 48).dp)) { Tiles(figures, perRow, isCompact = perRow == StatisticsDimens.NARROW_TILES_PER_ROW) } }
+        }
+
+    @Test
+    fun theTiles() = check("statistics_tiles", ignoring = nameCut, extra = figures(), screen = tiles())
 
     /** The cursor on the last game: the page has followed it, it is whole and its bottom is above the hint bar. */
     @Test
@@ -175,7 +191,7 @@ abstract class SettingsStatisticsFitBase(
     @Test
     fun aHugeTotalStaysInItsTile() {
         val figures = StatisticsShots.played.copy(totalSeconds = 12_345 * 3_600L + 59 * 60)
-        check("statistics_huge_total", ignoring = nameCut, extra = figures(strict = false), screen = played(0, figures))
+        check("statistics_huge_total", ignoring = nameCut, extra = figures(strict = false), screen = tiles(figures))
     }
 
     @Test

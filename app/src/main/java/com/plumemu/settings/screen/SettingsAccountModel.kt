@@ -27,6 +27,10 @@ internal abstract class SettingsAccountModel(
         }
     }
 
+    /** The row whose panel says how the box art work went: Box art's when that panel started it. */
+    protected val boxArtRow: SettingsOption
+        get() = if (focusedOption == SettingsOption.BoxArtSource) SettingsOption.BoxArtSource else SettingsOption.ScraperAccount
+
     /** A system's checkmark flips; the two actions work on the systems checked. */
     protected fun onSystemsEnter(index: Int) {
         val chosen = chosenSystemsIn(content, focus)
@@ -38,7 +42,7 @@ internal abstract class SettingsAccountModel(
             }
             SystemsPickAction.DownloadMissing -> {
                 if (chosen.isEmpty()) return
-                work.askAgain(AskAgain.Missing, chosen)
+                work.askAgain(AskAgain.Missing, chosen, boxArtRow)
                 cause = Cause.Enter
                 backToAccountPage(AccountPageItem.ChooseSystems)
             }
@@ -51,7 +55,7 @@ internal abstract class SettingsAccountModel(
 
     protected fun onBoxArtConfirmEnter(item: BoxArtConfirmItem?) {
         if (item == BoxArtConfirmItem.Redownload) {
-            work.askAgain(AskAgain.All, focus.redownloadSystems)
+            work.askAgain(AskAgain.All, focus.redownloadSystems, boxArtRow)
             cause = Cause.Enter
             backToAccountPage(if (focus.redownloadSystems == null) AccountPageItem.RedownloadAll else AccountPageItem.ChooseSystems)
         } else {
@@ -61,7 +65,7 @@ internal abstract class SettingsAccountModel(
 
     protected fun onClearConfirmEnter(item: ClearConfirmItem?) {
         if (item == ClearConfirmItem.Clear) {
-            work.clearBoxArt()
+            work.clearBoxArt(boxArtRow)
             cause = Cause.Enter
         }
         backToAccountPage(AccountPageItem.ClearBoxArt)
@@ -104,6 +108,11 @@ internal abstract class SettingsAccountModel(
     }
 
     protected fun backToAccountPage(on: AccountPageItem) {
+        // Box art's panel offers some of this work too: a confirm it opened goes back to it.
+        if (focusedOption == SettingsOption.BoxArtSource) {
+            val index = boxArtPanelEntries(content).indexOf(BoxArtPanelEntry.Work(on)).coerceAtLeast(0)
+            return moveTo(focus.copy(page = PanelPage.BoxArtSource, panelIndex = index, chosenSystems = emptySet(), redownloadSystems = null))
+        }
         val index = accountPageItems(content).indexOf(on).coerceAtLeast(0)
         moveTo(focus.copy(page = PanelPage.ScraperAccount, panelIndex = index, chosenSystems = emptySet(), redownloadSystems = null))
     }

@@ -16,6 +16,7 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.theme.ListGlide
 
 /**
@@ -94,13 +95,18 @@ internal class RowSpans(
 internal fun rememberGridViewportPx(
     gridState: LazyGridState,
     stripHeight: Dp,
+    /** What the grid's top padding holds besides its glide's room, and the same at its bottom without the leftover: rows run through both to the bars. */
+    roomAbove: Dp = 0.dp,
+    roomBelow: Dp = 0.dp,
 ): State<Int> {
     val density = LocalDensity.current
     val fallback = with(density) { stripHeight.roundToPx() }
-    return remember(gridState, fallback) {
+    val abovePx = with(density) { roomAbove.roundToPx() }
+    val belowPx = with(density) { roomBelow.roundToPx() }
+    return remember(gridState, fallback, abovePx, belowPx) {
         derivedStateOf {
             val info = gridState.layoutInfo
-            if (info.visibleItemsInfo.isEmpty()) fallback else info.viewportSize.height - 2 * info.beforeContentPadding
+            if (info.visibleItemsInfo.isEmpty()) fallback else info.viewportSize.height - 2 * (info.beforeContentPadding - abovePx) - abovePx - belowPx
         }
     }
 }

@@ -5,6 +5,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
@@ -114,6 +116,10 @@ class OkHttpUpdateHttp(
             }
         } catch (e: CancellationException) {
             opened.get()?.close()
+            throw e
+        } catch (e: UpdateNetException) {
+            // A cancel that reaches the call before execute() returns makes OkHttp fail with "Canceled": that is the person's cancel, not a network failure.
+            currentCoroutineContext().ensureActive()
             throw e
         }
     }

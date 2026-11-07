@@ -14,7 +14,7 @@ import org.junit.Test
  */
 internal class SettingsBuildFeaturesTest {
     private val statisticsRows = listOf(SettingsOption.UsageStatistics, SettingsOption.ReportProblem)
-    private val updateRows = listOf(SettingsOption.CheckForUpdates, SettingsOption.CheckUpdatesDaily, SettingsOption.UpdateAvailable)
+    private val updateRows = listOf(SettingsOption.Updates)
 
     private fun allRows(content: SettingsContent): List<SettingsOption> = SettingsSection.entries.flatMap { it.rowsIn(content) }
 
@@ -22,14 +22,14 @@ internal class SettingsBuildFeaturesTest {
     fun aBuildWithBothAddressesListsEveryRow() {
         val rows = allRows(SettingsContent(hasStatistics = true, hasUpdates = true))
         assertTrue(rows.containsAll(statisticsRows))
-        assertTrue(rows.containsAll(updateRows - SettingsOption.UpdateAvailable))
+        assertTrue(rows.containsAll(updateRows))
     }
 
     @Test
     fun noStatisticsServerHidesTheStatisticsAndReportRowsOnly() {
         val rows = allRows(SettingsContent(hasStatistics = false, hasUpdates = true))
         statisticsRows.forEach { assertFalse("$it must be hidden", it in rows) }
-        assertTrue(SettingsOption.CheckForUpdates in rows)
+        assertTrue(SettingsOption.Updates in rows)
         assertTrue(SettingsOption.Licenses in rows)
     }
 
@@ -44,6 +44,13 @@ internal class SettingsBuildFeaturesTest {
     fun aBuildWithNeitherKeepsTheRestOfAbout() {
         val about = SettingsSection.About.rowsIn(SettingsContent(hasStatistics = false, hasUpdates = false))
         assertTrue(about == listOf(SettingsOption.Version, SettingsOption.Licenses, SettingsOption.Privacy))
+    }
+
+    @Test
+    fun exportLogsIsARowOfAdvancedOnlyWithNoReportForm() {
+        val advanced = listOf(SettingsOption.Animations, SettingsOption.BackupAndRestore, SettingsOption.Reset)
+        assertEquals(advanced, SettingsSection.Advanced.rowsIn(SettingsContent(hasStatistics = true)))
+        assertEquals(advanced + SettingsOption.ExportLogs, SettingsSection.Advanced.rowsIn(SettingsContent(hasStatistics = false)))
     }
 
     @Test

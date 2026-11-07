@@ -1,6 +1,7 @@
 package com.plumemu.settings.screen
 
 import com.plumemu.R
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.account.AccountStatus
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
@@ -36,12 +37,12 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
 
     @Test
     fun rowsThatOpenAPageOrTheSignInSayOpen() {
-        model.content = model.content.copy(account = AccountStatus.SignedOut)
+        model.content = model.content.copy(account = AccountStatus.SignedOut, chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper)
         assertEquals(R.string.settings_hint_open, hintOn(SettingsSection.Library, SettingsOption.RomFolders))
         for (option in listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount)) {
             assertEquals(option.name, R.string.settings_hint_open, hintOn(SettingsSection.Accounts, option))
         }
-        for (option in listOf(SettingsOption.Backup, SettingsOption.Restore, SettingsOption.ResetAll, SettingsOption.ResetLibrary)) {
+        for (option in listOf(SettingsOption.BackupAndRestore, SettingsOption.Reset)) {
             assertEquals(option.name, R.string.settings_hint_open, hintOn(SettingsSection.Advanced, option))
         }
         assertEquals(R.string.settings_hint_open, hintOn(SettingsSection.About, SettingsOption.Licenses))
@@ -55,10 +56,10 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
 
     @Test
     fun valuesSwitchesAndChoicePanelsSayChange() {
-        for (option in listOf(SettingsOption.Colors, SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent, SettingsOption.Font)) {
+        for (option in listOf(SettingsOption.Colors, SettingsOption.Accent, SettingsOption.Font)) {
             assertEquals(option.name, R.string.settings_hint_change, hintOn(SettingsSection.Appearance, option))
         }
-        assertEquals(R.string.settings_hint_change, hintOn(SettingsSection.Library, SettingsOption.ScanOnStartup))
+        assertEquals(R.string.settings_hint_change, hintOn(SettingsSection.HomeScreen, SettingsOption.ClockAndBattery))
         assertEquals(R.string.settings_hint_change, hintOn(SettingsSection.Library, SettingsOption.SortGames))
         assertEquals(R.string.settings_hint_change, hintOn(SettingsSection.Advanced, SettingsOption.Animations))
     }
@@ -74,7 +75,6 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
     @Test
     fun actionsSaySelect() {
         assertEquals(R.string.settings_hint_select, hintOn(SettingsSection.Library, SettingsOption.Rescan))
-        assertEquals(R.string.settings_hint_select, hintOn(SettingsSection.Emulators, SettingsOption.DetectEmulators))
     }
 
     @Test
@@ -98,12 +98,13 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
         assertEquals(R.string.settings_hint_open, hintOn(SettingsSection.Library, SettingsOption.FilesNotAdded))
         press(Action.Enter)
         assertEquals(PanelPage.FilesNotAdded, model.focus.page)
-        val hints = items.indices.map { index ->
-            if (index > 0) move(Direction.Down)
+        // The heading is no stop: the cursor opens on the line under it.
+        val hints = (1..items.lastIndex).map { index ->
+            if (index > 1) move(Direction.Down)
             assertEquals(index, model.focus.panelIndex)
             confirmHint(model)
         }
-        assertEquals("A Choose only where A goes somewhere", listOf(null, R.string.settings_hint_choose, null, null), hints)
+        assertEquals("A Choose only where A goes somewhere", listOf(R.string.settings_hint_choose, null, null), hints)
     }
 
     /**
@@ -126,22 +127,21 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 SettingsOption.TextSize to change,
                 SettingsOption.TextWeight to change,
                 SettingsOption.LeftEdge to change,
-                SettingsOption.EdgeFade to change,
                 SettingsOption.GridSize to change,
                 SettingsOption.ConfirmBottom to change,
                 SettingsOption.Animations to change,
                 SettingsOption.Sounds to change,
                 SettingsOption.UsageStatistics to change,
+                SettingsOption.BackupAndRestore to open,
                 SettingsOption.Backup to open,
                 SettingsOption.Restore to open,
                 SettingsOption.UndoRestore to open,
+                SettingsOption.Reset to open,
                 SettingsOption.ResetAll to open,
                 SettingsOption.ResetLibrary to open,
                 SettingsOption.ExportLogs to select,
                 SettingsOption.Version to none,
-                SettingsOption.PlatformData to none,
-                SettingsOption.UpdateAvailable to open,
-                SettingsOption.CheckForUpdates to select,
+                SettingsOption.Updates to open,
                 SettingsOption.CheckUpdatesDaily to change,
                 SettingsOption.Licenses to open,
                 SettingsOption.Privacy to none,
@@ -150,28 +150,22 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 SettingsOption.Vibration to change,
                 SettingsOption.RomFolders to open,
                 SettingsOption.Rescan to select,
-                SettingsOption.ScanOnStartup to change,
                 SettingsOption.SortGames to change,
                 SettingsOption.SystemOrder to change,
-                SettingsOption.RecentSize to change,
                 SettingsOption.ClearRecent to open,
                 SettingsOption.Systems to open,
                 SettingsOption.UnidentifiedGames to open,
                 SettingsOption.HiddenGames to open,
                 // A choice of emulators, like Colors' panel: "Change".
                 SettingsOption.SystemEmulator to change,
-                SettingsOption.UnknownFolder to open,
                 SettingsOption.FilesNotAdded to open,
-                SettingsOption.DetectEmulators to select,
-                SettingsOption.HoldToScrollFaster to change,
                 SettingsOption.PushRightToPlay to change,
                 SettingsOption.ShowButtonHints to change,
                 SettingsOption.Keyboard to change,
                 SettingsOption.SwitchSystemWith to change,
                 SettingsOption.UseAsHome to select,
                 SettingsOption.ShowApps to change,
-                SettingsOption.ShowClock to change,
-                SettingsOption.ShowBattery to change,
+                SettingsOption.ClockAndBattery to change,
                 SettingsOption.SystemInfo to change,
                 SettingsOption.SecondScreen to change,
                 SettingsOption.SecondScreenInGame to change,

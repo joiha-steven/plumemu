@@ -200,7 +200,7 @@ internal class SettingsLibraryModelTest : SettingsModelHarness() {
     fun aSystemOpensOnItsCurrentChoiceAndStoresWhatIsPicked() {
         model.content = SettingsContent(systems = listOf(snes, psx))
         openSection(SettingsSection.Emulators)
-        assertEquals(listOf(SettingsOption.SystemEmulator, SettingsOption.SystemEmulator, SettingsOption.DetectEmulators), SettingsSection.Emulators.rowsIn(model.content))
+        assertEquals(listOf(SettingsOption.SystemEmulator, SettingsOption.SystemEmulator), SettingsSection.Emulators.rowsIn(model.content))
         move(Direction.Down)
         press(Action.Enter)
         assertEquals(PanelPage.Emulators, model.focus.page)
@@ -243,30 +243,6 @@ internal class SettingsLibraryModelTest : SettingsModelHarness() {
     }
 
     @Test
-    fun detectRunsOnceAtATimeAndSaysWhenDone() {
-        openSection(SettingsSection.Emulators)
-        assertEquals(SettingsOption.DetectEmulators, model.focusedOption)
-        press(Action.Enter)
-        press(Action.Enter)
-        assertEquals(1, actions.detections)
-        assertTrue(model.work.isDetecting)
-        actions.answer(true)
-        assertEquals(SettingsOption.DetectEmulators to SettingsNotice.DetectDone, model.work.notice)
-        press(Action.Enter)
-        actions.answer(false)
-        assertEquals(SettingsOption.DetectEmulators to SettingsNotice.DetectFailed, model.work.notice)
-    }
-
-    @Test
-    fun aDetectionStartedInAnEarlierSettingsIsNotStartedAgain() {
-        model.content = SettingsContent(systems = listOf(psx), isDetecting = true)
-        openSection(SettingsSection.Emulators)
-        focusOption(SettingsOption.DetectEmulators)
-        press(Action.Enter)
-        assertEquals(0, actions.detections)
-    }
-
-    @Test
     fun aFolderRemovedFromAnEarlierSettingsIsNotAskedAgain() {
         openFolders()
         model.content = SettingsContent(folders = listOf(internal, sd), removingFolderIds = setOf(sd.id))
@@ -296,8 +272,12 @@ internal class SettingsLibraryModelTest : SettingsModelHarness() {
         openSection(SettingsSection.Emulators)
         move(Direction.Right, narrow)
         assertEquals(PanelPage.Emulators, model.focus.page)
-        press(Action.Back, narrow)
-        focusOption(SettingsOption.DetectEmulators)
+    }
+
+    @Test
+    fun narrowScreensOpenAnActionsExplanationAsAStop() {
+        openSection(SettingsSection.Library)
+        focusOption(SettingsOption.Rescan)
         move(Direction.Right, narrow)
         assertEquals("an action's explanation is a stop on narrow screens", PanelPage.ReadOnly, model.focus.page)
     }

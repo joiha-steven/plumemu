@@ -73,7 +73,7 @@ class FocusSlabReadabilityTest {
         for (case in cases()) {
             val c = case.colors
             val fill = ColorMath.contrast(case.fill, c.bg)
-            val edge = ColorMath.contrast(FocusSlab.edgeOver(case.fill, c.text, case.dark), c.bg)
+            val edge = ColorMath.contrast(FocusSlab.edgeOver(case.fill, c.bg, case.dark), c.bg)
             if (case.dark && fill < FILL_MIN_DARK) failures += "${case.name}: slab fill against bg %.3f < %.2f".format(fill, FILL_MIN_DARK)
             if (!case.dark && fill < FILL_MIN_LIGHT && edge < EDGE_MIN_LIGHT) {
                 failures += "${case.name}: light slab fill %.3f < %.2f and edge %.3f < %.2f against bg".format(fill, FILL_MIN_LIGHT, edge, EDGE_MIN_LIGHT)

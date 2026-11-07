@@ -28,7 +28,7 @@ import com.plumemu.setup.SetupButton
 import com.plumemu.setup.bringIntoViewWhen
 
 /*
- * Settings › Advanced › Back up…: the choice between
+ * Settings › Advanced › Back up and restore › Back up…: the choice between
  * Settings and Everything, Android's save picker, then the progress with Cancel and a plain line
  * for how it ended. The work itself is the graph's (GraphBackup); this file only shows it.
  */
@@ -40,7 +40,7 @@ internal interface SettingsBackupActions {
 
     fun cancel()
 
-    /** The focus left Back up…: its last result is not shown again. */
+    /** The focus left the row after Back up…'s page was open: its last result is not shown again. */
     fun forgetResult()
 
     object None : SettingsBackupActions {
@@ -58,10 +58,13 @@ internal enum class BackupPanelItem { Settings, Everything, Cancel }
 internal fun backupPanelItems(state: BackupState): List<BackupPanelItem> =
     if (state is BackupState.Running) listOf(BackupPanelItem.Cancel) else listOf(BackupPanelItem.Settings, BackupPanelItem.Everything)
 
+/** How a backup ended, standing until the person has read it. */
+internal val BackupState.isResult: Boolean get() = this !is BackupState.Idle && this !is BackupState.Running
+
 /**
- * The row's value: "Backing up…" while one runs; how the last one ended ("Saved ›", "Failed ›",
- * "Cancelled ›", "Interrupted ›") until the person has seen its panel and left the row, so a result
- * that came while Settings was closed is not missed; else "›".
+ * The item's word: "Backing up…" while one runs; how the last one ended ("Saved", "Failed",
+ * "Cancelled", "Interrupted") until the person has opened its page and left the row, so a result
+ * that came while Settings was closed is not missed; else nothing.
  */
 @Composable
 internal fun backupRowValue(state: BackupState): String {
@@ -129,10 +132,7 @@ internal fun BackupPanel(
     val content = model.content
     val state = content.backup
     val inPanel = model.focus.column == SettingsColumn.Panel && model.focus.page == PanelPage.Backup
-    Column(
-        Modifier.fillMaxHeight().verticalScroll(rememberScrollState()).testTag(SettingsTags.BACKUP_PANEL),
-        verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap),
-    ) {
+    PanelScrollColumn(PlumDimens.settingsPanelGap, tag = SettingsTags.BACKUP_PANEL) {
         PanelTitle(stringResource(R.string.settings_backup_title))
         PanelBody(stringResource(R.string.settings_backup_body))
         if (content.account is AccountStatus.SignedIn) {

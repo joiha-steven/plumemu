@@ -20,7 +20,7 @@ enum class ButtonLayout { Xbox, Nintendo }
 /**
  * The Controls settings core-input needs. [swapAB] trades A and B after the layout (for a device
  * whose firmware already swaps them, or for a person who prefers it); X and Y stay.
- * [holdToScrollFaster] is "Hold to scroll faster": held moves speed up.
+ * [holdToScrollFaster]: held moves speed up; the app always asks for it.
  */
 @Immutable
 data class InputSettings(

@@ -10,17 +10,17 @@ handhelds.</p>
 </p>
 
 <p align="center">
-  <a href="https://plumemu.stevensdesk.com/assets/media/demo-v010.mp4"><img src="media/demo.jpg" width="100%" alt="Play the one-minute demo: Plumemu on a 4:3 handheld screen driven by its buttons, here the Super Nintendo games as a grid of covers"></a>
+  <a href="https://plumemu.stevensdesk.com/assets/media/demo-v013.mp4"><img src="media/demo.jpg" width="100%" alt="Play the one-minute demo: Plumemu on a 4:3 handheld screen driven by its buttons, here the Super Nintendo games as a grid of covers"></a>
   <br><sub>One minute with the buttons, on a 4:3 screen. The only sound is Plumemu's own clicks.</sub>
 </p>
 
 <p align="center">
-  <b>0.1.2</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket Classic ·
+  <b>0.1.3</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket Classic ·
   <a href="../../releases">Download</a> · <a href="https://plumemu.stevensdesk.com">Website</a>
 </p>
 
 <p align="center">
-  0.1.2 brings a new look, a setup that fits your handheld, box art without an account, and a list of the files left out of your library, each with its reason. The source is open: GPL-3.0, see <a href="#source">Source</a>.
+  0.1.3 is a calmer look and a shorter Settings: one glass look, lists that run under the bars and fade, covers in a glass frame, and about 40 rows in Settings instead of 53. The source is open: GPL-3.0, see <a href="#source">Source</a>.
 </p>
 
 ---
@@ -82,7 +82,7 @@ game file.
   of their own.
 - **New games show up by themselves.** Copy games in or put in an SD card: they appear when you
   come back to Plumemu, and Home tells you about them. A folder Plumemu cannot place in a system is
-  listed in Settings › Library, where you pick its system.
+  listed in Settings › Library › Files not added, where you pick its system.
 - **Android games and Ports.** Installed Android games get a system of their own, and native port
   apps (Delta Touch and others) join Ports. Show as game, Show as port and Not a game in the menus
   correct Plumemu's choice.
@@ -91,12 +91,12 @@ game file.
   show their app icon as a cover card.
 - **Real box art, if you want it.** Choose Box art only and Plumemu fetches box fronts over Wi-Fi
   from libretro's public server, with no account. Or sign in with your own free
-  [ScreenScraper](https://www.screenscraper.fr) account (Settings › Accounts › ScreenScraper) and
+  [ScreenScraper](https://www.screenscraper.fr) account (Settings › Box art & accounts › ScreenScraper) and
   Plumemu fetches box art and game details too. A wrong cover is replaced from the game
   menu. The ScreenScraper panel shows the space used, picks the Box art region and has Clear box
   art; a daily cleanup removes orphaned images, and games that keep failing on the server stop
   retrying after 3 days.
-- **Achievements, if you use RetroAchievements.** Sign in under Settings › Accounts ›
+- **Achievements, if you use RetroAchievements.** Sign in under Settings › Box art & accounts ›
   RetroAchievements with your user name and Web API key, never your password. A game's Info lists
   its achievements with badges, points and dates, and a game you have mastered carries a small
   trophy in the list. Plumemu only shows them; your emulator awards them. The key is kept
@@ -106,9 +106,9 @@ game file.
   list.
 - **Nothing goes missing quietly.** Settings › Library › Files not added lists every file left out
   of your library, with the reason, and Unidentified games suggests the closest official titles.
-- **Recent that you control.** Take one game out of Recent from its menu, choose how many it keeps
-  (10, 20 or 50) and clear it, all in Settings › Library. Your play time and statistics stay.
-- **Skip a sub-folder.** Settings › Library › ROM folders can leave out a sub-folder (a folder of
+- **Recent that you control.** Take one game out of Recent from its menu, or clear it
+  (Settings › Library › Clear Recent…). Recent keeps the last 50 games. Your play time and statistics stay.
+- **Skip a sub-folder.** Settings › Library › Game folders can leave out a sub-folder (a folder of
   demos, say) so its games never show up. Nothing on disk is touched.
 
 ### Playing
@@ -141,17 +141,17 @@ game file.
   Pocket color the A, B, X and Y keys. Or make your own background, text and accent colors with
   sliders that show the whole screen in the new color as you drag.
 - **Lists or covers.** Show any system, Recent or Favorites as a list or as a grid of covers in
-  three sizes (Settings › Home screen › Grid size). Apps can be a grid of icons too.
+  three sizes (L1 / R1, or the Size hint; Settings › Home screen › Grid size
+  while button hints are off). Covers sit in a glass frame. Apps can be a grid of larger icons too.
 - **One sliding view.** Systems, games and details move as one strip, laid out for 16:9 and 4:3
   screens. On 4:3 and narrow screens the game's details peek in beside the list. Beside the games,
   a narrow strip shows game counts, a code per system or a letter rail you can tap or drag
-  (Settings › Home screen › Left edge).
+  (Settings › Home screen › Left strip).
 - **About each system.** Above a system's games, a short band with its badge, the years it was
   made and a few lines about it. Settings › Home screen › System info turns it off.
 - **Text you can set.** Text size starts at Large, and Text weight is Thin, Medium or Bold.
-  Fade list edges (Settings › Appearance) softens the top and bottom of a list where there is more
-  to scroll.
-- **Sounds and vibration.** Settings › Controls sets sounds Off, Quiet or Loud (they follow the
+  Lists, menus and panels run under the top and bottom bars and fade there.
+- **Sounds and vibration.** Settings › Controls › Button sounds sets sounds Off, Quiet or Loud (they follow the
   media volume) and vibration, which is on by default. Language is in Settings › Appearance:
   English, Vietnamese, Spanish, French, Japanese, Korean and Chinese.
 - **Buttons and touch**, equally, everywhere. Plumemu has its own compact keyboard, made for the
@@ -166,7 +166,7 @@ game file.
 - **Back up and restore.** Save your settings, or everything (library, box art, play time), into
   one file, checked after writing, and put it back on this device or a new one.
 - **Updates from inside the app** (official builds). Once a day on Wi-Fi Plumemu looks for a new
-  version; the top bar then shows "Update" and the version, and START or Settings › About › Update
+  version; the top bar then shows "Update" and the version, and START or Settings › About › Updates
   installs it. After an update a card tells you what is new, once.
 - **Anonymous usage statistics and crash reports, only if you want them** (official builds). They
   are off until you switch them on in the setup or in Settings › About › Send usage statistics.
@@ -194,6 +194,12 @@ game file.
     <td align="center">In three sizes, light or dark</td>
   </tr>
   <tr>
+    <td colspan="2"><img src="media/apps-grid.png" alt="Apps as a grid of larger icons with one-line names and a thin focus ring on Gallery; the left strip counts each system"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">Apps as a grid of larger icons</td>
+  </tr>
+  <tr>
     <td width="50%"><img src="media/system-info.png" alt="Super Nintendo's games in Ivory with a short band above them: the SNES badge, Nintendo, home console, 1990 to 2003; Chrono Trigger selected, its cover and description on the right, and a charging bolt before 82% in the top bar"></td>
     <td width="50%"><img src="media/keyboard.png" alt="Search in Indigo with Plumemu's own keyboard: \"zelda\" typed, 8 games found, and the first results stay in view above the keys"></td>
   </tr>
@@ -218,8 +224,8 @@ game file.
     <td align="center">A, B, X and Y in their classic colors</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/settings.png" alt="Settings › Library in Dot matrix, a green screen: ROM folders (2 folders), Rescan library, Find new games automatically, Sort games, System order, Recent size and Clear Recent…; the ROM folders panel on the right lists Internal storage and SD card with their game counts"></td>
-    <td width="50%"><img src="media/update.png" alt="Settings › About in Paper with the update panel: Plumemu 0.1.0 → 0.1.1, a short list of release notes and an Update button (an example screen)"></td>
+    <td width="50%"><img src="media/settings.png" alt="Settings › Library in Dot matrix, a green screen: Game folders, Rescan library, Sort games, Files not added and Clear Recent…; the Game folders panel on the right lists Internal storage and SD card with their game counts"></td>
+    <td width="50%"><img src="media/update.png" alt="Settings › About in Paper with the update panel: Plumemu 0.1.2 → 0.1.3, a short list of release notes and an Update button (an example screen)"></td>
   </tr>
   <tr>
     <td align="center">Settings that say what they do</td>
@@ -282,9 +288,9 @@ optional: on the Thor it shows details, a clock and your battery, and nothing ne
 
 **Updating.** Install the new version the same way, over the old one; your library and settings
 stay. The official build also finds new versions itself: START Settings shows a dot, and
-Settings › About › Update downloads it, checks that it really is Plumemu, and installs it. On
+Settings › About › Updates downloads it, checks that it really is Plumemu, and installs it. On
 Android 8 and later, Android asks once to let Plumemu install apps. Nothing installs while you
-play. Settings › About › Check for updates daily turns the daily check off.
+play. Settings › About › Updates has a switch that turns the daily check off.
 
 ## Controls
 
@@ -302,7 +308,7 @@ play. Settings › About › Check for updates daily turns the daily check off.
 
 The button printed A confirms. Settings › Controls › Confirm with B can make the bottom button (B,
 or ✕) confirm instead, and Settings › Controls › Switch system with can move system switching to L1 / R1. Touch
-works everywhere: tap to select, tap again to play. Settings › Controls › Push right to play lets
+works everywhere: tap to select, tap again to play. Settings › Controls › Push right twice to play lets
 one hand do it: push right once to mark a game, again to start it. Pinned shortcuts (Steam,
 Windows) start from Plumemu.
 
@@ -327,12 +333,12 @@ official build can send, and to whom:
 |---|---|---|---|
 | Usage statistics and crash reports: device model, Android and Plumemu versions, a random install number, which screens and settings are used, play time by system. For a game Plumemu could not name, once: its system, size, checksum and any code read from the game. Never game titles, file names or search words. | The developer (`plumemu.stevensdesk.com`) | Only after you switch it on | Settings › About › Send usage statistics |
 | A problem report: what you wrote, an e-mail if you give one, the log unless you untick it | The developer | Only when you press Send | Do not press Send |
-| An update check: a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | Once a day on Wi-Fi, or when you press Check for updates | Settings › About › Check for updates daily |
-| Box art lookups: your ScreenScraper account, and each game's file name, size, checksum and title | [ScreenScraper](https://www.screenscraper.fr) | Only while you are signed in, on Wi-Fi | Settings › Accounts › ScreenScraper: Sign out or Pause |
+| An update check: a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | Once a day on Wi-Fi, or when you press Check for updates | Settings › About › Updates |
+| Box art lookups: your ScreenScraper account, and each game's file name, size, checksum and title | [ScreenScraper](https://www.screenscraper.fr) | Only while you are signed in, on Wi-Fi | Settings › Box art & accounts › ScreenScraper: Sign out or Pause |
 | Box art ScreenScraper lacks: a Steam game's title, or a game's file name | Steam (Valve) and the libretro thumbnail server | Only while you are signed in to ScreenScraper, on Wi-Fi | The same |
-| Box art with no account: a game's name, in the picture's address | The libretro thumbnail server | Only if you choose Box art only, on Wi-Fi | Settings › Accounts › Box art: Plumemu's own covers |
-| Achievements: your RetroAchievements user name, your Web API key and the RetroAchievements number of a game, found from a hash of the game file that Plumemu computes on the handheld (no file leaves it). Badge pictures are plain downloads with no account data | [RetroAchievements](https://retroachievements.org) (`retroachievements.org`, badges from `media.retroachievements.org`) | Only while you are signed in: when a game's Info opens, after you play, and once a day on Wi-Fi | Settings › Accounts › RetroAchievements: Sign out deletes your name, key and progress |
-| Platform data (the list of systems and emulators): a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | In the same daily update check | Settings › About › Check for updates daily |
+| Box art with no account: a game's name, in the picture's address | The libretro thumbnail server | Only if you choose Box art only, on Wi-Fi | Settings › Box art & accounts › Box art: Plumemu's own covers |
+| Achievements: your RetroAchievements user name, your Web API key and the RetroAchievements number of a game, found from a hash of the game file that Plumemu computes on the handheld (no file leaves it). Badge pictures are plain downloads with no account data | [RetroAchievements](https://retroachievements.org) (`retroachievements.org`, badges from `media.retroachievements.org`) | Only while you are signed in: when a game's Info opens, after you play, and once a day on Wi-Fi | Settings › Box art & accounts › RetroAchievements: Sign out deletes your name, key and progress |
+| Platform data (the list of systems and emulators): a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | In the same daily update check | Settings › About › Updates |
 
 A build you make yourself from the source sends no statistics and checks no updates, and has no
 ScreenScraper or RetroAchievements account built in (see [Source](#source)). Your IP address reaches each server with

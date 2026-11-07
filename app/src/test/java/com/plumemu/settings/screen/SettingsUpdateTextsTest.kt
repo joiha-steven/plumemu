@@ -65,11 +65,16 @@ class SettingsUpdateTextsTest {
     }
 
     @Test
-    fun updateAvailableShowsTheBuildNumberToo() {
-        var value: String? = null
-        compose.setContent { value = updateRowValue(UpdateView(found = manifest)) }
+    fun theRowSaysTheVersionIsAvailableNotJustItsNumber() {
+        var waiting: String? = null
+        var askedAndroid: String? = null
+        compose.setContent {
+            waiting = updateRowValue(UpdateView(found = manifest))
+            askedAndroid = updateRowValue(UpdateView(found = manifest, step = UpdateStep.Installing(askedPerson = true)))
+        }
         compose.waitForIdle()
-        assertEquals(true, value?.startsWith("0.0.3-alpha (41)"))
+        assertEquals("0.0.3-alpha available", waiting)
+        assertEquals("0.0.3-alpha available", askedAndroid)
     }
 
     @Test

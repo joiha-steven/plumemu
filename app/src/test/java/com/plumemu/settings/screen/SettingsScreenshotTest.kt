@@ -34,11 +34,9 @@ class SettingsScreenshotTest {
     @Test
     fun appearanceWithAnOptionFocused() =
         ReferenceShots.capture("settings_appearance", sizes = ReferenceShots.Size.entries) {
-            val isWide = PlumTheme.layout.widthClass == WidthClass.Wide
             val settings = settingsForShot()
-            // The panel opens on the current colour (Graphite or Paper).
-            val (page, index) = ColorPages.openingFor(SettingsOption.Background, settings)
-            SettingsAt(if (isWide) optionsAt(SettingsOption.Background) else panelAt(SettingsOption.Background, page, index), settings)
+            // The page opens on the current colour (Graphite or Paper).
+            SettingsAt(colorPageAt(SettingsOption.Background, settings), settings)
         }
 
     /** Text weight focused, showing the default ‹ Medium ›, with its explanation beside (wide). */
@@ -48,10 +46,6 @@ class SettingsScreenshotTest {
     /** Left edge focused, showing the default ‹ Game counts ›, with its explanation beside (wide). */
     @Test
     fun appearanceLeftEdge() = ReferenceShots.capture("settings_appearance_left_edge") { SettingsAt(optionsAt(SettingsOption.LeftEdge), settingsForShot()) }
-
-    /** Fade list edges focused, on (the default), with its explanation beside (wide). */
-    @Test
-    fun appearanceEdgeFade() = ReferenceShots.capture("settings_appearance_edge_fade") { SettingsAt(optionsAt(SettingsOption.EdgeFade), settingsForShot()) }
 
     @Test
     fun customColour() =

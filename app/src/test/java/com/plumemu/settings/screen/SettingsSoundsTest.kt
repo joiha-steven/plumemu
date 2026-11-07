@@ -86,15 +86,15 @@ internal class SettingsSoundsTest : SettingsModelHarness() {
         assertEquals("the second tap opens it", listOf(Outcome.Activated), tapped { model.onTapSection(SettingsSection.Advanced) })
         val animations = SettingsSection.Advanced.options.indexOf(SettingsOption.Animations)
         assertEquals("a switch flips on the first tap", listOf(Outcome.Activated), tapped { model.onTapOption(animations, actions.settings, wide) })
-        val reset = SettingsSection.Advanced.options.indexOf(SettingsOption.ResetAll)
+        val reset = SettingsSection.Advanced.options.indexOf(SettingsOption.Reset)
         assertEquals("first tap focuses", listOf(Outcome.Moved), tapped { model.onTapOption(reset, actions.settings, wide) })
-        assertEquals("second tap opens the confirm", listOf(Outcome.Activated), tapped { model.onTapOption(reset, actions.settings, wide) })
+        assertEquals("second tap opens the list", listOf(Outcome.Activated), tapped { model.onTapOption(reset, actions.settings, wide) })
     }
 
     @Test
     fun aTapThatOnlyFocusesOrStepsBackMovesAndNeverConfirms() {
         tapped { model.onTapSection(SettingsSection.Appearance) }
-        val textColor = SettingsSection.Appearance.options.indexOf(SettingsOption.TextColor)
+        val textColor = SettingsSection.Appearance.options.indexOf(SettingsOption.TextWeight)
         assertEquals("first tap on a choice row from the sections", listOf(Outcome.Moved), tapped { model.onTapOption(textColor, actions.settings, wide) })
         assertEquals("a tap on a section from the options steps back", listOf(Outcome.Moved), tapped { model.onTapSection(SettingsSection.Appearance) })
     }
@@ -153,13 +153,5 @@ internal class SettingsSoundsTest : SettingsModelHarness() {
         assertEquals(listOf(Outcome.Moved), heard(Direction.Right))
         assertEquals("last value, Right", emptyList<Outcome>(), heard(Direction.Right))
         assertEquals("A wraps round", listOf(Outcome.Activated), heard(Action.Enter))
-    }
-
-    @Test
-    fun detectingWhileItRunsIsSilent() {
-        openSection(SettingsSection.Emulators)
-        reported.drain()
-        assertEquals(listOf(Outcome.Activated), heard(Action.Enter))
-        assertEquals("the first run is still going", emptyList<Outcome>(), heard(Action.Enter))
     }
 }

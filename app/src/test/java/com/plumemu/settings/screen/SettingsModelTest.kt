@@ -37,8 +37,10 @@ internal class SettingsModelTest : SettingsModelHarness() {
     fun backChainGoesOneColumnLeftThenClosesSettings() {
         openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.Background)
-        press(Action.Enter) // Background: into the panel
-        assertEquals(SettingsColumn.Panel, model.focus.column)
+        press(Action.Enter) // Background: its page
+        assertEquals(PanelPage.BackgroundPresets, model.focus.page)
+        press(Action.Back)
+        assertEquals(PanelPage.ColorSets, model.focus.page)
         press(Action.Back)
         assertEquals(SettingsColumn.Options, model.focus.column)
         press(Action.Back)
@@ -59,15 +61,13 @@ internal class SettingsModelTest : SettingsModelHarness() {
     @Test
     fun l1AndR1ChangeSectionAndEachRemembersItsOption() {
         openSection(SettingsSection.Appearance)
-        focusOption(SettingsOption.TextColor) // remembered for Appearance
+        focusOption(SettingsOption.Accent) // remembered for Appearance
         press(Action.NextSystem)
         assertEquals(SettingsSection.HomeScreen, model.focus.section)
         assertEquals(SettingsColumn.Options, model.focus.column)
         assertEquals(SettingsOption.UseAsHome, model.focusedOption)
         press(Action.NextSystem)
-        assertEquals("no second screen: its section is skipped", SettingsSection.Emulators, model.focus.section)
-        assertEquals("no system has games: only Detect new emulators", SettingsOption.DetectEmulators, model.focusedOption)
-        press(Action.NextSystem)
+        assertEquals("no second screen and no games: both sections are skipped", SettingsSection.Controls, model.focus.section)
         assertEquals(SettingsOption.ConfirmBottom, model.focusedOption)
         press(Action.NextSystem)
         assertEquals("Statistics has no rows yet: Accounts comes next", SettingsSection.Accounts, model.focus.section)
@@ -78,9 +78,9 @@ internal class SettingsModelTest : SettingsModelHarness() {
         assertEquals(SettingsSection.About, model.focus.section)
         press(Action.NextSystem)
         assertEquals("the last section stays", SettingsSection.About, model.focus.section)
-        repeat(6) { press(Action.PreviousSystem) }
+        repeat(5) { press(Action.PreviousSystem) }
         assertEquals(SettingsSection.Appearance, model.focus.section)
-        assertEquals("each section remembers its option", SettingsOption.TextColor, model.focusedOption)
+        assertEquals("each section remembers its option", SettingsOption.Accent, model.focusedOption)
     }
 
     @Test
@@ -207,45 +207,6 @@ internal class SettingsModelTest : SettingsModelHarness() {
     }
 
     @Test
-    fun gridSizeIsListedLastAfterLeftEdgeAndEdgeFadeWithOrWithoutAnAccount() {
-        for (account in listOf(AccountStatus.NotInThisBuild, AccountStatus.SignedOut, AccountStatus.SignedIn("plumtester"))) {
-            val rows = SettingsSection.HomeScreen.rowsIn(model.content.copy(account = account))
-            assertEquals("$account: last, after Left edge", listOf(SettingsOption.LeftEdge, SettingsOption.GridSize), rows.takeLast(2))
-        }
-        assertEquals(OptionKind.Choice, SettingsOption.GridSize.kind)
-    }
-
-    @Test
-    fun gridSizeShowsMediumUntilPickedAndStepsWithLeftRightAndWrapsWithA() {
-        model.content = model.content.copy(account = AccountStatus.SignedIn("plumtester"))
-        openSection(SettingsSection.HomeScreen)
-        focusOption(SettingsOption.GridSize)
-        val index = SettingsOption.GridSize.choiceIndex(actions.settings, TextSizeSetting.Medium)
-        assertEquals("the row's value: ‹ Medium › (the default is one step up)", R.string.settings_size_medium, choiceName(SettingsOption.GridSize, index))
-        assertEquals(3, SettingsOption.GridSize.choiceCount(actions.settings))
-
-        move(Direction.Left)
-        assertEquals(GridSizeSetting.Small, appearance.gridSize)
-        move(Direction.Left)
-        assertEquals("left stops at Small", GridSizeSetting.Small, appearance.gridSize)
-        move(Direction.Right)
-        assertEquals(GridSizeSetting.Medium, appearance.gridSize)
-        assertEquals(R.string.settings_size_medium, choiceName(SettingsOption.GridSize, SettingsOption.GridSize.choiceIndex(actions.settings, TextSizeSetting.Medium)))
-        move(Direction.Right)
-        assertEquals(GridSizeSetting.Large, appearance.gridSize)
-        assertEquals(R.string.settings_size_large, choiceName(SettingsOption.GridSize, SettingsOption.GridSize.choiceIndex(actions.settings, TextSizeSetting.Medium)))
-        move(Direction.Right)
-        assertEquals("right stops at Large", GridSizeSetting.Large, appearance.gridSize)
-        press(Action.Enter)
-        assertEquals("A wraps", GridSizeSetting.Small, appearance.gridSize)
-        assertNull("the text size is not touched", appearance.textSize)
-        // A choice steps in place at both widths: its explanation is the panel beside (SettingsGridSizeRowTest).
-        move(Direction.Right, narrow)
-        assertEquals(SettingsColumn.Options, model.focus.column)
-        assertEquals(GridSizeSetting.Medium, appearance.gridSize)
-    }
-
-    @Test
     fun keyboardIsAControlsOptionBeforeSoundsPlumemuByDefaultAndStepsToAndroid() {
         val controls = SettingsSection.Controls.options
         assertEquals("right before Sounds", SettingsOption.Sounds, controls[controls.indexOf(SettingsOption.Keyboard) + 1])
@@ -288,7 +249,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
     @Test
     fun leftOnAnOptionThatIsNotAChoiceGoesBackToTheSections() {
         openSection(SettingsSection.Appearance)
-        focusOption(SettingsOption.Background)
+        focusOption(SettingsOption.Accent)
         move(Direction.Left)
         assertEquals(SettingsColumn.Sections, model.focus.column)
     }
@@ -303,7 +264,8 @@ internal class SettingsModelTest : SettingsModelHarness() {
         move(Direction.Right) // the screen still shows Small
         assertEquals(TextSizeSetting.Large, appearance.textSize)
 
-        repeat(4) { move(Direction.Up) } // Background
+        repeat(2) { move(Direction.Up) } // Colors
+        focusOption(SettingsOption.Background)
         press(Action.Enter)
         move(Direction.Right)
         move(Direction.Right)
@@ -332,7 +294,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
         assertFalse(actions.settings.advanced.animations)
         focusOption(SettingsOption.ResetLibrary)
         press(Action.Enter)
-        assertEquals(PanelPage.Confirm, model.focus.page)
+        assertEquals(PanelPage.ResetLibraryConfirm, model.focus.page)
         assertEquals("the confirm step opens on Cancel", 0, actions.resetsLibrary)
         move(Direction.Right)
         press(Action.Enter)
@@ -346,10 +308,10 @@ internal class SettingsModelTest : SettingsModelHarness() {
         openSection(SettingsSection.Advanced)
         focusOption(SettingsOption.ResetAll)
         press(Action.Enter)
-        assertEquals(PanelPage.Confirm, model.focus.page)
+        assertEquals(PanelPage.ResetAllConfirm, model.focus.page)
         assertEquals("Cancel is focused first", SettingsModel.CONFIRM_CANCEL, model.focus.panelIndex)
         press(Action.Enter)
-        assertEquals(SettingsColumn.Options, model.focus.column)
+        assertEquals("Cancel goes back to the list", PanelPage.Reset, model.focus.page)
         assertEquals(0, actions.resetsAll)
         press(Action.Enter)
         move(Direction.Right)
@@ -370,6 +332,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
             choiceName(SettingsOption.TextWeight, SettingsOption.TextWeight.choiceIndex(actions.settings, TextSizeSetting.Medium)),
         )
         assertTrue(actions.settings.flags.setupCompleted)
+        press(Action.Back)
         move(Direction.Up)
         assertNull("the done line goes with the focus", model.doneOption)
     }
@@ -442,12 +405,14 @@ internal class SettingsModelTest : SettingsModelHarness() {
 
         model.onTapOption(0, actions.settings, wide) // Animations: a switch flips on the first tap
         assertFalse(actions.settings.advanced.animations)
-        val resetAll = SettingsSection.Advanced.options.indexOf(SettingsOption.ResetAll)
-        model.onTapOption(resetAll, actions.settings, wide) // Reset all: first tap focuses
-        assertEquals(SettingsOption.ResetAll, model.focusedOption)
+        val reset = SettingsSection.Advanced.options.indexOf(SettingsOption.Reset)
+        model.onTapOption(reset, actions.settings, wide) // Reset…: first tap focuses
+        assertEquals(SettingsOption.Reset, model.focusedOption)
         assertEquals(SettingsColumn.Options, model.focus.column)
-        model.onTapOption(resetAll, actions.settings, wide)
-        assertEquals("second tap opens the confirm step", PanelPage.Confirm, model.focus.page)
+        model.onTapOption(reset, actions.settings, wide)
+        assertEquals("second tap opens the list", PanelPage.Reset, model.focus.page)
+        model.onTapPanelItem(ResetPanelItem.All.ordinal, actions.settings, wide)
+        assertEquals("a tap on the focused item opens its confirm step", PanelPage.ResetAllConfirm, model.focus.page)
         model.onTapPanelItem(SettingsModel.CONFIRM_RESET, actions.settings, wide)
         assertEquals("a tap on Reset focuses it", 0, actions.resetsAll)
         model.onTapPanelItem(SettingsModel.CONFIRM_RESET, actions.settings, wide)
@@ -459,10 +424,10 @@ internal class SettingsModelTest : SettingsModelHarness() {
         model.onTapSection(SettingsSection.Appearance)
         model.onTapSection(SettingsSection.Appearance)
         val rows = SettingsSection.Appearance.options
-        model.onTapValue(rows.indexOf(SettingsOption.TextColor), actions.settings, wide)
-        assertEquals("the Text color value opens its panel like Background's", PanelPage.TextPresets, model.focus.page)
-        press(Action.Back)
-        model.onTapValue(rows.indexOf(SettingsOption.Background), actions.settings, wide)
-        assertEquals("the swatch value opens the colours", PanelPage.BackgroundPresets, model.focus.page)
+        model.onTapValue(rows.indexOf(SettingsOption.Accent), actions.settings, wide)
+        assertEquals("the swatch value opens the colours", ColorKind.Accent, ColorPages.kindOf(checkNotNull(model.focus.page)))
+        repeat(2) { if (model.focus.page != null) press(Action.Back) }
+        model.onTapValue(rows.indexOf(SettingsOption.Colors), actions.settings, wide)
+        assertEquals("the Colors value opens its panel", PanelPage.ColorSets, model.focus.page)
     }
 }

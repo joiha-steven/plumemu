@@ -24,7 +24,10 @@ import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.AccentChoice
 import com.plumemu.coreui.theme.GridSize
+import com.plumemu.coreui.theme.CollarDimens
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.PlumMotion
+import com.plumemu.coreui.theme.focusedCoverScale
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.Rgb
@@ -42,8 +45,8 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * The focused cover of the grid is easy to see (docs/design/rules.md › Focus and current): drawn larger than its neighbours, over them, with an
- * accent ring and a halo, and nothing else moves. Measured from pixels and layout bounds at 640x480 and 832x468, Graphite, Paper and
+ * The focused cover of the grid is easy to see (docs/design/rules.md › Focus and current): its own size, a little larger with an accent ring in the gaps
+ * around it, no halo, and nothing else moves. Measured from pixels and layout bounds at 640x480 and 832x468, Graphite, Paper and
  * Paper with a dark teal accent, on a Super Nintendo grid (one shape) and on Recent (mixed shapes).
  */
 @RunWith(RobolectricTestRunner::class)
@@ -164,7 +167,10 @@ class GridCoverFocusTest {
         return Rect(ring!!.left + out, ring.top + out, ring.right - out, ring.bottom - out)
     }
 
-    private fun assertLarger(
+    /** How much larger the focused cover whose resting collar is [rest] is drawn: up to the constant, less for a very large cover (`focusedCoverScale`). */
+    private fun scaleOf(rest: Rect) = focusedCoverScale(max(rest.width, rest.height) / d)
+
+    private fun assertOwnSize(
         label: String,
         index: Int,
         neighbour: Int,
@@ -176,14 +182,13 @@ class GridCoverFocusTest {
         val drawn = drawnCollar(label, index)
         val ratioW = drawn.width / rest.width
         val ratioH = drawn.height / rest.height
-        assertTrue("$label: the focused cover is drawn at least 6% larger (width x$ratioW, height x$ratioH)", ratioW >= 1.06f && ratioH >= 1.06f)
-        assertTrue("$label: not larger than the lift allows (x$ratioW)", ratioW <= PlumDimens.FOCUSED_COVER_SCALE + 0.02f)
-        assertEquals("$label: the lift is about the collar's centre (x)", rest.center.x, drawn.center.x, 1.5f)
-        assertEquals("$label: the lift is about the collar's centre (y)", rest.center.y, drawn.center.y, 1.5f)
+        val scale = scaleOf(rest)
+        assertEquals("$label: the focused cover is drawn $scale larger in width", scale, ratioW, 0.02f)
+        assertEquals("$label: the focused cover is drawn $scale larger in height", scale, ratioH, 0.02f)
+        assertEquals("$label: the mark is about the collar's centre (x)", rest.center.x, drawn.center.x, 1.5f)
+        assertEquals("$label: the mark is about the collar's centre (y)", rest.center.y, drawn.center.y, 1.5f)
         // Layout is untouched: every cover's cell stands where it stood with the focus on the neighbour.
         for ((i, before) in others) assertEquals("$label: cell $i did not move or resize", before, cell(i))
-        val neighbourDrawn = collar(neighbour)
-        assertTrue("$label: larger than an unfocused neighbour (${drawn.width} vs ${neighbourDrawn.width})", drawn.width >= neighbourDrawn.width * 1.06f || drawn.height >= neighbourDrawn.height * 1.06f)
     }
 
     private fun assertRingContrast(label: String) {
@@ -204,16 +209,13 @@ class GridCoverFocusTest {
         assertTrue("$label: ring against the pixel just outside it ${contrast(ringAt, outside)}", contrast(ringAt, outside) >= 3f)
     }
 
-    private fun assertHalo(label: String) {
+    /** The ring's outside is the page: no halo, so the mark is the same on every side. */
+    private fun assertNoHalo(label: String) {
         focus(0)
         val drawn = drawnCollar(label, 0)
         val out = PlumDimens.focusRingOutset.value * d
-        val shot = pixels()
-        val x = drawn.center.x.roundToInt()
-        val above = shot[x, (drawn.top - out - (PlumDimens.focusRingKeyline.value + 2f) * d).roundToInt()]
-        val near = distance(above, accent)
-        val far = distance(background, accent)
-        assertTrue("$label: pixels just outside the ring lean to the accent (distance $near vs page $far)", near < far - 0.03f)
+        val above = pixels()[drawn.center.x.roundToInt(), (drawn.top - out - (PlumDimens.focusRingKeyline.value + 2f) * d).roundToInt()]
+        assertTrue("$label: the pixel past the ring's band is the page ($above vs $background)", near(above, background, 0.02f))
     }
 
     private fun exists(index: Int) = compose.onAllNodesWithTag(HomeTags.cover(index), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
@@ -223,6 +225,59 @@ class GridCoverFocusTest {
         listOf(HomeTags.RAIL, HomeTags.SYSTEMS).maxOf { tag ->
             compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().maxOfOrNull { it.boundsInRoot.right } ?: 0f
         }
+
+    /**
+     * The focused cover and its mark stay in their own cell and gaps: the cover between two others is drawn the same, pixel for
+     * pixel, whichever side the focus is on, its rounded corners left out (the page shows there, and the halo over it).
+     */
+    @Test
+    fun aNeighbourStaysWholeWhicheverSideTheFocusIsOn() {
+        show(PlumThemeSettings.Graphite)
+        focus(0)
+        val middle = collar(1)
+        assertEquals("three covers in the first row", cell(0).top, cell(2).top)
+        val focusLeft = pixels()
+        focus(2)
+        val focusRight = pixels()
+        val corner = (CollarDimens.coverBoxCorner.value + CollarSize.Cover.sidePadding.value) * d
+        var differing = 0
+        var first = ""
+        // One pixel in: the collar's outermost is anti-aliased, the page or the halo under it shows through.
+        for (x in middle.left.roundToInt() + 1 until middle.right.roundToInt() - 1) {
+            for (y in middle.top.roundToInt() + 1 until middle.bottom.roundToInt() - 1) {
+                val inCornerX = x < middle.left + corner || x > middle.right - corner
+                val inCornerY = y < middle.top + corner || y > middle.bottom - corner
+                if (inCornerX && inCornerY) continue
+                if (!near(focusLeft[x, y], focusRight[x, y], 8f / 255f)) {
+                    if (differing == 0) first = "${x - middle.left}, ${y - middle.top} of ${middle.width} x ${middle.height}: ${focusLeft[x, y]} ${focusRight[x, y]}"
+                    differing++
+                }
+            }
+        }
+        assertEquals("pixels of the neighbour that the focus changes, first at $first", 0, differing)
+    }
+
+    /** Landing on a cover, once focus has rested, one glint crosses it and is gone. */
+    @Test
+    fun aCoverTheFocusRestsOnGlintsOnce() {
+        show(PlumThemeSettings.Graphite)
+        focus(0)
+        val box = collar(1)
+        compose.mainClock.autoAdvance = false
+        compose.runOnIdle { checkNotNull(state).dispatch(Action.TapItem(Column.Games, 1)) }
+        compose.mainClock.advanceTimeBy(PlumMotion.FOCUS_SWEEP_REST_MS + PlumMotion.FOCUS_SWEEP_MS / 2L)
+        val crossing = pixels()
+        compose.mainClock.advanceTimeBy(1000)
+        val after = pixels()
+        compose.mainClock.autoAdvance = true
+        var lighter = 0
+        for (x in box.left.roundToInt() until box.right.roundToInt() step 4) {
+            for (y in box.top.roundToInt() until box.bottom.roundToInt() step 4) {
+                if (crossing[x, y].red > after[x, y].red + 0.04f) lighter++
+            }
+        }
+        assertTrue("the glint lit only $lighter samples", lighter > 100)
+    }
 
     /** The covers worth testing: both ends of the first row and of the bottom row that shows whole, and the last game. */
     private fun edgeIndices(last: Int): List<Int> {
@@ -242,7 +297,7 @@ class GridCoverFocusTest {
         side: Int,
         along: Float,
     ): Color {
-        val s = PlumDimens.FOCUSED_COVER_SCALE
+        val s = scaleOf(rest)
         val c = rest.center
         val x = c.x + if (side == LEFT) -(rest.width * s / 2 + along) else if (side == RIGHT) rest.width * s / 2 + along else 0f
         val y = c.y + if (side == TOP) -(rest.height * s / 2 + along) else if (side == BOTTOM) rest.height * s / 2 + along else 0f
@@ -277,8 +332,8 @@ class GridCoverFocusTest {
                 val rest = collar(index)
                 val shot = pixels()
                 val ring = checkNotNull(accentBox(shot, rest)) { "$at: no ring" }
-                val expectW = rest.width * PlumDimens.FOCUSED_COVER_SCALE + 2 * out
-                val expectH = rest.height * PlumDimens.FOCUSED_COVER_SCALE + 2 * out
+                val expectW = rest.width * scaleOf(rest) + 2 * out
+                val expectH = rest.height * scaleOf(rest) + 2 * out
                 assertTrue("$at: the ring is whole (${ring.width} x ${ring.height} of $expectW x $expectH; ring $ring)", ring.width >= expectW - 4f && ring.height >= expectH - 4f)
                 assertTrue("$at: ring under the top bar (${ring.top} vs $top)", ring.top >= top - 0.5f)
                 assertTrue("$at: ring above the hint bar (${ring.bottom} vs $hints)", ring.bottom <= hints + 1.5f)
@@ -318,20 +373,20 @@ class GridCoverFocusTest {
     @Test
     fun focusedCoverIsDrawnLargerAndNothingMoves() {
         show(TableText.Graphite)
-        assertLarger("640x480 snes", 1, 0)
+        assertOwnSize("640x480 snes", 1, 0)
     }
 
     @Test
     fun mixedSystemCoverIsDrawnLargerToo() {
         show(TableText.Graphite, entry = 0, id = "recent")
-        assertLarger("640x480 recent", 1, 0)
+        assertOwnSize("640x480 recent", 1, 0)
     }
 
     @Test
     @Config(qualifiers = SIZE_832)
     fun focusedCoverIsDrawnLargerAt832() {
         show(TableText.Graphite)
-        assertLarger("832x468 snes", 1, 0)
+        assertOwnSize("832x468 snes", 1, 0)
     }
 
     @Test
@@ -353,21 +408,21 @@ class GridCoverFocusTest {
     }
 
     @Test
-    fun haloGraphite() {
+    fun noHaloGraphite() {
         show(TableText.Graphite)
-        assertHalo("graphite")
+        assertNoHalo("graphite")
     }
 
     @Test
-    fun haloPaper() {
+    fun noHaloPaper() {
         show(TableText.Paper)
-        assertHalo("paper")
+        assertNoHalo("paper")
     }
 
     @Test
-    fun haloPaperWithDarkTeal() {
+    fun noHaloPaperWithDarkTeal() {
         show(TableText.Paper.copy(accent = AccentChoice.Custom(Rgb(0x0F5C5C))))
-        assertHalo("paper teal")
+        assertNoHalo("paper teal")
     }
 
     @Test

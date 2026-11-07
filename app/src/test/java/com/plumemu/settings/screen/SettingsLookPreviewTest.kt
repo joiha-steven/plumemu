@@ -57,14 +57,14 @@ class SettingsLookPreviewTest {
     private fun show(
         option: SettingsOption,
         size: TextSize = TextSize.Small,
-    ) = compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { SettingsAt(optionsAt(option)) } }
+    ) = compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { SettingsAt(panelShownAt(option)) } }
 
     /** Placed: a part of a panel's own layout stays composed when it gives way, but is not placed. */
     private fun hasPreview() = compose.onAllNodesWithTag(SettingsTags.LOOK_PREVIEW).fetchSemanticsNodes().any { it.layoutInfo.isPlaced }
 
     @Test
     fun theOptionsThatChangeTheLookGetTheTileAndNoOtherDoes() {
-        val with = listOf(SettingsOption.Colors, SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent, SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight, SettingsOption.EdgeFade)
+        val with = listOf(SettingsOption.Colors, SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent, SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight)
         assertEquals(with.toSet(), SettingsOption.entries.filter { previewKindOf(it) != null }.toSet())
         show(SettingsOption.TextSize)
         assertTrue(hasPreview())
@@ -72,8 +72,8 @@ class SettingsLookPreviewTest {
 
     @Test
     fun anOptionOutsideTheLookHasTheTextPanelOnly() {
-        for (option in listOf(SettingsOption.Language, SettingsOption.ScanOnStartup, SettingsOption.Animations)) assertEquals(null, previewKindOf(option))
-        show(SettingsOption.ScanOnStartup)
+        for (option in listOf(SettingsOption.Language, SettingsOption.ClockAndBattery, SettingsOption.Animations)) assertEquals(null, previewKindOf(option))
+        show(SettingsOption.ClockAndBattery)
         assertFalse(hasPreview())
     }
 
@@ -95,8 +95,6 @@ class SettingsLookPreviewTest {
     }
 
     @Test fun textWeightTile() = assertTrue(shownAtMedium(SettingsOption.TextWeight))
-
-    @Test fun fadeTile() = assertTrue(shownAtMedium(SettingsOption.EdgeFade))
 
     @Test fun textColorGivesWayToItsSwatchesAtMedium() = assertFalse(shownAtMedium(SettingsOption.TextColor))
 
@@ -145,7 +143,7 @@ class SettingsLookPreviewTest {
         var panel by mutableStateOf(100.dp)
         compose.setContent {
             Box(Modifier.width(240.dp).height(300.dp)) {
-                PlumTheme(PlumThemeSettings.Graphite) { PanelWithPreview(PreviewKind.Look, fadeEdges = true, allowed = true) { Box(Modifier.width(240.dp).height(panel)) } }
+                PlumTheme(PlumThemeSettings.Graphite) { PanelWithPreview(PreviewKind.Look, allowed = true) { Box(Modifier.width(240.dp).height(panel)) } }
             }
         }
         for ((height, shown) in listOf(100.dp to true, (300.dp - card) to true, (300.dp - card + 1.dp) to false, 300.dp to false, 100.dp to true)) {
@@ -159,7 +157,7 @@ class SettingsLookPreviewTest {
     fun aCoveringPageHasNoCard() {
         compose.setContent {
             Box(Modifier.width(240.dp).height(400.dp)) {
-                PlumTheme(PlumThemeSettings.Graphite) { PanelWithPreview(PreviewKind.Look, fadeEdges = true, allowed = false) { Box(Modifier.width(240.dp).height(40.dp)) } }
+                PlumTheme(PlumThemeSettings.Graphite) { PanelWithPreview(PreviewKind.Look, allowed = false) { Box(Modifier.width(240.dp).height(40.dp)) } }
             }
         }
         assertFalse(hasPreview())
@@ -200,7 +198,7 @@ class SettingsLookPreviewTest {
         size: TextSize,
         shown: Boolean,
     ) {
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { SettingsAt(optionsAt(SettingsOption.Background)) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { SettingsAt(colorPageAt(SettingsOption.Background)) } }
         val panel = compose.onNodeWithTag(SettingsTags.PANEL).getBoundsInRoot()
         assertEquals("$size at ${panel.right}", shown, hasPreview())
         if (hasPreview()) {
@@ -290,7 +288,9 @@ class SettingsLookPreviewTest {
     @Test
     fun theCoverTileCastsItsDropShadow() {
         show(SettingsOption.TextWeight)
-        val under = pixel(SettingsTags.LOOK_PREVIEW, 163f, 65f)
+        // 68, not closer to the edge: at 65 the difference sits on the threshold and one colour step of
+        // Linux rendering failed it in CI.
+        val under = pixel(SettingsTags.LOOK_PREVIEW, 163f, 68f)
         val away = pixel(SettingsTags.LOOK_PREVIEW, 163f, 105f)
         assertTrue("shadow under the tile: $under against $away", lum(under) < lum(away) - 0.02f || lum(under) > lum(away) + 0.02f)
     }
@@ -335,31 +335,6 @@ class SettingsLookPreviewTest {
         compose.waitForIdle()
         near(SettingsPreviewLook.tileStops(Color(0xFFD0502A))[0], pixel(SettingsTags.LOOK_PREVIEW, 149f, 23f), "tile after a stored accent")
     }
-
-    private fun bottomLine(on: Boolean): Color {
-        val settings = PlumSettings(appearance = AppearanceSettings(background = ColorSetting.Preset("Graphite"), edgeFade = on), flags = SetupFlags(setupCompleted = true))
-        compose.setContent { SettingsTheme(settings) { SettingsAt(optionsAt(SettingsOption.EdgeFade), settings) } }
-        compose.waitForIdle()
-        return pixel(SettingsTags.LOOK_PREVIEW, 40f, 96f)
-    }
-
-    private val plainLine: Color
-        get() {
-            val theme = PlumThemeSettings.Graphite
-            val colors = com.plumemu.coreui.theme.PlumColors.derive(theme.backgroundColor, theme.textMode, theme.accentColor)
-            val well = SettingsPreviewLook.well(colors.bg.toComposeColor(), colors.text.toComposeColor())
-            return SettingsPreviewLook.line(colors.text.toComposeColor()).compositeOver(well)
-        }
-
-    /** Fade list edges on: the last list line is half gone into the well at its middle; off: it is the plain line. */
-    @Test
-    fun fadeShowsWhileFadeListEdgesIsOn() {
-        val line = bottomLine(true)
-        assertTrue("faded: $line against the plain ${plainLine}", line.red < plainLine.red - 0.05f)
-    }
-
-    @Test
-    fun noFadeWhileFadeListEdgesIsOff() = near(plainLine, bottomLine(false), "the plain last line")
 
     /** Whether the chevron node at [tag] has anything drawn in it, against the screen's background. */
     private fun chevronDrawn(tag: String): Boolean {

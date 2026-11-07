@@ -16,6 +16,7 @@ import json
 import os
 import re
 import sys
+import urllib.parse
 
 sys.dont_write_bytecode = True  # no __pycache__ in the working tree
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -519,6 +520,7 @@ def finish(systems, registry, skipped, dj_players=None):
         if emulator_id in risky:
             record["legalRisk"] = True
         emulators.append(record)
+    add_download_pages(emulators, tables.DOWNLOAD_PAGES)
     package_name = re.compile(r"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$")
     for package, system_id in tables.KNOWN_APPS.items():
         if not package_name.match(package):
@@ -531,6 +533,33 @@ def finish(systems, registry, skipped, dj_players=None):
     if tables.KNOWN_APPS:
         data["knownApps"] = dict(sorted(tables.KNOWN_APPS.items()))
     return data, skipped, dropped
+
+
+def check_download_page(package, url):
+    """A page is the project's own: https, on a real host, not a store or a site that re-hosts APKs."""
+    host = (urllib.parse.urlsplit(url).hostname or "").lower() if url.startswith("https://") else ""
+    if not host:
+        raise ConvertError(f"DOWNLOAD_PAGES {package}: {url!r} is not an https link")
+    for banned in tables.NOT_DOWNLOAD_HOSTS:
+        if host == banned or host.endswith("." + banned):
+            raise ConvertError(f"DOWNLOAD_PAGES {package}: {url!r} is on {banned}, not the project's own page")
+
+
+def add_download_pages(emulators, pages):
+    """Writes `page`: the row of the emulator's own package, else of its first variant that has one."""
+    for package, url in pages.items():
+        check_download_page(package, url)
+    listed = set()
+    for record in emulators:
+        packages = [record["package"]] + [v["package"] for v in record.get("variants", [])]
+        listed.update(packages)
+        page = next((pages[p] for p in packages if p in pages), None)
+        if page is not None:
+            record["page"] = page
+    # A typing slip here would quietly leave an emulator with nothing to offer.
+    stale = sorted(set(pages) - listed)
+    if stale:
+        raise ConvertError(f"DOWNLOAD_PAGES names no emulator's package: {stale}")
 
 
 def version_record(data_bytes, current_text, today):

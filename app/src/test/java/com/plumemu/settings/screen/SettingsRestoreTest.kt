@@ -37,13 +37,9 @@ internal class SettingsRestoreTest : SettingsModelHarness() {
     }
 
     @Test
-    fun theRowSitsRightAfterBackUpAndUndoAfterItOnlyWhileTheSetExists() {
-        val advanced = SettingsSection.Advanced
-        assertFalse(SettingsOption.UndoRestore in advanced.rowsIn(SettingsContent()))
-        val rows = advanced.rowsIn(SettingsContent(wayBack = wayBack))
-        assertEquals(rows.indexOf(SettingsOption.Backup) + 1, rows.indexOf(SettingsOption.Restore))
-        assertEquals(rows.indexOf(SettingsOption.Restore) + 1, rows.indexOf(SettingsOption.UndoRestore))
-        assertEquals(rows.indexOf(SettingsOption.ResetAll) - 1, rows.indexOf(SettingsOption.UndoRestore))
+    fun restoreSitsRightAfterBackUpAndUndoAfterItOnlyWhileTheSetExists() {
+        assertEquals(listOf(BackupRestoreItem.Backup, BackupRestoreItem.Restore), backupRestoreItems(SettingsContent()))
+        assertEquals(listOf(BackupRestoreItem.Backup, BackupRestoreItem.Restore, BackupRestoreItem.Undo), backupRestoreItems(SettingsContent(wayBack = wayBack)))
     }
 
     @Test
@@ -98,8 +94,10 @@ internal class SettingsRestoreTest : SettingsModelHarness() {
         model.content = SettingsContent(restore = RestoreState.Confirm(summary))
         openSection(SettingsSection.Advanced)
         focusOption(SettingsOption.Restore)
+        press(Action.Enter)
         val settings = actions.shown
         model.onTapPanelItem(0, settings, wide)
+        assertFalse("the cursor opens on Cancel: the first tap only focuses Restore", actions.restoreCalls.contains("confirm"))
         model.onTapPanelItem(0, settings, wide)
         assertTrue(actions.restoreCalls.contains("confirm"))
     }
@@ -148,12 +146,15 @@ internal class SettingsRestoreTest : SettingsModelHarness() {
         move(Direction.Up)
         press(Action.Enter)
         assertEquals(listOf("forget copy"), actions.restoreCalls)
-        assertEquals("Delete closes the panel", SettingsColumn.Options, model.focus.column)
+        // The copy is gone with the store's answer: its item with it.
+        model.content = model.content.copy(wayBack = null)
+        assertEquals("Delete goes back to the list", PanelPage.BackupRestore, model.focus.page)
     }
 
     @Test
     fun theResultIsForgottenWhenTheFocusLeavesTheRow() {
         openRestorePanel(SettingsContent(restore = RestoreState.Refused(RestoreProblem.NewerFormat)))
+        press(Action.Back)
         press(Action.Back)
         actions.restoreCalls.clear()
         move(Direction.Down)

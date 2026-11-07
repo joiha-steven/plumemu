@@ -11,8 +11,8 @@ object SwitchSliderDimens {
     val switchTrackWidth = 40.dp
     val switchTrackHeight = (68f / 3f).dp
     val switchKnob = (56f / 3f).dp
-    /** The enabled knob sits this far above the track's centre line: half its solid edge (`SeatLook.cap` thick, 2 dp), so body plus edge is centred. */
-    val switchKnobLift = 1.dp
+    /** The enabled knob sits this far above the track's centre line: half its solid edge (`SeatLook.cap` thick, 2 dp, at `Depth.THICKNESS`), so body plus edge is centred. */
+    val switchKnobLift = 1.dp * Depth.THICKNESS
     val switchLip = 4.dp
     val switchLipBottom = (14f / 3f).dp
 
@@ -31,8 +31,8 @@ object SwitchSliderDimens {
 
     val sliderKnob = 20.dp
     /** The fill's `0 0 10px` glow and the focused knob's `0 0 14px` (1.5 px per dp). */
-    val fillGlowBlur = (20f / 3f).dp
-    val knobGlowBlur = (28f / 3f).dp
+    val fillGlowBlur = (20f / 3f).dp * Depth.GLOW_REACH
+    val knobGlowBlur = (28f / 3f).dp * Depth.GLOW_REACH
 
     /** The knob's groove ring (lit in the accent when focused). */
     val sliderKnobRing = (4f / 3f).dp

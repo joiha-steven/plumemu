@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.compositeOver
 import com.plumemu.coreui.theme.CollarDimens
 import com.plumemu.coreui.theme.CssFace
+import com.plumemu.coreui.theme.Depth
 import com.plumemu.coreui.theme.FieldDimens
 import com.plumemu.coreui.theme.FlatFace
 import com.plumemu.coreui.theme.PlumDimens
@@ -66,7 +67,7 @@ fun DrawScope.drawFlatFace(
     val faceTop = if (moveFace) flatFaceShift(press, raise) else 0f
     val edgeHeight = (edge + lift) * up
     // The shadow: three rounded rects growing downward, each a third of the peak; it fades as the key goes down.
-    val peak = look.shadow.alpha * up * (1f + SHADOW_RAISE * raise)
+    val peak = look.shadow.alpha * Depth.SHADOW * up * (1f + SHADOW_RAISE * raise)
     val layerAlpha = peak / SHADOW_LAYERS
     if (layerAlpha > 0.002f) {
         for (i in 1..SHADOW_LAYERS) {

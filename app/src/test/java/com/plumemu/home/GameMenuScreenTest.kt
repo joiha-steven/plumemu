@@ -21,10 +21,13 @@ import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.game.Beetle
 import com.plumemu.game.DuckStation
 import com.plumemu.game.EmulatorItem
+import com.plumemu.game.Epsxe
 import com.plumemu.game.FakeGameActions
 import com.plumemu.game.sampleFacts
 import com.plumemu.game.GameMenuEntryId
 import com.plumemu.game.GamePanelTags
+import com.plumemu.game.NoPageEmu
+import com.plumemu.game.RiskyEmu
 import com.plumemu.game.sampleListing
 import com.plumemu.launcher.FileProblem
 import com.plumemu.launcher.LaunchOutcome
@@ -372,6 +375,22 @@ class GameMenuScreenTest {
         compose.onNodeWithText("Current", useUnmergedTree = true).performTouchInput { click() }
         compose.waitForIdle()
         assertEquals(listOf(Beetle.id), games.choices.map { it.second })
+    }
+
+    @Test
+    fun aTapOnARowWithNothingToGetDoesNothingAndATapOnGetItOpensThePage() {
+        games.listing = { sampleListing(current = NoPageEmu.id, installed = listOf(DuckStation), notInstalled = listOf(NoPageEmu, RiskyEmu, Epsxe)) }
+        show()
+        openSnes()
+        send(Action.Menu)
+        tap(GamePanelTags.row(GameMenuEntryId.PlayWith.name))
+        for (emulator in listOf(NoPageEmu, RiskyEmu)) {
+            tap(GamePanelTags.row("get:${emulator.id}"))
+            assertEquals(emptyList<String>(), games.downloadPages)
+            assertEquals("the list stays open", true, isPanelOpen())
+        }
+        tap(GamePanelTags.row("get:${Epsxe.id}"))
+        assertEquals(listOf(Epsxe.page), games.downloadPages)
     }
 
     private fun hasText(text: String) = hasText(text, substring = false)

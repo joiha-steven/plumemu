@@ -47,7 +47,7 @@ internal object TestCatalogs {
            "game":{"mode":"path","target":"extra","key":"ROM"},"extras":{"LIBRETRO":"/data/data/{package}/cores/{core}"}},
           {"id":"risky","name":"Risky","package":"com.risky","activity":"com.risky.Main",
            "game":{"mode":"uri","target":"data"},"legalRisk":true},
-          {"id":"snes9x","name":"Snes9x EX+","package":"com.snes9x","activity":"com.snes9x.Main",
+          {"id":"snes9x","name":"Snes9x EX+","package":"com.snes9x","activity":"com.snes9x.Main","page":"https://example.org/snes9x",
            "game":{"mode":"uri","target":"extra","key":"uri"},"action":"android.intent.action.VIEW"}]}
     """.trimIndent()
 }

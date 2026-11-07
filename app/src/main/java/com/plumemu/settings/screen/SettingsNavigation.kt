@@ -41,15 +41,16 @@ internal abstract class SettingsNavigation(
             // Not a move: no sound, only the same item kept under the cursor. The first content is
             // what the focus was made for (the placeholder before it has no rows to follow).
             if (hasContent && before != value) focusKeptIn(before, value)?.let { focus = it }
-            // A section that left with its device (Second screen): the focus goes to the section above it.
-            // Not moveTo: no move sound for a change nobody made, and Second screen's rows open no page that onFocusChanging must leave.
+            // A section that left (Second screen with its device, Emulators with the last game): the focus goes to the section above it.
+            // Not moveTo: no move sound for a change nobody made, and these sections open no page that onFocusChanging must leave.
             val shown = SettingsSection.shownIn(value)
             if (focus.section !in shown) {
                 val above = SettingsSection.entries.take(focus.section.ordinal).lastOrNull { it in shown } ?: shown.first()
-                focus = focus.copy(column = SettingsColumn.Sections, section = above, page = null)
+                focus = focus.copy(column = SettingsColumn.Sections, section = above, page = null, panelIndex = 0)
             }
             // "Already reading your games" stays under the progress line until the scan ends.
             if (before.isScanning && !value.isScanning) work.clearScanBusyNotice()
+            markResultsSeen(focus.page)
             hasContent = true
         }
 
@@ -68,6 +69,20 @@ internal abstract class SettingsNavigation(
 
     /** The focused (or remembered) option of the focused section in [content]. */
     val focusedOption: SettingsOption? get() = focus.optionIn(content)
+
+    /** The option whose panel shows: the focused row's, or the item of Colors', Back up and restore's or Reset…'s panel whose page is up. */
+    val panelOption: SettingsOption?
+        get() =
+            when (focus.page) {
+                PanelPage.BackgroundPresets, PanelPage.BackgroundCustom -> SettingsOption.Background
+                PanelPage.TextPresets, PanelPage.TextCustom -> SettingsOption.TextColor
+                PanelPage.Backup -> SettingsOption.Backup
+                PanelPage.Restore -> SettingsOption.Restore
+                PanelPage.UndoRestore -> SettingsOption.UndoRestore
+                PanelPage.ResetAllConfirm -> SettingsOption.ResetAll
+                PanelPage.ResetLibraryConfirm -> SettingsOption.ResetLibrary
+                else -> focusedOption
+            }
 
     /** The focused row of the section in [content]. */
     val optionIndex: Int get() = focus.optionIndexIn(content)
@@ -252,6 +267,10 @@ internal abstract class SettingsNavigation(
                 work.submitReport(form, step) { report.form === form && focus.page == PanelPage.ProblemReport }
                 feel.report(Outcome.Activated)
             }
+            ReportStep.ShareLog -> {
+                work.exportLogs(SettingsOption.ReportProblem)
+                feel.report(Outcome.Activated)
+            }
             ReportStep.Leave, ReportStep.NotHandled -> {
                 if (step == ReportStep.NotHandled && action != Action.Back) return
                 cause = Cause.Back
@@ -275,7 +294,7 @@ internal abstract class SettingsNavigation(
     protected enum class Cause { Move, Back, Enter, Tap }
 
     private fun SettingsFocus.depth(): Int =
-        column.ordinal * 2 + if (page in DEEP_PAGES) 1 else 0
+        column.ordinal * 2 + (if (page in DEEP_PAGES) 1 else 0) + (if (page in PAGES_UNDER_COLORS || page in PAGES_UNDER_LISTS) 1 else 0)
 
     private fun reportMove(
         from: SettingsFocus,
@@ -299,6 +318,9 @@ internal abstract class SettingsNavigation(
         )
     }
 
+    /** The move being handled is a held key's repeat, not a press of its own. */
+    protected var isHeldMove = false
+
     /** The last press or tap came with a narrow geometry: a row's panel shows only once opened. */
     protected var isNarrow = false
 
@@ -308,11 +330,11 @@ internal abstract class SettingsNavigation(
      */
     protected var keyboardChoice = KeyboardChoice.Plumemu
 
-    /** Back up…'s panel was opened during this visit of its row (narrow screens show it only then). */
-    private var backupPanelOpened = false
+    /** Back up…'s page, the one place that says how a backup ended, was open while the standing result was there to read. */
+    private var backupResultSeen = false
 
-    /** Restore…'s or Undo's panel was opened during this visit of its row. */
-    private var restorePanelOpened = false
+    /** A restore's or an Undo's standing result was on the screen, in Restore…'s page or Undo's. */
+    private var restoreResultSeen = false
 
     /** Puts the focus on About's option row [index] (the row the main screen's update notice leads to). */
     fun focusAboutRow(index: Int) =
@@ -324,23 +346,19 @@ internal abstract class SettingsNavigation(
 
     protected fun moveTo(next: SettingsFocus) {
         val from = focus
-        if (next.page == PanelPage.Backup) backupPanelOpened = true
-        if (next.page == PanelPage.Restore || next.page == PanelPage.UndoRestore) restorePanelOpened = true
+        markResultsSeen(focus.page)
+        markResultsSeen(next.page)
         // Another option: what was said about the last one goes.
         if (next.section != focus.section || next.optionIndexIn(content) != focus.optionIndexIn(content)) {
             doneOption = null
             work.clearNotice()
             if (focus.optionIn(content) == SettingsOption.RomFolders) work.leaveFolders()
-            // Its result was seen when the panel showed: beside the row (wide) or opened (narrow).
-            if (focus.optionIn(content) == SettingsOption.Backup) {
-                if (!isNarrow || backupPanelOpened) work.leaveBackup()
-                backupPanelOpened = false
-            }
-            // The same for Restore… and Undo last restore, which share one result.
-            val leaving = focus.optionIn(content)
-            if (leaving == SettingsOption.Restore || leaving == SettingsOption.UndoRestore) {
-                if (!isNarrow || restorePanelOpened) work.leaveRestore()
-                restorePanelOpened = false
+            // A result was seen once its page showed it: the row's and the list's word alone leave it waiting.
+            if (focus.optionIn(content) == SettingsOption.BackupAndRestore) {
+                if (backupResultSeen) work.leaveBackup()
+                if (restoreResultSeen) work.leaveRestore()
+                backupResultSeen = false
+                restoreResultSeen = false
             }
             if (focus.optionIn(content) == SettingsOption.Rescan || next.optionIn(content) == SettingsOption.Rescan) work.leaveRescan()
         } else if (focus.optionIn(content) == SettingsOption.Rescan && leavesRescanView(next)) {
@@ -354,12 +372,26 @@ internal abstract class SettingsNavigation(
         reportMove(from, next)
     }
 
+    /** [page] is on the screen now: what it shows of a standing result counts as read. No result standing, nothing was seen: a page opened before the result does not count. */
+    private fun markResultsSeen(page: PanelPage?) {
+        val backup = content.backup
+        val restore = content.restore
+        backupResultSeen = backup.isResult && (backupResultSeen || page == PanelPage.Backup)
+        restoreResultSeen = restore.isResult && (restoreResultSeen || page == PanelPage.Restore || (page == PanelPage.UndoRestore && undoPageShows(restore)))
+    }
+
     /** B from Rescan's panel to the list (narrow), or from its row to the sections (wide): the person is done with the result. */
     private fun leavesRescanView(next: SettingsFocus) =
         next.column == SettingsColumn.Sections || (focus.column == SettingsColumn.Panel && next.column != SettingsColumn.Panel)
 
     internal companion object {
+        /** Pages one step deeper because Colors' panel opened them. */
+        private val PAGES_UNDER_COLORS = setOf(PanelPage.BackgroundPresets, PanelPage.TextPresets, PanelPage.BackgroundCustom, PanelPage.TextCustom)
+
+        /** Pages one step deeper because the list of Back up and restore's or Reset…'s panel opened them; they keep the column, unlike [DEEP_PAGES]. */
+        private val PAGES_UNDER_LISTS = setOf(PanelPage.Backup, PanelPage.Restore, PanelPage.UndoRestore, PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm)
+
         /** Pages one step deeper than their column (a colour's custom page, a licence text, a confirm, Fix name…). */
-        val DEEP_PAGES = setOf(PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom, PanelPage.LicenseText, PanelPage.Folder, PanelPage.SkipSubfolder, PanelPage.RemoveFolder, PanelPage.FixName, PanelPage.ScraperSignIn, PanelPage.ProblemReport, PanelPage.ScraperSystems, PanelPage.ScraperConfirm, PanelPage.ScraperSignOutConfirm, PanelPage.RaSignOutConfirm, PanelPage.ScraperClearConfirm)
+        val DEEP_PAGES = setOf(PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom, PanelPage.LicenseText, PanelPage.Folder, PanelPage.SkipSubfolder, PanelPage.RemoveFolder, PanelPage.FixName, PanelPage.ScraperSignIn, PanelPage.ProblemReport, PanelPage.ScraperSystems, PanelPage.ScraperConfirm, PanelPage.ScraperSignOutConfirm, PanelPage.RaSignOutConfirm, PanelPage.ScraperClearConfirm, PanelPage.UnknownFolder)
     }
 }

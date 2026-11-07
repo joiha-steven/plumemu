@@ -85,14 +85,14 @@ class GameLauncher internal constructor(
             is EmulatorPick.Ready -> resolved
             is EmulatorPick.ChosenMissing -> return LaunchOutcome.EmulatorMissing(
                 gameId,
-                EmulatorOffer(resolved.emulatorId, resolved.emulator?.name, resolved.emulator?.primary?.packageName, resolved.emulator?.legalRisk == true),
+                EmulatorOffer(resolved.emulatorId, resolved.emulator?.name, resolved.emulator?.page, resolved.emulator?.legalRisk == true),
                 resolved.source,
             )
             is EmulatorPick.NotChosen -> return LaunchOutcome.EmulatorNotChosen(
-                gameId, system.id, system.displayName, resolved.installed.map { offerOf(it, it.primary.packageName) }, resolved.recommended?.id,
+                gameId, system.id, system.displayName, resolved.installed.map(::offerOf), resolved.recommended?.id,
             )
             is EmulatorPick.NoneInstalled -> return LaunchOutcome.NoEmulatorForSystem(
-                gameId, system.id, resolved.candidates.map { offerOf(it, it.primary.packageName) },
+                gameId, system.id, resolved.candidates.map(::offerOf),
             )
         }
         val location = GameLocations.of(target, storageRoots)
@@ -108,7 +108,7 @@ class GameLauncher internal constructor(
         val built = LaunchSpecs.build(pick.emulator, location, pick.packageName, ready?.vitaTitleId, ready?.steamAppId)
         val spec = when (built) {
             is LaunchResult.Built -> built.spec
-            is LaunchResult.NeedsFilePath -> return LaunchOutcome.NeedsFilePath(gameId, offerOf(pick.emulator, pick.packageName))
+            is LaunchResult.NeedsFilePath -> return LaunchOutcome.NeedsFilePath(gameId, offerOf(pick.emulator))
             is LaunchResult.NeedsDocumentUri, is LaunchResult.UnknownPackage, is LaunchResult.NeedsVitaTitleId,
             is LaunchResult.NeedsSteamAppId,
             -> return LaunchOutcome.Failed(gameId, FailureReason.Internal)
@@ -225,7 +225,7 @@ class GameLauncher internal constructor(
         return LaunchOutcome.FileMissing(target.id, target.fileName, FileProblem.FolderUnreachable)
     }
 
-    private fun offerOf(emulator: Emulator, packageName: String) = EmulatorOffer(emulator.id, emulator.name, packageName, emulator.legalRisk)
+    private fun offerOf(emulator: Emulator) = EmulatorOffer(emulator.id, emulator.name, emulator.page, emulator.legalRisk)
 
     private fun logOutcome(outcome: LaunchOutcome) {
         val game = "launch: game ${outcome.gameId}"

@@ -17,7 +17,10 @@ import com.plumemu.coreui.theme.GridSize
 import com.plumemu.coreui.theme.LocalGlideClock
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.ProvideGridSize
+import com.plumemu.home.APPS_ENTRY
 import com.plumemu.home.CoverArtLibrary
+import com.plumemu.home.GameRowModel
+import com.plumemu.home.LocalHomeAppIcons
 import com.plumemu.home.HomeAt
 import com.plumemu.home.ProvideHomeArt
 import com.plumemu.home.appComposeRule
@@ -214,11 +217,13 @@ class DemoVideoFrames {
 
         // Fast pace: 0.28-0.35 s between moves in a burst, a beat of 0.45-0.5 s before a confirm.
         fun burst(key: String, times: Int, gap: Double = 0.28) = repeat(times) { strip(key, "move", gap) }
-        // Scene 1: the systems (Recent, Favorites, Apps, then the systems: down the list and back to Super Nintendo).
+        // Scene 1: the systems, down the list and back up to Super Nintendo (computed, so it follows the list).
         take.note("Move between your systems")
         take.seconds(0.8)
-        burst("DOWN", 15); strip("DOWN", "move", 0.45)
-        burst("UP", 12, 0.26); strip("UP", "move", 0.3)
+        val snes = entryIndex("snes")
+        val far = snes + 5
+        burst("DOWN", far)
+        burst("UP", far - snes, 0.26)
         // Scene 2: a system's games.
         take.note("Open a system and scroll its games")
         strip("A", "confirm", 0.6)
@@ -228,9 +233,8 @@ class DemoVideoFrames {
         burst("DOWN", 5); strip("UP", "move", 0.45)
         take.note("Grid")
         strip("SELECT", "confirm", 0.9)
-        strip("RIGHT", "move", 0.32); strip("DOWN", "move", 0.32); strip("DOWN", "move", 0.32); strip("LEFT", "move", 0.32)
-        strip("DOWN", "move", 0.32); strip("RIGHT", "move", 0.32); strip("RIGHT", "move", 0.32); strip("UP", "move", 0.32)
-        strip("DOWN", "move", 0.32); strip("DOWN", "move", 0.32); strip("LEFT", "move", 0.32); strip("UP", "move", 0.5)
+        strip("RIGHT", "move", 0.32); strip("DOWN", "move", 0.32); strip("LEFT", "move", 0.32)
+        strip("DOWN", "move", 0.32); strip("RIGHT", "move", 0.32); strip("RIGHT", "move", 0.32); strip("UP", "move", 0.5)
         // Scene 3: the game menu.
         take.note("Press START on a game for its menu")
         strip("START", "confirm", 0.7)
@@ -261,6 +265,47 @@ class DemoVideoFrames {
         take.finish()
     }
 
+    private val appNames = listOf(
+        "Browser", "Calculator", "Calendar", "Camera", "Clock", "Contacts", "Files", "Gallery", "Music", "Settings",
+        "Notes", "Maps", "Weather", "Podcasts", "Photos", "Downloads", "Recorder", "Video", "Mail", "Messages",
+    )
+
+    @Test
+    fun apps() {
+        val take = Take("apps")
+        begin()
+        val rows = appNames.mapIndexed { i, name -> GameRowModel("app-$i", name, region = "") }
+        val content = library.withEntries(library.entries.map { if (it.kind == EntryKind.Apps) it.copy(rows = rows, shownCount = rows.size) else it })
+        lateinit var state: StripState
+        compose.setContent {
+            CompositionLocalProvider(LocalGlideClock provides { compose.mainClock.currentTime * 1_000_000L }) {
+                PlumTheme(settings(ColorSet.Charcoal).toThemeSettings()) {
+                    val bgNow = PlumTheme.colors.bg.value
+                    val accentNow = PlumTheme.colors.accent.value
+                    SideEffect { take.colours = "$bgNow $accentNow" }
+                    CompositionLocalProvider(LocalHomeAppIcons provides remember { PosterAppIcons() }) {
+                        ProvideGridSize(GridSize.Large) {
+                            ProvideHomeArt(rememberSource { posterCoverSource(library) }, library.hasBoxArt) {
+                                HomeAt(content, isMotionOn = PlumTheme.motion.isOn, onState = { state = it }, gridIds = setOf(HomeContent.APPS_ID))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+        compose.runOnIdle { state.dispatch(Action.TapItem(Column.Systems, APPS_ENTRY)) }
+        take.note("Apps")
+        take.seconds(0.8)
+        fun key(k: String, action: Action, sound: String, gap: Double) = take.press(k, sound, gap) { state.dispatch(action) }
+        key("A", Action.Enter, "confirm", 0.8)
+        for (d in listOf(Direction.Right, Direction.Right, Direction.Down, Direction.Left, Direction.Down, Direction.Right, Direction.Right, Direction.Down, Direction.Left, Direction.Down, Direction.Right, Direction.Right, Direction.Up)) {
+            key(d.name.uppercase(), Action.Move(d), "move", 0.32)
+        }
+        take.seconds(0.8)
+        take.finish()
+    }
+
     @Test
     fun settings() {
         val take = Take("settings")
@@ -281,7 +326,7 @@ class DemoVideoFrames {
         compose.waitForIdle()
         take.note("Settings: browse")
         take.seconds(0.8)
-        val browse = listOf(SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent, SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight)
+        val browse = listOf(SettingsOption.Accent, SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight)
         for (o in browse) take.press("DOWN", "move", 0.45) { focus = optionsAt(o) }
         for (o in browse.dropLast(1).reversed() + SettingsOption.Colors) take.press("UP", "move", 0.3) { focus = optionsAt(o) }
         take.seconds(0.2)

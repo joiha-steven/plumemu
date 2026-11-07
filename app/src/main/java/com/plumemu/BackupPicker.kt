@@ -12,7 +12,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Android's save picker for Settings › Advanced › Back up… (`ACTION_CREATE_DOCUMENT`; no
+ * Android's save picker for Settings › Advanced › Back up and restore › Back up… (`ACTION_CREATE_DOCUMENT`; no
  * permission). Its answer starts the backup in the graph, which outlives the Activity. Made while
  * the Activity is constructed (a result launcher must be registered before it starts).
  */

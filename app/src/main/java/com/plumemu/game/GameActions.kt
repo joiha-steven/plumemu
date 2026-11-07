@@ -49,8 +49,8 @@ internal interface GameActions {
     /** Stores [emulatorId] as the emulator of every game of [gameKey]'s system (the first launch's question). */
     suspend fun chooseEmulatorForSystem(gameKey: String, emulatorId: String)
 
-    /** Opens the store page of [packageName]; false when nothing on the device could open it. */
-    fun openStorePage(packageName: String): Boolean
+    /** Opens an emulator's download page [url] in a browser; false when nothing on the device could open it. */
+    fun openDownloadPage(url: String): Boolean
 
     /** Starts one rescan of every picked folder; false when one is already running. */
     fun rescanLibrary(): Boolean
@@ -159,7 +159,7 @@ internal interface GameActions {
 
         override suspend fun chooseEmulatorForSystem(gameKey: String, emulatorId: String) = Unit
 
-        override fun openStorePage(packageName: String): Boolean = false
+        override fun openDownloadPage(url: String): Boolean = false
 
         override fun rescanLibrary(): Boolean = false
 
@@ -299,7 +299,7 @@ internal data class EmulatorToStart(
     val coreName: String? = null,
 )
 
-/** One emulator of a system, with the package its store page opens. */
+/** One emulator of a system, with the project's page "Get it" opens. */
 @Immutable
 internal data class EmulatorItem(
     val id: String,
@@ -309,7 +309,12 @@ internal data class EmulatorItem(
     val isLegalRisk: Boolean,
     /** The RetroArch core file this entry starts; null for an emulator without cores. */
     val core: String? = null,
-)
+    /** The project's own download page; null when the data holds none. */
+    val page: String? = null,
+) {
+    /** The page "Get it" may open: a legal-risk emulator is never offered, whatever the data holds. */
+    val pageToOffer: String? get() = page.takeUnless { isLegalRisk }
+}
 
 /**
  * A system's emulators for "Play with": [automatic] is what Automatic (the game's choice forgotten)

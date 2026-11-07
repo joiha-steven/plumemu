@@ -269,7 +269,7 @@ class SteamAppIdTests(unittest.TestCase):
                           "activity": "app.gamenative.MainActivity",
                           "game": {"mode": "steam_app_id", "target": "extra", "key": "app_id", "type": "int"},
                           "action": "app.gamenative.LAUNCH_GAME", "extras": {"game_source": "STEAM"},
-                          "accepts": ["steam"]},
+                          "accepts": ["steam"], "page": tables.DOWNLOAD_PAGES["app.gamenative"]},
                          emulators["gamenative"])
         for app in ("gamehub-lite", "droiddeck"):
             self.assertEqual(["steam"], emulators[app]["accepts"])
@@ -287,7 +287,8 @@ class SteamAppIdTests(unittest.TestCase):
         self.assertEqual(("gamehub.lite.LAUNCH_GAME", {"autoStartGame": True}), (hub["action"], hub["extras"]))
         self.assertEqual({"id": "droiddeck", "name": "DroidDeck", "package": "com.droiddeck.launcher",
                           "game": {"mode": "steam_app_id", "target": "data", "template": "droiddeck://game/{id}"},
-                          "action": "android.intent.action.VIEW", "accepts": ["steam"]}, emulators["droiddeck"])
+                          "action": "android.intent.action.VIEW", "accepts": ["steam"],
+                          "page": tables.DOWNLOAD_PAGES["com.droiddeck.launcher"]}, emulators["droiddeck"])
         # Only the Steam apps take an app id, and only from the steam system.
         self.assertEqual({"gamenative", "gamehub-lite", "droiddeck"},
                          {e["id"] for e in data["emulators"] if e["game"]["mode"] == "steam_app_id"})
@@ -681,6 +682,44 @@ class ManifestTests(unittest.TestCase):
     def test_packages_are_sorted_and_unique(self):
         packages = manifest.emulator_packages(self.data)
         self.assertEqual(sorted(set(packages)), packages)
+
+
+class DownloadPageTests(unittest.TestCase):
+    pages = {"com.example.emu": "https://example.org/download/"}
+
+    def test_the_emulators_own_package_decides_and_a_variants_row_fills_in(self):
+        pages = {"com.example.emu": "https://example.org/download/", "com.example.emu.free": "https://example.org/free/"}
+        both = {"id": "both", "package": "com.example.emu", "variants": [{"package": "com.example.emu.free"}]}
+        variant_only = {"id": "variant", "package": "com.other.emu", "variants": [{"package": "com.example.emu"}]}
+        none = {"id": "none", "package": "com.none.emu", "variants": [{"package": "com.none.emu.free"}]}
+        convert.add_download_pages([both, variant_only, none], pages)
+        self.assertEqual("https://example.org/download/", both["page"])
+        self.assertEqual("https://example.org/download/", variant_only["page"])
+        self.assertNotIn("page", none)
+
+    def test_a_row_for_no_emulator_fails(self):
+        with self.assertRaisesRegex(ConvertError, "com.example.emu"):
+            convert.add_download_pages([{"id": "other", "package": "com.other.emu"}], self.pages)
+
+    def test_only_an_https_page_of_a_project_passes(self):
+        for url in ("https://github.com/azahar-emu/azahar/releases", "https://www.retroarch.com/?page=platforms"):
+            convert.check_download_page("com.example.emu", url)
+        for url in ("http://example.org/", "market://details?id=com.example.emu", "javascript:alert(1)", "https://",
+                    "https://play.google.com/store/apps/details?id=com.example.emu",
+                    "https://PLAY.google.com/store/apps/details?id=com.example.emu",
+                    "https://www.apkmirror.com/apk/example/", "https://apkpure.com/example/", "https://en.uptodown.com/android/x"):
+            with self.subTest(url=url), self.assertRaisesRegex(ConvertError, "com.example.emu"):
+                convert.check_download_page("com.example.emu", url)
+
+    def test_every_row_of_the_table_passes_and_reaches_the_file(self):
+        data = convert.convert(os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources"))[0]
+        written = {e["page"] for e in data["emulators"] if "page" in e}
+        for package, url in tables.DOWNLOAD_PAGES.items():
+            convert.check_download_page(package, url)
+            self.assertIn(url, written, package)
+        by_id = {e["id"]: e for e in data["emulators"]}
+        self.assertEqual("https://www.ppsspp.org/download/", by_id["ppsspp"]["page"])
+        self.assertEqual("https://www.retroarch.com/?page=platforms", by_id["retroarch-snes9x"]["page"])
 
 
 class AppsSystemTests(unittest.TestCase):

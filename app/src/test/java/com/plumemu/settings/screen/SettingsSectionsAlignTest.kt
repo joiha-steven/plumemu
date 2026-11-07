@@ -85,7 +85,7 @@ abstract class SettingsSectionsAlignBase {
             val pinned = if (isThree) width - PlumDimens.stripMarginSide.value - SettingsThreeDimens.panelWidth.value else PANEL_LEFT[label]
             val pillRight = if (isThree) SettingsThreeDimens.sectionsWidth.value else (PlumDimens.stripMarginSide + PlumDimens.settingsSectionsWidth).value
             expect("header = hint key cap", near(header, hint), "header $header, hint $hint")
-            expect("every section's label", lefts.size == shownSections.size, "${lefts.size} of ${shownSections.size}")
+            expect("every section's label", lefts.size == SettingsSection.shownIn(ShotContent.library).size, "${lefts.size} of the sections shown")
             val labelStart = LeftColumnDimens.sectionLabelStart.value
             expect("every label a row padding inside the header", lefts.all { near(it, labelStart) }, "header $header, labels ${lefts.distinct()}")
             expect("focused label a row padding inside the header", near(focusedLabel, labelStart), "focused $focusedLabel, header $header")

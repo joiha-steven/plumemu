@@ -16,6 +16,14 @@ import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.coreui.theme.GridSize
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.ProvideGridSize
+import com.plumemu.home.APPS_ENTRY
+import com.plumemu.home.EntryKind
+import com.plumemu.home.HomeAppIcons
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import com.plumemu.home.GameRowModel
+import com.plumemu.home.LocalHomeAppIcons
 import com.plumemu.home.HomeAt
 import com.plumemu.home.HomeContent
 import com.plumemu.home.HomeWithArt
@@ -224,7 +232,19 @@ class ReadmeMediaShots {
     }
 
     @Test
-    fun gridDark() = shoot("grid-dark", stored(ColorSet.Charcoal)) { HomeOf(gridActions(systemIndex("snes"), 4), limitedTo(library, "snes", 6), grid = setOf("snes"), size = GridSize.Large) }
+    fun gridDark() = shoot("grid-dark", stored(ColorSet.Plumemu)) { HomeOf(gridActions(systemIndex("snes"), 4), limitedTo(library, "snes", 6), grid = setOf("snes"), size = GridSize.Large) }
+
+    /** Apps as a grid of icons: made-up apps with plain generated icons (no real logos). */
+    @Test
+    fun appsGrid() {
+        val apps = APP_NAMES.mapIndexed { i, name -> GameRowModel("app-$i", name, region = "") }
+        val content = library.withEntries(library.entries.map { if (it.kind == EntryKind.Apps) it.copy(rows = apps, shownCount = apps.size) else it })
+        shoot("apps-grid", stored(ColorSet.Charcoal)) {
+            CompositionLocalProvider(LocalHomeAppIcons provides remember { PosterAppIcons() }) {
+                HomeOf(gridActions(APPS_ENTRY, 7), content, grid = setOf(HomeContent.APPS_ID))
+            }
+        }
+    }
 
     @Test
     fun gridLight() = shoot("grid-light", stored(ColorSet.Paper)) { HomeOf(gridActions(systemIndex("psx"), readmeIndexOf("psx", "Final Fantasy VII")), limitedTo(library, "psx", 15), grid = setOf("psx"), size = GridSize.Small) }
@@ -248,9 +268,9 @@ class ReadmeMediaShots {
             PlumSettings(
                 appearance =
                     AppearanceSettings(
-                        background = ColorSetting.Custom(0x5C1230),
+                        background = ColorSetting.Custom(0x7A1424),
                         textColor = TextColorSetting.Light,
-                        accent = ColorSetting.Custom(0xFF9DB8),
+                        accent = ColorSetting.Custom(0xFFB4A8),
                         textSize = TextSizeSetting.Medium,
                     ),
                 flags = SetupFlags(setupCompleted = true),
@@ -281,18 +301,18 @@ class ReadmeMediaShots {
         val release =
             UpdateManifest(
                 versionCode = 901,
-                versionName = "0.1.1",
+                versionName = "0.1.3",
                 apkUrl = "https://example.invalid/plumemu.apk",
                 size = 8_100_000,
                 sha256 = "ab".repeat(32),
                 minSdk = 23,
-                released = "2026-11-04",
-                notes = listOf("Search keeps its keyboard on screen while you read the results.", "The grid keeps your place when you switch systems.", "Fixes the Recent list showing a game you removed."),
+                released = "2026-11-07",
+                notes = listOf("Lists, menus and panels run under the bars and fade there.", "Covers sit in a glass frame, a little further apart.", "Settings falls from 53 rows to about 40."),
                 notesUrl = null,
             )
         val content = SettingsContent(update = UpdateView(lastCheck = LastCheck(1_793_784_600_000L, CheckOutcome.Found), found = release))
         val row = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1))
-        shoot("update", stored(ColorSet.Paper)) { s -> SettingsAt(row.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0), s, content, version = "0.1.0") }
+        shoot("update", stored(ColorSet.Paper)) { s -> SettingsAt(row.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0), s, content, version = "0.1.2") }
     }
 
     @Test
@@ -317,5 +337,42 @@ class ReadmeMediaShots {
 
     private companion object {
         const val READMEDOWNS = 2
+        val APP_NAMES =
+            listOf(
+                "Browser", "Calculator", "Calendar", "Camera", "Clock", "Contacts", "Files", "Gallery", "Music", "Settings",
+                "Notes", "Maps", "Weather", "Podcasts", "Photos", "Downloads", "Recorder", "Video", "Mail", "Messages",
+                "Phone", "Translate", "Torch", "Updates",
+            )
+    }
+}
+
+/** Drawn app icons for the Apps grid shot: a saturated rounded square per app with a white shape; no real logos. */
+internal class PosterAppIcons : HomeAppIcons {
+    override val glowDispatcher: CoroutineDispatcher = Dispatchers.Unconfined
+    override val generation = MutableStateFlow(0)
+    private val memory = HashMap<Pair<String, Int>, androidx.compose.ui.graphics.ImageBitmap>()
+
+    override fun cached(rowId: String, sizePx: Int) = memory[rowId to sizePx]
+
+    override suspend fun load(rowId: String, sizePx: Int) = memory.getOrPut(rowId to sizePx) { draw(rowId.substringAfter('-').toInt(), sizePx) }
+
+    private fun draw(n: Int, size: Int): androidx.compose.ui.graphics.ImageBitmap {
+        val tops = intArrayOf(0xFFEF5350.toInt(), 0xFF42A5F5.toInt(), 0xFF66BB6A.toInt(), 0xFFAB47BC.toInt(), 0xFFFFA726.toInt(), 0xFF26C6DA.toInt(), 0xFFEC407A.toInt(), 0xFF7E57C2.toInt())
+        val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(bmp)
+        val s = size.toFloat()
+        val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        val base = tops[(n * 3 + n / 8) % tops.size]
+        p.shader = android.graphics.LinearGradient(0f, 0f, s, s, base, android.graphics.Color.rgb((android.graphics.Color.red(base) * 0.7).toInt(), (android.graphics.Color.green(base) * 0.7).toInt(), (android.graphics.Color.blue(base) * 0.7).toInt()), android.graphics.Shader.TileMode.CLAMP)
+        c.drawRoundRect(0f, 0f, s, s, s * 0.22f, s * 0.22f, p)
+        p.shader = null
+        p.color = 0xEEFFFFFF.toInt()
+        when (n % 4) {
+            0 -> c.drawCircle(s / 2, s / 2, s * 0.24f, p)
+            1 -> c.drawRoundRect(s * 0.28f, s * 0.28f, s * 0.72f, s * 0.72f, s * 0.08f, s * 0.08f, p)
+            2 -> c.drawPath(android.graphics.Path().apply { moveTo(s * 0.5f, s * 0.26f); lineTo(s * 0.74f, s * 0.7f); lineTo(s * 0.26f, s * 0.7f); close() }, p)
+            else -> { c.drawRoundRect(s * 0.26f, s * 0.26f, s * 0.46f, s * 0.74f, s * 0.05f, s * 0.05f, p); c.drawRoundRect(s * 0.54f, s * 0.26f, s * 0.74f, s * 0.74f, s * 0.05f, s * 0.05f, p) }
+        }
+        return bmp.asImageBitmap()
     }
 }

@@ -5,6 +5,7 @@ import android.view.inputmethod.EditorInfo
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.hasSetTextAction
 import com.plumemu.account.AccountStatus
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.plumemu.R
@@ -38,7 +39,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], qualifiers = "w768dp-h432dp-land-xhdpi")
 internal class SettingsSignInOwnKeyboardTest : SettingsKeyboardPathHarness() {
-    override val content: SettingsContent get() = SettingsContent(account = AccountStatus.SignedOut)
+    override val content: SettingsContent get() = SettingsContent(account = AccountStatus.SignedOut, chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper)
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
 

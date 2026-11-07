@@ -1,5 +1,6 @@
 package com.plumemu.settings.screen
 
+import androidx.compose.runtime.Composable
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.TextSize
 import org.junit.Test
@@ -22,22 +23,25 @@ class SettingsColumnsScreenshotTest {
     private fun shots(
         name: String,
         textSize: TextSize,
-        focus: SettingsFocus,
-    ) = ReferenceShots.capture(name, textSize = textSize, sizes = sizes) { SettingsAt(focus) }
+        focus: @Composable () -> SettingsFocus,
+    ) = ReferenceShots.capture(name, textSize = textSize, sizes = sizes) { SettingsAt(focus()) }
 
     @Test
-    fun swatchesPanel() = shots("settings_columns_swatches", TextSize.Small, optionsAt(SettingsOption.Background))
+    fun swatchesPanel() = shots("settings_columns_swatches", TextSize.Small, { colorPageAt(SettingsOption.Background) })
 
     @Test
-    fun swatchesPanelLargest() = shots("settings_columns_swatches", TextSize.Largest, optionsAt(SettingsOption.Background))
+    fun swatchesPanelLargest() = shots("settings_columns_swatches", TextSize.Largest, { colorPageAt(SettingsOption.Background) })
 
     @Test
-    fun descriptionPanel() = shots("settings_columns_description", TextSize.Small, optionsAt(SettingsOption.TextSize))
+    fun descriptionPanel() = shots("settings_columns_description", TextSize.Small, { optionsAt(SettingsOption.TextSize) })
 
     @Test
-    fun descriptionPanelLargest() = shots("settings_columns_description", TextSize.Largest, optionsAt(SettingsOption.TextSize))
+    fun descriptionPanelLargest() = shots("settings_columns_description", TextSize.Largest, { optionsAt(SettingsOption.TextSize) })
 
+    /** With its figures: left at the default content the page stands in the moment before the read, and the shot is empty. */
     @Test
     fun statisticsPage() =
-        shots("settings_columns_statistics", TextSize.Small, SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Statistics))
+        ReferenceShots.capture("settings_columns_statistics", textSize = TextSize.Small, sizes = sizes) {
+            StatisticsShots.WithCovers { SettingsAt(StatisticsShots.focusAt(0), content = StatisticsShots.contentOf(StatisticsShots.played)) }
+        }
 }

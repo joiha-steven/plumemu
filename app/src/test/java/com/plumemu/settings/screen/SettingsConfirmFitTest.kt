@@ -5,7 +5,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performScrollTo
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coreinput.Action
@@ -45,11 +44,11 @@ abstract class SettingsConfirmFitBase {
 
     private val cases =
         listOf(
-            Case("Reset all settings", panelAt(SettingsOption.ResetAll, PanelPage.Confirm, SettingsModel.CONFIRM_RESET)),
-            Case("Reset library", panelAt(SettingsOption.ResetLibrary, PanelPage.Confirm, SettingsModel.CONFIRM_RESET)),
+            Case("Reset all settings", panelAt(SettingsOption.ResetAll, PanelPage.ResetAllConfirm, SettingsModel.CONFIRM_RESET)),
+            Case("Reset library", panelAt(SettingsOption.ResetLibrary, PanelPage.ResetLibraryConfirm, SettingsModel.CONFIRM_RESET)),
             Case(
                 "Reset library, could not be reset",
-                panelAt(SettingsOption.ResetLibrary, PanelPage.Confirm, SettingsModel.CONFIRM_RESET),
+                panelAt(SettingsOption.ResetLibrary, PanelPage.ResetLibraryConfirm, SettingsModel.CONFIRM_RESET),
                 done = SettingsOption.ResetLibrary,
                 status = SettingsStatus(libraryReset = LibraryResetState.Failed),
             ),
@@ -80,10 +79,8 @@ abstract class SettingsConfirmFitBase {
                     compose.waitForIdle()
                     assertEquals("${font.name} ${each.label}: a tap on Reset focuses it", SettingsModel.CONFIRM_RESET, model.focus.panelIndex)
                 }
-                // The reset was asked for (A on Reset): its result line shows above the buttons. On a wide
-                // screen the panel stays beside the options; a narrow one has no panel then.
+                // The reset was asked for (A on Reset): the panel goes back to its list, with the result line.
                 if (each.done != null) {
-                    if (label.startsWith("576")) continue
                     compose.runOnIdle { model.onAction(Action.Enter, PlumSettings(), SettingsGeometry(isNarrow = false, presetColumns = 5, defaultTextSize = TextSizeSetting.Medium)) }
                     compose.waitForIdle()
                 }
@@ -97,14 +94,12 @@ abstract class SettingsConfirmFitBase {
                     if (button.bottom.value + outset > panel.bottom.value + TOLERANCE) problems += "$at: the focused button's ring ends at ${button.bottom.value + outset}, the panel at ${panel.bottom}"
                     if (button.top.value - outset < panel.top.value - TOLERANCE) problems += "$at: the focused button's ring starts at ${button.top.value - outset}, above the panel's ${panel.top}"
                 } else {
-                    // Nothing focused in the panel: the buttons may sit below its bottom only inside a scroll that reaches them.
-                    val scroll = compose.onNodeWithTag(SettingsTags.panelItem(SettingsModel.CONFIRM_RESET), useUnmergedTree = true)
-                    val button = scroll.getUnclippedBoundsInRoot()
-                    println("CONFIRMFIT $at: Reset button ${button.top}..${button.bottom}, panel ${panel.top}..${panel.bottom}")
-                    scroll.performScrollTo()
-                    compose.waitForIdle()
-                    val scrolled = scroll.getUnclippedBoundsInRoot()
-                    if (scrolled.bottom.value > panel.bottom.value + TOLERANCE) problems += "$at: the Reset button ends at ${scrolled.bottom} even scrolled, the panel at ${panel.bottom}"
+                    // The reset ran: back on its item of the list, whose title line says how it went.
+                    val line = compose.onNodeWithTag(SettingsPanelTags.DONE, useUnmergedTree = true).getUnclippedBoundsInRoot()
+                    val item = compose.onNodeWithTag(SettingsTags.panelItem(model.focus.panelIndex), useUnmergedTree = true).getUnclippedBoundsInRoot()
+                    println("CONFIRMFIT $at: line ${line.top}..${line.bottom}, item ${item.top}..${item.bottom}, panel ${panel.top}..${panel.bottom}")
+                    if (line.bottom.value > panel.bottom.value + TOLERANCE) problems += "$at: the result line ends at ${line.bottom}, the panel at ${panel.bottom}"
+                    if (item.top.value < line.top.value) problems += "$at: the item starts at ${item.top}, above the result line at ${line.top}"
                 }
             }
         }

@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -122,13 +121,14 @@ internal fun GamesGrid(
     key(entry.id) {
         // Where each row stands in px, from the packing: rows differ in height, so no scroll rule counts rows of one height.
         val spans = remember(packed, rowGap, density) { derivedStateOf { RowSpans.of(packed.value, rowGap, density) } }
-        val stripPx = with(density) { layout.gridStripHeight.roundToPx() }
+        val stripHeight = layout.gridStripHeight + LocalBarRoom.current.taller
+        val stripPx = with(density) { stripHeight.roundToPx() }
         // Read once without observing: the grid must not recompose on every move.
         val opening = Snapshot.withoutReadObservation { state.focus.rowOf(entry.id) }
         val openingRow = Snapshot.withoutReadObservation { packed.value.rowOf(opening) }
         // Where the grid opens is read once, not observed: a picture landing re-packs the rows and must not recompose the grid.
         val gridState = rememberLazyGridState(initialFirstVisibleItemIndex = Snapshot.withoutReadObservation { spans.value.firstShowing(openingRow, stripPx) })
-        val viewport = rememberGridViewportPx(gridState, layout.gridStripHeight)
+        val viewport = rememberGridViewportPx(gridState, stripHeight, PlumDimens.gridTopGap, LocalBarRoom.current.bottom + PlumDimens.gridBottomRoom)
         AlignOnRepack(gridState, spans, stripPx, columns, targetHeight, coversWidth) { packed.value.rowOf(state.focus.rowOf(entry.id)) }
         val glide = rememberListGlide(stride = targetHeight * ROW_SCALE_ROOM + rowGap, slabRoom = false)
         // The collar's focus (groove lit) is the lift slot's 0..1 growth, read in the cell's draw block; the halo is drawn
@@ -153,8 +153,9 @@ internal fun GamesGrid(
         state.setPackedRowsSource(entry.id, source)
         DisposableEffect(state, source) { onDispose { state.clearPackedRowsSource(entry.id, source) } }
         CompositionLocalProvider(LocalTileTitleFit provides fitter) {
-        // Under the ring: the focused cover is drawn over the mask (it never stands in a fade), the rows cut at an edge fade.
-        val fades = remember(gridState, glide, state, entry.id, packed) { GridEdgeFades(gridState, glide) { packed.value.rowOf(state.focus.rowOf(entry.id)) } }
+        // Under the ring: the focused cover is drawn over the mask, a row showing too little of itself at a bar is left out.
+        val fades = remember(gridState, glide, state, entry.id, packed) { GridEdgeFades(gridState, glide, with(density) { PlumDimens.gridTopGap.roundToPx().toFloat() }, liftShare = (PlumDimens.FOCUSED_COVER_SCALE - 1f) / 2f, ringPx = with(density) { PlumDimens.focusRingOutset.toPx() }) { packed.value.rowOf(state.focus.rowOf(entry.id)) } }
+        FollowBarRunner(fades)
         GridRows(modifier, entry, gridState, packed, spans, viewport, glide, rowGap, density, titleStyle, state, onAction, touch, lift, fade, halo, fades)
         }
         KeepFocusedCellVisible(gridState, 1, spans, viewport, glide) { packed.value.rowOf(state.focus.rowOf(entry.id)) }
@@ -191,8 +192,8 @@ private fun GridRows(
         columns = GridCells.Fixed(1),
         state = gridState,
         flingBehavior = rememberRowSnapFling(gridState),
-        modifier = modifier.padding(top = PlumDimens.gridTopGap - PlumDimens.barGap).fadingIn(fade).then(halo).listEdgeFadeMask(fades, PlumTheme.edgeFadeOn).testTag(HomeTags.GRID).then(glide.modifier),
-        contentPadding = PaddingValues(top = glide.extra, bottom = glide.extra + rememberGridLeftover(spans, viewport)),
+        modifier = modifier.fadingIn(fade).then(halo).listEdgeFadeMask(fades, true).testTag(HomeTags.GRID).then(glide.modifier),
+        contentPadding = PaddingValues(top = glide.extra + PlumDimens.gridTopGap, bottom = glide.extra + LocalBarRoom.current.bottom + PlumDimens.gridBottomRoom + rememberGridLeftover(spans, viewport)),
         verticalArrangement = Arrangement.spacedBy(rowGap),
     ) {
         val rows = packed.value.rows
@@ -361,9 +362,9 @@ internal fun Density.collarRect(
 }
 
 /**
- * The focus halo of the focused cover's collar (and of the one just left, fading), drawn over the grid so its clip does not cut
+ * The focus mark of the focused cover's collar (and of the one just left, fading), drawn over the grid so its clip does not cut
  * it at the top and bottom rows; the collar's groove is lit by the cell itself. Reads the focus, the animations and the scroll
- * while drawing: a move or a scroll redraws the halo, nothing recomposes.
+ * while drawing: a move or a scroll redraws the mark, nothing recomposes.
  */
 @Composable
 private fun focusHalo(
@@ -380,7 +381,8 @@ private fun focusHalo(
 ): Modifier {
     val colors = PlumTheme.colors
     val art = LocalHomeArt.current
-    FollowFocusLift(state, entry.id, panelOpen, lift, null, motionOn, null)
+    val sweep = remember { FocusSweep() }
+    FollowFocusLift(state, entry.id, panelOpen, lift, sweep, motionOn, null)
     return Modifier.drawWithContent {
         drawContent()
         fun drawOne(slot: LiftSlot) {
@@ -391,7 +393,7 @@ private fun focusHalo(
             // Follows its cover while the rows glide, cut where the covers are cut.
             val shift = glide.offset
             val width = box.width.dp.toPx()
-            val cellRect = Rect(Offset(item.offset.x + box.x.dp.toPx(), item.offset.y + shift), Size(width, item.size.height.toFloat()))
+            val cellRect = Rect(Offset(item.offset.x + box.x.dp.toPx(), item.offset.y + PlumDimens.gridTopGap.toPx() + shift), Size(width, item.size.height.toFloat()))
             val inner = coverInner(DpSize(box.width.dp, grid.rows[grid.rowOf(index)].height.dp))
             val row = entry.rows.getOrNull(index)
             val rowShape = row?.let(entry::shapeOf) ?: entry.coverShape
@@ -399,7 +401,8 @@ private fun focusHalo(
             val aspect = picture?.aspect ?: if (entry.kind.mixesSystems) rowShape.widthOverHeight else null
             val collar = collarRect(aspect, cellRect)
             val pressed = if (slot.isFocused) minOf(pressScale(), touch.scaleOf(index)) else 1f
-            val draw: DrawScope.() -> Unit = { drawLiftedCover(slot, entry.id, collar, cellRect, pressed, colors) }
+            val glint = if (slot.isFocused && sweep.progress.isRunning) sweep.progress.value else 0f
+            val draw: DrawScope.() -> Unit = { drawLiftedCover(slot, entry.id, collar, cellRect, pressed, colors, glint) }
             if (shift == 0f) draw() else clipRect(top = 0f, bottom = size.height, left = -size.width, right = size.width * 2) { draw() }
         }
         // The one fading out first, so the focused one is on top.

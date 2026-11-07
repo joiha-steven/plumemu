@@ -40,7 +40,7 @@ class LaunchingTest {
         val id = db.addGame("snes", "primary:ROMs/snes/a.sfc")
         launching.choices.chooseForGame(id, checkNotNull(catalog.system("snes")), "snes9x")
         assertEquals(
-            LaunchOutcome.EmulatorMissing(id, EmulatorOffer("snes9x", "Snes9x EX+", "com.snes9x"), ChoiceSource.PersonForGame),
+            LaunchOutcome.EmulatorMissing(id, EmulatorOffer("snes9x", "Snes9x EX+", "https://example.org/snes9x"), ChoiceSource.PersonForGame),
             launching.launcher.launch(id),
         )
         launching.choices.forgetGameChoice(id)

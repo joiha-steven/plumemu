@@ -35,10 +35,10 @@ internal class SettingsColorsTest : SettingsModelHarness() {
     private val graphite = AppearanceSettings(background = ColorSetting.Preset("Graphite"))
 
     @Test
-    fun colorsIsAChoiceAtTheTopOfAppearanceAboveTheThreeRowsItSets() {
+    fun colorsIsAChoiceAtTheTopOfAppearanceAboveAccentColor() {
         assertEquals(
-            listOf(SettingsOption.Language, SettingsOption.Colors, SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent),
-            SettingsSection.Appearance.options.take(5),
+            listOf(SettingsOption.Language, SettingsOption.Colors, SettingsOption.Accent),
+            SettingsSection.Appearance.options.take(3),
         )
         assertEquals(OptionKind.Choice, SettingsOption.Colors.kind)
     }

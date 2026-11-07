@@ -31,6 +31,9 @@ import com.plumemu.home.BoxArtPanelFixtures
 import com.plumemu.home.FakeHomeContent
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.slabOverhangPx
+import com.plumemu.home.assertSlabRestsOn
+import com.plumemu.home.barColumns
+import com.plumemu.home.rowHeightPx
 import com.plumemu.home.slabTopRow
 import com.plumemu.home.rulesAround
 import com.plumemu.home.search.SearchIndex
@@ -143,11 +146,13 @@ abstract class PanelPillFramesBase {
 
     /** How far the slab is drawn above its row's box: [pillTop] reports the box, so the glide is checked in row positions. */
     private var overhang = 0f
+    private var rowPx = 0f
 
     /** The slab fill's colour on the row [rowTag] at rest; also takes that row's overhang. */
     private fun ringColour(scene: Scene, rowTag: String): Color {
         val list = listBounds(scene)
         overhang = compose.slabOverhangPx(rowTag, scene.gap)
+        rowPx = compose.rowHeightPx(rowTag, scene.gap)
         return compose.onRoot().captureToImage().toPixelMap()[((list.left + list.right) / 2).toInt(), bounds(rowTag)!!.top.toInt() + EDGE_PX + 1]
     }
 
@@ -158,11 +163,9 @@ abstract class PanelPillFramesBase {
         ring: Color,
     ): Int {
         val list = listBounds(scene)
-        // A middle band, clear of the slab's rounded ends.
-        val xs = (list.left + list.width * 0.45f).toInt() until (list.left + list.width * 0.65f).toInt()
         // The slab of a first row is drawn above the list's top, inside the list's clip bleed.
         val from = list.top.toInt() - (if (scene.scanAbove) overhang.toInt() + 1 else 0)
-        val y = compose.onRoot().captureToImage().slabTopRow(xs, from, list.bottom.toInt())
+        val y = compose.onRoot().captureToImage().slabTopRow(compose.barColumns(list.left), from, list.bottom.toInt(), rowPx, overhang)
         return if (y < 0) -1 else Math.round(y + overhang)
     }
 
@@ -188,7 +191,9 @@ abstract class PanelPillFramesBase {
         val at = scene.first + preMoves + scene.lead
         val oldTop = bounds(scene.rowTag(at))!!.top
         val ring = ringColour(scene, scene.rowTag(at))
-        assertEquals("at rest the pill is on the focused row", oldTop.toInt(), pillTop(scene, ring))
+        listBounds(scene).let { list ->
+            compose.assertSlabRestsOn(scene.rowTag(at), compose.barColumns(list.left), list.top.toInt() - (if (scene.scanAbove) overhang.toInt() + 1 else 0), list.bottom.toInt(), scene.gap)
+        }
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { scene.down() }
         val list = listBounds(scene)

@@ -24,7 +24,7 @@ internal fun launchMessage(
     when (outcome) {
         is LaunchOutcome.Started -> null
         is LaunchOutcome.EmulatorMissing ->
-            // Installed since the launch looked (from the store, then back): nothing is missing any more.
+            // Installed since the launch looked (downloaded, then back): nothing is missing any more.
             if (listing?.installed?.any { it.id == outcome.emulator.emulatorId } == true) null else emulatorMissing(outcome.emulator)
         is LaunchOutcome.EmulatorNotChosen -> chooseForSystem(outcome)
         is LaunchOutcome.NoEmulatorForSystem -> noEmulator(outcome, listing)
@@ -250,24 +250,25 @@ internal fun saveFailedMessage(): PanelContent =
 /** The game's details could not be read for the menu, Play with or Info. */
 internal fun readFailedMessage(): PanelContent = failed(FailureReason.DatabaseError)
 
-/** "Get it" found no store and no browser. */
-internal fun storeUnavailableMessage(emulatorName: String): PanelContent =
+/** "Get it" found no browser. */
+internal fun pageUnavailableMessage(emulatorName: String): PanelContent =
     PanelContent(
-        title = UiText.Res(R.string.game_error_store_title),
-        body = listOf(UiText.Res(R.string.game_error_store_body, listOf(emulatorName))),
+        title = UiText.Res(R.string.game_error_page_title),
+        body = listOf(UiText.Res(R.string.game_error_page_body, listOf(emulatorName))),
         items = listOf(okRow()),
     )
 
 private fun emulatorMissing(offer: EmulatorOffer): PanelContent {
     val name = offer.name
-    // Legal-risk: never from a store; the legal-risk line instead.
-    val get = if (name != null && offer.packageName != null && !offer.isLegalRisk) {
+    // Legal-risk: never offered, whatever the data holds; the legal-risk line instead.
+    val page = offer.page
+    val get = if (name != null && page != null && !offer.isLegalRisk) {
         listOf(
             PanelItem.Row(
                 PanelRow(
                     key = "get:${offer.emulatorId}",
                     label = UiText.Res(R.string.game_error_get_named, listOf(name)),
-                    command = PanelCommand.GetEmulator(offer.packageName.orEmpty(), name),
+                    command = PanelCommand.GetEmulator(page, name),
                 ),
             ),
         )
@@ -296,11 +297,10 @@ private fun noEmulator(
         listing?.notInstalled
             ?: outcome.candidates.mapNotNull { offer ->
                 val name = offer.name ?: return@mapNotNull null
-                val packageName = offer.packageName ?: return@mapNotNull null
-                EmulatorItem(offer.emulatorId, name, packageName, offer.isLegalRisk)
+                EmulatorItem(offer.emulatorId, name, "", offer.isLegalRisk, page = offer.page)
             }
-    // Only legal-risk candidates (Switch): nothing can be offered; say why, with one OK.
-    if (candidates.isNotEmpty() && candidates.all { it.isLegalRisk }) {
+    // Nothing can be offered (Switch's legal-risk ones, or no page in the data): say why, with one OK.
+    if (candidates.isNotEmpty() && candidates.none { it.pageToOffer != null }) {
         return PanelContent(
             title = UiText.Res(R.string.game_no_emulator_title, listOf(systemName)),
             body = listOf(UiText.Res(R.string.game_error_no_emulator_offered_body)),
@@ -322,7 +322,7 @@ private fun noEmulator(
  * nothing to get or download is offered here.
  */
 private fun chooseForSystem(outcome: LaunchOutcome.EmulatorNotChosen): PanelContent {
-    val emulators = outcome.installed.map { offer -> EmulatorItem(offer.emulatorId, offer.name ?: offer.emulatorId, offer.packageName.orEmpty(), offer.isLegalRisk) }
+    val emulators = outcome.installed.map { offer -> EmulatorItem(offer.emulatorId, offer.name ?: offer.emulatorId, "", offer.isLegalRisk, page = offer.page) }
     return chooseAmong(emulators, outcome.recommendedId, outcome.systemName)
 }
 

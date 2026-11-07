@@ -19,11 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.testTag
@@ -54,9 +50,6 @@ internal enum class PreviewKind {
 
     /** The focused row's text is a sample in the type as set (size, weight, font). */
     Sample,
-
-    /** The list lines fade out at the bottom while Fade list edges is on. */
-    Fade,
 }
 
 /** The preview [option] gets, or null: the options of Appearance that change how the app looks and a still tile can show. */
@@ -64,20 +57,17 @@ internal fun previewKindOf(option: SettingsOption): PreviewKind? =
     when (option) {
         SettingsOption.Colors, SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent -> PreviewKind.Look
         SettingsOption.TextSize, SettingsOption.TextWeight, SettingsOption.Font -> PreviewKind.Sample
-        SettingsOption.EdgeFade -> PreviewKind.Fade
         else -> null
     }
 
-/** The card. [fadeEdges] is the stored Fade list edges, read only by [PreviewKind.Fade]. */
+/** The card. */
 @Composable
 internal fun SettingsLookPreview(
     kind: PreviewKind,
-    fadeEdges: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val colors = PlumTheme.colors
     val shape = RoundedCornerShape(P.corner)
-    val fades = kind == PreviewKind.Fade && fadeEdges
     Box(
         modifier
             .size(P.width, P.height)
@@ -87,14 +77,6 @@ internal fun SettingsLookPreview(
             .drawBehind {
                 drawRect(SettingsPreviewLook.well(colors.bg, colors.text))
                 drawPreviewInset(P.corner.toPx(), colors.bg.luminance() >= LIGHT_FROM)
-            }
-            .drawWithContent {
-                drawContent()
-                if (fades) {
-                    val well = SettingsPreviewLook.well(colors.bg, colors.text)
-                    val from = size.height - P.fadeHeight.toPx()
-                    drawRect(Brush.verticalGradient(listOf(well.copy(alpha = 0f), well), startY = from, endY = size.height), topLeft = Offset(0f, from), size = Size(size.width, size.height - from))
-                }
             }
             .testTag(SettingsTags.LOOK_PREVIEW),
     ) {
@@ -162,11 +144,8 @@ private fun Tile() {
 
 /** The preview as a part of a panel's own layout ([PanelHeaderYields]): at its size and place whatever width the column gives it. */
 @Composable
-internal fun LookPreviewPart(
-    kind: PreviewKind,
-    fadeEdges: Boolean,
-) {
-    Box(Modifier.wrapContentWidth(Alignment.Start).padding(top = P.top)) { SettingsLookPreview(kind, fadeEdges) }
+internal fun LookPreviewPart(kind: PreviewKind) {
+    Box(Modifier.wrapContentWidth(Alignment.Start).padding(top = P.top)) { SettingsLookPreview(kind) }
 }
 
 /** [option]'s panel with the look preview where it has one and it fits (see [PanelWithPreview]); the colour pages place it in their own layout. */
@@ -179,7 +158,7 @@ internal fun PanelWithLookPreview(
     versionName: String,
 ) {
     val kind = previewKindOf(option).takeIf { !option.hostsItsPreview }
-    PanelWithPreview(kind, settings.appearance.edgeFade, allowed = !model.focus.isWidePage(), bodyYields = kind == PreviewKind.Sample || kind == PreviewKind.Fade) {
+    PanelWithPreview(kind, allowed = !model.focus.isWidePage(), bodyYields = kind == PreviewKind.Sample) {
         SettingsPanel(option, settings, model, touch, versionName)
     }
 }
@@ -196,7 +175,6 @@ internal val SettingsOption.hostsItsPreview: Boolean
 @Composable
 internal fun PanelWithPreview(
     kind: PreviewKind?,
-    fadeEdges: Boolean,
     allowed: Boolean,
     bodyYields: Boolean = false,
     content: @Composable () -> Unit,
@@ -218,7 +196,7 @@ internal fun PanelWithPreview(
         val shown = allowed && (if (bodyYields) above + withoutBody else top + natural(plain) + cardHeight + gap) <= constraints.maxHeight
         val room = BodyRoom.Height((constraints.maxHeight - above - withoutBody - PlumDimens.settingsPanelListGap.roundToPx()).coerceAtLeast(0))
         val panel = if (bodyYields) subcompose(RoomSlot) { if (shown) CompositionLocalProvider(LocalBodyRoom provides room, content = content) else content() } else plain
-        val cards = if (shown) subcompose(CardSlot) { SettingsLookPreview(kind, fadeEdges) } else emptyList()
+        val cards = if (shown) subcompose(CardSlot) { SettingsLookPreview(kind) } else emptyList()
         val panelAbove = if (shown) above else 0
         val panelPlaced = panel.map { it.measure(Constraints(maxWidth = constraints.maxWidth, minHeight = 0, maxHeight = (constraints.maxHeight - panelAbove).coerceAtLeast(0))) }
         val cardPlaced = cards.map { it.measure(Constraints()) }

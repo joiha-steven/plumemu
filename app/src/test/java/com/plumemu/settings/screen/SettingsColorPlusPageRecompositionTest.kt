@@ -27,7 +27,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * A finger drag on a slider of the "+" page (Settings › Appearance › Text color): each move changes the
+ * A finger drag on a slider of the "+" page (Settings › Appearance › Colors › Text color): each move changes the
  * [ColorPreview] only. What recomposes is the three slider rows (their value, spoken text and track
  * depend on the thumb) and the Color code row; the swatch grid, the bars and the option rows read
  * their colours while drawing and stay out. The names of what ran are printed so a report can quote them.

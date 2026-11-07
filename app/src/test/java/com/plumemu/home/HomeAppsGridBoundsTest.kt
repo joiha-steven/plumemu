@@ -116,11 +116,11 @@ class HomeAppsGridBoundsTest {
             near("$at width", width, tile.right - tile.left)
             near("$at height", height, tile.bottom - tile.top)
             if (index % columns > 0) near("$at gap across", gap, tile.left - bounds(HomeTags.cover(index - 1)).right)
-            if (index >= columns) near("$at gap down", gap, tile.top - bounds(HomeTags.cover(index - columns)).bottom)
+            if (index >= columns) near("$at gap down", AppsGridDimens.appsGridRowGap, tile.top - bounds(HomeTags.cover(index - columns)).bottom)
             val iconTag = if (index == APP_WITHOUT_ICON) HomeTags.APP_ICON_STAND_IN else HomeTags.APP_ICON
             val icon = inTile(index, iconTag)
-            near("$at icon width", AppsGridDimens.appsGridIcon, icon.right - icon.left)
-            near("$at icon height", AppsGridDimens.appsGridIcon, icon.bottom - icon.top)
+            near("$at icon width", AppsGridDimens.appsGridTileIcon, icon.right - icon.left)
+            near("$at icon height", AppsGridDimens.appsGridTileIcon, icon.bottom - icon.top)
             near("$at icon centred", icon.left - tile.left, tile.right - icon.right)
             val name = inTile(index, HomeTags.APP_NAME)
             assertTrue("$at: the name is inside the tile across ($name in $tile)", name.left >= tile.left - PIXEL.dp && name.right <= tile.right + PIXEL.dp)
@@ -128,9 +128,9 @@ class HomeAppsGridBoundsTest {
             near("$at: the name is centred under the icon", icon.left + icon.right, name.left + name.right)
             near("$at: the name sits ${AppsGridDimens.appsGridNameGap} under the icon", AppsGridDimens.appsGridNameGap, name.top - icon.bottom)
             assertTrue("$at: the name ends inside the tile (${name.bottom} > ${tile.bottom})", name.bottom <= tile.bottom - AppsGridDimens.appsGridTilePadding + PIXEL.dp)
-            val lines = (name.bottom - name.top) / nameLine
-            assertTrue("$at: at most two lines ($lines)", lines <= 2f + PIXEL / nameLine.value)
-            if (index == APP_LONG_NAME) near("$at: a long name takes exactly two lines", nameLine * 2, name.bottom - name.top)
+            near("$at: one line, a long name too", nameLine, name.bottom - name.top)
+            near("$at: the name's line is its row's", inTile(index - index % columns, HomeTags.APP_NAME).top, name.top)
+            assertTrue("$at: the ring stands clear of the name", name.top - icon.bottom >= PlumDimens.focusRingOutset)
         }
         return columns
     }

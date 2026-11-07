@@ -26,7 +26,7 @@ enum class TextMode(
     }
 }
 
-/** The eight background presets of Settings › Appearance › Background (design/rules.md › Colour). */
+/** The eight background presets of Settings › Appearance › Colors › Background (design/rules.md › Colour). */
 enum class BackgroundPreset(
     val color: Rgb,
 ) {

@@ -189,7 +189,7 @@ data class PlumColors(
         private const val COVER_EDGE = 0.10
 
         /** The board's `rgba(0,0,0,0.07)` with dark text (light backgrounds), 0.45 with light text. */
-        private const val TRAY_SHADOW_DARK_TEXT = 0.07
-        private const val TRAY_SHADOW_LIGHT_TEXT = 0.45
+        private const val TRAY_SHADOW_DARK_TEXT = 0.07 * Depth.SHADOW
+        private const val TRAY_SHADOW_LIGHT_TEXT = 0.45 * Depth.SHADOW
     }
 }

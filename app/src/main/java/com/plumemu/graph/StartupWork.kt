@@ -143,7 +143,7 @@ data class ScanState(
  * stop a scan).
  *
  * - [onContentShown], once per process: the installed packages (app list when Show apps is on,
- *   emulator detection, default emulators); a rescan when Find new games automatically is on and first-run
+ *   emulator detection, default emulators); a rescan once first-run
  *   setup is done, then the defaults again for the systems it found.
  * - [markPackagesChanged] (a package was added, removed, replaced or changed while Plumemu was
  *   started) and [onStart]: the packages again on the next start, only if something changed.
@@ -153,7 +153,7 @@ data class ScanState(
  *   pass of the running scan, so a folder added while a scan runs is read too.
  * - Every scan pass that ends without failing calls [StartupTasks.scanEnded] (a box-art run).
  * - [onStart] after the startup work, and [onStorageMounted]: a change check
- *   ([StartupTasks.changedFolders], directory times only) when Find new games automatically is on, then a scan
+ *   ([StartupTasks.changedFolders], directory times only), then a scan
  *   of the changed folders only, holding the scan slot; when and how often: [ChangeChecks].
  *
  * A failed step is logged (class only) and the next one still runs.
@@ -251,11 +251,7 @@ class StartupWork(
                 step("app games") { tasks.syncAppGames() }
                 val s = currentSettings() ?: return@launch
                 // Setup has just scanned in this process: a rescan right after it would find nothing new.
-                // A reset whose scan never ended (the process died) scans whatever Find new games automatically says.
-                // Older folder, naming or scrape rules: the library is put right once, even with Find new games automatically off.
-                val wanted = s.library.scanOnStartup || s.flags.rescanAfterReset || s.flags.folderMatchVersion < FOLDER_MATCH_VERSION ||
-                    s.flags.namingRulesVersion < NAMING_RULES_VERSION || s.flags.scrapeRulesVersion < SCRAPE_RULES_VERSION
-                val needsRescan = wanted && s.flags.setupCompleted && !scannedInThisProcess.get()
+                val needsRescan = s.flags.setupCompleted && !scannedInThisProcess.get()
                 if (needsRescan && !justRestored && scanIfIdle(ScanTrigger.Startup)) {
                     step("default emulators after the scan") { tasks.refreshDefaults() }
                 }

@@ -2,6 +2,7 @@ package com.plumemu.settings.screen
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.plumemu.account.AccountStatus
 import com.plumemu.content.SystemOrder
@@ -11,9 +12,7 @@ import com.plumemu.coredata.settings.SystemOrderSetting
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.update.ui.NotesScroll
-import com.plumemu.coreui.theme.Rgb
 import com.plumemu.library.scrape.AskAgain
-import com.plumemu.settings.withColors
 import com.plumemu.sound.Outcome
 
 /**
@@ -21,35 +20,25 @@ import com.plumemu.sound.Outcome
  * step, Fix name…. [SettingsModel] adds the sections and options columns on top.
  */
 internal abstract class SettingsPanelModel(
-    protected val actions: SettingsActions,
+    actions: SettingsActions,
     initialFocus: SettingsFocus,
-) : SettingsFolderModel(initialFocus, SettingsWork(actions)) {
+) : SettingsColorModel(actions, initialFocus) {
     init {
         report.draft = actions.reportDraft
     }
 
-    protected val custom = SettingsCustomColor(actions)
-
-    /** The "+" page's check: the colour it opened with, then the one chosen. */
-    val selectedColour: Rgb? get() = custom.selectedColour
-
-    /** The swatches the "+" page draws and the cursor walks, fixed when it opened. */
-    fun customPalette(page: PanelPage): List<Rgb> = custom.palette(page)
-
-    /** Up (-1) and down (+1) presses in an open licence text; the screen scrolls by them. */
+    /** Up (-1) and down (+1) presses in an open licence text or a panel of text; the screen scrolls by them. */
     var licenseScroll: Int by mutableIntStateOf(0)
         protected set
 
     /** Whether the open licence text can scroll that way; the page sets it (it knows its size). */
     var licenseCanScroll: (down: Boolean) -> Boolean = { true }
 
+    /** The panel beside the row is text that runs past its column: only then the row's "More" enters it. */
+    var panelTextScrolls: Boolean by mutableStateOf(false)
+
     /** The update panel's notes, scrolled by Up and Down past its buttons. */
     val updateNotes = NotesScroll()
-
-    /** A on the hex row: typing starts, with the keyboard Settings › Controls › Keyboard names now. */
-    protected fun startEditingHex() {
-        custom.startEditingHex(focus.page ?: return, keyboardChoice)
-    }
 
     /** Library › Systems: the system being carried and the order the panel holds ([SettingsSystems]). */
     val systems = SettingsSystems()
@@ -74,7 +63,7 @@ internal abstract class SettingsPanelModel(
         settings: PlumSettings,
         geometry: SettingsGeometry,
     ) {
-        if (page == PanelPage.LicenseText) {
+        if (page == PanelPage.LicenseText || (page == PanelPage.ReadOnly && panelTextScrolls)) {
             when (direction) {
                 Direction.Up -> licenseScroll--
                 Direction.Down -> licenseScroll++
@@ -85,103 +74,53 @@ internal abstract class SettingsPanelModel(
         }
         if (page == PanelPage.Update) return moveInUpdatePage(direction, settings, geometry)
         if (SettingsCustomColor.isCustomPage(page)) return moveInCustomPage(page, direction)
+        if (page == PanelPage.ColorSets) return moveInColorSets(direction, settings, geometry)
         val grid = PanelGrid.of(page, geometry, content, focus, settings, custom.palette(page).size, pickableSubfolders(work.subfolders, content).size) ?: return
-        val next = grid.move(focus.panelIndex, direction)
+        var next = grid.move(focus.panelIndex, direction)
+        // Two buttons side by side stack when the text is large, so Down and Up walk them too.
+        if (page in TWO_BUTTON_PAGES && next == focus.panelIndex) {
+            if (direction == Direction.Down) next = grid.move(focus.panelIndex, Direction.Right)
+            if (direction == Direction.Up) next = grid.move(focus.panelIndex, Direction.Left)
+        }
+        // Files not added: its headings are no stops, the cursor goes on to the line under one.
+        if (page == PanelPage.FilesNotAdded) {
+            var from = focus.panelIndex
+            while (next != from && content.notAdded.getOrNull(next) is NotAddedItem.Heading) {
+                from = next
+                next = grid.move(next, direction)
+            }
+            if (content.notAdded.getOrNull(next) is NotAddedItem.Heading) return
+        }
         if (next != focus.panelIndex) return focusPanelItem(next)
-        if (direction == Direction.Left && (page == PanelPage.ColorSets || ColorPages.kindOf(page) != null)) leaveColourPageToItsRow(page)
+        if (direction == Direction.Left && ColorPages.kindOf(page) != null) leaveColourPageToItsRow(page)
     }
 
-    /** Update panel: Up and Down walk its buttons, then scroll the notes. */
+    /** Updates' panel: Up and Down walk its items; past the first item, and past the update's last button while the notes run on, they scroll the notes. */
     private fun moveInUpdatePage(
         direction: Direction,
         settings: PlumSettings,
         geometry: SettingsGeometry,
     ) {
         if (direction != Direction.Up && direction != Direction.Down) return
-        val next = PanelGrid.of(PanelPage.Update, geometry, content, focus, settings)?.move(focus.panelIndex, direction) ?: focus.panelIndex
-        if (next != focus.panelIndex) return focusPanelItem(next)
-        if (updateNotes.press(direction == Direction.Down)) feel.report(Outcome.Moved)
-    }
-
-    /** The "+" page: the swatch grid, then the sliders (Left and Right step the focused one), then the hex row. */
-    private fun moveInCustomPage(
-        page: PanelPage,
-        direction: Direction,
-    ) {
-        val index = focus.panelIndex
-        val slider = custom.sliderAt(page, index)
-        if (slider != null) {
-            // A slider keeps Left and Right: at its start Left does nothing, it never leaves the page.
-            val steps = if (direction == Direction.Left) -1 else if (direction == Direction.Right) 1 else 0
-            if (steps != 0) {
-                if (custom.step(page, slider, steps)) feel.report(Outcome.Moved)
-                return
-            }
+        val down = direction == Direction.Down
+        val at = focus.panelIndex
+        val hasNotes = content.update.found != null
+        val lastButton = (updateStepItems(content.update).size - 1).coerceAtLeast(0)
+        if (hasNotes && (if (down) at == lastButton && updateNotes.canScroll(true) else at == 0)) {
+            if (updateNotes.press(down)) feel.report(Outcome.Moved)
+            return
         }
-        val next = custom.nextIndex(page, index, direction)
-        if (next != index) return focusPanelItem(next)
-        // Left leaves from the grid's leftmost tiles and from the hex row only.
-        val leftmost = index < custom.palette(page).size && index % ColorPages.PALETTE_COLUMNS == 0
-        if (direction == Direction.Left && (leftmost || custom.isHexRow(page, index))) leaveColourPageToItsRow(page)
-    }
-
-    /**
-     * Left from the leftmost item of a colour page goes back to its row in the options column, as B
-     * does (a custom page first returns to its presets page): the colour the page opened with is put
-     * back unless one was chosen.
-     */
-    private fun leaveColourPageToItsRow(page: PanelPage) {
-        onPanelBack(page)
-        val now = focus.page
-        if (now != null && now != page && focus.column == SettingsColumn.Panel) onPanelBack(now)
-    }
-
-    /**
-     * Focus panel item [index]. On a colour page its colour applies at once (the ring marks the
-     * current one); on a custom page that is a preview, and the hex row puts back the colour the
-     * page opened with.
-     */
-    protected fun focusPanelItem(index: Int) {
-        val page = focus.page ?: return
-        moveTo(focus.copy(panelIndex = index))
-        custom.focus(page, index)
-    }
-
-    /** Opens a custom page with the cursor on the swatch nearest the current colour; applies nothing, so A before any move keeps the current colour. */
-    protected fun enterCustomPage(
-        page: PanelPage,
-        settings: PlumSettings,
-    ) {
-        val at = custom.open(page, settings)
-        moveTo(focus.copy(column = SettingsColumn.Panel, page = page, panelIndex = at))
+        val next = PanelGrid.of(PanelPage.Update, geometry, content, focus, settings)?.move(at, direction) ?: at
+        if (next != at) focusPanelItem(next)
     }
 
     protected fun onPanelEnter(settings: PlumSettings) {
         val page = focus.page ?: return
         val index = focus.panelIndex
         when (page) {
-            PanelPage.ColorSets -> useColorSet(index, settings)
-            PanelPage.BackgroundPresets, PanelPage.AccentPresets, PanelPage.TextPresets ->
-                if (page == PanelPage.TextPresets && custom.textBlocked) {
-                    // Nothing reads on this background: the panel says so and offers nothing to pick.
-                    feel.report(Outcome.Nothing)
-                } else if (index == custom.presetCount(page) - 1) {
-                    enterCustomPage(ColorPages.customOf(ColorPages.kindOf(page) ?: return), settings)
-                } else if (custom.lastWrite?.refusal != null) {
-                    // The colour under the cursor does not read: A stays here, with the reason shown.
-                    feel.report(Outcome.Nothing)
-                } else {
-                    closePanel()
-                }
-            PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom ->
-                if (isHexRow(page, index)) {
-                    startEditingHex()
-                    feel.report(Outcome.Activated)
-                } else {
-                    // A chooses the swatch: nothing to put back.
-                    custom.choose(page, null)
-                    closePanel()
-                }
+            PanelPage.ColorSets -> onColorSetsEnter(index, settings)
+            PanelPage.BackgroundPresets, PanelPage.AccentPresets, PanelPage.TextPresets -> onPresetsEnter(page, index, settings)
+            PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom -> onCustomPageEnter(page, index)
             // A applies the language under the cursor (the screen recreates itself as it always did); B closes with no change.
             PanelPage.Language -> {
                 val tag = languagePanelTag(index)
@@ -194,10 +133,15 @@ internal abstract class SettingsPanelModel(
             PanelPage.Folder -> onFolderPageEnter(index)
             PanelPage.SkipSubfolder -> onSkipPickEnter(index)
             PanelPage.HiddenGames -> SettingsListPages.unhideAt(index, content, work, focus)?.let(::moveTo) ?: closePanel()
-            PanelPage.FilesNotAdded -> SettingsListPages.toUnknownFolderRow(index, content, focus)?.let(::moveTo) ?: feel.report(Outcome.Nothing)
+            PanelPage.FilesNotAdded -> SettingsListPages.toUnknownFolder(index, content, focus)?.let(::moveTo) ?: feel.report(Outcome.Nothing)
             PanelPage.UnidentifiedGames -> openNameFix(index)
             PanelPage.FixName, PanelPage.ScraperSignIn, PanelPage.ProblemReport -> Unit
-            PanelPage.BoxArtSource -> onBoxArtSourceEnter(boxArtSourceChoices(content.account).getOrNull(index))
+            PanelPage.BoxArtSource ->
+                when (val entry = boxArtPanelEntries(content).getOrNull(index)) {
+                    is BoxArtPanelEntry.Work -> onAccountEnter(entry.item)
+                    is BoxArtPanelEntry.Choice -> onBoxArtSourceEnter(entry.source)
+                    null -> onBoxArtSourceEnter(null)
+                }
             PanelPage.ScraperAccount -> onAccountEnter(accountPageItems(content).getOrNull(index))
             PanelPage.RaAccount -> enterRaItem(raPageItems(content).getOrNull(index), content, ::askRaSignOut, ::openRaSignIn) { if (focus.page == PanelPage.RaAccount) closePanel() }
             PanelPage.RaSignOutConfirm -> onRaSignOutConfirmEnter(SignOutConfirmItem.entries.getOrNull(index))
@@ -216,22 +160,18 @@ internal abstract class SettingsPanelModel(
                 closePanel()
             }
             PanelPage.Confirm -> {
-                val option = focusedOption
                 closePanel()
-                if (index == SettingsModel.CONFIRM_RESET && option != null) {
-                    if (option == SettingsOption.ClearRecent) {
-                        work.clearRecent()
-                    } else if (option == SettingsOption.ResetAll) {
-                        custom.forgetWritten()
-                        actions.resetAllSettings()
-                    } else {
-                        actions.resetLibrary()
-                    }
-                    doneOption = option
+                if (index == SettingsModel.CONFIRM_RESET) {
+                    work.clearRecent()
+                    doneOption = SettingsOption.ClearRecent
                 }
             }
+            PanelPage.Reset -> onResetEnter(ResetPanelItem.entries.getOrNull(index))
+            PanelPage.ResetAllConfirm -> onResetConfirmEnter(ResetPanelItem.All, index)
+            PanelPage.ResetLibraryConfirm -> onResetConfirmEnter(ResetPanelItem.Library, index)
+            PanelPage.BackupRestore -> onBackupRestoreEnter(backupRestoreItems(content).getOrNull(index))
             PanelPage.Backup -> onBackupEnter(backupPanelItems(content.backup).getOrNull(index))
-            PanelPage.Update -> onUpdateEnter(updatePanelItems(content.update).getOrNull(index))
+            PanelPage.Update -> onUpdateEnter(updatesPanelItems(content.update).getOrNull(index))
             PanelPage.Restore -> onRestoreEnter(restorePanelItems(content.restore).getOrNull(index))
             PanelPage.UndoRestore -> onUndoEnter(undoPanelItems(content, focus.undoAsk).getOrNull(index))
             PanelPage.Licenses -> moveTo(focus.copy(page = PanelPage.LicenseText, licenseIndex = index)).also { licenseScroll = 0 }
@@ -240,30 +180,13 @@ internal abstract class SettingsPanelModel(
         }
     }
 
-    /**
-     * Colors' tile [index]: that set (or Custom), through the row's own write ([withColors], so the
-     * person's own colours are kept exactly as the row keeps them), then back to the row. The entry
-     * is taken from what this panel shows; the write reads the store, so a quick second press
-     * picking what is already current changes nothing.
-     */
-    private fun useColorSet(
-        index: Int,
-        settings: PlumSettings,
-    ) {
-        val entries = colorSetsPanelEntries(settings)
-        if (index !in entries.indices) return closePanel()
-        val entry = entries[index]
-        custom.forgetWritten()
-        actions.update { stored -> stored.withAppearance { it.withColors(entry) } }
-        closePanel()
-    }
-
-    protected fun onPanelBack(page: PanelPage) {
+    final override fun onPanelBack(page: PanelPage) {
         when (page) {
             PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom -> {
                 val presets = ColorPages.presetsOf(ColorPages.kindOf(page) ?: return)
                 moveTo(focus.copy(page = presets, panelIndex = custom.presetCount(presets) - 1))
             }
+            PanelPage.BackgroundPresets, PanelPage.TextPresets -> closeColourPage(page)
             PanelPage.LicenseText -> moveTo(focus.copy(page = PanelPage.Licenses, panelIndex = focus.licenseIndex))
             PanelPage.RemoveFolder -> backToFolderPage(FolderPageItem.Remove)
             PanelPage.Folder -> backToFolders()
@@ -273,8 +196,13 @@ internal abstract class SettingsPanelModel(
             PanelPage.ScraperSignOutConfirm -> backToAccountPage(AccountPageItem.SignOut)
             PanelPage.RaSignOutConfirm -> backToRaPage()
             PanelPage.ScraperClearConfirm -> backToAccountPage(AccountPageItem.ClearBoxArt)
+            PanelPage.UnknownFolder -> backToFilesNotAdded()
             // B at Undo's own confirm goes back to its first step, on the button it asked about.
-            PanelPage.UndoRestore -> focus.undoAsk?.let { moveTo(focus.copy(undoAsk = null, panelIndex = it.ordinal)) } ?: closePanel()
+            PanelPage.UndoRestore -> focus.undoAsk?.let { moveTo(focus.copy(undoAsk = null, panelIndex = it.ordinal)) } ?: backToBackupRestore(BackupRestoreItem.Undo)
+            PanelPage.Backup -> backToBackupRestore(BackupRestoreItem.Backup)
+            PanelPage.Restore -> backToBackupRestore(BackupRestoreItem.Restore)
+            PanelPage.ResetAllConfirm -> backToReset(ResetPanelItem.All)
+            PanelPage.ResetLibraryConfirm -> backToReset(ResetPanelItem.Library)
             else -> closePanel()
         }
     }
@@ -290,10 +218,11 @@ internal abstract class SettingsPanelModel(
         before: SettingsContent,
         after: SettingsContent,
     ): SettingsFocus? {
-        aboutFocusKept(focus, before, after)?.let { return it }
-        val libraryKept = SettingsListPages.libraryFocusKept(focus, before, after)
-        val focus = libraryKept ?: focus
-        if (focus.column != SettingsColumn.Panel) return libraryKept
+        val rowKept = SettingsListPages.libraryFocusKept(focus, before, after) ?: SettingsListPages.accountsFocusKept(focus, before, after) ?: SettingsListPages.homeScreenFocusKept(focus, before, after)
+        // The row under ScreenScraper's form left: the form goes with it, or the next one would open with its words.
+        if (rowKept != null && rowKept.page == null && this.focus.page == PanelPage.ScraperSignIn) signIn.close()
+        val focus = rowKept ?: focus
+        if (focus.column != SettingsColumn.Panel) return rowKept
         val at = focus.panelIndex
         val next =
             when (focus.page) {
@@ -304,20 +233,34 @@ internal abstract class SettingsPanelModel(
                 }
                 // A backup that starts or ends swaps the buttons: the cursor stays on one of them.
                 PanelPage.Backup -> at.coerceAtMost(backupPanelItems(after.backup).size - 1)
-                // Each step has its own buttons: the cursor goes to the first, so A never lands on another one.
-                PanelPage.Update -> if (updatePanelItems(before.update) == updatePanelItems(after.update)) at else 0
+                // The way back that left takes Undo's item with it.
+                PanelPage.BackupRestore -> at.coerceAtMost(backupRestoreItems(after).size - 1)
+                // A check that finds an update puts its button above: Check now and the switch keep the cursor. Each step
+                // has its own buttons: from one the cursor goes to the first, so A never lands on another one.
+                PanelPage.Update -> {
+                    val item = updatesPanelItems(before.update).getOrNull(at)
+                    when {
+                        item == UpdatePanelItem.CheckNow || item == UpdatePanelItem.CheckDaily -> updatesPanelItems(after.update).indexOf(item)
+                        updateStepItems(before.update) == updateStepItems(after.update) -> at
+                        else -> 0
+                    }
+                }
                 // Reading, the confirm and the result each have their own buttons: the cursor goes to the first.
                 PanelPage.Restore -> {
                     val now = restorePanelItems(after.restore)
                     // The confirm opens on Cancel: a quick double A must not replace the library.
                     if (restorePanelItems(before.restore) == now) at else now.indexOf(RestorePanelItem.Cancel).coerceAtLeast(0)
                 }
-                PanelPage.UndoRestore -> at.coerceAtMost(undoPanelItems(after, focus.undoAsk).size - 1)
+                PanelPage.UndoRestore -> {
+                    // The copy is gone (undone, or forgotten from elsewhere): its page goes with it.
+                    if (after.wayBack == null) return focus.copy(page = PanelPage.BackupRestore, panelIndex = backupRestoreItems(after).indexOf(BackupRestoreItem.Restore), undoAsk = null)
+                    at.coerceAtMost(undoPanelItems(after, focus.undoAsk).size - 1)
+                }
                 // A folder's page and its pick: a folder that left goes back to the list.
                 PanelPage.Folder, PanelPage.SkipSubfolder, PanelPage.RemoveFolder ->
                     folderIndexKept(focus, before, after) ?: return SettingsListPages.backToFolders(focus, after)
                 // The carried system stays under the cursor; otherwise the cursor stays inside the list.
-                PanelPage.Systems -> systems.follow(after) ?: at.coerceAtMost(after.librarySystems.size - 1)
+                PanelPage.Systems -> systems.follow(after)?.plus(FIRST_SYSTEM_ITEM) ?: at.coerceAtMost(after.librarySystems.size)
                 PanelPage.ScraperSystems -> {
                     val kept =
                         if (at < before.systems.size) {
@@ -327,16 +270,24 @@ internal abstract class SettingsPanelModel(
                         }
                     kept.coerceAtMost(systemsPickCount(after, focus) - 1)
                 }
-                else -> return libraryKept
+                PanelPage.BoxArtSource -> {
+                    val now = boxArtPanelEntries(after)
+                    boxArtPanelEntries(before).getOrNull(at)?.let { now.indexOf(it) }?.takeIf { it >= 0 } ?: at.coerceAtMost(now.lastIndex)
+                }
+                PanelPage.FilesNotAdded -> SettingsListPages.filesNotAddedLineAfter(at, before, after)
+                // A folder that left goes back to the list; while it is there the page stays on the same item.
+                PanelPage.UnknownFolder ->
+                    if (SettingsListPages.unknownFolderAt(focus, after) == null) return SettingsListPages.backToFilesNotAdded(focus, after) else at
+                else -> return rowKept
             }.coerceAtLeast(0)
-        return if (next == at) libraryKept else focus.copy(panelIndex = next)
+        return if (next == at) rowKept else focus.copy(panelIndex = next)
     }
 
     private fun onAccountEnter(item: AccountPageItem?) {
         when (item) {
             AccountPageItem.SignInAgain -> openSignIn((content.account as? AccountStatus.SignedIn)?.username.orEmpty())
             AccountPageItem.DownloadMissing -> {
-                work.askAgain(AskAgain.Missing, null)
+                work.askAgain(AskAgain.Missing, null, boxArtRow)
                 feel.report(Outcome.Activated)
             }
             AccountPageItem.RedownloadAll -> openBoxArtConfirm(null)
@@ -344,7 +295,7 @@ internal abstract class SettingsPanelModel(
             AccountPageItem.ClearBoxArt -> moveTo(focus.copy(page = PanelPage.ScraperClearConfirm, panelIndex = ClearConfirmItem.Cancel.ordinal))
             AccountPageItem.ChooseSystems -> moveTo(focus.copy(page = PanelPage.ScraperSystems, panelIndex = 0, chosenSystems = emptySet()))
             AccountPageItem.PauseOrResume -> {
-                work.setBoxArtPaused(!isPausedByPerson(content))
+                work.setBoxArtPaused(!isPausedByPerson(content), boxArtRow)
                 feel.report(Outcome.Activated)
             }
             AccountPageItem.BoxArtRegion -> actions.update { withNextBoxArtRegion(it) }.also { feel.report(Outcome.Activated) }
@@ -354,16 +305,70 @@ internal abstract class SettingsPanelModel(
         }
     }
 
-    /** Update starts it (or asks first on mobile data); the step's buttons answer its question; Cancel stops it. */
+    /** Update starts it (or asks first on mobile data); the step's buttons answer its question; Cancel stops it; Check now checks, whatever the switch and the last check say. */
     private fun onUpdateEnter(item: UpdatePanelItem?) {
         when (item) {
             UpdatePanelItem.Update -> actions.updates.startUpdate(allowMetered = false)
             UpdatePanelItem.DownloadAnyway -> actions.updates.startUpdate(allowMetered = true)
             UpdatePanelItem.AllowInstalls -> actions.updates.openInstallPermission()
             UpdatePanelItem.Cancel -> actions.updates.cancel()
+            UpdatePanelItem.CheckNow -> actions.updates.checkNow()
+            // From the stored value inside the write, like every switch.
+            UpdatePanelItem.CheckDaily -> actions.update { SettingsOption.CheckUpdatesDaily.toggled(it) }
             null -> return
         }
         feel.report(Outcome.Activated)
+    }
+
+    /** An item of Back up and restore's list: its own panel, as it always was. */
+    private fun onBackupRestoreEnter(item: BackupRestoreItem?) {
+        val page =
+            when (item) {
+                BackupRestoreItem.Backup -> PanelPage.Backup
+                BackupRestoreItem.Restore -> PanelPage.Restore
+                BackupRestoreItem.Undo -> PanelPage.UndoRestore
+                null -> return
+            }
+        // A confirm left waiting opens on Cancel too: a quick double A must not replace the library.
+        val first = if (page == PanelPage.Restore) restorePanelItems(content.restore).indexOf(RestorePanelItem.Cancel).coerceAtLeast(0) else 0
+        moveTo(focus.copy(page = page, panelIndex = first, undoAsk = null))
+    }
+
+    private fun backToBackupRestore(on: BackupRestoreItem) {
+        // Undo's item leaves with the copy: the cursor stays inside the list.
+        val items = backupRestoreItems(content)
+        moveTo(focus.copy(page = PanelPage.BackupRestore, panelIndex = items.indexOf(on).takeIf { it >= 0 } ?: items.lastIndex, undoAsk = null))
+    }
+
+    /** An item of Reset…'s list: its own confirm, the cursor on Cancel. */
+    private fun onResetEnter(item: ResetPanelItem?) {
+        val page =
+            when (item) {
+                ResetPanelItem.All -> PanelPage.ResetAllConfirm
+                ResetPanelItem.Library -> PanelPage.ResetLibraryConfirm
+                null -> return
+            }
+        doneOption = null
+        moveTo(focus.copy(page = page, panelIndex = SettingsModel.CONFIRM_CANCEL))
+    }
+
+    private fun backToReset(on: ResetPanelItem) = moveTo(focus.copy(page = PanelPage.Reset, panelIndex = on.ordinal))
+
+    /** Cancel or Reset at [item]'s confirm: back on its item, where a reset says how it went. */
+    private fun onResetConfirmEnter(
+        item: ResetPanelItem,
+        index: Int,
+    ) {
+        backToReset(item)
+        if (index != SettingsModel.CONFIRM_RESET) return
+        when (item) {
+            ResetPanelItem.All -> {
+                custom.forgetWritten()
+                actions.resetAllSettings()
+            }
+            ResetPanelItem.Library -> actions.resetLibrary()
+        }
+        doneOption = item.option
     }
 
     /** Settings or Everything opens the save picker (the backup starts with its answer); Cancel stops the running one. */
@@ -404,7 +409,7 @@ internal abstract class SettingsPanelModel(
             UndoPanelItem.Confirm ->
                 if (ask == UndoPanelItem.Forget) {
                     actions.restore.forgetCopy()
-                    closePanel()
+                    backToBackupRestore(BackupRestoreItem.Undo)
                 } else {
                     custom.forgetWritten()
                     actions.restore.undo()
@@ -420,7 +425,8 @@ internal abstract class SettingsPanelModel(
     /**
      * Every press on Library › Systems. Carrying: Up / Down move the system (a held key repeats
      * through the router), L1 / R1 take it to the top / bottom, A drops it, B puts it back.
-     * Otherwise: Up / Down move the cursor, A picks the system up, Y hides or shows it, B leaves.
+     * Otherwise: Up / Down move the cursor, A picks the system up, Y hides or shows it, B leaves. On
+     * the System order item above the systems (Up from the first system) Left / Right step it, stopping at the ends, never while held, and A steps it, wrapping.
      */
     protected fun onSystemsAction(
         action: Action,
@@ -433,8 +439,8 @@ internal abstract class SettingsPanelModel(
             when (action) {
                 is Action.Move ->
                     when (action.direction) {
-                        Direction.Up -> carrySystemTo(focus.panelIndex - 1)
-                        Direction.Down -> carrySystemTo(focus.panelIndex + 1)
+                        Direction.Up -> carrySystemTo(focusedSystemIndex - 1)
+                        Direction.Down -> carrySystemTo(focusedSystemIndex + 1)
                         else -> Unit
                     }
                 Action.PreviousSystem -> carrySystemTo(0)
@@ -445,12 +451,61 @@ internal abstract class SettingsPanelModel(
             }
             return
         }
+        val onOrder = focus.panelIndex == SYSTEM_ORDER_ITEM
         when (action) {
-            is Action.Move -> movePanel(PanelPage.Systems, action.direction, settings, geometry)
-            Action.Enter, Action.Play -> pickUpSystem(rows, settings)
-            Action.ToggleFavorite -> toggleSystemHidden(rows, settings)
+            is Action.Move ->
+                when {
+                    // A held key steps nothing: only a press of its own changes the order.
+                    onOrder && (action.direction == Direction.Left || action.direction == Direction.Right) ->
+                        if (!action.isRepeat) stepSystemOrder(if (action.direction == Direction.Left) -1 else +1, wrap = false, settings, geometry)
+                    else -> movePanel(PanelPage.Systems, action.direction, settings, geometry)
+                }
+            Action.Enter, Action.Play -> if (onOrder) stepSystemOrder(+1, wrap = true, settings, geometry) else pickUpSystem(rows, settings)
+            Action.ToggleFavorite -> if (!onOrder) toggleSystemHidden(rows, settings)
             Action.Back -> onPanelBack(PanelPage.Systems)
             else -> Unit
+        }
+    }
+
+    /** The system row under the cursor, counted among the systems (the panel's items start with System order). */
+    protected val focusedSystemIndex: Int get() = focus.panelIndex - FIRST_SYSTEM_ITEM
+
+    /** System order's next value: the order the panel held after a drop gives way, and "Order set to Manual" stops being true. */
+    protected fun stepSystemOrder(
+        step: Int,
+        wrap: Boolean,
+        settings: PlumSettings,
+        geometry: SettingsGeometry,
+    ) {
+        systems.leave()
+        work.unsay(SettingsNotice.SystemOrderNowManual)
+        stepChoice(SettingsOption.SystemOrder, step, wrap, settings, geometry)
+    }
+
+    protected fun stepChoice(
+        option: SettingsOption,
+        step: Int,
+        wrap: Boolean,
+        settings: PlumSettings,
+        geometry: SettingsGeometry,
+    ) {
+        val count = option.choiceCount(settings, content.sortValues)
+        val raw = option.choiceIndex(settings, geometry.defaultTextSize, content.sortValues) + step
+        // At the end of a list a press changes nothing, and says nothing. The Sounds row is silent itself: Off must not
+        // click, and the screen plays one confirm at the new volume once the level is stored (SettingsScreen).
+        if (option == SettingsOption.Sounds) {
+            feel.hush()
+        } else if (wrap || raw in 0 until count) {
+            feel.report(if (cause == Cause.Move) Outcome.Moved else Outcome.Activated)
+        }
+        // A set picked by stepping replaces whatever the colour panels wrote before.
+        if (option == SettingsOption.Colors) custom.forgetWritten()
+        // From the stored value inside the write: presses faster than the store answers each count.
+        actions.update { stored ->
+            val raw = option.choiceIndex(stored, geometry.defaultTextSize, content.sortValues) + step
+            // Colors has one value more while there is a custom look: count what is stored too.
+            val storedCount = option.choiceCount(stored, content.sortValues)
+            option.withChoice(stored, if (wrap) Math.floorMod(raw, storedCount) else raw.coerceIn(0, storedCount - 1), content.sortValues)
         }
     }
 
@@ -462,8 +517,8 @@ internal abstract class SettingsPanelModel(
         rows: List<LibrarySystem>,
         settings: PlumSettings,
     ) {
-        val carry = systems.pickUp(rows, focus.panelIndex.coerceIn(0, rows.lastIndex)) ?: return
-        if (focus.panelIndex != carry.fromIndex) moveTo(focus.copy(panelIndex = carry.fromIndex))
+        val carry = systems.pickUp(rows, focusedSystemIndex.coerceIn(0, rows.lastIndex)) ?: return
+        if (focusedSystemIndex != carry.fromIndex) moveTo(focus.copy(panelIndex = FIRST_SYSTEM_ITEM + carry.fromIndex))
         if (settings.library.systemOrder != SystemOrderSetting.Manual) {
             val shown = carry.order
             actions.update { stored -> stored.withManualSystems(shown) }
@@ -474,7 +529,7 @@ internal abstract class SettingsPanelModel(
 
     protected fun carrySystemTo(index: Int) {
         val to = systems.carryTo(index) ?: return
-        moveTo(focus.copy(panelIndex = to))
+        moveTo(focus.copy(panelIndex = FIRST_SYSTEM_ITEM + to))
     }
 
     /** A: the system stays where it is now; the whole order is stored as Manual. */
@@ -487,7 +542,7 @@ internal abstract class SettingsPanelModel(
     /** B: the system goes back to where it was picked up; nothing more is stored. */
     protected fun cancelSystemCarry() {
         val at = systems.cancel() ?: return
-        if (at != focus.panelIndex) moveTo(focus.copy(panelIndex = at))
+        if (at != focusedSystemIndex) moveTo(focus.copy(panelIndex = FIRST_SYSTEM_ITEM + at))
         feel.report(Outcome.WentBack)
     }
 
@@ -496,7 +551,7 @@ internal abstract class SettingsPanelModel(
         rows: List<LibrarySystem>,
         settings: PlumSettings,
     ) {
-        val system = rows.getOrNull(focus.panelIndex) ?: return
+        val system = rows.getOrNull(focusedSystemIndex) ?: return
         val present = content.librarySystems.map { it.id }
         val hidden = settings.library.hiddenSystems
         if (system.id !in hidden && present.count { it !in hidden } <= 1) {
@@ -521,13 +576,11 @@ internal abstract class SettingsPanelModel(
         val leaving = focus.page
         if (next.page != leaving && leaving != null && SettingsCustomColor.isCustomPage(leaving)) custom.leave(leaving)
     }
-
-    fun isHexRow(
-        page: PanelPage,
-        index: Int,
-    ): Boolean = custom.isHexRow(page, index)
 }
 
 /** These settings with the system order Manual and [arranged] (every system with games, top to bottom) as its list ([SystemOrder.manualAfterMove]). */
 internal fun PlumSettings.withManualSystems(arranged: List<String>): PlumSettings =
     copy(library = library.copy(systemOrder = SystemOrderSetting.Manual, manualSystemOrder = SystemOrder.manualAfterMove(arranged, library.manualSystemOrder)))
+
+/** Pages of two buttons in one row of [PanelGrid]. */
+private val TWO_BUTTON_PAGES = setOf(PanelPage.Confirm, PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm, PanelPage.RemoveFolder)

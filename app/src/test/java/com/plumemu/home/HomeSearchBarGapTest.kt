@@ -27,9 +27,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Home's system list and games list and Search's results end [footerGapToKeys] above what the hint bar draws highest (the
- * top of its keys' collars), not above the bar's bounds, at Medium and Largest. A row cut by the list's own edge (the scroll
- * cue) is left out: only rows that end inside the list count.
+ * Home's system list and games list and Search's results rest [footerGapToKeys] above what the hint bar draws highest (the
+ * top of its keys' collars), not above the bar's bounds, at Medium and Largest. The column now runs to the bar, so its slot (the
+ * footer gap short of the bar) must end that far above the keys; a row that ends in the slot rests that far above them too. A row
+ * that ends in the gap, under the bar's fade, runs past the slot on purpose: it is left out.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
@@ -69,7 +70,7 @@ class HomeSearchBarGapTest {
             val caps = compose.onAllNodesWithTag(HINT_KEY_CAP_TAG, useUnmergedTree = true).fetchSemanticsNodes()
             val keyTop = with(density) { caps.minOf { it.boundsInRoot.top }.toDp() } - (CollarSize.Hint.lip + CollarSize.Hint.groove)
             val listTag = if (scene == Scene.Search) SearchTags.RESULTS else HomeTags.STRIP
-            val listBottom = compose.onNodeWithTag(listTag, useUnmergedTree = true).getUnclippedBoundsInRoot().bottom
+            val listBottom = compose.onNodeWithTag(listTag, useUnmergedTree = true).getUnclippedBoundsInRoot().slot().bottom
             val tags = (0 until ROWS).map { if (scene == Scene.Systems) HomeTags.system(it) else if (scene == Scene.Games) HomeTags.game(it) else SearchTags.result(it) }
             var seen = 0
             for (tag in tags) {

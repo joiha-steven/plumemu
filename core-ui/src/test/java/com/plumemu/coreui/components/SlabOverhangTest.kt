@@ -32,7 +32,10 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
 
-/** The focused slab is 46.67 dp tall on a 38 or 40 dp row, drawn past the row above and below, and a list that clips to its bounds (`ListGlide`) does not cut it at its first and last row. */
+/**
+ * The focused slab is 46.67 dp tall on a 38 or 40 dp row, drawn past the row above and below, and a list that clips to its bounds (`ListGlide`) does not
+ * cut it at its first and last row. Its height is measured between its own edges, not by colour, so the lift around it does not count as slab.
+ */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
@@ -66,12 +69,19 @@ class SlabOverhangTest {
         return List(image.height) { image[image.width / 2, it] }
     }
 
-    private fun slabRows(pixels: List<Color>, density: Float): Int {
-        // The slab's rows are those lighter than the background (its gradient ends at white 0.045 over it, darkened a little by the inset shadow;
-        // the drops and the ring only darken, the blue glow hardly moves red), short of the lit top border.
-        val bg = colors.bg
-        return pixels.count { it.red > bg.red + 0.02f && it.red < colors.slab.fill.red + 0.35f }.also { assertTrue(density > 0f) }
+    /**
+     * The slab's first row and the first row below it, down the middle. The lift around it (light on Graphite) is as bright as its fill, so rows are not
+     * told apart by colour: the slab is where the rim and fill start and end, the sharpest steps of the column in its upper and lower half.
+     */
+    private fun slabEdges(pixels: List<Color>): Pair<Int, Int> {
+        val red = pixels.map { it.red }
+        val mid = red.size / 2
+        val top = (1 until mid).maxByOrNull { red[it] - red[it - 1] }!!
+        val bottom = (mid until red.size).maxByOrNull { red[it - 1] - red[it] }!!
+        return top to bottom
     }
+
+    private fun slabRows(pixels: List<Color>): Int = slabEdges(pixels).let { it.second - it.first }
 
     @Test
     fun aSlabOnA38DpRowIs46Point7DpTall() = checkHeight(38)
@@ -81,7 +91,7 @@ class SlabOverhangTest {
 
     private fun checkHeight(row: Int) {
         val density = compose.density.density
-        val drawn = slabRows(column(row, clipped = false), density)
+        val drawn = slabRows(column(row, clipped = false))
         assertEquals("row $row: the slab is ${SlabDimens.height.value} dp tall", SlabDimens.height.value * density, drawn.toFloat(), 3f * density)
     }
 
@@ -89,10 +99,10 @@ class SlabOverhangTest {
     fun aClippedListDoesNotCutTheSlabAtItsFirstAndLastRow() {
         val density = compose.density.density
         val pixels = column(38, clipped = true)
-        val drawn = slabRows(pixels, density)
+        val drawn = slabRows(pixels)
         assertEquals("the whole slab shows through the list's clip", SlabDimens.height.value * density, drawn.toFloat(), 3f * density)
         // And the row layout did not move: the slab starts above the row's top (20 dp margin).
-        val firstSlab = pixels.indexOfFirst { it.red > colors.bg.red + 0.05f }
+        val firstSlab = slabEdges(pixels).first
         assertTrue("the slab begins above the row", firstSlab < 20 * density)
     }
 

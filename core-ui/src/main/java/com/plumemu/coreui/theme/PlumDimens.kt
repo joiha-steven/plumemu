@@ -172,8 +172,8 @@ object PlumDimens {
     /** Fade over content that continues past the right edge. */
     val edgeFade = 32.dp
 
-    /** Fade at the bottom (or top) edge of a list that scrolls, over rows that continue past it (design/rules.md > Lists that scroll). */
-    val listEdgeFade = 20.dp
+    /** The one fade where scrolling content runs under a bar or into a panel's edge (design/rules.md > Lists that scroll). */
+    val listFadeBand = 12.dp
 
     // Bars
     /** Between the clock and the battery on the top bar. */
@@ -206,7 +206,7 @@ object PlumDimens {
     /** A flat face (keys, buttons, knobs): the edge under it, the hairline of light on top, and how far its shadow reaches below. */
     val flatEdge = 2.dp
     val flatRim = 1.dp
-    val flatShadow = 3.dp
+    val flatShadow = 3.dp * Depth.SHADOW_REACH
 
     /** A focused or hovered key sits this much higher: its edge grows by it and the face rises by it. */
     val flatRaise = 1.dp
@@ -433,9 +433,9 @@ object PlumDimens {
     val homeRolePromptPadding = 24.dp
 
     // Grid
-    /** Between collars of a file game's grid, drawn at the board's 1.5 px per dp: 10 px across, 14 px down. */
-    val gridGapAcross = (10f / 1.5f).dp
-    val gridGapDown = (14f / 1.5f).dp
+    /** Between collars of a file game's grid, the same both ways: wider than the boards' so the frames read apart. */
+    val gridGapAcross = 18.dp
+    val gridGapDown = 18.dp
 
     /** Apps' grid (its focused tile still grows and rises) keeps its wider gaps. */
     val gridGapLandscape = 22.dp
@@ -504,8 +504,8 @@ object PlumDimens {
     /** How much larger a focused Apps tile (icon and name) is drawn, about its centre, lifted [focusedLift] up, by the grid over its clip, never by layout (`PlumLayoutTest`, `GridFocusBoundsTest`). */
     const val FOCUSED_ICON_SCALE = 1.13f
 
-    /** How much larger a focused grid cover (its whole collar) is drawn, about its centre, over its neighbours, never by layout (`GridCoverFocusTest`). */
-    const val FOCUSED_COVER_SCALE = 1.08f
+    /** How much larger a focused grid cover (its whole collar) is drawn about its centre, at most: `focusedCoverScale` (`GridCoverFocusTest`). */
+    const val FOCUSED_COVER_SCALE = 1.04f
 
     /** How far a focused grid item rises, at full growth. */
     val focusedLift = 2.5.dp
@@ -553,10 +553,10 @@ object PlumDimens {
      * The focused cover's glow (same rule), drawn under it in the cover's own colour after the lifted shadow: blur, offset
      * down and opacity at full growth on a dark and on a light background.
      */
-    val coverGlowBlur = 18.dp
-    val coverGlowOffsetY = 4.dp
-    const val COVER_GLOW_ALPHA_DARK = 0.5f
-    const val COVER_GLOW_ALPHA_LIGHT = 0.2f
+    val coverGlowBlur = 18.dp * Depth.GLOW_REACH
+    val coverGlowOffsetY = 4.dp * Depth.SHADOW_REACH
+    const val COVER_GLOW_ALPHA_DARK = 0.5f * Depth.GLOW
+    const val COVER_GLOW_ALPHA_LIGHT = 0.2f * Depth.GLOW
 
     /** A cover's average colour is lifted until its brightest channel (0..1) reaches this, so a dark cover still glows. */
     const val COVER_GLOW_MIN_VALUE = 0.6f
@@ -584,11 +584,11 @@ object PlumDimens {
     const val LOCKED_BADGE_ALPHA = 0.6f
 
     /** How far the focus halo reaches past the ring (rules.md > Focus and current); drawn as [FOCUS_HALO_STEPS] bands, never blurred. Strength and colour: `FocusHalo`. */
-    val focusHaloReach = 10.dp
+    val focusHaloReach = 10.dp * Depth.GLOW_REACH
     const val FOCUS_HALO_STEPS = 7
     /** Focus ring reach past its item (gap + width): space a grid keeps clear around covers. */
     val focusRingOutset = focusRingGap + focusRingWidth
-    /** A band of the screen colour just outside a lifted cover's ring: what the ring's contrast is measured against, whatever the halo or a neighbour is. */
+    /** A band of the screen colour outside a focused cover's ring, for the ring's contrast; with [focusRingOutset] it stays inside [gridGapDown]. */
     val focusRingKeyline = 2.dp
 
     /** The grid cover's hairline, drawn just inside its edge (`PlumColors.coverEdge`): no layout change. */

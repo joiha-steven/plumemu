@@ -11,7 +11,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -74,9 +74,9 @@ internal fun DrawScope.drawSlabFill(
     val w = Math.round(bounds.width)
     val h = Math.round(bounds.height)
     fun px(l: com.plumemu.coreui.theme.SlabShadow?) = l?.let { SoftImages.Inset(it.color, it.drop.toPx(), it.sigma.toPx()) }
-    val image = SoftImages.inset(w, h, outline.roundRect.topLeftCornerRadius.x, SlabDimens.edge.toPx(), px(look.insetTop), px(look.insetBottom)) ?: return
+    val placed = SoftImages.inset(w, h, outline.roundRect.topLeftCornerRadius.x, SlabDimens.edge.toPx(), px(look.insetTop), px(look.insetBottom)) ?: return
     // Placed at the outline's own (fractional) corner, so it sits on the gradient and border exactly wherever the slab is drawn.
-    translate(bounds.left, bounds.top) { drawImage(image, IntOffset.Zero, IntSize(w, h), IntOffset.Zero, IntSize(w, h), filterQuality = FilterQuality.Low) }
+    translate(bounds.left, bounds.top) { drawPlaced(placed, IntOffset.Zero, w, h) }
 }
 
 /** The glow, [SlabLook.far] and [SlabLook.near] as one cached image ([SoftImages.drops]), placed at the shape's corner rounded to whole pixels. */
@@ -104,10 +104,24 @@ private fun DrawScope.drawDrops(
         if (glow.alpha > 0f) SoftImages.Inset(glow, 0f, SlabDimens.glowSigma.toPx()) else null,
         under,
     ) ?: return
-    val image = placed.image
     // Whole pixels, as [drawSoft]: a fractional offset would resample the image and add a level of rounding to its smooth ramp.
     val at = IntOffset(Math.round(topLeft.x) + placed.dx, Math.round(topLeft.y) + placed.dy)
-    drawImage(image, IntOffset.Zero, IntSize(image.width, image.height), at, IntSize(image.width, image.height), filterQuality = FilterQuality.Low)
+    drawPlaced(placed, at, Math.round(size.width) - 2 * placed.dx, placed.image.height)
+}
+
+/** [placed] at [at], [width] x [height] px: as it is, or sliced to that width when it was built for a narrower box of its look. */
+internal fun DrawScope.drawPlaced(
+    placed: SoftImages.Placed,
+    at: IntOffset,
+    width: Int,
+    height: Int,
+) {
+    val image = placed.image
+    if (placed.keep >= 0) {
+        drawSliced(image, placed.keep, -1, 1, at, IntSize(width, height))
+    } else {
+        drawImage(image, IntOffset.Zero, IntSize(image.width, image.height), at, IntSize(width, height), filterQuality = FilterQuality.Low)
+    }
 }
 
 /**
@@ -204,10 +218,15 @@ internal fun DrawScope.drawSlabFace(
     val bounds = outline.bounds
     val edge = SlabDimens.edge.toPx()
     val corner = (outline as? Outline.Rounded)?.roundRect?.topLeftCornerRadius?.x ?: 0f
-    val split = bounds.top + corner * (1f - HALF_ROUND)
-    // Both clips name all four sides: the slab is drawn past the row's box (its overhang), which a default clip edge would cut.
-    clipRect(left = bounds.left - edge, top = split, right = bounds.right + edge, bottom = bounds.bottom + edge) { drawRingInside(outline, look.edge, edge) }
-    clipRect(left = bounds.left - edge, top = bounds.top - edge, right = bounds.right + edge, bottom = split) { drawRingInside(outline, look.top, edge) }
+    // Glass: a thin rim, lit at two opposite corners and nearly gone between them.
+    val rim = look.rim(bounds.topLeft, bounds.bottomRight)
+    drawRoundRect(
+        rim,
+        Offset(bounds.left + edge / 2f, bounds.top + edge / 2f),
+        Size(bounds.width - edge, bounds.height - edge),
+        CornerRadius(corner - edge / 2f),
+        style = Stroke(edge),
+    )
     val barHeight = min(SlabDimens.barHeight.toPx(), bounds.height * SlabDimens.BAR_HEIGHT_SHARE)
     val barWidth = SlabDimens.barWidth.toPx()
     val left = bounds.left + barInset.toPx()
@@ -217,5 +236,3 @@ internal fun DrawScope.drawSlabFace(
     drawRoundRect(colors.accent, Offset(left, top), Size(barWidth, barHeight), CornerRadius(barWidth / 2f))
 }
 
-/** cos 45 deg: where a rounded CSS border's top colour gives way to its side colour. */
-private const val HALF_ROUND = 0.70710677f

@@ -36,7 +36,7 @@ import com.plumemu.keyboard.KeyboardChoice
 /** Appearance plus Advanced › Animations: everything [PlumThemeSettings] holds. */
 fun PlumSettings.toThemeSettings(): PlumThemeSettings = appearance.toThemeSettings(animationsOn = advanced.animations)
 
-fun AppearanceSettings.toThemeSettings(animationsOn: Boolean): PlumThemeSettings = toColorsAndLook(animationsOn).copy(buttonSet = effectiveButtonSet(), edgeFadeOn = edgeFade)
+fun AppearanceSettings.toThemeSettings(animationsOn: Boolean): PlumThemeSettings = toColorsAndLook(animationsOn).copy(buttonSet = effectiveButtonSet())
 
 /** Everything but the glyph colours, which need the current set ([effectiveButtonSet]) and so this. */
 internal fun AppearanceSettings.toColorsAndLook(animationsOn: Boolean): PlumThemeSettings =
@@ -85,7 +85,8 @@ fun ControlsSettings.toInputSettings(): InputSettings =
     InputSettings(
         buttonLayout = ButtonLayout.Xbox,
         swapAB = confirmButton == ConfirmButtonSetting.Bottom,
-        holdToScrollFaster = holdToScrollFaster,
+        // Always on, whatever is stored: the setting is no longer offered.
+        holdToScrollFaster = true,
     )
 
 /** Settings › Controls › Keyboard onto the keyboard Search and the game panel's fields type with. */

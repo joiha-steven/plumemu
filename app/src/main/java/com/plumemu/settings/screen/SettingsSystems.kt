@@ -3,6 +3,7 @@ package com.plumemu.settings.screen
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -17,16 +18,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -44,18 +49,25 @@ import com.plumemu.coreui.components.EllipsisText
 import com.plumemu.coreui.components.focusPill
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.home.currentLocale
 import com.plumemu.home.rememberCountFormat
 import java.util.Locale
 
 /*
- * Settings › Library › Systems: every system with games in the main screen's
- * order. A picks the focused one up (the row turns solid accent with an `onAccent` ring), Up / Down carry it (held: as
+ * Settings › Library › Systems: what System order means, System order (‹ › and A step it), then every
+ * system with games in the main screen's order. A picks the focused one up (the row turns solid accent with an `onAccent` ring), Up / Down carry it (held: as
  * fast as the router repeats), L1 / R1 to the top / bottom, A drops it, B puts it back. Picking up
  * while the order is A–Z or Maker & year switches it to Manual from the order on screen. Y hides
  * or shows the focused system; one always stays shown. Touch: a tap focuses, a long press on the
  * handle drags, a tap on "Hidden" shows it again (and the "Y Hide" hint hides).
  */
+
+private const val LIST_KEEPS_ROWS = 3
+
+/** The Systems panel's items: System order, then the systems. */
+internal const val SYSTEM_ORDER_ITEM = 0
+internal const val FIRST_SYSTEM_ITEM = 1
 
 /** A system being carried: [id] in [order] (the panel's order while carried), and the order and place before it was picked up. */
 internal data class SystemCarry(
@@ -191,7 +203,7 @@ internal fun systemsShownText(
     }
 }
 
-/** The order's name for the System order row, its value index [index]. */
+/** The order's name for the System order item, its value index [index]. */
 internal fun systemOrderName(index: Int): Int =
     when (SystemOrderSetting.entries[index]) {
         SystemOrderSetting.Name -> R.string.settings_system_order_name
@@ -199,7 +211,10 @@ internal fun systemOrderName(index: Int): Int =
         SystemOrderSetting.Manual -> R.string.settings_system_order_manual
     }
 
-/** Library › Systems' panel: the title, a plain line when there is one, then every system with games. */
+/**
+ * Library › Systems' panel: the title, what System order means and a plain line when there is one, laid out as Emulators' (they leave from the last when there is
+ * no room), then the list: System order and every system with games. It opens on the first system, right under System order.
+ */
 @Composable
 internal fun SystemsPanel(
     settings: PlumSettings,
@@ -215,35 +230,57 @@ internal fun SystemsPanel(
     val geometry = settingsGeometry(PlumTheme.layout)
     val latestSettings by rememberUpdatedState(settings)
     val latestGeometry by rememberUpdatedState(geometry)
-    Column(Modifier.fillMaxSize().testTag(SettingsTags.SYSTEMS_PANEL), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
+    PanelListColumn(Modifier.fillMaxSize().testTag(SettingsTags.SYSTEMS_PANEL), listKeepsEnd = true) {
         PanelTitle(stringResource(R.string.settings_systems))
+        PanelBody(stringResource(R.string.settings_system_order_body))
         val notice = model.work.notice?.takeIf { it.first == SettingsOption.Systems }?.second
         if (notice != null) {
             // "Order set to Manual" is quiet (it only says what happened); the refusal is a plain line in the text colour.
             val color = if (notice == SettingsNotice.SystemOrderNowManual) PlumTheme.colors.muted else PlumTheme.colors.text
             BasicText(stringResource(notice.text), style = PlumTheme.type.panelBody.copy(color = color), modifier = Modifier.onRowTextLine().testTag(SettingsTags.NOTICE))
         }
-        KeepFocusedColumn(
-            { if (model.focus.column == SettingsColumn.Panel && model.focus.page == PanelPage.Systems) model.focus.panelIndex else -1 },
-            rows.size,
-            PlumDimens.listRowGap,
-            Modifier.fillMaxWidth().weight(1f).testTag(SettingsTags.SYSTEMS_LIST),
-            // The carried row is drawn solid by itself ([carriedPill]); a gliding pill lagging behind it would show next to it.
-            pillIndex = { if (carriedId != null) -1 else if (model.focus.column == SettingsColumn.Panel && model.focus.page == PanelPage.Systems) model.focus.panelIndex else -1 },
-        ) { place ->
-            rows.forEachIndexed { index, system ->
-                SystemArrangeRow(
-                    system = system,
-                    isFocused = index == focused,
-                    isCarried = system.id == carriedId,
-                    isHidden = system.id in settings.library.hiddenSystems,
-                    modifier =
-                        place(index)
-                            .tapTarget { model.onTapSystem(index, latestSettings, latestGeometry) }
-                            .testTag(SettingsTags.panelItem(index)),
-                    onHiddenTap = { model.onTapSystemHidden(index, latestSettings, latestGeometry) },
-                    handle = Modifier.systemHandleDrag(index, model, { latestSettings }, { latestGeometry }),
+        // Walked, the list keeps three rows: the focused one with a whole row past it either way (a carried row moves both ways). The text above gives way first, as to a tall card.
+        val room = LocalPanelListRoom.current
+        val rowPx = remember { mutableIntStateOf(0) }
+        val peekPx = with(LocalDensity.current) { EdgePeek.roundToPx() }
+        LaunchedEffect(inPage, room) { snapshotFlow { rowPx.intValue }.collect { room?.tallestRow = if (inPage) (LIST_KEEPS_ROWS * it - 2 * peekPx).coerceAtLeast(0) else 0 } }
+        // A box around the column: the column's edge fades share a box with it ([KeepFocusedColumn]).
+        Box(Modifier.fillMaxSize()) {
+            KeepFocusedColumn(
+                { if (model.focus.column == SettingsColumn.Panel && model.focus.page == PanelPage.Systems) model.focus.panelIndex else -1 },
+                FIRST_SYSTEM_ITEM + rows.size,
+                PlumDimens.listRowGap,
+                Modifier.fillMaxSize().testTag(SettingsTags.SYSTEMS_LIST),
+                fadeTag = SettingsTags.SYSTEMS_LIST,
+                endRoom = SlabDimens.listEndRoom,
+                restsAtTopOn = FIRST_SYSTEM_ITEM,
+                // The carried row is drawn solid by itself ([carriedPill]); a gliding pill lagging behind it would show next to it.
+                pillIndex = { if (carriedId != null) -1 else if (model.focus.column == SettingsColumn.Panel && model.focus.page == PanelPage.Systems) model.focus.panelIndex else -1 },
+            ) { place ->
+                OptionRow(
+                    option = SettingsOption.SystemOrder,
+                    value = OptionValue.Choice(stringResource(systemOrderName(settings.library.systemOrder.ordinal))),
+                    look = if (focused == SYSTEM_ORDER_ITEM) OptionLook.Focused else OptionLook.Normal,
+                    modifier = place(SYSTEM_ORDER_ITEM).tapTarget { model.onTapSystemOrder(latestSettings, latestGeometry) },
+                    valueModifier = Modifier.tapTarget { model.onTapSystemOrderValue(latestSettings, latestGeometry) },
+                    keepsLabelOnOneLine = true,
+                    isPanelSized = true,
                 )
+                rows.forEachIndexed { index, system ->
+                    SystemArrangeRow(
+                        system = system,
+                        isFocused = FIRST_SYSTEM_ITEM + index == focused,
+                        isCarried = system.id == carriedId,
+                        isHidden = system.id in settings.library.hiddenSystems,
+                        modifier =
+                            place(FIRST_SYSTEM_ITEM + index)
+                                .onSizeChanged { rowPx.intValue = maxOf(rowPx.intValue, it.height) }
+                                .tapTarget { model.onTapSystem(index, latestSettings, latestGeometry) }
+                                .testTag(SettingsTags.panelItem(index)),
+                        onHiddenTap = { model.onTapSystemHidden(index, latestSettings, latestGeometry) },
+                        handle = Modifier.systemHandleDrag(index, model, { latestSettings }, { latestGeometry }),
+                    )
+                }
             }
         }
     }

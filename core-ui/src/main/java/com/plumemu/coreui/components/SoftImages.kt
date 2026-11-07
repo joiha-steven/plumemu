@@ -195,7 +195,7 @@ internal object SoftImages {
             synchronized(cache) { distinctBytes(cache.values.toList()) } +
                 synchronized(shades) { distinctBytes(shades.values.map { it.image } + latest.values.map { it.image }) } +
                 synchronized(dropCache) { distinctBytes(dropCache.values.map { it.image }) } +
-                synchronized(insetCache) { distinctBytes(insetCache.values.toList()) }
+                synchronized(insetCache) { distinctBytes(insetCache.values.map { it.image }) }
 
     /** How many shadows are kept (tests). */
     val keptCount: Int get() = synchronized(shades) { shades.size }
@@ -290,12 +290,27 @@ internal object SoftImages {
         return (premultiplied * 255f / alpha).roundToInt().coerceIn(0, 255)
     }
 
-    /** Where a [drops] image's top-left sits against the shape's own top-left, in px (negative: above and left of it). */
+    /**
+     * Where a [drops] image's top-left sits against the shape's own top-left, in px (negative: above and left of it). With [keep] 0 or more
+     * the image was built for a narrower box: its first and last [keep] columns are drawn as they are, the one between fills the rest ([drawSliced]).
+     */
     class Placed(
         val image: ImageBitmap,
         val dx: Int,
         val dy: Int,
+        val keep: Int = -1,
     )
+
+    /**
+     * The box width to build a look's image for: past the corner and the blur a row does not change along x, so every wider box of that
+     * look shares the image of the narrowest one that shows all of it, drawn [Placed.keep] sliced. A slab's width differs on every screen;
+     * its first image on each cost a long main-thread frame.
+     */
+    private fun sharedWidth(
+        w: Int,
+        corner: Float,
+        reach: Float,
+    ): Int = min(w, 2 * (ceil(reach + corner).toInt() + SHARED_ROOM) + 1)
 
     /**
      * The outer soft layers under a [w] x [h] px rounded rectangle (corner [corner]) composited into one bitmap, page pixel for page pixel: [near] over
@@ -313,14 +328,17 @@ internal object SoftImages {
         under: Color = Color.Transparent,
     ): Placed? {
         if (w <= 0 || h <= 0) return null
-        val key = DropKey(w, h, (corner * 100).roundToInt(), layerKey(near), layerKey(far), glow?.let { layerKey(it) }, under.toArgb())
+        val shared = sharedWidth(w, corner.coerceIn(0f, min(w, h) / 2f), listOfNotNull(near, far, glow).maxOf { REACH_SIGMAS * it.sigma })
+        // Sliced by the look, not by this box: the box that builds the image can be exactly as wide as it, and a wider one takes it from the cache.
+        val widest = sharedWidth(Int.MAX_VALUE, corner.coerceIn(0f, min(w, h) / 2f), listOfNotNull(near, far, glow).maxOf { REACH_SIGMAS * it.sigma })
+        val key = DropKey(shared, h, (corner * 100).roundToInt(), layerKey(near), layerKey(far), glow?.let { layerKey(it) }, under.toArgb())
         synchronized(dropCache) { dropCache[key] }?.let { return it }
         // Built outside the lock: a background warm-up must not make a draw on the main thread wait for a cached image.
-        val built = traceMiss("Plum:drops") { dropsBuild(w, h, corner, near, far, glow, under) } ?: return null
+        val built = traceMiss("Plum:drops") { dropsBuild(shared, h, corner, near, far, glow, under, sliced = shared == widest) } ?: return null
         return synchronized(dropCache) { dropCache.getOrPut(key) { built } }
     }
 
-    private fun dropsBuild(w: Int, h: Int, corner: Float, near: Inset, far: Inset, glow: Inset?, under: Color): Placed? {
+    internal fun dropsBuild(w: Int, h: Int, corner: Float, near: Inset, far: Inset, glow: Inset?, under: Color, sliced: Boolean): Placed? {
         run {
             val r = corner.coerceIn(0f, min(w, h) / 2f)
             val layers = listOfNotNull(near, far, glow)
@@ -367,7 +385,7 @@ internal object SoftImages {
                     (alpha shl 24) or (r shl 16) or (g shl 8) or bl
                 }
             }
-            return Placed(Bitmap.createBitmap(pixels, bw, bh, Bitmap.Config.ARGB_8888).asImageBitmap(), left, top)
+            return Placed(Bitmap.createBitmap(pixels, bw, bh, Bitmap.Config.ARGB_8888).asImageBitmap(), left, top, if (sliced) (bw - 1) / 2 else -1)
         }
     }
 
@@ -396,15 +414,17 @@ internal object SoftImages {
         border: Float,
         over: Inset?,
         under: Inset?,
-    ): ImageBitmap? {
+    ): Placed? {
         if (w <= 0 || h <= 0 || (over == null && under == null)) return null
-        val key = InsetKey(w, h, (corner * 100).roundToInt(), (border * 100).roundToInt(), over?.let { layerKey(it) }, under?.let { layerKey(it) })
+        val shared = sharedWidth(w, corner.coerceIn(0f, min(w, h) / 2f), listOfNotNull(over, under).maxOf { REACH_SIGMAS * max(it.sigma, MIN_SIGMA) } + border)
+        val key = InsetKey(shared, h, (corner * 100).roundToInt(), (border * 100).roundToInt(), over?.let { layerKey(it) }, under?.let { layerKey(it) })
         synchronized(insetCache) { insetCache[key] }?.let { return it }
-        val built = traceMiss("Plum:inset") { insetBuild(w, h, corner, border, over, under) } ?: return null
+        val widest = sharedWidth(Int.MAX_VALUE, corner.coerceIn(0f, min(w, h) / 2f), listOfNotNull(over, under).maxOf { REACH_SIGMAS * max(it.sigma, MIN_SIGMA) } + border)
+        val built = traceMiss("Plum:inset") { insetBuild(shared, h, corner, border, over, under, sliced = shared == widest) } ?: return null
         return synchronized(insetCache) { insetCache.getOrPut(key) { built } }
     }
 
-    private fun insetBuild(w: Int, h: Int, corner: Float, border: Float, over: Inset?, under: Inset?): ImageBitmap? {
+    private fun insetBuild(w: Int, h: Int, corner: Float, border: Float, over: Inset?, under: Inset?, sliced: Boolean): Placed? {
         run {
             val pw = w - 2 * border
             val ph = h - 2 * border
@@ -431,7 +451,7 @@ internal object SoftImages {
                     pixels[p] = (alpha shl 24) or (red shl 16) or (green shl 8) or blue
                 }
             }
-            return Bitmap.createBitmap(pixels, w, h, Bitmap.Config.ARGB_8888).asImageBitmap()
+            return Placed(Bitmap.createBitmap(pixels, w, h, Bitmap.Config.ARGB_8888).asImageBitmap(), 0, 0, if (sliced) (w - 1) / 2 else -1)
         }
     }
 
@@ -454,8 +474,8 @@ internal object SoftImages {
 
     private data class InsetKey(val w: Int, val h: Int, val corner: Int, val border: Int, val over: List<Int>?, val under: List<Int>?)
 
-    private val insetCache = object : LinkedHashMap<InsetKey, ImageBitmap>(8, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<InsetKey, ImageBitmap>?) = size > MAX_INSETS
+    private val insetCache = object : LinkedHashMap<InsetKey, Placed>(8, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<InsetKey, Placed>?) = size > MAX_INSETS
     }
 
     /** A 2D Gaussian of [sigmaX] by [sigmaY] px in [color] (its alpha is the peak), out to [BLOB_SIGMAS] sigmas. */
@@ -487,6 +507,9 @@ internal object SoftImages {
     private const val BYTES_PER_PIXEL = 4
     private const val MAX_LOOKS = 16
     private const val MAX_INSETS = 8
+
+    /** Columns past the corner and the blur in a shared image, so its middle column is one of the straight run. */
+    private const val SHARED_ROOM = 2
 
     /** A blur narrower than this (px) is drawn as this: the sampled corner rows stay smooth. */
     private const val MIN_SIGMA = 0.35f

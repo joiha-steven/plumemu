@@ -30,8 +30,8 @@ import org.robolectric.annotation.GraphicsMode
  * Library › Systems measured at all six text sizes: every row spans from the
  * title's left line to one right line inside the panel, 2 apart; the names and their game counts
  * start on one line (the focused one after the focus dot); every handle is one width and ends the
- * row; every "Hidden" ends where the handle starts. The System order and Systems values end where
- * ROM folders' value ends.
+ * row; every "Hidden" ends where the handle starts. The Systems value ends where
+ * Game folders' value ends.
  */
 abstract class SettingsSystemsAlignBase {
     /** True in the classes of a wide screen, where small sizes show three columns and a panel's title starts on its edge (the board). */
@@ -75,10 +75,8 @@ abstract class SettingsSystemsAlignBase {
     protected fun theValuesEndWithTheOthers(label: String) {
         eachSize(label, SettingsOption.RomFolders, enter = false) { at, problems ->
             val folders = compose.onNode(hasText("2 folders") and hasAnyAncestor(hasTestTag(SettingsTags.option(SettingsOption.RomFolders))), useUnmergedTree = true).getUnclippedBoundsInRoot()
-            for ((option, text) in listOf(SettingsOption.SystemOrder to "A–Z", SettingsOption.Systems to "6 of 8 shown")) {
-                val value = compose.onNode(hasText(text) and hasAnyAncestor(hasTestTag(SettingsTags.option(option))), useUnmergedTree = true).getUnclippedBoundsInRoot()
-                if (!near(value.right.value, folders.right.value)) problems += "$at: $option's value ends at ${value.right}, ROM folders' at ${folders.right}"
-            }
+            val value = compose.onNode(hasText("6 of 8 shown") and hasAnyAncestor(hasTestTag(SettingsTags.option(SettingsOption.Systems))), useUnmergedTree = true).getUnclippedBoundsInRoot()
+            if (!near(value.right.value, folders.right.value)) problems += "$at: Systems' value ends at ${value.right}, Game folders' at ${folders.right}"
         }
     }
 
@@ -91,6 +89,8 @@ abstract class SettingsSystemsAlignBase {
                 if (!near(row.left.value, panel.left.value)) problems += "$at: row $index starts at ${row.left}, the panel at ${panel.left}"
                 if (!near(row.right.value, rows.first().right.value)) problems += "$at: row $index ends at ${row.right}, the first at ${rows.first().right}"
             }
+            val order = bounds(SettingsTags.option(SettingsOption.SystemOrder))
+            if (!near(order.left.value, panel.left.value) || !near(order.right.value, rows.first().right.value)) problems += "$at: System order spans ${order.left} to ${order.right}, the rows ${panel.left} to ${rows.first().right}"
             if (rows.first().right.value > panel.right.value + TOLERANCE) problems += "$at: rows end at ${rows.first().right}, past the panel's ${panel.right}"
             val gaps = rows.zipWithNext().map { (a, b) -> b.top.value - a.bottom.value }
             if (gaps.any { !near(it, PlumDimens.listRowGap.value) }) problems += "$at: gaps between rows $gaps, not ${PlumDimens.listRowGap}"

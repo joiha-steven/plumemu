@@ -86,13 +86,13 @@ class SettingsPanelTextLineTest {
         val cases =
             listOf(
                 optionsAt(SettingsOption.PushRightToPlay) to listOf("Push right twice to play"),
-                optionsAt(SettingsOption.Background) to listOf("Background", "Graphite"),
+                panelAt(SettingsOption.Background, PanelPage.BackgroundPresets, 0) to listOf("Background", "Graphite"),
                 // The Accent page names the focused accent under the swatches, like Background and Text color.
                 optionsAt(SettingsOption.Accent) to listOf("Red"),
                 optionsAt(SettingsOption.Version) to listOf("Plumemu", "Version 0.0.2-alpha"),
                 SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1)) to
                     // A note's text hangs one indent past the line, after its dot (SettingsUpdateNotesAlignTest).
-                    listOf("Plumemu 0.0.2-alpha → 0.0.3-alpha"),
+                    listOf(if (size == com.plumemu.coreui.theme.TextSize.Small) "Plumemu 0.0.2-alpha → 0.0.3-alpha" else "0.0.2-alpha → 0.0.3-alpha"),
             )
         for ((at, texts) in cases) {
             focus = at

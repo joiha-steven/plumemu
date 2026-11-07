@@ -43,14 +43,14 @@ data class PlumThemeSettings(
     /** Settings › Appearance › Text weight: how heavy every text role is drawn. */
     val textWeight: TextWeight = TextWeight.Default,
     val animationsOn: Boolean = true,
-    /** Settings › Home screen › Grid size: [PlumLayout.gridSize]. */
+    /** The home grid's size (L1 / R1 and the Size hint): [PlumLayout.gridSize]. */
     val gridSize: GridSize = GridSize.Default,
     /**
      * The ready-made set whose A/B/X/Y glyph colours are in use: the one the person last picked,
      * whatever the three colours are now. Null: the usual ringed glyphs.
      */
     val buttonSet: ColorSet? = null,
-    /** Settings › Appearance › Fade list edges: [PlumTheme.edgeFadeOn]. */
+    /** Whether lists fade at their edges: [PlumTheme.edgeFadeOn]. Always on in the app; a test may turn it off. */
     val edgeFadeOn: Boolean = true,
 ) {
     /** The text and accent that are drawn: the stored ones settled by [Readability], never written back. */

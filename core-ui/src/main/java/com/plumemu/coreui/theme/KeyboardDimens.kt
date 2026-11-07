@@ -30,9 +30,9 @@ object KeyboardDimens {
     val keyboardEdge = 1.dp
 
     /** The tray's upward shadow, the board's `box-shadow: 0 -6px 12px -4px`: offset, blur, spread (inwards). */
-    val keyboardShadowOffset = 6.dp
-    val keyboardShadowBlur = 12.dp
-    val keyboardShadowSpread = 4.dp
+    val keyboardShadowOffset = 6.dp * Depth.SHADOW_REACH
+    val keyboardShadowBlur = 12.dp * Depth.SHADOW_REACH
+    val keyboardShadowSpread = 4.dp * Depth.SHADOW_REACH
 
     /** Shift, delete and hide icons at Medium ([PlumLayout.keyboardIconSize] grows them with the text). */
     val keyboardIconSize = 18.dp

@@ -19,10 +19,9 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
+import com.plumemu.coreui.theme.Depth
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import kotlin.math.ceil
@@ -48,11 +47,11 @@ fun DrawScope.drawPanelChrome(
     top: Float = 0f,
     width: Float = size.width,
     height: Float = size.height,
-    bottomReach: Float = PlumDimens.panelShadowReach.toPx() + PlumDimens.panelShadowDrop.toPx(),
+    bottomReach: Float = (PlumDimens.panelShadowReach + PlumDimens.panelShadowDrop).toPx() * Depth.SHADOW_REACH,
 ) {
-    val reach = PlumDimens.panelShadowReach.toPx()
-    val drop = PlumDimens.panelShadowDrop.toPx()
-    val layerAlpha = shadow.alpha / SHADOW_LAYERS
+    val reach = PlumDimens.panelShadowReach.toPx() * Depth.SHADOW_REACH
+    val drop = PlumDimens.panelShadowDrop.toPx() * Depth.SHADOW_REACH
+    val layerAlpha = shadow.alpha * Depth.SHADOW / SHADOW_LAYERS
     for (i in 1..SHADOW_LAYERS) {
         val share = (SHADOW_LAYERS + 1 - i).toFloat() / SHADOW_LAYERS
         val grow = reach * share
@@ -75,31 +74,6 @@ fun DrawScope.drawPanelChrome(
         cornerRadius = CornerRadius(corner - line / 2),
         style = Stroke(line),
     )
-}
-
-/**
- * A card with a panel's chrome behind it, [fill] its colour (read while drawing). The card is the item's bounds, [start] and [end]
- * in from the sides, grown by [outset] on the sides and top and [outsetBottom] below, its shadow [shadowBottom] below that; nothing is laid out, so the content keeps its place.
- */
-@Composable
-fun Modifier.panelChrome(
-    fill: () -> Color,
-    outset: Dp = 0.dp,
-    start: Dp = 0.dp,
-    end: Dp = 0.dp,
-    outsetBottom: Dp = outset,
-    shadowBottom: Dp = PlumDimens.panelShadowReach + PlumDimens.panelShadowDrop,
-): Modifier {
-    val colors = PlumTheme.colors
-    return drawBehind {
-        val grow = outset.toPx()
-        val from = start.toPx()
-        drawPanelChrome(
-            fill(), colors.panelEdge, colors.panelShadow, PlumDimens.panelCorner.toPx(),
-            from - grow, -grow, size.width - from - end.toPx() + 2 * grow, size.height + grow + outsetBottom.toPx(),
-            bottomReach = shadowBottom.toPx(),
-        )
-    }
 }
 
 /** The small accent dot at the end of a panel's title, [PlumDimens.panelTitleDot] across. */

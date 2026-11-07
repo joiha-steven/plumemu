@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import com.plumemu.account.AccountShots
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.account.UtcTimeZone
 import com.plumemu.account.AccountStatus
 import com.plumemu.coreui.components.LocalScanPulsePhase
@@ -89,7 +90,9 @@ class SettingsAccountScreenshotTest {
 
 /** The board's library with an account state, and the focus on one of its rows. */
 internal object AccountShotContent {
-    fun of(account: AccountStatus): SettingsContent = ShotContent.library.copy(account = account)
+    /** Signed out, ScreenScraper as the source: the one way its row is listed with nobody signed in. */
+    fun of(account: AccountStatus): SettingsContent =
+        ShotContent.library.copy(account = account, chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper.takeIf { account == AccountStatus.SignedOut })
 
     fun focusOn(
         content: SettingsContent,

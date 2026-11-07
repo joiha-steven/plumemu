@@ -4,6 +4,7 @@ import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import com.plumemu.account.AccountStatus
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.account.RaAccountStatus
 import com.plumemu.account.SignInItem
 import com.plumemu.account.SignInTags
@@ -29,7 +30,7 @@ import org.robolectric.annotation.Config
 internal class SettingsSignInOpensTypingTest : SettingsKeyboardPathHarness() {
     private var ra: RaAccountStatus = RaAccountStatus.SignedOut
 
-    override val content: SettingsContent get() = SettingsContent(account = AccountStatus.SignedOut, raAccount = ra)
+    override val content: SettingsContent get() = SettingsContent(account = AccountStatus.SignedOut, chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper, raAccount = ra)
 
     private val isFormOpen get() = exists(SignInTags.FORM)
 

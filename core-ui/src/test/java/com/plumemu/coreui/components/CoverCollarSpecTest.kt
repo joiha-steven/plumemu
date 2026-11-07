@@ -20,9 +20,12 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.CollarDimens
+import com.plumemu.coreui.theme.Depth
 import com.plumemu.coreui.theme.PlumColors
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumThemeSettings
+import com.plumemu.coreui.theme.Rgb
+import com.plumemu.coreui.theme.SeatLook
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -31,6 +34,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
+import kotlin.math.exp
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 /**
  * The cover collar (SPEC 20) drawn as the grid draws it, at the boards' scale (1.5 px per dp, a pixel is a board px), read against the
@@ -94,6 +100,31 @@ class CoverCollarSpecTest {
     private fun near(what: String, board: IntArray, ours: IntArray, tolerance: Int) =
         assertTrue("$what: board ${board.toList()} ours ${ours.toList()}", board.indices.all { abs(board[it] - ours[it]) <= tolerance })
 
+    /** A tone the board mixes from the page is drawn [Depth.RAISE] of the way from [page] to the board's [tone]. */
+    private fun raised(page: IntArray, tone: IntArray) = IntArray(3) { (page[it] + (tone[it] - page[it]) * Depth.RAISE).roundToInt() }
+
+    /** The share of a Gaussian glow of [sigma] dp left [distance] dp outside a straight edge (the tail beyond it). */
+    private fun tail(distance: Double, sigma: Double): Double {
+        val z = distance / sigma
+        // Abramowitz and Stegun 26.2.17.
+        val t = 1.0 / (1.0 + 0.2316419 * z)
+        return exp(-z * z / 2) / sqrt(2 * Math.PI) * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))))
+    }
+
+    /**
+     * What a board pixel [lit] that was [rest] before the glow reached it looks like drawn: the resting tone at Depth, plus the glow's change at
+     * [Depth.GLOW] of its strength and the share of it a glow [distance] dp from the edge keeps once its sigma goes from [boardSigma] to
+     * [boardSigma] x [Depth.GLOW_REACH].
+     */
+    private fun glowed(page: IntArray, rest: IntArray, lit: IntArray, distance: Double, boardSigma: Double): IntArray = glowedOver(raised(page, rest), rest, lit, distance, boardSigma)
+
+    /** As [glowed] over a [base] the app draws itself: the cover's lip is glass (`SeatLook.coverGlass`), not the board's tone, and the glow's change on it is the board's. */
+    private fun glowedOver(base: IntArray, rest: IntArray, lit: IntArray, distance: Double, boardSigma: Double): IntArray {
+        val sigma = boardSigma * Depth.GLOW_REACH
+        val share = Depth.GLOW * tail(distance, sigma) / tail(distance, boardSigma)
+        return IntArray(3) { (base[it] + (lit[it] - rest[it]) * share).roundToInt() }
+    }
+
     @Test
     fun theLipIsRoundedNinePxRoundASixPxGroove() {
         // SPEC: lip radius 9 px = 6 dp, groove 6 px = 4 dp, art 4 px; the lip is not concentric with the groove.
@@ -102,21 +133,31 @@ class CoverCollarSpecTest {
         assertEquals(6f, (CollarDimens.coverBoxCorner + CollarSize.Cover.groove + CollarSize.Cover.lipCornerAdd).value, 0.01f)
     }
 
-    /** PartsDark render: the lit groove's `0 0 12px` tints the lip above it from (62,65,70) at rest to (61,71,88); beside it (31,33,37) to (34,43,59). */
+    /**
+     * PartsDark render: the lit groove's `0 0 12px` (sigma 4 dp) tints the lip above it from (62,65,70) at rest to (61,71,88); beside it (31,33,37) to (34,43,59),
+     * both 1.17 dp from the groove; drawn at Depth.
+     */
     @Test
     fun theLitGrooveGlowsOverTheLipOnGraphite() {
         val px = shot(PlumThemeSettings.Graphite)
-        near("focused lip above the groove", intArrayOf(61, 71, 88), px(266, 20), 5)
-        near("resting lip above the groove", intArrayOf(62, 65, 70), px(80, 20), 4)
-        near("focused lip beside the groove", intArrayOf(34, 43, 59), px(156, 100), 4)
+        val page = intArrayOf(0x11, 0x12, 0x14)
+        near("focused lip above the groove", glowedOver(px(80, 20), intArrayOf(62, 65, 70), intArrayOf(61, 71, 88), 1.17, 4.0), px(266, 20), 5)
+        // The cover's lip is glass, its top the recipe's first step above the page (`SeatLook.coverGlass`), not the board's tone.
+        val glassTop = SeatLook.of(Rgb(0x111214), Rgb(0xF2F0EA), true).coverGlass.lipStops[0]
+        near("resting lip above the groove", intArrayOf((glassTop.red * 255).roundToInt(), (glassTop.green * 255).roundToInt(), (glassTop.blue * 255).roundToInt()), px(80, 20), 4)
+        near("focused lip beside the groove", glowedOver(px(20, 100), intArrayOf(31, 33, 37), intArrayOf(34, 43, 59), 1.17, 4.0), px(156, 100), 4)
     }
 
-    /** PartsLight render: the lip above the lit groove (232,239,251); the kit's accent glow 2.67 dp above the collar (215,219,225). */
+    /**
+     * PartsLight render: the lip above the lit groove (232,239,251; the lip's top is white at rest); the kit's accent glow (sigma 7.33 dp) 2.67 dp above the
+     * collar (215,219,225) and 6.67 dp above it (224,224,221), over the page; drawn at Depth.
+     */
     @Test
     fun paperGlowsWithTheKitsAccentGlowNotAHaze() {
         val px = shot(PlumThemeSettings.Paper)
-        near("focused lip above the groove", intArrayOf(232, 239, 251), px(266, 20), 5)
-        near("4 px above the collar", intArrayOf(215, 219, 225), px(266, 14), 6)
-        near("10 px above the collar", intArrayOf(224, 224, 221), px(266, 8), 4)
+        val page = intArrayOf(0xEC, 0xE8, 0xDF)
+        near("focused lip above the groove", glowedOver(px(80, 20), intArrayOf(255, 255, 255), intArrayOf(232, 239, 251), 1.17, 4.0), px(266, 20), 5)
+        near("4 px above the collar", glowed(page, page, intArrayOf(215, 219, 225), 2.67, 7.33), px(266, 14), 6)
+        near("10 px above the collar", glowed(page, page, intArrayOf(224, 224, 221), 6.67, 7.33), px(266, 8), 4)
     }
 }

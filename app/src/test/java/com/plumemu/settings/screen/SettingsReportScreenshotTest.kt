@@ -68,7 +68,10 @@ internal fun ReportSettingsWith(
     val shown: PlumSettings = settingsForShot().let { it.copy(advanced = it.advanced.copy(usageStatistics = statisticsOn)) }
     val model =
         remember(form) {
-            SettingsModel(NoActions, panelAt(SettingsOption.ReportProblem, PanelPage.ProblemReport, 0)).also { it.report.openWith(form) }
+            SettingsModel(NoActions, panelAt(SettingsOption.ReportProblem, PanelPage.ProblemReport, 0)).also {
+                it.content = SettingsContent().withGamesListed()
+                it.report.openWith(form)
+            }
         }
     CompositionLocalProvider(LocalScanPulsePhase provides 0.5f) {
         SettingsLayout(shown, model, NoTouch, TEST_VERSION, clock = { BOARD_CLOCK }, battery = { BOARD_BATTERY })

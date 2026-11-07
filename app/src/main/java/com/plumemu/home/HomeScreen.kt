@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.plumemu.battery.BatteryPaceNow
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -39,7 +42,9 @@ import com.plumemu.coreinput.TextEntry
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreinput.strip.rememberStripState
 import com.plumemu.coreui.theme.GridSize
+import com.plumemu.coreui.components.BarFades
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.fadingIn
 import com.plumemu.coreui.theme.rememberContentFade
@@ -114,7 +119,7 @@ internal data class HomeCallbacks(
     val notices: HomeNotices = HomeNotices(),
     /** The trophy on mastered games, the line after a game and Info's badges (`MainScreen` provides them as [LocalHomeAchievements] and the others); empty signed out. */
     val achievements: HomeAchievements = HomeAchievements(),
-    /** L1 / R1 (or a tap on the Size hint) in a grid picked this size; written to Settings › Home screen › Grid size; [onFailed] if the write could not be saved. */
+    /** L1 / R1 (or a tap on the Size hint) in a grid picked this size; stored in `appearance.grid_size`; [onFailed] if the write could not be saved. */
     val onGridSize: (GridSize, onFailed: () -> Unit) -> Unit = { _, _ -> },
     /** SELECT made [systemId] a grid ([isGrid]) or a list; written to `appearance.grid_systems`, once per press; [onFailed] if the write could not be saved (on the writer's thread). */
     val onGridView: (systemId: String, isGrid: Boolean, onFailed: () -> Unit) -> Unit = { _, _, _ -> },
@@ -478,27 +483,45 @@ internal fun HomeLayout(
                 .background(PlumTheme.colors.bg)
                 .padding(top = PlumDimens.stripMarginTop, bottom = if (showHints) PlumDimens.footerBelow else PlumDimens.stripMarginBottom),
     ) {
-        Box(Modifier.fadingIn(searchFade)) {
+        // Over the fade and the rows that run under it.
+        Box(Modifier.zIndex(1f).fadingIn(searchFade)) {
             if (searching && search != null) SearchTopBar(search, clock, battery, wifi, charging) else HomeTopBar(content, state, clock, battery, wifi, charging, onSettings = { onAction(Action.OpenSettings) }, typing = { (panel?.screen as? TypingScreen)?.typing?.isTrayUp == true })
         }
         Spacer(Modifier.height(PlumDimens.barGap))
         Box(Modifier.fillMaxWidth().weight(1f)) {
-            Box(Modifier.fillMaxSize().fadingIn(searchFade)) {
-                if (searching && search != null) {
-                    SearchResults(search, onAction, isPanelOpen = panel != null, Modifier.fillMaxHeight())
-                } else {
-                    HomeStrip(
-                        content,
-                        state,
-                        gridIds,
-                        onAction,
-                        Modifier.fillMaxSize(),
-                        isPanelOpen = panel != null,
-                        positions = positions,
-                        showSystemInfo = showSystemInfo,
-                    )
+            val layout = PlumTheme.layout
+            val barRoom =
+                BarRoom(
+                    top = PlumDimens.barGap,
+                    bottom = if (showHints) PlumDimens.footerGap else PlumDimens.stripMarginBottom,
+                    height = layout.height - PlumDimens.stripMarginTop - layout.topBarHeight - if (showHints) layout.footerZone - PlumDimens.footerGap else 0.dp,
+                    taller = if (showHints) 0.dp else layout.footerZone - PlumDimens.stripMarginBottom,
+                )
+            val barRunners = remember { BarRunners() }
+            // A focused row's slab or a focused cover's ring reaches past it: the top fade stays off it.
+            val fadePx = with(LocalDensity.current) { (PlumDimens.listFadeBand + SlabDimens.listEndRoom).toPx() }
+            val topFadeShows = remember(barRunners, fadePx) { { barRunners.topFadeShows(fadePx) } }
+            val bandPx = with(LocalDensity.current) { PlumDimens.listFadeBand.toPx() }
+            val bottomFadeReach = remember(barRunners, bandPx) { { barRunners.bottomFadeReach(bandPx) } }
+            CompositionLocalProvider(LocalBarRoom provides barRoom, LocalBarRunners provides barRunners) {
+                Box(Modifier.fillMaxSize().fadingIn(searchFade).runsToBars(barRoom)) {
+                    if (searching && search != null) {
+                        SearchResults(search, onAction, isPanelOpen = panel != null, Modifier.fillMaxHeight())
+                    } else {
+                        HomeStrip(
+                            content,
+                            state,
+                            gridIds,
+                            onAction,
+                            Modifier.fillMaxSize(),
+                            isPanelOpen = panel != null,
+                            positions = positions,
+                            showSystemInfo = showSystemInfo,
+                        )
+                    }
                 }
             }
+            BarFades(barRoom.top, barRoom.bottom, topFadeShows, bottomFadeReach)
             // Plumemu's keyboard over the results' lower part, down to the screen's bottom; the hint bar is drawn on it.
             val below = if (showHints) PlumTheme.layout.footerZone else PlumDimens.stripMarginBottom
             if (searching && search != null && search.usesOwnKeyboard) {

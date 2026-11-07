@@ -106,7 +106,10 @@ class RemoveFolderTest {
         // The second ask joins the running detection and is answered with its outcome ("Detecting…" ends).
         assertEquals(outcome, withTimeout(TIMEOUT_MS) { second.await() })
         assertEquals("ran once", if (outcome) 0 else 1, logged.count { it.contains("emulator detection failed") })
-        assertFalse(library.isDetecting.value)
+        // It has ended: the next ask runs again, it does not join a finished one.
+        val again = CompletableDeferred<Boolean>()
+        library.detectEmulators { again.complete(it) }
+        assertEquals(outcome, withTimeout(TIMEOUT_MS) { again.await() })
     }
 
     @Test

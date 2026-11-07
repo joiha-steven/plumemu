@@ -67,7 +67,7 @@ open class PlumApplication : Application(), Configuration.Provider, ScraperHost,
 
     /** The process's statistics; the tests' Application answers null. */
     protected open fun makeTelemetry(): Telemetry? {
-        // The log file is local (Settings › Advanced › Export logs): kept in every build.
+        // The log file is local (Report a problem's Share log): kept in every build.
         AppLog.install(this)
         // A build from source names no statistics server: no crash files, nothing started, nothing sent.
         if (!BuildFeatures.hasStatistics) return null

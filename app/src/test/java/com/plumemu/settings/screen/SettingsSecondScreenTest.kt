@@ -185,13 +185,13 @@ internal class SettingsSecondScreenTest : SettingsModelHarness() {
     }
 
     @Test
-    fun r1FromHomeScreenWithoutAScreenGoesToEmulators() = assertEquals(SettingsSection.Emulators, r1FromHomeScreen(null))
+    fun r1FromHomeScreenWithoutAScreenOrGamesGoesToControls() = assertEquals(SettingsSection.Controls, r1FromHomeScreen(null))
 
     @Test
     fun r1FromHomeScreenWithAScreenGoesToSecondScreen() = assertEquals(SettingsSection.SecondScreen, r1FromHomeScreen(builtIn))
 
     @Test
-    fun downFromHomeScreenWithoutAScreenGoesToEmulators() = assertEquals(SettingsSection.Emulators, downFromHomeScreen(null))
+    fun downFromHomeScreenWithoutAScreenOrGamesGoesToControls() = assertEquals(SettingsSection.Controls, downFromHomeScreen(null))
 
     @Test
     fun downFromHomeScreenWithAScreenGoesToSecondScreen() = assertEquals(SettingsSection.SecondScreen, downFromHomeScreen(builtIn))

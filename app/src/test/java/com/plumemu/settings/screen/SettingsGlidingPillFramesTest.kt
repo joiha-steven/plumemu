@@ -27,6 +27,9 @@ import com.plumemu.home.FakeHomeContent
 import com.plumemu.home.HomeCallbacks
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.slabOverhangPx
+import com.plumemu.home.assertSlabRestsOn
+import com.plumemu.home.barColumns
+import com.plumemu.home.rowHeightPx
 import com.plumemu.home.slabTopRow
 import com.plumemu.home.rulesAround
 import kotlinx.coroutines.flow.flowOf
@@ -92,26 +95,27 @@ abstract class SettingsGlidingPillFramesBase {
 
     private fun down(times: Int) = repeat(times) { send(Action.Move(Direction.Down)) }
 
+    private fun up(times: Int) = repeat(times) { send(Action.Move(Direction.Up)) }
+
     private fun bounds(tag: String): Rect = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
 
     private fun rowTop(tag: String): Float = bounds(tag).top
 
     /** How far the slab is drawn above its row's box: [pillTop] reports the box, so the glide is checked in row positions. */
     private var overhang = 0f
+    private var rowPx = 0f
 
     /** Takes the overhang of the row [rowTag] that wears the pill, at rest. */
     private fun takeOverhang(rowTag: String) {
         overhang = compose.slabOverhangPx(rowTag)
+        rowPx = compose.rowHeightPx(rowTag)
     }
 
-    /** The top of the pill's row box now (the slab's top edge plus its overhang), found by the slab's bright top border ([slabTopRow]); -1 when none. */
+    /** The top of the pill's row box now (the slab's top edge plus its overhang), found by the slab's accent bar ([slabTopRow]); -1 when none. */
     private fun pillTop(listTag: String): Int {
         val list = bounds(listTag)
-        // A middle band, clear of the slab's rounded ends; the sections' is further right, past their labels (a row padding in from the slab).
-        val (from, to) = if (listTag == SettingsTags.SECTIONS) 0.72f to 0.82f else 0.45f to 0.65f
-        val xs = (list.left + list.width * from).toInt() until (list.left + list.width * to).toInt()
         // The slab of a first row is drawn above the list's top, inside the list's clip bleed.
-        val y = compose.onRoot().captureToImage().slabTopRow(xs, list.top.toInt() - overhang.toInt() - 1, list.bottom.toInt())
+        val y = compose.onRoot().captureToImage().slabTopRow(compose.barColumns(list.left), list.top.toInt() - overhang.toInt() - 1, list.bottom.toInt(), rowPx, overhang)
         return if (y < 0) -1 else Math.round(y + overhang)
     }
 
@@ -147,7 +151,7 @@ abstract class SettingsGlidingPillFramesBase {
         val oldTop = rowTop(rowTag(from))
         val newTop = rowTop(rowTag(from + 1))
         takeOverhang(rowTag(from))
-        assertEquals("at rest the pill is on the focused row", oldTop.toInt(), pillTop(listTag))
+        bounds(listTag).let { list -> compose.assertSlabRestsOn(rowTag(from), compose.barColumns(list.left), list.top.toInt() - overhang.toInt() - 1, list.bottom.toInt()) }
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { router.send(Action.Move(Direction.Down)) }
         compose.mainClock.autoAdvance = true
@@ -185,7 +189,7 @@ abstract class SettingsGlidingPillFramesBase {
     private fun openEmulators(animationsOn: Boolean, textSize: TextSizeSetting = TextSizeSetting.Medium): (Int) -> String {
         val content = emulators()
         show(animationsOn, content, textSize)
-        down(SettingsSection.Emulators.shownIndex)
+        down(SettingsSection.shownIn(content).indexOf(SettingsSection.Emulators))
         send(Action.Enter)
         return emulatorRowTag(content)
     }
@@ -209,7 +213,7 @@ abstract class SettingsGlidingPillFramesBase {
     fun theSectionsListGlidesWhenItScrolls() {
         // At Largest the seven sections do not fit: the last steps scroll the column.
         show(true, textSize = TextSizeSetting.Largest)
-        // The first step that moves the list is found by pressing; the next one scrolls it too.
+        // The step that moves the list is found by pressing (it rests showing the next rows, so it may be the only one); then that step is taken again.
         var from = 0
         while (true) {
             val before = rowTop(sectionTag(from + 1))
@@ -218,7 +222,9 @@ abstract class SettingsGlidingPillFramesBase {
             if (rowTop(sectionTag(from)) != before) break
             assertTrue("the sections column scrolls at Largest", from < shownSections.size - 2)
         }
-        assertScrollGlide("sections", SettingsTags.SECTIONS, ::sectionTag, from)
+        up(from)
+        down(from - 1)
+        assertScrollGlide("sections", SettingsTags.SECTIONS, ::sectionTag, from - 1)
     }
 
     @Test

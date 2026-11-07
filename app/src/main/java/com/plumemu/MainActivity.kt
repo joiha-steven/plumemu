@@ -150,7 +150,7 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
             achievements = if (isBenchmarkBuild) HomeAchievements() else graph.homeAchievements(),
             // A box-art run asks the shown system's games first.
             onSystemShown = { systemId -> if (!isBenchmarkBuild) graph.viewedSystem.value = systemId },
-            // L1 / R1 in a grid: the same setting and queue as Settings › Home screen › Grid size.
+            // L1 / R1 in a grid: stored through the settings' one queue.
             // The cover benchmarks write it too (the emulator's own settings store), as the size shows only through the theme.
             onGridSize = { size, onFailed ->
                 if (!isBenchmarkBuild || wantsCovers) {
@@ -225,10 +225,10 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
             }
         }
 
-    /** Settings › Advanced › Back up…'s save picker; its answer starts the backup in the graph. */
+    /** Settings › Advanced › Back up and restore › Back up…'s save picker; its answer starts the backup in the graph. */
     private val backupPicker = BackupPicker(this) { graph }
 
-    /** Settings › Advanced › Restore…'s open picker; its answer starts the reading in the graph. */
+    /** Settings › Advanced › Back up and restore › Restore…'s open picker; its answer starts the reading in the graph. */
     private val restorePicker = RestorePicker(this) { graph }
 
     /** Android's own home-app screens (the question's Yes, Settings' row), with what came of them. */

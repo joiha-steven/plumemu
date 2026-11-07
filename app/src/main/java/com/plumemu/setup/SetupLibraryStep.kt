@@ -24,9 +24,19 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreui.components.ScanPulseLine
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.TextSize
 import com.plumemu.coreui.theme.WidthClass
 import com.plumemu.graph.ScanPhase
 import com.plumemu.home.rememberCountFormat
+
+/**
+ * The wide Ready step shows its counts under the description, outside the scrolling column: the step's point is the counts, and
+ * a column that runs long (large text) would scroll them out of sight. The narrow layout and the scan step keep them in the column, and so does the Largest text:
+ * the title column has no height left for them under its body (they were squeezed to half a line, `TextSizeScreens768Test.setupReady`).
+ */
+internal val SetupUiState.countsInTitle: Boolean
+    @Composable
+    get() = step == SetupStep.Ready && folders.isNotEmpty() && !hasScanFailed && !hasLoadFailed && PlumTheme.layout.widthClass == WidthClass.Wide && PlumTheme.type.textSize < TextSize.Largest
 
 /**
  * The scan and the library ready (the board's RP5-O4 and Nova-9): games and systems found, the
@@ -51,7 +61,7 @@ internal fun ColumnScope.LibraryStepContent(
         return
     }
     // Set up later: no folder, so no counts to read.
-    if (state.folders.isNotEmpty()) LibraryCounts(state)
+    if (state.folders.isNotEmpty() && !state.countsInTitle) LibraryCounts(state, Modifier.restCard("counts"))
     if (state.step == SetupStep.Scan) {
         val counted = state.folders.count { it.isCounted }
         // No total is known before the walk ends; folders done is the only honest fraction.
@@ -93,7 +103,7 @@ internal fun ColumnScope.LibraryStepContent(
             body = null,
             isFocused = false,
             // One content gap from the rows around it, like the statistics row.
-            modifier = Modifier.testTag(SetupTags.BOX_ART_COMING),
+            modifier = Modifier.restCard("boxArt").testTag(SetupTags.BOX_ART_COMING),
         )
     }
     if (state.asksAboutStatistics) {
@@ -101,7 +111,7 @@ internal fun ColumnScope.LibraryStepContent(
             title = stringResource(R.string.setup_stats_title),
             body = stringResource(R.string.setup_stats_body),
             isFocused = state.focus == SetupControl.UsageStatistics,
-            modifier = Modifier.setupControl(state, SetupControl.UsageStatistics, onAction),
+            modifier = Modifier.restCard("stats").setupControl(state, SetupControl.UsageStatistics, onAction),
         ) {
             SetupSwitch(
                 state.usageStatistics,
@@ -111,7 +121,7 @@ internal fun ColumnScope.LibraryStepContent(
             )
         }
     }
-    Box(Modifier.padding(top = PlumDimens.setupButtonSpacer)) {
+    Box(Modifier.padding(top = PlumDimens.setupButtonSpacer).restCard("start")) {
         SetupButton(
             text = stringResource(R.string.setup_start_playing),
             isPrimary = true,
@@ -152,11 +162,11 @@ internal fun LoadFailedContent(
 
 /** "1,284 games" (16 / 600) and "18 systems" (12, `muted`) centred on one line, at the two ends. */
 @Composable
-private fun LibraryCounts(state: SetupUiState) {
+internal fun LibraryCounts(state: SetupUiState, modifier: Modifier = Modifier) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
     val format = rememberCountFormat()
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         BasicText(
             text = pluralStringResource(R.plurals.home_games_count, state.gameCount, format.format(state.gameCount)),
             style = type.setupCount.copy(color = colors.text),
@@ -224,7 +234,7 @@ private fun EmulatorsRow(coverage: EmulatorCoverage?) {
                 stringResource(R.string.setup_emulators_some, format.format(coverage.systemsWithEmulator), format.format(coverage.systems)) to
                     stringResource(R.string.setup_emulators_missing, joinNames(coverage.missing))
         }
-    SetupInfoRow(title = title, body = body, isFocused = false, modifier = Modifier.padding(top = PlumDimens.setupRowTopMargin).testTag(SetupTags.EMULATORS))
+    SetupInfoRow(title = title, body = body, isFocused = false, modifier = Modifier.padding(top = PlumDimens.setupRowTopMargin).restCard("emulators").testTag(SetupTags.EMULATORS))
 }
 
 /** "A", "A and B", "A, B and C", "A, B, C and 4 others". */

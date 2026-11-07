@@ -55,7 +55,7 @@ class SettingsColorsRowTest {
 
     private fun show(appearance: AppearanceSettings) {
         val stored = PlumSettings(appearance = appearance, flags = SetupFlags(setupCompleted = true))
-        compose.setContent { PlumTheme { SettingsAt(optionsAt(SettingsOption.Colors), stored) } }
+        compose.setContent { PlumTheme { SettingsAt(optionsAt(SettingsOption.TextColor), stored) } }
     }
 
     @Test
@@ -63,7 +63,7 @@ class SettingsColorsRowTest {
         show(AppearanceSettings())
         compose.onAllNodesWithText(text(R.string.settings_colors)).assertCountEquals(2) // the row and its panel's title
         compose.onNode(colorsValue(R.string.settings_colors_plumemu), useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.settings_colors_panel_help)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.settings_colors_panel_help)).assertExists() // above the row the panel scrolled to
         // Plumemu is Black with an own-colour accent: the rows below name them.
         compose.onNode(valueText(R.string.settings_bg_black), useUnmergedTree = true).assertIsDisplayed()
         // The Accent row names its own-colour accent by the set it belongs to, so "Plumemu" shows on the Colors row and the Accent row.

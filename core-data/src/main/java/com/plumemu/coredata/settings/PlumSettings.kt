@@ -133,7 +133,7 @@ enum class LeftEdgeSetting {
     }
 }
 
-/** Settings › Home screen › Grid size, smallest covers first. The names are what `appearance.grid_size` stores. */
+/** The home grid's size (L1 / R1 and the Size hint), smallest covers first. The names are what `appearance.grid_size` stores. */
 enum class GridSizeSetting { Small, Medium, Large }
 
 /**
@@ -193,7 +193,7 @@ data class AppearanceSettings(
     val textWeight: TextWeightSetting? = null,
     /** Null (never picked, or a file from before the setting) is [LeftEdgeSetting.Default], Counts. */
     val leftEdge: LeftEdgeSetting? = null,
-    /** Settings › Appearance › Fade list edges: the home screen's lists and grids fade out where they continue (on by default). */
+    /** No longer offered or followed (the fade is always on); kept so backups round-trip and older versions restore it. */
     val edgeFade: Boolean = true,
     /**
      * Settings › Appearance › Language (docs/conventions/translation.md): a BCP 47 tag of one of the app's
@@ -222,6 +222,7 @@ data class OwnColors(
 /** Settings › Controls (the confirm button sits in Settings › Advanced). */
 data class ControlsSettings(
     val confirmButton: ConfirmButtonSetting = ConfirmButtonSetting.Right,
+    /** No longer offered or followed (always on); kept so backups round-trip and older versions restore it. */
     val holdToScrollFaster: Boolean = true,
     val showButtonHints: Boolean = true,
     val keyboard: KeyboardSetting = KeyboardSetting.Plumemu,
@@ -230,8 +231,9 @@ data class ControlsSettings(
     val pushRightToPlay: Boolean = false,
 )
 
-/** Settings › Library. Scan on startup is on by default. */
+/** Settings › Library. */
 data class LibrarySettings(
+    /** No longer offered or followed (Plumemu always looks); kept so backups round-trip and older versions restore it. */
     val scanOnStartup: Boolean = true,
     val sortGames: SortGamesSetting = SortGamesSetting.Name,
     val boxArtRegion: BoxArtRegionSetting = BoxArtRegionSetting.Usa,
@@ -259,7 +261,7 @@ data class LibrarySettings(
      * games still show in Recent, Favorites and Search. Recent, Favorites and Apps are never in it.
      */
     val hiddenSystems: Set<String> = emptySet(),
-    /** How many games Recent keeps: 20 unless the person picks 10 or 50. */
+    /** No longer offered or followed (Recent always shows 50); kept so backups round-trip and older versions restore it. */
     val recentSize: RecentSizeSetting = RecentSizeSetting.Twenty,
 )
 

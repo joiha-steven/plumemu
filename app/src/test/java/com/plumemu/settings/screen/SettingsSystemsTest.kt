@@ -27,7 +27,10 @@ internal class SettingsSystemsTest : SettingsModelHarness() {
     /** The panel's rows as the model arranges them now, after the store applied every write. */
     private fun shownIds(): List<String> = model.systems.rows(model.content, stored).map { it.id }
 
-    private fun focusedId(): String = model.systems.rows(model.content, actions.shown).map { it.id }[model.focus.panelIndex]
+    /** The system row under the cursor; the panel's first item is System order. */
+    private val cursor: Int get() = model.focus.panelIndex - FIRST_SYSTEM_ITEM
+
+    private fun focusedId(): String = model.systems.rows(model.content, actions.shown).map { it.id }[cursor]
 
     @Before
     fun openTheLibrary() {
@@ -41,33 +44,6 @@ internal class SettingsSystemsTest : SettingsModelHarness() {
         press(Action.Enter)
         assertEquals(PanelPage.Systems, model.focus.page)
         assertEquals(SettingsColumn.Panel, model.focus.column)
-    }
-
-    @Test
-    fun theTwoRowsSitAfterSortGamesAndSystemsOnlyWithGames() {
-        val rows = SettingsSection.Library.rowsIn(model.content)
-        assertEquals(SettingsOption.SystemOrder, rows[rows.indexOf(SettingsOption.SortGames) + 1])
-        assertEquals(SettingsOption.Systems, rows[rows.indexOf(SettingsOption.SystemOrder) + 1])
-        assertFalse("no systems, nothing to arrange", SettingsOption.Systems in SettingsSection.Library.rowsIn(SettingsContent()))
-        assertTrue(SettingsOption.SystemOrder in SettingsSection.Library.rowsIn(SettingsContent()))
-    }
-
-    @Test
-    fun systemOrderStepsThroughItsThreeValuesByEveryInput() {
-        openSection(SettingsSection.Library)
-        focusOption(SettingsOption.SystemOrder)
-        assertEquals(SystemOrderSetting.Name, stored.library.systemOrder)
-        press(Action.Enter)
-        assertEquals(SystemOrderSetting.Maker, stored.library.systemOrder)
-        move(Direction.Right)
-        assertEquals(SystemOrderSetting.Manual, stored.library.systemOrder)
-        move(Direction.Right)
-        assertEquals("right stops at the end", SystemOrderSetting.Manual, stored.library.systemOrder)
-        press(Action.Enter)
-        assertEquals("A wraps", SystemOrderSetting.Name, stored.library.systemOrder)
-        val row = SettingsSection.Library.rowsIn(model.content).indexOf(SettingsOption.SystemOrder)
-        model.onTapValue(row, actions.shown, wide)
-        assertEquals("a tap on the value steps it", SystemOrderSetting.Maker, stored.library.systemOrder)
     }
 
     @Test
@@ -87,9 +63,9 @@ internal class SettingsSystemsTest : SettingsModelHarness() {
         assertEquals("psx", model.systems.carry?.id)
         move(Direction.Down)
         move(Direction.Down)
-        assertEquals("the cursor rides with it", 3, model.focus.panelIndex)
+        assertEquals("the cursor rides with it", 3, cursor)
         move(Direction.Down)
-        assertEquals("at the bottom it stays", 3, model.focus.panelIndex)
+        assertEquals("at the bottom it stays", 3, cursor)
         assertEquals("nothing stored while carried", listOf("snes", "psx", "gba", "megadrive"), actions.shown.library.manualSystemOrder)
         press(Action.Enter)
         assertFalse(model.systems.isCarrying)
@@ -117,9 +93,9 @@ internal class SettingsSystemsTest : SettingsModelHarness() {
         move(Direction.Down) // gba
         press(Action.Enter)
         press(Action.PreviousSystem)
-        assertEquals(0, model.focus.panelIndex)
+        assertEquals(0, cursor)
         press(Action.NextSystem)
-        assertEquals(3, model.focus.panelIndex)
+        assertEquals(3, cursor)
         press(Action.PreviousSystem)
         press(Action.Enter)
         assertEquals(listOf("gba", "snes", "psx", "megadrive"), stored.library.manualSystemOrder)
@@ -136,7 +112,7 @@ internal class SettingsSystemsTest : SettingsModelHarness() {
         val writes = actions.writes
         press(Action.Back)
         assertFalse(model.systems.isCarrying)
-        assertEquals("back where it was picked up", 1, model.focus.panelIndex)
+        assertEquals("back where it was picked up", 1, cursor)
         assertEquals(PanelPage.Systems, model.focus.page)
         assertEquals("B cancels; it does not leave the panel", SettingsColumn.Panel, model.focus.column)
         assertEquals(writes, actions.writes)
@@ -168,20 +144,6 @@ internal class SettingsSystemsTest : SettingsModelHarness() {
         press(Action.Enter)
         assertEquals(listOf("snes", "gba", "megadrive", "psx"), stored.library.manualSystemOrder)
         assertEquals(SystemOrderSetting.Manual, stored.library.systemOrder)
-    }
-
-    @Test
-    fun manualToAToZAndBackKeepsTheManualList() {
-        actions.settings = stored.copy(library = stored.library.copy(systemOrder = SystemOrderSetting.Manual, manualSystemOrder = listOf("psx", "snes", "gba", "megadrive")))
-        openSection(SettingsSection.Library)
-        focusOption(SettingsOption.SystemOrder)
-        move(Direction.Left)
-        move(Direction.Left)
-        assertEquals(SystemOrderSetting.Name, stored.library.systemOrder)
-        assertEquals(listOf("gba", "megadrive", "psx", "snes"), shownIds())
-        move(Direction.Right)
-        move(Direction.Right)
-        assertEquals(listOf("psx", "snes", "gba", "megadrive"), shownIds())
     }
 
     @Test
@@ -239,9 +201,9 @@ internal class SettingsSystemsTest : SettingsModelHarness() {
         press(Action.Enter)
         model.content = SettingsContent(librarySystems = listOf(LibrarySystem("nes", "NES", 3, "Nintendo", 1983)) + library.filter { it.id != "snes" })
         assertEquals("gba", model.systems.carry?.id)
-        assertEquals("snes left: gba is now second", 1, model.focus.panelIndex)
+        assertEquals("snes left: gba is now second", 1, cursor)
         move(Direction.Down)
-        assertEquals("a press carries it past the next row on screen", 2, model.focus.panelIndex)
+        assertEquals("a press carries it past the next row on screen", 2, cursor)
         assertEquals("gba", focusedId())
         move(Direction.Up)
         assertEquals("gba", focusedId())
@@ -258,17 +220,17 @@ internal class SettingsSystemsTest : SettingsModelHarness() {
         press(Action.Enter)
         model.content = SettingsContent(librarySystems = library.filter { it.id != "snes" })
         assertEquals(listOf("psx", "gba", "megadrive"), shownIds())
-        assertEquals(1, model.focus.panelIndex)
+        assertEquals(1, cursor)
         assertEquals("gba", focusedId())
 
         move(Direction.Down)
         assertEquals("Down moves it below Mega Drive", listOf("psx", "megadrive", "gba"), shownIds())
-        assertEquals(2, model.focus.panelIndex)
+        assertEquals(2, cursor)
         assertEquals("the highlight stays on the carried system", "gba", focusedId())
         move(Direction.Up)
         move(Direction.Up)
         assertEquals(listOf("gba", "psx", "megadrive"), shownIds())
-        assertEquals(0, model.focus.panelIndex)
+        assertEquals(0, cursor)
         assertEquals("gba", focusedId())
 
         // The same by touch: one row's travel is one place on screen.
@@ -300,7 +262,7 @@ internal class SettingsSystemsTest : SettingsModelHarness() {
         focusOption(SettingsOption.Systems)
         model.onTapSystem(2, actions.shown, wide)
         assertEquals("a tap in the previewed panel enters it on that row", PanelPage.Systems, model.focus.page)
-        assertEquals(2, model.focus.panelIndex)
+        assertEquals(2, cursor)
         assertFalse("a tap never lifts a row", model.systems.isCarrying)
         model.onTapSystemHidden(2, actions.shown, wide)
         assertEquals(emptySet<String>(), stored.library.hiddenSystems)
@@ -316,7 +278,7 @@ internal class SettingsSystemsTest : SettingsModelHarness() {
         model.onSystemDragStep(+1)
         model.onSystemDragCancel()
         assertEquals("a cancelled drag stores nothing", listOf("snes", "megadrive", "psx", "gba"), stored.library.manualSystemOrder)
-        assertEquals(0, model.focus.panelIndex)
+        assertEquals(0, cursor)
     }
 
     @Test

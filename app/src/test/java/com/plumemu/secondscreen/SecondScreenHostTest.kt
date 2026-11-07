@@ -232,6 +232,53 @@ class SecondScreenHostTest : SecondScreenHostTestBase() {
     }
 
     @Test
+    fun afterTheQuickTriesAreUsedUpADisplayChangeTriesAgain() {
+        var refuse = true
+        val host =
+            startHost(showWindow = {
+                if (refuse) throw WindowManager.InvalidDisplayException("test")
+                it.show()
+            })
+        idle(SecondScreenHost.SHOW_RETRY_MS * SecondScreenHost.SHOW_ATTEMPTS * 2)
+        assertNull("quick tries used up: $logs", host.shownDisplayId)
+        refuse = false
+        ShadowDisplayManager.changeDisplay(displayId, "w600dp-h468dp-xhdpi")
+        idle()
+        assertEquals("shown on the display change: $logs", displayId, host.shownDisplayId)
+        assertTrue(logs.toString(), logs.last().startsWith("Second screen window: shown on display $displayId (late try"))
+    }
+
+    @Test
+    fun afterTheQuickTriesAreUsedUpASlowTimerTriesAgainWithNoDisplayEvent() {
+        var refusals = SecondScreenHost.SHOW_ATTEMPTS + 1
+        val host =
+            startHost(showWindow = {
+                if (refusals-- > 0) throw WindowManager.InvalidDisplayException("test")
+                it.show()
+            })
+        idle(SecondScreenHost.SHOW_RETRY_MS * SecondScreenHost.SHOW_ATTEMPTS * 2)
+        assertNull(host.shownDisplayId)
+        idle(SecondScreenHost.LATE_RETRY_MS * 3)
+        assertEquals("shown by the timer: $logs", displayId, host.shownDisplayId)
+        assertEquals("one window, no more tries once shown", 0, refusals.coerceAtLeast(0))
+    }
+
+    @Test
+    fun theLateTriesStopWhenTheWantedStateChanges() {
+        var tries = 0
+        val host = startHost(showWindow = { tries++; throw WindowManager.InvalidDisplayException("test") })
+        idle(SecondScreenHost.SHOW_RETRY_MS * SecondScreenHost.SHOW_ATTEMPTS * 2)
+        settings.value = on(false)
+        idle()
+        val before = tries
+        idle(SecondScreenHost.LATE_RETRY_MS * 3)
+        ShadowDisplayManager.changeDisplay(displayId, "w600dp-h468dp-xhdpi")
+        idle()
+        assertEquals("no try while switched off", before, tries)
+        assertNull(host.shownDisplayId)
+    }
+
+    @Test
     fun noLateTryOnceTheSwitchIsOff() {
         val host = startHost(showWindow = { throw WindowManager.InvalidDisplayException("test") })
         settings.value = on(false)
@@ -258,6 +305,8 @@ class SecondScreenHostTest : SecondScreenHostTestBase() {
             })
         idle(SecondScreenHost.SHOW_RETRY_MS * SecondScreenHost.SHOW_ATTEMPTS * 2)
         assertNull(host.shownDisplayId)
+        // The host's own listener for the late tries goes with the host; the refused windows leave none.
+        host.stop()
         assertEquals("every try was refused: $logs", SecondScreenHost.SHOW_ATTEMPTS, refused.size)
         assertEquals("each refusal came after onStart had registered the listener", List(SecondScreenHost.SHOW_ATTEMPTS) { before + 1 }, atRefusal)
         assertEquals("no listener left behind", before, displayListenerCount())

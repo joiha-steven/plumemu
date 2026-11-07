@@ -76,7 +76,7 @@ class SetupScrollEdgeFadeTest {
                 val scroll = compose.onNodeWithTag(SetupTags.SCROLL, useUnmergedTree = true).getUnclippedBoundsInRoot()
                 val pixels = compose.onRoot().captureToImage().toPixelMap()
                 val cut = px(scroll.bottom - SlabDimens.listEndRoom).toInt()
-                val fade = px(PlumDimens.listEdgeFade).toInt()
+                val fade = px(PlumDimens.listFadeBand).toInt()
                 val left = px(scroll.left + SlabDimens.listEndRoom).toInt()
                 val right = px(scroll.right - SlabDimens.listEndRoom).toInt()
                 fun rowAway(y: Int) = (left until right).sumOf { away(pixels[it, y]).toDouble() } / (right - left)

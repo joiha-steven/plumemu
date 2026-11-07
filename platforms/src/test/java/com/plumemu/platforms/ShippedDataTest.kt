@@ -23,6 +23,28 @@ class ShippedDataTest {
         listOf("nes", "snes", "gb", "gbc", "gba", "n64", "nds", "megadrive", "psx", "psp", "ps2", "gc", "arcade")
 
     @Test
+    fun everyShippedPageIsAnHttpsLinkAndNoStore() {
+        val pages = loadShipped().emulators.mapNotNull { it.page }.toSet()
+        assertTrue("the converter wrote no page", pages.isNotEmpty())
+        for (page in pages) {
+            assertTrue(page, page.startsWith("https://"))
+            assertTrue(page, "play.google.com" !in page)
+        }
+    }
+
+    /** "Plumemu does not offer emulators for this system" is written for legal-risk systems: no other may need it. */
+    @Test
+    fun everySystemWithSafeEmulatorsOffersOneToGet() {
+        val catalog = loadShipped()
+        val emptyHanded =
+            catalog.systems.filter { system ->
+                val safe = catalog.emulatorsOf(system).filterNot { it.legalRisk }
+                safe.isNotEmpty() && safe.none { it.page != null }
+            }
+        assertEquals(emptyList<String>(), emptyHanded.map { it.id })
+    }
+
+    @Test
     fun theShippedFileIsAccepted() {
         val catalog = loadShipped()
         println("systems=${catalog.systems.size} emulators=${catalog.emulators.size}")

@@ -5,6 +5,7 @@ import com.plumemu.home.EmptyLibrary
 import com.plumemu.home.HomeNotices
 import com.plumemu.settings.screen.FolderAddState
 import com.plumemu.settings.screen.SettingsActivityActions
+import com.plumemu.settings.screen.notAddedItems
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -19,16 +20,26 @@ internal fun AppGraph.addFolderFromHome(actions: SettingsActivityActions) {
     libraryNotices.pickerAsked(isMissing = !actions.openFolderPicker())
 }
 
+/** Why the library is empty. */
+internal fun emptyLibraryOf(
+    hasFolders: Boolean,
+    isScanning: Boolean,
+    hasFilesNotAdded: Boolean,
+): EmptyLibrary =
+    when {
+        !hasFolders -> EmptyLibrary.NoFolder
+        isScanning -> EmptyLibrary.Scanning
+        hasFilesNotAdded -> EmptyLibrary.NoGames
+        else -> EmptyLibrary.NoFiles
+    }
+
 /** What the home screen shows besides its games: the library's news, why an empty library is empty, and a refused folder ask. */
 internal fun AppGraph.homeNotices(): HomeNotices {
     // Collected only while the empty message is on screen; "reading" until the first answer, the likeliest state at startup.
     val why =
-        combine(database.scanDao().observeFolders(), startup.scanState) { folders, scan ->
-            when {
-                folders.isEmpty() -> EmptyLibrary.NoFolder
-                scan.isBusy -> EmptyLibrary.Scanning
-                else -> EmptyLibrary.NoGames
-            }
+        combine(database.scanDao().observeFolders(), startup.scanState, database.leftOutFileDao().observeAll()) { folders, scan, leftOut ->
+            // The same test as Settings › Files not added, so the home never points to a page that has nothing to say.
+            emptyLibraryOf(folders.isNotEmpty(), scan.isBusy, hasFilesNotAdded = notAddedItems(leftOut, emptyList()).isNotEmpty())
         }.stateIn(appScope, SharingStarted.WhileSubscribed(), EmptyLibrary.Scanning)
     val problem =
         combine(settingsLibrary.folderAdd, libraryNotices.pickerMissing) { added, pickerMissing ->

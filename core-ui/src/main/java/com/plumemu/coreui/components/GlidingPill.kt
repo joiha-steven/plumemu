@@ -178,28 +178,9 @@ class GlidingPill internal constructor(
         fun drawIn(part: DrawScope.(Outline) -> Unit) {
             CanvasDrawScope().draw(density, layoutDirection, Canvas(ImageBitmap(1, 1)), size) { part(input.shape.createOutline(size, layoutDirection, this)) }
         }
-        if (!inBuilds { drawIn { drawSlabOutside(it, colors.slab, colors.slabGlow, blobColor, if (input.onCard) colors.card.fill else colors.bg) } }) return
-        if (!inBuilds { drawIn { drawSlabFill(it, colors.slab, input.onCard) } }) return
+        if (!onImageThread { drawIn { drawSlabOutside(it, colors.slab, colors.slabGlow, blobColor, if (input.onCard) colors.card.fill else colors.bg) } }) return
+        if (!onImageThread { drawIn { drawSlabFill(it, colors.slab, input.onCard) } }) return
         warmedFor = key
-    }
-
-    /** Runs [part] on the image thread and waits for it; false if it could not run or failed (queue full, out of memory), or the caller was cancelled meanwhile. */
-    private suspend fun inBuilds(part: () -> Unit): Boolean {
-        var done = false
-        suspendCancellableCoroutine { c ->
-            val queued = BackgroundBuilds.submit {
-                try {
-                    part()
-                    done = true
-                } finally {
-                    c.resume(Unit)
-                }
-                null
-            }
-            if (!queued) c.resume(Unit)
-        }
-        currentCoroutineContext().ensureActive()
-        return done
     }
 
     internal fun draw(
@@ -469,6 +450,8 @@ fun rememberGlidingPill(
     blob: Boolean = false,
     /** The list's width in px when known before it is laid out: its slab's images are then built in the background once the page is composed, not in the frame that first shows it. */
     warmWidthPx: Int = 0,
+    /** Px the slab's right end stands from the list's, read while drawing ([drawWithEndMoved]): a list that changes width with the strip's stop. */
+    endMovedPx: (() -> Float)? = null,
     focusedIndex: () -> Int,
 ): GlidingPillHost {
     val scope = rememberCoroutineScope()
@@ -495,11 +478,11 @@ fun rememberGlidingPill(
     }
     // A list of equal rows has its halo placed here even with animations off (no row box needed); one whose rows differ in height leaves it to the rows.
     val haloHere = haloOutside || !rowsVary
-    return remember(pill, input, haloOutside, haloHere) {
+    return remember(pill, input, haloOutside, haloHere, endMovedPx) {
         GlidingPillHost(
             if (isOn) pill else null,
             if (haloHere) pill else null,
-            Modifier.drawBehind { pill.draw(this, input) },
+            Modifier.drawBehind { if (endMovedPx == null) pill.draw(this, input) else drawWithEndMoved(endMovedPx()) { pill.draw(this, input) } },
             Modifier.onPlaced { pill.content = it },
             input,
         )

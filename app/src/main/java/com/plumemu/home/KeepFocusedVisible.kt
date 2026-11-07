@@ -3,6 +3,7 @@ package com.plumemu.home
 import androidx.compose.foundation.lazy.LazyListLayoutInfo
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -46,10 +47,20 @@ internal fun KeepFocusedVisible(
     trailingGap: Dp = 0.dp,
     /** The list draws a gliding pill: a move that scrolls nothing still counts as a step of a held key ([ListGlide.stepped]). */
     countsSteps: Boolean = false,
-    /** A list of whole rows (Settings' panels): a scroll ends with a row's top at the window's top, never with a cut row there (see [keepVisible]). */
+    /** Settings' panels: px of the next row shown past an edge the list continues over (see [restWithPeeks]); 0 for none. */
+    peekPx: Int = 0,
+    /** A list of whole rows (the game menu, Search): a scroll ends with a row's top at the window's top, never with a cut row there (see [keepVisible]). */
     snapsToRows: Boolean = false,
     /** Keep the context rows from the first scroll on, however the focus got there (the game menu's slab keeps its room below it when the menu opens on a row). */
     keepsContextAtOpen: Boolean = false,
+    /** How far below the window's top a list that continues above rests its first whole row, the row before it going under the bar ([keepVisible] `band`). */
+    bandPx: Int = 0,
+    /** The items a scroll may rest on at the band's bottom (a heading is not one); every item by default. */
+    isRestRow: (Int) -> Boolean = { true },
+    /** Settings' panels: focused on this row the list rests at its very top when the row is whole there: what stands above it (a heading no cursor stops on) is never left under the fade. */
+    restsAtTopOn: Int = -1,
+    /** Settings' panels: the px of room the list keeps under its last row, written here to reach a rest past its end ([restWithPeeks]). */
+    foot: MutableIntState? = null,
     focusedIndex: () -> Int,
 ) {
     val latest = rememberUpdatedState(focusedIndex)
@@ -72,10 +83,11 @@ internal fun KeepFocusedVisible(
             val info = listState.layoutInfo
             val items = info.visibleItemsInfo
             val rows = keeper.contextFor(target, context)
-            val wanted = (target - rows).coerceAtLeast(0)..(target + rows).coerceAtMost(info.totalItemsCount - 1)
+            // The row before the first context row too: a rest at the band scrolls past it.
+            val wanted = (target - rows - 1).coerceAtLeast(0)..(target + rows).coerceAtMost(info.totalItemsCount - 1)
             val isLaidOut = items.any { it.index == wanted.first } && items.any { it.index == wanted.last }
             keeper.update(target, hasLayout = items.isNotEmpty(), isLaidOut = isLaidOut) {
-                listState.keepVisible(target, rows, gapPx, snapsToRows).also { kept = it }.moved
+                listState.keepVisible(target, rows, gapPx, snapsToRows, bandPx, isRestRow, peekPx, restsAtTopOn, foot).also { kept = it }.moved
             }
         }
     // Also when nothing scrolled: a glide still running from the last jump must leave the row past
@@ -195,35 +207,67 @@ internal fun LazyListState.keepVisible(
      * list ends first (the scroll is then clamped and the band stays; nothing can be done).
      */
     snapsToRows: Boolean = false,
+    /**
+     * The first whole row's place below the window's top (px; 0 for none): with [snapsToRows] a list that continues above rests with a [isRestRow] row's top there (the row before it
+     * lies above, going under the bar). The first row alone rests at the window's top: nothing continues above it.
+     */
+    band: Int = 0,
+    isRestRow: (Int) -> Boolean = { true },
+    /** Above 0: the list rests with this many px of the next row past each edge it continues over ([restWithPeeks]). */
+    peek: Int = 0,
+    /** See [KeepFocusedVisible]. */
+    restsAtTopOn: Int = -1,
+    /** See [KeepFocusedVisible]. */
+    foot: MutableIntState? = null,
 ): KeptScroll {
     val info = layoutInfo
     val count = info.totalItemsCount
     if (info.visibleItemsInfo.isEmpty() || index !in 0 until count) return KeptScroll(0, Float.MAX_VALUE, Float.MAX_VALUE)
     val rows = LaidOutRows(info)
-    val windowEnd = info.viewportEndOffset - info.afterContentPadding + trailingGap
+    // A list with room at its foot pads its top and foot alike but for that room, which is no part of what ends the window.
+    val windowEnd = info.viewportEndOffset - (if (foot != null) info.beforeContentPadding else info.afterContentPadding) + trailingGap
+    if (index == restsAtTopOn && rows.bottomOf(index) - rows.topOf(0) <= windowEnd) return restAtTop(index, count, windowEnd, rows, foot)
     var before = minOf(context, index)
     var after = minOf(context, count - 1 - index)
     // Less context where the item and its context do not fit (tall rows, a short list window).
     while (before + after > 0 && rows.bottomOf(index + after) - rows.topOf(index - before) > windowEnd) {
         if (before >= after) before-- else after--
     }
+    if (peek > 0) return restShowingPeeks(index, before, after, windowEnd, peek, rows, foot)
+    // The window a rest leaves: past the band when rows continue above it.
+    val bands = snapsToRows && band > 0
+    while (before + after > 0 && rows.bottomOf(index + after) - rows.topOf(index - before) > windowEnd - (if (bands && index - before > 0) band else 0)) {
+        if (before >= after) before-- else after--
+    }
+    // With a band the first context row is one a scroll can rest on (the first item rests at the window's top whatever it is).
+    while (bands && before > 0 && index - before > 0 && !isRestRow(index - before)) before--
+    // The band only where the item and its context stay whole past it: a window too low for that keeps the focused row whole at the top.
+    val bandNow = if (bands && index - before > 0 && rows.bottomOf(index + after) - rows.topOf(index - before) <= windowEnd - band) band else 0
     val top = rows.topOf(index - before)
     val bottom = rows.bottomOf(index + after)
     val moved =
         when {
-            top < 0 -> {
-                requestScrollToItem(index - before)
-                -top
+            top < bandNow -> {
+                val at = index - before
+                if (bandNow > 0 && restOn(at, rows, band)) {
+                    band - top
+                } else {
+                    requestScrollToItem(at)
+                    -top
+                }
             }
             // Never past the item's own top: an item taller than the window (a typing panel's
             // list above the keyboard tray at the largest sizes) shows its first line, not its last.
             bottom > windowEnd && rows.topOf(index) > 0 -> {
                 val needed = minOf(bottom - windowEnd, rows.topOf(index))
-                val pad = info.beforeContentPadding
-                val snapped = if (snapsToRows) rows.firstTopAtLeast(bottom - windowEnd + pad, rows.topOf(index - before)) else null
-                if (snapped != null) {
+                // The first scroll off the list's start moves a whole stride or more: a shorter one would end before a held key's next step, and the rows would stall.
+                val fromStart = if (bandNow > 0 && firstVisibleItemIndex == 0 && firstVisibleItemScrollOffset == 0) rows.topOf(1) - rows.topOf(0) else 0
+                val snapped = if (snapsToRows) rows.firstTopAtLeast(maxOf(bottom - windowEnd, fromStart) + bandNow, rows.topOf(index - before), if (bandNow > 0) isRestRow else { _ -> true }) else null
+                if (snapped != null && bandNow > 0 && restOn(snapped.first, rows, band)) {
+                    band - snapped.second
+                } else if (snapped != null && bandNow == 0) {
                     requestScrollToItem(snapped.first, 0)
-                    -(snapped.second - pad)
+                    -snapped.second
                 } else {
                     requestScrollToItem(firstVisibleItemIndex, firstVisibleItemScrollOffset + needed)
                     -needed
@@ -231,10 +275,16 @@ internal fun LazyListState.keepVisible(
             }
             // A list of whole rows opened or clamped with its first row cut at the top (a short list that fits but for one row): that row is hidden, a
             // blank band. Back to its top when the item and its context stay whole; the room left then is at the bottom, as the games list ends.
-            snapsToRows && firstVisibleItemScrollOffset > 0 && bottom + firstVisibleItemScrollOffset <= windowEnd -> {
+            snapsToRows && firstVisibleItemScrollOffset > 0 && (!bands || firstVisibleItemIndex == 0) && bottom + firstVisibleItemScrollOffset <= windowEnd -> {
                 val back = firstVisibleItemScrollOffset
                 requestScrollToItem(firstVisibleItemIndex, 0)
                 back
+            }
+            // A scrolled list whose first shown row stands lower than the band (a rest the layout could not give before: the room below the last row came after): up to the band
+            // while the context stays whole and the list can still scroll that far.
+            bandNow > 0 && (firstVisibleItemIndex > 0 || firstVisibleItemScrollOffset > 0) && hole(rows, isRestRow, band, top, windowEnd) != null -> {
+                val row = hole(rows, isRestRow, band, top, windowEnd)!!
+                if (restOn(row.first, rows, band)) band - row.second else 0
             }
             else -> 0
         }
@@ -242,6 +292,99 @@ internal fun LazyListState.keepVisible(
     val roomAbove = rows.topOf((index - 1).coerceAtLeast(0)) + moved
     val roomBelow = windowEnd - (rows.bottomOf((index + 1).coerceAtMost(count - 1)) + moved)
     return KeptScroll(moved, roomAbove.coerceAtLeast(0).toFloat(), roomBelow.coerceAtLeast(0).toFloat())
+}
+
+/** The first rest row standing lower than [band] (its index and top) that a scroll to the band keeps [contextTop] whole for and that the list can still scroll to, or null. */
+private fun LazyListState.hole(
+    rows: LaidOutRows,
+    isRestRow: (Int) -> Boolean,
+    band: Int,
+    contextTop: Int,
+    windowEnd: Int,
+): Pair<Int, Int>? {
+    val info = layoutInfo
+    val row = rows.firstTopAtLeast(band, contextTop, isRestRow) ?: return null
+    if (row.second <= band || row.first == 0) return null
+    val last = info.visibleItemsInfo.lastOrNull() ?: return null
+    // How far the list can still scroll: what lies below the window, room included.
+    val remaining = if (last.index == info.totalItemsCount - 1) last.offset + last.size - (info.viewportEndOffset - info.afterContentPadding) else Int.MAX_VALUE
+    return row.takeIf { it.second - band <= remaining }
+}
+
+/**
+ * Requests the scroll that puts row [at]'s top at [band] px (the row before it, [at] - 1, stands first in the list's window, scrolled up past it); false when that row's
+ * stride is shorter than the band (nothing is requested).
+ */
+private fun LazyListState.restOn(
+    at: Int,
+    rows: LaidOutRows,
+    band: Int,
+): Boolean {
+    val past = rows.topOf(at) - rows.topOf(at - 1) - band
+    if (past < 0) return false
+    requestScrollToItem(at - 1, past)
+    return true
+}
+
+/** [keepVisible] for a list resting at its very top on row [index] ([KeepFocusedVisible] `restsAtTopOn`). */
+private fun LazyListState.restAtTop(
+    index: Int,
+    count: Int,
+    windowEnd: Int,
+    rows: LaidOutRows,
+    foot: MutableIntState?,
+): KeptScroll {
+    val moved = -rows.topOf(0)
+    foot?.intValue = 0
+    if (moved != 0) requestScrollToItem(0)
+    return KeptScroll(moved, rows.topOf(0).plus(moved).toFloat(), (windowEnd - (rows.bottomOf((index + 1).coerceAtMost(count - 1)) + moved)).coerceAtLeast(0).toFloat())
+}
+
+/** [keepVisible] for a list that rests showing the next rows ([restWithPeeks]): context gives way to the peeks, down to one row on each side. */
+private fun LazyListState.restShowingPeeks(
+    index: Int,
+    contextBefore: Int,
+    contextAfter: Int,
+    windowEnd: Int,
+    peek: Int,
+    rows: LaidOutRows,
+    foot: MutableIntState?,
+): KeptScroll {
+    val info = layoutInfo
+    val items = info.visibleItemsInfo
+    val first = items.first()
+    val last = items.last()
+    val count = info.totalItemsCount
+    val kept = { delta: Int ->
+        val roomAbove = rows.topOf((index - 1).coerceAtLeast(0)) - delta
+        val roomBelow = windowEnd - (rows.bottomOf((index + 1).coerceAtMost(count - 1)) - delta)
+        KeptScroll(-delta, roomAbove.coerceAtLeast(0).toFloat(), roomBelow.coerceAtLeast(0).toFloat())
+    }
+    // Resting on the room at the foot with the row whole and none cut at the top: the row that went is no longer laid out, so nothing here could find this rest again.
+    if ((foot?.intValue ?: 0) > 0 && rows.topOf(index) >= 0 && rows.bottomOf(index) <= windowEnd && items.none { it.offset < 0 && it.offset + it.size > 0 }) return kept(0)
+    val min = if (first.index == 0) first.offset else Int.MIN_VALUE / 2
+    val max = if (last.index == count - 1) maxOf(last.offset + last.size - windowEnd, min) else Int.MAX_VALUE / 2
+    var before = contextBefore
+    var after = contextAfter
+    var rest: Int?
+    var wanted: Int
+    while (true) {
+        val top = rows.topOf(index - before)
+        val bottom = rows.bottomOf(index + after)
+        // Never past the item's own top, as [keepVisible].
+        wanted = if (top < 0) top else if (bottom > windowEnd) minOf(bottom - windowEnd, rows.topOf(index)).coerceAtLeast(0) else 0
+        rest = restWithPeeks(wanted.coerceIn(min, max), windowEnd, peek, min, max, top, bottom, items.size, { items[it].offset }, { items[it].offset + items[it].size }, pastMax = if (foot != null && last.index == count - 1) windowEnd else 0)
+        if (rest != null || maxOf(before, after) <= 1) break
+        if (before >= after) before-- else after--
+    }
+    val delta = rest ?: wanted.coerceIn(min, max)
+    foot?.intValue = (delta - max).coerceAtLeast(0)
+    if (delta != 0) {
+        // Above every row laid out (a finger left the focus far up) no row can anchor the rest: the row goes first, as in [keepVisible], and the check after this layout finds its rest.
+        val anchor = items.lastOrNull { it.offset <= delta }
+        if (anchor == null) requestScrollToItem(index - before) else requestScrollToItem(anchor.index, delta - anchor.offset)
+    }
+    return kept(delta)
 }
 
 /** Rows' places in a lazy list's last layout; a row not laid out is placed from the average stride. */
@@ -257,7 +400,8 @@ private class LaidOutRows(
     fun firstTopAtLeast(
         from: Int,
         upTo: Int,
-    ): Pair<Int, Int>? = items.firstOrNull { it.offset >= from && it.offset <= upTo }?.let { it.index to it.offset }
+        accepts: (Int) -> Boolean = { true },
+    ): Pair<Int, Int>? = items.firstOrNull { it.offset >= from && it.offset <= upTo && accepts(it.index) }?.let { it.index to it.offset }
 
     fun topOf(i: Int): Int {
         items.firstOrNull { it.index == i }?.let { return it.offset }

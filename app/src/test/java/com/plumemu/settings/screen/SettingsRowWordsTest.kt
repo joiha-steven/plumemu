@@ -18,6 +18,7 @@ import com.plumemu.graph.RestoreState
 import com.plumemu.graph.WayBackSet
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
+import com.plumemu.platforms.PlatformDataVersion
 import com.plumemu.secondscreen.ScreenKind
 import com.plumemu.secondscreen.SecondScreen
 import com.plumemu.update.CheckFailure
@@ -38,7 +39,7 @@ import java.util.Date
  * The labels and values the settings pass renamed, as the rows show them: the
  * ScreenScraper row keeps its name signed in or out ("Sign in\u00A0»" while out), Undo restore's
  * "Copy · 120 MB", Check for updates' "Check failed · <date>", Privacy without "›", and the
- * plainer names of Find new games automatically, Show clock and Send usage statistics.
+ * plainer names of Clock and battery and Send usage statistics.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w837dp-h471dp-land-xhdpi")
@@ -92,8 +93,8 @@ class SettingsRowWordsTest {
     fun panelValuesCarryTheOpeningMark() {
         val opening =
             listOf(
-                SettingsOption.RomFolders, SettingsOption.Systems, SettingsOption.Backup, SettingsOption.Restore, SettingsOption.ResetAll,
-                SettingsOption.ResetLibrary, SettingsOption.Licenses, SettingsOption.ReportProblem, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount,
+                SettingsOption.RomFolders, SettingsOption.Systems, SettingsOption.BackupAndRestore, SettingsOption.Reset,
+                SettingsOption.Updates, SettingsOption.Licenses, SettingsOption.ReportProblem, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount,
             )
         for ((option, value) in valuesOf(opening)) {
             assertEquals(option.name + ": " + value, true, value is OptionValue.Opens)
@@ -158,7 +159,7 @@ class SettingsRowWordsTest {
         val at = 1_792_670_400_000L
         val content = SettingsContent(update = UpdateView(lastCheck = LastCheck(at, CheckOutcome.Failed(CheckFailure.Offline))))
         val date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(at))
-        assertEquals("Check for updates" to "Check failed · $date", rowOf(SettingsOption.CheckForUpdates, content))
+        assertEquals("Updates" to "Check failed · $date", rowOf(SettingsOption.Updates, content))
     }
 
     @Test
@@ -166,7 +167,7 @@ class SettingsRowWordsTest {
         val at = 1_792_670_400_000L
         val content = SettingsContent(update = UpdateView(lastCheck = LastCheck(at, CheckOutcome.Found)))
         val date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(at))
-        assertEquals("Check for updates" to "Update available · $date", rowOf(SettingsOption.CheckForUpdates, content))
+        assertEquals("Updates" to "Update available · $date", rowOf(SettingsOption.Updates, content))
     }
 
     @Test
@@ -176,24 +177,37 @@ class SettingsRowWordsTest {
 
     @Test
     fun theRenamedSwitchesSayWhatTheyDo() {
-        val renamed = listOf(SettingsOption.ScanOnStartup, SettingsOption.ShowClock, SettingsOption.UsageStatistics)
+        val renamed = listOf(SettingsOption.ClockAndBattery, SettingsOption.UsageStatistics)
         var labels = emptyList<String>()
         compose.setContent { labels = renamed.map { optionLabel(it, SettingsContent(), 0) } }
         compose.waitForIdle()
-        assertEquals(listOf("Find new games automatically", "Show clock", "Send usage statistics"), labels)
+        assertEquals(listOf("Clock and battery", "Send usage statistics"), labels)
     }
 
     @Test
-    fun showBatterysPanelMentionsTheSecondScreensClockOnlyWithASecondScreen() {
-        val alsoThere = "Also on the second screen's clock."
+    fun versionsPanelNamesThePlatformDataOnceItIsKnown() {
         var content by mutableStateOf(SettingsContent())
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { SettingsAt(optionsAt(SettingsOption.ShowBattery), content = content) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { SettingsAt(optionsAt(SettingsOption.Version), content = content) } }
         compose.waitForIdle()
-        compose.onNodeWithText("The battery level at the top right of the screen.").assertExists()
+        compose.onNodeWithTag(SettingsPanelTags.PLATFORM_DATA).assertDoesNotExist()
+        content = SettingsContent(platformData = PlatformDataVersion(6, "0".repeat(64), "2026-11-01"))
+        compose.waitForIdle()
+        compose.onNodeWithTag(SettingsPanelTags.PLATFORM_DATA).assertExists()
+        compose.onNodeWithText("Platform data · Version 6", substring = true).assertExists()
+        compose.onNodeWithText("The list of systems and emulators Plumemu knows.", substring = true).assertExists()
+    }
+
+    @Test
+    fun clockAndBatterysPanelMentionsTheSecondScreensClockOnlyWithASecondScreen() {
+        val alsoThere = "The battery also shows on the second screen's clock."
+        var content by mutableStateOf(SettingsContent())
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { SettingsAt(optionsAt(SettingsOption.ClockAndBattery), content = content) } }
+        compose.waitForIdle()
+        compose.onNodeWithText("The time and battery level at the top right of the screen.").assertExists()
         compose.onNodeWithText(alsoThere, substring = true).assertDoesNotExist()
         content = SettingsContent(secondScreen = SecondScreen(2, "Screen-2", ScreenKind.BuiltIn))
         compose.waitForIdle()
-        compose.onNodeWithText("The battery level at the top right of the screen. $alsoThere").assertExists()
+        compose.onNodeWithText("The time and battery level at the top right of the screen. $alsoThere").assertExists()
     }
 
     private fun valueOf(
@@ -228,6 +242,37 @@ class SettingsRowWordsTest {
     }
 
     @Test
+    fun filesNotAddedCountsTheFilesWithNoFolderWaiting() {
+        val files = listOf(NotAddedItem.File(1, "", "a.iso"), NotAddedItem.More(NotAddedGroup.NoSystem, null, 340))
+        assertEquals(OptionValue.Opens("341"), valueOf(SettingsOption.FilesNotAdded, SettingsContent(notAdded = files)))
+    }
+
+    @Test
+    fun filesNotAddedHasNoValueWithNothingLeftOut() {
+        assertEquals(OptionValue.Opens(""), valueOf(SettingsOption.FilesNotAdded, SettingsContent()))
+    }
+
+    private val waitingFolder = SettingsFolderRow(FolderKey(1, "Xbox 360"), 3, FolderAnswer.Unanswered)
+    private val answeredFolder = SettingsFolderRow(FolderKey(2, "Halo"), 0, FolderAnswer.OfSystem("x360", "Xbox 360"))
+    private val oneFile = listOf(NotAddedItem.File(1, "", "a.iso"))
+
+    @Test
+    fun filesNotAddedSaysOneFolderWaitsBeforeAnyCount() {
+        assertEquals(OptionValue.Opens("1 folder to sort"), valueOf(SettingsOption.FilesNotAdded, SettingsContent(unknownFolders = listOf(waitingFolder, answeredFolder), notAdded = oneFile)))
+    }
+
+    @Test
+    fun filesNotAddedSaysHowManyFoldersWait() {
+        val other = SettingsFolderRow(FolderKey(1, "Wii U"), 5, FolderAnswer.Unanswered)
+        assertEquals(OptionValue.Opens("2 folders to sort"), valueOf(SettingsOption.FilesNotAdded, SettingsContent(unknownFolders = listOf(waitingFolder, other), notAdded = oneFile)))
+    }
+
+    @Test
+    fun anAnsweredFolderWaitsForNothing() {
+        assertEquals(OptionValue.Opens("1"), valueOf(SettingsOption.FilesNotAdded, SettingsContent(unknownFolders = listOf(answeredFolder), notAdded = oneFile)))
+    }
+
+    @Test
     fun aSignedOutAccountHasNoCheck() {
         assertEquals(OptionValue.Opens("Sign in"), valueOf(SettingsOption.ScraperAccount, SettingsContent(account = AccountStatus.SignedOut)))
     }
@@ -245,7 +290,8 @@ class SettingsRowWordsTest {
                 SettingsOption.Backup to SettingsContent(backup = BackupState.Running(BackupKind.Everything)),
                 SettingsOption.Restore to SettingsContent(restore = RestoreState.Reading()),
                 SettingsOption.UndoRestore to SettingsContent(restore = RestoreState.Replacing(isUndo = true, withLibrary = false)),
-                SettingsOption.UpdateAvailable to SettingsContent(update = UpdateView(step = UpdateStep.Downloading(1, 2))),
+                SettingsOption.Updates to SettingsContent(update = UpdateView(found = com.plumemu.update.UpdateManifest(41, "0.0.3", "https://example.com/p.apk", 1, "ab".repeat(32), 23, "2026-10-23", listOf("One."), null), step = UpdateStep.Downloading(1, 2))),
+                SettingsOption.BackupAndRestore to SettingsContent(backup = BackupState.Running(BackupKind.Settings)),
             )
         var values = emptyMap<SettingsOption, OptionValue>()
         compose.setContent {

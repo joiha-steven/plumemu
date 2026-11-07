@@ -133,9 +133,10 @@ class HomeFocusedCoverDecodeTest {
         // The focused cover is drawn larger about its collar's centre: read on the picture's top edge, lifted with it.
         val density = compose.density.density
         val centreY = (picture.top - CollarSize.Cover.topPadding.value * density + picture.bottom + CollarSize.Cover.bottomPadding.value * density) / 2f
-        for (y in listOf(centreY + (picture.top - centreY) * PlumDimens.FOCUSED_COVER_SCALE)) {
-            val seen = pixels[x, y.roundToInt()]
-            assertTrue("at y=$y px the lit groove shows through ($seen)", seen.near(accent))
+        for (y in listOf(centreY + (picture.top - centreY) * com.plumemu.coreui.theme.focusedCoverScale(maxOf(picture.width, picture.height) / compose.density.density))) {
+            // The groove is about two pixels wide here and its edges are anti-aliased: one of the rows around the line is the plain accent.
+            val seen = (-1..1).map { pixels[x, y.roundToInt() + it] }
+            assertTrue("at y=$y px the lit groove shows through ($seen)", seen.any { it.near(accent) })
         }
         assertTrue("the larger copy itself is drawn (${centre(1)})", centre(1).near(Color(PICTURE)))
     }

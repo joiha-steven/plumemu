@@ -13,6 +13,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.Depth
 import com.plumemu.coreui.theme.PlumColors
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumTheme
@@ -80,12 +81,13 @@ class PlumSwitchLookTest {
         val knobL = (lip + 2 * d + SwitchSliderDimens.switchKnob.value * d / 2).toInt()
         assertTrue("on knob ${on[knobR, mid]}", on[knobR, mid].sum(cap) < 6f / 255)
         assertTrue("off knob ${off[knobL, mid]}", off[knobL, mid].sum(cap) < 6f / 255)
-        // The glow: the lip beside an on track moves toward the accent by about the board's 0.12 (half of that at least), the off one is untouched.
-        val atLip = (lip / 2).toInt() // the lip's middle, in the node's own coordinates
+        // The glow: the lip beside an on track moves toward the accent by about the board's 0.12 at `Depth.SHADOW` (half of that at least), the off one is untouched.
+        // The glow reaches [Depth.GLOW_REACH] of the board's: it is read at the lip's pixel next to the track, where the reach is not in question.
+        val atLip = lip.toInt() - 1 // in the node's own coordinates
         val lipOff = off[atLip, mid]
         val lipOn = on[atLip, mid]
         val toAccent = lipOff.sum(colors.accent)
-        assertTrue("the lip beside an on track moved ${lipOn.sum(lipOff)} of $toAccent", lipOn.sum(lipOff) >= 0.06f * toAccent)
+        assertTrue("the lip beside an on track moved ${lipOn.sum(lipOff)} of $toAccent", lipOn.sum(lipOff) >= 0.06f * Depth.SHADOW * toAccent)
         assertTrue("the lip must not be fully the accent", lipOn.sum(colors.accent) > 0.5f * toAccent)
     }
 

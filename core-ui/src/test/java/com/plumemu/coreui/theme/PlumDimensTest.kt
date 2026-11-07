@@ -71,9 +71,9 @@ class PlumDimensTest {
         assertEquals(listOf(22.dp, 20.dp), listOf(PlumDimens.gridGapLandscape, PlumDimens.gridGapPortrait))
         assertEquals(listOf(8.dp, 6.dp), listOf(PlumDimens.cornerCoverLandscape, PlumDimens.cornerCoverPortrait))
         assertEquals(listOf(12.dp, 10.dp, 9.dp), listOf(PlumDimens.coverPaddingLandscape, PlumDimens.coverPaddingPortrait, PlumDimens.gridHintGap))
-        // Focus ring 2.5 wide, 3 away: it reaches 5.5 past the cover; the focus halo reaches 10 more in 7 bands.
+        // Focus ring 2.5 wide, 3 away: it reaches 5.5 past the cover; the focus halo reaches 10 more (at Depth.GLOW_REACH) in 7 bands.
         assertEquals(listOf(2.5.dp, 3.dp, 5.5.dp), listOf(PlumDimens.focusRingWidth, PlumDimens.focusRingGap, PlumDimens.focusRingOutset))
-        assertEquals(listOf(10.dp, 7), listOf(PlumDimens.focusHaloReach, PlumDimens.FOCUS_HALO_STEPS))
+        assertEquals(listOf(10.dp * Depth.GLOW_REACH, 7), listOf(PlumDimens.focusHaloReach, PlumDimens.FOCUS_HALO_STEPS))
     }
 
     @Test

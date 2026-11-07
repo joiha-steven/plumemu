@@ -18,12 +18,14 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.components.TopBar
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
@@ -97,6 +99,36 @@ class SearchTopBarAlignTest {
             if (abs(base - referenceBase) > dp / 2) problems += "$each: title baseline ${base / dp} dp into the bar, shared bar ${referenceBase / dp}"
             if (abs((field.top + field.bottom) / 2 - (bar.top + bar.bottom) / 2) > dp / 2) problems += "$each: field centre is not the bar's centre"
             if (field.height > bar.height + dp / 2) problems += "$each: field ${field.height / dp} dp high in a ${bar.height / dp} dp bar"
+        }
+        assertTrue(problems.joinToString("\n"), problems.isEmpty())
+    }
+
+    /** The field's well and collar reach past its bounds: the title and the count stay the bar's item gap away from what is drawn. */
+    @Test
+    fun theTitleTheFieldAndTheCountHaveTheBarsGap() {
+        var size by mutableStateOf(TextSize.Small)
+        var density = Density(1f)
+        val search = typingFor("super", FakeHomeContent.withFavorites())
+        compose.setContent {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
+                density = LocalDensity.current
+                SearchTopBar(search, clock = { "5:36 PM" }, battery = { "70%" })
+            }
+        }
+        val problems = mutableListOf<String>()
+        for (each in TextSize.entries) {
+            size = each
+            compose.waitForIdle()
+            val dp = with(density) { 1.dp.toPx() }
+            val title = compose.onNodeWithText("Search").fetchSemanticsNode()
+            val titleEnd = title.boundsInRoot.left + layoutOf(title).size.width
+            val field = compose.onNodeWithTag(SearchTags.FIELD).fetchSemanticsNode().boundsInRoot
+            val reach = (PlumDimens.searchFieldInsetX + CollarSize.Field.sidePadding).value * dp
+            val before = (field.left - reach - titleEnd) / dp
+            if (before < PlumDimens.topBarItemGap.value - 0.5f) problems += "$each: $before dp from the title to the field's collar"
+            val count = compose.onNodeWithText("games", substring = true).fetchSemanticsNode().boundsInRoot
+            val after = (count.left - (field.right + reach)) / dp
+            if (after < PlumDimens.topBarItemGap.value - 0.5f) problems += "$each: $after dp from the field's collar to the count"
         }
         assertTrue(problems.joinToString("\n"), problems.isEmpty())
     }

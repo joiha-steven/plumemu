@@ -100,8 +100,7 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
     fun aTapOnTheRowOpensThePanelAndTheNameIsLightDarkOrCustom() {
         model.onTapSection(SettingsSection.Appearance)
         model.onTapSection(SettingsSection.Appearance)
-        val row = SettingsSection.Appearance.options.indexOf(SettingsOption.TextColor)
-        model.onTapValue(row, actions.settings, wide)
+        tapIntoColorPage(SettingsOption.TextColor)
         assertEquals(PanelPage.TextPresets, model.focus.page)
         assertEquals(R.string.settings_text_light, textColorName(TextColorSetting.Light))
         assertEquals(R.string.settings_text_dark, textColorName(TextColorSetting.Dark))
@@ -121,7 +120,7 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
         assertNull(model.colorWrite?.refusal)
         assertEquals("every step is a colour that reads", presets[1], appearance.textColor)
         press(Action.Back)
-        assertEquals(SettingsColumn.Options, model.focus.column)
+        assertOnColorsRow(COLORS_TEXT_ITEM)
     }
 
     @Test
@@ -129,7 +128,7 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
         use(ColorSetting.Preset("Black"), TextColorSetting.Light)
         openTextPanel()
         press(Action.Enter) // Light is current: A closes
-        assertEquals(SettingsColumn.Options, model.focus.column)
+        assertOnColorsRow(COLORS_TEXT_ITEM)
         assertEquals(TextColorSetting.Light, appearance.textColor)
     }
 
@@ -155,7 +154,8 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
             }
             press(Action.Back)
             press(Action.Back)
-            assertEquals("$name: B closes the panel", SettingsColumn.Options, model.focus.column)
+            assertOnColorsRow(COLORS_TEXT_ITEM, "$name: B closes the page")
+            press(Action.Back)
         }
     }
 

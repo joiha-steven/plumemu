@@ -23,6 +23,9 @@ import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.slabOverhangPx
+import com.plumemu.home.assertSlabRestsOn
+import com.plumemu.home.barColumns
+import com.plumemu.home.rowHeightPx
 import com.plumemu.home.slabTopRow
 import com.plumemu.home.rulesAround
 import org.junit.Assert.assertEquals
@@ -72,12 +75,13 @@ abstract class SettingsPanelPillNestedBase {
         val list = compose.onNodeWithTag(SettingsTags.PANEL_LIST, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         // The slab is drawn this far above its row; the pill's place is reported as the row's box.
         val overhang = compose.slabOverhangPx(inner(0))
+        val rowPx = compose.rowHeightPx(inner(0))
+        val xs = compose.barColumns(list.left)
         fun pillTop(): Int {
-            val xs = (list.left + list.width * 0.45f).toInt() until (list.left + list.width * 0.65f).toInt()
-            val y = compose.onRoot().captureToImage().slabTopRow(xs, list.top.toInt() - overhang.toInt() - 1, list.bottom.toInt())
+            val y = compose.onRoot().captureToImage().slabTopRow(xs, list.top.toInt() - overhang.toInt() - 1, list.bottom.toInt(), rowPx, overhang)
             return if (y < 0) -1 else Math.round(y + overhang)
         }
-        assertEquals("at rest the pill is on the first row", top(inner(0)).toInt(), pillTop())
+        compose.assertSlabRestsOn(inner(0), xs, list.top.toInt() - overhang.toInt() - 1, list.bottom.toInt())
         val stride = top(inner(1)) - top(inner(0))
         compose.mainClock.autoAdvance = false
         val worst = mutableListOf<String>()

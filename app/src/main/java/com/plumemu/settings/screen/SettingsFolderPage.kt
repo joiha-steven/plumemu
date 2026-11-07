@@ -75,11 +75,11 @@ internal fun FolderPage(
     val items = folderPageItems(content, folder.id)
     val focused = focus.panelIndex.coerceAtMost(items.lastIndex)
     val skippedDetail = stringResource(R.string.settings_folder_skipped)
-    Column(Modifier.fillMaxHeight().testTag(SettingsPanelTags.FOLDER_PAGE), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
+    PanelListColumn(Modifier.fillMaxHeight().testTag(SettingsPanelTags.FOLDER_PAGE)) {
         PanelTitle(folderLabel(folder))
         PanelBody(stringResource(R.string.settings_folder_body))
         PanelLine(model, SettingsOption.RomFolders, null)
-        PanelLazyList(focused, Modifier.weight(1f, fill = false)) {
+        PanelLazyList(focused, Modifier) {
             itemsIndexed(items, key = { _, item -> folderItemKey(item) }, contentType = { _, item -> item.javaClass.simpleName }) { index, item ->
                 val isAction = item !is FolderPageItem.Skipped
                 PanelItem(
@@ -125,7 +125,7 @@ internal fun SkipSubfolderPage(
     val pick = model.work.subfolders?.takeIf { it.folderId == folder.id }
     val names = pickableSubfolders(pick, content)
     val focused = focus.panelIndex.coerceAtMost(names.lastIndex)
-    Column(Modifier.fillMaxHeight().testTag(SettingsPanelTags.SKIP_SUBFOLDER_PAGE), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
+    PanelListColumn(Modifier.fillMaxHeight().testTag(SettingsPanelTags.SKIP_SUBFOLDER_PAGE)) {
         PanelTitle(stringResource(R.string.settings_skip_subfolder_title))
         PanelBody(stringResource(R.string.settings_skip_subfolder_body))
         val line =
@@ -135,7 +135,7 @@ internal fun SkipSubfolderPage(
                 is SubfolderState.Listed -> if (names.isEmpty()) stringResource(R.string.settings_skip_subfolder_none) else null
             }
         PanelLine(model, SettingsOption.RomFolders, line)
-        PanelLazyList(focused, Modifier.weight(1f, fill = false)) {
+        PanelLazyList(focused, Modifier) {
             itemsIndexed(names, key = { _, name -> name }, contentType = { _, _ -> "subfolder" }) { index, name ->
                 PanelItem(
                     title = name,

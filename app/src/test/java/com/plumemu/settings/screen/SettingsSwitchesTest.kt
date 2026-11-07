@@ -13,14 +13,10 @@ import org.junit.Test
 internal class SettingsSwitchesTest : SettingsModelHarness() {
     private val switches: Map<SettingsOption, (PlumSettings) -> Boolean> =
         mapOf(
-            SettingsOption.ScanOnStartup to { s -> s.library.scanOnStartup },
-            SettingsOption.EdgeFade to { s -> s.appearance.edgeFade },
-            SettingsOption.HoldToScrollFaster to { s -> s.controls.holdToScrollFaster },
             SettingsOption.PushRightToPlay to { s -> s.controls.pushRightToPlay },
             SettingsOption.ShowButtonHints to { s -> s.controls.showButtonHints },
             SettingsOption.ShowApps to { s -> s.homeScreen.showApps },
-            SettingsOption.ShowClock to { s -> s.homeScreen.showClock },
-            SettingsOption.ShowBattery to { s -> s.homeScreen.showBattery },
+            SettingsOption.ClockAndBattery to { s -> s.homeScreen.showClock && s.homeScreen.showBattery },
             SettingsOption.SystemInfo to { s -> s.homeScreen.isSystemInfoShown },
         )
 
@@ -55,10 +51,12 @@ internal class SettingsSwitchesTest : SettingsModelHarness() {
     fun aTapFlipsASwitchAtOnce() {
         model.onTapSection(SettingsSection.HomeScreen)
         model.onTapSection(SettingsSection.HomeScreen)
-        model.onTapOption(SettingsSection.HomeScreen.options.indexOf(SettingsOption.ShowClock), actions.settings, wide)
+        model.onTapOption(SettingsSection.HomeScreen.options.indexOf(SettingsOption.ClockAndBattery), actions.settings, wide)
         assertEquals(false, actions.settings.homeScreen.showClock)
-        model.onTapValue(SettingsSection.HomeScreen.options.indexOf(SettingsOption.ShowBattery), actions.settings, wide)
         assertEquals(false, actions.settings.homeScreen.showBattery)
+        model.onTapValue(SettingsSection.HomeScreen.options.indexOf(SettingsOption.ClockAndBattery), actions.settings, wide)
+        assertEquals(true, actions.settings.homeScreen.showClock)
+        assertEquals(true, actions.settings.homeScreen.showBattery)
         // System info is on until switched off, and a tap on its value flips it (touch).
         assertEquals(true, actions.settings.homeScreen.isSystemInfoShown)
         model.onTapValue(SettingsSection.HomeScreen.options.indexOf(SettingsOption.SystemInfo), actions.settings, wide)

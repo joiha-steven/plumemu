@@ -89,7 +89,7 @@ abstract class HomeFourThreeBoundsBase(
         show(FakeHomeContent.withArtwork(), BoardSystemsFocused)
         val row = bounds(HomeTags.game(0))
         assertDp("list starts after the systems column and the gap, less its 8 bleed", 248.dp - PlumDimens.gamesListBleed, row.left)
-        assertDp("list ends at the right margin", rightMargin, row.right)
+        assertDp("the rows end past the right margin by their end padding, so their right-hand text ends on it", rightMargin + PlumDimens.gameRowEndPadding, row.right)
         assertEquals("no text past the screen", emptyList<String>(), textsPast(screenWidth))
         assertEquals("no text past the margin (the year is whole)", emptyList<String>(), textsPast(rightMargin))
     }
@@ -119,21 +119,21 @@ abstract class HomeFourThreeBoundsBase(
         show(FakeHomeContent.board(), BoardSystemsFocused)
         val row = bounds(HomeTags.game(0))
         assertDp("preview starts after the systems column and the gap, less its 8 bleed", 248.dp - PlumDimens.gamesListBleed, row.left)
-        assertDp("preview ends at the right margin", rightMargin, row.right)
+        assertDp("the preview's rows end past the right margin by their end padding", rightMargin + PlumDimens.gameRowEndPadding, row.right)
         assertEquals("no text past the margin", emptyList<String>(), textsPast(rightMargin))
     }
 
     @Test
     fun recentWithoutArtShowsItsSystemCodeWholeWithTheSystemsOpen() {
         show(FakeHomeContent.mixedSystems(withBoxArt = false), emptyList())
-        assertDp("preview ends at the right margin", rightMargin, bounds(HomeTags.game(0)).right)
+        assertDp("the preview's rows end past the right margin by their end padding", rightMargin + PlumDimens.gameRowEndPadding, bounds(HomeTags.game(0)).right)
         assertEquals("the system code is whole", emptyList<String>(), textsPast(rightMargin))
     }
 
     @Test
     fun recentWithArtShowsItsSystemCodeWholeWithTheSystemsOpen() {
         show(FakeHomeContent.mixedSystems(withBoxArt = true), emptyList())
-        assertDp("preview ends at the right margin", rightMargin, bounds(HomeTags.game(0)).right)
+        assertDp("the preview's rows end past the right margin by their end padding", rightMargin + PlumDimens.gameRowEndPadding, bounds(HomeTags.game(0)).right)
         assertEquals("the system code is whole", emptyList<String>(), textsPast(rightMargin))
     }
 

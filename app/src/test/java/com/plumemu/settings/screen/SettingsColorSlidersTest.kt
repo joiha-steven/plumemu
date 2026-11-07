@@ -1,6 +1,7 @@
 package com.plumemu.settings.screen
 
 import com.plumemu.coredata.settings.ColorSetting
+import com.plumemu.coreui.theme.BackgroundPreset
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.theme.ColorRole
@@ -45,6 +46,32 @@ internal class SettingsColorSlidersTest : SettingsModelHarness() {
         press(Action.Enter)
         openPlus()
         assertEquals(PanelPage.TextCustom, model.focus.page)
+    }
+
+    private fun downToTheCodeRowKeepsTheColour(background: String) {
+        actions.settings = actions.settings.let { it.copy(appearance = it.appearance.copy(background = ColorSetting.Preset(background))) }
+        openAccent()
+        val swatches = model.customPalette(PanelPage.AccentCustom).size
+        val codeRow = swatches + ColorSlider.entries.size
+        repeat(BOUNDED_WALK) {
+            press(Action.Move(Direction.Down))
+            if (model.focus.panelIndex >= swatches) assertTrue("$background: ${model.sliderHsl} after moving Down", model.sliderHsl.saturation > 0 || model.sliderHsl.lightness > 0)
+        }
+        assertEquals("$background ends on the Color code row", codeRow, model.focus.panelIndex)
+    }
+
+    /** On the real model the sliders never read 0 on the way down, and the page reaches the Color code row whatever number of swatches reads on the background. */
+    @Test
+    fun downReachesTheCodeRowOnGraphite() = downToTheCodeRowKeepsTheColour("Graphite")
+
+    @Test
+    fun downReachesTheCodeRowOnPaper() = downToTheCodeRowKeepsTheColour("Paper")
+
+    /** Why the swatch focused on opening differs by background: only the colours that read on it are offered, so the nearest one differs. */
+    @Test
+    fun eachBackgroundHasItsOwnReadableSwatches() {
+        fun swatchesOn(background: BackgroundPreset) = ColorPages.palette(PanelPage.AccentCustom, background.color)
+        assertNotEquals(swatchesOn(BackgroundPreset.Graphite), swatchesOn(BackgroundPreset.Paper))
     }
 
     private fun openAccent() {
@@ -212,7 +239,7 @@ internal class SettingsColorSlidersTest : SettingsModelHarness() {
         repeat(3) { move(Direction.Right) }
         val shown = actions.settings.appearance.background
         press(Action.Enter)
-        assertEquals(SettingsColumn.Options, model.focus.column)
+        assertOnColorsRow(COLORS_BACKGROUND_ITEM)
         assertEquals(shown, actions.settings.appearance.background)
     }
 
@@ -565,5 +592,9 @@ internal class SettingsColorSlidersTest : SettingsModelHarness() {
         reported.drain()
         model.onTouchSlider(hue, 0.5f, actions.settings, wide)
         assertTrue("a new touch sounds again", Outcome.Moved in reported.drain())
+    }
+
+    private companion object {
+        const val BOUNDED_WALK = 40
     }
 }

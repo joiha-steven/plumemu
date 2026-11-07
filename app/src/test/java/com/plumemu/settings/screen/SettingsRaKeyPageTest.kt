@@ -1,6 +1,7 @@
 package com.plumemu.settings.screen
 
 import com.plumemu.account.RA_KEY_PAGE_URL
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.account.SignInItem
 import com.plumemu.account.SignInResult
 import com.plumemu.coreinput.Action
@@ -16,7 +17,7 @@ import org.junit.Test
 internal class SettingsRaKeyPageTest : SettingsModelHarness() {
     /** A on the row opens the form typing on the name (tray up); B puts the tray away and the form stays. */
     private fun openForm(option: SettingsOption) {
-        model.content = model.content.copy(account = com.plumemu.account.AccountStatus.SignedOut)
+        model.content = model.content.copy(account = com.plumemu.account.AccountStatus.SignedOut, chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper)
         openSection(SettingsSection.Accounts)
         focusOption(option)
         press(Action.Enter)

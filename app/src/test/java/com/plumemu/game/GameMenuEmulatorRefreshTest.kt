@@ -17,7 +17,10 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Back from the store: an open panel that talks of emulators to get shows what is installed now. */
+/**
+ * Emulators to get. Back from a download, an open panel that talks of them shows what is installed
+ * now; a row kept with nothing to get is passed over.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class GameMenuEmulatorRefreshTest {
     private val game = GameRef("7", "Chrono Trigger")
@@ -39,7 +42,7 @@ class GameMenuEmulatorRefreshTest {
     @Test
     fun theMissingEmulatorMessageClosesOnceItIsInstalled() =
         runMenu {
-            val offer = EmulatorOffer(Epsxe.id, Epsxe.name, Epsxe.packageName)
+            val offer = EmulatorOffer(Epsxe.id, Epsxe.name, Epsxe.page)
             val actions = FakeGameActions(outcome = { LaunchOutcome.EmulatorMissing(7, offer, ChoiceSource.PersonForGame) })
             actions.listing = { sampleListing(installed = listOf(DuckStation), notInstalled = listOf(Epsxe)) }
             val menu = controller(actions)
@@ -68,7 +71,7 @@ class GameMenuEmulatorRefreshTest {
             val after = menu.panel!!
             assertTrue(after.screen is PanelScreen.PlayWith)
             assertTrue("the installed ePSXe is a row to play with", after.content.focusableRows.any { it.command is PanelCommand.PlayWith && it.label == UiText.Plain(Epsxe.name) })
-            assertFalse("no Get it for it any more", after.content.focusableRows.any { it.command == PanelCommand.GetEmulator(Epsxe.packageName, Epsxe.name) })
+            assertFalse("no Get it for it any more", after.content.focusableRows.any { it.command == PanelCommand.GetEmulator(Epsxe.page.orEmpty(), Epsxe.name) })
             assertTrue("the focus is on a row", after.focus in after.content.focusableRows.indices)
             assertEquals(before.parent, after.parent)
         }
@@ -149,5 +152,34 @@ class GameMenuEmulatorRefreshTest {
             menu.emulatorsMayHaveChanged()
             menu.back()
             assertEquals(UiText.Plain("DuckStation"), playWithValue(menu))
+        }
+
+    @Test
+    fun theCursorPassesOverRowsWithNothingToGet() =
+        runMenu {
+            val actions = FakeGameActions()
+            actions.listing = { sampleListing(current = NoPageEmu.id, notInstalled = listOf(NoPageEmu, Epsxe, NoPageEmu.copy(id = "nopage2"), RiskyEmu)) }
+            val menu = controller(actions)
+            openPlayWith(menu)
+            menu.down(3) // over the current choice, which has no page
+            assertEquals("get:${Epsxe.id}", menu.focusedKey())
+            menu.down() // past the last one with nothing to get: back to the top
+            assertEquals(AUTOMATIC_KEY, menu.focusedKey())
+            menu.down(3)
+            menu.onAction(Action.Enter)
+            assertEquals(listOf(Epsxe.page), actions.downloadPages)
+        }
+
+    @Test
+    fun anOpenNoEmulatorMessageWithNoPageClosesOnOk() =
+        runMenu {
+            val actions = FakeGameActions(outcome = { LaunchOutcome.NoEmulatorForSystem(7, "psx", emptyList()) })
+            actions.listing = { sampleListing(installed = emptyList(), automatic = null, notInstalled = listOf(NoPageEmu)) }
+            val menu = controller(actions)
+            menu.play(game)
+            assertEquals("ok", menu.focusedKey())
+            menu.onAction(Action.Enter)
+            assertEquals(null, menu.panel)
+            assertTrue(actions.downloadPages.isEmpty())
         }
 }

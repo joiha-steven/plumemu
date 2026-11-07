@@ -62,10 +62,11 @@ class SettingsSectionsBoundsTest {
     @Test
     fun systemRowsAreOptionRowsAndTheirEmulatorsListRowsInThePanel() {
         show(SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Emulators, rememberedOption = mapOf(SettingsSection.Emulators to ShotContent.PSX_ROW)))
-        compose.onNodeWithTag(SettingsTags.system(0)).assertLeftPositionInRootIsEqualTo(206.dp).assertWidthIsEqualTo(314.67.dp).assertHeightIsEqualTo(40.dp)
+        compose.onNodeWithTag(SettingsTags.system(0)).assertLeftPositionInRootIsEqualTo(222.5.dp).assertWidthIsEqualTo(298.17.dp).assertHeightIsEqualTo(40.dp)
         assertEquals("rows 42 apart", 42f, (bounds(SettingsTags.system(1)).top - bounds(SettingsTags.system(0)).top).value, 0.01f)
-        compose.onNodeWithTag(SettingsTags.panelItem(0)).assertLeftPositionInRootIsEqualTo(538.67.dp).assertWidthIsEqualTo(205.33.dp).assertHeightIsEqualTo(40.dp)
-        assertEquals(42f, (bounds(SettingsTags.panelItem(1)).top - bounds(SettingsTags.panelItem(0)).top).value, 0.01f)
+        // "Ask on the first game" beside its badge takes two lines here, with a card's padding above and below them.
+        compose.onNodeWithTag(SettingsTags.panelItem(0)).assertLeftPositionInRootIsEqualTo(538.67.dp).assertWidthIsEqualTo(205.33.dp).assertHeightIsEqualTo(58.dp)
+        assertEquals(60f, (bounds(SettingsTags.panelItem(1)).top - bounds(SettingsTags.panelItem(0)).top).value, 0.01f)
     }
 
     @Test

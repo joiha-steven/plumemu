@@ -155,7 +155,7 @@ class SettingsRescanTest {
     @Test
     fun withoutAResultThePanelIsTheNormalBody() {
         show(ShotContent.library)
-        see("Reads your folders again and adds or removes what changed.")
+        see("Reads your folders again and looks for new emulators.")
         compose.onNodeWithText("Done", substring = true).assertDoesNotExist()
         compose.onNodeWithTag(SettingsPanelTags.STATUS).assertDoesNotExist()
     }

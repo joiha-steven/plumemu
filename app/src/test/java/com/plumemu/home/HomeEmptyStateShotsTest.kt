@@ -32,7 +32,12 @@ class HomeEmptyStateShotsTest {
     /** The board's empty state: the primary button (Files not added) focused. */
     @Test fun noGamesPrimaryFocused() = shot("home_empty_state_no_games_primary", EmptyLibrary.NoGames, inButtons = true)
 
+    /** A folder with no files to report: one primary button, Choose folder. */
+    @Test fun noFiles() = shot("home_empty_state_no_files", EmptyLibrary.NoFiles)
+
     @Test fun noFolderLargest() = shot("home_empty_state_no_folder", EmptyLibrary.NoFolder, TextSize.Largest)
 
     @Test fun noGamesLargest() = shot("home_empty_state_no_games", EmptyLibrary.NoGames, TextSize.Largest)
+
+    @Test fun noFilesLargest() = shot("home_empty_state_no_files", EmptyLibrary.NoFiles, TextSize.Largest)
 }

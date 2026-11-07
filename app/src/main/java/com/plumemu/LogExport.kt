@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Settings › Advanced › Export logs: the log file ([AppLog.snapshot]: its own file and this app's lines of logcat) to Android's
+ * Report a problem's Share log (Settings › Advanced › Export logs in a build with no report form): the log file ([AppLog.snapshot]: its own file and this app's lines of logcat) to Android's
  * share sheet, through the app's FileProvider ([LOG_AUTHORITY_SUFFIX], `res/xml/log_export_paths.xml`,
  * which serves the export folder only). [onDone] gets false, on the main thread, when there is no
  * log, the file could not be written or nothing can share it.

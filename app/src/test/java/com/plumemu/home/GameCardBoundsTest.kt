@@ -286,7 +286,7 @@ class GameCardBoundsTest {
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
     fun noRowBelowTheCardOnTheLastAt768() = assertNoRowBelowTheCard("768 last", TextSize.Small, 1)
 
-    /** At the last row, no sliver of a cut row shows between the title and the first whole row, and one-line rows keep one pitch. */
+    /** At the last row, the list starts below the title and one-line rows keep one pitch (a cut row's hiding is GamePanelWholeRowsTest's). */
     private fun assertListTopAndPitch(what: String, text: TextSize) {
         val facts = menuFacts()
         val rows = OpenPanel(game, PanelScreen.Menu(facts)).content.focusableRows
@@ -294,21 +294,10 @@ class GameCardBoundsTest {
         compose.waitForIdle()
         val d = compose.density.density
         val listTop = compose.onNodeWithTag(GamePanelTags.ROWS, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.top
-        val lead = CardDimens.listEdgeLead.value * d
         val title = compose.onNodeWithTag(GamePanelTags.TITLE, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         assertTrue("$what: the list starts below the title", listTop >= title.bottom - 1f)
         val rowNodes = rows.map { compose.onAllNodesWithTag(GamePanelTags.row(it.key), useUnmergedTree = true).fetchSemanticsNodes().firstOrNull() }
-        for ((index, row) in rowNodes.withIndex()) {
-            if (row == null) continue
-            for (label in allTexts(row)) {
-                val box = label.boundsInRoot
-                if (box.height <= 0f) continue
-                if (label.size.height <= box.height + 1f) continue
-                // A text the list's top cuts is either hidden by the solid lead or shows most of itself (fading): never a sliver of it.
-                val beyondLead = box.bottom - (listTop + lead)
-                assertTrue("$what: a sliver of '${label.config[SemanticsProperties.Text].joinToString()}' (row $index) shows: $beyondLead of ${label.size.height} px past the solid lead", beyondLead <= 0.5f || beyondLead >= label.size.height * 0.5f)
-            }
-        }
+        // The sliver check that stood here read layout bounds. A cut row is now hidden whole at draw time, so the pixels decide: GamePanelWholeRowsTest (every focus, all sizes).
         val whole = rowNodes.filterNotNull().filter { it.size.height <= it.boundsInRoot.height + 1f }
         val lines = whole.filter { allTexts(it).size == 1 }
         for ((a, b) in lines.zipWithNext()) {
@@ -354,13 +343,13 @@ class GameCardBoundsTest {
     fun listTopAndPitchAt832Largest() = assertListTopAndPitch("832 largest", TextSize.Largest)
 
     /**
-     * Just outside the card's rounded bottom corners, while the menu scrolls (its bottom fade draws), no pixel is lighter than the
+     * Just outside the card's rounded bottom corners, while the menu scrolls (rows continue past its bottom), no pixel is lighter than the
      * page beside the card at the same height: the fade in the card's fill stays inside the card's arc.
      */
     private fun assertNothingPastTheBottomCorners(what: String, text: TextSize) {
         show(text, OpenPanel(game, PanelScreen.Menu(menuFacts())))
         compose.waitForIdle()
-        assertTrue("$what: the menu scrolls, so its bottom fade draws", compose.onAllNodesWithTag(GamePanelTags.FADE_BOTTOM, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        assertTrue("$what: the menu scrolls, so rows continue past its bottom (the chevron's tag is there)", compose.onAllNodesWithTag(GamePanelTags.FADE_BOTTOM, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
         val d = compose.density.density
         val card = compose.onNodeWithTag(GamePanelTags.CARD, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val shot = compose.onRoot().captureToImage().toPixelMap()

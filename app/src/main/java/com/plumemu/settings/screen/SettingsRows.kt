@@ -11,65 +11,69 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import com.plumemu.coreui.components.borderDrawn
-import com.plumemu.coreui.components.KeyState
-import com.plumemu.coreui.components.StripeAnchor
-import com.plumemu.coreui.components.focusPill
-import com.plumemu.coreui.components.rememberKeyState
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.plumemu.R
 import com.plumemu.account.AccountStatus
 import com.plumemu.account.RaAccountStatus
 import com.plumemu.coredata.settings.BoxArtRegionSetting
-import com.plumemu.secondscreen.isSecondScreenOn
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.InGameSetting
+import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.PlumSettings
-import com.plumemu.coredata.settings.RecentSizeSetting
 import com.plumemu.coredata.settings.SortGamesSetting
 import com.plumemu.coredata.settings.SoundLevel
-import com.plumemu.language.AppLanguages
-import com.plumemu.language.languageName
-import com.plumemu.coredata.settings.TextColorSetting
-import com.plumemu.coredata.settings.GridSizeSetting
-import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.SwitchSystemWithSetting
+import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coredata.settings.TextWeightSetting
+import com.plumemu.coreui.components.KeyState
+import com.plumemu.coreui.components.StripeAnchor
+import com.plumemu.coreui.components.borderDrawn
+import com.plumemu.coreui.components.focusPill
+import com.plumemu.coreui.components.rememberKeyState
 import com.plumemu.coreui.theme.AccentPreset
 import com.plumemu.coreui.theme.BackgroundPreset
 import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.coreui.theme.FocusSlab
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.Rgb
+import com.plumemu.coreui.theme.WidthClass
+import com.plumemu.coreui.theme.toComposeColor
 import com.plumemu.graph.BackupState
 import com.plumemu.graph.RestoreState
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import com.plumemu.coreui.theme.Rgb
-import com.plumemu.coreui.theme.toComposeColor
 import com.plumemu.home.rememberCountFormat
+import com.plumemu.language.AppLanguages
+import com.plumemu.language.languageName
+import com.plumemu.secondscreen.isSecondScreenOn
 import com.plumemu.settings.colorSet
 import com.plumemu.settings.toThemeSettings
-import androidx.compose.ui.res.pluralStringResource
 import com.plumemu.setup.SetupSwitch
 
 /*
@@ -126,6 +130,18 @@ internal sealed interface OptionValue {
 }
 
 @Composable
+private fun optionLabelStyle(
+    isBold: Boolean,
+    isPanelSized: Boolean,
+): TextStyle {
+    val type = PlumTheme.type
+    return when {
+        isPanelSized -> if (isBold) type.settingsPanelItemFocused else type.meta
+        else -> if (isBold) type.settingsOptionFocused else type.settingsOption
+    }
+}
+
+@Composable
 internal fun OptionRow(
     option: SettingsOption,
     value: OptionValue,
@@ -135,10 +151,14 @@ internal fun OptionRow(
     label: String = stringResource(option.label),
     tag: String = SettingsTags.option(option),
     valueTag: String = SettingsTags.value(option),
-    /** An unknown folder's name may need a third line at the largest sizes. */
-    labelLines: Int = 2,
     /** Room above and below the text: the two-line Confirm row (audit B5) keeps clear of its ring. */
     verticalPadding: Dp = 0.dp,
+    /** The value on its own line under the label, for a column too narrow to hold both whole. */
+    valueBelow: Boolean = false,
+    /** The label never wraps: a brand's one long word must not break inside it, and a value that does not fit beside it goes under it, whole ([LabelThenValue]). */
+    keepsLabelOnOneLine: Boolean = option == SettingsOption.ScraperAccount || option == SettingsOption.RetroAchievementsAccount,
+    /** A row heading a list of panel rows: its label is their size. */
+    isPanelSized: Boolean = false,
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
@@ -168,26 +188,58 @@ internal fun OptionRow(
     val knob = rememberKeyState()
     // The accent bar of the two-line Confirm row stands beside its label, not beside the line under it.
     val anchor = remember { StripeAnchor() }
+    val titleAnchored = option == SettingsOption.ConfirmBottom || valueBelow || keepsLabelOnOneLine
+    // On a screen too narrow for the preview column the values lie past its edge: none is ever whole there, and none shows a sliver of itself.
+    val layout = PlumTheme.layout
+    val valuePastScreen = look == OptionLook.Preview && layout.widthClass == WidthClass.Narrow && layout.settingsOptionsPreviewWidth == layout.settingsOptionsWidth
+    val valueShown = if (valuePastScreen) Modifier.alpha(0f) else Modifier
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
                 .heightIn(min = PlumTheme.layout.rowHeight)
-                .focusPill(focused, mirror = knob, stripe = if (option == SettingsOption.ConfirmBottom) anchor else null)
+                .focusPill(focused, mirror = knob, stripe = if (titleAnchored) anchor else null)
                 .padding(start = PlumDimens.gameRowPadding, end = PlumDimens.panelTextEnd, top = verticalPadding, bottom = verticalPadding)
                 .testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f)) {
-            val style = if (focused || look == OptionLook.Current) type.settingsOptionFocused else type.settingsOption
-            BasicText(label, style = style, color = labelColor, maxLines = labelLines, overflow = TextOverflow.Ellipsis, onTextLayout = if (option == SettingsOption.ConfirmBottom) anchor::measured else null, modifier = if (option == SettingsOption.ConfirmBottom) anchor.title() else Modifier)
-            // The confirm option names the buttons on a second line; the board's 16 sp label would not fit.
-            if (option == SettingsOption.ConfirmBottom) {
-                BasicText(stringResource(R.string.settings_confirm_bottom_detail), style = type.smallFact, color = secondaryColor, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        val style = optionLabelStyle(isBold = focused || look == OptionLook.Current, isPanelSized)
+        if (keepsLabelOnOneLine) {
+            val leadRoom = remember { ValueLeadRoom() }
+            LabelThenValue(PlumDimens.rowTrailingGap, PlumDimens.settingsTwoLineRowPadding, leadRoom, Modifier.weight(1f)) {
+                BasicText(label, style = style, color = labelColor, maxLines = 1, softWrap = false, onTextLayout = anchor::measured, modifier = anchor.title())
+                Box(valueModifier.then(valueShown).testTag(valueTag)) { OptionValueView(value, valueColor, focused, valueTag, knob, leadRoom) }
             }
+            return@Row
         }
-        Spacer(Modifier.width(PlumDimens.rowTrailingGap))
-        Box(valueModifier.testTag(valueTag)) { OptionValueView(value, valueColor, focused, valueTag, knob) }
+        val labelPart =
+            @Composable {
+                Column {
+                    BasicText(label, style = style, color = labelColor, maxLines = 2, overflow = TextOverflow.Ellipsis, onTextLayout = if (titleAnchored) anchor::measured else null, modifier = if (titleAnchored) anchor.title() else Modifier)
+                    // The confirm option names the buttons on a second line; the board's 16 sp label would not fit.
+                    if (option == SettingsOption.ConfirmBottom) {
+                        BasicText(stringResource(R.string.settings_confirm_bottom_detail), style = type.smallFact, color = secondaryColor, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    if (valueBelow) Box(valueModifier.testTag(valueTag)) { OptionValueView(value, valueColor, focused, valueTag, knob) }
+                }
+            }
+        if (valueBelow) {
+            Box(Modifier.weight(1f)) { labelPart() }
+            return@Row
+        }
+        val measurer = rememberTextMeasurer()
+        val boldStyle = optionLabelStyle(isBold = true, isPanelSized)
+        LabelBesideValue(
+            gap = PlumDimens.rowTrailingGap,
+            leastGap = PlumDimens.settingsValueGap,
+            // A switch is as tall as a line and a half of text and sits on its row as it is.
+            padding = if (verticalPadding > 0.dp || value is OptionValue.Switch) 0.dp else PlumDimens.settingsTwoLineRowPadding,
+            boldLabelWidth = { measurer.measure(label, boldStyle, softWrap = false, maxLines = 1).size.width },
+            modifier = Modifier.weight(1f),
+        ) {
+            labelPart()
+            Box(valueModifier.then(valueShown).testTag(valueTag)) { OptionValueView(value, valueColor, focused, valueTag, knob) }
+        }
     }
 }
 
@@ -198,6 +250,7 @@ private fun OptionValueView(
     focused: Boolean,
     valueTag: String,
     knob: KeyState,
+    leadRoom: ValueLeadRoom? = null,
 ) {
     val colors = PlumTheme.colors
     // On the focused row the value takes the row's weight, as the board's focused trailing text does.
@@ -205,21 +258,21 @@ private fun OptionValueView(
     // The marks are dimmed text; a choice's chevrons keep their room while hidden so the value never moves with focus.
     val dim: () -> Color = { colors.muted }
     val hidden: () -> Color = { Color.Transparent }
-    // A long value (an emulator, "Ask on the first game") may take two lines, in at most half the row.
-    val widest = Modifier.widthIn(max = PlumTheme.layout.settingsOptionsWidth / 2)
     when (value) {
         is OptionValue.Text ->
-            if (value.text.isNotEmpty()) BasicText(value.text, style = style, color = color, maxLines = 2, modifier = widest)
+            if (value.text.isNotEmpty()) BasicText(value.text, style = style, color = color, maxLines = 2)
         is OptionValue.Choice ->
-            Row(widest, verticalAlignment = Alignment.CenterVertically) {
-                ValueChevron(ChevronSide.Left, style, if (focused) dim else hidden, tag = SettingsTags.chevronLeft(valueTag))
-                Spacer(Modifier.width(PlumDimens.settingsValueGap))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.valueLead(leadRoom), verticalAlignment = Alignment.CenterVertically) {
+                    ValueChevron(ChevronSide.Left, style, if (focused) dim else hidden, tag = SettingsTags.chevronLeft(valueTag))
+                    Spacer(Modifier.width(PlumDimens.settingsValueGap))
+                }
                 BasicText(value.text, style = style, color = color, maxLines = 2, modifier = Modifier.weight(1f, fill = false).testTag(SettingsTags.valueText(valueTag)))
                 Spacer(Modifier.width(PlumDimens.settingsValueGap))
                 ValueChevron(ChevronSide.Right, style, if (focused || value.opensPanel) dim else hidden, tag = SettingsTags.chevronRight(valueTag))
             }
         is OptionValue.Opens ->
-            Row(widest, verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (value.isSignedIn) {
                     ValueCheck(style, { colors.accent }, tag = SettingsTags.check(valueTag))
                     Spacer(Modifier.width(PlumDimens.settingsValueGap))
@@ -250,7 +303,6 @@ internal fun optionValue(
     versionName: String,
     content: SettingsContent = SettingsContent(),
     index: Int = 0,
-    isDetecting: Boolean = false,
 ): OptionValue {
     // Per appearance, not per row and recomposition: drawing a failing stored colour settles it (a search).
     val theme = remember(settings.appearance, settings.advanced.animations) { settings.toThemeSettings() }
@@ -265,12 +317,12 @@ internal fun optionValue(
         SettingsOption.Language ->
             OptionValue.Opens(languageName(AppLanguages.byTag(settings.appearance.language)?.tag))
         SettingsOption.Colors -> OptionValue.Choice(stringResource(choiceName(option, option.choiceIndex(settings, textSizeInUse()))), opensPanel = true)
-        SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight, SettingsOption.LeftEdge, SettingsOption.GridSize, SettingsOption.SortGames, SettingsOption.RecentSize, SettingsOption.SystemOrder,
+        SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight, SettingsOption.LeftEdge, SettingsOption.GridSize, SettingsOption.SortGames, SettingsOption.SystemOrder,
         SettingsOption.SecondScreenInGame, SettingsOption.BoxArtRegion, SettingsOption.Keyboard, SettingsOption.SwitchSystemWith, SettingsOption.Sounds,
         ->
             OptionValue.Choice(stringResource(choiceName(option, option.choiceIndex(settings, textSizeInUse()))))
-        SettingsOption.ConfirmBottom, SettingsOption.Animations, SettingsOption.EdgeFade, SettingsOption.Vibration, SettingsOption.UsageStatistics, SettingsOption.ScanOnStartup, SettingsOption.CheckUpdatesDaily,
-        SettingsOption.HoldToScrollFaster, SettingsOption.PushRightToPlay, SettingsOption.ShowButtonHints, SettingsOption.ShowApps, SettingsOption.ShowClock, SettingsOption.ShowBattery, SettingsOption.SystemInfo,
+        SettingsOption.ConfirmBottom, SettingsOption.Animations, SettingsOption.Vibration, SettingsOption.UsageStatistics, SettingsOption.CheckUpdatesDaily,
+        SettingsOption.PushRightToPlay, SettingsOption.ShowButtonHints, SettingsOption.ShowApps, SettingsOption.ClockAndBattery, SettingsOption.SystemInfo,
         -> OptionValue.Switch(option.switchValue(settings))
         SettingsOption.SecondScreen -> OptionValue.Switch(isSecondScreenOn(settings.secondScreen, content.secondScreen))
         SettingsOption.RomFolders -> {
@@ -280,19 +332,16 @@ internal fun optionValue(
         SettingsOption.Systems -> OptionValue.Opens(systemsShownText(content, settings))
         SettingsOption.Rescan -> OptionValue.Text(if (content.isScanning) stringResource(R.string.settings_rescan_running) else "")
         SettingsOption.SystemEmulator -> OptionValue.Opens(emulatorValue(content.systems.getOrNull(index)))
-        SettingsOption.UnknownFolder -> OptionValue.Opens(unknownFolderValue(content, content.unknownFolderAtRow(index)))
-        SettingsOption.FilesNotAdded -> OptionValue.Opens(notAddedCount(content.notAdded).let { if (it == 0) "" else rememberCountFormat().format(it) })
-        SettingsOption.DetectEmulators -> OptionValue.Text(if (isDetecting) stringResource(R.string.settings_detect_running) else "")
+        SettingsOption.FilesNotAdded -> OptionValue.Opens(filesNotAddedValue(content))
         // Shown as the board's switch; A asks Android, which is the only one that can change it.
         SettingsOption.UseAsHome -> OptionValue.Switch(content.isHomeApp)
         SettingsOption.Version -> OptionValue.Text(versionName)
-        SettingsOption.PlatformData -> OptionValue.Text(content.platformData?.let { platformDataRowValue(it) }.orEmpty())
-        SettingsOption.UpdateAvailable -> opensUnlessBusy(updateRowValue(content.update), content.update.isUpdateRunning)
-        SettingsOption.CheckForUpdates -> OptionValue.Text(checkRowValue(content.update))
+        SettingsOption.Updates -> updatesRowValue(content.update)
+        SettingsOption.BackupAndRestore -> backupAndRestoreValue(content)
         SettingsOption.Backup -> opensUnlessBusy(backupRowValue(content.backup), content.backup is BackupState.Running)
         SettingsOption.Restore -> opensUnlessBusy(restoreRowValue(content.restore), content.restore.isRunning())
         SettingsOption.UndoRestore -> opensUnlessBusy(undoRowValue(content), content.restore.let { it is RestoreState.Replacing && it.isUndo })
-        SettingsOption.ResetAll, SettingsOption.ResetLibrary, SettingsOption.ClearRecent, SettingsOption.Licenses, SettingsOption.HiddenGames,
+        SettingsOption.Reset, SettingsOption.ResetAll, SettingsOption.ResetLibrary, SettingsOption.ClearRecent, SettingsOption.Licenses, SettingsOption.HiddenGames,
         SettingsOption.UnidentifiedGames, SettingsOption.ReportProblem,
         ->
             OptionValue.Opens("")
@@ -367,8 +416,6 @@ internal fun optionLabel(
 ): String =
     when (option) {
         SettingsOption.SystemEmulator -> content.systems.getOrNull(index)?.name.orEmpty()
-        SettingsOption.UnknownFolder ->
-            content.unknownFolderAtRow(index)?.let { row -> if (row.answer == FolderAnswer.Unanswered) stringResource(R.string.settings_unknown_folder, row.name) else row.name }.orEmpty()
         SettingsOption.HiddenGames -> stringResource(R.string.settings_hidden_games, rememberCountFormat().format(content.hiddenGames.size))
         SettingsOption.UnidentifiedGames -> stringResource(R.string.settings_unidentified_games, rememberCountFormat().format(content.unidentifiedGames.size))
         SettingsOption.ScraperStatus -> boxArtLineOf(content.account, content.boxArt)?.let { boxArtLineText(it) }.orEmpty()
@@ -397,6 +444,7 @@ internal object SettingsTags {
     const val OPTIONS = "settings_options"
     const val PANEL = "settings_panel"
     const val PANEL_LIST = "settings_panel_list"
+    const val FONT_CARD = "settings_font_card"
 
     /** Library › Systems: the panel, its list, and in each row the name, the "Hidden" label and the drag handle. */
     const val SYSTEMS_PANEL = "settings_systems_panel"
@@ -410,8 +458,9 @@ internal object SettingsTags {
     const val SYSTEM_HIDDEN = "settings_system_hidden"
     const val SYSTEM_HANDLE = "settings_system_handle"
     const val ACCOUNT_PANEL = "settings_account_panel"
+    const val CONFIRM_PANEL = "settings_confirm_panel"
 
-    /** Advanced › Back up…'s panel, which scrolls when the text is large. */
+    /** Back up…'s panel, which scrolls when the text is large. */
     const val BACKUP_PANEL = "settings_backup_panel"
     const val UPDATE_PANEL = "settings_update_panel"
     const val UPDATE_NOTES = "settings_update_notes"
@@ -474,11 +523,7 @@ internal object SettingsTags {
     /** A row of Emulators: one per system, by its index among them. */
     fun system(index: Int) = "settings_option_system_$index"
 
-    /** A row of Library's unknown folders, by the folder's ids (the list reorders as folders are answered). */
-    fun unknownFolder(key: FolderKey) = "settings_option_unknown_${key.folderId}_${key.relativePath}"
-
-    fun unknownFolderValue(key: FolderKey) = "settings_value_unknown_${key.folderId}_${key.relativePath}"
-
+    /** An unknown folder's page, opened from Files not added. */
     const val UNKNOWN_FOLDER_PANEL = "settings_unknown_folder_panel"
 
     fun systemValue(index: Int) = "settings_value_system_$index"

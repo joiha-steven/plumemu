@@ -375,7 +375,7 @@ internal class AppGameActions(
         withContext(io) { graph.libraryNotices.expectCoreTry(gameKey, emulatorId, tried) }
     }
 
-    override fun openStorePage(packageName: String): Boolean = openStorePage(packageName) { app.startActivity(it) }
+    override fun openDownloadPage(url: String): Boolean = openDownloadPage(url) { app.startActivity(it) }
 
     override fun rescanLibrary(): Boolean {
         if (graph.startup.isScanning) return false
@@ -451,7 +451,7 @@ internal class AppGameActions(
     private fun requireId(gameKey: String): Long = requireNotNull(gameKey.toLongOrNull()) { "row $gameKey is not a game of the library" }
 }
 
-private fun itemOf(emulator: Emulator) = EmulatorItem(emulator.id, emulator.name, emulator.primary.packageName, emulator.legalRisk, emulator.core)
+private fun itemOf(emulator: Emulator) = EmulatorItem(emulator.id, emulator.name, emulator.primary.packageName, emulator.legalRisk, emulator.core, emulator.page)
 
 /**
  * "Play with" for the game [fileName] of [system]: only the emulators that can open the file (the

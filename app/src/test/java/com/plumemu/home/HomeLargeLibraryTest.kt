@@ -49,12 +49,14 @@ class HomeLargeLibraryTest {
         }
         assertEquals(10, state.focus.row)
         // Scrolled just enough to keep three rows past the focus (the glide's room and the context,
-        // design/rules.md): row 13 at the bottom, so rows 0 to 5 have left the screen (the list is exactly the
-        // eight rows 40 apart that fit at 768x432, so rows 6 to 13 show). Row 5 is still composed, out of
-        // sight: the glide keeps one row past each edge.
+        // design/rules.md): row 13 below it, so rows 0 to 4 have left the screen. The list runs under both bars:
+        // rows 6 to 13 are the eight whole rows 40 apart that fit between the fades at 768x432, and row 5 stands part
+        // under the top bar (row 14 under the hint bar). Row 4 is still composed, out of sight: the glide keeps one
+        // row past each edge.
         compose.onNodeWithTag(HomeTags.game(13), useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithTag(HomeTags.game(1), useUnmergedTree = true).assertDoesNotExist()
-        compose.onNodeWithTag(HomeTags.game(5), useUnmergedTree = true).assertIsNotDisplayed()
+        compose.onNodeWithTag(HomeTags.game(5), useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithTag(HomeTags.game(4), useUnmergedTree = true).assertIsNotDisplayed()
         compose.onNodeWithTag(HomeTags.game(6), useUnmergedTree = true).assertIsDisplayed()
     }
 }

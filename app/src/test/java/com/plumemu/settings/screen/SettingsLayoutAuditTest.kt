@@ -126,7 +126,7 @@ abstract class SettingsLayoutAuditBase {
     fun theColourPresetsStartOnThePanelsTextColumn() {
         // Narrow screens show the panel as a further stop, opened.
         val (page, startIndex) = ColorPages.openingFor(SettingsOption.Background, PlumSettings(appearance = AppearanceSettings(background = ColorSetting.Preset("Graphite"))))
-        inBothThemes(if (narrow) panelAt(SettingsOption.Background, page, startIndex) else optionsAt(SettingsOption.Background)) { name ->
+        inBothThemes(panelAt(SettingsOption.Background, page, startIndex)) { name ->
             val panel = bounds(SettingsTags.PANEL)
             val first = bounds(SettingsTags.panelItem(0))
             val title = textBounds(hasText(context.getString(SettingsOption.Background.label)) and hasAnyAncestor(hasTestTag(SettingsTags.PANEL)))

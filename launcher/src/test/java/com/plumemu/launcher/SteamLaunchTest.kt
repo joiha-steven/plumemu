@@ -43,6 +43,10 @@ class SteamLaunchTest {
     private val reads = mutableListOf<Pair<String, Int>>()
     private val started = mutableListOf<Intent>()
     private val log = RecordingLog()
+
+    /** The offer as the shipped data makes it: its page comes from `DOWNLOAD_PAGES`. */
+    private fun offerOf(id: String, name: String) =
+        EmulatorOffer(id, name, catalog.emulators.first { it.id == id }.page)
     private var games = 0
     private lateinit var playTime: PlayTimeTracker
     private lateinit var launcher: GameLauncher
@@ -102,7 +106,7 @@ class SteamLaunchTest {
         // Nothing starts before a choice; the only installed Steam app is the recommendation.
         val question = launcher.launch(id) as LaunchOutcome.EmulatorNotChosen
         assertEquals("gamenative", question.recommendedId)
-        assertEquals(listOf(EmulatorOffer("gamenative", "GameNative", "app.gamenative")), question.installed)
+        assertEquals(listOf(offerOf("gamenative", "GameNative")), question.installed)
         assertTrue(started.isEmpty())
 
         choose("gamenative")
@@ -146,9 +150,9 @@ class SteamLaunchTest {
         // Only WinNative installed: nothing can start a .steam file.
         installed -= "app.gamenative"
         assertEquals(LaunchOutcome.NoEmulatorForSystem(id, "steam", listOf(
-            EmulatorOffer("gamenative", "GameNative", "app.gamenative"),
-            EmulatorOffer("gamehub-lite", "GameHub Lite", "gamehub.lite"),
-            EmulatorOffer("droiddeck", "DroidDeck", "com.droiddeck.launcher"),
+            offerOf("gamenative", "GameNative"),
+            offerOf("gamehub-lite", "GameHub Lite"),
+            offerOf("droiddeck", "DroidDeck"),
         )), launcher.launch(id))
         assertTrue(started.isEmpty())
     }
@@ -195,9 +199,9 @@ class SteamLaunchTest {
         choose("winnative")
         val (id, _) = steamGame("274190")
         assertEquals(LaunchOutcome.NoEmulatorForSystem(id, "steam", listOf(
-            EmulatorOffer("gamenative", "GameNative", "app.gamenative"),
-            EmulatorOffer("gamehub-lite", "GameHub Lite", "gamehub.lite"),
-            EmulatorOffer("droiddeck", "DroidDeck", "com.droiddeck.launcher"),
+            offerOf("gamenative", "GameNative"),
+            offerOf("gamehub-lite", "GameHub Lite"),
+            offerOf("droiddeck", "DroidDeck"),
         )), launcher.launch(id))
         assertTrue(started.isEmpty())
     }
@@ -271,7 +275,7 @@ class SteamLaunchTest {
         choose("gamenative")
         val (id, _) = steamGame("274190")
         assertEquals(
-            LaunchOutcome.EmulatorMissing(id, EmulatorOffer("gamenative", "GameNative", "app.gamenative"), ChoiceSource.PersonForSystem),
+            LaunchOutcome.EmulatorMissing(id, offerOf("gamenative", "GameNative"), ChoiceSource.PersonForSystem),
             launcher.launch(id),
         )
         assertTrue(reads.isEmpty())

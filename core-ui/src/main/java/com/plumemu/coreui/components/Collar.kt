@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.pow
+import com.plumemu.coreui.theme.Depth
 import com.plumemu.coreui.theme.CollarDimens
 import com.plumemu.coreui.theme.CollarLook
 import com.plumemu.coreui.theme.CssShadow
@@ -105,7 +106,8 @@ fun DrawScope.drawCollar(
     focusRing: Dp = 0.dp,
 ) {
     // A box cover sits in the same lip and well as every part (docs/design/rules.md › Cover collar); only its sizes differ.
-    drawSeatCollar(look.seat, collarSize, cornerRadius, focus, grooveOverride, accent, glow, focusRing)
+    val seat = if (collarSize == CollarSize.Cover) look.seat.coverGlass else look.seat
+    drawSeatCollar(seat, collarSize, cornerRadius, focus, grooveOverride, accent, glow, focusRing)
 }
 
 /**
@@ -149,8 +151,8 @@ internal fun DrawScope.drawSeatCollarLayers(
     val h = size.height
     val outer = collarSize.outerCorner(this, cornerRadius, Size(w, h))
     val lit = if (glow.alpha > 0f) focus else 0f
-    if (lip > 0f && lit > 0f) drawCssShadows(listOf(CssShadow(glow, 0.dp, CollarDimens.glowBlur)), Offset.Zero, Size(w, h), outer, lit)
-    if (focusRing > 0.dp && focus > 0f) drawCssShadows(listOf(CssShadow(accent, 0.dp, spread = focusRing)), Offset.Zero, Size(w, h), outer, focus)
+    if (lip > 0f && lit > 0f) drawCssShadows(listOf(CssShadow(glow, 0.dp, CollarDimens.glowBlur, glow = true)), Offset.Zero, Size(w, h), outer, lit)
+    if (focusRing > 0.dp && focus > 0f) drawCssShadows(listOf(CssShadow(accent, 0.dp, spread = focusRing, glow = true)), Offset.Zero, Size(w, h), outer, focus)
     if (focus > 0f && grooveOverride != null) {
         val ring = PlumDimens.focusRingWidth.toPx()
         drawRoundRect(accent.copy(alpha = accent.alpha * focus), Offset(-ring / 2, -ring / 2), Size(w + ring, h + ring), CornerRadius(outer + ring / 2), style = strokeOf(ring))
@@ -162,7 +164,7 @@ internal fun DrawScope.drawSeatCollarLayers(
     val grooveSize = Size(Math.round(w - lip).toFloat() - at.x, Math.round(h - lipBottom).toFloat() - at.y)
     val grooveCorner = minOf(cornerRadius + groove, grooveSize.minDimension / 2)
     val grooveGlow = if (lip > 0f) CollarDimens.grooveGlowBlur else CollarDimens.glowBlur
-    if (lit > 0f && grooveOverride == null) drawCssShadows(listOf(CssShadow(glow, 0.dp, grooveGlow)), at, grooveSize, grooveCorner, lit)
+    if (lit > 0f && grooveOverride == null) drawCssShadows(listOf(CssShadow(glow, 0.dp, grooveGlow, glow = true)), at, grooveSize, grooveCorner, lit)
     val fill = grooveOverride ?: if (focus > 0f) lerp(seat.well, accent, focus) else seat.well
     drawRoundRect(fill, at, grooveSize, CornerRadius(grooveCorner))
     val shown = if (grooveOverride != null) 0f else focus
@@ -185,7 +187,7 @@ fun DrawScope.drawCollarHalo(
     if (focus <= 0f || glow.alpha <= 0f || PerfSwitches.noGlow) return
     val outer = collarSize.outerCorner(this, cornerRadius, size)
     // The kit's `0 0 22px` glow as the lit collar draws it: one cached Gaussian image, outside the collar only.
-    drawCssShadows(listOf(CssShadow(glow, 0.dp, CollarDimens.glowBlur)), topLeft, size, outer, focus)
+    drawCssShadows(listOf(CssShadow(glow, 0.dp, CollarDimens.glowBlur, glow = true)), topLeft, size, outer, focus)
 }
 
 /**
@@ -207,7 +209,7 @@ fun DrawScope.drawCollarGrooveGlow(
     val at = Offset(Math.round(topLeft.x + lip).toFloat(), Math.round(topLeft.y + lip).toFloat())
     val grooveSize = Size(Math.round(topLeft.x + size.width - lip).toFloat() - at.x, Math.round(topLeft.y + size.height - collarSize.lipBottom.toPx()).toFloat() - at.y)
     val grooveCorner = minOf(cornerRadius + collarSize.groove.toPx(), grooveSize.minDimension / 2)
-    drawCssShadows(listOf(CssShadow(glow, 0.dp, CollarDimens.grooveGlowBlur)), at, grooveSize, grooveCorner, focus)
+    drawCssShadows(listOf(CssShadow(glow, 0.dp, CollarDimens.grooveGlowBlur, glow = true)), at, grooveSize, grooveCorner, focus)
 }
 
 /**
@@ -344,7 +346,7 @@ internal fun grooveColor(
  * and draws [drawCollar] behind. [radius] is the part's corner; null is a pill (half the part's height). [focus] is 0..1 and
  * is read only while drawing, so a move of it redraws and nothing recomposes; [error] draws the groove in the danger colour.
  * [halo] false leaves the focus halo to a parent that draws it outside a clip ([drawCollarHalo]).
- * Reaches [CollarDimens.shadowReach] below its bounds and the focus halo around it: leave that unclipped.
+ * Reaches [CollarDimens.shadowReach] below its bounds and the focus halo around it: leave that unclipped. A focused grid cover has none ([halo] false).
  */
 @Composable
 fun Modifier.collar(
@@ -409,4 +411,4 @@ fun Modifier.coverBoxShadow(
 }
 
 private const val BOX_SHADOW_HARD_ALPHA = 0.55f
-private const val BOX_SHADOW_SOFT_ALPHA = 0.4f
+private const val BOX_SHADOW_SOFT_ALPHA = 0.4f * Depth.SHADOW

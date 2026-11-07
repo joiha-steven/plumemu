@@ -106,23 +106,23 @@ class CollarLook(
         const val LIGHT_OFF_TEXT = 0.424
         const val DARK_WELL = 0.41
         const val LIGHT_WELL = 0.0715
-        const val DARK_CREST = 0.16f
-        const val DARK_GROOVE_INSET = 0.45f
-        const val LIGHT_GROOVE_INSET = 0.13f
-        const val DARK_TOP = 0.21
-        const val DARK_MID = 0.072
+        const val DARK_CREST = 0.16f * Depth.RAISE
+        const val DARK_GROOVE_INSET = 0.45f * Depth.RAISE
+        const val LIGHT_GROOVE_INSET = 0.13f * Depth.RAISE
+        const val DARK_TOP = 0.21 * Depth.RAISE
+        const val DARK_MID = 0.072 * Depth.RAISE
         const val DARK_BOTTOM = 0.03
-        const val DARK_GROOVE = 0.30
-        const val DARK_SHADOW = 0.45f
+        const val DARK_GROOVE = 0.30 * Depth.RAISE
+        const val DARK_SHADOW = 0.45f * Depth.SHADOW
         const val LIGHT_CAP = 0.58
         const val LIGHT_CAP_BOTTOM = 0.16
         const val DARK_CAP = 0.12
         const val DARK_CAP_BOTTOM = 0.096
-        const val LIGHT_TOP = 1.0
-        const val LIGHT_MID = 0.26
+        const val LIGHT_TOP = 1.0 * Depth.RAISE
+        const val LIGHT_MID = 0.26 * Depth.RAISE
         const val LIGHT_BOTTOM = 0.04
-        const val LIGHT_GROOVE = 0.13
-        const val LIGHT_RING = 0.185
-        const val LIGHT_SHADOW = 0.10f
+        const val LIGHT_GROOVE = 0.13 * Depth.RAISE
+        const val LIGHT_RING = 0.185 * Depth.RAISE
+        const val LIGHT_SHADOW = 0.10f * Depth.SHADOW
     }
 }

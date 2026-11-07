@@ -19,7 +19,7 @@ Buttons and touch are equals. Every handheld has both.
   a second tap on the focused game plays it. A long press opens the game menu.
 - Touch targets: a list row's touch area at least 40 dp (game rows draw at least 38 dp and their 2 dp gap is part of the tap area), standalone buttons at least 44 dp. Every hint in
   the bottom bar is tappable and does what its button does.
-- Scrolling: holding a direction repeats with acceleration ("Hold to scroll faster"); a fling
+- Scrolling: holding a direction repeats with acceleration; a fling
   scrolls with momentum. Neither may drop frames.
 - Nintendo or Xbox layout and the A/B swap are resolved in `core-input` only.
 - **Search types with Plumemu's own keyboard** (see

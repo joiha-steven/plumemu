@@ -121,7 +121,13 @@ class OkHttpUpdateHttpTest {
      * reaches the caller, still closes the response (else its connection leaks until the GC finds it).
      */
     @Test
-    fun aCancelRightAfterTheAnswerClosesTheResponse() =
+    fun aCancelRightAfterTheAnswerClosesTheResponse() = cancelRightAfterTheAnswer(callCanceledFirst = false)
+
+    /** The same cancel when the watcher thread has already cancelled the call before the chain returns: OkHttp then fails with "Canceled", which must stay a cancellation. */
+    @Test
+    fun aCancelThatReachesTheCallBeforeTheChainReturnsIsStillACancellation() = cancelRightAfterTheAnswer(callCanceledFirst = true)
+
+    private fun cancelRightAfterTheAnswer(callCanceledFirst: Boolean) =
         runBlocking {
             server.enqueue(MockResponse.Builder().body("apk bytes").build())
             val closed = AtomicBoolean(false)
@@ -146,6 +152,12 @@ class OkHttpUpdateHttpTest {
                             }
                         // The person's Cancel, exactly between the answer and the hand-over.
                         caller.get()!!.cancel()
+                        if (callCanceledFirst) {
+                            // Whether the watcher gets to the call before the chain returns is a race in real life; here it is made to win.
+                            val deadline = System.nanoTime() + 5_000_000_000L
+                            while (!chain.call().isCanceled() && System.nanoTime() < deadline) Thread.onSpinWait()
+                            assertTrue("the watcher cancelled the call", chain.call().isCanceled())
+                        }
                         response.newBuilder().body(tracked).build()
                     }.build()
                 }

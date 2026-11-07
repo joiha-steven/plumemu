@@ -3,23 +3,39 @@ package com.plumemu.settings.screen
 import android.text.format.DateUtils
 import android.text.format.Formatter
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import com.plumemu.platforms.PlatformDataVersion
-import com.plumemu.settings.versionLine
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.plumemu.R
+import com.plumemu.coredata.settings.PlumSettings
+import com.plumemu.coreui.components.ListEdgeFade
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.WidthClass
+import com.plumemu.platforms.PlatformDataVersion
+import com.plumemu.settings.versionLine
 import com.plumemu.setup.SetupButton
 import com.plumemu.setup.SetupProgressBar
 import com.plumemu.setup.bringIntoViewWhen
@@ -37,15 +53,14 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 /*
- * Settings › About's update rows: "Update
- * available" with its panel (notes, size, Update and the steps after it), "Check for updates" with
- * the last check, and the daily switch (its explanation is an ExplainPanel). The work is the graph's
- * (`Updates`); this file only shows it.
+ * Settings › About › Updates: the row (the update found, or the last check) and its panel: the status
+ * line; while an update is found its notes, size, Update and the steps after it; Check now; and the
+ * daily switch with what it sends. The work is the graph's (`Updates`); this file only shows it.
  */
 
 /** What Settings asks of the updates. */
 internal interface SettingsUpdateActions {
-    /** Check for updates: now, whatever the switch and the last check say. */
+    /** Check now: now, whatever the switch and the last check say. */
     fun checkNow()
 
     /** Update (or, on mobile data, the yes to downloading there). */
@@ -68,30 +83,8 @@ internal interface SettingsUpdateActions {
     }
 }
 
-/**
- * "Update available" comes (a check found one) and goes (installed) above the other About rows: the
- * cursor stays on the row it was on, so A after Check for updates checks again rather than opening
- * the update. If its own row went away, its panel closes. Null when nothing moves.
- */
-internal fun aboutFocusKept(
-    focus: SettingsFocus,
-    before: SettingsContent,
-    after: SettingsContent,
-): SettingsFocus? {
-    val about = SettingsSection.About
-    if (focus.section != about || focus.column == SettingsColumn.Sections) return null
-    val rowsBefore = about.rowsIn(before)
-    val rowsAfter = about.rowsIn(after)
-    if (rowsBefore == rowsAfter) return null
-    val at = focus.rememberedOption[about] ?: return null
-    val option = rowsBefore.getOrNull(at) ?: return null
-    val now = rowsAfter.indexOf(option)
-    if (now < 0) return focus.copy(column = SettingsColumn.Options, page = null, panelIndex = 0, rememberedOption = focus.rememberedOption + (about to at.coerceAtMost(rowsAfter.lastIndex)))
-    return if (now == at) null else focus.copy(rememberedOption = focus.rememberedOption + (about to now))
-}
-
-/** The update panel's buttons, top to bottom. */
-internal enum class UpdatePanelItem { Update, DownloadAnyway, AllowInstalls, Cancel }
+/** What the Updates panel can focus, top to bottom: the update's own buttons, Check now, the daily switch. */
+internal enum class UpdatePanelItem { Update, DownloadAnyway, AllowInstalls, Cancel, CheckNow, CheckDaily }
 
 /**
  * The buttons for where the update is: none while a check runs (the line says "Checking for
@@ -118,10 +111,21 @@ private fun stepItems(step: UpdateStep): List<UpdatePanelItem> =
         UpdateStep.Verifying, UpdateStep.ReadyToInstall -> emptyList()
     }
 
-/** Update available's value: the version, or a word while an update runs. */
+/** The update's buttons for the panel: none with nothing found. */
+internal fun updateStepItems(view: UpdateView): List<UpdatePanelItem> = if (view.found == null) emptyList() else updatePanelItems(view)
+
+/** Everything the panel can focus: Check now stays through an update, whose status then says why it does nothing. */
+internal fun updatesPanelItems(view: UpdateView): List<UpdatePanelItem> = updateStepItems(view) + UpdatePanelItem.CheckNow + UpdatePanelItem.CheckDaily
+
+/** The row's value: the update found, else the last check; "»" unless an update runs. */
+@Composable
+internal fun updatesRowValue(view: UpdateView): OptionValue =
+    if (view.found != null) opensUnlessBusy(updateRowValue(view), view.isUpdateRunning) else OptionValue.Opens(checkRowValue(view))
+
+/** The value while an update is found: "0.1.3 available" (never the bare number, which reads as the installed one), or a word while an update runs. */
 @Composable
 internal fun updateRowValue(view: UpdateView): String {
-    val name = view.found?.let { versionLine(it.versionName, it.versionCode) }.orEmpty()
+    val name = stringResource(R.string.settings_update_value_available, view.found?.versionName.orEmpty())
     return when (view.step) {
         is UpdateStep.Downloading, UpdateStep.Verifying -> stringResource(R.string.settings_update_value_downloading)
         is UpdateStep.Installing -> if (view.step.askedPerson) name else stringResource(R.string.settings_update_value_installing)
@@ -130,7 +134,7 @@ internal fun updateRowValue(view: UpdateView): String {
     }
 }
 
-/** Check for updates' value: "Checking…", or the last result and when ("Up to date · 10:15 AM"), or nothing before the first check. */
+/** The value with no update found: "Checking…", or the last result and when ("Up to date · 10:15 AM"), or nothing before the first check. */
 @Composable
 internal fun checkRowValue(view: UpdateView): String {
     if (view.isUpdateRunning) return stringResource(R.string.settings_check_updates_value_busy)
@@ -167,7 +171,7 @@ internal fun releaseDateText(released: String): String {
 
 private const val ISO_DAY_LENGTH = 10
 
-/** The check panel's sentence for the last check, "Checking…", or why no check runs during an update. */
+/** The panel's sentence for the last check, "Checking…", or why no check runs during an update. */
 @Composable
 internal fun checkLineText(view: UpdateView): String? {
     if (view.isUpdateRunning) return stringResource(R.string.settings_check_updates_busy)
@@ -228,68 +232,197 @@ private fun failureText(failure: UpdateFailure): Int =
         UpdateFailure.InstallFailed -> R.string.settings_update_failed_install
     }
 
-/** Check for updates' panel: what it asks and of whom, then the last check. */
-@Composable
-internal fun CheckUpdatesPanel(model: SettingsModel) {
-    Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
-        PanelTitle(stringResource(R.string.settings_check_updates))
-        PanelBody(stringResource(R.string.settings_check_updates_body))
-        PanelLine(model, SettingsOption.CheckForUpdates, checkLineText(model.content.update))
-    }
-}
-
 /**
- * Update available's panel: "Plumemu installed → offered", the date and size, the notes (grouped
- * under New, Improved, Fixed and Known issues when the manifest has them, else bullets), the status
- * line (with a bar while downloading), then the buttons (stacked, as wide as the widest, like Back
- * up…'s). Only the notes scroll, by touch or by Up and Down past the first and last button
- * ([SettingsPanelModel.updateNotes]), so the buttons stay in view.
+ * The panel, one scrolling column. While an update is found: "Plumemu installed → offered", the date and size, the notes (grouped
+ * under New, Improved, Fixed and Known issues when the manifest has them, else bullets), the status line (with a bar while
+ * downloading) and the update's buttons (stacked, as wide as the widest, like Back up…'s) fill the first screen, so the buttons
+ * stay in view while only the notes scroll, by touch or by Up and Down past the first and last button
+ * ([SettingsPanelModel.updateNotes]); the last check and Check now follow below it. With nothing found: what Check now asks and of whom, the last
+ * check and the button. Under either, the daily switch and what it sends: the IP address it shows is the person's choice to
+ * make, so it stands in the panel.
  */
 @Composable
 internal fun UpdatePanel(
     model: SettingsModel,
     touch: SettingsTouch,
+    settings: PlumSettings,
     installedLine: String,
 ) {
     val view = model.content.update
-    val found = view.found ?: return
-    val context = LocalContext.current
+    val found = view.found
+    val items = updatesPanelItems(view)
     val inPanel = model.focus.column == SettingsColumn.Panel && model.focus.page == PanelPage.Update
+    val focused = if (inPanel) items.getOrNull(model.focus.panelIndex) else null
+    val scroll = rememberScrollState()
+    val gap = PlumDimens.settingsPanelGap
+    BoxWithConstraints(Modifier.fillMaxHeight().testTag(SettingsTags.UPDATE_PANEL)) {
+        // The bottom fade says there is more; it never lies over the update's buttons.
+        val firstScreen = maxHeight - PlumDimens.listFadeBand
+        var frameHeight by remember { mutableIntStateOf(Int.MAX_VALUE) }
+        // Back on the update, the whole of it shows again; a frame taller than the panel keeps each button in view by itself.
+        val frameFits = found != null && frameHeight <= constraints.maxHeight
+        val onUpdate = focused != null && focused != UpdatePanelItem.CheckNow && focused != UpdatePanelItem.CheckDaily
+        LaunchedEffect(onUpdate, frameFits) { if (onUpdate && frameFits) scroll.scrollTo(0) }
+        val buttons =
+            @Composable { shown: (UpdatePanelItem) -> Boolean ->
+                UpdateButtons(view, items, shown, focused, keepsInView = !frameFits, model, touch)
+            }
+        Column(Modifier.verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(gap)) {
+            if (found != null) {
+                NotesFrame(
+                    height = firstScreen,
+                    modifier = Modifier.onSizeChanged { frameHeight = it.height },
+                    top = {
+                        val (from, to) = titleVersions(installedLine, found)
+                        PanelTitleOr(stringResource(R.string.settings_update_title, from, to), stringResource(R.string.settings_update_title_short, from, to))
+                        PanelFacts(stringResource(R.string.settings_update_facts, releaseDateText(found.released), Formatter.formatShortFileSize(LocalContext.current, found.size)))
+                    },
+                    notes = { UpdateNotes(found, model, Modifier) },
+                    bottom = {
+                        UpdateStatus(view, isOnCheckNow = focused == UpdatePanelItem.CheckNow)
+                        if (updateStepItems(view).isNotEmpty()) buttons { it != UpdatePanelItem.CheckNow }
+                    },
+                )
+                LastCheckUnderUpdate(view)
+                buttons { it == UpdatePanelItem.CheckNow }
+            } else {
+                PanelTitle(stringResource(R.string.settings_updates))
+                PanelBody(stringResource(R.string.settings_check_updates_body))
+                UpdateStatus(view, isOnCheckNow = false)
+                buttons { true }
+            }
+            DailySwitch(settings, isFocused = focused == UpdatePanelItem.CheckDaily, items.indexOf(UpdatePanelItem.CheckDaily), touch)
+        }
+        if (scroll.canScrollBackward) ListEdgeFade(atBottom = false, Modifier.align(Alignment.TopCenter))
+        if (scroll.canScrollForward) ListEdgeFade(atBottom = true, Modifier.align(Alignment.BottomCenter).testTag(SettingsTags.UPDATE_PANEL + FADE_BOTTOM_SUFFIX))
+    }
+}
+
+/**
+ * What the update needs, in [height]: [top], then [notes] in what is left, then [bottom], all of which stay whole. At a size where
+ * nothing is left the notes give way and the buttons stay; short notes end the frame sooner.
+ */
+@Composable
+private fun NotesFrame(
+    height: Dp,
+    modifier: Modifier,
+    top: @Composable () -> Unit,
+    notes: @Composable () -> Unit,
+    bottom: @Composable () -> Unit,
+) {
+    val gap = PlumDimens.settingsPanelGap
+    Layout(
+        {
+            Column(verticalArrangement = Arrangement.spacedBy(gap)) { top() }
+            notes()
+            Column(verticalArrangement = Arrangement.spacedBy(gap)) { bottom() }
+        },
+        modifier,
+    ) { (topPart, notesPart, bottomPart), constraints ->
+        val free = constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity)
+        val above = topPart.measure(free)
+        val below = bottomPart.measure(free)
+        val gapPx = gap.roundToPx()
+        val room = (height.roundToPx() - above.height - below.height - 2 * gapPx).coerceAtLeast(0)
+        val text = notesPart.measure(constraints.copy(minHeight = 0, maxHeight = room))
+        layout(constraints.maxWidth, above.height + text.height + below.height + 2 * gapPx) {
+            above.place(0, 0)
+            text.place(0, above.height + gapPx)
+            below.place(0, above.height + text.height + 2 * gapPx)
+        }
+    }
+}
+
+/** The status line: where the update is (with a bar while downloading), else the last check; on Check now during a download, why it checks nothing. */
+@Composable
+private fun UpdateStatus(
+    view: UpdateView,
+    isOnCheckNow: Boolean,
+) {
+    val step = view.step
+    val hasUpdate = view.found != null
+    // With no button of its own the step keeps the line: the cursor is on Check now only because nothing else is left.
+    val saysWhyNoCheck = view.isUpdateRunning && isOnCheckNow && updateStepItems(view).isNotEmpty()
+    val stepLine = if (!hasUpdate || saysWhyNoCheck) null else updateStepText(view)
+    // A finished check's answer stands under the update when one is found: it must not take the notes' room.
+    val line = stepLine ?: (if (hasUpdate && isCheckAnswer(view)) null else checkLineText(view)) ?: return
+    Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.titleLineGap)) {
+        if (hasUpdate && step is UpdateStep.Downloading) {
+            SetupProgressBar(if (step.total > 0) step.done.toFloat() / step.total else 0f, Modifier.onRowTextLine().testTag(SettingsTags.UPDATE_PROGRESS))
+        }
+        BasicText(line, style = PlumTheme.type.panelBody.copy(color = PlumTheme.colors.text), modifier = Modifier.onRowTextLine().testTag(SettingsPanelTags.STATUS))
+    }
+}
+
+/** The last check holds a finished answer: no check runs and no update runs. */
+private fun isCheckAnswer(view: UpdateView): Boolean = !view.isChecking && !view.isUpdateRunning
+
+/**
+ * With an update found: the last check's answer, between the update and Check now, the button it answers. Under a step left standing it is the [SettingsPanelTags.UPDATE_LAST_CHECK]
+ * line; alone it is the status line. "Update found" would repeat the title: then only when it ran, or Check now would answer with nothing.
+ */
+@Composable
+private fun LastCheckUnderUpdate(view: UpdateView) {
+    if (!isCheckAnswer(view)) return
+    val last = view.lastCheck
+    val line = (if (last?.outcome == CheckOutcome.Found) stringResource(R.string.settings_check_updates_last, checkTime(last.at)) else checkLineText(view)) ?: return
+    val tag = if (updateStepText(view) != null) SettingsPanelTags.UPDATE_LAST_CHECK else SettingsPanelTags.STATUS
+    BasicText(line, style = PlumTheme.type.panelBody.copy(color = PlumTheme.colors.text), modifier = Modifier.onRowTextLine().testTag(tag))
+}
+
+/** Those of the panel's buttons that are [shown]; each keeps its index in [items]. */
+@Composable
+private fun UpdateButtons(
+    view: UpdateView,
+    items: List<UpdatePanelItem>,
+    shown: (UpdatePanelItem) -> Boolean,
+    focused: UpdatePanelItem?,
+    keepsInView: Boolean,
+    model: SettingsModel,
+    touch: SettingsTouch,
+) {
     Column(
-        Modifier.fillMaxHeight().testTag(SettingsTags.UPDATE_PANEL),
-        verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap),
+        modifier = Modifier.ringRoomAboveAndBelow().width(IntrinsicSize.Max),
+        verticalArrangement = Arrangement.spacedBy(PlumDimens.setupButtonGap),
     ) {
-        val (from, to) = titleVersions(installedLine, found)
-        PanelTitle(stringResource(R.string.settings_update_title, from, to))
-        PanelFact(stringResource(R.string.settings_update_facts, releaseDateText(found.released), Formatter.formatShortFileSize(context, found.size)))
-        UpdateNotes(found, model, Modifier.weight(1f, fill = false))
-        val step = view.step
-        updateStepText(view)?.let { line ->
-            Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.titleLineGap)) {
-                if (step is UpdateStep.Downloading) {
-                    SetupProgressBar(if (step.total > 0) step.done.toFloat() / step.total else 0f, Modifier.onRowTextLine().testTag(SettingsTags.UPDATE_PROGRESS))
-                }
-                BasicText(line, style = PlumTheme.type.panelBody.copy(color = PlumTheme.colors.text), modifier = Modifier.onRowTextLine().testTag(SettingsPanelTags.STATUS))
-            }
+        items.forEachIndexed { index, item ->
+            if (item == UpdatePanelItem.CheckDaily || !shown(item)) return@forEachIndexed
+            val isFocused = item == focused && model.focus.panelIndex == index
+            SetupButton(
+                text = stringResource(updateItemText(item)),
+                isPrimary = item != UpdatePanelItem.Cancel && (item != UpdatePanelItem.CheckNow || view.found == null),
+                isFocused = isFocused,
+                maxLines = 2,
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .bringIntoViewWhen(isFocused && (keepsInView || item == UpdatePanelItem.CheckNow), ring = PlumDimens.focusRingOutset, below = PlumDimens.listFadeBand)
+                        .tapTarget { touch.onPanelItem(index) }
+                        .testTag(SettingsTags.panelItem(index)),
+            )
         }
-        val items = updatePanelItems(view)
-        if (items.isNotEmpty()) {
-            Column(
-                modifier = Modifier.ringRoomAboveAndBelow().width(IntrinsicSize.Max),
-                verticalArrangement = Arrangement.spacedBy(PlumDimens.setupButtonGap),
-            ) {
-                items.forEachIndexed { index, item ->
-                    val isFocused = inPanel && model.focus.panelIndex == index
-                    SetupButton(
-                        text = stringResource(updateItemText(item)),
-                        isPrimary = item != UpdatePanelItem.Cancel,
-                        isFocused = isFocused,
-                        maxLines = 2,
-                        modifier = Modifier.fillMaxWidth().bringIntoViewWhen(isFocused, ring = PlumDimens.focusRingOutset).tapTarget { touch.onPanelItem(index) }.testTag(SettingsTags.panelItem(index)),
-                    )
-                }
-            }
-        }
+    }
+}
+
+/** Check for updates daily, as the row it is elsewhere, and what it sends; focused, both are brought into view. */
+@Composable
+private fun DailySwitch(
+    settings: PlumSettings,
+    isFocused: Boolean,
+    index: Int,
+    touch: SettingsTouch,
+) {
+    // The narrow column beside the options cannot hold the long label and the switch on one line.
+    val stacked = PlumTheme.layout.widthClass == WidthClass.Wide
+    Column(Modifier.bringIntoViewWhen(isFocused), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
+        OptionRow(
+            option = SettingsOption.CheckUpdatesDaily,
+            value = OptionValue.Switch(SettingsOption.CheckUpdatesDaily.switchValue(settings)),
+            look = if (isFocused) OptionLook.Focused else OptionLook.Normal,
+            modifier = Modifier.tapTarget { touch.onPanelItem(index) }.testTag(SettingsTags.panelItem(index)),
+            verticalPadding = if (stacked) PlumDimens.settingsTwoLineRowPadding else 0.dp,
+            valueBelow = stacked,
+        )
+        PanelBody(stringResource(R.string.settings_check_updates_daily_body))
     }
 }
 
@@ -324,4 +457,6 @@ private fun updateItemText(item: UpdatePanelItem): Int =
         UpdatePanelItem.DownloadAnyway -> R.string.settings_update_download_anyway
         UpdatePanelItem.AllowInstalls -> R.string.settings_update_allow
         UpdatePanelItem.Cancel -> R.string.settings_cancel
+        UpdatePanelItem.CheckNow -> R.string.settings_updates_check_now
+        UpdatePanelItem.CheckDaily -> R.string.settings_check_updates_daily
     }

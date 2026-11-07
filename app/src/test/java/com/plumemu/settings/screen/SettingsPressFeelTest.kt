@@ -96,7 +96,8 @@ class SettingsPressFeelTest {
     @Test
     fun aColourSwatchDips() {
         show { SettingsAt(panelAt(SettingsOption.Background, PanelPage.BackgroundPresets, 1)) }
-        checkDips(SettingsTags.panelItem(1), SettingsTags.panelItem(4))
+        // Two rows down: the focused key's glow tail reaches the swatch right under it, and a press moves that by one colour step.
+        checkDips(SettingsTags.panelItem(1), SettingsTags.panelItem(7))
     }
 
     @Test
@@ -149,8 +150,8 @@ class SettingsPressFeelTest {
                 onAction(Action.Move(Direction.Down), settings, geometry)
             }
         }
-        // Not the Color code row: the Use row's glow reaches into it.
-        checkDips(SettingsTags.HEX_USE, SettingsTags.panelItem(PaletteCuration.curated(CustomPalette.accentSwatchesOn(PlumThemeSettings.Graphite.backgroundColor)).size - 1))
+        // Not the Color code row: the Use row's glow reaches into it. A slider, not a swatch: the panel has scrolled the swatches past its top.
+        checkDips(SettingsTags.HEX_USE, SettingsTags.panelItem(PaletteCuration.curated(CustomPalette.accentSwatchesOn(PlumThemeSettings.Graphite.backgroundColor)).size + 1))
     }
 
     /** The Color code row with Plumemu's own keyboard: A on the row brings the tray up; [steps] then run on the model. */

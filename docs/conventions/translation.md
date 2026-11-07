@@ -74,7 +74,7 @@ below, and keep to it.
 | accent | The colour of the focus mark and highlights (Settings › Appearance › Accent color). |
 | text size | Settings › Appearance › Text size: Small, Medium, Large, Larger, Largest. |
 | text weight | Settings › Appearance › Text weight: Thin, Medium, Bold (how heavy the letters are drawn). |
-| left edge | Settings › Home screen › Left edge: Game counts, System codes, Letters (what the narrow strip at the screen's left edge shows in a games list). |
+| left strip | Settings › Home screen › Left strip: Game counts, System codes, Letters (what the narrow strip on the left shows in a games list). |
 | second screen | The bottom screen of a two-screen device (AYN Thor). |
 | home screen | Android's home screen; "Plumemu as the home screen" means the home app. |
 | shortcut | A pinned Android shortcut to a game (Steam games). |
@@ -259,7 +259,7 @@ Address: t&#250; (informal), never usted. Neutral Spanish understood in Spain an
 
 | English | Spanish | Note |
 |---|---|---|
-| game / system / library / folder | juego / sistema / biblioteca / carpeta | "ROM folders" is "Carpetas de ROMs" (gamers' plural) |
+| game / system / library / folder | juego / sistema / biblioteca / carpeta | "Game folders" is "Carpetas de juegos" |
 | scan / rescan | escanear, leer / Volver a escanear | The progress lines keep English's "reading" (Leyendo carpetas&#8230;) |
 | naming games | identificar (Identificando juegos) | |
 | emulator | emulador | |
@@ -303,7 +303,7 @@ Standard French of France, understood in Belgium, Switzerland and Canada.
 
 | English | French | Note |
 |---|---|---|
-| game / system / library / folder / file | jeu / syst&#232;me / biblioth&#232;que / dossier / fichier | "ROM folders" is "Dossiers de ROM" |
+| game / system / library / folder / file | jeu / syst&#232;me / biblioth&#232;que / dossier / fichier | "Game folders" is "Dossiers de jeux" |
 | scan / rescan | lire, lecture / Relire la biblioth&#232;que | As Spanish, the progress lines say reading: Lecture des dossiers&#8230; |
 | naming games | identifier (Identification des jeux) | |
 | emulator | &#233;mulateur | A RetroArch core is "c&#339;ur", as RetroArch's French screens say |
@@ -379,7 +379,7 @@ Wi-Fi, ScreenScraper, title ID, Steam app ID, arcade, ROM, Shift and Menu stay a
 ### Chinese, Simplified (`zh-CN`, `values-zh`)
 
 Mainland usage. Full-width punctuation in sentences (&#65292;&#12290;&#65306;&#65311;&#65288;&#65289;&#12289; and &#8220;&#8221; for names, button
-labels and Settings paths: &#22312;&#8220;&#35774;&#32622; &#8250; &#28216;&#25103;&#24211; &#8250; ROM &#25991;&#20214;&#22841;&#8221;&#20013;). A space between Chinese and Latin
+labels and Settings paths: &#22312;&#8220;&#35774;&#32622; &#8250; &#28216;&#25103;&#24211; &#8250; &#28216;&#25103;&#25991;&#20214;&#22841;&#8221;&#20013;). A space between Chinese and Latin
 letters or digits (Plumemu &#26080;&#27861;&#8230;, 18 &#20010;&#24179;&#21488;), none next to full-width punctuation. Labels, hints
 and values have no full stop.
 
@@ -427,7 +427,7 @@ translated from English, with the Simplified file as a reference only where Taiw
 Wording follows Android's own zh-TW screens (&#35373;&#23450;, &#25033;&#29992;&#31243;&#24335;, &#25463;&#24465;, &#20027;&#30059;&#38754;, &#23433;&#35037;&#19981;&#26126;&#25033;&#29992;&#31243;&#24335;).
 
 Full-width punctuation in sentences (&#65292;&#12290;&#65306;&#65311;&#65288;&#65289;&#12289;), &#12300;&#12301; for names, quotes, button labels and
-Settings paths (&#22312;&#12300;&#35373;&#23450; &#8250; &#36938;&#25138;&#24235; &#8250; ROM &#36039;&#26009;&#22846;&#12301;&#20013;). A space between Chinese and Latin letters or
+Settings paths (&#22312;&#12300;&#35373;&#23450; &#8250; &#36938;&#25138;&#24235; &#8250; &#36938;&#25138;&#36039;&#26009;&#22846;&#12301;&#20013;). A space between Chinese and Latin letters or
 digits (Plumemu &#28961;&#27861;&#8230;, 18 &#20491;&#24179;&#21488;), none next to full-width punctuation; a no-break space
 (`&#160;`) where English has one between a number and its unit. Labels, hints and values have no
 full stop.
@@ -485,7 +485,7 @@ buttons, hints and values are plain nouns (&#49444;&#51221;, &#46244;&#47196;, &
 No pronoun for the person. Instructions end in -&#54616;&#49464;&#50836;; a request to another app in -&#54644; &#51452;&#49464;&#50836;.
 
 Names of buttons, rows and entries inside a sentence are quoted in &#8216; &#8217; (&#8216;&#45796;&#49884; &#49884;&#46020;&#8217;&#47484; &#49440;&#53469;&#54616;&#49464;&#50836;);
-Settings paths are not (&#49444;&#51221; &#8250; &#46972;&#51060;&#48652;&#47084;&#47532; &#8250; ROM &#54260;&#45908;). Game titles in the system about texts are in &#12298; &#12299;
+Settings paths are not (&#49444;&#51221; &#8250; &#46972;&#51060;&#48652;&#47084;&#47532; &#8250; &#44172;&#51076; &#54260;&#45908;). Game titles in the system about texts are in &#12298; &#12299;
 with their Korean names where one is known (&#12298;&#49800;&#54140; &#47560;&#47532;&#50724; 64&#12299;, &#12298;&#53580;&#53944;&#47532;&#49828;&#12299;, &#12298;&#54252;&#53011;&#47788;&#49828;&#53552; &#44552;&#183;&#51008;&#12299;), English
 otherwise. Placeholders take no particle that depends on the last letter: the sentence names the
 thing after it (%1$s &#54637;&#47785;&#51012;, %1$s &#54028;&#51068;&#51060;, %1$s &#50640;&#48044;&#47112;&#51060;&#53552;&#44032;, %1$s &#50545;&#51012;) or the placeholder sits where no
@@ -534,7 +534,7 @@ Colour preset names: plain colours in native words (&#44160;&#51221;, &#48744;&#
 &#12391;&#12377;/&#12414;&#12377; for messages and explanations; labels, buttons and hints are
 plain nouns (&#20307;&#35328;&#27490;&#12417;) or short verb stems, no polite endings. Katakana for loanwords only
 where they are the common word. Japanese punctuation &#12289;&#12290; and full-width &#65288;&#65289;&#12300;&#12301;&#65306;&#65311; in
-sentences; names of screens, rows and buttons quoted in &#12300;&#12301; (&#12300;&#35373;&#23450; &#8250; &#12521;&#12452;&#12502;&#12521;&#12522; &#8250; ROM&#12501;&#12457;&#12523;&#12480;&#12301;),
+sentences; names of screens, rows and buttons quoted in &#12300;&#12301; (&#12300;&#35373;&#23450; &#8250; &#12521;&#12452;&#12502;&#12521;&#12522; &#8250; &#12466;&#12540;&#12512;&#12501;&#12457;&#12523;&#12480;&#12301;),
 game titles in &#12302;&#12303; in the system about texts. No space between Japanese and Latin words or
 numbers (Wi-Fi&#12395;&#25509;&#32154;, 18&#27231;&#31278;).
 

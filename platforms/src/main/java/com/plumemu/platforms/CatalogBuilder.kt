@@ -11,6 +11,7 @@ internal const val CORE_PLACEHOLDER = "{core}"
 private val PACKAGE_NAME = Regex("^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$")
 private val CLASS_NAME = Regex("^[A-Za-z_][A-Za-z0-9_$]*(\\.[A-Za-z_][A-Za-z0-9_$]*)*$")
 private val COLOR_HEX = Regex("^#[0-9A-Fa-f]{6}$")
+private val WEB_PAGE = Regex("^https?://[^\\s/?#]+\\S*$", RegexOption.IGNORE_CASE)
 private const val HEX_RADIX = 16
 
 /** How long a system code is (`tools/platforms/tables.py` `CODE_LENGTH`). */
@@ -23,7 +24,7 @@ private const val APPS_SOURCE = "apps"
 private val ID = Regex("^[a-z0-9][a-z0-9._-]*$")
 
 /** Checks a decoded file and turns it into models; the first problem found is thrown as [RejectedException]. */
-internal class CatalogBuilder(private val source: String) {
+internal class CatalogBuilder(private val source: String, private val log: PlatformLog) {
 
     fun build(raw: RawCatalog): PlatformCatalog {
         if (raw.systems.isEmpty()) reject(PlatformFailure.EmptyField(source, "systems", "(file)"))
@@ -207,8 +208,19 @@ internal class CatalogBuilder(private val source: String) {
         }
         return Emulator(
             raw.id, raw.name, primary, variants, core, raw.action, raw.category, raw.mimeType,
-            flags, GamePass(mode, target, raw.game.key, raw.game.prefix, idType, template, pathExtensions.toSet()), extras, raw.legalRisk, accepts,
+            flags, GamePass(mode, target, raw.game.key, raw.game.prefix, idType, template, pathExtensions.toSet()), extras, raw.legalRisk, accepts, webPageOf(raw),
         )
+    }
+
+    /**
+     * The file can arrive over the network and the app opens this link: anything but a web page counts as no
+     * page, and one bad link does not cost the person every emulator of the file.
+     */
+    private fun webPageOf(raw: RawEmulator): String? {
+        val page = raw.page ?: return null
+        if (WEB_PAGE.matches(page)) return page
+        log.error("Platform data: ${raw.id}: page is not an http(s) link, ignored")
+        return null
     }
 
     /**

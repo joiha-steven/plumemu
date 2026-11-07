@@ -66,6 +66,14 @@ class HomeEmptyLibraryTest {
     }
 
     @Test
+    fun aFolderHoldingNoFilesAtAllSaysSoAndSendsNowhereElse() {
+        show(FakeHomeContent.noGames(), HomeNotices(emptyLibrary = MutableStateFlow(EmptyLibrary.NoFiles)))
+        assertTrue(hasText("No games here yet"))
+        assertTrue(hasText("This folder holds no game files. Choose the folder that has your games."))
+        assertFalse("no page that would say the opposite", hasText("Files not added"))
+    }
+
+    @Test
     fun aRefusedFolderAskSaysWhyInTheMessageNotInAPopUp() {
         show(FakeHomeContent.noGames(), HomeNotices(folderMessage = MutableStateFlow(R.string.setup_message_no_picker)))
         assertTrue(hasText("This device has no folder picker"))
@@ -73,9 +81,9 @@ class HomeEmptyLibraryTest {
     }
 
     @Test
-    fun theHintOffersAddFolderAndItOpensThePicker() {
+    fun theButtonOffersAddFolderAndItOpensThePicker() {
         show(FakeHomeContent.noGames())
-        compose.onNodeWithTag(HomeTags.hint(Action.Enter), useUnmergedTree = true).performClick()
+        compose.onNodeWithTag(HomeTags.emptyButton(EmptyButton.AddFolder), useUnmergedTree = true).performClick()
         compose.waitForIdle()
         assertEquals(1, folderAsked)
     }

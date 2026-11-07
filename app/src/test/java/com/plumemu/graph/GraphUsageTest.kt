@@ -177,8 +177,8 @@ class GraphUsageTest {
 
     @Test
     fun aSettingsWriteIsCountedOnceItHasLanded() {
-        graph.settingsWriter.submitWatched({ it.copy(homeScreen = it.homeScreen.copy(showBattery = false)) }, graph::trackSettingChanges)
-        assertEquals(listOf("setting_changed" to mapOf("key" to "show_battery", "value" to "off")), awaitEvents(1))
+        graph.settingsWriter.submitWatched({ it.copy(homeScreen = it.homeScreen.copy(showClock = false, showBattery = false)) }, graph::trackSettingChanges)
+        assertEquals(listOf("setting_changed" to mapOf("key" to "clock_and_battery", "value" to "off")), awaitEvents(1))
     }
 
     @Test

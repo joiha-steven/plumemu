@@ -12,6 +12,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.Depth
 import com.plumemu.coreui.theme.PlumColors
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumTheme
@@ -57,7 +58,8 @@ open class PlumSwitchKnobCentreTest {
         val seat = colors.collar.seat
         val x = (if (on) lip + trackW - 2 * d - knob / 2 else lip + 2 * d + knob / 2).toInt()
         val tol = 10f / 255
-        val rows = (lip.toInt() until (lip + trackH).toInt() + (6 * d).toInt())
+        // From the row after the track's first (at a fractional density that row is half lip, half track: a step that is not the knob).
+        val rows = (lip.toInt() + 1 until (lip + trackH).toInt() + (6 * d).toInt())
         // The body's top is the first hard step down the column, its highlight row included (the track's own inset shadow fades gently).
         val step = rows.firstOrNull { it > rows.first() && px[x, it].dist(px[x, it - 1]) > 0.25f }
         assertTrue("no knob body found at x=$x", step != null)
@@ -66,9 +68,10 @@ open class PlumSwitchKnobCentreTest {
         val side = rows.filter { it > top + knob / 2 && px[x, it].dist(seat.side) < tol }
         assertTrue("no knob side found at x=$x", side.isNotEmpty())
         // The thick edge is the run of side-coloured rows under the body; the knob (body plus edge) is what must sit centred.
-        // The shadow under it is nearly the same colour on a dark theme, so the run stops at the edge's 2 dp (`SeatLook.cap` thick).
+        // The shadow under it is nearly the same colour on a dark theme, so the run stops at the edge's thickness (`SeatLook.cap` thick, 2 dp, at `Depth.THICKNESS`).
+        val edge = 2 * d * Depth.THICKNESS
         var end = side.first()
-        while (end + 1 < rows.last && end + 1 - side.first() < 2 * d - 0.5f && px[x, end + 1].dist(seat.side) < tol) end++
+        while (end + 1 < rows.last && end + 1 - side.first() < edge - 0.5f && px[x, end + 1].dist(seat.side) < tol) end++
         val bottom = end + 1
         val knobCentre = (top + bottom) / 2f
         val trackCentre = lip + trackH / 2f

@@ -192,7 +192,7 @@ private fun KeyCell(
                 .drawBehind {
                     // `pressed` is read here, while drawing: a press redraws this key and recomposes nothing.
                     drawCssCap(look.face, corner = capCorner.toPx(), press = if (pressed) 1f else 0f)
-                    if (focused && key == KeyboardKey.Action) drawActionRing(colors.onAccent, capCorner.toPx())
+                    if (focused) drawFocusedKeyRing(colors.onAccent, capCorner.toPx())
                 },
         contentAlignment = Alignment.Center,
     ) {
@@ -255,9 +255,10 @@ private data class KeyLook(
 
 /**
  * The board's look (the Search board): every key a cap in its collar; character keys on the cap
- * colour (`text`, 400), keys with a word or icon a touch lighter (`text2`, 400); the focused key `strong`, 600,
- * its collar's groove lit in the accent (the cap does not move); the action key an accent cap with its word in
- * `onAccent`, 600; shift in the accent while it is on.
+ * colour (`text`, 400), keys with a word or icon a touch lighter (`text2`, 400); the action key an accent cap with
+ * its word in `onAccent`, 600; shift in the accent while it is on. The focused key, whichever it is, is the strongest
+ * thing on the keyboard: the accent cap, its label in `onAccentFace`, 600, its collar's groove lit, and the inner ring
+ * ([drawFocusedKeyRing]) the action key at rest does not have.
  */
 private fun keyLook(
     key: KeyboardKey,
@@ -266,24 +267,19 @@ private fun keyLook(
     colors: PlumComposeColors,
 ): KeyLook {
     val seat = colors.collar.seat
-    val cap = seat.keyCap
+    // The accent cap's label is white unless under 3:1 (`onAccentFace`).
+    val accentCap = seat.keyAccent(colors.accent)
     if (key is KeyboardKey.Character) {
         return if (focused) {
-            KeyLook(cap, colors.strong, TypeRole.KeyboardKeyFocused)
+            KeyLook(accentCap, colors.onAccentFace, TypeRole.KeyboardKeyFocused)
         } else {
-            KeyLook(cap, colors.text, TypeRole.KeyboardKey)
+            KeyLook(seat.keyCap, colors.text, TypeRole.KeyboardKey)
         }
     }
-    // The action is the field's primary button: accent cap, its label white unless under 3:1 (`onAccentFace`).
-    if (key == KeyboardKey.Action) return KeyLook(seat.keyAccent(colors.accent), colors.onAccentFace, TypeRole.KeyboardWordStrong)
-    val ink =
-        when {
-            key == KeyboardKey.Shift && shift != ShiftMode.Off -> colors.accent
-            focused -> colors.strong
-            else -> colors.text2
-        }
-    val word = seat.wordCap
-    return KeyLook(word, ink, if (focused) TypeRole.KeyboardWordStrong else TypeRole.KeyboardWord)
+    // The action is the field's primary button.
+    if (key == KeyboardKey.Action || focused) return KeyLook(accentCap, colors.onAccentFace, TypeRole.KeyboardWordStrong)
+    val ink = if (key == KeyboardKey.Shift && shift != ShiftMode.Off) colors.accent else colors.text2
+    return KeyLook(seat.wordCap, ink, TypeRole.KeyboardWord)
 }
 
 /** The hairline of light just under the well: the key's outline moved down 1 px, drawn first. */
@@ -298,10 +294,10 @@ private fun DrawScope.drawWellLight(corner: Float) {
 }
 
 /**
- * The action key focused: its accent cap hides the accent groove, so a ring in `onAccent` is drawn inside the cap,
- * [KeyboardDimens.keyboardActionRingInset] in from its edge, so the focus shows for a gamepad user.
+ * The focused key: its accent cap hides the accent groove, so a ring in `onAccent` is drawn inside the cap,
+ * [KeyboardDimens.keyboardActionRingInset] in from its edge. It tells the focused key from the action key at rest.
  */
-private fun DrawScope.drawActionRing(
+private fun DrawScope.drawFocusedKeyRing(
     ring: Color,
     corner: Float,
 ) {

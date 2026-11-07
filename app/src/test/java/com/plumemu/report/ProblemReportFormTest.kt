@@ -35,16 +35,16 @@ class ProblemReportFormTest {
         assertNull(form.result)
         assertNull(form.mistake)
         assertFalse(form.isTrayUp)
-        assertEquals(listOf(ReportItem.Text, ReportItem.Email, ReportItem.Details, ReportItem.Send, ReportItem.Leave), form.items)
+        assertEquals(listOf(ReportItem.Text, ReportItem.Email, ReportItem.Details, ReportItem.Send, ReportItem.Leave, ReportItem.ShareLog), form.items)
     }
 
     @Test
     fun downAndUpWalkTheItemsAndStopAtTheEnds() {
         val seen = mutableListOf(form.focus)
         repeat(6) { form.onAction(down); seen += form.focus }
-        assertEquals(listOf(ReportItem.Text, ReportItem.Email, ReportItem.Details, ReportItem.Send, ReportItem.Leave, ReportItem.Leave, ReportItem.Leave), seen)
+        assertEquals(listOf(ReportItem.Text, ReportItem.Email, ReportItem.Details, ReportItem.Send, ReportItem.Leave, ReportItem.ShareLog, ReportItem.ShareLog), seen)
         assertEquals(ReportStep.Stay(moved = true), form.onAction(up))
-        assertEquals(ReportItem.Send, form.focus)
+        assertEquals(ReportItem.Leave, form.focus)
         repeat(5) { form.onAction(up) }
         assertEquals(ReportItem.Text, form.focus)
         assertEquals(ReportStep.Stay(moved = false), form.onAction(up))

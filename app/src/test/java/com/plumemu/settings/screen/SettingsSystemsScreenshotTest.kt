@@ -20,8 +20,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings › Library › System order and Systems: the
- * System order row with its line, and the Systems panel idle, carrying, with hidden systems, after
+ * Settings › Library › Systems: System order, its first item, with its line, and the panel idle, carrying, with hidden systems, after
  * the switch to Manual and after the refusal to hide the last one.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -29,7 +28,7 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class SettingsSystemsScreenshotTest {
     @Test
-    fun systemOrderRow() = ReferenceShots.capture("settings_system_order") { SystemsShot(SettingsOption.SystemOrder) }
+    fun systemOrderItem() = ReferenceShots.capture("settings_system_order") { SystemsShot(SettingsOption.Systems, enter = true) { move(Direction.Up) } }
 
     @Test
     fun systemsIdle() = ReferenceShots.capture("settings_systems_idle") { SystemsShot(SettingsOption.Systems, enter = true) { move(Direction.Down) } }

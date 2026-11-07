@@ -40,6 +40,8 @@ internal fun buttonsFor(why: EmptyLibrary): List<EmptyButton> =
     when (why) {
         EmptyLibrary.NoFolder -> listOf(EmptyButton.AddFolder)
         EmptyLibrary.NoGames -> listOf(EmptyButton.FilesNotAdded, EmptyButton.ChooseFolder)
+        // Nothing to report: the page would say "Every file is in the library"; what helps is another folder.
+        EmptyLibrary.NoFiles -> listOf(EmptyButton.ChooseFolder)
         EmptyLibrary.Scanning -> emptyList()
     }
 
@@ -118,7 +120,14 @@ internal fun EmptyLibraryMessage(
         return
     }
     val title = stringResource(if (why == EmptyLibrary.NoFolder) R.string.home_empty_title else R.string.home_nogames_title)
-    val body = stringResource(if (why == EmptyLibrary.NoFolder) R.string.home_empty_body_folder else R.string.home_nogames_body_files)
+    val body =
+        stringResource(
+            when (why) {
+                EmptyLibrary.NoFolder -> R.string.home_empty_body_folder
+                EmptyLibrary.NoFiles -> R.string.home_nogames_body_no_files
+                else -> R.string.home_nogames_body_files
+            },
+        )
     val focused = notices.emptyFocus.indexIn(buttons.size)
     val colors = PlumTheme.colors
     val type = PlumTheme.type

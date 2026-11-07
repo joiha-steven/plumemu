@@ -70,7 +70,7 @@ class SettingsStatusTest {
 
     @Test
     fun resetLibrarySaysForgettingThenDoneOrFailed() {
-        show(panelAt(SettingsOption.ResetLibrary, PanelPage.Confirm, SettingsModel.CONFIRM_RESET))
+        show(panelAt(SettingsOption.ResetLibrary, PanelPage.ResetLibraryConfirm, SettingsModel.CONFIRM_RESET))
         press(Action.Enter)
         compose.onNodeWithText(context.getString(R.string.settings_reset_library_forgetting)).assertIsDisplayed()
         status.value = SettingsStatus(libraryReset = LibraryResetState.Forgetting)
@@ -84,7 +84,7 @@ class SettingsStatusTest {
     @Test
     fun aFailedWriteIsSaidUnderTheOptionsAndResetAllDoesNotClaimDone() {
         status.value = SettingsStatus(saveFailed = true)
-        show(panelAt(SettingsOption.ResetAll, PanelPage.Confirm, SettingsModel.CONFIRM_RESET))
+        show(panelAt(SettingsOption.ResetAll, PanelPage.ResetAllConfirm, SettingsModel.CONFIRM_RESET))
         press(Action.Enter)
         compose.onNodeWithTag(SettingsTags.SAVE_FAILED).assertIsDisplayed()
         compose.onNodeWithText(context.getString(R.string.settings_reset_all_done)).assertDoesNotExist()
@@ -95,9 +95,7 @@ class SettingsStatusTest {
         show(optionsAt(SettingsOption.Version))
         compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertDoesNotExist()
         compose.onNodeWithTag(SettingsTags.HINT_BACK).assertIsDisplayed()
-        press(Action.Move(Direction.Down)) // Check for updates: A checks now
-        compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed()
-        press(Action.Move(Direction.Down)) // Check for updates daily: A flips it
+        press(Action.Move(Direction.Down)) // Updates: A opens its panel
         compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed()
         press(Action.Move(Direction.Down)) // Send usage statistics: A flips it
         compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed()

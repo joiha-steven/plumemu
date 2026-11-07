@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.click
 import com.plumemu.account.AccountStatus
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.account.SignInItem
 import com.plumemu.account.SignInTags
 import com.plumemu.coreinput.Action
@@ -38,7 +39,7 @@ internal class SettingsPasteTest : SettingsKeyboardPathHarness() {
         startOnRedSans() // the accent palette's "+" is reached by walking the presets from Red
     }
 
-    override val content: SettingsContent get() = SettingsContent(account = AccountStatus.SignedOut)
+    override val content: SettingsContent get() = SettingsContent(account = AccountStatus.SignedOut, chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper)
 
     /** The clipboard as a test sets it; counts how often the text itself was read. */
     private class FakeClip : ClipSource {

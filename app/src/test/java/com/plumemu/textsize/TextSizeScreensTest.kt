@@ -177,7 +177,7 @@ abstract class TextSizeScreensBase(
             val screenRoot = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
             val root = if (spec.rootTag == null) screenRoot else compose.onNodeWithTag(spec.rootTag, useUnmergedTree = true).fetchSemanticsNode()
             val label = "$name at ${each.name} (${each.factor}) ${eachFont.name} ${eachWeight.name} on ${widthDp}x$heightDp"
-            (textProblems(root, FitAllowance(spec.scrollTags, spec.ellipsisUnder, isLargest = each.factor >= spec.ellipsisFrom.factor, stripTags = homeLists + HomeTags.DETAILS, cutToFit = spec.cutToFit, slidingText = spec.slidingText, oneLine = DETAILS_ONE_LINE, ellipsisTexts = if (each == TextSize.Largest && eachFont != PlumFont.Sans) spec.longTitles else emptySet())) + spec.readThrough?.unreadRows(compose).orEmpty()).mapTo(failures) { "$label: $it" }
+            (textProblems(root, FitAllowance(spec.scrollTags, spec.ellipsisUnder, isLargest = each.factor >= spec.ellipsisFrom.factor, stripTags = homeLists + HomeTags.DETAILS, cutToFit = spec.cutToFit, slidingText = spec.slidingText, oneLine = DETAILS_ONE_LINE, ellipsisTexts = if (each == TextSize.Largest && eachFont != PlumFont.Sans) spec.longTitles else emptySet(), barTags = setOf(HomeTags.TOP_BAR, HomeTags.HINT_BAR))) + spec.readThrough?.unreadRows(compose).orEmpty()).mapTo(failures) { "$label: $it" }
             (if (each == TextSize.Largest && eachFont != PlumFont.Sans) spec.focusedWhenTooTall ?: spec.focused else spec.focused)?.let { find ->
                 val node = find(screenRoot)
                 if (node == null) failures += "$label: the focused item is not drawn" else notFullyShown(node, screenRoot, with(compose.density) { spec.trailingGap.toPx() })?.let { failures += "$label: the focused item $it" }
@@ -192,7 +192,7 @@ abstract class TextSizeScreensBase(
     private fun focusedRow(panel: OpenPanel): (SemanticsNode) -> SemanticsNode? = tagged(GamePanelTags.row(panel.content.focusableRows[panel.focus].key))
 
     private val homeLists = setOf(HomeTags.SYSTEMS, HomeTags.GAMES)
-    private val settingsLists = setOf(SettingsTags.OPTION_LIST, SettingsTags.SECTIONS)
+    private val settingsLists = setOf(SettingsTags.OPTION_LIST, SettingsTags.SECTIONS, com.plumemu.settings.screen.SettingsPanelTags.EXPLAIN)
     private val game = GameRef("snes-6", "Super Metroid")
     private val facts =
         sampleFacts(title = "Super Metroid").copy(
@@ -274,7 +274,7 @@ abstract class TextSizeScreensBase(
 
     // Home
     @Test
-    fun homeSystems() = check("home_systems", Spec(scrollTags = homeLists, focused = tagged(HomeTags.system(FakeHomeContent.BOARD_SNES_INDEX)), shoot = true, longTitles = LONG_TITLES)) { HomeAt(FakeHomeContent.board(), BoardSystemsFocused) }
+    fun homeSystems() = check("home_systems", Spec(scrollTags = homeLists, ellipsisUnder = HomeTags.GAMES, ellipsisFrom = TextSize.Large, focused = tagged(HomeTags.system(FakeHomeContent.BOARD_SNES_INDEX)), shoot = true, longTitles = LONG_TITLES)) { HomeAt(FakeHomeContent.board(), BoardSystemsFocused) }
 
     @Test
     fun homeGames() = check("home_games", Spec(scrollTags = homeLists, focused = tagged(HomeTags.game(FakeHomeContent.BOARD_REMEMBERED_ROW)), shoot = true, trailingGap = PlumDimens.listRowGap, longTitles = LONG_TITLES)) { HomeAt(FakeHomeContent.board(), BoardGamesFocused) }
@@ -294,7 +294,7 @@ abstract class TextSizeScreensBase(
 
     @Test
     fun settingsBackgroundPanel() =
-        check("settings_background", Spec(scrollTags = settingsLists, focused = tagged(SettingsTags.option(SettingsOption.Background)), shoot = true)) { SettingsAt(optionsAt(SettingsOption.Background)) }
+        check("settings_background", Spec(scrollTags = settingsLists, focused = tagged(SettingsTags.panelItem(0)), shoot = true)) { SettingsAt(com.plumemu.settings.screen.colorPageAt(SettingsOption.Background)) }
 
     @Test
     fun settingsAdvanced() =
@@ -306,7 +306,7 @@ abstract class TextSizeScreensBase(
 
     @Test
     fun settingsHomeScreen() =
-        check("settings_home_screen", Spec(scrollTags = settingsLists, focused = tagged(SettingsTags.option(SettingsOption.ShowBattery)))) { SettingsAt(optionsAt(SettingsOption.ShowBattery)) }
+        check("settings_home_screen", Spec(scrollTags = settingsLists, focused = tagged(SettingsTags.option(SettingsOption.ClockAndBattery)))) { SettingsAt(optionsAt(SettingsOption.ClockAndBattery)) }
 
     @Test
     fun settingsLibrary() =
@@ -339,9 +339,9 @@ abstract class TextSizeScreensBase(
             )
         }
 
-    // Library › System order and Systems; the carried row at the bottom stays whole.
+    // Library › Systems with System order on top; the carried row at the bottom stays whole.
     @Test
-    fun settingsSystemOrder() = check("settings_system_order", Spec(scrollTags = settingsLists, focused = tagged(SettingsTags.option(SettingsOption.SystemOrder)))) { SystemsShot(SettingsOption.SystemOrder) }
+    fun settingsSystemOrder() = check("settings_system_order", Spec(scrollTags = settingsLists + SettingsTags.SYSTEMS_LIST, focused = tagged(SettingsTags.option(SettingsOption.SystemOrder)), shoot = true)) { SystemsShot(SettingsOption.Systems, true) { move(Direction.Up) } }
 
     @Test
     fun settingsSystemsPanel() = systems("settings_systems", 1, setOf("arcade", "psp")) { move(Direction.Down) }
@@ -354,7 +354,7 @@ abstract class TextSizeScreensBase(
 
     @Test
     fun settingsAbout() =
-        check("settings_about", Spec(scrollTags = settingsLists, focused = tagged(SettingsTags.option(SettingsOption.Version)))) { SettingsAt(optionsAt(SettingsOption.Version)) }
+        check("settings_about", Spec(scrollTags = settingsLists + com.plumemu.settings.screen.SettingsPanelTags.ABOUT, focused = tagged(SettingsTags.option(SettingsOption.Version)))) { SettingsAt(optionsAt(SettingsOption.Version), content = SettingsContent(platformData = com.plumemu.platforms.PlatformDataVersion(6, "0".repeat(64), "2026-11-01"))) }
 
     @Test
     fun settingsSections() =
@@ -384,9 +384,9 @@ abstract class TextSizeScreensBase(
     fun gamePanelChooseEmulator() {
         val offers =
             listOf(
-                EmulatorOffer("snes9x", "Snes9x EX+", "com.explusalpha.Snes9xPlus"),
-                EmulatorOffer("retroarch-snes9x", "RetroArch: Snes9x", "com.retroarch.aarch64"),
-                EmulatorOffer("retroarch-bsnes-mercury-accuracy", "RetroArch: bsnes-mercury Accuracy", "com.retroarch.aarch64"),
+                EmulatorOffer("snes9x", "Snes9x EX+", null),
+                EmulatorOffer("retroarch-snes9x", "RetroArch: Snes9x", null),
+                EmulatorOffer("retroarch-bsnes-mercury-accuracy", "RetroArch: bsnes-mercury Accuracy", null),
             )
         val message = launchMessage(LaunchOutcome.EmulatorNotChosen(6, "snes", "Super Nintendo", offers, "snes9x"), sampleListing().copy(systemName = "Super Nintendo"))!!
         val panel = OpenPanel(game, PanelScreen.Message(message))

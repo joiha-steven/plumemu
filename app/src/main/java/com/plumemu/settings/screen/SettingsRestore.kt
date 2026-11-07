@@ -97,7 +97,14 @@ internal fun undoPanelItems(
         else -> listOf(UndoPanelItem.Confirm, UndoPanelItem.Cancel)
     }
 
-/** The Restore… row's value: what runs, or how the last one ended until the person has seen it; else "›". */
+/** How a restore or an Undo ended, standing until the person has read it; a confirm is still a question. */
+internal val RestoreState.isResult: Boolean
+    get() = this is RestoreState.Refused || this is RestoreState.Done || this is RestoreState.Failed || this is RestoreState.Interrupted
+
+/** The results Undo's page says itself; the others only Restore…'s page does. */
+internal fun undoPageShows(state: RestoreState): Boolean = (state is RestoreState.Failed && state.isUndo) || state is RestoreState.Refused
+
+/** Restore…'s word: what runs, or how the last one ended until the person has seen it; else nothing. */
 @Composable
 internal fun restoreRowValue(state: RestoreState): String {
     val word =
@@ -114,7 +121,7 @@ internal fun restoreRowValue(state: RestoreState): String {
     return stringResource(word)
 }
 
-/** The Undo row's value: the space the way-back set keeps ("Copy · 412 MB ›"), or "Undoing…". */
+/** Undo restore's word: the space the way-back set keeps ("Copy · 412 MB"), or "Undoing…". */
 @Composable
 internal fun undoRowValue(content: SettingsContent): String {
     val state = content.restore
@@ -226,10 +233,7 @@ internal fun RestorePanel(
 ) {
     val state = model.content.restore
     val inPanel = model.focus.column == SettingsColumn.Panel && model.focus.page == PanelPage.Restore
-    Column(
-        Modifier.fillMaxHeight().verticalScroll(rememberScrollState()).testTag(SettingsTags.RESTORE_PANEL),
-        verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap),
-    ) {
+    PanelScrollColumn(PlumDimens.settingsPanelGap, tag = SettingsTags.RESTORE_PANEL) {
         PanelTitle(stringResource(R.string.settings_restore_title))
         // The confirm says it all itself; otherwise what Restore does comes first.
         if (state !is RestoreState.Confirm) PanelBody(stringResource(R.string.settings_restore_body))
@@ -252,10 +256,7 @@ internal fun UndoRestorePanel(
     val state = content.restore
     val set = content.wayBack
     val inPanel = model.focus.column == SettingsColumn.Panel && model.focus.page == PanelPage.UndoRestore
-    Column(
-        Modifier.fillMaxHeight().verticalScroll(rememberScrollState()).testTag(SettingsTags.UNDO_PANEL),
-        verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap),
-    ) {
+    PanelScrollColumn(PlumDimens.settingsPanelGap, tag = SettingsTags.UNDO_PANEL) {
         PanelTitle(stringResource(R.string.settings_undo_restore))
         val ask = model.focus.undoAsk.takeIf { model.focus.page == PanelPage.UndoRestore }
         if (set != null) {
@@ -273,8 +274,7 @@ internal fun UndoRestorePanel(
         val line =
             when {
                 state is RestoreState.Replacing && state.isUndo -> restoreLineText(state)
-                state is RestoreState.Failed && state.isUndo -> restoreLineText(state)
-                state is RestoreState.Refused -> restoreLineText(state)
+                undoPageShows(state) -> restoreLineText(state)
                 else -> null
             }
         PanelLine(model, SettingsOption.UndoRestore, line)

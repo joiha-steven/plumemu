@@ -59,7 +59,7 @@ android {
         versionCode = providers.gradleProperty("plumemu.versionCode").orNull?.trim()?.toInt()
             ?: providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }
                 .standardOutput.asText.get().trim().toInt()
-        versionName = "0.1.2"
+        versionName = "0.1.3"
         // The 10,000-game benchmark content may be picked by an intent extra only where this is
         // true: the benchmark build types below, never debug or release (MainActivity).
         buildConfigField("boolean", "BENCHMARK_CONTENT", "false")

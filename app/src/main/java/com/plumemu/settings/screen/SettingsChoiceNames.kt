@@ -40,7 +40,6 @@ import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.InGameSetting
 import com.plumemu.coredata.settings.PlumSettings
-import com.plumemu.coredata.settings.RecentSizeSetting
 import com.plumemu.coredata.settings.SortGamesSetting
 import com.plumemu.coredata.settings.SoundLevel
 import com.plumemu.language.AppLanguages
@@ -110,12 +109,6 @@ internal fun choiceName(
                 SortGamesSetting.RecentlyAdded -> R.string.settings_sort_by_recently_added
                 SortGamesSetting.Year -> R.string.settings_sort_by_year
                 SortGamesSetting.Rating -> R.string.settings_sort_by_rating
-            }
-        SettingsOption.RecentSize ->
-            when (RecentSizeSetting.entries[index]) {
-                RecentSizeSetting.Ten -> R.string.settings_recent_size_10
-                RecentSizeSetting.Twenty -> R.string.settings_recent_size_20
-                RecentSizeSetting.Fifty -> R.string.settings_recent_size_50
             }
         SettingsOption.SystemOrder -> systemOrderName(index)
         SettingsOption.SwitchSystemWith -> if (index == SwitchSystemWithSetting.Triggers.ordinal) R.string.settings_switch_system_triggers else R.string.settings_switch_system_bumpers

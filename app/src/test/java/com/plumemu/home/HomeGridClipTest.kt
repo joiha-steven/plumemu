@@ -33,12 +33,12 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
 
 /**
- * A grid row scrolled partly off the grid's edge is cut at the grid's edge (seen on an AYN Thor:
- * the second line of an app's name showed under the header). The strip lets the focus ring into the 10 dp
- * bar gaps above and below the grid; tile content must not follow it. Measured on the pixels: scrolling
- * down the Apps grid, Recent, Favorites and a system's grid, and back up, the gap above and below the grid
- * holds nothing but the background at every step where a row is cut and the focused tile (whose ring may
- * be there) is not the one at that edge.
+ * The grid runs from bar to bar and its rows go through the gaps and under both bars (design/rules.md >
+ * Lists that scroll); it never draws into a bar (seen on an AYN Thor: the second line of an app's name
+ * showed under the header), and a row cut at a bar shows at least a third of itself or is left out whole.
+ * Measured on the pixels: scrolling down the Apps grid, Recent, Favorites and a system's grid, and back up,
+ * the top bar and the hint bar are the pixels they were at the start at every step where a row is cut, and a
+ * cut row showing under a third of itself leaves nothing in the grid.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -62,17 +62,73 @@ abstract class HomeGridClipBase {
             node.config.first { it.key.name == "TestTag" }.value.toString().removePrefix("home_cover_").toInt() to (node.positionInRoot.y to node.positionInRoot.y + node.size.height)
         }
 
-    /** Row cut at the grid's top, as messages (the grid's own top, px). */
-    private fun topCuts(label: String): List<String> {
+    /** The pixels of a row [cell] (px: top, bottom) in the grid's column span, inside the run [from]..[to], that are not the page. */
+    private fun inkOf(
+        pixels: androidx.compose.ui.graphics.PixelMap,
+        from: Float,
+        to: Float,
+        ringColumns: ClosedFloatingPointRange<Float> = 1f..0f,
+    ): Int {
+        val grid = compose.onNodeWithTag(HomeTags.GRID, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val left = (grid.left.value * compose.density.density).toInt()
+        val right = (grid.right.value * compose.density.density).toInt() - 2
+        val page = pixels[2, 2]
+        val own = compose.barsOwnBounds()
+        var n = 0
+        for (y in from.toInt().coerceAtLeast(0) until to.toInt().coerceAtMost(pixels.height)) for (x in left until right) {
+            // The focused cover's ring and glow reach past its cell: its columns are left out.
+            if (x.toFloat() in ringColumns) continue
+            // What a bar draws itself (a title's line box, a key's collar reaching up) shares the strip's edge rows.
+            if (own.any { it.contains(androidx.compose.ui.geometry.Offset(x.toFloat(), y.toFloat())) }) continue
+            val p = pixels[x, y]
+            if (abs(p.red - page.red) > 0.04f || abs(p.green - page.green) > 0.04f || abs(p.blue - page.blue) > 0.04f) n++
+        }
+        return n
+    }
+
+    /** The pixel columns the focused cover's ring, lift and glow may reach (a lifted cover's collar grown, plus the halo). */
+    private fun ringColumns(entryId: String): ClosedFloatingPointRange<Float> {
+        val strip = checkNotNull(state)
+        val index = compose.runOnIdle { strip.focus.rowOf(entryId) }
+        val node = compose.onAllNodes(isCover, useUnmergedTree = true).fetchSemanticsNodes().firstOrNull { it.config.first { c -> c.key.name == "TestTag" }.value.toString() == HomeTags.cover(index) } ?: return 1f..0f
+        val reach = (PlumDimens.focusRingOutset.value + PlumDimens.focusRingKeyline.value + PlumDimens.focusHaloReach.value) * compose.density.density + node.size.width * (PlumDimens.FOCUSED_COVER_SCALE - 1f) / 2f
+        return (node.positionInRoot.x - reach)..(node.positionInRoot.x + node.size.width + reach)
+    }
+
+    /** Rows cut at the grid's top that show a third of themselves or more are fine; one showing less must leave no ink (messages; the grid's own top, px). */
+    private fun topCuts(
+        label: String,
+        entryId: String,
+    ): List<String> {
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(2000)
         compose.waitForIdle()
         val density = compose.density.density
         val top = compose.onNodeWithTag(HomeTags.GRID, useUnmergedTree = true).getUnclippedBoundsInRoot().top.value * density
-        return cells().filterValues { it.first < top - 1 && it.second > top + 1 }.entries.distinctBy { it.value.first }.map { "$label: a row starts ${(top - it.value.first) / density} dp above the grid's top" }
+        val sliver = cells().filterValues { it.first < top - 1 && it.second > top + 1 && it.second - top < (it.second - it.first) / 3f }.values.distinctBy { it.first }
+        if (sliver.isEmpty()) return emptyList()
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        return sliver.mapNotNull { if (inkOf(pixels, top, it.second, ringColumns(entryId)) > 0) "$label: a row ${(it.second - top) / density} dp of ${(it.second - it.first) / density} shows at the grid's top, under a third" else null }
     }
 
-    /** Down all the way, then up all the way; at each rest the gaps are checked. Returns "cut at top" / "cut at bottom" step counts. */
+    /** Pixels of the bar tagged [tag] that are not the page and lie outside everything the bars draw themselves ([barsOwnBounds]). */
+    private fun foreignInBar(
+        pixels: androidx.compose.ui.graphics.PixelMap,
+        tag: String,
+    ): Int {
+        val own = compose.barsOwnBounds()
+        val page = pixels[2, 2]
+        var n = 0
+        val box = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        for (y in box.top.toInt() until box.bottom.toInt()) for (x in box.left.toInt() until box.right.toInt()) {
+            if (own.any { it.contains(androidx.compose.ui.geometry.Offset(x.toFloat(), y.toFloat())) }) continue
+            val p = pixels[x, y]
+            if (abs(p.red - page.red) > 0.04f || abs(p.green - page.green) > 0.04f || abs(p.blue - page.blue) > 0.04f) n++
+        }
+        return n
+    }
+
+    /** Down all the way, then up all the way; at each rest the bars and the cut rows are checked. Returns "cut at top" / "cut at bottom" step counts. */
     private fun walk(label: String, entryId: String): Pair<Int, Int> {  // steps scrolled off the first row, steps with a row cut at the bottom
         val strip = checkNotNull(state)
         val density = compose.density.density
@@ -87,44 +143,35 @@ abstract class HomeGridClipBase {
             val grid = compose.onNodeWithTag(HomeTags.GRID, useUnmergedTree = true).getUnclippedBoundsInRoot()
             val top = grid.top.value * density
             val bottom = grid.bottom.value * density
-            val gap = PlumDimens.barGap.value * density
-            val gapBelow = footerGapToKeys(settings.textSize ?: TextSize.Large).value * density
-            // What a lifted focused cover (its collar grown by the lift) puts past its own bounds: ring, keyline and halo (half the growth each side is added per cover).
-            val ring = (PlumDimens.focusRingOutset.value + PlumDimens.focusRingKeyline.value + PlumDimens.focusHaloReach.value) * density
             val nodes = compose.onAllNodes(isCover, useUnmergedTree = true).fetchSemanticsNodes()
             val covers = nodes.map { it.positionInRoot.y to it.positionInRoot.y + it.size.height }
-            // Scrolled: the cell at the grid's top is not the first one.
-            val atTop = nodes.filter { abs(it.positionInRoot.y - top) <= 1f }.map { node -> node.config.first { it.key.name == "TestTag" }.value.toString() }
-            if (atTop.isNotEmpty() && HomeTags.cover(0) !in atTop) scrolledSteps++
+            // Scrolled: the first cover has left the top of the grid's rows.
+            val firstTop = nodes.firstOrNull { node -> node.config.first { it.key.name == "TestTag" }.value.toString() == HomeTags.cover(0) }?.positionInRoot?.y
+            if (firstTop == null || firstTop < top - 1f) scrolledSteps++
             // Captured only in a step that cuts a row: the capture is most of this test's time.
             val pixels by lazy { compose.onRoot().captureToImage().toPixelMap() }
-            val left = (grid.left.value * density).toInt()
-            val right = (grid.right.value * density).toInt() - 2
-            val background by lazy { pixels[right + 1, (top - gap / 2).toInt()] }
-
-            fun dirty(y0: Int, y1: Int): Int {
-                var n = 0
-                for (y in y0 until y1) for (x in left until right) {
-                    val p = pixels[x, y]
-                    if (abs(p.red - background.red) > 0.04f || abs(p.green - background.green) > 0.04f || abs(p.blue - background.blue) > 0.04f) n++
-                }
-                return n
-            }
-
             val focusTop = focusedBounds(strip, entryId)
-            // A row cut at the grid's top shows its tail alone (a name's second line, a text tile's title).
-            covers.filter { it.first < top - 1 && it.second > top + 1 }.forEach { problems += "$step: a row starts ${(top - it.first) / density} dp above the grid's top and is cut there" }
-            val cutAbove = covers.any { it.first < top - 1 && it.second > top }
-            val cutBelow = covers.any { it.second > bottom + 1 && it.first < bottom }
-            if (cutAbove && (focusTop == null || focusTop.first - ring - (focusTop.second - focusTop.first) * (PlumDimens.FOCUSED_COVER_SCALE - 1f) / 2f >= top)) {
-                cutTop++
-                val n = dirty((top - gap).toInt(), top.toInt())
-                if (n > 0) problems += "$step: $n pixels of the gap above the grid are not background"
+            val cutAbove = covers.any { it.first < top - 1 && it.second > top + 1 }
+            val cutBelow = covers.any { it.second > bottom + 1 && it.first < bottom - 1 }
+            if (cutAbove) cutTop++
+            if (cutBelow) cutBottom++
+            if (cutAbove || cutBelow) {
+                // A cut row goes under the bar and no further: outside what the bar draws itself the bar is the page.
+                for ((name, tag) in listOf("top bar" to HomeTags.TOP_BAR, "hint bar" to HomeTags.HINT_BAR)) {
+                    val n = foreignInBar(pixels, tag)
+                    if (n > 0) problems += "$step: $n pixels of the $name are not the page while a row runs under it"
+                }
             }
-            if (cutBelow && (focusTop == null || focusTop.second + ring + (focusTop.second - focusTop.first) * (PlumDimens.FOCUSED_COVER_SCALE - 1f) / 2f <= bottom)) {
-                cutBottom++
-                val n = dirty(bottom.toInt(), (bottom + gapBelow).toInt())
-                if (n > 0) problems += "$step: $n pixels of the gap below the grid are not background"
+            // A row cut at a bar that shows under a third of itself is left out, the focused one aside.
+            for ((index, cover) in nodes.withIndex()) {
+                val at = covers[index]
+                val share = if (at.first < top - 1 && at.second > top + 1) (at.second - top) / (at.second - at.first) else if (at.second > bottom + 1 && at.first < bottom - 1) (bottom - at.first) / (at.second - at.first) else continue
+                if (share >= 1f / 3f) continue
+                val name = cover.config.first { it.key.name == "TestTag" }.value.toString()
+                if (focusTop != null && focusTop.first == at.first) continue
+                val ringColumns = ringColumns(entryId)
+                val ink = if (at.first < top) inkOf(pixels, top, at.second, ringColumns) else inkOf(pixels, at.first, bottom, ringColumns)
+                if (ink > 0) problems += "$step: $name shows $share of itself at a bar, under a third, yet $ink pixels of it stand there"
             }
         }
         check("$label at the start")
@@ -138,9 +185,12 @@ abstract class HomeGridClipBase {
             compose.runOnIdle { strip.dispatch(Action.Move(Direction.Down)) }
             check("$label down $i")
             val after = cells()
-            val wasWhole = next != null && next.second <= gridBounds.bottom.value * density + 0.5f && next.first >= gridBounds.top.value * density
+            // Whole and clear of the bottom fade: a row only partly under it is one the grid may scroll to.
+            // The focus ring and glow of the row below reach past it: whole means clear of the fade with those too.
+            val reach = (PlumDimens.focusRingOutset.value + PlumDimens.focusRingKeyline.value + PlumDimens.focusHaloReach.value) * density
+            val wasWhole = next != null && next.second + reach <= (gridBounds.bottom - PlumDimens.listFadeBand).value * density + 0.5f && next.first >= gridBounds.top.value * density
             val still = before[focusIndex]?.first == after[focusIndex]?.first
-            if (wasWhole && !still) problems += "$label down $i: the row below stood whole in the grid and the grid scrolled anyway"
+            if (wasWhole && !still) problems += "$label down $i: the row below stood whole in the grid and the grid scrolled anyway (${next?.first}..${next?.second}, reach $reach, grid to ${gridBounds.bottom.value * density}, before ${before[focusIndex]}, after ${after[focusIndex]})"
             val moved = compose.runOnIdle { strip.focus.rowOf(entryId) }
             if (columns > 0 && moved != focusIndex && moved != focusIndex + columns) problems += "$label down $i: focus went from $focusIndex to $moved, not one row of $columns"
             val landed = after[moved]
@@ -196,8 +246,9 @@ abstract class HomeGridClipBase {
         assertTrue("$label: the walks never scrolled ($top) or cut a row at the bottom ($bottom), so they prove nothing", top > 0 && (bottom > 0 || !needsCutRow))
     }
 
+    // The Apps grid's window is whole rows (AppsGridWholeCellsTest): no row is cut at the bottom, so only the top walk is proof.
     @Test
-    fun appsGridCutsAtItsEdges() = everySize("Apps", HomeContent.APPS_ID) { AppsGridBoard(focused = 0, onState = { state = it }) }
+    fun appsGridCutsAtItsEdges() = everySize("Apps", HomeContent.APPS_ID, needsCutRow = false) { AppsGridBoard(focused = 0, onState = { state = it }) }
 
     private fun gamesGrid(
         label: String,
@@ -220,9 +271,10 @@ abstract class HomeGridClipBase {
     @Test
     fun systemGridCutsAtItsEdges() = gamesGrid("Super Nintendo", FakeHomeContent.BOARD_SNES_INDEX, CoverArtLibrary, coverArtSource(), "snes")
 
-    /** A touch fling (and a drag) ends on a row: no row is left cut at the top. */
+    /** A touch fling (and a drag) leaves no sliver at the top: a cut row shows a third of itself or is left out. */
     private fun fling(
         label: String,
+        entryId: String,
         board: @Composable () -> Unit,
     ) {
         compose.setContent { PlumTheme(settings) { ProvideGridSize(gridSize) { board() } } }
@@ -237,34 +289,35 @@ abstract class HomeGridClipBase {
                     val x = center.x
                     if (gesture % 2 == 0) swipe(androidx.compose.ui.geometry.Offset(x, bottom - 20f), androidx.compose.ui.geometry.Offset(x, top + 20f), durationMillis = 60 + 40L * gesture) else swipe(androidx.compose.ui.geometry.Offset(x, top + 20f), androidx.compose.ui.geometry.Offset(x, bottom - 20f), durationMillis = 80)
                 }
-                problems += topCuts("$label $size fling $gesture")
+                problems += topCuts("$label $size fling $gesture", entryId)
                 if (HomeTags.cover(0) !in cells().keys.map { HomeTags.cover(it) }) scrolled = true
             }
         }
-        assertTrue("${problems.size} flings left a cut top row:\n" + problems.take(4).joinToString("\n"), problems.isEmpty())
+        assertTrue("${problems.size} flings left a sliver at the top:\n" + problems.take(4).joinToString("\n"), problems.isEmpty())
         assertTrue("$label: no fling scrolled the grid, so the test proves nothing", scrolled)
     }
 
     @Test
-    fun aFlingInAppsEndsOnARow() = fling("Apps") { AppsGridBoard(focused = 0, onState = { state = it }) }
+    fun aFlingInAppsLeavesNoSliver() = fling("Apps", HomeContent.APPS_ID) { AppsGridBoard(focused = 0, onState = { state = it }) }
 
     @Test
-    fun aFlingInASystemGridEndsOnARow() = fling("Super Nintendo") { HomeWithArt(coverArtSource(), gridActions(FakeHomeContent.BOARD_SNES_INDEX, 0), CoverArtLibrary, gridIds = setOf("snes"), onState = { state = it }) }
+    fun aFlingInASystemGridLeavesNoSliver() = fling("Super Nintendo", "snes") { HomeWithArt(coverArtSource(), gridActions(FakeHomeContent.BOARD_SNES_INDEX, 0), CoverArtLibrary, gridIds = setOf("snes"), onState = { state = it }) }
 
-    /** A text size change at the end of the list (the board is not rebuilt, only its sizes) realigns the grid to whole rows. */
+    /** A text size change at the end of the list (the board is not rebuilt, only its sizes) realigns the grid: no sliver at the top, the last row whole above the fade. */
     @Test
-    fun aTextSizeChangeAtTheEndOfTheListRealignsToWholeRows() {
+    fun aTextSizeChangeAtTheEndOfTheListKeepsTheLastRowWhole() {
         compose.setContent { PlumTheme(settings) { AppsGridBoard(focused = AppsGridApps.lastIndex, onState = { state = it }) } }
         compose.waitForIdle()
         val problems = mutableListOf<String>()
         val order = listOf(TextSize.Small, TextSize.Large, TextSize.Small, TextSize.Largest, TextSize.Small, TextSize.Huge, TextSize.Small, TextSize.Large)
         for (size in order) {
             settings = PlumThemeSettings.Graphite.copy(textSize = size)
-            problems += topCuts("end of Apps at $size")
+            problems += topCuts("end of Apps at $size", HomeContent.APPS_ID)
             val density = compose.density.density
             val grid = compose.onNodeWithTag(HomeTags.GRID, useUnmergedTree = true).getUnclippedBoundsInRoot()
             val last = cells()[AppsGridApps.lastIndex]
-            if (last == null || last.second > grid.bottom.value * density + 0.5f) problems += "end of Apps at $size: the last app is not whole in the grid ($last)"
+            // The last row of the list rests whole above the bottom fade.
+            if (last == null || last.second > (grid.bottom - PlumDimens.listFadeBand).value * density + 0.5f) problems += "end of Apps at $size: the last app is not whole above the fade ($last)"
         }
         assertTrue("${problems.size} problems:\n" + problems.take(4).joinToString("\n"), problems.isEmpty())
     }

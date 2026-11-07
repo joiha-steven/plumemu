@@ -8,7 +8,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipPath
@@ -16,6 +15,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.graphics.FilterQuality
 import com.plumemu.coreui.components.SoftImages
+import com.plumemu.coreui.components.drawPlaced
 import com.plumemu.coreui.components.drawSoft
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
@@ -49,9 +49,9 @@ object SettingsPreviewDimens {
     val slabEdge = 0.67.dp
 
     /** The mini slab's drop shadow (`0 6px 14px` black .5: a drop and sigma = blur / 2) and its glow's sigma (`0 0 22px`). */
-    val slabDrop = 4.dp
-    val slabSigma = 4.67.dp
-    val slabGlowSigma = 7.33.dp
+    val slabDrop = 4.dp * Depth.SHADOW_REACH
+    val slabSigma = 4.67.dp * Depth.SHADOW_REACH
+    val slabGlowSigma = 7.33.dp * Depth.GLOW_REACH
     val samplePad = 3.dp
     val barLeft = 13.33.dp
     val barWidth = 72.dp
@@ -82,9 +82,6 @@ object SettingsPreviewDimens {
     val frameInsetDrop = 1.33.dp
     val frameInsetSigma = 2.dp
     val frameLineDrop = 0.67.dp
-
-    /** Where the list lines fade out when Fade list edges is on: the card's bottom stretch. */
-    val fadeHeight = 36.dp
 
     /** The board's right-column text (title 22 px, description 16 px on 24, gap 8 px) as shares of the panel title (16) and body (13) sizes. */
     const val BOARD_TITLE_SCALE = 14.67f / 16f
@@ -153,8 +150,8 @@ fun DrawScope.drawPreviewInset(corner: Float, light: Boolean) {
     val w = Math.round(size.width)
     val h = Math.round(size.height)
     val look = SoftImages.Inset(SettingsPreviewLook.frameInset(light), SettingsPreviewDimens.frameInsetDrop.toPx(), SettingsPreviewDimens.frameInsetSigma.toPx())
-    val image = SoftImages.inset(w, h, corner, 0f, look, null) ?: return
-    drawImage(image, IntOffset.Zero, IntSize(w, h), IntOffset.Zero, IntSize(w, h), filterQuality = FilterQuality.Low)
+    val placed = SoftImages.inset(w, h, corner, 0f, look, null) ?: return
+    drawPlaced(placed, IntOffset.Zero, w, h)
 }
 
 /**
@@ -204,12 +201,9 @@ fun DrawScope.drawPreviewSlab(colors: PlumComposeColors) {
     val stops = look.stops
     drawRoundRect(Brush.verticalGradient(0f to stops[0], FocusSlab.MID_AT to stops[1], 1f to stops[2], startY = 0f, endY = size.height), cornerRadius = CornerRadius(corner))
     val edge = d.slabEdge.toPx()
-    val split = corner * (1f - HALF_ROUND)
-    // The border's top side takes its own colour, meeting the sides half way round each corner (the CSS `border-top-color`).
-    clipRect(top = split) { drawRoundRect(look.edge, topLeft = Offset(edge / 2, edge / 2), size = Size(size.width - edge, size.height - edge), cornerRadius = CornerRadius(corner - edge / 2), style = Stroke(edge)) }
-    clipRect(bottom = split) { drawRoundRect(look.top, topLeft = Offset(edge / 2, edge / 2), size = Size(size.width - edge, size.height - edge), cornerRadius = CornerRadius(corner - edge / 2), style = Stroke(edge)) }
+    // The real slab's rim: lit at two opposite corners.
+    drawRoundRect(look.rim(Offset.Zero, Offset(size.width, size.height)), topLeft = Offset(edge / 2, edge / 2), size = Size(size.width - edge, size.height - edge), cornerRadius = CornerRadius(corner - edge / 2), style = Stroke(edge))
 }
 
-/** The board's mini slab drops black .5; the theme's own near shadow is .35 (and lighter on a light theme): scaled by their ratio. */
+/** The mini slab's lift against the theme's near layer: a small slab needs it a little stronger to read. */
 private const val SLAB_DROP_SCALE = 1.43f
-private const val HALF_ROUND = 0.70710677f

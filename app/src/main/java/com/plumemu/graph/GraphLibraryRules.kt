@@ -3,6 +3,7 @@ package com.plumemu.graph
 import android.content.Context
 import com.plumemu.library.matching.SystemRule
 import android.util.Log
+import com.plumemu.sound.findVibrator
 import com.plumemu.platforms.PlatformCatalog
 import com.plumemu.platforms.PlatformDataVersion
 import com.plumemu.platforms.PlatformDataVersions
@@ -11,9 +12,11 @@ import com.plumemu.update.PlatformDataStore
 import com.plumemu.update.selectPlatformData
 import com.plumemu.settings.screen.SettingsContent
 import java.io.File
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 
 /*
  * What the library's scan takes from the platform data (moved out of AppGraph.kt): the
@@ -64,3 +67,9 @@ internal fun loadPlatformData(context: Context): LoadedPlatformData? =
 /** Adds which version of the platform data is in use (Settings › About): none first, then the version once the data has loaded. */
 internal fun Flow<SettingsContent>.withPlatformData(load: RetryingLazy<LoadedPlatformData>): Flow<SettingsContent> =
     combine(flow { emit(null); emit(load.get()?.version) }) { content, version -> content.copy(platformData = version) }
+
+/** Adds whether the device can vibrate (Settings › Controls): asked once per collection, off the main thread. */
+internal fun Flow<SettingsContent>.withVibrator(
+    context: Context,
+    io: CoroutineDispatcher,
+): Flow<SettingsContent> = combine(flow { emit(findVibrator(context.applicationContext) != null) }.flowOn(io)) { content, has -> content.copy(hasVibrator = has) }

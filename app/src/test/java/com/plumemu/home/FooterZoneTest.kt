@@ -54,11 +54,16 @@ class FooterZoneTest {
 
     private fun rootBottom(): Dp = compose.onRoot().getUnclippedBoundsInRoot().bottom
 
-    private fun zoneUnder(tag: String): Float = (rootBottom() - compose.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot().bottom).value
+    /** Home's columns run to the hint bar (rows go under its fade): their content ends where the slot does, the footer gap above the bar. */
+    private fun zoneUnder(
+        tag: String,
+        runsToBar: Boolean,
+    ): Float = (rootBottom() - compose.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot().let { if (runsToBar) it.slot().bottom else it.bottom }).value
 
     private fun check(
         what: String,
         contentTag: String,
+        runsToBar: Boolean = true,
         scene: @androidx.compose.runtime.Composable () -> Unit,
     ) {
         var expected = 0f
@@ -70,10 +75,10 @@ class FooterZoneTest {
             }
         }
         compose.waitForIdle()
-        assertEquals("$what at Medium: footer zone", 40f, zoneUnder(contentTag), 0.5f)
+        assertEquals("$what at Medium: footer zone", 40f, zoneUnder(contentTag, runsToBar), 0.5f)
         size = TextSize.Largest
         compose.waitForIdle()
-        assertEquals("$what at Largest: footer zone", expected, zoneUnder(contentTag), 0.5f)
+        assertEquals("$what at Largest: footer zone", expected, zoneUnder(contentTag, runsToBar), 0.5f)
     }
 
     @Test
@@ -101,7 +106,7 @@ class FooterZoneTest {
         }
 
     @Test
-    fun settings() = check("settings", SettingsTags.STRIP) { SettingsAt(SettingsFocus()) }
+    fun settings() = check("settings", SettingsTags.STRIP, runsToBar = false) { SettingsAt(SettingsFocus()) }
 
     @Test
     fun setup() {

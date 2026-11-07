@@ -47,6 +47,9 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class GameMenuSlabGapsTest {
     private companion object {
+        /** The room under the last row of a scrolled menu stays under a row (dp). */
+        const val MOST_ROOM = 60f
+
         /** Rows: Play, Play with, Favorite, Sort by, Name, Box art, Achievements, Info, Hide game; the cursor starts on the first. */
         const val LAST = 8
     }
@@ -103,13 +106,14 @@ class GameMenuSlabGapsTest {
         return Triple(row.left.value - cardLeft, cardRight - row.right.value, cardBottom - (row.bottom.value + overhang))
     }
 
-    // At 832 the card nearly holds all nine rows: the list's "no sliver of the first row under the title" room may sit under the last one, so only the board's minimum counts there.
+    // A list that scrolls ends with a little room under its last row, so the first shown row can sit right under the up arrow (design/rules.md, Lists that scroll; `endRoomFor`, under one row): the board's
+    // padding is a minimum there, one row at most more. At 832 the card nearly holds all nine rows: the room may likewise sit under the last one.
     private fun check(what: String, text: TextSize = TextSize.Small, exactBottom: Boolean = true) {
         val (left, right, bottom) = gaps(LAST, text)
         val wrong = listOfNotNull(
             "left $left (2.67)".takeIf { kotlin.math.abs(left - 2.67f) > 1f },
             "right $right (2.67, the same as the left)".takeIf { kotlin.math.abs(right - 2.67f) > 1f },
-            "bottom $bottom (15.33, the card's padding under the last row)".takeIf { if (exactBottom) kotlin.math.abs(bottom - 15.33f) > 1f else bottom < 15.33f - 1f },
+            "bottom $bottom (15.33, the card's padding under the last row, and under a row more)".takeIf { if (exactBottom) kotlin.math.abs(bottom - 15.33f) > 1f else bottom < 15.33f - 1f || bottom > 15.33f + MOST_ROOM },
         )
         assertTrue("$what: slab to the card's edges: $wrong", wrong.isEmpty())
     }
@@ -161,7 +165,7 @@ class GameMenuSlabGapsTest {
 
     @Test
     @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
-    fun lastAt576() = check("576 last")
+    fun lastAt576() = check("576 last", exactBottom = false)
 
     @Test
     @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
@@ -169,7 +173,7 @@ class GameMenuSlabGapsTest {
 
     @Test
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
-    fun lastAt768() = check("768 last")
+    fun lastAt768() = check("768 last", exactBottom = false)
 
     @Test
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
@@ -197,7 +201,7 @@ class GameMenuSlabGapsTest {
     }
 
     private fun measureCutRow(what: String): Boolean {
-        assertTrue("$what: the menu scrolls, so its bottom fade is there", compose.onAllNodesWithTag(GamePanelTags.FADE_BOTTOM, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        assertTrue("$what: the menu scrolls, so rows continue past its bottom (the chevron's tag is there)", compose.onAllNodesWithTag(GamePanelTags.FADE_BOTTOM, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
         val shot = compose.onRoot().captureToImage().toPixelMap()
         val keys = gameMenuEntries(facts.copy(canSort = true)).map { it.key }
         val cardBottom = compose.onNodeWithTag(GamePanelTags.PANEL, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.bottom.toInt()

@@ -54,12 +54,12 @@ fun DrawScope.drawGridFocusRing(
 }
 
 /**
- * The focus mark of a lifted grid cover whose collar's outer edge is the rounded rectangle at [topLeft] of [size] with corner [corner]
+ * The focus mark of a grid cover whose collar's outer edge is the rounded rectangle at [topLeft] of [size] with corner [corner]
  * (px), faded in by [strength] (0..1): a [PlumDimens.focusRingGap] band of the screen's [gap] colour, the [ring]
- * ([PlumDimens.focusRingWidth]), a [PlumDimens.focusRingKeyline] band of [gap] again so the ring's outside is always the screen colour
- * (its contrast never depends on what lies beyond), then the soft halo: the [ring] colour at [FocusHalo.COVER_PEAK] fading out over
- * [PlumDimens.focusHaloReach]. Only strokes outside the shape: never laid out, no image to build, so a focus move costs a handful of
- * strokes. Colours are values, read by the caller while drawing. The ring reaches [PlumDimens.focusRingOutset] past the collar.
+ * ([PlumDimens.focusRingWidth]) and a [PlumDimens.focusRingKeyline] band of [gap] again so the ring's outside is always the screen colour
+ * (its contrast never depends on what lies beyond). Only strokes outside the shape: never laid out, no image to build, so a focus move
+ * costs a handful of strokes. Colours are values, read by the caller while drawing. The ring reaches [PlumDimens.focusRingOutset] past
+ * the collar. No halo: it would show only where no neighbour stands, so the mark would be lopsided.
  */
 fun DrawScope.drawCoverFocusMark(
     topLeft: Offset,
@@ -72,8 +72,6 @@ fun DrawScope.drawCoverFocusMark(
     if (strength <= 0f) return
     val outset = PlumDimens.focusRingOutset.toPx()
     val keyline = PlumDimens.focusRingKeyline.toPx()
-    val halo = ring.copy(alpha = FocusHalo.COVER_PEAK * ring.alpha * strength)
-    drawFocusHalo(topLeft, size, corner, outset + keyline, halo)
     drawOutline(topLeft, size, outset + keyline / 2, corner, gap.copy(alpha = gap.alpha * strength), keyline)
     val gapWidth = PlumDimens.focusRingGap.toPx()
     drawOutline(topLeft, size, gapWidth / 2, corner, gap.copy(alpha = gap.alpha * strength), gapWidth)

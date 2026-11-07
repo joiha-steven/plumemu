@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** Settings › Advanced › Export logs: A or a tap asks the Activity to share; a failure is said under the row. */
+/** Settings › Advanced › Export logs, in a build with no Report a problem: A or a tap asks the Activity to share; a failure is said under the row. */
 internal class SettingsExportLogsTest : SettingsModelHarness() {
     @Test
     fun exportLogsIsListedLastInAdvanced() {
@@ -15,6 +15,7 @@ internal class SettingsExportLogsTest : SettingsModelHarness() {
 
     @Test
     fun aPressSharesTheLogAndAFailureIsSaid() {
+        model.content = SettingsContent(hasStatistics = false)
         openSection(SettingsSection.Advanced)
         focusOption(SettingsOption.ExportLogs)
         press(Action.Enter)

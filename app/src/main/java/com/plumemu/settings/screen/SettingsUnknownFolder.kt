@@ -14,7 +14,7 @@ import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.home.rememberCountFormat
 
 /*
- * Settings › Library › an unknown folder: the side
+ * Settings › Library › Files not added › an unknown folder: the side
  * panel that answers which system a folder belongs to. Item 0 is "Ignore this folder", then every system, A to Z, as the
  * rest of Plumemu names them; the current answer wears the "Current" badge, so an answer can be changed. A applies
  * (the model's `onUnknownFolderEnter`), B cancels.
@@ -23,7 +23,7 @@ import com.plumemu.home.rememberCountFormat
 /** Item 0's key; the systems are keyed by id, so the lazy list keeps its place when the list changes. */
 private const val IGNORE_KEY = "ignore"
 
-/** The panel for the folder under the cursor (wide: previewed beside the row) or opened by A or a tap. */
+/** The page of the folder whose line was opened with A or a tap. */
 @Composable
 internal fun UnknownFolderPanel(
     model: SettingsModel,
@@ -37,7 +37,7 @@ internal fun UnknownFolderPanel(
     val current = SettingsListPages.answerIndex(row, model.content)
     val isUnanswered = row.answer == FolderAnswer.Unanswered
     val isSaving = row.key in model.content.answeringFolders || row.key in model.work.answering
-    Column(Modifier.fillMaxHeight().testTag(SettingsTags.UNKNOWN_FOLDER_PANEL), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
+    PanelListColumn(Modifier.fillMaxHeight().testTag(SettingsTags.UNKNOWN_FOLDER_PANEL)) {
         PanelTitle(row.name)
         PanelBody(
             if (isUnanswered && row.files <= 0) {
@@ -48,10 +48,10 @@ internal fun UnknownFolderPanel(
                 stringResource(R.string.settings_unknown_folder_body_answered)
             },
         )
-        PanelLine(model, SettingsOption.UnknownFolder, if (isSaving) stringResource(R.string.settings_unknown_folder_saving_line) else null)
+        PanelLine(model, SettingsOption.FilesNotAdded, if (isSaving) stringResource(R.string.settings_unknown_folder_saving_line) else null)
         val ignore = stringResource(R.string.settings_unknown_folder_ignore)
         val entries = listOf<FolderSystemChoice?>(null) + choices
-        PanelLazyList(focused, Modifier.weight(1f, fill = false)) {
+        PanelLazyList(focused, Modifier) {
             itemsIndexed(entries, key = { _, entry -> entry?.id ?: IGNORE_KEY }, contentType = { _, _ -> "system" }) { index, entry ->
                 PanelItem(
                     title = entry?.name ?: ignore,

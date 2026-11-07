@@ -57,7 +57,7 @@ internal fun ReportProblemPanel(
 ) {
     val form = model.report.form
     if (form != null && model.focus.page == PanelPage.ProblemReport) {
-        ReportPage(form, settings.advanced.usageStatistics, touch)
+        ReportPage(form, settings.advanced.usageStatistics, model, touch)
         return
     }
     Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
@@ -74,12 +74,17 @@ internal fun ReportProblemPanel(
 private fun ReportPage(
     form: ProblemReportForm,
     statisticsOn: Boolean,
+    model: SettingsModel,
     touch: SettingsTouch,
 ) {
     val covers = settingsKeyboardCovers()
     val gap = PlumDimens.setupContentGap
-    AccountPanelScroll(gap, Modifier.aboveTray({ form.isTrayUp }, covers)) {
+    AccountPanelScroll(gap, Modifier.aboveTray({ form.isTrayUp }, covers), isForm = true) {
         PanelTitle(stringResource(R.string.settings_report_problem))
-        ProblemReportBody(form, statisticsOn, onTap = touch.onPanelItem, onAction = touch.onHint, gap = gap)
+        // Share log's failure stands by its button, far below this line; the form says the rest itself.
+        val notice = model.work.notice?.takeIf { it.first == SettingsOption.ReportProblem }?.second
+        val shareFailed = notice == SettingsNotice.ExportLogsFailed
+        if (!shareFailed) PanelLine(model, SettingsOption.ReportProblem, null)
+        ProblemReportBody(form, statisticsOn, onTap = touch.onPanelItem, onAction = touch.onHint, gap = gap, shareLogFailure = if (shareFailed) notice?.lineText(model.work.noticeCount) else null)
     }
 }

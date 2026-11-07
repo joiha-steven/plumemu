@@ -17,7 +17,8 @@ class FocusHaloTest {
     fun defaultGreenKeepsItsColourAndAlmostFullStrength() {
         val halo = look("#7ED093")!!
         assertEquals("#7ED093", halo.colour.toHex())
-        assertEquals(0.30, halo.peak, 0.01)
+        // The board's 0.30 at Depth.GLOW.
+        assertEquals(0.30 * Depth.GLOW, halo.peak, 0.01)
     }
 
     @Test

@@ -443,20 +443,22 @@ internal fun SignOutConfirmPage(
 }
 
 /**
- * Accounts › ScreenScraper › Clear box art…, asked first: the covers disappear until Download missing
- * fetches them again, the person's own picks and the sign-in stay; then Clear box art and Cancel.
+ * Accounts › ScreenScraper › Clear box art… (or Box art's, with [body] saying what happens under its
+ * source), asked first: the covers disappear until Download missing fetches them again, the person's
+ * own picks and the sign-in stay; then Clear box art and Cancel.
  */
 @Composable
 internal fun ClearBoxArtConfirmPage(
     model: SettingsModel,
     touch: SettingsTouch,
+    @StringRes body: Int = R.string.settings_box_art_clear_body,
 ) {
     val focus = model.focus
     val focused = if (focus.column == SettingsColumn.Panel) focus.panelIndex else -1
     AccountPanelScroll(PlumDimens.settingsPanelGap) {
         PanelTitle(stringResource(R.string.settings_box_art_clear_title))
         BasicText(
-            stringResource(R.string.settings_box_art_clear_body),
+            stringResource(body),
             style = PlumTheme.type.panelBody.copy(color = PlumTheme.colors.text),
             modifier = Modifier.onRowTextLine().testTag(SettingsPanelTags.STATUS),
         )
@@ -483,6 +485,8 @@ internal fun ClearBoxArtConfirmPage(
 internal fun BoxArtSystemsPage(
     model: SettingsModel,
     touch: SettingsTouch,
+    /** The row whose notices this page says: Box art's when its panel opened it. */
+    row: SettingsOption = SettingsOption.ScraperAccount,
 ) {
     val content = model.content
     val focus = model.focus
@@ -499,7 +503,7 @@ internal fun BoxArtSystemsPage(
                 pluralStringResource(R.plurals.settings_box_art_systems_chosen, chosen.size, rememberCountFormat().format(chosen.size))
             },
         )
-        PanelLine(model, SettingsOption.ScraperAccount, null)
+        PanelLine(model, row, null)
         Column(Modifier.testTag(SettingsTags.BOX_ART_SYSTEMS), verticalArrangement = Arrangement.spacedBy(PlumDimens.listRowGap)) {
             content.systems.forEachIndexed { index, system ->
                 PanelItem(

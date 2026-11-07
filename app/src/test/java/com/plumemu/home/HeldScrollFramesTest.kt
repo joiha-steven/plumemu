@@ -305,9 +305,9 @@ class HeldScrollFramesTest {
 
     /**
      * A list opens where it always did: the system column rebuilt with the focus near its end shows
-     * the focused system at the list's bottom edge, with no context kept until the first move, and a
-     * later layout with nothing pressed (the content arriving again) moves nothing. Keeping context
-     * from the opening scrolled it two rows further, then glided.
+     * the focused system on the last whole row, which rests clear of the bottom fade with the leftover room shared evenly above the first and below the
+     * last whole row (`barRows`), with no context kept until the first move, and a later layout with nothing pressed (the content arriving again) moves
+     * nothing. Keeping context from the opening scrolled it two rows further, then glided.
      */
     @Test
     @Config(qualifiers = RP5)
@@ -322,7 +322,17 @@ class HeldScrollFramesTest {
         compose.waitForIdle()
         val opened = drawnBounds(HomeTags.system(far))!!
         val list = boundsOf(HomeTags.SYSTEMS)
-        assertEquals("the focused system at the list's bottom edge, as before (dp)", 0f, (list.bottom - opened.bottom) / compose.density.density, 0.5f)
+        // The column runs from bar to bar: whole rows (the run less a fade band at each end, over the row's stride) rest with half the leftover under the last one.
+        val density = compose.density.density
+        val stride = (opened.top - drawnBounds(HomeTags.system(far - 1))!!.top).toInt()
+        val band = (com.plumemu.coreui.theme.PlumDimens.listFadeBand.value * density).toInt()
+        val roomTop = (com.plumemu.coreui.theme.PlumDimens.barGap.value * density).toInt()
+        val run = list.height.toInt()
+        val whole = ((run - 2 * band) / stride) * stride
+        val inset = ((run - whole) / 2 - roomTop).coerceAtLeast(0)
+        val below = (run - roomTop - inset - whole).coerceAtLeast(0)
+        assertEquals("the focused system on the last whole row, clear of the fade, as the rest says (dp)", below / density, (list.bottom - opened.bottom) / density, 1f)
+        assertTrue("and clear of the bottom fade: ${(list.bottom - opened.bottom) / density} dp", list.bottom - opened.bottom >= band - 1f)
         compose.runOnIdle { content.value = FakeHomeContent.large(GAMES_PER_SYSTEM * 18) }
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(1_000)
@@ -402,7 +412,8 @@ class HeldScrollFramesTest {
             listOf(
                 Triple(listOf(20, 4), 40, 5 to null),
                 Triple(listOf(60, 6), 16, 2 to null),
-                Triple(listOf(100, 8), 60, 0 to accelerating),
+                // Probed further ahead: the list composes more rows now they run under the bars, and the probe must still come in after the press's own glide.
+                Triple(listOf(100, 11), 60, 0 to accelerating),
             )
         for ((place, frames, cadence) in cadences) {
             val (start, ahead) = place

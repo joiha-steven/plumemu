@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -114,13 +115,24 @@ class SettingsMappingTest {
         // The Thor sends by letter, so the Xbox layout reads Android's key names as the printed
         // letters; swapping A and B never moves X and Y.
         assertEquals(
-            InputSettings(ButtonLayout.Xbox, swapAB = false, holdToScrollFaster = false),
-            ControlsSettings(ConfirmButtonSetting.Right, holdToScrollFaster = false).toInputSettings(),
+            InputSettings(ButtonLayout.Xbox, swapAB = false),
+            ControlsSettings(ConfirmButtonSetting.Right).toInputSettings(),
         )
         assertEquals(
             InputSettings(ButtonLayout.Xbox, swapAB = true, holdToScrollFaster = true),
             ControlsSettings(ConfirmButtonSetting.Bottom).toInputSettings(),
         )
+    }
+
+    @Test
+    fun aStoredHoldToScrollOffNoLongerChangesAnything() {
+        assertEquals(ControlsSettings().toInputSettings(), ControlsSettings(holdToScrollFaster = false).toInputSettings())
+        assertTrue(ControlsSettings(holdToScrollFaster = false).toInputSettings().holdToScrollFaster)
+    }
+
+    @Test
+    fun aStoredFadeOffNoLongerChangesAnything() {
+        assertTrue(PlumSettings(appearance = AppearanceSettings(edgeFade = false)).toThemeSettings().edgeFadeOn)
     }
 
     @Test
@@ -141,9 +153,9 @@ class SettingsMappingTest {
         runCurrent()
         assertEquals(InputSettings(ButtonLayout.Xbox, swapAB = true), router.settings)
 
-        stored.value = stored.value.copy(controls = ControlsSettings(holdToScrollFaster = false))
+        stored.value = stored.value.copy(controls = ControlsSettings(ConfirmButtonSetting.Right))
         runCurrent()
-        assertEquals(InputSettings(ButtonLayout.Xbox, holdToScrollFaster = false), router.settings)
+        assertEquals(InputSettings(ButtonLayout.Xbox), router.settings)
     }
 
     @Test

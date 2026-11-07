@@ -23,15 +23,13 @@ class SettingsPreviewScreenshotTest {
         name: String,
         option: SettingsOption,
         textSize: TextSize,
-    ) = ReferenceShots.capture(name, textSize = textSize, sizes = sizes) { SettingsAt(optionsAt(option)) }
+    ) = ReferenceShots.capture(name, textSize = textSize, sizes = sizes) { SettingsAt(panelShownAt(option)) }
 
     @Test fun textSize() = shots("settings_preview_text_size", SettingsOption.TextSize, TextSize.Small)
 
     @Test fun textSizeLargest() = shots("settings_preview_text_size", SettingsOption.TextSize, TextSize.Largest)
 
     @Test fun textWeight() = shots("settings_preview_text_weight", SettingsOption.TextWeight, TextSize.Small)
-
-    @Test fun fadeEdges() = shots("settings_preview_fade", SettingsOption.EdgeFade, TextSize.Small)
 
     @Test fun textColor() = shots("settings_preview_text_color", SettingsOption.TextColor, TextSize.Small)
 

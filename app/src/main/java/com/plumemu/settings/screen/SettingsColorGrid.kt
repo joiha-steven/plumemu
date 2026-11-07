@@ -14,7 +14,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -103,6 +107,28 @@ internal fun Swatch(
     selected: Boolean = false,
 ) {
     val shape = RoundedCornerShape(corner)
+    val colors = PlumTheme.colors
+    val line = PlumDimens.focusRingKeyline
+    // Focus lights the groove in the accent, which a swatch of that colour swallows: there a line in the accent's own ink tells it, inside the cap's edge.
+    val edge =
+        if (isFocused) {
+            Modifier.drawWithContent {
+                drawContent()
+                if (nearAccent(color, colors.accent)) {
+                    val width = line.toPx()
+                    val inset = width / 2
+                    drawRoundRect(
+                        colors.onAccent,
+                        topLeft = Offset(inset, inset),
+                        size = Size(this.size.width - width, this.size.height - width),
+                        cornerRadius = CornerRadius(corner.toPx() - inset),
+                        style = Stroke(width),
+                    )
+                }
+            }
+        } else {
+            Modifier
+        }
     PlumSwatch(
         color = { color },
         selected = selected,
@@ -111,9 +137,17 @@ internal fun Swatch(
         // Outside the collar, so the whole swatch dips with a press.
         modifier = modifier.pressFeel(isFocused, null, shape).then(if (bleed) Modifier.collarBleed(CollarSize.Key) else Modifier),
         corner = corner,
-        size = size,
+        size = size.then(edge),
     )
 }
+
+private const val RGB_ONLY = 0xFFFFFF
+
+/** Close enough that the accent's focus light does not stand out on [swatch]: within twice the palette's "clearly different" distance. */
+internal fun nearAccent(
+    swatch: Color,
+    accent: Color,
+): Boolean = PaletteCuration.distance(Rgb(swatch.toArgb() and RGB_ONLY), Rgb(accent.toArgb() and RGB_ONLY)) < 2 * PaletteCuration.MIN_DISTANCE
 
 /** The test tag of the grid container (SettingsTags is at the file-length limit). */
 internal const val PALETTE_GRID_TAG = "settings_palette_grid"

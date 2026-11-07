@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -21,6 +23,7 @@ import com.plumemu.coreui.components.OptionRowLook
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.rememberListGlide
+import com.plumemu.home.BarRunClips
 import com.plumemu.home.KeepFocusedVisible
 
 /**
@@ -37,13 +40,15 @@ internal fun FixNameResults(
     val entries = fixNameEntries(state)
     val choices = state.choices
     val listState = rememberLazyListState()
-    val glide = rememberListGlide(stride = PlumTheme.layout.rowHeight + PlumDimens.panelRowGap)
+    val glide = rememberListGlide(stride = PlumTheme.layout.rowHeight + PlumDimens.panelRowGap, shadowPastEnds = true)
     val focusedEntry = if (state.inField) -1 else entries.indexOfFirst { it is FixNameEntry.Choice && it.index == state.row }
     val pill = rememberPanelPill(listState, glide, focusedEntry)
+    val latestFocus = rememberUpdatedState(focusedEntry)
+    val clips = remember(listState, glide) { BarRunClips(listState, glide, topRoom = 0f, ramps = true) { latestFocus.value } }
     pill.Provide {
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxWidth().testTag(FixNameTags.RESULTS).then(pill.modifier).then(glide.modifier),
+            modifier = Modifier.fillMaxWidth().testTag(FixNameTags.RESULTS).then(pill.modifier).then(glide.withFadeMask(clips, isOn = true, hidesCutRows = true)),
             contentPadding = PaddingValues(vertical = glide.extra),
             verticalArrangement = Arrangement.spacedBy(PlumDimens.panelRowGap),
         ) {

@@ -108,7 +108,7 @@ class HomeTextDetailsTest {
         assertDp("the column 24 after the list", list.right + 24.dp, details.left)
         assertDp("the column 248 wide", 248.dp, details.right - details.left)
         assertDp("its right edge at the 24 dp margin", 768.dp - 24.dp, details.right)
-        assertDp("top aligned where the cover box starts with box art (the strip's top)", bounds(HomeTags.STRIP).top, details.top)
+        assertDp("top aligned where the cover box starts with box art (the strip's slot top, the column runs from the bar)", bounds(HomeTags.STRIP).slot().top, details.top)
         val cover = bounds(HomeTags.DETAILS_COVER)
         assertDp("the poster at the column's top, as box art is", details.top, cover.top)
         assertDp("the poster is the column's width at most", 248.dp, cover.right - cover.left)

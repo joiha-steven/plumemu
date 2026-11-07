@@ -18,7 +18,7 @@ import com.plumemu.telemetry.EmailProblem
 import com.plumemu.telemetry.ProblemReports
 import com.plumemu.telemetry.ReportResult
 
-/** What the Report a problem form can focus, top to bottom; Send and [Leave] are stacked. */
+/** What the Report a problem form can focus, top to bottom; Send and [Leave] are stacked, Share log under them. */
 internal enum class ReportItem {
     Text,
     Email,
@@ -29,6 +29,9 @@ internal enum class ReportItem {
 
     /** Cancel. */
     Leave,
+
+    /** Android's share sheet with the log file, for a person who would rather send it themselves. */
+    ShareLog,
 
     /** After a report was sent or saved: the only item. */
     Done,
@@ -53,6 +56,9 @@ internal sealed interface ReportStep {
 
     /** Not the form's (Back, START): the host's own handling applies. */
     data object NotHandled : ReportStep
+
+    /** Share log: the host opens Android's share sheet; the form stays as it is. */
+    data object ShareLog : ReportStep
 }
 
 /**
@@ -107,7 +113,7 @@ internal class ProblemReportForm(
 
     /** The items in screen order; a tap on the n-th is item n. */
     val items: List<ReportItem>
-        get() = if (isFinished) listOf(ReportItem.Done) else listOf(ReportItem.Text, ReportItem.Email, ReportItem.Details, ReportItem.Send, ReportItem.Leave)
+        get() = if (isFinished) listOf(ReportItem.Done) else listOf(ReportItem.Text, ReportItem.Email, ReportItem.Details, ReportItem.Send, ReportItem.Leave, ReportItem.ShareLog)
 
     /** Whether the person asked to type, as in the sign-in form ([KeyboardAsk]). */
     val keyboard = KeyboardAsk()
@@ -312,6 +318,7 @@ internal class ProblemReportForm(
             }
             ReportItem.Send -> submit()
             ReportItem.Leave, ReportItem.Done -> ReportStep.Leave
+            ReportItem.ShareLog -> ReportStep.ShareLog
         }
 
     private fun submit(): ReportStep {

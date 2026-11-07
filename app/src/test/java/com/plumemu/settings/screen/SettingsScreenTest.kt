@@ -266,8 +266,12 @@ class SettingsScreenTest {
         compose.waitForIdle()
         assertEquals("a tap on the chevrons goes to the next value", "Sans", settings.value.appearance.font.name)
 
-        compose.onNodeWithTag(SettingsTags.option(SettingsOption.Background)).performClick()
+        compose.onNodeWithTag(SettingsTags.value(SettingsOption.Colors)).performClick() // Colors' panel, then its Background row: the first tap focuses it, the second opens its page
         compose.waitForIdle()
+        repeat(2) {
+            compose.onNodeWithTag(SettingsTags.panelItem(COLORS_BACKGROUND_ITEM)).performScrollTo().performClick()
+            compose.waitForIdle()
+        }
         compose.onNodeWithTag(SettingsTags.panelItem(0)).performClick() // Graphite (the default is Black), in the panel beside
         compose.waitForIdle()
         assertEquals(ColorSetting.Preset("Graphite"), settings.value.appearance.background)
@@ -279,9 +283,9 @@ class SettingsScreenTest {
         send(Action.Menu)
         down(SettingsSection.Advanced.shownIndex) // Advanced, after Statistics
         send(Action.Enter)
-        // Reset library, the last row of Advanced (Back up… sits before the resets).
-        down(SettingsSection.Advanced.options.indexOf(SettingsOption.ResetLibrary))
-        send(Action.Enter, Action.Enter) // Cancel
+        // Reset…, then Reset library in its list.
+        down(SettingsSection.Advanced.options.indexOf(SettingsOption.Reset))
+        send(Action.Enter, Action.Move(Direction.Down), Action.Enter, Action.Enter) // Cancel
         assertEquals(0, resetsLibrary)
         send(Action.Enter, Action.Move(Direction.Right), Action.Enter)
         assertEquals(1, resetsLibrary)
@@ -294,7 +298,7 @@ class SettingsScreenTest {
         showMainScreen()
         send(Action.Menu)
         down()
-        send(Action.Enter, Action.Move(Direction.Down), Action.Move(Direction.Down)) // Background, under Language and Colors
+        send(Action.Enter, Action.Move(Direction.Down), Action.Move(Direction.Down)) // Accent color, under Language and Colors
         assertEquals("opening the panel changes nothing stored: Light text on Paper stays", TextColorSetting.Light, settings.value.appearance.textColor)
         assertEquals("but it is drawn dark so the screen can be read", com.plumemu.coreui.theme.TextMode.Dark, settings.value.toThemeSettings().textMode)
     }
@@ -310,7 +314,11 @@ class SettingsScreenTest {
             }
         }
         send(Action.Move(Direction.Left), Action.Menu) // Settings
-        send(Action.Move(Direction.Down), Action.Enter, Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Enter) // Appearance › Background (under Language and Colors) › presets
+        send(Action.Move(Direction.Down), Action.Enter, Action.Move(Direction.Down), Action.Enter) // Appearance › Colors' panel
+        repeat(2) { // Background's row: a first tap focuses it, the second opens its presets
+            compose.onNodeWithTag(SettingsTags.panelItem(COLORS_BACKGROUND_ITEM)).performScrollTo().performClick()
+            compose.waitForIdle()
+        }
         // Down to the last row and right to its end, the "+" (however many swatches a row holds), then into the palette and up onto a swatch.
         send(*Array(6) { Action.Move(Direction.Down) }, *Array(6) { Action.Move(Direction.Right) })
         val opening = settings.value.appearance.background // presets apply as the cursor reaches them

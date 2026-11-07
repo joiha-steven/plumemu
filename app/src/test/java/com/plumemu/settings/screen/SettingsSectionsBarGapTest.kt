@@ -75,7 +75,7 @@ class SettingsSectionsBarGapTest {
                     when {
                         options -> optionsAt(lastOption)
                         cursor == SectionsCursor.First -> SettingsFocus(section = sections.first())
-                        cursor == SectionsCursor.OptionFocused -> optionsAt(SettingsOption.Background)
+                        cursor == SectionsCursor.OptionFocused -> optionsAt(SettingsOption.Accent)
                         else -> SettingsFocus(section = last)
                     },
                     content = content,

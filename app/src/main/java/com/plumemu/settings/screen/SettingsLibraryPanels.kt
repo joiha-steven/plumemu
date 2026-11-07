@@ -69,11 +69,11 @@ internal fun FoldersPanel(
     }
     val content = model.content
     val focused = if (inPanel) focus.panelIndex else -1
-    Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
+    PanelListColumn(Modifier.fillMaxHeight()) {
         PanelTitle(stringResource(R.string.settings_rom_folders))
         PanelBody(stringResource(R.string.settings_rom_folders_body))
         PanelLine(model, SettingsOption.RomFolders, folderAddText(LocalSettingsStatus.current.folderAdd))
-        PanelLazyList(focused, Modifier.weight(1f, fill = false)) {
+        PanelLazyList(focused, Modifier) {
             itemsIndexed(content.folders, key = { _, folder -> folder.id }, contentType = { _, _ -> "folder" }) { index, folder ->
                 PanelItem(
                     title = folderLabel(folder),
@@ -115,12 +115,12 @@ internal fun SettingsGameListPanel(
     val inPanel = focus.column == SettingsColumn.Panel && focus.page != null
     // A shown-again game leaves the list: the focus stays in place, on the last one at the end.
     val focused = if (inPanel) focus.panelIndex.coerceAtMost(games.lastIndex) else -1
-    Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
+    PanelListColumn(Modifier.fillMaxHeight()) {
         PanelTitle(title)
         PanelBody(body)
         PanelLine(model, option, null)
         // Lazy: a library has thousands of games, and a panel that only previews must not build them all.
-        PanelLazyList(focused, Modifier.weight(1f, fill = false)) {
+        PanelLazyList(focused, Modifier) {
             itemsIndexed(games, key = { _, game -> game.id }, contentType = { _, _ -> "game" }) { index, game ->
                 PanelItem(
                     title = game.title,
@@ -170,7 +170,7 @@ private fun RemoveFolderPage(
 ) {
     val folder = model.content.folder(model.focus.folderId)
     // Scrolls when the text is large (Largest in Plum Serif), keeping the focused button in view.
-    Column(Modifier.fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap)) {
+    PanelScrollColumn(PlumDimens.settingsPanelGap) {
         PanelTitle(stringResource(R.string.settings_remove_folder_title))
         if (folder != null) {
             BasicText(folderLabel(folder), style = PlumTheme.type.meta.copy(color = PlumTheme.colors.text), maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.onRowTextLine())
@@ -272,23 +272,6 @@ internal fun EmulatorsPanel(
     )
 }
 
-/** Detect new emulators: what it does, how many were found, and how the last run went. */
-@Composable
-internal fun DetectPanel(model: SettingsModel) {
-    Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
-        PanelTitle(stringResource(R.string.settings_detect_emulators))
-        PanelBody(stringResource(R.string.settings_detect_body))
-        model.content.emulatorAppCount?.let { count ->
-            BasicText(
-                pluralStringResource(R.plurals.settings_emulators_found, count, rememberCountFormat().format(count)),
-                style = PlumTheme.type.panelBody.copy(color = PlumTheme.colors.text2),
-                modifier = Modifier.onRowTextLine(),
-            )
-        }
-        PanelLine(model, SettingsOption.DetectEmulators, null)
-    }
-}
-
 /**
  * The panel's line about [option]: what it just tried ([SettingsWork.notice]) or, when nothing was
  * said, [status]. In `text`, so it reads as news.
@@ -361,7 +344,7 @@ internal fun PanelItem(
     titleStyle: TextStyle = PlumTheme.type.meta.copy(color = PlumTheme.colors.text),
     isQuiet: Boolean = false,
     isOutlined: Boolean = false,
-    padded: Boolean = false,
+    padded: Boolean = true,
     badge: String? = null,
     isChecked: Boolean = false,
     /** Lines the detail may take before it is cut with "…" (a long folder path). */
@@ -395,7 +378,7 @@ internal fun PanelItem(
                 BasicText(
                     title,
                     style = style,
-                    maxLines = if (PlumTheme.layout.isSettingsThreeColumns) 4 else 3,
+                    maxLines = 4,
                     overflow = TextOverflow.Ellipsis,
                     onTextLayout = if (detail != null) anchor::measured else null,
                     modifier = Modifier.weight(1f).then(if (detail != null) anchor.title() else Modifier).alignByBaseline(),

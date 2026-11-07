@@ -1,38 +1,37 @@
 package com.plumemu.settings.screen
 
 import androidx.compose.animation.core.Animatable
-import com.plumemu.usage.TrackScreen
-import com.plumemu.usage.screenIdOf
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -48,7 +47,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.plumemu.R
-import com.plumemu.game.isTrayUp
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SoundLevel
 import com.plumemu.coredata.settings.TextSizeSetting
@@ -57,25 +55,27 @@ import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreinput.TextEntry
 import com.plumemu.coreinput.hint
 import com.plumemu.coreui.components.EdgeFade
-import com.plumemu.coreui.components.SystemRow
+import com.plumemu.coreui.components.InsetFocusPillShape
 import com.plumemu.coreui.components.SystemRowLook
 import com.plumemu.coreui.components.TopBar
-import com.plumemu.coreui.components.InsetFocusPillShape
 import com.plumemu.coreui.theme.LeftColumnDimens
 import com.plumemu.coreui.theme.PlumDimens
-import com.plumemu.coreui.theme.SettingsThreeDimens
-import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.PlumLayout
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.SettingsThreeDimens
+import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.WidthClass
+import com.plumemu.game.isTrayUp
 import com.plumemu.home.rememberBatteryCharging
 import com.plumemu.home.rememberBatteryReading
 import com.plumemu.home.rememberBatteryText
 import com.plumemu.home.rememberClockText
 import com.plumemu.home.rememberWifiConnected
-import com.plumemu.sound.LocalUiSounds
 import com.plumemu.sound.HearFeel
+import com.plumemu.sound.LocalUiSounds
 import com.plumemu.sound.Outcome
+import com.plumemu.usage.TrackScreen
+import com.plumemu.usage.screenIdOf
 import kotlin.math.floor
 
 /**
@@ -94,7 +94,7 @@ internal fun SettingsScreen(
     content: SettingsContent = SettingsContent(),
     /** Told each new state of Statistics' figures (the second screen's card); no second read. */
     onStatistics: (StatisticsState) -> Unit = {},
-    /** Opens on About › Update available's panel (the main screen's pill or START while an update waits), once, when that row exists. */
+    /** Opens on About › Updates' panel (the main screen's pill or START while an update waits), once, when that row exists. */
     opensOnUpdate: Boolean = false,
     /** Opens on Library › Files not added (the home's empty state), once, when the library's content has arrived. */
     opensOnFilesNotAdded: Boolean = false,
@@ -109,7 +109,7 @@ internal fun SettingsScreen(
     DisposableEffect(model) { onDispose { model.onDispose() } }
     // Statistics' figures are read once per opening, after the first frame; content given with them (tests) keeps its own.
     val statistics = rememberStatistics(actions.statistics, content.isScanning, status.libraryReset)
-    SideEffect { model.content = if (content.statistics == StatisticsState.NotRead) content.copy(statistics = statistics) else content }
+    SideEffect { model.content = (if (content.statistics == StatisticsState.NotRead) content.copy(statistics = statistics) else content).copy(hasNoButtonHints = !settings.controls.showButtonHints) }
     val shownStatistics = if (content.statistics == StatisticsState.NotRead) statistics else content.statistics
     val currentOnStatistics by rememberUpdatedState(onStatistics)
     LaunchedEffect(shownStatistics) { currentOnStatistics(shownStatistics) }
@@ -299,19 +299,21 @@ private fun SettingsTopBar(
     val title = stringResource(R.string.settings_title)
     val section = stringResource(focus.section.title)
     val option =
-        model.focusedOption?.let {
-            // The account rows' labels carry a name or a whole sentence, an unknown folder's its own name: the crumb names the place only.
+        model.panelOption?.let {
+            // The account rows' labels carry a name or a whole sentence: the crumb names the place only.
             when (it) {
                 SettingsOption.ScraperAccount, SettingsOption.ScraperStatus -> stringResource(R.string.settings_account_title)
                 SettingsOption.RetroAchievementsAccount -> stringResource(R.string.settings_ra_title)
-                SettingsOption.UnknownFolder -> stringResource(R.string.settings_unknown_folder_title)
-                else -> optionLabel(it, model.content, model.optionIndex)
+                else -> optionLabel(it, model.content, model.optionIndex).withoutDots()
             }
         }
     val place =
         when {
             // The sections are on screen in three columns: the bar names the screen only.
             focus.column == SettingsColumn.Sections || PlumTheme.layout.isSettingsThreeColumns -> title
+            // This section's name is too long to share the narrow bar with a panel's, and the panel's name alone says where it is.
+            focus.column == SettingsColumn.Panel && option != null && focus.section == SettingsSection.Accounts ->
+                stringResource(R.string.settings_crumb, title, option)
             focus.column == SettingsColumn.Panel && option != null ->
                 stringResource(R.string.settings_crumb, stringResource(R.string.settings_crumb, title, section), option)
             else -> stringResource(R.string.settings_crumb, title, section)
@@ -383,7 +385,7 @@ private fun PanelHost(
     touch: SettingsTouch,
     versionName: String,
 ) {
-    val option = model.focusedOption ?: return
+    val option = model.panelOption ?: return
     // Keyed by the row too: each system of Emulators is the same option with its own panel.
     val textStart = if (PlumTheme.layout.isSettingsThreeColumns && !model.focus.isWidePage()) 0.dp else PlumDimens.gameRowPadding
     CompositionLocalProvider(LocalPanelTextStart provides textStart) {
@@ -396,7 +398,7 @@ private fun SectionsColumn(
     model: SettingsModel,
     touch: SettingsTouch,
 ) {
-    // Scrolls to the focused section (the rows do not all fit the strip). Only the second screen changes the rows.
+    // Scrolls to the focused section (the rows do not all fit the strip). Second screen and Emulators come and go.
     val sections by remember(model) { derivedStateOf { SettingsSection.shownIn(model.content) } }
     KeepFocusedColumn(
         { sections.indexOf(model.focus.section) },
@@ -436,16 +438,13 @@ private fun SectionRow(
     val three = PlumTheme.layout.isSettingsThreeColumns
     val colors = PlumTheme.colors
     val marked = three && look == SystemRowLook.Current
-    SystemRow(
+    SectionLabelRow(
         name = stringResource(section.title),
-        count = "",
         look = look,
-        showName = true, showCount = !three,
-        endPadding = if (three) 0.dp else PlumDimens.systemRowPadding,
-        bleedStart = LeftColumnDimens.sectionLabelStart, barInset = SlabDimens.barInset,
+        endPadding = if (three) 0.dp else PlumDimens.systemRowPadding + PlumDimens.rowTrailingGap,
         // As high as an option row (not the systems' 40): the two columns' text lines then share a centre row by row, where the
-        // 4 dp between 40 and 44 at Large put the options' first text line 2 dp lower. The outer height wins over SystemRow's own.
-        modifier = place.height(PlumTheme.layout.rowHeight).tapTarget { touch.onSection(section) }.testTag(SettingsTags.section(section))
+        // 4 dp between 40 and 44 at Large put the options' first text line 2 dp lower.
+        modifier = place.heightIn(min = PlumTheme.layout.rowHeight).tapTarget { touch.onSection(section) }.testTag(SettingsTags.section(section))
             .drawBehind {
                 if (marked) drawCircle(colors.accent, PlumDimens.hintDot.toPx() / 2, Offset(LeftColumnDimens.sectionBarCentre.toPx(), size.height / 2))
             },
@@ -486,7 +485,7 @@ private fun OptionsColumn(
             derivedStateOf { model.work.notice?.takeIf { it.first == model.focusedOption && model.focus.column == SettingsColumn.Options && layout.widthClass == WidthClass.Narrow } }
         }
         notice?.let { NoticeLine(it.second, count = model.work.noticeCount) }
-        if (content.loadFailed && (section == SettingsSection.Library || section == SettingsSection.Emulators)) {
+        if (content.loadFailed && section == SettingsSection.Library) {
             BasicText(
                 stringResource(R.string.settings_library_unreadable),
                 style = PlumTheme.type.panelBody.copy(color = PlumTheme.colors.text),
@@ -522,17 +521,15 @@ private fun OptionsColumn(
                 ) { place ->
                     options.forEachIndexed { index, option ->
                         val isSystem = option == SettingsOption.SystemEmulator
-                        val unknown = if (option == SettingsOption.UnknownFolder) content.unknownFolderAtRow(index) else null
                         OptionRowAt(
                             model = model,
                             index = index,
                             option = option,
-                            value = optionValue(option, settings, versionName, content, index, model.work.isDetecting(content)),
+                            value = optionValue(option, settings, versionName, content, index),
                             label = optionLabel(option, content, index),
                             touch = touch,
                             place = place(index),
                             isSystem = isSystem,
-                            unknown = unknown,
                         )
                     }
                 }
@@ -552,7 +549,6 @@ private fun OptionRowAt(
     touch: SettingsTouch,
     place: Modifier,
     isSystem: Boolean,
-    unknown: SettingsFolderRow? = null,
 ) {
     SideEffect { SettingsRecomposeProbe.optionRows++ }
     val look by remember(model, index) {
@@ -574,9 +570,8 @@ private fun OptionRowAt(
         // A read-only row's value is no button (TalkBack would announce one that does nothing): a tap on it reaches the row's own target, which focuses.
         valueModifier = if (option.kind == OptionKind.Info) Modifier else Modifier.tapTarget { touch.onValue(index) },
         label = label,
-        tag = if (unknown != null) SettingsTags.unknownFolder(unknown.key) else if (isSystem) SettingsTags.system(index) else SettingsTags.option(option),
-        valueTag = if (unknown != null) SettingsTags.unknownFolderValue(unknown.key) else if (isSystem) SettingsTags.systemValue(index) else SettingsTags.value(option),
-        labelLines = if (unknown != null) GAME_TITLE_LINES else 2,
+        tag = if (isSystem) SettingsTags.system(index) else SettingsTags.option(option),
+        valueTag = if (isSystem) SettingsTags.systemValue(index) else SettingsTags.value(option),
         verticalPadding = if (option == SettingsOption.ConfirmBottom) PlumDimens.settingsTwoLineRowPadding else 0.dp,
     )
 }

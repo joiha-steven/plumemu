@@ -66,8 +66,11 @@ internal enum class EmptyLibrary {
     /** Folders exist and are being read. */
     Scanning,
 
-    /** Folders exist, the scan ended and found no games. */
+    /** Folders exist, the scan ended and found no games, and some files were left out (Files not added says why). */
     NoGames,
+
+    /** Folders exist, the scan ended and found no games, and no file was left out either: the folders hold no files to report. */
+    NoFiles,
 }
 
 internal val LocalHomeNotices = staticCompositionLocalOf { HomeNotices() }

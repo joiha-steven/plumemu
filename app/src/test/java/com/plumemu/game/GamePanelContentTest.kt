@@ -89,7 +89,7 @@ class GamePanelContentTest {
         assertEquals(UiText.Res(R.string.game_play_with_automatic, listOf("DuckStation")), rows[0].label)
         assertEquals(PanelCommand.PlayWith(null), rows[0].command)
         assertEquals(PanelCommand.PlayWith("duckstation"), rows[1].command)
-        assertEquals(PanelCommand.GetEmulator("com.epsxe.ePSXe", "ePSXe"), rows[3].command)
+        assertEquals(PanelCommand.GetEmulator("https://example.org/epsxe", "ePSXe"), rows[3].command)
         assertEquals(UiText.Res(R.string.game_get_it), rows[3].value)
         // The heading sits between the installed and the not installed ones.
         val headingAt = content.items.indexOfFirst { it is PanelItem.Heading }
@@ -134,12 +134,12 @@ class GamePanelContentTest {
     }
 
     @Test
-    fun emulatorMissingNamesItAndOffersItsStorePageAndAnother() {
-        val offer = EmulatorOffer("duckstation", "DuckStation", "com.github.stenzek.duckstation")
+    fun emulatorMissingNamesItAndOffersItsPageAndAnother() {
+        val offer = EmulatorOffer("duckstation", "DuckStation", "https://example.org/duckstation")
         val message = launchMessage(LaunchOutcome.EmulatorMissing(7, offer, ChoiceSource.PersonForGame), null)!!
         assertEquals(UiText.Res(R.string.game_error_missing_title, listOf("DuckStation")), message.title)
         assertEquals(
-            listOf(PanelCommand.GetEmulator("com.github.stenzek.duckstation", "DuckStation"), PanelCommand.OpenPlayWith),
+            listOf(PanelCommand.GetEmulator("https://example.org/duckstation", "DuckStation"), PanelCommand.OpenPlayWith),
             message.commands(),
         )
         assertEquals(UiText.Res(R.string.game_error_get_named, listOf("DuckStation")), message.rows()[0].label)
@@ -154,7 +154,7 @@ class GamePanelContentTest {
 
     @Test
     fun noEmulatorNamesTheSystemAndListsTheCandidatesNonLegalRiskFirst() {
-        val outcome = LaunchOutcome.NoEmulatorForSystem(7, "psx", listOf(EmulatorOffer("duckstation", "DuckStation", "com.github.stenzek.duckstation")))
+        val outcome = LaunchOutcome.NoEmulatorForSystem(7, "psx", listOf(EmulatorOffer("duckstation", "DuckStation", null)))
         val message = launchMessage(outcome, sampleListing(installed = emptyList(), automatic = null, notInstalled = listOf(DuckStation, RiskyEmu)))!!
         assertEquals(UiText.Res(R.string.game_no_emulator_title, listOf("PlayStation")), message.title)
         assertEquals(listOf("get:duckstation", "get:risky"), message.rows().map { it.key })
@@ -165,10 +165,10 @@ class GamePanelContentTest {
 
     @Test
     fun noEmulatorWithoutAListingFallsBackToTheEnginesCandidates() {
-        val outcome = LaunchOutcome.NoEmulatorForSystem(7, "psx", listOf(EmulatorOffer("duckstation", "DuckStation", "com.github.stenzek.duckstation")))
+        val outcome = LaunchOutcome.NoEmulatorForSystem(7, "psx", listOf(EmulatorOffer("duckstation", "DuckStation", "https://example.org/duckstation")))
         val message = launchMessage(outcome, null)!!
         assertEquals(UiText.Res(R.string.game_no_emulator_title, listOf("psx")), message.title)
-        assertEquals(listOf(PanelCommand.GetEmulator("com.github.stenzek.duckstation", "DuckStation")), message.commands())
+        assertEquals(listOf(PanelCommand.GetEmulator("https://example.org/duckstation", "DuckStation")), message.commands())
     }
 
     @Test
@@ -219,15 +219,15 @@ class GamePanelContentTest {
 
     @Test
     fun aSteamAppNotInstalledIsTheUsualMissingEmulatorMessage() {
-        val offer = EmulatorOffer("gamenative", "GameNative", "app.gamenative")
+        val offer = EmulatorOffer("gamenative", "GameNative", "https://example.org/gamenative")
         val message = launchMessage(LaunchOutcome.EmulatorMissing(7, offer, ChoiceSource.PersonForSystem), null)!!
         assertEquals(UiText.Res(R.string.game_error_missing_title, listOf("GameNative")), message.title)
-        assertEquals(listOf(PanelCommand.GetEmulator("app.gamenative", "GameNative"), PanelCommand.OpenPlayWith), message.commands())
+        assertEquals(listOf(PanelCommand.GetEmulator("https://example.org/gamenative", "GameNative"), PanelCommand.OpenPlayWith), message.commands())
     }
 
     @Test
     fun needsFilePathNamesTheEmulatorAndOffersAnother() {
-        val outcome = LaunchOutcome.NeedsFilePath(7, EmulatorOffer("retroarch_snes9x", "RetroArch (Snes9x)", "com.retroarch.aarch64"))
+        val outcome = LaunchOutcome.NeedsFilePath(7, EmulatorOffer("retroarch_snes9x", "RetroArch (Snes9x)", null))
         val message = launchMessage(outcome, null)!!
         assertEquals(UiText.Res(R.string.game_error_needs_path_title, listOf("RetroArch (Snes9x)")), message.title)
         assertEquals(listOf(PanelCommand.OpenPlayWith), message.commands())
@@ -286,9 +286,9 @@ class GamePanelContentTest {
     @Test
     fun theFirstLaunchAsksAmongTheInstalledOnesRecommendedFirstAndKeepsItForTheSystem() {
         val offers = listOf(
-            EmulatorOffer("duckstation", "DuckStation", "com.github.stenzek.duckstation"),
-            EmulatorOffer("risky", "Risky Emu", "org.example.risky", isLegalRisk = true),
-            EmulatorOffer("retroarch_mednafen_psx", "RetroArch (Beetle PSX)", "com.retroarch.aarch64"),
+            EmulatorOffer("duckstation", "DuckStation", null),
+            EmulatorOffer("risky", "Risky Emu", null, isLegalRisk = true),
+            EmulatorOffer("retroarch_mednafen_psx", "RetroArch (Beetle PSX)", null),
         )
         val message = launchMessage(LaunchOutcome.EmulatorNotChosen(7, "psx", "PlayStation", offers, "duckstation"), sampleListing())!!
         assertEquals(UiText.Res(R.string.game_choose_emulator_title, listOf("PlayStation")), message.title)
@@ -306,7 +306,7 @@ class GamePanelContentTest {
 
     @Test
     fun aLegalRiskSystemIsAskedWithNoRecommendationAndNothingToGet() {
-        val offers = listOf(EmulatorOffer("risky", "Risky Emu", "org.example.risky", isLegalRisk = true))
+        val offers = listOf(EmulatorOffer("risky", "Risky Emu", null, isLegalRisk = true))
         val listing = sampleListing(installed = listOf(RiskyEmu), automatic = null, notInstalled = listOf(Epsxe)).copy(systemName = "Switch")
         val message = launchMessage(LaunchOutcome.EmulatorNotChosen(7, "switch", "Switch", offers, null), listing)!!
         assertEquals(UiText.Res(R.string.game_choose_emulator_title, listOf("Switch")), message.title)
@@ -367,7 +367,7 @@ class GamePanelContentTest {
 
     @Test
     fun aMissingLegalRiskEmulatorIsNeverOfferedFromAStore() {
-        val offer = EmulatorOffer("eden", "Eden", "dev.eden.eden_emulator", isLegalRisk = true)
+        val offer = EmulatorOffer("eden", "Eden", "https://example.org/eden", isLegalRisk = true)
         val message = launchMessage(LaunchOutcome.EmulatorMissing(7, offer, ChoiceSource.PersonForGame), null)!!
         assertEquals(listOf(PanelCommand.OpenPlayWith), message.commands())
         assertTrue("the R30 line is said", UiText.Res(R.string.game_legal_risk_note) in message.body)
@@ -388,5 +388,91 @@ class GamePanelContentTest {
         assertEquals(listOf("back"), content.focusableRows.map { it.key })
         assertEquals(PanelCommand.Back, content.focusableRows.single().command)
         assertTrue(UiText.Res(R.string.game_error_no_emulator_offered_body) in content.body)
+    }
+
+    @Test
+    fun anEmulatorWithNoPageIsLeftOut() {
+        val rows = playWithContent(sampleListing(notInstalled = listOf(NoPageEmu, Epsxe))).rows()
+        assertEquals(listOf(AUTOMATIC_KEY, "duckstation", "retroarch_mednafen_psx", "get:epsxe"), rows.map { it.key })
+    }
+
+    @Test
+    fun theCurrentChoiceWithNoPageKeepsItsDisabledRow() {
+        val row = playWithContent(sampleListing(current = NoPageEmu.id, notInstalled = listOf(NoPageEmu, Epsxe))).rows().single { it.key == "get:nopage" }
+        assertEquals(true, row.isCurrent)
+        assertEquals(false, row.isEnabled)
+        assertEquals(null, row.value)
+        assertEquals("not a legal-risk row", null, row.note)
+        assertEquals(PanelCommand.Nothing, row.command)
+    }
+
+    @Test
+    fun withNothingLeftNotInstalledHasNoHeadingEither() {
+        val content = playWithContent(sampleListing(notInstalled = listOf(NoPageEmu)))
+        assertTrue(content.items.none { it is PanelItem.Heading })
+        assertEquals(listOf(AUTOMATIC_KEY, "duckstation", "retroarch_mednafen_psx"), content.rows().map { it.key })
+    }
+
+    @Test
+    fun aLegalRiskRowWithAPageStillOffersNothing() {
+        val row = playWithContent(sampleListing(notInstalled = listOf(RiskyEmu))).rows().single { it.key == "get:risky" }
+        assertEquals(false, row.isEnabled)
+        assertEquals(null, row.value)
+        assertEquals(UiText.Res(R.string.game_legal_risk_note), row.note)
+        assertEquals("the page goes nowhere near the row", PanelCommand.Nothing, row.command)
+    }
+
+    @Test
+    fun playWithWithOnlyEmulatorsWithNoPageStillHasAFocusedRow() {
+        val content = playWithContent(sampleListing(installed = emptyList(), automatic = null, notInstalled = listOf(NoPageEmu)))
+        assertEquals(listOf("back"), content.focusableRows.map { it.key })
+        assertTrue(UiText.Res(R.string.game_error_no_emulator_offered_body) in content.body)
+        assertEquals("nothing but the way out", listOf("back"), content.rows().map { it.key })
+        assertTrue(content.items.none { it is PanelItem.Heading })
+    }
+
+    @Test
+    fun emulatorMissingWithNoPageOffersOnlyAnotherEmulator() {
+        val offer = EmulatorOffer("nopage", "No Page Emu", null)
+        val message = launchMessage(LaunchOutcome.EmulatorMissing(7, offer, ChoiceSource.PersonForGame), null)!!
+        assertEquals(UiText.Res(R.string.game_error_missing_title, listOf("No Page Emu")), message.title)
+        assertEquals(listOf(UiText.Res(R.string.game_error_missing_body)), message.body)
+        assertEquals(listOf(PanelCommand.OpenPlayWith), message.commands())
+    }
+
+    @Test
+    fun noEmulatorWhenNoCandidateHasAPageSaysSoAndHasAFocusedOk() {
+        val listing = sampleListing(installed = emptyList(), automatic = null, notInstalled = listOf(NoPageEmu, RiskyEmu))
+        val message = launchMessage(LaunchOutcome.NoEmulatorForSystem(7, "psx", emptyList()), listing)!!
+        assertEquals(listOf(UiText.Res(R.string.game_error_no_emulator_offered_body)), message.body)
+        assertEquals(listOf("ok"), message.focusableRows.map { it.key })
+        assertEquals(PanelCommand.Close, message.focusableRows.single().command)
+    }
+
+    @Test
+    fun noEmulatorWithoutAListingWhenNoCandidateHasAPageSaysSoAndHasAFocusedOk() {
+        val candidates = listOf(EmulatorOffer("nopage", "No Page Emu", null), EmulatorOffer("risky", "Risky Emu", "https://example.org/risky", isLegalRisk = true))
+        val message = launchMessage(LaunchOutcome.NoEmulatorForSystem(7, "psx", candidates), null)!!
+        assertEquals(listOf(UiText.Res(R.string.game_error_no_emulator_offered_body)), message.body)
+        assertEquals(listOf("ok"), message.focusableRows.map { it.key })
+    }
+
+    @Test
+    fun noEmulatorWithOneCandidateWithAPageOffersThatOneAndLeavesOutTheOnesWithNoPage() {
+        val listing = sampleListing(installed = emptyList(), automatic = null, notInstalled = listOf(NoPageEmu, Epsxe, RiskyEmu))
+        val message = launchMessage(LaunchOutcome.NoEmulatorForSystem(7, "psx", emptyList()), listing)!!
+        assertEquals(listOf(UiText.Res(R.string.game_error_no_emulator_body)), message.body)
+        assertEquals(listOf("get:epsxe"), message.focusableRows.map { it.key })
+        assertEquals("the one with no page is gone, the legal-risk one stays", listOf("get:epsxe", "get:risky"), message.rows().map { it.key })
+    }
+
+    @Test
+    fun coreMissingWithOnlyEmulatorsWithNoPageKeepsItsOk() {
+        val failed = Beetle.copy(core = "beetle_libretro_android.so")
+        val listing = sampleListing(installed = listOf(failed), notInstalled = listOf(NoPageEmu))
+        val message = coreMissingMessage(listing, failed.id, failed.name)
+        assertEquals(listOf("ok"), message.focusableRows.map { it.key })
+        assertEquals(listOf("ok"), message.rows().map { it.key })
+        assertTrue(message.items.none { it is PanelItem.Heading })
     }
 }

@@ -42,7 +42,7 @@ private things. `system_id` and `emulator_id` are the platform data's ids.
 | `game_launched` | `system_id`, `emulator_id`, `from` (list / grid / details / recent / favorites / search / second_screen; statistics is retired: Settings › Statistics no longer starts games), `result` (ok / emulator_missing / emulator_not_chosen / file_missing / error); emulator_id is left out when none was chosen or installed |
 | `game_session` | `system_id`, `emulator_id`, `minutes` (whole, capped at 600; from the launch to Plumemu back in front, the same time Settings › Statistics counts; sessions under 10 seconds are not sent) |
 | `emulator_picked` | `system_id`, `emulator_id`, `where` (setup / settings / per_game); setup is not sent today, as setup picks none |
-| `setting_changed` | `key`, `value` (only fixed choices: background preset or "custom", text colour, accent preset, "by_system" or "custom", font, text size, text weight, left edge, grid size, button layout, keyboard, switch system with, sounds, animations, …; never a colour value or free text) |
+| `setting_changed` | `key`, `value` (only fixed choices: background preset or "custom", text colour, accent preset, "by_system" or "custom", font, text size, text weight, left edge, grid size (key `grid_size`, sent for L1 / R1, the Size hint and the Grid size row), clock and battery (one on / off, clock_and_battery), keyboard, switch system with, sounds, animations, …; never a colour value or free text) |
 | `controller_connected` | `kind` (built_in / xbox / playstation / nintendo / other) |
 | `artwork_status` | `downloaded`, `failed`, `quota_hit` (counts) |
 | `update_check` | `trigger` (daily / manual), `result` (none / available / error) |

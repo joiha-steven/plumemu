@@ -7,7 +7,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Settings › Library › unknown folders: the rows (unanswered, answered, ignored, saving) and the side panel, at 768x432 and 576x432. */
+/** Settings › Library › Files not added › unknown folders: the lines (unanswered, answered, ignored, saving) and the folder's page, at 768x432 and 576x432. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
@@ -25,32 +25,33 @@ class SettingsUnknownFolderScreenshotTest {
             unknownFolders = listOf(xbox, long, halo, docs, saving),
             folderSystemChoices = systems,
             answeringFolders = setOf(saving.key),
-        )
+        ).let { it.copy(notAdded = notAddedItems(emptyList(), it.unknownFolders)) }
 
-    private fun focusOn(row: SettingsFolderRow, panel: Boolean, index: Int = 0): SettingsFocus {
-        val at = SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.UnknownFolder) + content.unknownFolders.indexOf(row)
-        return SettingsFocus(
-            column = if (panel) SettingsColumn.Panel else SettingsColumn.Options,
+    private val filesNotAdded = SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.FilesNotAdded)
+
+    private fun focusOnLine(row: SettingsFolderRow) =
+        SettingsFocus(
+            column = SettingsColumn.Panel,
             section = SettingsSection.Library,
-            rememberedOption = mapOf(SettingsSection.Library to at),
-            page = if (panel) PanelPage.UnknownFolder else null,
-            panelIndex = index,
-            folderKey = if (panel) row.key else null,
+            rememberedOption = mapOf(SettingsSection.Library to filesNotAdded),
+            page = PanelPage.FilesNotAdded,
+            panelIndex = content.notAdded.indexOfFirst { it is NotAddedItem.Folder && it.folder == row.key },
         )
-    }
+
+    private fun focusOnPage(row: SettingsFolderRow, index: Int) = focusOnLine(row).copy(page = PanelPage.UnknownFolder, panelIndex = index, folderKey = row.key)
 
     @Test
-    fun rowsWithTheUnansweredFolderFocused() = ReferenceShots.capture("settings_unknown_folder_rows") { SettingsAt(focusOn(xbox, panel = false), settingsForShot(), content) }
+    fun linesWithTheUnansweredFolderFocused() = ReferenceShots.capture("settings_unknown_folder_lines") { SettingsAt(focusOnLine(xbox), settingsForShot(), content) }
 
     @Test
-    fun rowsAnsweredAndSaving() = ReferenceShots.capture("settings_unknown_folder_answered") { SettingsAt(focusOn(halo, panel = false), settingsForShot(), content) }
+    fun linesAnsweredAndSaving() = ReferenceShots.capture("settings_unknown_folder_lines_answered") { SettingsAt(focusOnLine(halo), settingsForShot(), content) }
 
     @Test
-    fun panelOfAnUnansweredFolder() = ReferenceShots.capture("settings_unknown_folder_panel") { SettingsAt(focusOn(xbox, panel = true, index = 3), settingsForShot(), content) }
+    fun panelOfAnUnansweredFolder() = ReferenceShots.capture("settings_unknown_folder_panel") { SettingsAt(focusOnPage(xbox, index = 3), settingsForShot(), content) }
 
     @Test
-    fun panelOfAnAnsweredFolderMarksTheCurrentSystem() = ReferenceShots.capture("settings_unknown_folder_panel_answered") { SettingsAt(focusOn(halo, panel = true, index = 10), settingsForShot(), content) }
+    fun panelOfAnAnsweredFolderMarksTheCurrentSystem() = ReferenceShots.capture("settings_unknown_folder_panel_answered") { SettingsAt(focusOnPage(halo, index = 10), settingsForShot(), content) }
 
     @Test
-    fun panelWithALongName() = ReferenceShots.capture("settings_unknown_folder_panel_long_name") { SettingsAt(focusOn(long, panel = true, index = 1), settingsForShot(), content) }
+    fun panelWithALongName() = ReferenceShots.capture("settings_unknown_folder_panel_long_name") { SettingsAt(focusOnPage(long, index = 1), settingsForShot(), content) }
 }

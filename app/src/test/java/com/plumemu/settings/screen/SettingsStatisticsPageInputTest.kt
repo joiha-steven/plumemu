@@ -23,6 +23,8 @@ import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.testing.TableText
+import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.TextSize
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
@@ -52,11 +54,14 @@ abstract class SettingsStatisticsPageInputBase(
     private lateinit var router: InputRouter
     private val shown = mutableListOf<Pair<String, Long>>()
 
-    private fun open(figures: PlayStatistics = StatisticsShots.played) {
+    private fun open(
+        figures: PlayStatistics = StatisticsShots.played,
+        textSize: TextSize? = TableText.Graphite.textSize,
+    ) {
         compose.setContent {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope, onDebug = {}) }
-            PlumTheme(TableText.Graphite) {
+            PlumTheme(TableText.Graphite.copy(textSize = textSize)) {
                 StatisticsShots.WithCovers {
                     SettingsScreen(
                         PlumSettings(flags = SetupFlags(setupCompleted = true)), router, NoActions, TEST_VERSION,
@@ -99,6 +104,20 @@ abstract class SettingsStatisticsPageInputBase(
         }
         assertEquals("one A per game, nothing else answered", 5, shown.size)
     }
+
+    /** Where the first game cannot stand under the tiles the page rests on a row of tiles or the lists: no tile cut in half, with its label scrolled away. */
+    private fun assertNoTileIsCut(size: TextSize) {
+        open(textSize = size)
+        compose.waitForIdle()
+        val page = top(StatisticsTags.PAGE)
+        for (tile in tilesOf(StatisticsShots.played)) {
+            val tag = StatisticsTags.tile(tile)
+            assertTrue("$size: $tile runs from ${top(tag) - page} to ${bottom(tag) - page} dp of the page", top(tag) >= page - 0.5f || bottom(tag) <= page + PlumDimens.listFadeBand.value)
+        }
+    }
+
+    @Test
+    fun aPageTooShortForTheTilesRestsOnABlockNotThroughATile() = assertNoTileIsCut(TextSize.Largest)
 
     @Test
     fun downOnTheLastGameReadsOnToTheEndAndUpComesBackToItBeforeMoving() {

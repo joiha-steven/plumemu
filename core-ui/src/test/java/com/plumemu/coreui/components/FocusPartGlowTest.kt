@@ -20,6 +20,7 @@ import com.plumemu.coreui.theme.AccentPreset
 import com.plumemu.coreui.theme.BackgroundChoice
 import com.plumemu.coreui.theme.BackgroundPreset
 import com.plumemu.coreui.theme.ColorSet
+import com.plumemu.coreui.theme.Depth
 import com.plumemu.coreui.theme.FocusHalo
 import com.plumemu.coreui.theme.PlumColors
 import com.plumemu.coreui.theme.PlumComposeColors
@@ -131,7 +132,8 @@ class FocusPartGlowTest {
         for (case in cases().filter { it.light }) {
             val c = case.colors
             val toAccent = abs(c.accent.red - c.bg.red) + abs(c.accent.green - c.bg.green) + abs(c.accent.blue - c.bg.blue)
-            val need = FocusHalo.LIGHT_PART_PEAK.toFloat() * GLOW_SHARE_AT_3_DP * toAccent / 255f
+            // The peak is at its Depth; the glow's reach is GLOW_REACH of the board's, so the band 3 dp out, near its edge, keeps that share of it.
+            val need = FocusHalo.LIGHT_PART_PEAK.toFloat() * GLOW_SHARE_AT_3_DP * Depth.GLOW_REACH * toAccent / 255f
             val got = ringChange(case.settings)
             println("GLOW ${case.name}: ring change %.3f, wanted %.3f".format(got, need))
             if (got < need) failures += "${case.name}: ring change %.3f < %.3f".format(got, need)

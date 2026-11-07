@@ -169,55 +169,18 @@ class HomeCoverFocusTest {
         }
     }
 
+    /** The ring and its bands fill the gaps: a halo could only show where no neighbour stands, so a cover has none, on any side. */
     @Test
-    fun theFocusedCollarHasAHaloAndTheOthersDoNot() {
-        open(focus = 5)
-        compose.mainClock.advanceTimeBy(1000)
-        val d = compose.density.density
-        val focused = box(5)
-        val above = { b: Rect -> brighterAt(b.center.x, b.top - (CollarSize.Cover.topPadding.value + HALO_PROBE_DP) * d) }
-        assertTrue("${HALO_PROBE_DP} dp above the focused collar the halo is there (was ${above(focused)})", above(focused) >= 3)
-        for (other in listOf(4, 6)) assertTrue("no halo above cover $other (was ${above(box(other))})", above(box(other)) <= 1)
-    }
-
-    @Test
-    fun theHaloIsNotCutAtTheFirstRow() {
+    fun aFocusedCoverHasNoHaloSoItsMarkIsEvenOnEverySide() {
         open(focus = 0)
         compose.mainClock.advanceTimeBy(1000)
         val first = box(0)
-        val above = brighterAt(first.center.x, first.top - (CollarSize.Cover.topPadding.value + HALO_PROBE_DP) * compose.density.density)
-        assertTrue("above a first-row cover the halo reaches (was $above)", above >= 3)
-    }
-
-    @Test
-    fun theHaloReachesPastTheLastColumn() {
-        // Medium grid size on 768: four landscape columns; the last of the first row is focused as the grid opens.
-        open(focus = LAST_COLUMN)
-        compose.mainClock.advanceTimeBy(1000)
-        assertEquals("the last column index is the layout's", columns - 1, LAST_COLUMN)
-        val last = box(LAST_COLUMN)
-        val beside = brighterAt(last.right + (CollarSize.Cover.sidePadding.value + HALO_PROBE_DP) * compose.density.density, last.center.y)
-        assertTrue("right of a last-column collar the halo reaches (was $beside)", beside >= 3)
-    }
-
-    @Test
-    fun theHaloFadesOutWhenFocusLeaves() {
-        open(focus = 5)
-        compose.mainClock.advanceTimeBy(1000)
-        move(Direction.Right)
-        frame()
-        frame()
-        // Drawn once while it goes (the test clock draws on a capture).
-        assertTrue("the new groove is still coming on", !isLit(6))
-        compose.mainClock.advanceTimeBy(PlumMotion.FOCUS_GROW_MS + 40L)
-        val old = box(5)
-        val probe = { brighterAt(old.center.x, old.top - (CollarSize.Cover.topPadding.value + HALO_PROBE_DP) * compose.density.density) }
-        assertTrue("the halo of the cover left is gone (was ${probe()})", probe() <= 1)
+        val past = (CollarSize.Cover.topPadding.value + PlumDimens.focusRingOutset.value + PlumDimens.focusRingKeyline.value + 7f) * compose.density.density
+        val glow = brighterAt(first.center.x, first.top - past)
+        assertTrue("nothing glows above a first-row cover (was $glow)", glow <= 1)
     }
 
     private companion object {
-        const val HALO_PROBE_DP = 4f
-        const val LAST_COLUMN = 3
         const val IDLE_MS = 5_000L
     }
 }

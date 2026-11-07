@@ -9,7 +9,6 @@ import com.plumemu.coredata.db.RomFolderEntity
 import com.plumemu.coredata.db.ScanBatch
 import com.plumemu.coredata.db.SystemEntity
 import com.plumemu.coredata.settings.LeftEdgeSetting
-import com.plumemu.coredata.settings.RecentSizeSetting
 import com.plumemu.coredata.settings.SortGamesSetting
 import com.plumemu.coredata.settings.SystemOrderSetting
 import com.plumemu.coreui.testing.ReferenceShots
@@ -387,35 +386,17 @@ class LibraryHomeContentTest {
     }
 
     @Test
-    fun recentKeepsTheTwentyLatest() = runBlocking {
-        val many = (1..25).map { game("snes/g$it.sfc", "snes", "Game %02d".format(it), "USA") }
-        db.scanDao().applyBatch(ScanBatch(folderId, newGames = many))
-        val ids = gameIdsByTitle()
-        (1..25).forEach { db.playDao().addSession(ids.getValue("Game %02d".format(it)), endedAt = it * 1_000L, seconds = 30) }
-
-        val recent = first { it.entry(HomeContent.RECENT_ID).count == RecentSizeSetting.Twenty.games }.entry(HomeContent.RECENT_ID)
-
-        assertEquals("Game 25", recent.rows.first().title)
-        assertEquals("Game 06", recent.rows.last().title)
-    }
-
-    @Test
-    fun recentFollowsTheRecentSizeSettingAtOnce() = runBlocking<Unit> {
+    fun recentShowsTheFiftyLatest() = runBlocking {
         val many = (1..60).map { game("snes/g$it.sfc", "snes", "Game %02d".format(it), "USA") }
         db.scanDao().applyBatch(ScanBatch(folderId, newGames = many))
         val ids = gameIdsByTitle()
         (1..60).forEach { db.playDao().addSession(ids.getValue("Game %02d".format(it)), endedAt = it * 1_000L, seconds = 30) }
-        val size = MutableStateFlow(RecentSizeSetting.Ten)
-        val sized = LibraryHomeContent(db.gameDao(), { catalog }, apps, showApps, Dispatchers.Default, recentSize = size)
 
-        withTimeout(TIMEOUT_MS) {
-            val ten = sized.content.first { it.entry(HomeContent.RECENT_ID).count == 10 }.entry(HomeContent.RECENT_ID)
-            assertEquals("Game 60", ten.rows.first().title)
-            assertEquals("Game 51", ten.rows.last().title)
-            size.value = RecentSizeSetting.Fifty
-            val fifty = sized.content.first { it.entry(HomeContent.RECENT_ID).count == 50 }.entry(HomeContent.RECENT_ID)
-            assertEquals("Game 11", fifty.rows.last().title)
-        }
+        assertEquals(50, LibraryHomeContent.RECENT_GAMES)
+        val recent = first { it.entry(HomeContent.RECENT_ID).count == 50 }.entry(HomeContent.RECENT_ID)
+
+        assertEquals("Game 60", recent.rows.first().title)
+        assertEquals("Game 11", recent.rows.last().title)
     }
 
     @Test

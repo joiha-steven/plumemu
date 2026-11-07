@@ -20,22 +20,25 @@ object SlabDimens {
     val maxOverhang = (height - PlumDimens.gameRowHeight) / 2
 
     /** The bar's glow, the boards' `0 0 12px glowColor`: a Gaussian of sigma 12 / 2 px. */
-    val barGlowSigma = 4.dp
+    val barGlowSigma = 4.dp * Depth.GLOW_REACH
 
     /** The border, 1 board px, drawn inside the outline. */
     val edge = 0.667.dp
 
     /**
      * The slab's glow `0 0 glowBlur glowColor`, glowBlur 22 px at the boards' glow 0.3: sigma 7 dp, Chrome's render of the board (the CSS Gaussian is
-     * 22 / 2 px = 7.33 dp; fitted with the dark far drop, `FocusSlab.FAR_DARK_RENDERED`). The drops are [SlabLook]'s.
+     * 22 / 2 px = 7.33 dp; as Chrome renders it). The lift layers are [SlabLook]'s.
      */
-    val glowSigma = 7.dp
+    val glowSigma = 7.dp * Depth.GLOW_REACH
 
     /** How far a list's side clip lets the glow reach past the slab: where it is under 2 of 255. */
-    val glowReach = 13.dp
+    val glowReach = 13.dp * Depth.GLOW_REACH
 
     /** What a list keeps past its first and last row: the overhang and the glow around it, so a focused end row is never cut flat by the list's clip. */
     val listEndRoom = maxOverhang + glowReach
+
+    /** How far in from a slab's end its rounded corner, accent bar and the glow's bend reach: what stays whole when the end moves. */
+    val endCap = 48.dp
 
     /** The last stretch of the shadow and glow before their clip fades to the page colour, so the clip leaves no line. */
     val tailFade = 12.dp

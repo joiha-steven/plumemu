@@ -174,7 +174,12 @@ GRADLE_ARGS=()
 # Shared CI runners are several times slower than the development machine: absolute time budgets in unit
 # tests are skipped there (the ratio checks and every correctness assertion still run). --continue: one CI run
 # reports every failing module, not just the first.
-[[ $ON_CI == 1 ]] && GRADLE_ARGS+=(-Pplumemu.timingBudgets=false --continue)
+# No Kotlin daemon and a smaller Gradle heap: the runner has 8 GB, and test JVMs beside the Gradle
+# and Kotlin daemons filled memory and swap until the runner was shut down mid-build (measured
+# 2026-11-05). One worker fitted but ran past 45 minutes, so ci.yml adds swap instead.
+[[ $ON_CI == 1 ]] && GRADLE_ARGS+=(-Pplumemu.timingBudgets=false --continue
+  -Pkotlin.compiler.execution.strategy=in-process
+  "-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8")
 ./gradlew --console=plain ${GRADLE_ARGS[@]+"${GRADLE_ARGS[@]}"} "${TASKS[@]}" >"$GRADLE_LOG" 2>&1
 gradle_rc=$?
 GRADLE_SECONDS=$(( $(date +%s) - GRADLE_STARTED ))

@@ -43,6 +43,7 @@ import com.plumemu.coreinput.strip.StripFocus
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreinput.stripDrag
 import com.plumemu.coreinput.tapItem
+import com.plumemu.coreui.components.LocalRowEndShift
 import com.plumemu.coreui.components.EdgeFade
 import com.plumemu.coreui.components.GameRowLook
 import com.plumemu.coreui.components.InsetFocusPillShape
@@ -80,14 +81,6 @@ internal fun HomeStrip(
     val showsGrid by remember(state, content, gridIds) {
         derivedStateOf { content.showsGrid(content.entries.getOrNull(state.focus.systemIndex), gridIds) }
     }
-    // No fade where nothing continues: a grid with its games focused ends at the margin, and the
-    // narrow details stop ends at it too (Nova-3-details draws none).
-    val hideFade by remember(state, content, gridIds) {
-        derivedStateOf {
-            val column = state.focus.column
-            column == Column.Details || (content.showsGrid(content.entries.getOrNull(state.focus.systemIndex), gridIds) && column != Column.Systems)
-        }
-    }
     // Apps shows details in its list only (the icon column); a wide grid takes the whole width; a narrow grid keeps its stop.
     // Without box art a list has the text-only column on wide screens only (listHasDetails).
     val showsDetails by remember(state, content, gridIds, layout) {
@@ -105,15 +98,25 @@ internal fun HomeStrip(
     // Every entry has details now, so "no details" never holds: only the Apps list keeps its column.
     val onApps by remember(state, content) { derivedStateOf { content.entries.getOrNull(state.focus.systemIndex)?.kind == EntryKind.Apps } }
     val keepsFullWidth = content.isLibraryEmpty && !content.hasBoxArt && !(onApps && showsDetails)
-    // 640 dp and up, narrow, no details beside the list: with the systems open its preview must end inside the margin
-    // (the right column is the year, region or system code); it takes its full width once the games have the focus.
-    val systemsOpen by remember(state) { derivedStateOf { state.focus.column == Column.Systems } }
-    val previewFits = layout.isNarrowFitted && !showsGrid && !showsDetails && !keepsFullWidth && systemsOpen
-    val gamesWidth = if (previewFits) layout.narrowListWidth else if (keepsFullWidth) layout.listWidthWithoutArt else homeGamesWidth(layout, content.hasBoxArt, showsGrid)
-    // A grid's focus ring and a list's focus slab (drawn past its first and last row) may reach into the bar gaps; a first or last row's glow reaches
-    // [SlabDimens.listEndRoom] past the row, further than the gap, so the clip leaves that much above (else the glow is cut flat under the title).
-    // Below stays the gap: a row cut by the list's end must not show in the hint keys' strip. A grid's ring keeps the gap too (its shots are not touched here).
-    Box(modifier = modifier.then(Modifier.clipSidesLeavingRoom(above = if (showsGrid) PlumDimens.barGap else maxOf(PlumDimens.barGap, SlabDimens.listEndRoom))).stripDrag(state).testTag(HomeTags.STRIP)) {
+    // With the systems focused and no room for the details, the list runs to the right margin (ListStretch.kt): the slot keeps the full width, nothing beside it moves.
+    val fullWidth = if (keepsFullWidth) layout.listWidthWithoutArt else homeGamesWidth(layout, content.hasBoxArt, showsGrid)
+    val stretch = rememberListStretch(state, layout, fullWidth, stretches = !showsGrid && !keepsFullWidth && !detailsCoverFitsWithSystemsOpen(layout, content.hasBoxArt))
+    val gamesWidth = fullWidth
+    // No fade where nothing continues: a grid with its games focused ends at the margin, and the
+    // narrow details stop ends at it too (Nova-3-details draws none).
+    val hideFade by remember(state, content, gridIds, stretch) {
+        derivedStateOf {
+            val column = state.focus.column
+            val entry = content.entries.getOrNull(state.focus.systemIndex)
+            val shown = content.showsGrid(entry, gridIds)
+            // The Apps grid's preview shows whole columns only (AppsGridWindow.kt): nothing is cut, so no fade.
+            (stretch != null && column == Column.Systems) || column == Column.Details || (shown && column != Column.Systems) || (shown && column == Column.Systems && entry?.let { it.kind == EntryKind.Apps || it.isAppGamesGrid } == true)
+        }
+    }
+    // The strip runs from bar to bar and ends on both: nothing it draws stands in a bar.
+    // The Apps grid's preview beside the systems shows whole columns only (AppsGridWindow.kt); measured, so a move recomposes nothing.
+    val appsPreview = rememberAppsPreview(content, state, layout)
+    Box(modifier = modifier.then(Modifier.clipSidesLeavingRoom(room = 0.dp)).stripDrag(state).testTag(HomeTags.STRIP)) {
         Row(
             modifier =
                 Modifier
@@ -125,19 +128,19 @@ internal fun HomeStrip(
             // Starts at the screen edge: the 24 dp margin is inside the column, so the selector can run under the edge.
             SystemsColumn(content, state, onAction, Modifier.width(PlumDimens.stripMarginSide + PlumTheme.layout.systemsColumnWidth).fillMaxHeight(), isPanelOpen)
             if (showsGrid) {
-                GamesGrid(content, state, onAction, Modifier.width(gamesWidth).fillMaxHeight(), isPanelOpen)
+                CompositionLocalProvider(LocalAppsSpread provides appsPreview.spread) { GamesGrid(content, state, onAction, appsPreview.modifier.width(gamesWidth).fillMaxHeight(), isPanelOpen) }
                 PrefetchNeighbourCovers(content, state, gridIds)
             } else {
                 // The list's width in px as it is laid out (the bleed of boardListStart included), for the pill images built ahead.
                 val density = LocalDensity.current
                 val listWidthPx = with(density) { gamesWidth.roundToPx() + if (keepsFullWidth) 0 else PlumDimens.gamesListBleed.roundToPx() }
-                CompositionLocalProvider(LocalGamesListWidthPx provides listWidthPx) {
+                CompositionLocalProvider(LocalGamesListWidthPx provides listWidthPx, LocalListStretch provides stretch, LocalRowEndShift provides remember(stretch) { stretch?.let { it::rowEndShift } }) {
                     GamesList(content, state, gridIds, positions, onAction, Modifier.width(gamesWidth).fillMaxHeight().then(if (keepsFullWidth) Modifier else Modifier.boardListStart()), isPanelOpen, listShowsPlace(layout, PlumTheme.type.font), showSystemInfo)
                 }
             }
             // Beside the list on wide screens; on narrow ones the third stop, after list or grid.
             if (showsDetails && (layout.widthClass == WidthClass.Wide || detailsWidth > 0.dp)) {
-                DetailsColumn(content, state, onAction, Modifier.width(detailsWidth).fillMaxHeight(), detailsWidth)
+                DetailsColumn(content, state, onAction, Modifier.width(detailsWidth).fillMaxHeight().inStrip().then(if (stretch != null) Modifier.graphicsLayer { translationX = stretch.followerShift() } else Modifier), detailsWidth)
             }
         }
         if (!hideFade) EdgeFade(Modifier.align(Alignment.CenterEnd).testTag(HomeTags.EDGE_FADE))
@@ -189,19 +192,22 @@ private fun SystemsColumn(
         rememberGlidingPill(listState, glide, rowHeight = PlumTheme.layout.systemRowHeight, stride = PlumTheme.layout.systemRowHeight, extraGap = PlumDimens.systemGroupGap, shape = pillShape, fromBottom = true) {
             if (state.focus.column == Column.Systems && !notices.emptyFocus.inButtons) state.focus.systemIndex else -1
         }
-    // The column fades out at an edge it continues past (design/rules.md › Lists that scroll).
-    val groupGapPx = with(LocalDensity.current) { PlumDimens.systemGroupGap.toPx() }
-    val fades = remember(listState, glide, state, content.firstSystemIndex, groupGapPx) {
-        ListEdgeFades(listState, glide, wholeRowsOnly = true, gapAbove = { if (it == content.firstSystemIndex) groupGapPx else 0f }) { state.focus.systemIndex }
+    // The column runs from bar to bar, its rows under both (design/rules.md › Lists that scroll).
+    val density = LocalDensity.current
+    val barRoom = LocalBarRoom.current
+    val rest = barRows(PlumTheme.layout.systemRowHeight, 0.dp)
+    val groupGapPx = with(density) { PlumDimens.systemGroupGap.toPx() }
+    val topRoomPx = with(density) { barRoom.top.toPx() }
+    val clips = remember(listState, glide, state, content.firstSystemIndex, groupGapPx, topRoomPx) {
+        BarRunClips(listState, glide, topRoomPx, gapAbove = { if (it == content.firstSystemIndex) groupGapPx else 0f }, minShown = ONE_LINE_MIN_SHOWN) { state.focus.systemIndex }
     }
-    // The column takes the strip's whole height; a row cut by its top or bottom edge is hidden, only whole rows show.
-    val systemsHeightPx = with(LocalDensity.current) { PlumTheme.layout.stripHeight.roundToPx() }
+    FollowBarRunner(clips)
     Box(modifier) {
         pill.Provide {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize().listHeightAtMost(systemsHeightPx).testTag(HomeTags.SYSTEMS).then(pill.modifier).then(glide.withFadeMask(fades, PlumTheme.edgeFadeOn, hidesCutRows = true)),
-                contentPadding = PaddingValues(vertical = glide.extra),
+                modifier = Modifier.fillMaxSize().testTag(HomeTags.SYSTEMS).then(pill.modifier).then(glide.withFadeMask(clips, isOn = false, hidesCutRows = true)),
+                contentPadding = PaddingValues(top = glide.extra + barRoom.top, bottom = glide.extra + with(density) { rest.below.toDp() }),
             ) {
                 itemsIndexed(content.entries, key = { _, entry -> entry.id }) { index, entry ->
                     if (index == content.firstSystemIndex) Spacer(Modifier.height(PlumDimens.systemGroupGap))
@@ -217,9 +223,9 @@ private fun SystemsColumn(
             }
         }
         // The peek is the column's last stretch: the rail sits there, centred in it.
-        if (content.leftEdge == LeftEdgeSetting.Letters) LetterRail(content, state, Modifier.align(Alignment.CenterEnd).width(PlumTheme.layout.peek).fillMaxHeight())
+        if (content.leftEdge == LeftEdgeSetting.Letters) LetterRail(content, state, Modifier.align(Alignment.CenterEnd).width(PlumTheme.layout.peek).fillMaxHeight().inStrip())
     }
-    KeepFocusedVisible(listState, glide) { state.focus.systemIndex }
+    KeepFocusedVisible(listState, glide, snapsToRows = true, bandPx = rest.inset) { state.focus.systemIndex }
 }
 
 /**
@@ -243,16 +249,16 @@ private fun GamesList(
     val panelOpen = rememberUpdatedState(isPanelOpen)
     val entry = content.entries.getOrNull(entryIndex) ?: return
     if (entry.rows.isEmpty() && content.isLibraryEmpty) {
-        EmptyLibraryMessage(modifier, onAction)
+        EmptyLibraryMessage(modifier.inStrip(), onAction)
         return
     }
     if (entry.rows.isEmpty() && entry.kind == EntryKind.Favorites) {
         val key = stringResource(LocalButtonLetters.current.favorite)
-        EmptyEntryLine(stringResource(R.string.home_favorites_empty, key), HomeTags.EMPTY_FAVORITES, modifier)
+        EmptyEntryLine(stringResource(R.string.home_favorites_empty, key), HomeTags.EMPTY_FAVORITES, modifier.inStrip())
         return
     }
     if (entry.rows.isEmpty() && entry.kind == EntryKind.Recent) {
-        EmptyEntryLine(stringResource(R.string.home_recent_empty), HomeTags.EMPTY_RECENT, modifier)
+        EmptyEntryLine(stringResource(R.string.home_recent_empty), HomeTags.EMPTY_RECENT, modifier.inStrip())
         return
     }
     // L1/R1 with the games focused: the next system's games fade in instead of popping. Moves in

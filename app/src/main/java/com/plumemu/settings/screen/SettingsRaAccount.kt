@@ -90,17 +90,19 @@ internal fun RaAccountPanel(
     val inPanel = model.focus.column == SettingsColumn.Panel && page == PanelPage.RaAccount
     var buttonsTop by remember { mutableIntStateOf(0) }
     AccountPanelScroll(PlumDimens.settingsPanelGap) {
-        PanelTitle(title)
+        WordPanelTitle(title)
         if (account is RaAccountStatus.SignedIn) {
             if (account.isKeyRefused) {
                 PanelBody(stringResource(R.string.settings_ra_refused), Modifier.testTag(SettingsPanelTags.STATUS))
             } else {
-                BasicText(
+                val colors = PlumTheme.colors
+                FactsLine(
                     pluralStringResource(R.plurals.settings_ra_signed_in, account.points, account.userName, rememberCountFormat().format(account.points)),
-                    style = PlumTheme.type.meta.copy(color = PlumTheme.colors.text),
+                    PlumTheme.type.meta,
+                    color = { colors.text },
+                    modifier = Modifier.onPanelTextLine(),
+                    textModifier = Modifier.testTag(SettingsPanelTags.STATUS),
                     maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.onPanelTextLine().testTag(SettingsPanelTags.STATUS),
                 )
             }
             PanelLine(model, SettingsOption.RetroAchievementsAccount, null)

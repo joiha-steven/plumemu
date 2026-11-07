@@ -145,17 +145,6 @@ internal class VibratorHaptics(
         const val TICK_SCALE = 0.5f
         const val CLICK_SCALE = 0.8f
 
-        fun findVibrator(context: Context): Vibrator? {
-            val found =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    context.getSystemService(VibratorManager::class.java)?.defaultVibrator
-                } else {
-                    @Suppress("DEPRECATION") // VibratorManager exists only from API 31.
-                    context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                }
-            return found?.takeIf { it.hasVibrator() }
-        }
-
         /** Needs every primitive it may play: CLICK, and a tick (LOW_TICK or TICK). */
         fun supportsPrimitives(device: Vibrator): Boolean =
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
@@ -165,4 +154,16 @@ internal class VibratorHaptics(
                         device.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_TICK)
                 )
     }
+}
+
+/** The device's vibrator; null when it has none. */
+internal fun findVibrator(context: Context): Vibrator? {
+    val found =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            context.getSystemService(VibratorManager::class.java)?.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION") // VibratorManager exists only from API 31.
+            context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        }
+    return found?.takeIf { it.hasVibrator() }
 }

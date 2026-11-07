@@ -45,7 +45,7 @@ internal fun SettingsAt(
         remember(focus, content, busyPress, subfolders) {
             val actions = if (busyPress) BusyScanActions else subfolders?.let { ListingActions(it.getOrNull()) } ?: NoActions
             SettingsModel(actions, focus).also {
-                it.content = content
+                it.content = content.withGamesListed()
                 if (busyPress) it.work.rescan()
                 focus.folderId?.takeIf { focus.page == PanelPage.SkipSubfolder }?.let(it.work::listSubfolders)
             }
@@ -55,6 +55,10 @@ internal fun SettingsAt(
         SettingsLayout(settings, model, NoTouch, version, clock = { BOARD_CLOCK }, battery = { BOARD_BATTERY }, wifi = { wifi }, charging = { charging })
     }
 }
+
+/** A shot is of a library with games: Emulators is listed unless the shot names its systems, or nothing could be read. */
+internal fun SettingsContent.withGamesListed(): SettingsContent =
+    if (systems.isEmpty() && !loadFailed) copy(systems = listOf(SystemEmulators("snes", "Super Nintendo", automatic = null, chosen = null, installed = emptyList()))) else this
 
 /** Answers Skip a sub-folder…'s listing at once with [names]. */
 private class ListingActions(private val listing: List<String>?) : SettingsActions by NoActions {
@@ -96,8 +100,6 @@ internal object NoActions : SettingsActions {
         onDone: (Boolean) -> Unit,
     ) = Unit
 
-    override fun detectEmulators(onDone: (Boolean) -> Unit) = Unit
-
     override fun openHomeSettings(onNotHome: () -> Unit): Boolean = true
 
     override fun forgetFolderAnswer() = Unit
@@ -118,9 +120,35 @@ internal val shownSections: List<SettingsSection> = SettingsSection.shownIn(Sett
 
 /** The focus on [option] of its section in the options column. */
 internal fun optionsAt(option: SettingsOption): SettingsFocus {
+    // Background and Text color are rows of Colors' panel: the cursor on that row, the Colors row behind it.
+    ColorPages.kindOf(option)?.let(::colorsRowItemOf)?.let { item -> return optionsAt(SettingsOption.Colors).copy(column = SettingsColumn.Panel, page = PanelPage.ColorSets, panelIndex = item) }
+    // An item of a panel's list: its page open, the list's row behind it.
+    pageOfListItem(option)?.let { (row, page, index) -> return optionsAt(row).copy(column = SettingsColumn.Panel, page = page, panelIndex = index) }
     val section = SettingsSection.entries.first { option in it.options }
     return SettingsFocus(column = SettingsColumn.Options, section = section, rememberedOption = mapOf(section to section.options.indexOf(option)))
 }
+
+/** An item of Back up and restore's or Reset…'s panel: the row that lists it, its own page, the cursor's first place on that page. */
+private fun pageOfListItem(option: SettingsOption): Triple<SettingsOption, PanelPage, Int>? =
+    when (option) {
+        SettingsOption.Backup -> Triple(SettingsOption.BackupAndRestore, PanelPage.Backup, 0)
+        SettingsOption.Restore -> Triple(SettingsOption.BackupAndRestore, PanelPage.Restore, 0)
+        SettingsOption.UndoRestore -> Triple(SettingsOption.BackupAndRestore, PanelPage.UndoRestore, 0)
+        SettingsOption.ResetAll -> Triple(SettingsOption.Reset, PanelPage.ResetAllConfirm, SettingsModel.CONFIRM_CANCEL)
+        SettingsOption.ResetLibrary -> Triple(SettingsOption.Reset, PanelPage.ResetLibraryConfirm, SettingsModel.CONFIRM_CANCEL)
+        else -> null
+    }
+
+/** [option]'s row and place in the list of the panel that lists it; null for a row of its own. */
+internal fun listItemOf(option: SettingsOption): Pair<SettingsOption, Int>? =
+    when (option) {
+        SettingsOption.Backup -> SettingsOption.BackupAndRestore to BackupRestoreItem.Backup.ordinal
+        SettingsOption.Restore -> SettingsOption.BackupAndRestore to BackupRestoreItem.Restore.ordinal
+        SettingsOption.UndoRestore -> SettingsOption.BackupAndRestore to BackupRestoreItem.Undo.ordinal
+        SettingsOption.ResetAll -> SettingsOption.Reset to ResetPanelItem.All.ordinal
+        SettingsOption.ResetLibrary -> SettingsOption.Reset to ResetPanelItem.Library.ordinal
+        else -> null
+    }
 
 /** The focus inside [option]'s panel, on [page] item [index]. */
 internal fun panelAt(
@@ -128,6 +156,20 @@ internal fun panelAt(
     page: PanelPage,
     index: Int,
 ): SettingsFocus = optionsAt(option).copy(column = SettingsColumn.Panel, page = page, panelIndex = index)
+
+/** Background's or Text color's page as [settings] open it, reached from Colors' panel. */
+internal fun colorPageAt(
+    option: SettingsOption,
+    settings: PlumSettings,
+): SettingsFocus = ColorPages.openingFor(option, settings).let { (page, index) -> panelAt(option, page, index) }
+
+/** [colorPageAt] with the shots' settings. */
+@Composable
+internal fun colorPageAt(option: SettingsOption): SettingsFocus = colorPageAt(option, settingsForShot())
+
+/** What a shot of [option] shows: Background's and Text color's own page, any other row with its panel beside it. */
+@Composable
+internal fun panelShownAt(option: SettingsOption): SettingsFocus = if (option == SettingsOption.Background || option == SettingsOption.TextColor) colorPageAt(option) else optionsAt(option)
 
 /** The board's library (RP5-S1-settings): two folders, seven systems, PlayStation on DuckStation by default. */
 internal object ShotContent {

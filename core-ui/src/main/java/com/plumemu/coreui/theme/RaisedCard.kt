@@ -46,8 +46,8 @@ object RaisedCard {
     const val SHADOW_LIGHT = 0.45
 
     /** The peak alpha of the near (`0 2px 4px`) and the far (`0 30px 60px`) shadow at strength 1 (Graphite; Paper is 0.45 of it, brown). */
-    const val SHADOW_NEAR = 0.4
-    const val SHADOW_FAR = 0.6
+    const val SHADOW_NEAR = 0.4 * Depth.SHADOW
+    const val SHADOW_FAR = 0.6 * Depth.SHADOW
     private val WHITE = Rgb(0xFFFFFF)
 }
 
@@ -92,10 +92,13 @@ object CardDimens {
     val edge = 0.67.dp
 
     /** The board's two shadows (`0 2px 4px` and `0 30px 60px`) as drop and Gaussian sigma (px / 1.5; a CSS blur of B is a sigma of B / 2). */
-    val shadowNearDrop = 1.333.dp
-    val shadowNearSigma = 1.333.dp
-    val shadowFarDrop = 20.dp
-    val shadowFarSigma = 20.dp
+    val shadowNearDrop = 1.333.dp * Depth.SHADOW_REACH
+    val shadowNearSigma = 1.333.dp * Depth.SHADOW_REACH
+    val shadowFarDrop = 20.dp * Depth.SHADOW_REACH * FAR_TIGHT
+    val shadowFarSigma = 20.dp * Depth.SHADOW_REACH * FAR_TIGHT
+
+    /** How much of a depth-cut far shadow's reach a card keeps: the shadow stays close to the card's edge, its strength as it was. */
+    private const val FAR_TIGHT = 0.45f
 
     /** Padding inside the game panel's card above the title (the board's 22 px less its 1 px border) and below the last row or button. */
     val padTop = 15.dp
@@ -111,6 +114,6 @@ object CardDimens {
     val questionButtonSpacing = 10.67.dp
     const val QUESTION_BODY_LEADING = 28f / 19f
 
-    /** Where a card's list scrolls under its title: the first stretch of the top fade is solid, so a sliver of a cut row never shows. */
+    /** What a row's text keeps clear above and below it, when its lines are not measured yet: a cut row's sliver of text is judged from here. */
     val listEdgeLead = 12.dp
 }

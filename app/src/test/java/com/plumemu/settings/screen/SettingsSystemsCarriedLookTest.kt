@@ -55,7 +55,7 @@ class SettingsSystemsCarriedLookTest {
             return image.toPixelMap()[image.width / 2, FILL_Y]
         }
         val focused = fillPixel()
-        // The slab is a gradient now: ten px under its top the fill is still close to the first stop.
+        // The slab is a gradient now: just under the ring the fill is still close to the first stop.
         assertTrue("focused: the slab", focused.near(colors.slab.stops.first()))
         compose.runOnUiThread { presses!!.press(Action.Enter) }
         compose.waitForIdle()
@@ -71,7 +71,7 @@ class SettingsSystemsCarriedLookTest {
     fun carriedRowIsToldFromFocusedOnPaper() = check(PlumThemeSettings.Paper)
 
     private companion object {
-        /** Below the 2 dp ring (4 px at xhdpi), inside the fill. */
-        const val FILL_Y = 10
+        /** Below the 2 dp ring (4 px at xhdpi), inside the fill; lower, the gradient has drifted to the tolerance's edge and one colour step of Linux rendering failed it in CI. */
+        const val FILL_Y = 6
     }
 }

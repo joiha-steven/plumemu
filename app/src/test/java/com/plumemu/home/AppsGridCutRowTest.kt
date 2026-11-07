@@ -31,8 +31,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The Apps grid shows a row cut at its top or bottom edge only when most of it shows (and then faded); a row mostly cut is left
- * out, so no sliver of icon tops or names stands above the hint bar (design/rules.md › Lists that scroll). Checked on the pixels.
+ * The Apps grid runs under both bars and shows a row cut at an edge only when at least a third of it shows (and then faded); a row
+ * showing less is left out, so no sliver of icon tops or names stands at a bar (design/rules.md › Lists that scroll). Checked on the pixels.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -71,7 +71,8 @@ class AppsGridCutRowTest {
                 leftOut++
                 // Nothing of the row stands inside the window: every pixel there is the page.
                 val from = if (c.top < box.top) box.top else c.top
-                val to = if (c.top < box.top) c.bottom else box.bottom
+                // The hint bar's collars stand a little above its bounds: their ink is not the row.
+                val to = if (c.top < box.top) c.bottom else box.bottom - HINT_COLLAR_REACH_DP * compose.density.density
                 val page = shot[2, 2]
                 var odd = 0
                 for (y in from.toInt() until to.toInt()) for (x in c.left.toInt() until c.right.toInt()) {
@@ -84,7 +85,8 @@ class AppsGridCutRowTest {
             compose.waitForIdle()
         }
         assertTrue(problems.joinToString("\n"), problems.isEmpty())
-        assertTrue("$size: a row is mostly cut at some step", leftOut > 0)
+        // Rows run under the bars, so some step must have left a row out, or the check above proved nothing.
+        assertTrue("$size: no step left a row out", leftOut > 0)
     }
 
     @Test
@@ -97,6 +99,7 @@ class AppsGridCutRowTest {
 
     private companion object {
         /** The share of a cut row that must show for it to stay (faded); less and it is left out (`GridEdgeFades.minShown`). */
-        const val MOST = 0.75f
+        const val MOST = 1f / 3f
+        const val HINT_COLLAR_REACH_DP = 2.5f
     }
 }

@@ -113,7 +113,7 @@ private fun PresetsPage(
         Modifier.fillMaxHeight(),
         PlumDimens.settingsPanelGap,
         // The look preview comes first where it fits whole with the swatches; the swatches win, then the title and text.
-        leading = { LookPreviewPart(PreviewKind.Look, settings.appearance.edgeFade) },
+        leading = { LookPreviewPart(PreviewKind.Look) },
         header = listOf({ PanelTitle(stringResource(option.label)) }, { PanelBody(stringResource(bodyOf(kind))) }),
         main = {
             FlowRow(
@@ -358,7 +358,7 @@ private fun CustomPalettePage(
     val ownKeyboard = model.hexTyping?.takeIf { inPanel && it.keyboardKind == KeyboardChoice.Plumemu }
     if (ownKeyboard == null) {
         // Scrolls when the text is large (the palette, the message and the hex rows are taller than the panel), keeping the focused item in view.
-        Column(Modifier.fillMaxHeight().verticalScroll(rememberScrollState()).testTag(SettingsTags.COLOR_SCROLL), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelGap)) {
+        PanelScrollColumn(PlumDimens.settingsPanelGap, tag = SettingsTags.COLOR_SCROLL) {
             top()
             hex()
         }

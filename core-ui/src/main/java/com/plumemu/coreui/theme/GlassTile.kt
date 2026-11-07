@@ -36,8 +36,8 @@ object GlassTile {
     const val RING_DARK = 0.40f
 
     /** The board's two tile shadows (`0 3px 6px` and `0 16px 32px`) at these shares of the card's shadow strength. */
-    const val SHADOW_NEAR = 0.35f
-    const val SHADOW_FAR = 0.45f
+    const val SHADOW_NEAR = 0.35f * Depth.SHADOW
+    const val SHADOW_FAR = 0.45f * Depth.SHADOW
 
     fun footLight(bg: Rgb): Rgb = ColorMath.mix(bg, FOOT_TOWARD, FOOT_LIGHT)
 }
@@ -107,10 +107,10 @@ object GlassDimens {
     val edge = 0.67.dp
 
     /** The two shadows as drop and Gaussian sigma (board px / 1.5; a CSS blur of B is a sigma of B / 2). */
-    val shadowNearDrop = 2.dp
-    val shadowNearSigma = 2.dp
-    val shadowFarDrop = 10.667.dp
-    val shadowFarSigma = 10.667.dp
+    val shadowNearDrop = 2.dp * Depth.SHADOW_REACH
+    val shadowNearSigma = 2.dp * Depth.SHADOW_REACH
+    val shadowFarDrop = 10.667.dp * Depth.SHADOW_REACH
+    val shadowFarSigma = 10.667.dp * Depth.SHADOW_REACH
 }
 
 /**
@@ -222,6 +222,6 @@ object BadgeFrame {
 object BadgeFrameDimens {
     val ring = 0.667.dp
     val topLine = 0.667.dp
-    val drop = 1.333.dp
-    val sigma = 1.333.dp
+    val drop = 1.333.dp * Depth.SHADOW_REACH
+    val sigma = 1.333.dp * Depth.SHADOW_REACH
 }

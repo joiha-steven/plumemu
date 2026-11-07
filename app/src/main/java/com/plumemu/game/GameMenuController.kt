@@ -249,7 +249,7 @@ internal class GameMenuController(
 
     private val emulatorRefresh = EmulatorRefresh(scope, actions, log)
 
-    /** Packages may have changed (back from the store): the panel open shows the emulators as they are now, or closes ([EmulatorRefresh]). */
+    /** Packages may have changed (back from a download): the panel open shows the emulators as they are now, or closes ([EmulatorRefresh]). */
     fun emulatorsMayHaveChanged() {
         val open = panel ?: return
         if (work?.isActive == true || isLaunching || opening?.isActive == true) return
@@ -375,9 +375,9 @@ internal class GameMenuController(
                         if (stored && panel === open) play(game)
                     }
             is PanelCommand.GetEmulator ->
-                if (!actions.openStorePage(command.packageName)) {
-                    log("store page: no store or browser for an emulator of game ${game.key}")
-                    panel = OpenPanel(game, PanelScreen.Message(storeUnavailableMessage(command.name)), parent = open)
+                if (!actions.openDownloadPage(command.url)) {
+                    log("download page: no browser for an emulator of game ${game.key}")
+                    panel = OpenPanel(game, PanelScreen.Message(pageUnavailableMessage(command.name)), parent = open)
                 }
             PanelCommand.RescanLibrary ->
                 if (actions.rescanLibrary()) {

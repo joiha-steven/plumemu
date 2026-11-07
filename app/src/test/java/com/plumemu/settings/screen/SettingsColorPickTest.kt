@@ -38,7 +38,7 @@ internal class SettingsColorPickTest : SettingsModelHarness() {
         val ring = backgroundGrid[model.focus.panelIndex]
         assertNotEquals("the ring sits on a different colour than the typed one", typed.rgb, ring.value)
         press(Action.Enter)
-        assertNull("the page closed", model.focus.page)
+        assertOnColorsRow(COLORS_BACKGROUND_ITEM, "the page closed")
         assertEquals(typed, appearance.background)
     }
 
@@ -47,7 +47,7 @@ internal class SettingsColorPickTest : SettingsModelHarness() {
         openBackgroundPlusPage()
         val at = model.focus.panelIndex
         model.onTapPanelItem(at, actions.shown, wide)
-        assertNull("the page closed", model.focus.page)
+        assertOnColorsRow(COLORS_BACKGROUND_ITEM, "the page closed")
         assertEquals(ColorSetting.Custom(backgroundGrid[at].value), appearance.background)
     }
 
@@ -73,7 +73,7 @@ internal class SettingsColorPickTest : SettingsModelHarness() {
         assertEquals(PanelPage.BackgroundCustom, model.focus.page)
         // The cursor moved on the first visit; the reopened page must not remember it.
         press(Action.Enter)
-        assertNull("the page closed", model.focus.page)
+        assertOnColorsRow(COLORS_BACKGROUND_ITEM, "the page closed")
         assertEquals(typed, appearance.background)
     }
 

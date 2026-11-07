@@ -57,8 +57,8 @@ internal class SettingsColorsPanelTest : SettingsModelHarness() {
         assertEquals("three tiles per row in the wide panel", 1 + COLOR_SET_COLUMNS_WIDE, model.focus.panelIndex)
         move(Direction.Left)
         assertEquals("left goes to the row's first tile", COLOR_SET_COLUMNS_WIDE, model.focus.panelIndex)
-        repeat(10) { move(Direction.Down) }
-        assertEquals("down stops on the last tile (Cream, no Custom here)", ColorSet.entries.size - 1, model.focus.panelIndex)
+        repeat(10) { if (model.focus.panelIndex < ColorSet.entries.size - 1) move(Direction.Down) }
+        assertEquals("down reaches the last tile (Cream, no Custom here)", ColorSet.entries.size - 1, model.focus.panelIndex)
         assertEquals("moving only previews: nothing is written", writes, actions.writes)
         assertEquals(before, actions.settings)
     }

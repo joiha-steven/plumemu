@@ -1,7 +1,6 @@
 package com.plumemu.coreui.theme
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.components.CollarSize
@@ -56,7 +55,7 @@ enum class CoverClass {
 }
 
 /**
- * The grid's three sizes (Settings › Home screen › Grid size), one for every
+ * The grid's three sizes (L1 / R1 and the Size hint), one for every
  * system; each class of cover takes its own columns from it ([PlumLayout.gridColumns]). [Medium] is
  * the default (Small was a little small). The board's
  * landscape grid is [Large], its portrait grid [Medium].
@@ -111,7 +110,7 @@ data class PlumLayout(
     val hintScale: Float = maxOf(1f, minOf(textScale, TextSize.HINT_FACTOR_CAP)),
     /** The top bar's place name line in the font and size in use: the bar grows to hold it, never cuts it. */
     val topBarLine: Dp = 0.dp,
-    /** Settings › Home screen › Grid size, one for every system: picks the grid's cells. */
+    /** L1 / R1 and the Size hint, one size for every system: picks the grid's cells. */
     val gridSize: GridSize = GridSize.Default,
     /** Whether Settings' three columns fit at the text size and font in use ([SettingsColumns.fits]); true where nothing says otherwise. */
     val settingsThreeFit: Boolean = true,
@@ -173,7 +172,7 @@ data class PlumLayout(
             CoverClass.Square, CoverClass.Tall -> PlumDimens.gridColumnsGapPortrait
         }
 
-    /** Between neighbouring collars of [shape]'s covers across: the board's 10 px, 6.67 dp. Nothing grows on focus, so no room for growth. */
+    /** Between neighbouring collars of [shape]'s covers across ([PlumDimens.gridGapAcross]). Nothing grows on focus, so no room for growth. */
     fun gridGap(shape: CoverShape): Dp = PlumDimens.gridGapAcross
 
     /** Between covers of [coverClass] across and down in Apps' grid, whose focused tile still grows: 22 landscape, 20 square and tall. */
@@ -183,7 +182,7 @@ data class PlumLayout(
             CoverClass.Square, CoverClass.Tall -> PlumDimens.gridGapPortrait
         }
 
-    /** Between neighbouring collars of [shape]'s covers down: the board's 14 px, 9.33 dp, for every cover class (the tall-cover gap only made room for growth). */
+    /** Between neighbouring collars of [shape]'s covers down ([PlumDimens.gridGapDown]), for every cover class (the tall-cover gap only made room for growth). */
     fun gridRowGap(shape: CoverShape): Dp = PlumDimens.gridGapDown
 
     /**
@@ -232,6 +231,10 @@ data class PlumLayout(
         } else {
             width - PlumDimens.stripMarginSide * 2
         }
+
+    /** The widest a value gets in an options row. */
+    val settingsValueMaxWidth: Dp =
+        if (isSettingsThreeColumns) settingsOptionsWidth * SettingsThreeDimens.VALUE_SHARE else settingsOptionsWidth / 2
 
     /**
      * The options column while the sections are focused (narrow, 640 and up): it is a preview under the sections, so
@@ -327,7 +330,7 @@ data class PlumLayout(
 
     /**
      * Game rows that fit between the bars (the games list only), counting the gap after each; fewer at bigger text.
-     * Counted in rounded pixels as [listRowsHeightPx] lays them out: a count that fits in dp can overflow by a pixel per row and cut the first row.
+     * Counted in rounded pixels, as the rows lay out: a count that fits in dp can overflow by a pixel per row and cut the first row.
      */
     val listRowsThatFit: Int =
         floor(
@@ -337,10 +340,6 @@ data class PlumLayout(
 
     /** The games list's height: the [listRowsThatFit] whole rows, the last without its gap. The list ends on a row (where the list fades) and the scroll keeper's window is this, so the two agree on the last row. */
     val listRowsHeight: Dp = ((gameRowHeight + PlumDimens.listRowGap) * listRowsThatFit - PlumDimens.listRowGap).coerceAtLeast(0.dp)
-
-    /** [listRowsHeight] in whole pixels, as the rows lay out: each row is its stride rounded to pixels, so the sum of rounded strides, not the rounded sum. */
-    fun listRowsHeightPx(density: Density): Int =
-        with(density) { ((gameRowHeight + PlumDimens.listRowGap).roundToPx() * listRowsThatFit - PlumDimens.listRowGap.roundToPx()).coerceAtLeast(0) }
 
     private fun gridColumns(
         cell: Dp,

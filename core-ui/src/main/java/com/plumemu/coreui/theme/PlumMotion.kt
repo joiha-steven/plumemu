@@ -25,9 +25,12 @@ object PlumMotion {
     /** The focused cover growing to its larger size on arrival, and back on leave (ease-out, scale only). */
     const val FOCUS_GROW_MS: Int = 150
 
-    /** The light band crossing the focused cover once, and how long focus must rest on the cover before it starts. */
+    /**
+     * The light band crossing the focused cover once, and how long focus must rest on the cover before it starts: past [FOCUS_GROW_MS],
+     * as a band that starts while the cover still grows slows the grid's next move.
+     */
     const val FOCUS_SWEEP_MS: Int = 400
-    const val FOCUS_SWEEP_REST_MS: Int = 120
+    const val FOCUS_SWEEP_REST_MS: Int = 300
 
     /** New content fading in where old content stood (a list swap, a panel's sub-screen, search). */
     const val FADE_IN_MS: Int = 110

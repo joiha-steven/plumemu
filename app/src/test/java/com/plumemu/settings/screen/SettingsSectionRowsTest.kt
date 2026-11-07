@@ -1,6 +1,7 @@
 package com.plumemu.settings.screen
 
 import com.plumemu.account.AccountStatus
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.coredata.settings.SecondScreenSettings
 import com.plumemu.secondscreen.ScreenKind
 import com.plumemu.secondscreen.SecondScreen
@@ -17,7 +18,7 @@ internal class SettingsSectionRowsTest {
     private val builtIn = SecondScreen(4, "Screen-2", ScreenKind.BuiltIn)
 
     private fun content(screen: SecondScreen?) =
-        SettingsContent(hasStatistics = true, hasUpdates = true, account = AccountStatus.SignedOut).withSecondScreen(screen, SecondScreenSettings())
+        SettingsContent(hasStatistics = true, hasUpdates = true, account = AccountStatus.SignedOut, chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper).withSecondScreen(screen, SecondScreenSettings())
 
     private fun rowsBySection(content: SettingsContent): Map<SettingsSection, List<SettingsOption>> =
         SettingsSection.shownIn(content).associateWith { it.rowsIn(content) }
@@ -28,41 +29,31 @@ internal class SettingsSectionRowsTest {
                 listOf(
                     SettingsOption.RomFolders,
                     SettingsOption.Rescan,
-                    SettingsOption.ScanOnStartup,
                     SettingsOption.SortGames,
-                    SettingsOption.SystemOrder,
                     SettingsOption.FilesNotAdded,
-                    SettingsOption.RecentSize,
                     SettingsOption.ClearRecent,
                 ),
             SettingsSection.Appearance to
                 listOf(
                     SettingsOption.Language,
                     SettingsOption.Colors,
-                    SettingsOption.Background,
-                    SettingsOption.TextColor,
                     SettingsOption.Accent,
                     SettingsOption.Font,
                     SettingsOption.TextSize,
                     SettingsOption.TextWeight,
-                    SettingsOption.EdgeFade,
                 ),
             SettingsSection.HomeScreen to
                 listOf(
                     SettingsOption.UseAsHome,
                     SettingsOption.ShowApps,
-                    SettingsOption.ShowClock,
-                    SettingsOption.ShowBattery,
+                    SettingsOption.ClockAndBattery,
                     SettingsOption.SystemInfo,
                     SettingsOption.LeftEdge,
-                    SettingsOption.GridSize,
                 ),
-            SettingsSection.Emulators to listOf(SettingsOption.DetectEmulators),
             SettingsSection.Controls to
                 listOf(
                     SettingsOption.ConfirmBottom,
                     SettingsOption.SwitchSystemWith,
-                    SettingsOption.HoldToScrollFaster,
                     SettingsOption.PushRightToPlay,
                     SettingsOption.ShowButtonHints,
                     SettingsOption.Keyboard,
@@ -74,17 +65,13 @@ internal class SettingsSectionRowsTest {
             SettingsSection.Advanced to
                 listOf(
                     SettingsOption.Animations,
-                    SettingsOption.Backup,
-                    SettingsOption.Restore,
-                    SettingsOption.ResetAll,
-                    SettingsOption.ResetLibrary,
-                    SettingsOption.ExportLogs,
+                    SettingsOption.BackupAndRestore,
+                    SettingsOption.Reset,
                 ),
             SettingsSection.About to
                 listOf(
                     SettingsOption.Version,
-                    SettingsOption.CheckForUpdates,
-                    SettingsOption.CheckUpdatesDaily,
+                    SettingsOption.Updates,
                     SettingsOption.UsageStatistics,
                     SettingsOption.Licenses,
                     SettingsOption.Privacy,

@@ -249,7 +249,7 @@ private fun HomeWithSettings(
     startTarget: HomeLandingTarget? = null,
 ) {
     var isSettingsOpen by settingsOpen
-    // START or the pill while an update waits: Settings opens on About › Update available instead of its start page.
+    // START or the pill while an update waits: Settings opens on About › Updates instead of its start page.
     var opensOnUpdate by rememberSaveable { mutableStateOf(false) }
     // The home's empty state "Files not added": Settings opens on Library › Files not added.
     var opensOnFilesNotAdded by rememberSaveable { mutableStateOf(false) }

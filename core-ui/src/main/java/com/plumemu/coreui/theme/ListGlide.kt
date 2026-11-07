@@ -64,7 +64,10 @@ class ListGlide internal constructor(
     private var glowRoom by mutableStateOf(false)
 
     /** True when the list keeps room past its ends for a focused end row's glow ([SlabDimens.listEndRoom]); else only for the slab's overhang. */
-    internal val keepsGlowRoom: Boolean get() = glowRoom
+    internal val keepsGlowRoom: Boolean get() = glowRoom || shadowPastEnds
+
+    /** The list keeps only the slab's overhang, so a touch past it stays with what stands there, but the pill, drawn outside the list's clip, leaves the shadow and glow whole. */
+    private var shadowPastEnds by mutableStateOf(false)
     private var lastJumpAt = Long.MIN_VALUE
 
     /**
@@ -180,11 +183,13 @@ class ListGlide internal constructor(
         density: Density,
         slabRoom: Boolean = true,
         glowRoom: Boolean = false,
+        shadowPastEnds: Boolean = false,
     ) {
         // Compared without observing: this runs while composing, and a scope that read what it then writes would compose twice.
         Snapshot.withoutReadObservation {
             if (isOn != motionOn) motionOn = isOn
             if (glowRoom != this.glowRoom) this.glowRoom = glowRoom
+            if (shadowPastEnds != this.shadowPastEnds) this.shadowPastEnds = shadowPastEnds
             val room = if (isOn) stride * ROOM_STRIDES else if (slabRoom) endRoom() else 0.dp
             val roomPx = with(density) { room.roundToPx() }
             if (room != extra) extra = room
@@ -220,11 +225,12 @@ fun rememberListGlide(
      * the games and systems lists, whose strip leaves room. A column that ends right above the hint keys' gap keeps the slab's overhang only.
      */
     glowRoom: Boolean = false,
+    shadowPastEnds: Boolean = false,
 ): ListGlide {
     val scope = rememberCoroutineScope()
     val clock = rememberUpdatedState(LocalGlideClock.current)
     val glide = remember(scope) { ListGlide(Settle(scope)) { clock.value() } }
-    glide.update(stride, PlumTheme.motion.isOn, LocalDensity.current, slabRoom, glowRoom)
+    glide.update(stride, PlumTheme.motion.isOn, LocalDensity.current, slabRoom, glowRoom, shadowPastEnds)
     return glide
 }
 

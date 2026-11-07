@@ -114,6 +114,9 @@ abstract class GlidingPillFramesBase {
     /** How far the slab is drawn above its row's box: [pillTop] reports the box, so the glide is checked in row positions. */
     private var overhang = 0f
 
+    /** The height of the row [overhang] was taken from. */
+    private var rowPx = 0f
+
     /** Where [pillTop] starts looking: the list's top, or the first game row's when something else (the system info band) stands above it. */
     private var scanTop = 0f
 
@@ -124,7 +127,9 @@ abstract class GlidingPillFramesBase {
     private fun ringColour(rowTag: String): Color {
         val list = listBounds()
         // A game row's box holds its tap gap under the row; the slab is as tall as the row.
-        overhang = compose.slabOverhangPx(rowTag, if (rowTag.startsWith("home_game")) PlumDimens.listRowGap else 0.dp)
+        val gap = if (rowTag.startsWith("home_game")) PlumDimens.listRowGap else 0.dp
+        overhang = compose.slabOverhangPx(rowTag, gap)
+        rowPx = compose.rowHeightPx(rowTag, gap)
         // A system info band above the first game row ends in a hairline of its own: the search for the pill starts at the first row, under it.
         scanTop = if (rowTag.startsWith("home_game")) runCatching { rowTop(HomeTags.game(0)) }.getOrDefault(list.top) else list.top
         return compose.onRoot().captureToImage().toPixelMap()[((list.left + list.right) / 2).toInt(), rowTop(rowTag).toInt() + 1]
@@ -134,10 +139,8 @@ abstract class GlidingPillFramesBase {
     @Suppress("UNUSED_PARAMETER")
     private fun pillTop(ring: Color): Int {
         val list = listBounds()
-        // A middle band, clear of the slab's rounded ends (a narrow list's are most of its width).
-        val xs = (list.left + list.width * 0.45f).toInt() until (list.left + list.width * 0.65f).toInt()
         // The slab of a first row is drawn above the list's top, inside the list's clip bleed.
-        val y = compose.onRoot().captureToImage().slabTopRow(xs, scanTop.toInt() - overhang.toInt() - 1, list.bottom.toInt())
+        val y = compose.onRoot().captureToImage().slabTopRow(compose.barColumns(list.left), scanTop.toInt() - overhang.toInt() - 1, list.bottom.toInt(), rowPx, overhang)
         return if (y < 0) -1 else Math.round(y + overhang)
     }
 
@@ -192,7 +195,10 @@ abstract class GlidingPillFramesBase {
         val oldTop = rowTop(rowTag(first))
         val ring = ringColour(rowTag(first))
         val newTop = rowTop(rowTag(first + 1))
-        assertEquals("at rest the pill is on the focused row", oldTop.toInt(), pillTop(ring))
+        listBounds().let { list ->
+            val gap = if (rowTag(first).startsWith("home_game")) PlumDimens.listRowGap else 0.dp
+            compose.assertSlabRestsOn(rowTag(first), compose.barColumns(list.left), scanTop.toInt() - overhang.toInt() - 1, list.bottom.toInt(), gap)
+        }
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { state.dispatch(Action.Move(Direction.Down)) }
         compose.mainClock.autoAdvance = true

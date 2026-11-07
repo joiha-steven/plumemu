@@ -9,12 +9,21 @@ import androidx.compose.ui.unit.dp
  * inset's hole). [inset] layers are drawn inside the box over its fill; outer ones outside it only (CSS paints no outer shadow under the box).
  */
 class CssShadow(
-    val color: Color,
-    val y: Dp,
-    val blur: Dp = 0.dp,
+    color: Color,
+    y: Dp,
+    blur: Dp = 0.dp,
     val spread: Dp = 0.dp,
     val inset: Boolean = false,
-)
+    /** A focus glow: its colour and blur already are at their [Depth]. */
+    glow: Boolean = false,
+) {
+    /** A soft outer shadow, or the highlights, insets and thicknesses that make a part look raised: each at its [Depth]. */
+    private val isSoft = !glow && !inset && blur > 0.dp
+    private val isThickness = !glow && !inset && blur == 0.dp && spread == 0.dp
+    val color: Color = if (glow || isThickness) color else color.copy(alpha = color.alpha * if (isSoft) Depth.SHADOW else Depth.RAISE)
+    val y: Dp = if (isSoft) y * Depth.SHADOW_REACH else if (isThickness) y * Depth.THICKNESS else y
+    val blur: Dp = if (isSoft) blur * Depth.SHADOW_REACH else blur
+}
 
 /** A box's fill and shadows: [stops] top to bottom, evenly spaced (one stop is a solid fill), [shadows] in CSS order (the first is on top). */
 class CssFace(
@@ -27,7 +36,16 @@ class CssCap(
     val rest: CssFace,
     val down: CssFace,
     val travel: Dp,
-)
+) {
+    companion object {
+        /** A cap whose [travel] is the board's: glass is thinner, so it moves [Depth.THICKNESS] of it. A cap rebuilt from another's travel uses the constructor. */
+        fun board(
+            rest: CssFace,
+            down: CssFace,
+            travel: Dp,
+        ) = CssCap(rest, down, travel * Depth.THICKNESS)
+    }
+}
 
 /**
  * The seated parts of the kit boards (design/rules.md › Seated parts): the LIP, the WELL, the CAP and their states, every
@@ -55,8 +73,41 @@ class SeatLook(
     val fieldShade: CssShadow,
     /** The RAISED chip's radial stops at 0 % and 85 % (Graphite #34363C to #1D1E22, Paper #FFFFFF to #EFEBE3). */
     val chipStops: List<Color> = capStops,
+    /** The page this look was made for. */
+    val page: Rgb = Rgb(0x111214),
 ) {
     private fun s(a: Float) = shade.copy(alpha = a)
+
+    /**
+     * The cover's frame as glass: the lip is steps of lightness above the page ([Depth.COVER_FRAME_TOP_L] and on), as the slab's fill is, with a lit
+     * crest along its top and a fine edge that parts it from the page. A near-white page has little room above it, so there the edge carries it.
+     * Everything else is this look's. It goes through the collar's cached image, so a frame costs what it cost.
+     */
+    val coverGlass: SeatLook by lazy {
+        fun up(l: Double) = ColorMath.mix(page, Rgb(0xFFFFFF), ColorMath.shareForLightness(page, Rgb(0xFFFFFF), l).toDouble()).toComposeColor()
+        val edge = if (dark) Color.White.copy(alpha = Depth.COVER_FRAME_EDGE_DARK) else shade.copy(alpha = Depth.COVER_FRAME_EDGE_LIGHT)
+        SeatLook(
+            dark = dark,
+            lipStops = listOf(up(Depth.COVER_FRAME_TOP_L), up(Depth.COVER_FRAME_MID_L), up(Depth.COVER_FRAME_BOTTOM_L)),
+            lipEllipseHeight = lipEllipseHeight,
+            lipShadows =
+                listOf(
+                    CssShadow(Color.White.copy(alpha = Depth.COVER_FRAME_CREST), (2f / 3f).dp, (1f / 3f).dp, inset = true),
+                    CssShadow(edge, 0.dp, 0.dp, (1f / 3f).dp, inset = true),
+                ) + lipShadows.filter { !it.inset },
+            well = well,
+            wellShade = wellShade,
+            capStops = capStops,
+            capDownStops = capDownStops,
+            capOff = capOff,
+            side = side,
+            shade = shade,
+            fieldWell = fieldWell,
+            fieldShade = fieldShade,
+            chipStops = chipStops,
+            page = page,
+        )
+    }
 
     /**
      * The V2 board's RAISED surface (a chip, depth level 1): the radial [chipStops] under `inset 0 1px 0` (white .16, Paper #FFFFFF), `inset 0 -3px 4px`
@@ -103,7 +154,7 @@ class SeatLook(
      * the brown at .158); its down face (locked) is the flat fill.
      */
     fun swatch(fill: Color): CssCap =
-        swatchMemo?.takeIf { it.first == fill }?.second ?: CssCap(
+        swatchMemo?.takeIf { it.first == fill }?.second ?: CssCap.board(
             CssFace(
                 listOf(fill),
                 listOf(
@@ -160,7 +211,7 @@ class SeatLook(
         light: Float = CAP_LIGHT,
     ): CssCap {
         val drop = if (dropAlpha > 0f) listOf(CssShadow(s(if (dark) dropAlpha else dropAlphaLight), dropY, dropBlur)) else emptyList()
-        return CssCap(
+        return CssCap.board(
             rest = CssFace(capStops, listOf(capLight(light), CssShadow(side, thick)) + drop),
             down = CssFace(capDownStops, listOf(CssShadow(Color.Black.copy(alpha = 0.22f), (4f / 3f).dp, 2.dp, inset = true))),
             travel = travel,
@@ -170,7 +221,7 @@ class SeatLook(
     /** A disabled cap: flat capOff, `inset 0 1px 2px rgba(0,0,0,.18)`, sat down. */
     fun off(travel: Dp = 2.dp): CssCap {
         val face = CssFace(listOf(capOff), listOf(CssShadow(Color.Black.copy(alpha = 0.18f), (2f / 3f).dp, (4f / 3f).dp, inset = true)))
-        return CssCap(face, face, travel)
+        return CssCap.board(face, face, travel)
     }
 
     /** The ACCENT CAP: accentLight to accent, `inset 0 1px 0 rgba(255,255,255,.4), 0 3px 0 accentDark, 0 4px 5px rgba(0,0,0,.35)`; pressed flat accent with `inset 0 2px 4px .30`. */
@@ -183,15 +234,15 @@ class SeatLook(
         travel: Dp = 2.dp,
     ): CssCap {
         val drop = if (dropAlpha > 0f) listOf(CssShadow(Color.Black.copy(alpha = dropAlpha), dropY, dropBlur)) else emptyList()
-        return CssCap(
-            rest = CssFace(listOf(accentLight(accent), accent), listOf(CssShadow(Color.White.copy(alpha = 0.40f), (2f / 3f).dp, inset = true), CssShadow(accentDark(accent), thick)) + drop),
+        return CssCap.board(
+            rest = CssFace(listOf(accentLight(accent), accent), listOf(CssShadow(Color.White.copy(alpha = 0.8f), (2f / 3f).dp, inset = true), CssShadow(accentDark(accent), thick)) + drop),
             down = CssFace(listOf(accent), listOf(CssShadow(Color.Black.copy(alpha = 0.30f), (4f / 3f).dp, (8f / 3f).dp, inset = true))),
             travel = travel,
         )
     }
 
     companion object {
-        const val CAP_LIGHT = 0.16f
+        const val CAP_LIGHT = 0.5f
         const val WORD_LIFT = 0.04f
 
         /** Graphite's, for a [CollarLook] built by hand (tests). */
@@ -221,27 +272,28 @@ class SeatLook(
                 val black = Color.Black
                 return SeatLook(
                     dark = true,
-                    lipStops = listOf(up(0.21), up(0.10), up(0.03)),
+                    lipStops = listOf(up(0.21 * Depth.RAISE), up(0.10 * Depth.RAISE), up(0.03 * Depth.RAISE)),
                     lipEllipseHeight = 1f,
                     lipShadows =
                         listOf(
-                            CssShadow(Color.White.copy(alpha = 0.16f), (4f / 3f).dp, (2f / 3f).dp, inset = true),
-                            CssShadow(black.copy(alpha = 0.40f), (-2f).dp, (8f / 3f).dp, inset = true),
+                            CssShadow(Color.White.copy(alpha = 0.16f), (4f / 3f).dp * Depth.LIP, (2f / 3f).dp, inset = true),
+                            CssShadow(black.copy(alpha = 0.40f), (-2f).dp * Depth.LIP, (8f / 3f).dp * Depth.LIP, inset = true),
                             CssShadow(Color.White.copy(alpha = 0.03f), 0.dp, 0.dp, (2f / 3f).dp, inset = true),
                             CssShadow(Color.White.copy(alpha = 0.03f), (-2f / 3f).dp, 2.dp),
                             CssShadow(black.copy(alpha = 0.45f), 2.dp, (8f / 3f).dp),
                             CssShadow(black.copy(alpha = 0.45f), (20f / 3f).dp, (44f / 3f).dp),
                         ),
-                    well = c(ColorMath.mix(bg, Rgb(0x000000), 0.12)),
+                    well = c(ColorMath.mix(bg, Rgb(0x000000), 0.12 * Depth.RAISE)),
                     wellShade = CssShadow(black.copy(alpha = 0.6f), (2f / 3f).dp, (4f / 3f).dp, inset = true),
-                    capStops = listOf(up(0.12), up(0.085)),
+                    capStops = listOf(up(0.10), up(0.085)),
                     capDownStops = listOf(up(0.075), up(0.062)),
                     capOff = up(0.033),
                     side = up(0.006),
                     shade = black,
-                    fieldWell = c(ColorMath.mix(bg, Rgb(0x000000), 0.40)),
+                    fieldWell = c(ColorMath.mix(bg, Rgb(0x000000), 0.40 * Depth.RAISE)),
                     fieldShade = CssShadow(black.copy(alpha = 0.55f), 2.dp, 4.dp, inset = true),
                     chipStops = listOf(up(0.165), up(0.058)),
+                    page = bg,
                 )
             }
             val brown = CollarLook.SHADE_BROWN.toComposeColor()
@@ -249,26 +301,27 @@ class SeatLook(
             fun br(t: Double) = c(ColorMath.mix(bg, CollarLook.SHADE_BROWN, t))
             return SeatLook(
                 dark = false,
-                lipStops = listOf(c(ColorMath.mix(bg, Rgb(0xFFFFFF), 1.0)), c(ColorMath.mix(bg, Rgb(0xFFFFFF), 0.26)), warm(0.068)),
+                lipStops = listOf(c(ColorMath.mix(bg, Rgb(0xFFFFFF), 1.0 * Depth.RAISE)), c(ColorMath.mix(bg, Rgb(0xFFFFFF), 0.26 * Depth.RAISE)), warm(0.068 * Depth.RAISE)),
                 lipEllipseHeight = 0.9f,
                 lipShadows =
                     listOf(
-                        CssShadow(Color.White, (4f / 3f).dp, (2f / 3f).dp, inset = true),
-                        CssShadow(brown.copy(alpha = 0.08f), (-2f).dp, 2.dp, inset = true),
+                        CssShadow(Color.White, (4f / 3f).dp * Depth.LIP, (2f / 3f).dp, inset = true),
+                        CssShadow(brown.copy(alpha = 0.08f), (-2f).dp * Depth.LIP, 2.dp * Depth.LIP, inset = true),
                         CssShadow(Color.White.copy(alpha = 0.8f), (-4f / 3f).dp, (8f / 3f).dp),
                         CssShadow(brown.copy(alpha = 0.14f), 2.dp, (8f / 3f).dp),
                         CssShadow(brown.copy(alpha = 0.14f), (20f / 3f).dp, (44f / 3f).dp),
                     ),
-                well = warm(0.165),
+                well = warm(0.165 * Depth.RAISE),
                 wellShade = CssShadow(brown.copy(alpha = 0.25f), (2f / 3f).dp, (4f / 3f).dp, inset = true),
-                capStops = listOf(c(ColorMath.mix(bg, WARM_WHITE, 0.6)), c(ColorMath.mix(bg, Rgb(0xFFFFFF), 0.16))),
+                capStops = listOf(c(ColorMath.mix(bg, WARM_WHITE, 0.5)), c(ColorMath.mix(bg, Rgb(0xFFFFFF), 0.42))),
                 capDownStops = listOf(br(0.005), c(ColorMath.mix(bg, Rgb(0xFFFFFF), 0.16))),
                 capOff = br(0.035),
                 side = warm(0.2),
                 shade = brown,
-                fieldWell = br(0.07),
+                fieldWell = br(0.07 * Depth.RAISE),
                 fieldShade = CssShadow(brown.copy(alpha = 0.248f), 2.dp, 4.dp, inset = true),
                 chipStops = listOf(c(ColorMath.mix(bg, Rgb(0xFFFFFF), 1.0)), c(ColorMath.mix(bg, Rgb(0xFFFFFF), 0.16))),
+                page = bg,
             )
         }
     }

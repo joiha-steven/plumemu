@@ -52,9 +52,9 @@ class AppGamesHaloTest {
     }
 
     @Test
-    fun theFocusedAndroidGameTileHasTheHaloOnGraphite() {
+    fun theFocusedAndroidGameTileHasNoHaloOnGraphite() {
         val halo = haloBesideTile(TableText.Graphite, ANDROID_GAMES_ENTRY, focused = 0)
-        assertTrue("beside the ring the focused tile has a halo (was $halo)", halo >= HALO_MIN)
+        assertTrue("beside the ring the focused tile has no halo (was $halo)", halo <= NO_HALO_MAX)
     }
 
     @Test
@@ -64,9 +64,8 @@ class AppGamesHaloTest {
     }
 
     private companion object {
-        /** Just outside the ring, which here wraps the whole cell (icon and name) and sits about 10 dp from it. */
+        /** Left of the tile, past the ring on its icon. */
         const val PROBE_DP = 14f
-        const val HALO_MIN = 20
-        const val NO_HALO_MAX = 10
+        const val NO_HALO_MAX = 1
     }
 }

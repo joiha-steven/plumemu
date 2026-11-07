@@ -131,6 +131,7 @@
     <string name="home_empty_choose_folder">选择文件夹</string>
     <string name="home_nogames_title">这里还没有游戏</string>
     <string name="home_nogames_body_files">这个文件夹里没有这台设备上的模拟器能打开的文件。“未添加的文件”会逐一说明原因。</string>
+    <string name="home_nogames_body_no_files">这个文件夹里没有游戏文件。请选择存放游戏的文件夹。</string>
 
     <!-- The library could not be read (database or platform data failed); shown instead of the main screen. -->
     <string name="home_library_error_title">Plumemu 无法打开游戏库</string>
@@ -157,7 +158,7 @@
     <string name="setup_add_folder">+ 添加其他文件夹</string>
     <string name="setup_add_folder_sub">SD 卡，或存放在其他位置的游戏</string>
     <string name="setup_continue">继续</string>
-    <string name="setup_folder_note">之后可在“设置 › 游戏库 › ROM 文件夹”中添加或移除文件夹。</string>
+    <string name="setup_folder_note">之后可在“设置 › 游戏库 › 游戏文件夹”中添加或移除文件夹。</string>
     <!-- A picked folder's name on its card: where it is, then its path ("Internal storage › ROMs"). -->
     <string name="setup_folder_internal">内部存储空间</string>
     <string name="setup_folder_removable">SD 卡</string>
@@ -196,7 +197,7 @@
     <string name="setup_ready_title">游戏库已就绪</string>
     <string name="setup_ready_desc">游戏按名称列出，按平台分类。之后可随时在“设置”中更改。</string>
     <string name="setup_ready_naming">名称仍在补全 · 将在后台继续</string>
-    <string name="setup_ready_empty_desc">之后可在“设置 › 游戏库 › ROM 文件夹”中添加文件夹。</string>
+    <string name="setup_ready_empty_desc">之后可在“设置 › 游戏库 › 游戏文件夹”中添加文件夹。</string>
     <string name="setup_ready_empty_title">暂未找到游戏</string>
     <string name="setup_ready_no_folder_title">稍后也可以添加游戏</string>
     <string name="setup_ready_no_folder_desc">准备好后，主页会请你选择游戏文件夹。</string>
@@ -344,7 +345,7 @@
     <string name="game_fix_box_art_waiting">仍在保存。后台下载中的封面可能会优先处理，大约需要一分钟。</string>
     <string name="game_fix_box_art_daily_limit">ScreenScraper 今日请求次数已达上限。请在 %1$s 后再试。</string>
     <string name="game_fix_box_art_server_closed">ScreenScraper 暂停服务。请在 %1$s 后再试。</string>
-    <string name="game_fix_box_art_sign_in_again">ScreenScraper 拒绝了你的密码。请在“设置 › 账户 › ScreenScraper”中重新登录。</string>
+    <string name="game_fix_box_art_sign_in_again">ScreenScraper 拒绝了你的密码。请在“设置 › 封面和账号 › ScreenScraper”中重新登录。</string>
     <string name="game_fix_box_art_offline">没有网络连接。请检查 Wi-Fi 后重试。</string>
     <string name="game_fix_box_art_no_wifi">未连接 Wi-Fi。封面只在连接 Wi-Fi 时查找。</string>
     <string name="game_fix_box_art_server_error">ScreenScraper 无法响应（代码 %1$s）。请稍后再试。</string>
@@ -390,7 +391,7 @@
     <!-- %1$s is the emulator chosen for every game of the system, %2$s the system's name. -->
     <string name="game_play_with_system_choice_missing">%2$s 游戏默认使用的 %1$s 未安装。请为此游戏另选一个。</string>
     <string name="game_play_with_not_installed">未安装</string>
-    <!-- Value at the right of an emulator that is not installed: opens its store page. -->
+    <!-- Value at the right of an emulator that is not installed: opens its project's page. -->
     <string name="game_get_it">获取</string>
     <!-- Badge on the emulator this game uses now. -->
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
@@ -479,8 +480,8 @@
     <string name="game_app_kind_later_body">Plumemu 下次读取已安装的应用时生效。</string>
     <string name="game_rename_box_art_title">名称已保存，未查找封面</string>
     <string name="game_rename_box_art_no_wifi">未连接 Wi-Fi。</string>
-    <string name="game_rename_box_art_sign_in">请在“设置 › 账户 › ScreenScraper”中登录 ScreenScraper。</string>
-    <string name="game_rename_box_art_paused">封面下载已暂停。可在“设置 › 账户 › ScreenScraper”中继续。</string>
+    <string name="game_rename_box_art_sign_in">请在“设置 › 封面和账号 › 封面”中登录 ScreenScraper。</string>
+    <string name="game_rename_box_art_paused">封面下载已暂停。可在“设置 › 封面和账号 › ScreenScraper”中继续。</string>
     <string name="game_rename_box_art_daily_limit">ScreenScraper 今日请求次数已达上限。请在 %1$s 后再试。</string>
     <string name="game_rename_box_art_server_closed">ScreenScraper 暂停服务，将于 %1$s 恢复。</string>
     <string name="game_error_internal_title">无法启动游戏</string>
@@ -510,9 +511,9 @@
     <!-- After Hide in the game menu; %1$s is the game's title. -->
     <string name="game_hidden_title">游戏已隐藏</string>
     <string name="game_hidden_body">“%1$s”已从所有列表中移除。可在“设置 › 游戏库 › 已隐藏的游戏”中恢复。</string>
-    <string name="game_error_store_title">无法打开商店页面</string>
+    <string name="game_error_page_title">无法打开下载页面</string>
     <!-- %1$s is an emulator's name. -->
-    <string name="game_error_store_body">此设备上没有能打开它的应用商店或浏览器。请从项目页面获取 %1$s。</string>
+    <string name="game_error_page_body">此设备上没有能打开它的浏览器。请从项目页面获取 %1$s。</string>
     <!-- Opening an app of the Apps entry failed. %1$s is the app's name. -->
     <string name="app_error_missing_title">找不到 %1$s</string>
     <string name="app_error_missing_body">该应用在列表读取后已卸载或停用，现已从“应用”列表中移除。</string>
@@ -553,7 +554,7 @@
     <string name="settings_switch_off">关</string>
 
     <!-- Library -->
-    <string name="settings_rom_folders">ROM 文件夹</string>
+    <string name="settings_rom_folders">游戏文件夹</string>
     <string name="settings_library_unreadable">Plumemu 无法读取文件夹和模拟器。请关闭并重新打开“设置”再试。</string>
     <plurals name="settings_folders_count">
         <item quantity="other">%1$s 个文件夹</item>
@@ -581,7 +582,7 @@
     <string name="settings_skip_subfolder_unreadable">Plumemu 无法读取此文件夹。如果它在 SD 卡上，请检查卡是否已插入。</string>
     <string name="settings_skip_subfolder_none">此文件夹没有可跳过的子文件夹。</string>
     <string name="settings_rescan">重新扫描游戏库</string>
-    <string name="settings_rescan_body">重新读取文件夹，添加或移除有变化的内容。</string>
+    <string name="settings_rescan_body">重新读取文件夹，并查找新的模拟器。</string>
     <!-- Value of Rescan library while a scan runs. -->
     <string name="settings_rescan_running">正在读取…</string>
     <!-- Rescan library's panel while a scan runs. No total is known during the walk. -->
@@ -608,14 +609,13 @@
     <plurals name="settings_rescan_removed">
         <item quantity="other">移除 %1$s 个文件</item>
     </plurals>
-    <!-- %1$s is the folder as the ROM folders list names it ("SD card › Games"). -->
+    <!-- %1$s is the folder as the Game folders list names it ("SD card › Games"). -->
     <string name="settings_rescan_revoked">%1$s：Plumemu 失去了访问权限，请重新选择该文件夹。</string>
     <string name="settings_rescan_missing">%1$s：未找到。SD 卡插好了吗？</string>
     <string name="settings_rescan_read_failed">%1$s：无法读取，请重试。</string>
     <string name="settings_rescan_a_folder">某个文件夹</string>
     <string name="settings_rescan_failed">无法读取游戏，请重试。</string>
     <string name="settings_rescan_busy">正在读取游戏。</string>
-    <string name="settings_scan_on_startup">自动查找新游戏</string>
     <string name="settings_sort_games">游戏排序</string>
     <string name="settings_sort_by_name">名称</string>
     <string name="settings_sort_by_last_played">上次游玩</string>
@@ -624,8 +624,6 @@
     <string name="settings_sort_by_year">发行年份</string>
     <string name="settings_sort_by_rating">评分</string>
     <string name="settings_sort_games_body">各平台列表和“收藏”的排列顺序。没有排序依据的游戏（从未游玩、没有年份、没有评分）按名称排在后面。有游戏带有来自 ScreenScraper 的年份或评分时，才会列出“发行年份”或“评分”。“最近”始终将最后玩的游戏排在最前面。</string>
-    <string name="settings_recent_size">最近列表数量</string>
-    <string name="settings_recent_size_body">“最近”保留多少个游戏。满了以后，最早玩的游戏会从末尾掉出。游玩时间和统计不受影响。</string>
     <string name="settings_clear_recent">清空最近…</string>
     <string name="settings_clear_recent_body">将清空“最近”。再次玩某个游戏时，它会重新出现。游玩时间和统计会保留。</string>
     <string name="settings_clear_recent_confirm">清空</string>
@@ -679,12 +677,11 @@
     <string name="settings_name_fix_failed">无法保存该名称，未做任何更改。</string>
     <string name="settings_name_fix_game_gone">该游戏已不在你的游戏库中。</string>
     <string name="settings_rename_box_art_no_wifi">名称已保存，未查找封面。未连接 Wi-Fi。</string>
-    <string name="settings_rename_box_art_sign_in">名称已保存，未查找封面。请在“设置 › 账户 › ScreenScraper”中登录 ScreenScraper。</string>
-    <string name="settings_rename_box_art_paused">名称已保存，未查找封面。封面下载已暂停，可在“设置 › 账户 › ScreenScraper”中继续。</string>
+    <string name="settings_rename_box_art_sign_in">名称已保存，未查找封面。请在“设置 › 封面和账号 › 封面”中登录 ScreenScraper。</string>
+    <string name="settings_rename_box_art_paused">名称已保存，未查找封面。封面下载已暂停，可在“设置 › 封面和账号 › ScreenScraper”中继续。</string>
     <string name="settings_rename_box_art_daily_limit">名称已保存，未查找封面。ScreenScraper 今日请求次数已达上限，请稍后再试。</string>
     <string name="settings_rename_box_art_server_closed">名称已保存，未查找封面。ScreenScraper 暂停服务。</string>
     <string name="settings_titles_unreadable">无法读取 %1$s 的名称列表，请稍后再试。</string>
-    <string name="settings_scan_on_startup_body">启动或返回 Plumemu 时，查找新增和移除的游戏。只会重新读取有变化的文件夹。</string>
 
     <!-- Emulators. %1$s is a system's name, %2$s the confirm button's letter. -->
     <string name="settings_emulators_body">在 %1$s 游戏上按 %2$s 时使用此模拟器。单个游戏仍可在其菜单中通过“指定模拟器…”另选。</string>
@@ -697,15 +694,8 @@
         <item quantity="other">在此设备上找到 %1$s 个模拟器</item>
     </plurals>
     <string name="settings_emulator_choice_failed">无法保存此选择。</string>
-    <string name="settings_detect_emulators">检测新模拟器</string>
-    <string name="settings_detect_body">Plumemu 会自动发现新安装的模拟器。如有模拟器未显示，可使用此选项。</string>
-    <string name="settings_detect_running">正在检查…</string>
-    <string name="settings_detect_done">完成。推荐项已按当前安装的模拟器更新。</string>
-    <string name="settings_detect_failed">无法检查已安装的模拟器。</string>
 
     <!-- Controls -->
-    <string name="settings_hold_to_scroll">按住快速滚动</string>
-    <string name="settings_hold_to_scroll_body">按住上或下时，光标在长列表中会逐渐加速。关闭后，光标始终匀速移动。</string>
     <string name="settings_push_right">向右推两次开始游戏</string>
     <string name="settings_push_right_body">单手游玩：在游戏列表中向右推两次，即可启动选中的游戏。第一次推动会标记该游戏，两秒内再推一次即可启动；按其他任意键会取消。A 键照常可用。开启后，在窄屏上要通过触摸进入详情栏。可随时在这里关闭。</string>
     <string name="settings_show_hints">显示按键提示</string>
@@ -721,10 +711,9 @@
     <string name="settings_home_unavailable">此设备没有选择桌面应用的界面。请在 Android 的“设置 › 应用 › 默认应用”中选择 Plumemu。</string>
     <string name="settings_show_apps">显示 Android 应用</string>
     <string name="settings_show_apps_body">设备上的所有 Android 应用都会列在“收藏”下方的“应用”中。关闭后，不显示“应用”。</string>
-    <string name="settings_clock">显示时钟</string>
-    <string name="settings_clock_body">在屏幕右上角显示时间。</string>
-    <string name="settings_edge_fade">列表边缘淡出</string>
-    <string name="settings_edge_fade_body">主屏幕的列表和网格在还能滚动时，上下边缘会淡出。关闭后，边缘为一条直线。</string>
+    <string name="settings_clock_battery">时钟和电量</string>
+    <string name="settings_clock_battery_body">在屏幕右上角显示时间和电池电量。</string>
+    <string name="settings_clock_battery_body_two_screens">在屏幕右上角显示时间和电池电量。副屏的时钟上也会显示电量。</string>
     <!-- The band over a system's games list ("Nintendo · Home console · 1990–2003". -->
     <string name="system_kind_console">家用主机</string>
     <string name="system_kind_handheld">掌机</string>
@@ -800,9 +789,6 @@
     <string name="system_about_fbneo">基于 FinalBurn 和旧版 MAME，可模拟 Capcom CPS-1、CPS-2、CPS-3、Neo Geo 和 Sega System 16 基板。</string>
     <string name="settings_system_info">平台信息</string>
     <string name="settings_system_info_body">在游戏列表顶部显示平台标识、一行简介（厂商、类型、年代）和几句介绍。</string>
-    <string name="settings_show_battery">显示电量</string>
-    <string name="settings_show_battery_body">在屏幕右上角显示电池电量。</string>
-    <string name="settings_show_battery_body_two_screens">在屏幕右上角显示电池电量，副屏的时钟上也会显示。</string>
     <!-- Second screen, picking cards. Top line: "Super Nintendo · USA"; the separator is also used in the facts line (quoted: Android trims the spaces of an unquoted string). -->
     <string name="second_screen_android_app">Android 应用</string>
     <string name="second_screen_app_tag">应用</string>
@@ -886,7 +872,7 @@
     <!-- %1$s is the time of day charging was first seen. -->
     <string name="in_game_battery_charging_since">%1$s 开始充电</string>
     <string name="in_game_battery_measuring">正在测量耗电情况…</string>
-    <!-- Shown once for a minute the first time the in-game card shows; also ends Settings › Second screen › In game's text. -->
+    <!-- Shown once for a minute the first time the in-game card shows; also ends Settings › Second screen › During a game's text. -->
     <string name="in_game_drift_note">为保护屏幕，每分钟会轻微移动</string>
     <!-- The picking line of a game measured before: "2 h on this charge · 30% an hour"; charging: the pace only. %1$s is a duration or a percentage. The pace's spaces do not break, so "an hour" never wraps alone. -->
     <string name="battery_line_on_charge">当前电量可玩 %1$s</string>
@@ -903,7 +889,7 @@
     <string name="second_screen_setup_question">Plumemu 可在这里显示当前选中的游戏。</string>
     <string name="settings_second_screen">使用副屏</string>
     <string name="settings_second_screen_body">显示当前选中的游戏。不看副屏也不影响游玩。</string>
-    <string name="settings_second_screen_in_game">游戏中</string>
+    <string name="settings_second_screen_in_game">游戏运行时</string>
     <string name="settings_second_screen_in_game_body">游戏运行时副屏显示的内容。使用双屏的模拟器会自行接管副屏。卡片每分钟会轻微移动，以保护屏幕。</string>
     <string name="settings_second_screen_clock">时钟和电量</string>
     <string name="settings_second_screen_black">黑屏</string>
@@ -911,7 +897,7 @@
     <!-- Appearance -->
     <!-- Ready-made colour sets (never a console's or a brand's name. -->
     <string name="settings_colors">配色</string>
-    <string name="settings_colors_panel_help">选择一套配色。自己调的颜色会保留在“自定义”中。</string>
+    <string name="settings_colors_panel_help">选择一套配色。想自己调，可在下方更改“背景”或“文字颜色”。自己调的颜色会保留在“自定义”中。</string>
     <string name="settings_colors_paper">纸张</string>
     <string name="settings_colors_pocket">口袋</string>
     <string name="settings_colors_dot_matrix">点阵</string>
@@ -927,7 +913,7 @@
     <string name="settings_font">字体</string>
     <string name="settings_text_size">文字大小</string>
     <string name="settings_text_weight">文字粗细</string>
-    <string name="settings_left_edge">左边缘</string>
+    <string name="settings_left_edge">左侧窄条</string>
     <string name="settings_grid_size">网格大小</string>
     <string name="settings_bg_graphite">石墨</string>
     <string name="settings_bg_black">黑色</string>
@@ -1026,7 +1012,7 @@
     <string name="settings_font_body">Plumemu 中所有文字使用的字体。</string>
     <string name="settings_text_size_body">更改 Plumemu 中的所有文字。Android 自身的字体大小会在此基础上叠加。</string>
     <string name="settings_text_weight_body">更改 Plumemu 中所有文字的粗细。</string>
-    <string name="settings_left_edge_body">浏览游戏列表时，左边缘的窄条显示什么：每个平台的游戏数量、每个平台的简短代码，或当前列表的字母。</string>
+    <string name="settings_left_edge_body">浏览游戏列表时，左侧的窄条显示什么：每个平台的游戏数量、每个平台的简短代码，或当前列表的字母。</string>
     <string name="settings_grid_size_body">网格视图中封面的大小，适用于所有平台以及“最近”和“收藏”。“小”一屏显示的游戏最多，“大”最少。</string>
     <!-- Sample lines in the colour and font panels (the board's). -->
 
@@ -1036,13 +1022,13 @@
     <string name="settings_confirm_bottom_body">关闭时，A 确认，B 返回。开启时，B 确认，A 返回（PlayStation 风格手柄上，关闭时用叉键确认，开启时用圆圈键确认）。按键提示会同步更新。</string>
     <string name="settings_animations">动画</string>
     <string name="settings_animations_body">滑动和细微的动效。关闭后，画面直接切换。Android 动画关闭时，此项也会关闭。</string>
-    <string name="settings_sounds">音效</string>
+    <string name="settings_sounds">按键音效</string>
     <string name="settings_sounds_body">移动和按下按钮时发出轻柔的提示音，音量跟随媒体音量。可选关闭、轻柔或响亮。</string>
     <string name="settings_sounds_off">关闭</string>
     <string name="settings_sounds_quiet">轻柔</string>
     <string name="settings_sounds_loud">响亮</string>
     <string name="settings_vibration">振动</string>
-    <string name="settings_vibration_body">移动时轻轻振动，确认时振动更有力。关闭后不振动。没有振动马达的设备会忽略此项。</string>
+    <string name="settings_vibration_body">移动时轻轻振动，确认时振动更有力。关闭后不振动。</string>
     <string name="settings_usage_statistics">发送使用数据</string>
     <!-- setup_stats_body is its short form; settings_privacy_body and the public PRIVACY.md say the same (change them together). -->
     <string name="settings_usage_statistics_body">匿名使用数据和崩溃报告，仅在你开启后发送：国家或地区、设备型号、Android 和应用版本、使用的界面和设置、游玩时长（按平台统计，绝不按游戏统计）。绝不包含游戏名称、搜索词或你的 ScreenScraper 账号。崩溃报告可能包含文件路径。关闭后，Plumemu 只发送一次匿名的“已关闭”记录，此后不再发送任何数据。</string>
@@ -1050,6 +1036,7 @@
     <string name="settings_reset_all_body">将所有设置恢复为默认值。游戏库、文件夹和初始设置均会保留。</string>
     <string name="settings_reset_all_done">设置已重置。</string>
     <!-- Settings › Advanced › Back up… -->
+    <string name="settings_backup_and_restore">备份和恢复</string>
     <string name="settings_backup">备份…</string>
     <string name="settings_backup_title">备份</string>
     <string name="settings_backup_body">将副本保存到你选择的文件中。“设置”：所有设置和你的 ScreenScraper 账号。“全部”：还包括游戏库、收藏、游玩时长、模拟器选择和封面。</string>
@@ -1117,7 +1104,7 @@
     <string name="settings_restore_sign_in_again">此文件中没有可用的 ScreenScraper 密码，恢复后请重新登录。</string>
     <string name="settings_restore_running">正在恢复…</string>
     <string name="settings_restore_running_restart">正在恢复…完成后 Plumemu 会重新启动。</string>
-    <string name="settings_restore_done_everything">已恢复 %1$s 的完整备份。来自其他设备的文件夹需要在“游戏库 › ROM 文件夹”中重新选择。</string>
+    <string name="settings_restore_done_everything">已恢复 %1$s 的完整备份。来自其他设备的文件夹需要在“游戏库 › 游戏文件夹”中重新选择。</string>
     <string name="settings_restore_done_settings">已恢复 %1$s 的设置备份。</string>
     <string name="settings_restore_failed">恢复失败，所有内容已还原。</string>
     <string name="settings_restore_failed_not_put_back">恢复失败，部分内容暂时无法还原。Plumemu 下次启动时会重试。</string>
@@ -1164,12 +1151,13 @@
     <string name="settings_undo_done">已撤销上次恢复。</string>
     <string name="settings_undo_failed">撤销失败，所有内容保持原样。</string>
     <string name="settings_reset_library">重置游戏库</string>
+    <string name="settings_reset_row">重置…</string>
     <!-- Settings › Advanced › Export logs: shares the app's log file with Android's share sheet. -->
     <string name="settings_export_logs">导出日志</string>
     <string name="settings_export_logs_body">将 Plumemu 的日志文件仅分享到你选择的位置，方便随问题反馈一并发送。日志可能包含文件夹名和文件名。</string>
     <string name="settings_export_logs_failed">无法分享日志。</string>
     <string name="settings_export_logs_chooser">分享日志</string>
-    <string name="settings_reset_library_body">清除所有游戏及其收藏和游玩时长，然后重新读取文件夹。文件夹会保留。此操作无法撤销，请先在“设置 › 高级 › 备份…”中备份。</string>
+    <string name="settings_reset_library_body">清除所有游戏及其收藏和游玩时长，然后重新读取文件夹。文件夹会保留。此操作无法撤销，请先在“设置 › 高级 › 备份和恢复”中备份。</string>
     <string name="settings_reset_library_done">游戏库已清除，正在重新读取文件夹。</string>
     <string name="settings_reset_library_forgetting">正在清除游戏库…</string>
     <string name="settings_reset_library_failed">无法重置游戏库，未移除任何内容。</string>
@@ -1249,6 +1237,7 @@
     <string name="report_email_hint">邮箱（选填，用于接收回复）</string>
     <string name="report_details">附上日志和设备信息</string>
     <string name="report_send">发送</string>
+    <string name="report_share_log">分享日志</string>
     <string name="report_sends_all">将发送描述、邮箱（如已填写）、日志、设备信息和匿名安装 ID。</string>
     <string name="report_sends_details">将发送描述、邮箱（如已填写）、日志和设备信息。</string>
     <string name="report_sends_id">将发送描述、邮箱（如已填写）和匿名安装 ID。</string>
@@ -1263,12 +1252,13 @@
     <string name="report_error_refused">服务器未接受此反馈，请检查邮箱地址。已写的内容会保留，可以再试一次。</string>
     <string name="report_error_unavailable">此版本无法发送反馈。请使用“导出日志”，然后自行发送该文件。</string>
     <string name="report_error_not_saved">无法在此设备上保存此反馈。</string>
-    <string name="settings_privacy_body">你的游戏库、设置和游玩时长都保存在此设备上 Plumemu 自身的存储空间中，绝不会发送出去。仅当你开启此功能（“设置 › 关于 › 发送使用数据”）时，Plumemu 才会向开发者发送匿名使用数据和崩溃报告：国家或地区、设备型号、Android 和应用版本、使用的界面和设置、按平台统计的游玩时长。绝不包含游戏名称、搜索词或你的 ScreenScraper 账号。崩溃报告可能包含文件路径。关闭后只会发送一次匿名的“已关闭”记录，此后不再发送任何数据。只有在“反馈问题”中按下“发送”时才会发送问题反馈，可能包含你选择附上的日志（含文件路径）。已发送的数据会无限期保存。Plumemu 每天会在连接 Wi-Fi 时询问一次 plumemu-app.stevensdesk.com 是否有新版本；托管该网站的 Cloudflare 会看到你的 IP 地址。可通过上方的“每天检查更新”关闭此功能。这项每日检查还会从同一台服务器下载更新后的平台数据（系统和模拟器列表），不会额外发送任何内容。如果你使用 ScreenScraper 账号，Plumemu 会向 ScreenScraper 发送每个游戏的文件名、大小和校验值来查找封面；这些信息找不到结果时，还会发送游戏名称。如果你使用 RetroAchievements 账号，Plumemu 会在你打开游戏信息时、玩完游戏后，以及连上 Wi-Fi 时每天一次，向 retroachievements.org 发送你的用户名、密钥和每个游戏的 RetroAchievements 编号；徽章图片来自 media.retroachievements.org。密钥以加密方式保存在这台设备上，绝不会进入备份或日志。退出登录后就不再发送。 精确游玩时间（在“设置”\u203A“统计”中开启后）会通过 Android 的使用情况访问权限获取该次游玩时间段内的事件，只保留从 Plumemu 启动的游戏或应用以及屏幕的事件；除游玩时长外不保存任何内容，也绝不会发送。</string>
+    <string name="settings_privacy_body">你的游戏库、设置和游玩时长都保存在此设备上 Plumemu 自身的存储空间中，绝不会发送出去。仅当你开启此功能（“设置 › 关于 › 发送使用数据”）时，Plumemu 才会向开发者发送匿名使用数据和崩溃报告：国家或地区、设备型号、Android 和应用版本、使用的界面和设置、按平台统计的游玩时长。对于 Plumemu 无法识别名称的游戏，还会在每次安装时发送一次：平台、文件的存储方式、大小、CRC-32，以及从游戏本身读取的产品代码或光盘序列号。绝不包含游戏名称、搜索词或你的 ScreenScraper 账号。崩溃报告可能包含文件路径。关闭后只会发送一次匿名的“已关闭”记录，此后不再发送任何数据。只有在“反馈问题”中按下“发送”时才会发送问题反馈，可能包含你选择附上的日志（含文件路径）。已发送的数据会无限期保存。Plumemu 每天会在连接 Wi-Fi 时询问一次 plumemu-app.stevensdesk.com 是否有新版本；托管该网站的 Cloudflare 会看到你的 IP 地址。可在“设置 › 关于 › 更新”中关闭此功能。这项每日检查还会从同一台服务器下载更新后的平台数据（系统和模拟器列表），不会额外发送任何内容。如果你使用 ScreenScraper 账号，Plumemu 会向 ScreenScraper 发送每个游戏的文件名、大小和校验值来查找封面；这些信息找不到结果时，还会发送游戏名称。如果选择“仅封面”，Plumemu 会在连接 Wi-Fi 时从 libretro 的公开服务器（thumbnails.libretro.com）下载盒装封面，游戏名称会出现在地址中；该服务器能看到你的 IP 地址。如果你使用 RetroAchievements 账号，Plumemu 会在你打开游戏信息时、玩完游戏后，以及连上 Wi-Fi 时每天一次，向 retroachievements.org 发送你的用户名、密钥和每个游戏的 RetroAchievements 编号；徽章图片来自 media.retroachievements.org。密钥以加密方式保存在这台设备上，绝不会进入备份或日志。退出登录后就不再发送。 精确游玩时间（在“设置”\u203A“统计”中开启后）会通过 Android 的使用情况访问权限获取该次游玩时间段内的事件，只保留从 Plumemu 启动的游戏或应用以及屏幕的事件；除游玩时长外不保存任何内容，也绝不会发送。</string>
     <!-- Updates -->
-    <string name="settings_update_available">有可用更新</string>
     <string name="settings_update_value_downloading">正在下载…</string>
     <string name="settings_update_value_installing">正在安装…</string>
-    <string name="settings_check_updates">检查更新</string>
+    <string name="settings_update_value_available">可更新至 %1$s</string>
+    <string name="settings_updates">更新</string>
+    <string name="settings_updates_check_now">立即检查</string>
     <string name="settings_check_updates_body">立即询问 Plumemu 更新服务器是否有新版本。使用移动数据时，Plumemu 会在下载更新前先询问你。</string>
     <string name="settings_check_updates_daily">每天检查更新</string>
     <string name="settings_check_updates_daily_body">每天连接 Wi-Fi 时，Plumemu 会在你返回时询问一次 plumemu-app.stevensdesk.com 是否有新版本。托管该网站的 Cloudflare 会看到设备的 IP 地址。这项检查还会从同一台服务器下载更新后的平台数据（系统和模拟器列表）。不会发送其他任何内容。只有选择“更新”后才会安装更新。</string>
@@ -1284,6 +1274,7 @@
     <string name="settings_update_checking">正在检查更新…</string>
     <string name="settings_update_no_permission_screen">此设备没有 Plumemu 能打开的相应界面。请在 Android 的“设置”（应用 › Plumemu，或安全）中允许 Plumemu 安装应用，然后返回。</string>
     <string name="settings_check_updates_line">上次检查：%1$s。%2$s</string>
+    <string name="settings_check_updates_last">上次检查：%1$s</string>
     <string name="settings_check_updates_up_to_date">Plumemu 已是最新版本。</string>
     <string name="settings_check_updates_found">Plumemu %1$s 现已发布。</string>
     <string name="settings_check_updates_needs_android">最新版 Plumemu 需要更高版本的 Android，此设备不满足要求。</string>
@@ -1323,7 +1314,7 @@
 
     <!-- ScreenScraper account: setup's box art step and Settings › Library. -->
     <string name="setup_box_art_title">从 ScreenScraper 获取封面</string>
-    <string name="setup_box_art_desc">封面和游戏信息来自 ScreenScraper，需使用你在 screenscraper.fr 注册的免费账号。也可以稍后在“设置 › 账户 › ScreenScraper”中登录。</string>
+    <string name="setup_box_art_desc">封面和游戏信息来自 ScreenScraper，需使用你在 screenscraper.fr 注册的免费账号。也可以稍后在“设置 › 封面和账号 › 封面”中登录。</string>
     <string name="setup_box_art_skip">跳过</string>
     <!-- The question before the sign-in form. -->
     <string name="setup_confirm_title">用哪个按键确认？</string>
@@ -1339,7 +1330,7 @@
     <string name="setup_box_art_question_desc">Plumemu 从哪里获取游戏封面。之后可随时在“设置 › 账号 › 封面图”中更改。</string>
     <string name="setup_ready_box_art">封面：正在后台下载</string>
     <string name="setup_ready_box_art_offline">封面：联网后开始</string>
-    <string name="setup_ready_box_art_sign_in">封面：请在“设置 › 账户”中重新登录</string>
+    <string name="setup_ready_box_art_sign_in">封面：请在“设置 › 封面和账号”中重新登录</string>
     <string name="account_username">用户名</string>
     <string name="account_password">密码</string>
     <!-- What the keyboard shows as the field's name (EditorInfo.hintText), even in a full-screen editor. -->
@@ -1429,6 +1420,8 @@
     <string name="settings_box_art_clear">清除封面…</string>
     <string name="settings_box_art_clear_title">清除封面？</string>
     <string name="settings_box_art_clear_body">封面将消失，直到用“下载缺失的封面”重新下载。你亲自选择的封面会保留，ScreenScraper 仍保持登录。</string>
+    <string name="settings_box_art_clear_body_libretro">封面将消失，直到用“下载缺失的封面”重新下载。你亲自选择的封面会保留。</string>
+    <string name="settings_box_art_clear_body_own">已保存的封面会被删除，改为显示 Plumemu 自带封面。你亲自选择的封面会保留。</string>
     <string name="settings_box_art_clear_confirm">清除封面</string>
     <string name="settings_box_art_clear_failed">Plumemu 无法清除封面，请重试。</string>
     <string name="settings_box_art_clear_in_use">备份或恢复正在使用封面，暂时无法清除。请在完成后重试。</string>
@@ -1450,7 +1443,7 @@
     <string name="settings_box_art_region">封面地区</string>
     <string name="settings_box_art_region_value">封面地区：%1$s</string>
     <string name="settings_box_art_region_body">游戏没有本地区的封面时，改用哪个地区的封面。</string>
-    <!-- Region names for box art (Settings › Accounts › ScreenScraper › Box art region). -->
+    <!-- Region names for box art (Settings › Box art & accounts › ScreenScraper › Box art region). -->
     <string name="settings_region_usa">美国</string>
     <string name="settings_region_europe">欧洲</string>
     <string name="settings_region_japan">日本</string>
@@ -1464,8 +1457,6 @@
     <string name="app_tool_error_body">Android 无法打开该界面，请稍后再试。</string>
 
     <!-- Library › an unknown folder (a folder whose name matches no system): its row, side panel and the home notice. %1$s is the folder's name or a number. -->
-    <string name="settings_unknown_folder_title">未知文件夹</string>
-    <string name="settings_unknown_folder">未知文件夹：%1$s</string>
     <plurals name="settings_unknown_folder_files">
         <item quantity="other">%1$s个文件</item>
     </plurals>
@@ -1483,12 +1474,17 @@
     <string name="settings_files_not_added_title">未添加的文件</string>
     <string name="settings_files_not_added_body">文件夹中未加入游戏库的文件及原因。</string>
     <string name="settings_files_not_added_none">所有文件都已在游戏库中</string>
+    <string name="settings_files_not_added_nothing">没有可显示的文件</string>
     <string name="settings_files_not_added_no_system">不在任何主机的文件夹中</string>
     <string name="settings_files_not_added_unmatched_system">%1$s 的模拟器无法打开这些文件</string>
     <string name="settings_files_not_added_unmatched">没有模拟器能打开这些文件</string>
     <string name="settings_files_not_added_bios">BIOS 和固件</string>
     <string name="settings_files_not_added_saves">存档和即时存档</string>
     <string name="settings_files_not_added_junk">备注、图片和隐藏文件</string>
+    <string name="settings_files_not_added_answered">已回答的文件夹</string>
+    <plurals name="settings_files_not_added_waiting">
+        <item quantity="other">%1$s 个文件夹待整理</item>
+    </plurals>
     <string name="settings_files_not_added_folder">%1$s · %2$s</string>
     <plurals name="settings_files_not_added_more">
         <item quantity="one">以及另外 %1$s 个文件</item>
@@ -1500,8 +1496,8 @@
     <string name="home_notice_unknown_folder">未知文件夹：%1$s</string>
     <string name="home_notice_unknown_where">设置 › 游戏库</string>
 
-    <!-- Settings › Accounts › RetroAchievements -->
-    <string name="settings_section_accounts">账户</string>
+    <!-- Settings › Box art & accounts › RetroAchievements -->
+    <string name="settings_section_accounts">封面和账号</string>
     <string name="settings_ra_title">RetroAchievements</string>
     <string name="settings_ra_value_refused">重新登录</string>
     <string name="settings_ra_refused">RetroAchievements 不接受你的密钥。它可能已在网站上被重置。请用新密钥重新登录。</string>
@@ -1565,7 +1561,7 @@
     </plurals>
     <string name="achievement_mastered">已全部完成</string>
 
-    <!-- Settings › Accounts › Box art: where box art comes from. -->
+    <!-- Settings › Box art & accounts › Box art: where box art comes from. -->
     <string name="settings_box_art_source">封面</string>
     <string name="settings_box_art_source_body">Plumemu 从哪里获取封面。按 A 选择。</string>
     <string name="settings_box_art_source_screenscraper">封面和游戏信息</string>
