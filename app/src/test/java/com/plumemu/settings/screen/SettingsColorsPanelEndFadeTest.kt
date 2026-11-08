@@ -37,7 +37,7 @@ class SettingsColorsPanelEndFadeTest {
     @get:Rule
     val rules = rulesAround(compose)
 
-    private val settings = PlumSettings(flags = SetupFlags(setupCompleted = true))
+    private val settings = PlumSettings(appearance = OLD_DEFAULT_LOOK, flags = SetupFlags(setupCompleted = true))
     private var shown = settings
     private lateinit var model: SettingsModel
     private lateinit var geometry: SettingsGeometry

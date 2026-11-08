@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
@@ -28,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.components.EdgeFades
 import com.plumemu.coreui.components.listEdgeFadeMaskInRoom
 import kotlin.math.abs
+import com.plumemu.coreui.components.plainLayer
 
 /**
  * A scrolling list that glides (design/rules.md › Shapes and motion). The list still jumps in
@@ -114,10 +114,10 @@ class ListGlide internal constructor(
             // clips to that; the inner one adds the rest of the room. A tap outside the clip never reaches the
             // layout inside, which would otherwise take the taps of what is above the list (a field over it).
             .layout { measurable, constraints -> growBy(measurable, constraints, bleedPx()) }
-            .graphicsLayer { clip = true }
+            .plainLayer { clip = true }
             .layout { measurable, constraints -> growBy(measurable, constraints, extraPx - bleedPx()) }
             .then(inside)
-            .graphicsLayer { translationY = settle.value }
+            .plainLayer { translationY = settle.value }
 
     private fun Density.bleedPx() = minOf(endRoom().roundToPx(), extraPx)
 

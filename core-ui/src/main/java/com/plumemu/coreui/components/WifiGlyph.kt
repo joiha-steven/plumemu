@@ -34,7 +34,7 @@ fun WifiGlyph(
     color: Color,
     description: String,
     modifier: Modifier = Modifier,
-    font: PlumFont = PlumTheme.type.font,
+    font: PlumFont = PlumTheme.type.fontOf(style),
 ) = WifiGlyph(style, { color }, description, modifier, font)
 
 /** [WifiGlyph] with a colour read while drawing, so a theme colour that moves redraws it without recomposing. */
@@ -44,8 +44,8 @@ fun WifiGlyph(
     color: () -> Color,
     description: String,
     modifier: Modifier = Modifier,
-    /** The font the text beside it is drawn in: the person's, unless the screen fixes its own (the in-game card draws in Plum Sans). */
-    font: PlumFont = PlumTheme.type.font,
+    /** The font the text beside it is drawn in: Mono beside a mono style, else the typography's, unless the screen fixes its own (the in-game card draws in Plum Sans). */
+    font: PlumFont = PlumTheme.type.fontOf(style),
 ) {
     val density = LocalDensity.current
     val height = with(density) { (style.fontSize.toPx() * font.digitHeightEm).toDp() }

@@ -17,11 +17,11 @@ class PlumMotionTest {
     }
 
     @Test
-    fun slideIs180MsEaseOutOrAJump() {
+    fun slideIs180MsOnTheOneCurveOrAJump() {
         val on = PlumMotionState(isOn = true).slideSpec<Float>()
         assertTrue(on is TweenSpec<*>)
         assertEquals(180, (on as TweenSpec<Float>).durationMillis)
-        assertEquals(PlumMotion.EaseOut, on.easing)
+        assertEquals("slides move on the one curve of everything that moves", PlumMotion.Decelerate, on.easing)
         assertTrue(PlumMotionState(isOn = false).slideSpec<Float>() is SnapSpec<*>)
     }
 }

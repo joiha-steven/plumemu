@@ -2,6 +2,8 @@ package com.plumemu.setup
 
 import androidx.compose.runtime.Immutable
 import com.plumemu.coredata.settings.TextSizeSetting
+import com.plumemu.coreui.theme.BackgroundChoice
+import com.plumemu.coreui.theme.BackgroundPreset
 import com.plumemu.coreui.theme.ColorSet
 
 /*
@@ -10,8 +12,8 @@ import com.plumemu.coreui.theme.ColorSet
  */
 
 internal object SetupLooks {
-    /** The sets offered: two near-black, one dark with colour, three light; two rows of [COLUMNS]. */
-    val sets: List<ColorSet> = listOf(ColorSet.Plumemu, ColorSet.Charcoal, ColorSet.Indigo, ColorSet.Paper, ColorSet.Ivory, ColorSet.Pocket)
+    /** The sets offered: two dark, one dark with colour, three light; two rows of [COLUMNS]. */
+    val sets: List<ColorSet> = listOf(ColorSet.Plumemu, ColorSet.ColdGrey, ColorSet.SpiceCube, ColorSet.Daylight, ColorSet.Ivory, ColorSet.Pocket)
 
     const val COLUMNS = 3
 }
@@ -30,25 +32,32 @@ internal data class DeviceFacts(
 
 /**
  * What the device suggests: [colorSet] the tile the step opens on (null: no suggestion, the current look),
- * [textSize] a size to apply with the pick (null: keep what is stored).
+ * [textSize] a size to apply with the pick (null: keep what is stored), [blackPage] true on an OLED screen, where the
+ * default set's tile draws and applies true black as its page, keeping its accent and tones.
  */
 @Immutable
 internal data class DeviceLook(
     val colorSet: ColorSet? = null,
     val textSize: TextSizeSetting? = null,
+    val blackPage: Boolean = false,
 ) {
+    /** The page [set]'s tile draws and applies: Black for the default set on an OLED screen, else the set's own. */
+    fun pageOf(set: ColorSet): BackgroundChoice = if (blackPage && set == ColorSet.Plumemu) BLACK else set.background
+
     companion object {
         val None = DeviceLook()
+        private val BLACK = BackgroundChoice.Preset(BackgroundPreset.Black)
     }
 }
 
 /**
- * Near black on an OLED screen (black pixels are off there); a larger text size on a small 4:3 screen.
+ * The dark default on true black on an OLED screen (black pixels are off: power, and no glow round the focus on a black panel); a larger text size on a small 4:3 screen.
  * Android does not say what a panel is made of, so OLED is a short list of known handhelds by name.
  */
 internal fun deviceLookOf(facts: DeviceFacts): DeviceLook =
     DeviceLook(
         colorSet = ColorSet.Plumemu.takeIf { isOledHandheld(facts) },
+        blackPage = isOledHandheld(facts),
         textSize = TextSizeSetting.Larger.takeIf { isSmallFourThree(facts) },
     )
 

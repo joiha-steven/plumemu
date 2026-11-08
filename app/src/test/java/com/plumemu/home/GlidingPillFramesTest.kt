@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import com.plumemu.coreinput.Action
@@ -57,8 +58,12 @@ abstract class GlidingPillFramesBase {
     private lateinit var state: StripState
     private val composed = mutableListOf<Pair<String, Long>>()
 
+    /** The pages' prefetcher, run by the test: Compose's own spends a wall-clock budget, so what it built ahead varied with load. */
+    private val prefetch = ManualPagesPrefetch()
+
     @Before
     fun trace() {
+        gamesPagesStateMade = prefetch::install
         Composer.setTracer(
             object : CompositionTracer {
                 override fun isTraceInProgress(): Boolean = true
@@ -78,7 +83,10 @@ abstract class GlidingPillFramesBase {
     }
 
     @After
-    fun stop() = Composer.setTracer(null)
+    fun stop() {
+        Composer.setTracer(null)
+        gamesPagesStateMade = null
+    }
 
     private fun show(
         content: HomeContent,
@@ -320,7 +328,8 @@ abstract class GlidingPillFramesBase {
         val list = listBounds()
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         val x = list.left.toInt() - HALO_PROBE_PX
-        val bg = pixels[x - HALO_BG_GAP_PX, list.top.toInt() + 1]
+        // The page colour from the screen's side margin: the systems column beside the list may scroll a number under any probe nearer.
+        val bg = pixels[2, list.top.toInt() + 1]
         val ys = (list.top.toInt() until list.bottom.toInt()).filter { y -> pixels[x, y] != bg }
         return if (ys.isEmpty()) -1f else ys.average().toFloat()
     }
@@ -360,12 +369,20 @@ abstract class GlidingPillFramesBase {
         assertTrue("the halo never lags or leads the pill by a frame: $gaps (fastest step $fastestStep)", gaps.max() - gaps.min() < fastestStep / 2)
     }
 
-    /** An L2/R2 system switch: in every frame, a halo left of the list belongs to a pill drawn in the list (none is left on the old page). */
+    /** An L2/R2 system switch onto a page built ahead in idle time, as at rest on a device: no halo is left on the old page. */
     @Test
-    fun noHaloIsLeftOnTheOldPageWhileTheSystemSwitches() {
+    fun noHaloIsLeftOnTheOldPageWhileTheSystemSwitches() = assertNoHaloLeftBehind(neighboursBuilt = true)
+
+    /** The same onto a page the switch builds in its own frame (a fast hold, no idle time between). */
+    @Test
+    fun noHaloIsLeftOnTheOldPageWhenTheSwitchBuildsTheNewPage() = assertNoHaloLeftBehind(neighboursBuilt = false)
+
+    /** An L2/R2 system switch: in every frame, a halo left of the list belongs to a pill drawn in the list (none is left on the old page). */
+    private fun assertNoHaloLeftBehind(neighboursBuilt: Boolean) {
         show(FakeHomeContent.board(), true, HomeTags.GAMES, Column.Games, FakeHomeContent.BOARD_SNES_INDEX)
         val ring = ringColour(HomeTags.game(0))
         compose.mainClock.autoAdvance = false
+        if (neighboursBuilt) idle()
         compose.runOnIdle { state.dispatch(Action.NextSystem) }
         var measured = 0
         repeat(framesFor(PlumMotion.GLIDE_MS) + 2) {
@@ -373,14 +390,28 @@ abstract class GlidingPillFramesBase {
             compose.waitForIdle()
             val halo = haloCentreLeftOfList()
             if (halo >= 0f) {
-                val top = pillTop(ring)
+                // While the new page fades in its pill is too faint for the pixels to place: then the focused row, laid out in the list, places it.
+                val top = pillTop(ring).takeIf { it >= 0 } ?: focusedRowTopInList()
                 assertTrue("a halo with no pill in the list (halo at $halo)", top >= 0)
                 assertTrue("the halo ($halo) is beside the pill ($top), not left on the old page", abs(halo - top) <= listBounds().height / 4)
             }
             measured++
+            if (neighboursBuilt) idle()
         }
         assertTrue("frames were measured", measured > 5)
+        assertTrue("pages were asked of the prefetcher: ${prefetch.scheduled}", prefetch.scheduled > 0)
     }
+
+
+    /** The top of the focused row (the page's first, on a page not visited yet) when it is laid out inside the list's bounds, else -1. */
+    private fun focusedRowTopInList(): Int {
+        val list = listBounds()
+        val row = compose.onAllNodesWithTag(HomeTags.game(0), useUnmergedTree = true).fetchSemanticsNodes().map { it.boundsInRoot }
+        return row.firstOrNull { abs(it.left - list.left) < list.width / 4 && it.top >= list.top && it.top < list.bottom }?.top?.let(Math::round) ?: -1
+    }
+
+    /** Idle time between frames: the prefetcher builds the pages beside the shown one to the end. */
+    private fun idle() = compose.runOnUiThread { prefetch.runIdle() }
 
     /** With the game panel open the row is not focused in the list: no pill and no halo. */
     @Test

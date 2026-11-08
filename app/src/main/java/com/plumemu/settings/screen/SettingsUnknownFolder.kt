@@ -34,7 +34,9 @@ internal fun UnknownFolderPanel(
     val row = SettingsListPages.unknownFolderAt(focus, model.content) ?: return
     val choices = model.content.folderSystemChoices
     val focused = if (inPanel) focus.panelIndex else -1
-    val current = SettingsListPages.answerIndex(row, model.content)
+    // An answer the list does not offer (platform data not read yet) marks nothing: never "Ignore" for a folder the line shows answered.
+    val offered = (row.answer as? FolderAnswer.OfSystem)?.let { answer -> choices.any { it.id == answer.id } } ?: true
+    val current = if (offered) SettingsListPages.answerIndex(row, model.content) else -1
     val isUnanswered = row.answer == FolderAnswer.Unanswered
     val isSaving = row.key in model.content.answeringFolders || row.key in model.work.answering
     PanelListColumn(Modifier.fillMaxHeight().testTag(SettingsTags.UNKNOWN_FOLDER_PANEL)) {

@@ -49,19 +49,17 @@ class SignInCollarFloorTest {
         name: String,
         screen: @Composable () -> Unit,
     ) {
-        var font by mutableStateOf(PlumFont.Sans)
         var density = Density(1f)
         var capHeight = 0.dp
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest, font = font)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) {
                 density = LocalDensity.current
                 capHeight = PlumTheme.layout.setupButtonHeight
                 screen()
             }
         }
         val problems = mutableListOf<String>()
-        for (each in PlumFont.entries) {
-            font = each
+        for (each in listOf(PlumFont.Jost)) {
             compose.waitForIdle()
             val field = compose.onNodeWithTag(SignInTags.PASSWORD, useUnmergedTree = true).getUnclippedBoundsInRoot()
             val button = compose.onNodeWithTag(SignInTags.item(SignInItem.SignIn), useUnmergedTree = true).getUnclippedBoundsInRoot()

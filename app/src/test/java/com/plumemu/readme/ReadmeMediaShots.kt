@@ -153,7 +153,7 @@ class ReadmeMediaShots {
     private fun withDreamcastInfo(): HomeContent =
         library.withSystemInfo().let { c -> c.withEntries(c.entries.map { if (it.id == "dreamcast") it.copy(info = dreamcastInfo) else it }) }
 
-    @Test fun heroMain() = shoot("hero-main", stored(ColorSet.Indigo)) { HomeOf(metroidFocused) }
+    @Test fun heroMain() = shoot("hero-main", stored(ColorSet.SpiceCube)) { HomeOf(metroidFocused) }
 
     @Test fun heroGrid() = shoot("hero-grid", stored(ColorSet.Pocket)) {
             val content = limitedTo(library, "snes", 12)
@@ -169,7 +169,7 @@ class ReadmeMediaShots {
 
     @Test
     fun heroSearch() =
-        shoot("hero-search", stored(ColorSet.Super)) { HomeAt(library, metroidFocused, search = typingFor("super", library)) }
+        shoot("hero-search", stored(ColorSet.Ivory)) { HomeAt(library, metroidFocused, search = typingFor("super", library)) }
 
     /** Info's RetroAchievements section beside a list with trophies; made-up achievements, drawn badges. */
     @Test
@@ -211,7 +211,7 @@ class ReadmeMediaShots {
                     return bmp.asImageBitmap()
                 }
             }
-        shoot("achievements", stored(ColorSet.Charcoal)) {
+        shoot("achievements", stored(ColorSet.ColdGrey)) {
             val screen = remember { PanelScreen.Info(AchievementsSamples.facts(state).copy(folderName = "ROMs/snes", emulator = com.plumemu.game.EmulatorToStart("Snes9x", isInstalled = true), sizeBytes = 3L * 1024 * 1024, lastPlayedAt = System.currentTimeMillis() - 86_400_000L)) }
             val panel = remember(screen) { OpenPanel(GameRef(snes.first { it.title == "Super Metroid" }.id, "Super Metroid"), screen) }
             CompositionLocalProvider(LocalMasteredGames provides mastered, LocalBadgeImages provides badges) {
@@ -239,7 +239,7 @@ class ReadmeMediaShots {
     fun appsGrid() {
         val apps = APP_NAMES.mapIndexed { i, name -> GameRowModel("app-$i", name, region = "") }
         val content = library.withEntries(library.entries.map { if (it.kind == EntryKind.Apps) it.copy(rows = apps, shownCount = apps.size) else it })
-        shoot("apps-grid", stored(ColorSet.Charcoal)) {
+        shoot("apps-grid", stored(ColorSet.ColdGrey)) {
             CompositionLocalProvider(LocalHomeAppIcons provides remember { PosterAppIcons() }) {
                 HomeOf(gridActions(APPS_ENTRY, 7), content, grid = setOf(HomeContent.APPS_ID))
             }
@@ -247,7 +247,7 @@ class ReadmeMediaShots {
     }
 
     @Test
-    fun gridLight() = shoot("grid-light", stored(ColorSet.Paper)) { HomeOf(gridActions(systemIndex("psx"), readmeIndexOf("psx", "Final Fantasy VII")), limitedTo(library, "psx", 15), grid = setOf("psx"), size = GridSize.Small) }
+    fun gridLight() = shoot("grid-light", stored(ColorSet.Daylight)) { HomeOf(gridActions(systemIndex("psx"), readmeIndexOf("psx", "Final Fantasy VII")), limitedTo(library, "psx", 15), grid = setOf("psx"), size = GridSize.Small) }
 
     @Test
     fun systemInfo() = shoot("system-info", stored(ColorSet.Ivory)) { HomeOf(gridActions(systemIndex("snes"), 0), library.withSystemInfo(), charging = true) }
@@ -260,7 +260,7 @@ class ReadmeMediaShots {
         }
 
     @Test
-    fun keyboard() = shoot("keyboard", stored(ColorSet.Indigo)) { HomeAt(library, metroidFocused, search = typedQuery("zelda")) }
+    fun keyboard() = shoot("keyboard", stored(ColorSet.SpiceCube)) { HomeAt(library, metroidFocused, search = typedQuery("zelda")) }
 
     @Test
     fun fourThree() {
@@ -284,13 +284,13 @@ class ReadmeMediaShots {
 
     @Test
     fun colors() =
-        shoot("colors", stored(ColorSet.Cream)) { s -> SettingsAt(panelAt(SettingsOption.Colors, PanelPage.ColorSets, ColorSet.Cream.ordinal), s) }
+        shoot("colors", stored(ColorSet.RedAndGold)) { s -> SettingsAt(panelAt(SettingsOption.Colors, PanelPage.ColorSets, ColorSet.RedAndGold.ordinal), s) }
 
     @Test
     fun buttonColors() = shoot("button-colors", stored(ColorSet.Banana)) { HomeOf(gridActions(systemIndex("snes"), readmeIndexOf("snes", "Zelda: A Link to the Past"))) }
 
     @Test
-    fun settings() = shoot("settings", stored(ColorSet.DotMatrix)) { s -> SettingsAt(
+    fun settings() = shoot("settings", stored(ColorSet.PeaGreen)) { s -> SettingsAt(
                 optionsAt(SettingsOption.RomFolders),
                 s,
                 ShotContent.library.copy(account = BoxArtShots.SIGNED_IN, boxArt = BoxArtShots.done, boxArtBytes = BoxArtShots.BOX_ART_BYTES, accountLimits = BoxArtShots.limits),
@@ -312,7 +312,7 @@ class ReadmeMediaShots {
             )
         val content = SettingsContent(update = UpdateView(lastCheck = LastCheck(1_793_784_600_000L, CheckOutcome.Found), found = release))
         val row = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1))
-        shoot("update", stored(ColorSet.Paper)) { s -> SettingsAt(row.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0), s, content, version = "0.1.2") }
+        shoot("update", stored(ColorSet.Daylight)) { s -> SettingsAt(row.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0), s, content, version = "0.1.2") }
     }
 
     @Test

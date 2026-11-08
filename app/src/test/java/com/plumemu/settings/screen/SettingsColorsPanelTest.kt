@@ -34,7 +34,7 @@ internal class SettingsColorsPanelTest : SettingsModelHarness() {
 
     @Test
     fun aOpensThePanelAtTheCurrentSetsTile() {
-        for ((start, at) in listOf(PlumSettings.Defaults.appearance to 0, ColorSet.Super.appearance() to ColorSet.Super.ordinal, own to ColorSet.entries.size)) {
+        for ((start, at) in listOf(PlumSettings.Defaults.appearance to 0, ColorSet.Ivory.appearance() to ColorSet.Ivory.ordinal, own to ColorSet.entries.size)) {
             onColors(start)
             press(Action.Enter)
             assertEquals(SettingsColumn.Panel, model.focus.column)
@@ -57,8 +57,11 @@ internal class SettingsColorsPanelTest : SettingsModelHarness() {
         assertEquals("three tiles per row in the wide panel", 1 + COLOR_SET_COLUMNS_WIDE, model.focus.panelIndex)
         move(Direction.Left)
         assertEquals("left goes to the row's first tile", COLOR_SET_COLUMNS_WIDE, model.focus.panelIndex)
-        repeat(10) { if (model.focus.panelIndex < ColorSet.entries.size - 1) move(Direction.Down) }
-        assertEquals("down reaches the last tile (Cream, no Custom here)", ColorSet.entries.size - 1, model.focus.panelIndex)
+        val lastRow = (ColorSet.entries.size - 1) / COLOR_SET_COLUMNS_WIDE
+        repeat(10) { if (model.focus.panelIndex / COLOR_SET_COLUMNS_WIDE < lastRow) move(Direction.Down) }
+        assertEquals("down reaches the last row of tiles (no Custom here)", lastRow, model.focus.panelIndex / COLOR_SET_COLUMNS_WIDE)
+        move(Direction.Down)
+        assertEquals("down from the last row goes to the Background row", COLORS_BACKGROUND_ITEM, model.focus.panelIndex)
         assertEquals("moving only previews: nothing is written", writes, actions.writes)
         assertEquals(before, actions.settings)
     }
@@ -71,15 +74,15 @@ internal class SettingsColorsPanelTest : SettingsModelHarness() {
         assertOnTheRow()
         // Left / right on the row still step from there, like before.
         move(Direction.Right)
-        assertEquals(ColorSet.Banana, appearance.colorSet())
+        assertEquals(ColorSet.ClearGrape, appearance.colorSet())
     }
 
     /** The same write as the row: own colours are kept exactly as stepping away from Custom keeps them. */
     @Test
     fun aKeepsTheOwnColoursExactlyLikeTheRow() {
         onColors(own)
-        pickInColorsPanel(ColorSet.Super)
-        assertEquals(own.withColors(ColorSet.Super), appearance)
+        pickInColorsPanel(ColorSet.Ivory)
+        assertEquals(own.withColors(ColorSet.Ivory), appearance)
         assertEquals(OwnColors(own.background, own.textColor, own.accent, buttonSet = "None"), appearance.ownColors)
         // Custom's tile is still there (own colours kept) and brings all three back.
         pickInColorsPanel(null)
@@ -88,16 +91,16 @@ internal class SettingsColorsPanelTest : SettingsModelHarness() {
 
     @Test
     fun customHasATileOnlyWhileThereIsACustomLook() {
-        val onPaper = PlumSettings(appearance = ColorSet.Paper.appearance())
+        val onPaper = PlumSettings(appearance = ColorSet.Daylight.appearance())
         assertEquals("no own colours: the ten sets", ColorSet.entries.toList(), colorSetsPanelEntries(onPaper))
         assertEquals("current colours match no set", ColorSet.entries + null, colorSetsPanelEntries(PlumSettings(appearance = own)))
-        val kept = ColorSet.Paper.appearance().copy(ownColors = OwnColors(own.background, own.textColor, own.accent))
+        val kept = ColorSet.Daylight.appearance().copy(ownColors = OwnColors(own.background, own.textColor, own.accent))
         assertEquals("own colours kept", ColorSet.entries + null, colorSetsPanelEntries(PlumSettings(appearance = kept)))
         // Custom's tile shows the colours Custom stands for: the kept ones here, not Paper's.
         val look = tileLookOf(null, PlumSettings(appearance = kept))
         assertEquals(0x2C1111, look.tokens.bg.value)
         assertNull("Custom keeps the usual glyphs", look.buttons)
-        assertEquals("a set's tile has its glyph colours", ColorSet.Super.buttons, tileLookOf(ColorSet.Super, onPaper).buttons)
+        assertEquals("a set's tile has its glyph colours", ColorSet.Ivory.buttons, tileLookOf(ColorSet.Ivory, onPaper).buttons)
     }
 
     @Test
@@ -120,28 +123,28 @@ internal class SettingsColorsPanelTest : SettingsModelHarness() {
         press(Action.Back)
         assertOnTheRow()
         // Wide: the panel shows beside the row; a tap on a tile enters it and focuses that tile.
-        model.onTapPanelItem(ColorSet.DotMatrix.ordinal, actions.shown, wide)
+        model.onTapPanelItem(ColorSet.PeaGreen.ordinal, actions.shown, wide)
         assertEquals(PanelPage.ColorSets, model.focus.page)
-        assertEquals(ColorSet.DotMatrix.ordinal, model.focus.panelIndex)
+        assertEquals(ColorSet.PeaGreen.ordinal, model.focus.panelIndex)
         assertEquals("the first tap only focuses", ColorSet.Plumemu, appearance.colorSet())
-        model.onTapPanelItem(ColorSet.DotMatrix.ordinal, actions.shown, wide)
-        assertEquals(ColorSet.DotMatrix, appearance.colorSet())
+        model.onTapPanelItem(ColorSet.PeaGreen.ordinal, actions.shown, wide)
+        assertEquals(ColorSet.PeaGreen, appearance.colorSet())
         assertOnTheRow()
     }
 
     /** The panel opens on the current set's tile: a first tap there only enters the panel, like any tile. */
     @Test
     fun touchAFirstTapOnTheCurrentTileOnlyOpensThePanel() {
-        onColors(ColorSet.Super.appearance())
+        onColors(ColorSet.Ivory.appearance())
         val writes = actions.writes
-        model.onTapPanelItem(ColorSet.Super.ordinal, actions.shown, wide)
+        model.onTapPanelItem(ColorSet.Ivory.ordinal, actions.shown, wide)
         assertEquals(SettingsColumn.Panel, model.focus.column)
         assertEquals(PanelPage.ColorSets, model.focus.page)
-        assertEquals(ColorSet.Super.ordinal, model.focus.panelIndex)
+        assertEquals(ColorSet.Ivory.ordinal, model.focus.panelIndex)
         assertEquals("nothing used yet", writes, actions.writes)
-        model.onTapPanelItem(ColorSet.Super.ordinal, actions.shown, wide)
+        model.onTapPanelItem(ColorSet.Ivory.ordinal, actions.shown, wide)
         assertOnTheRow()
-        assertEquals(ColorSet.Super, appearance.colorSet())
+        assertEquals(ColorSet.Ivory, appearance.colorSet())
     }
 
     @Test
@@ -154,8 +157,8 @@ internal class SettingsColorsPanelTest : SettingsModelHarness() {
         assertEquals(5, model.focus.panelIndex)
         press(Action.Back, narrowTiles)
         assertOnTheRow()
-        pickInColorsPanel(ColorSet.Cream, narrowTiles)
-        assertEquals(ColorSet.Cream, appearance.colorSet())
+        pickInColorsPanel(ColorSet.RedAndGold, narrowTiles)
+        assertEquals(ColorSet.RedAndGold, appearance.colorSet())
     }
 
     @Test

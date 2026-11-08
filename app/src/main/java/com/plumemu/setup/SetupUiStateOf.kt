@@ -31,7 +31,7 @@ internal fun setupUiStateOf(
     // A question answered shows again when Back comes to it (its kind is kept), so it is not "gone".
     val step = if (l.step == SetupStep.SecondScreen && choices.secondScreen == null && l.askedSecondScreen == null) SetupStep.Scan else l.step
     val failed = step == SetupStep.Scan && scanEndedInFailure
-    val controls = controlsOf(step, shownFolders.size, failed, asksAboutStatistics, hasScreenScraper)
+    val controls = controlsOf(step, shownFolders.size, failed, asksAboutStatistics, hasScreenScraper, l.isBoxArtSourceOpen)
     val boxArtSource = effectiveBoxArtSource(choices.boxArtSource, choices.hasAccount || l.signedInHere != null)
     // A scan started from the folder step (a folder was added) that failed says so there too.
     val scanMessage = if (step == SetupStep.Folders && scanEndedInFailure) SetupMessage.ScanFailed else null
@@ -52,6 +52,7 @@ internal fun setupUiStateOf(
         hasSecondScreenStep = !l.hasSkippedSecondScreen && (choices.secondScreen != null || l.hasAnsweredSecondScreen),
         hasScreenScraper = hasScreenScraper,
         boxArt = l.boxArt.takeIf { step == SetupStep.BoxArt && l.isBoxArtFormOpen },
+        isBoxArtSourceOpen = l.isBoxArtSourceOpen && hasScreenScraper,
         boxArtSource = boxArtSource,
         // Whichever choice was made: box art downloads unless Plumemu's own covers are in force.
         isBoxArtComing = boxArtSource != BoxArtSourceSetting.OwnCovers,

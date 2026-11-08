@@ -15,6 +15,7 @@ import com.plumemu.coreui.theme.SettingsThreeDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.SettingsColumns
 import com.plumemu.coreui.theme.TextSize
+import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
@@ -45,7 +46,7 @@ abstract class SettingsStatisticsLayoutBase(
     private val tileGap = PlumDimens.settingsPanelGap.value
 
     /** Three columns (wide, up to Large text): the page has the options' and right column's room and lays out as on a narrow screen. */
-    private val threeColumns = isWide && SettingsColumns.fits(PlumThemeSettings.Graphite.textSize ?: TextSize.Default, PlumThemeSettings.Graphite.font)
+    private val threeColumns = isWide && SettingsColumns.fits(PlumThemeSettings.Graphite.textSize ?: TextSize.Default, PlumFont.Jost)
     private val fourAcross = isWide && !threeColumns
     private val pageLeft = if (threeColumns) (SettingsThreeDimens.sectionsWidth + SettingsThreeDimens.optionsGap).value else margin
 

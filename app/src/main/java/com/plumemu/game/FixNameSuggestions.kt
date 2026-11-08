@@ -97,7 +97,9 @@ private fun fixNameEntries(state: FixNameState): List<FixNameEntry> {
             }
         }
         shown.indices.forEach { add(FixNameEntry.Choice(it)) }
-        if (lines && shown.isNotEmpty() && total > shown.size) add(FixNameEntry.Header(R.string.game_fix_name_others, FixNameTags.OTHERS))
+        // "No close title found" over bare results would contradict itself: the results are headed too.
+        val noneClose = state.showsSuggestions && state.suggestions?.isEmpty() == true
+        if (lines && (shown.isNotEmpty() || noneClose) && total > shown.size) add(FixNameEntry.Header(R.string.game_fix_name_others, FixNameTags.OTHERS))
         for (i in shown.size until total) add(FixNameEntry.Choice(i))
     }
 }

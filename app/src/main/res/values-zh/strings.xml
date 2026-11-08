@@ -69,6 +69,8 @@
     <string name="home_hint_unfavorite">取消收藏</string>
     <!-- X: open search. -->
     <string name="home_hint_search">搜索</string>
+    <string name="home_hint_undo">撤销</string>
+    <string name="home_notice_removed_from_recent">已从最近中移除</string>
     <string name="home_hint_sort">排序</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
@@ -148,8 +150,8 @@
     <string name="setup_folder_desc">选择存放 ROM 的文件夹。snes、psx 这类子文件夹会自动对应到相应平台。</string>
     <string name="setup_folder_point_opens">会打开 Android 的文件夹选择器。请前往你的游戏文件夹。</string>
     <!-- No button name: it differs by Android version. -->
-    <string name="setup_folder_point_use">然后在那里确认该文件夹。</string>
-    <string name="setup_folder_point_private">Plumemu 只能访问你选择的文件夹</string>
+    <string name="setup_folder_point_use">然后在那里确认该文件夹。部分掌机需要触摸屏幕。</string>
+    <string name="setup_folder_point_private">Plumemu 只能访问你选择的文件夹。</string>
     <string name="setup_choose_folder">选择文件夹</string>
     <string name="setup_set_up_later">稍后设置</string>
     <string name="setup_folder_remove">移除此文件夹</string>
@@ -546,6 +548,7 @@
     <string name="settings_hint_section">切换分类</string>
     <!-- Hint bar label beside A in a list of choices: a verb, pick the focused one. -->
     <string name="settings_hint_choose">选择</string>
+    <string name="settings_hint_skip">跳过</string>
     <string name="settings_hint_try_again">重试</string>
     <!-- Narrow screens: opens the focused option's explanation as a further stop (the right button). -->
     <string name="settings_hint_more">说明</string>
@@ -574,6 +577,12 @@
     <string name="settings_folder_body">文件仍保留在设备上。选择一个已跳过的子文件夹即可重新读取。</string>
     <string name="settings_folder_skip_one">跳过子文件夹…</string>
     <string name="settings_folder_skipped">已跳过</string>
+    <string name="settings_unreadable_row">无法读取文件夹</string>
+    <string name="settings_unreadable_title_many">无法读取文件夹</string>
+    <string name="settings_unreadable_body">上次扫描时 Plumemu 无法读取这个文件夹。在能读取之前，从中删除的游戏仍会留在游戏库里；下次扫描会再试一次。</string>
+    <string name="settings_unreadable_body_many">上次扫描时 Plumemu 无法读取这些文件夹。在能读取之前，从中删除的游戏仍会留在游戏库里；下次扫描会再试一次。</string>
+    <string name="settings_unreadable_scan_again">再次扫描</string>
+    <string name="settings_unreadable_skip">跳过这个文件夹</string>
     <string name="settings_folder_remove">移除此文件夹…</string>
     <string name="settings_folder_skip_failed">无法保存该更改。未做任何更改。</string>
     <string name="settings_skip_subfolder_title">跳过子文件夹</string>
@@ -898,21 +907,26 @@
     <!-- Ready-made colour sets (never a console's or a brand's name. -->
     <string name="settings_colors">配色</string>
     <string name="settings_colors_panel_help">选择一套配色。想自己调，可在下方更改“背景”或“文字颜色”。自己调的颜色会保留在“自定义”中。</string>
-    <string name="settings_colors_paper">纸张</string>
+    <string name="settings_colors_daylight">日光</string>
+    <string name="settings_colors_ultramarine">群青</string>
+    <string name="settings_colors_magenta">品红</string>
+    <string name="settings_colors_peach">蜜桃</string>
+    <string name="settings_colors_matcha">抹茶</string>
+    <string name="settings_colors_mocha">摩卡</string>
+    <string name="settings_colors_front_loader">前置卡槽</string>
+    <string name="settings_colors_spice_cube">香料方块</string>
+    <string name="settings_colors_pea_green">豌豆绿</string>
     <string name="settings_colors_pocket">口袋</string>
-    <string name="settings_colors_dot_matrix">点阵</string>
-    <string name="settings_colors_super">超级</string>
-    <string name="settings_colors_indigo">靛蓝</string>
-    <string name="settings_colors_charcoal">炭黑</string>
+    <string name="settings_colors_lavender">薰衣草</string>
+    <string name="settings_colors_red_and_gold">红与金</string>
     <string name="settings_colors_ivory">象牙白</string>
+    <string name="settings_colors_clear_grape">透明葡萄</string>
+    <string name="settings_colors_cold_grey">冷灰</string>
     <string name="settings_colors_banana">香蕉</string>
-    <string name="settings_colors_cream">奶油</string>
     <string name="settings_background">背景</string>
     <string name="settings_text_color">文字颜色</string>
     <string name="settings_accent">强调色</string>
-    <string name="settings_font">字体</string>
     <string name="settings_text_size">文字大小</string>
-    <string name="settings_text_weight">文字粗细</string>
     <string name="settings_left_edge">左侧窄条</string>
     <string name="settings_grid_size">网格大小</string>
     <string name="settings_bg_graphite">石墨</string>
@@ -978,9 +992,6 @@
     <string name="settings_size_larger">较大</string>
     <string name="settings_size_huge">特大</string>
     <string name="settings_size_largest">最大</string>
-    <string name="settings_weight_thin">细</string>
-    <string name="settings_weight_medium">中</string>
-    <string name="settings_weight_bold">粗</string>
     <string name="settings_left_edge_counts">游戏数量</string>
     <string name="settings_left_edge_codes">平台代码</string>
     <string name="settings_left_edge_letters">字母</string>
@@ -1009,12 +1020,10 @@
     <string name="settings_color_adjusted_accent">强调色已调整，以保持清晰易读</string>
     <string name="settings_color_adjusted_both">文字颜色和强调色已调整，以保持清晰易读</string>
     <string name="settings_accent_body">用于标示当前平台、焦点圆点、开关和按钮。“按平台”为每个平台使用各自的颜色。</string>
-    <string name="settings_font_body">Plumemu 中所有文字使用的字体。</string>
     <string name="settings_text_size_body">更改 Plumemu 中的所有文字。Android 自身的字体大小会在此基础上叠加。</string>
-    <string name="settings_text_weight_body">更改 Plumemu 中所有文字的粗细。</string>
     <string name="settings_left_edge_body">浏览游戏列表时，左侧的窄条显示什么：每个平台的游戏数量、每个平台的简短代码，或当前列表的字母。</string>
     <string name="settings_grid_size_body">网格视图中封面的大小，适用于所有平台以及“最近”和“收藏”。“小”一屏显示的游戏最多，“大”最少。</string>
-    <!-- Sample lines in the colour and font panels (the board's). -->
+    <!-- Sample lines in the colour panel (the board's). -->
 
     <!-- Advanced (includes the confirm-button option) -->
     <string name="settings_confirm_bottom">用 B 确认</string>
@@ -1252,7 +1261,7 @@
     <string name="report_error_refused">服务器未接受此反馈，请检查邮箱地址。已写的内容会保留，可以再试一次。</string>
     <string name="report_error_unavailable">此版本无法发送反馈。请使用“导出日志”，然后自行发送该文件。</string>
     <string name="report_error_not_saved">无法在此设备上保存此反馈。</string>
-    <string name="settings_privacy_body">你的游戏库、设置和游玩时长都保存在此设备上 Plumemu 自身的存储空间中，绝不会发送出去。仅当你开启此功能（“设置 › 关于 › 发送使用数据”）时，Plumemu 才会向开发者发送匿名使用数据和崩溃报告：国家或地区、设备型号、Android 和应用版本、使用的界面和设置、按平台统计的游玩时长。对于 Plumemu 无法识别名称的游戏，还会在每次安装时发送一次：平台、文件的存储方式、大小、CRC-32，以及从游戏本身读取的产品代码或光盘序列号。绝不包含游戏名称、搜索词或你的 ScreenScraper 账号。崩溃报告可能包含文件路径。关闭后只会发送一次匿名的“已关闭”记录，此后不再发送任何数据。只有在“反馈问题”中按下“发送”时才会发送问题反馈，可能包含你选择附上的日志（含文件路径）。已发送的数据会无限期保存。Plumemu 每天会在连接 Wi-Fi 时询问一次 plumemu-app.stevensdesk.com 是否有新版本；托管该网站的 Cloudflare 会看到你的 IP 地址。可在“设置 › 关于 › 更新”中关闭此功能。这项每日检查还会从同一台服务器下载更新后的平台数据（系统和模拟器列表），不会额外发送任何内容。如果你使用 ScreenScraper 账号，Plumemu 会向 ScreenScraper 发送每个游戏的文件名、大小和校验值来查找封面；这些信息找不到结果时，还会发送游戏名称。如果选择“仅封面”，Plumemu 会在连接 Wi-Fi 时从 libretro 的公开服务器（thumbnails.libretro.com）下载盒装封面，游戏名称会出现在地址中；该服务器能看到你的 IP 地址。如果你使用 RetroAchievements 账号，Plumemu 会在你打开游戏信息时、玩完游戏后，以及连上 Wi-Fi 时每天一次，向 retroachievements.org 发送你的用户名、密钥和每个游戏的 RetroAchievements 编号；徽章图片来自 media.retroachievements.org。密钥以加密方式保存在这台设备上，绝不会进入备份或日志。退出登录后就不再发送。 精确游玩时间（在“设置”\u203A“统计”中开启后）会通过 Android 的使用情况访问权限获取该次游玩时间段内的事件，只保留从 Plumemu 启动的游戏或应用以及屏幕的事件；除游玩时长外不保存任何内容，也绝不会发送。</string>
+    <string name="settings_privacy_body">你的游戏库、设置和游玩时长都保存在此设备上 Plumemu 自身的存储空间中，绝不会发送出去。仅当你开启此功能（“设置 › 关于 › 发送使用数据”）时，Plumemu 才会向开发者发送匿名使用数据和崩溃报告：国家或地区、设备型号、Android 和应用版本、使用的界面和设置、按平台统计的游玩时长。对于 Plumemu 无法识别名称的游戏，还会在每次安装时发送一次：平台、文件的存储方式、大小、CRC-32，以及从游戏本身读取的产品代码或光盘序列号。绝不包含游戏名称、搜索词或你的 ScreenScraper 账号。崩溃报告可能包含文件路径。关闭后只会发送一次匿名的“已关闭”记录，此后不再发送任何数据。只有在“反馈问题”中按下“发送”时才会发送问题反馈，可能包含你选择附上的日志（含文件路径）。已发送的数据会无限期保存。Plumemu 每天会在连接 Wi-Fi 时询问一次 plumemu-app.stevensdesk.com 是否有新版本；托管该网站的 Cloudflare 会看到你的 IP 地址。可在“设置 › 关于 › 更新”中关闭此功能。这项每日检查还会从同一台服务器下载更新后的平台数据（系统和模拟器列表），不会额外发送任何内容。如果你使用 ScreenScraper 账号，Plumemu 会向 ScreenScraper 发送每个游戏的文件名、大小和校验值来查找封面；这些信息找不到结果时，还会发送游戏名称。如果选择“默认来源”，Plumemu 会在连接 Wi-Fi 时从 libretro 的公开服务器（thumbnails.libretro.com）下载盒装封面，游戏名称会出现在地址中；该服务器能看到你的 IP 地址。如果你使用 RetroAchievements 账号，Plumemu 会在你打开游戏信息时、玩完游戏后，以及连上 Wi-Fi 时每天一次，向 retroachievements.org 发送你的用户名、密钥和每个游戏的 RetroAchievements 编号；徽章图片来自 media.retroachievements.org。密钥以加密方式保存在这台设备上，绝不会进入备份或日志。退出登录后就不再发送。 精确游玩时间（在“设置”\u203A“统计”中开启后）会通过 Android 的使用情况访问权限获取该次游玩时间段内的事件，只保留从 Plumemu 启动的游戏或应用以及屏幕的事件；除游玩时长外不保存任何内容，也绝不会发送。</string>
     <!-- Updates -->
     <string name="settings_update_value_downloading">正在下载…</string>
     <string name="settings_update_value_installing">正在安装…</string>
@@ -1300,6 +1309,18 @@
     <string name="settings_update_confirm">请在 Android 的界面上确认更新。如未安装成功，请选择“更新”重试。</string>
     <string name="settings_update_cancelled">更新已取消。</string>
     <string name="settings_update_aborted">更新未安装。</string>
+    <!-- Updates panel, after Update was pressed on Android 13 or newer: why Android is about to ask to allow notifications. -->
+    <string name="settings_update_notice_reason">Android 会询问是否允许通知。Plumemu 只在更新后显示一条通知，点按即可打开 Plumemu。</string>
+    <!-- Updates panel, notifications off: Plumemu cannot always reopen itself after the update. -->
+    <string name="settings_update_notice_off">通知已关闭，更新后 Plumemu 可能不会自动打开。按主页键即可回来。</string>
+    <!-- Updates panel, notifications off and Plumemu not the home app: the Home button would not bring it back. -->
+    <string name="settings_update_notice_off_not_home">通知已关闭，更新后 Plumemu 可能不会自动打开。请从应用列表重新打开。</string>
+    <!-- Updates panel, notifications off: opens Android's notification settings for Plumemu. -->
+    <string name="settings_update_notifications_button">开启通知</string>
+    <!-- The one notification, shown after an update when Plumemu could not reopen itself. Channel name, title, text. -->
+    <string name="update_notice_channel">更新</string>
+    <string name="update_notice_title">Plumemu 已更新</string>
+    <string name="update_notice_text">点按以打开。</string>
     <string name="settings_update_failed_offline">下载已停止：无法连接更新服务器。</string>
     <string name="settings_update_failed_timeout">下载已停止：更新服务器未及时响应。</string>
     <string name="settings_update_failed_http">下载失败：更新服务器出现问题。</string>
@@ -1314,8 +1335,21 @@
 
     <!-- ScreenScraper account: setup's box art step and Settings › Library. -->
     <string name="setup_box_art_title">从 ScreenScraper 获取封面</string>
-    <string name="setup_box_art_desc">封面和游戏信息来自 ScreenScraper，需使用你在 screenscraper.fr 注册的免费账号。也可以稍后在“设置 › 封面和账号 › 封面”中登录。</string>
-    <string name="setup_box_art_skip">跳过</string>
+    <string name="setup_box_art_desc">封面和游戏信息来自 ScreenScraper，需使用你在 screenscraper.fr 注册的免费账号。也可以稍后在“设置 › 封面和账号”中登录。</string>
+    <string name="setup_box_art_ask_title">下载封面吗？</string>
+    <string name="setup_box_art_ask_desc">每个游戏的盒装封面图。之后可随时在“设置 › 封面和账号”中更改。</string>
+    <string name="setup_box_art_no">否</string>
+    <string name="setup_box_art_no_line">不使用网络，由 Plumemu 绘制封面。</string>
+    <string name="setup_box_art_yes">是</string>
+    <string name="setup_box_art_yes_line">通过 Wi-Fi 下载盒装正面，下一步选来源。</string>
+    <string name="setup_box_art_yes_line_libretro">通过 Wi-Fi 从 libretro 获取盒装正面。无需账号，没有游戏详细信息。</string>
+    <string name="setup_box_art_source_title">选择来源</string>
+    <string name="setup_box_art_source_desc">两种都只在 Wi-Fi 下下载。之后可随时在“设置 › 封面和账号”中更改。</string>
+    <string name="setup_box_art_default">默认来源</string>
+    <string name="setup_box_art_default_line">来自 libretro 的盒装正面。无需账号，没有游戏详细信息。</string>
+    <string name="setup_box_art_account">ScreenScraper 账号</string>
+    <string name="setup_box_art_account_line">封面，另有年份、评分、类型、发行商和简介。需要 screenscraper.fr 的免费账号。</string>
+    <string name="setup_box_art_skip">暂不</string>
     <!-- The question before the sign-in form. -->
     <string name="setup_confirm_title">用哪个按键确认？</string>
     <string name="setup_confirm_desc">A 确认，B 返回。想反过来用？请选择“使用 B”。</string>
@@ -1326,8 +1360,6 @@
     <string name="setup_confirm_again_desc">用方向键选择你平时使用的按键。选择当前正在使用的那个会继续。</string>
     <string name="setup_look_title">选择外观</string>
     <string name="setup_look_desc">选择你喜欢的颜色。之后可随时在“设置 › 外观”中更改。</string>
-    <string name="setup_box_art_question_title">封面图</string>
-    <string name="setup_box_art_question_desc">Plumemu 从哪里获取游戏封面。之后可随时在“设置 › 账号 › 封面图”中更改。</string>
     <string name="setup_ready_box_art">封面：正在后台下载</string>
     <string name="setup_ready_box_art_offline">封面：联网后开始</string>
     <string name="setup_ready_box_art_sign_in">封面：请在“设置 › 封面和账号”中重新登录</string>
@@ -1358,6 +1390,7 @@
     <string name="settings_account_value_sign_in">登录</string>
     <string name="settings_account_value_signed_in">已登录</string>
     <string name="settings_account_body">封面和游戏信息来自 ScreenScraper，需使用你在 screenscraper.fr 注册的免费账号。密码会加密保存在此设备上。</string>
+    <string name="settings_account_sign_up">还没有账户？可在 screenscraper.fr 免费创建。</string>
     <string name="settings_account_sign_out">退出登录</string>
     <string name="settings_account_sign_in_again">重新登录</string>
     <string name="settings_account_sign_out_failed">Plumemu 无法退出登录，请重试。</string>
@@ -1566,7 +1599,7 @@
     <string name="settings_box_art_source_body">Plumemu 从哪里获取封面。按 A 选择。</string>
     <string name="settings_box_art_source_screenscraper">封面和游戏信息</string>
     <string name="settings_box_art_source_screenscraper_line">封面，另有年份、评分、类型、发行商和简介。需要免费的 ScreenScraper 账号。</string>
-    <string name="settings_box_art_source_libretro">仅封面</string>
+    <string name="settings_box_art_source_libretro">默认来源</string>
     <string name="settings_box_art_source_libretro_line">通过 Wi-Fi 从 libretro 获取盒装正面。没有详细信息，无需账号。</string>
     <string name="settings_box_art_source_own">Plumemu 自带封面</string>
     <string name="settings_box_art_source_own_line">不联网。Plumemu 为每个游戏绘制海报封面。</string>

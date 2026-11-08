@@ -37,7 +37,7 @@ public interface Scraper {
     public val accountLimits: StateFlow<AccountLimits?> get() = NO_LIMITS
 
     /**
-     * Why the picture source of "Box art only" last failed (no network, or the server did not answer); null until it
+     * Why the picture source of "Default source" last failed (no network, or the server did not answer); null until it
      * did, and again after its next success. Never stored: the status line reads it while the process lives.
      */
     public val pictureFailure: StateFlow<PictureFailure?> get() = NO_PICTURE_FAILURE
@@ -123,7 +123,7 @@ public interface Scraper {
             if (config.developer.isBlank) UnavailableScraper else ScreenScraperScraper(config)
 
         /**
-         * The scraper of "Box art only" (no account): libretro's thumbnail server only, never ScreenScraper
+         * The scraper of "Default source" (no account): libretro's thumbnail server only, never ScreenScraper
          * and never a credential, whatever [config] holds. Works in a build without developer credentials.
          */
         public fun createLibretroOnly(config: ScraperConfig): Scraper = LibretroOnlyScraper(config)

@@ -29,7 +29,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [28], qualifiers = "w768dp-h432dp-land-xhdpi")
 internal class SettingsHexOwnKeyboardTest : SettingsKeyboardPathHarness() {
     init {
-        startOnRedSans() // the accent palette's "+" is reached by walking the presets from Red
+        startOnRed() // the accent palette's "+" is reached by walking the presets from Red
     }
 
     private fun text() = textOf(SettingsTags.HEX_TEXT)

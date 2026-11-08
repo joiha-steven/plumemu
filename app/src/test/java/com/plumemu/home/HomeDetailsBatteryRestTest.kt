@@ -52,7 +52,7 @@ abstract class HomeDetailsBatteryRestBase {
         val details = GameDetails(year = 1994, publisher = "Nintendo", genre = "Role-Playing Game / Action RPG", players = "1", description = "", rating = 17)
         val play = ShownPlay.Read(GamePlay(2, 2057 * 60, EmulatorToStart("RetroArch: Beetle PSX HW", isInstalled = false), BatteryPace(855.0, 7.0, 1_000L)))
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Small, font = PlumFont.Jost)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Small)) {
                 CompositionLocalProvider(LocalBatteryReading provides remember { reading }, LocalBatteryPaceNow provides reader) {
                     Column(Modifier.width(PlumDimens.detailsColumnWidth).testTag(PANEL)) { DetailsBlock(details, play) }
                 }

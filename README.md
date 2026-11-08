@@ -6,7 +6,7 @@ handhelds.</p>
 
 
 <p align="center">
-  <img src="media/hero.png" width="100%" alt="Plumemu in Indigo: the Super Nintendo list, 248 games, with Super Metroid selected in a soft accent pill; its cover, year, maker, genre, rating and description on the right (covers are posters Plumemu draws). Below, three smaller views: Super Nintendo as a grid of covers in Pocket, the Dreamcast list with its system band in Banana, and Search with "super" typed and its keyboard in Super">
+  <img src="media/hero.png" width="100%" alt="Plumemu in Spice cube: the Super Nintendo list, 248 games, with Super Metroid selected in a soft pill; its cover, year, maker, genre, rating and description on the right (covers are posters Plumemu draws). Below, three smaller views: Super Nintendo as a grid of covers in Pocket with Final Fantasy VI lifted inside a thin rim, the Dreamcast list with its system band in Banana, and Search with "super" typed and its keyboard in Ivory">
 </p>
 
 <p align="center">
@@ -15,12 +15,12 @@ handhelds.</p>
 </p>
 
 <p align="center">
-  <b>0.1.3</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket Classic ·
+  <b>0.1.4</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket Classic ·
   <a href="../../releases">Download</a> · <a href="https://plumemu.stevensdesk.com">Website</a>
 </p>
 
 <p align="center">
-  0.1.3 is a calmer look and a shorter Settings: one glass look, lists that run under the bars and fade, covers in a glass frame, and about 40 rows in Settings instead of 53. The source is open: GPL-3.0, see <a href="#source">Source</a>.
+  0.1.4 brings new color sets, one typeface, a clearer focus, a simpler setup, and menus and lists that move faster and more smoothly. The source is open: GPL-3.0, see <a href="#source">Source</a>.
 </p>
 
 ---
@@ -39,7 +39,7 @@ your list, not five. You pick which copy plays from the game's menu.
 have, chooses one for each system and adds new games by itself. There are no platform files to
 import, no theme engine to learn and no scraper to configure before the first game.
 
-**Light enough for the handheld you already own.** A 9.3 MB download that runs on Android 6.0
+**Light enough for the handheld you already own.** A 9.4 MB download that runs on Android 6.0
 and 2 GB devices, fits 4:3 screens as well as 16:9, opens 10,000 games in about a quarter
 of a second and uses no CPU while it waits.
 
@@ -60,7 +60,7 @@ game file.
 |---|---|
 | Game names | Read from the game itself, offline, about 29,000 arcade sets |
 | Duplicates | Regions, revisions and arcade clones folded into one row |
-| Setup | Pick a folder; emulators found and chosen for you |
+| Setup | Pick a folder and say whether you want box art; emulators found and chosen for you |
 | Covers | A drawn cover for every game; real box art with no account, or game details too with a free ScreenScraper account |
 | Runs on | Android 6.0 and later, 2 GB devices, 16:9 and 4:3 screens |
 | Second screen | Details and battery time left on the AYN Thor |
@@ -86,10 +86,10 @@ game file.
 - **Android games and Ports.** Installed Android games get a system of their own, and native port
   apps (Delta Touch and others) join Ports. Show as game, Show as port and Not a game in the menus
   correct Plumemu's choice.
-- **Covers for every game.** A game without box art gets a drawn poster cover with its title, so
-  every system, Recent and Favorites can use the grid, with no account. Android games and Ports
+- **Covers for every game.** A game without box art gets a card in its system's color with its title
+  (covers still on their way show the same card), so every system, Recent and Favorites can use the grid, with no account. Android games and Ports
   show their app icon as a cover card.
-- **Real box art, if you want it.** Choose Box art only and Plumemu fetches box fronts over Wi-Fi
+- **Real box art, if you want it.** Setup asks first, No by default. Choose the default source and Plumemu fetches box fronts over Wi-Fi
   from libretro's public server, with no account. Or sign in with your own free
   [ScreenScraper](https://www.screenscraper.fr) account (Settings › Box art & accounts › ScreenScraper) and
   Plumemu fetches box art and game details too. A wrong cover is replaced from the game
@@ -105,8 +105,9 @@ game file.
   description and, with RetroAchievements, the game's achievements. Sort games by name, last played, year, most played, recently added or rating, right from the
   list.
 - **Nothing goes missing quietly.** Settings › Library › Files not added lists every file left out
-  of your library, with the reason, and Unidentified games suggests the closest official titles.
-- **Recent that you control.** Take one game out of Recent from its menu, or clear it
+  of your library, with the reason, and Unidentified games suggests the closest official titles. Folders the last scan could not read are listed
+  there too, with Scan again and a way to skip each one.
+- **Recent that you control.** Take one game out of Recent from its menu (Undo brings it back for four seconds), or clear it
   (Settings › Library › Clear Recent…). Recent keeps the last 50 games. Your play time and statistics stay.
 - **Skip a sub-folder.** Settings › Library › Game folders can leave out a sub-folder (a folder of
   demos, say) so its games never show up. Nothing on disk is touched.
@@ -128,7 +129,7 @@ game file.
   its charger. A game you have played says "2 h on this charge" before you start it. Its options
   are in Settings › Second screen, which appears only on a handheld that has one. Everything still
   works on one screen.
-- **Light enough for old handhelds.** A 9.3 MB download that runs on Android 6.0, opens your
+- **Light enough for old handhelds.** A 9.4 MB download that runs on Android 6.0, opens your
   library in about a quarter of a second and uses no CPU while it sits on the home screen.
   [Measured](#light-on-the-hardware) on a slow emulator with 10,000 games.
 - **Smooth.** Every list and grid glides over 200 ms and slows into place, and the selection pill
@@ -136,20 +137,22 @@ game file.
 
 ### Make it yours
 
-- **Colors.** Ten ready-made sets, each previewed before you pick it: Plumemu, Paper, Pocket, Dot
-  matrix, Super, Indigo, Charcoal, Ivory, Banana and Cream. Super, Charcoal, Ivory, Banana and
-  Pocket color the A, B, X and Y keys. Or make your own background, text and accent colors with
+- **Colors.** Seventeen ready-made sets, each previewed before you pick it: Plumemu (a deep blue, the
+  default), Daylight, Ultramarine, Magenta, Peach, Matcha, Mocha, Front loader, Spice cube, Pea green, Pocket, Lavender, Red and gold, Ivory, Clear grape, Cold grey and Banana. Eight of them color the A, B, X and Y keys,
+  and on a handheld with an OLED screen setup offers true black. Or make your own background, text and accent colors with
   sliders that show the whole screen in the new color as you drag.
 - **Lists or covers.** Show any system, Recent or Favorites as a list or as a grid of covers in
   three sizes (L1 / R1, or the Size hint; Settings › Home screen › Grid size
-  while button hints are off). Covers sit in a glass frame. Apps can be a grid of larger icons too.
+  while button hints are off). Covers sit in a glass frame with rounded corners; the focused cover or app lifts a little inside its
+  own space, with a thin light rim, so nothing overlaps. Apps can be a grid of larger icons too.
 - **One sliding view.** Systems, games and details move as one strip, laid out for 16:9 and 4:3
   screens. On 4:3 and narrow screens the game's details peek in beside the list. Beside the games,
   a narrow strip shows game counts, a code per system or a letter rail you can tap or drag
   (Settings › Home screen › Left strip).
 - **About each system.** Above a system's games, a short band with its badge, the years it was
   made and a few lines about it. Settings › Home screen › System info turns it off.
-- **Text you can set.** Text size starts at Large, and Text weight is Thin, Medium or Bold.
+- **Text you can read.** Text size starts at Large. Every screen uses Jost in one weight, and the clock,
+  battery and years use a monospaced face so their figures line up.
   Lists, menus and panels run under the top and bottom bars and fade there.
 - **Sounds and vibration.** Settings › Controls › Button sounds sets sounds Off, Quiet or Loud (they follow the
   media volume) and vibration, which is on by default. Language is in Settings › Appearance:
@@ -167,41 +170,42 @@ game file.
   one file, checked after writing, and put it back on this device or a new one.
 - **Updates from inside the app** (official builds). Once a day on Wi-Fi Plumemu looks for a new
   version; the top bar then shows "Update" and the version, and START or Settings › About › Updates
-  installs it. After an update a card tells you what is new, once.
+  installs it. After an update Plumemu opens itself again, or shows a notification to tap if Android keeps
+  it from coming to the front, and a card tells you what is new, once.
 - **Anonymous usage statistics and crash reports, only if you want them** (official builds). They
   are off until you switch them on in the setup or in Settings › About › Send usage statistics.
   [What Plumemu sends](#what-plumemu-sends) lists every connection.
 
 <p align="center">
-  <img src="media/color-sets.png" width="100%" alt="The same Super Nintendo screen in all ten ready-made color sets, each named below: Plumemu, Paper, Pocket, Dot matrix, Super, Indigo, Charcoal, Ivory, Banana and Cream">
+  <img src="media/color-sets.png" width="100%" alt="The same Super Nintendo screen in all seventeen ready-made color sets, each named below: Plumemu, Daylight, Ultramarine, Magenta, Peach, Matcha, Mocha, Front loader, Spice cube, Pea green, Pocket, Lavender, Red and gold, Ivory, Clear grape, Cold grey and Banana">
 </p>
 
 <table>
   <tr>
     <td width="50%"><img src="media/battery-in-game.png" alt="The lower screen while a game runs: a large clock at 21:47, a ring at 38%, \"45 min left\" and \"empty at about 22:32\", a chart of the session with a dotted line for the usual pace, and \"Played 0:40 · Used 32% · 48% an hour · usually 40%\""></td>
-    <td width="50%"><img src="media/system-card.png" alt="The lower screen's card for Super Nintendo: the SNES badge, 248 games, Nintendo, home console, 1990 to 2003, and the game played last, Super Metroid, yesterday"></td>
+    <td width="50%"><img src="media/system-card.png" alt="The lower screen's card for Super Nintendo: the four games played last as cards, play time, games played and achievements, then Nintendo, home console, 1990 to 2003, and a line about it"></td>
   </tr>
   <tr>
     <td align="center">How long your battery lasts, while you play</td>
     <td align="center">Each system's facts on the second screen</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/grid.png" alt="Super Nintendo as a grid of covers on a dark background, with the selected cover raised and ringed in the accent color (the covers are drawn posters)"></td>
-    <td width="50%"><img src="media/grid-light.png" alt="PlayStation as a smaller grid of covers, five to a row, in the light Paper colors, Final Fantasy VII selected and ringed"></td>
+    <td width="50%"><img src="media/grid.png" alt="Super Nintendo as a grid of covers in the dark Plumemu colors, F-Zero lifted a little inside a thin light rim (the covers are drawn posters)"></td>
+    <td width="50%"><img src="media/grid-light.png" alt="PlayStation as a smaller grid of covers, five to a row, in the light Daylight colors, Final Fantasy VII selected in the top-right corner inside a thin dark rim"></td>
   </tr>
   <tr>
     <td align="center">Any system as a grid of covers</td>
     <td align="center">In three sizes, light or dark</td>
   </tr>
   <tr>
-    <td colspan="2"><img src="media/apps-grid.png" alt="Apps as a grid of larger icons with one-line names and a thin focus ring on Gallery; the left strip counts each system"></td>
+    <td colspan="2"><img src="media/apps-grid.png" alt="Apps in Cold grey as a grid of larger icons with one-line names, Gallery lifted inside a thin light rim; the left strip counts each system"></td>
   </tr>
   <tr>
     <td colspan="2" align="center">Apps as a grid of larger icons</td>
   </tr>
   <tr>
     <td width="50%"><img src="media/system-info.png" alt="Super Nintendo's games in Ivory with a short band above them: the SNES badge, Nintendo, home console, 1990 to 2003; Chrono Trigger selected, its cover and description on the right, and a charging bolt before 82% in the top bar"></td>
-    <td width="50%"><img src="media/keyboard.png" alt="Search in Indigo with Plumemu's own keyboard: \"zelda\" typed, 8 games found, and the first results stay in view above the keys"></td>
+    <td width="50%"><img src="media/keyboard.png" alt="Search in Spice cube with Plumemu's own keyboard: \"zelda\" typed, 8 games found, and the first results stay in view above the keys"></td>
   </tr>
   <tr>
     <td align="center">A few lines about each system</td>
@@ -209,23 +213,23 @@ game file.
   </tr>
   <tr>
     <td width="50%"><img src="media/four-three.png" alt="Plumemu on the Retroid Pocket Nova's 4:3 screen in a custom wine color: the Super Nintendo list with Super Metroid selected, and its details peeking in from the right edge"></td>
-    <td width="50%"><img src="media/system-codes.png" alt="Super Nintendo's games with a short code for each system in the strip on the left: REC, FAV, APP, SNS, GBA, PS1, PSP, NDS and GC"></td>
+    <td width="50%"><img src="media/system-codes.png" alt="Super Nintendo's games with a short code for each system in the strip on the left: REC, FAV, APP, SNS, GBA, PS1, PSP and NDS"></td>
   </tr>
   <tr>
     <td align="center">4:3 screens, like the Retroid Pocket Nova</td>
     <td align="center">Counts, system codes or a letter rail at the edge</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/colors.png" alt="Settings › Appearance › Colors: the ten ready-made color sets, each shown as a small preview"></td>
+    <td width="50%"><img src="media/colors.png" alt="Settings › Appearance › Colors in Ultramarine: a short help text and small previews of the first color sets, Ultramarine selected"></td>
     <td width="50%"><img src="media/button-colors.png" alt="Super Nintendo in the Banana color set, a yellow screen with the A, B, X and Y keys in red, teal and dark yellow; Zelda: A Link to the Past selected, its cover and description on the right"></td>
   </tr>
   <tr>
-    <td align="center">Ten ready-made color sets</td>
+    <td align="center">Seventeen ready-made color sets</td>
     <td align="center">A, B, X and Y in their classic colors</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/settings.png" alt="Settings › Library in Dot matrix, a green screen: Game folders, Rescan library, Sort games, Files not added and Clear Recent…; the Game folders panel on the right lists Internal storage and SD card with their game counts"></td>
-    <td width="50%"><img src="media/update.png" alt="Settings › About in Paper with the update panel: Plumemu 0.1.2 → 0.1.3, a short list of release notes and an Update button (an example screen)"></td>
+    <td width="50%"><img src="media/settings.png" alt="Settings › Library in Pea green, a green screen: Game folders, Rescan library, Sort games, Files not added and Clear Recent…; the Game folders panel on the right lists Internal storage and SD card with their game counts"></td>
+    <td width="50%"><img src="media/update.png" alt="Settings › About in Daylight with the update panel: Plumemu 0.1.3 → 0.1.4, a short list of release notes and an Update button (an example screen)"></td>
   </tr>
   <tr>
     <td align="center">Settings that say what they do</td>
@@ -241,7 +245,7 @@ can. These figures were measured with 0.0.7-beta (the download size is the curre
 
 | | |
 |---|---|
-| Download | 9.3 MB |
+| Download | 9.4 MB |
 | Start to your library | 0.25 s |
 | Memory | 63 MB |
 | CPU while it sits on the home screen | almost none (one CPU tick in 60 s); the clock redraws once a minute |
@@ -336,7 +340,7 @@ official build can send, and to whom:
 | An update check: a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | Once a day on Wi-Fi, or when you press Check for updates | Settings › About › Updates |
 | Box art lookups: your ScreenScraper account, and each game's file name, size, checksum and title | [ScreenScraper](https://www.screenscraper.fr) | Only while you are signed in, on Wi-Fi | Settings › Box art & accounts › ScreenScraper: Sign out or Pause |
 | Box art ScreenScraper lacks: a Steam game's title, or a game's file name | Steam (Valve) and the libretro thumbnail server | Only while you are signed in to ScreenScraper, on Wi-Fi | The same |
-| Box art with no account: a game's name, in the picture's address | The libretro thumbnail server | Only if you choose Box art only, on Wi-Fi | Settings › Box art & accounts › Box art: Plumemu's own covers |
+| Box art with no account: a game's name, in the picture's address | The libretro thumbnail server | Only if you choose the default source, on Wi-Fi | Settings › Box art & accounts › Box art: Plumemu's own covers |
 | Achievements: your RetroAchievements user name, your Web API key and the RetroAchievements number of a game, found from a hash of the game file that Plumemu computes on the handheld (no file leaves it). Badge pictures are plain downloads with no account data | [RetroAchievements](https://retroachievements.org) (`retroachievements.org`, badges from `media.retroachievements.org`) | Only while you are signed in: when a game's Info opens, after you play, and once a day on Wi-Fi | Settings › Box art & accounts › RetroAchievements: Sign out deletes your name, key and progress |
 | Platform data (the list of systems and emulators): a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | In the same daily update check | Settings › About › Updates |
 

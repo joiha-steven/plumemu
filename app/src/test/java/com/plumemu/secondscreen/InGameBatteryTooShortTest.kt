@@ -4,7 +4,6 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.unit.DpOffset
 import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
@@ -38,7 +37,7 @@ class InGameBatteryTooShortTest {
         RuntimeEnvironment.setQualifiers("w${SecondSize.Compact.widthDp}dp-h${SHORT_HEIGHT_DP}dp-land-xhdpi")
         val s = InGameBatterySamples.widest.first()
         compose.setContent {
-            PlumTheme(PlumThemeSettings(font = PlumFont.Serif, textSize = TextSize.Largest)) {
+            PlumTheme(PlumThemeSettings(textSize = TextSize.Largest)) {
                 InGameCard(time = "20:08", battery = s.reading, wifi = s.wifi, shift = { DpOffset.Zero }, part = { s.part }, formatTime = InGameBatterySamples.time24)
             }
         }

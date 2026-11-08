@@ -38,7 +38,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The statistics card measured: inside its margins and on the bottom margin at every text
- * size and in every font at Largest; no text cut but a game's title (with "…", in its lines); the
+ * size and  at Largest; no text cut but a game's title (with "…", in its lines); the
  * times and counts whole; lines going in the documented order when the height runs out, never
  * overflowing; covers and the box-art line only with box art set up.
  */
@@ -170,9 +170,9 @@ abstract class SecondScreenStatisticsCardFitBase(
 
     @Test
     fun theLargestTextFitsInEveryFont() {
-        for (font in PlumFont.entries) {
+        for (font in listOf(PlumFont.Jost)) {
             for ((name, each) in SecondScreenStatisticsSamples.cases) {
-                show(each, PlumThemeSettings.Default.copy(textSize = TextSize.Largest, font = font))
+                show(each, PlumThemeSettings.Default.copy(textSize = TextSize.Largest))
                 val dropped = assertFits("$size $font $name", each)
                 println("$size Largest $font $name: skipped $dropped")
             }
@@ -243,16 +243,18 @@ abstract class SecondScreenStatisticsCardFitBase(
         assertEquals("no session, no week", listOf("Total play time"), totalLabels())
         val fellBack = mutableListOf<String>()
         for (textSize in TextSize.entries) {
-            for (font in PlumFont.entries) {
-                show(SecondScreenStatisticsSamples.withCovers.copy(thisWeekSeconds = 123 * 3_600L + 45 * 60), PlumThemeSettings.Default.copy(textSize = textSize, font = font))
+            for (font in listOf(PlumFont.Jost)) {
+                show(SecondScreenStatisticsSamples.withCovers.copy(thisWeekSeconds = 9_999 * 3_600L + 45 * 60), PlumThemeSettings.Default.copy(textSize = textSize))
                 val label = placed(SecondScreenTags.STATISTICS_TOTAL_LABEL).single()
-                assertTrue("$size $textSize $font: ${textOf(label)}", textOf(label) in listOf("Total play time", "Total play time · 123\u00A0h 45\u00A0min this week"))
+                assertTrue("$size $textSize $font: ${textOf(label)}", textOf(label) == "Total play time" || (textOf(label).startsWith("Total play time · ") && textOf(label).endsWith(" this week")))
                 assertEquals("one line", 1, layoutOf(label).lineCount)
                 assertNoTextCut(label, "$size $textSize $font label")
                 if (textOf(label) == "Total play time") fellBack += "$textSize $font"
             }
         }
-        assertTrue("$size: at least one text size and font must fall back to the plain label (so the drop branch runs), none did", fellBack.isNotEmpty())
+        // 9,999 h is more than a week holds: Jost keeps even 123 h 45 min whole on Compact, so this forces the drop branch.
+        // Roomy holds the week at every size in Jost (the drop was seen in Plum Serif and Mono, gone with the Font setting): only Compact must reach the drop branch.
+        if (size == SecondSize.Compact) assertTrue("$size: at least one text size must fall back to the plain label (so the drop branch runs), none did", fellBack.isNotEmpty())
         println("$size: the week part is dropped at $fellBack")
     }
 

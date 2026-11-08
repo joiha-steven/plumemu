@@ -22,7 +22,7 @@ class PlumColorsTest {
         val expected =
             mapOf(
                 "bg" to "#111214", "text" to "#EBE7DD", "strong" to "#FFFFFF", "sel" to "#272728",
-                "sel2" to "#1C1D1E", "text2" to "#CCC9C1", "meta" to "#AAA7A1", "muted" to "#94928D",
+                "sel2" to ToneLadder.level(Rgb(0x111214), ToneLadder.SURFACE).toHex(), "text2" to "#CCC9C1", "meta" to "#AAA7A1", "muted" to "#94928D",
                 "chip" to "#646360", "accent" to "#DA4655", "onAccent" to "#000000",
             )
         assertEquals(expected, hexes(graphite))
@@ -33,7 +33,7 @@ class PlumColorsTest {
         val expected =
             mapOf(
                 "bg" to "#ECE8DF", "text" to "#1C1C1E", "strong" to "#0F0F10", "sel" to "#D9D6CE",
-                "sel2" to "#E2DED5", "text2" to "#2D2C2D", "meta" to "#4A4948", "muted" to "#5A5958",
+                "sel2" to ToneLadder.level(Rgb(0xECE8DF), ToneLadder.SURFACE).toHex(), "text2" to "#2D2C2D", "meta" to "#4A4948", "muted" to "#5A5958",
                 "chip" to "#84827E", "accent" to "#9E2A3A", "onAccent" to "#ECE8DF",
             )
         assertEquals(expected, hexes(paper))
@@ -55,29 +55,36 @@ class PlumColorsTest {
     }
 
     /**
-     * The keyboard tray (design/rules.md › Derived tokens), values from the keyboard board's code
-     * (`ban-phim-rieng/ve-anh-mau.py`: `mix(bg, text, 0.06 / 0.12 / 0.14)`).
+     * The keyboard tray (design/rules.md › Derived tokens): the tone ladder's surface step, its keys the top step, on dark and light pages;
+     * only the hairline is still mixed toward the text (`mix(bg, text, 0.14)`).
      */
     @Test
-    fun keyboardTrayTokensMatchTheBoard() {
-        fun tray(c: PlumColors) = listOf(c.tray, c.trayKey, c.trayEdge).map { it.toHex() }
-        assertEquals(listOf("#18191C", "#2B2C2C", "#313438"), tray(graphite))
-        assertEquals(listOf("#E0DCD3", "#D3D0C8", "#CFCBC4"), tray(paper))
-        assertEquals(listOf("#070808", "#1C1C1B", "#232528"), tray(PlumColors.derive(BackgroundPreset.Black.color, TextMode.Light)))
-        assertEquals(listOf("#121927", "#262C37", "#2C3443"), tray(PlumColors.derive(BackgroundPreset.Midnight.color, TextMode.Light)))
+    fun keyboardTrayTokensFollowTheToneLadder() {
+        val pages =
+            listOf(
+                graphite to "#313438",
+                paper to "#CFCBC4",
+                PlumColors.derive(BackgroundPreset.Black.color, TextMode.Light) to "#232528",
+                PlumColors.derive(BackgroundPreset.Midnight.color, TextMode.Light) to "#2C3443",
+            )
+        for ((c, edge) in pages) {
+            assertEquals("tray on ${c.bg}", ToneLadder.level(c.bg, ToneLadder.SURFACE).toHex(), c.tray.toHex())
+            assertEquals("trayKey on ${c.bg}", ToneLadder.level(c.bg, ToneLadder.TOP).toHex(), c.trayKey.toHex())
+            assertEquals("trayEdge on ${c.bg}", edge, c.trayEdge.toHex())
+        }
     }
 
-    /** Mixed towards the text: lighter than a dark background, darker than a light one. */
+    /** The tray and its keys are the page moved up the ladder (lighter on dark and light pages alike), the key lighter than the tray; the hairline still goes toward the text. */
     @Test
-    fun trayIsLighterOnDarkAndDarkerOnLight() {
-        for (c in listOf(graphite, PlumColors.derive(BackgroundPreset.Black.color, TextMode.Light))) {
+    fun trayIsLighterThanThePageAndTheKeysLighterStill() {
+        for (c in listOf(graphite, paper, PlumColors.derive(BackgroundPreset.Black.color, TextMode.Light))) {
             assertTrue("${c.tray} lighter than ${c.bg}", ColorMath.luminance(c.tray) > ColorMath.luminance(c.bg))
-            assertTrue(ColorMath.luminance(c.trayKey) > ColorMath.luminance(c.tray))
+            assertTrue("${c.trayKey} lighter than ${c.tray}", ColorMath.luminance(c.trayKey) > ColorMath.luminance(c.tray))
+        }
+        for (c in listOf(graphite, PlumColors.derive(BackgroundPreset.Black.color, TextMode.Light))) {
             assertTrue(ColorMath.luminance(c.trayEdge) > ColorMath.luminance(c.trayKey))
         }
-        assertTrue("${paper.tray} darker than ${paper.bg}", ColorMath.luminance(paper.tray) < ColorMath.luminance(paper.bg))
-        assertTrue(ColorMath.luminance(paper.trayKey) < ColorMath.luminance(paper.tray))
-        assertTrue(ColorMath.luminance(paper.trayEdge) < ColorMath.luminance(paper.trayKey))
+        assertTrue("${paper.trayEdge} darker than ${paper.tray}", ColorMath.luminance(paper.trayEdge) < ColorMath.luminance(paper.tray))
     }
 
     /**

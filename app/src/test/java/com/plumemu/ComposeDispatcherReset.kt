@@ -1,7 +1,11 @@
 package com.plumemu
 
+import android.os.Build
+import android.os.Looper
 import android.view.Choreographer
 import androidx.compose.ui.platform.AndroidUiDispatcher
+import com.plumemu.home.isLooperEmpty
+import org.robolectric.Shadows.shadowOf
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
 
@@ -22,6 +26,30 @@ internal fun resetComposeDispatcher() {
     val dispatcher = checkNotNull(main[ContinuationInterceptor]) { "AndroidUiDispatcher.Main has no dispatcher" }
     val callback = dispatcher.field("dispatchCallback") as Choreographer.FrameCallback
     callback.doFrame(System.nanoTime())
+}
+
+/**
+ * Clears a frame the main Choreographer still holds as scheduled while nothing waits on the main looper.
+ *
+ * Robolectric resets the Choreographer and clears the looper between tests, but work left from an
+ * earlier test (a coroutine resuming on `AndroidUiDispatcher.Main` from another thread) can ask for
+ * a frame in the middle of that: the frame stays marked as scheduled while the message that would
+ * bring it went with the old queue. No frame runs again, the first layout never happens, and its
+ * sync barrier holds back every plain message on the main looper, so a `postDelayed` never runs
+ * whatever the clock says. Seen 1 in about 100 runs under load (MainActivity's stray-focus catcher
+ * never started, its decor view had no insets; StuckChoreographerTest). [TestPlumApplication] calls
+ * it at every test's start; never makes the main Choreographer.
+ */
+internal fun unstickMainChoreographer() {
+    // Android 7.1 and older have no main-instance field; their tests (23, 25) never failed this way.
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+    // At a test's start the queue is empty, so a frame marked as scheduled can never arrive.
+    if (!shadowOf(Looper.getMainLooper()).isLooperEmpty()) return
+    val main = Choreographer::class.java.getDeclaredField("mMainInstance").apply { isAccessible = true }.get(null) as Choreographer? ?: return
+    val scheduled = Choreographer::class.java.getDeclaredField("mFrameScheduled").apply { isAccessible = true }
+    if (!scheduled.getBoolean(main)) return
+    System.err.println("unstickMainChoreographer: a frame was marked as scheduled with an empty main looper; cleared")
+    scheduled.setBoolean(main, false)
 }
 
 /** Whether the dispatcher still holds work or a mark from before ([resetComposeDispatcher] clears them). */

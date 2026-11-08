@@ -103,7 +103,7 @@ abstract class HomeDetailsGridFitBase {
 
     private companion object {
         const val PANEL = "details_panel"
-        val LABELS = setOf("GENRE", "RATING", "PLAYED", "LAST PLAYED", "EMULATOR", "BATTERY")
+        val LABELS = setOf("Genre", "Rating", "Played", "Last played", "Emulator", "Battery")
     }
 }
 

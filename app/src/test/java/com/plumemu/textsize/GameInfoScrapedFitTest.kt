@@ -99,13 +99,11 @@ abstract class GameInfoScrapedFitBase(
     fun theWholeDescriptionIsReachableWithUpAndDownAtEverySize() {
         val facts = scrapedGameFacts(FULL_SCRAPED)
         var size by mutableStateOf(TextSize.Small)
-        var font by mutableStateOf(PlumFont.Sans)
         val info = InfoReadThrough(OpenPanel(GameRef("1", facts.title), PanelScreen.Info(facts)))
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { info.screen() } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { info.screen() } }
         val failures = mutableListOf<String>()
-        val sizes = TextSize.entries.map { PlumFont.Sans to it } + listOf(PlumFont.Serif to TextSize.Largest, PlumFont.Mono to TextSize.Largest)
+        val sizes = TextSize.entries.map { PlumFont.Jost to it }
         for ((eachFont, each) in sizes) {
-            font = eachFont
             size = each
             compose.waitForIdle()
             val root = compose.onNodeWithTag(GamePanelTags.PANEL, useUnmergedTree = true).fetchSemanticsNode()

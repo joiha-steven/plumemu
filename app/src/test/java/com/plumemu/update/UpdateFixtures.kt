@@ -36,6 +36,47 @@ internal object UpdateFixtures {
 
     val apkUrl = "https://plumemu-app.stevensdesk.com/update/plumemu-0.0.3-alpha.apk"
 
+    /** A `.dm` as AGP writes it: a zip of `primary.prof` (and `primary.profm`); [withProfile] false leaves the profile out. */
+    fun dexMetadataZip(
+        tag: String,
+        withProfile: Boolean = true,
+    ): ByteArray {
+        val bytes = java.io.ByteArrayOutputStream()
+        java.util.zip.ZipOutputStream(bytes).use { zip ->
+            if (withProfile) {
+                zip.putNextEntry(java.util.zip.ZipEntry(DexMetadata.PROFILE_ENTRY))
+                zip.write("pro\u0000 $tag".toByteArray())
+                zip.closeEntry()
+            }
+            zip.putNextEntry(java.util.zip.ZipEntry("primary.profm"))
+            zip.write("pro\u0000 meta $tag".toByteArray())
+            zip.closeEntry()
+        }
+        return bytes.toByteArray()
+    }
+
+    /** Android 9 to 11's profile format (P) and Android 12's onwards (S), as a release manifest lists them. */
+    val dmP: ByteArray = dexMetadataZip("010")
+    val dmS: ByteArray = dexMetadataZip("015")
+    val dmPUrl = "https://plumemu-app.stevensdesk.com/update/plumemu-0.0.3-alpha-41.api28-30.dm"
+    val dmSUrl = "https://plumemu-app.stevensdesk.com/update/plumemu-0.0.3-alpha-41.api31-up.dm"
+
+    /** One `dexMetadata` entry of the manifest. */
+    fun dexMetadataEntry(
+        minSdk: Int,
+        maxSdk: Int?,
+        file: String,
+        bytes: ByteArray,
+    ): JSONObject =
+        JSONObject().put("minSdk", minSdk).apply { if (maxSdk != null) put("maxSdk", maxSdk) }
+            .put("file", file).put("size", bytes.size).put("sha256", sha256(bytes))
+
+    /** The `dexMetadata` field of a release manifest for [dmP] and [dmS]. */
+    fun dexMetadataJson(): JSONArray =
+        JSONArray()
+            .put(dexMetadataEntry(28, 30, "plumemu-0.0.3-alpha-41.api28-30.dm", dmP))
+            .put(dexMetadataEntry(31, null, "plumemu-0.0.3-alpha-41.api31-up.dm", dmS))
+
     val installedFacts = ApkFacts(ApkChecks.PACKAGE, INSTALLED, setOf(CERT))
     val goodArchive = ApkFacts(ApkChecks.PACKAGE, 41, setOf(CERT))
 }
@@ -125,6 +166,9 @@ internal class FakeInstaller : UpdateInstaller {
     var reopenMarker = false
     var duringCommit: () -> Unit = {}
 
+    /** Runs once, at the end of the next commit, before it returns: Android answering before the commit call is back. */
+    var afterCommit: () -> Unit = {}
+
     override fun forgetReopen() {
         reopenMarker = false
     }
@@ -136,13 +180,24 @@ internal class FakeInstaller : UpdateInstaller {
         return hasPermissionScreen
     }
 
+    /** The dex metadata each commit carried (null: the APK alone), in the order of [committed]. */
+    val committedDexMetadata = mutableListOf<ByteArray?>()
+
+    /** Like [SessionUpdateInstaller] when writing the `.dm` failed: the APK goes alone. */
+    var dexMetadataWriteFails = false
+
     override fun commit(
         file: File,
         versionCode: Long,
-    ) {
+        dexMetadata: File?,
+    ): Boolean {
         commitFailure?.let { throw it }
         duringCommit()
         committed += file.readBytes() to versionCode
+        val carried = dexMetadata?.takeUnless { dexMetadataWriteFails }
+        committedDexMetadata += carried?.readBytes()
         reopenMarker = true
+        afterCommit.also { afterCommit = {} }.invoke()
+        return carried != null
     }
 }

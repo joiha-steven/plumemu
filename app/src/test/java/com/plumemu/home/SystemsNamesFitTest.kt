@@ -43,12 +43,11 @@ abstract class SystemsNamesFitBase {
     @Test
     fun everyNameFits() {
         var size by mutableStateOf(TextSize.Small)
-        var font by mutableStateOf(PlumFont.Jost)
         var names = emptyList<String>()
         var name by mutableStateOf("")
         compose.setContent {
             names = listOf("Game Boy Advance", "Neo Geo Pocket Color", "Sinclair ZX Spectrum", stringResource(R.string.home_entry_recent), stringResource(R.string.home_entry_favorites), stringResource(R.string.home_entry_apps))
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 Box(Modifier.width(PlumDimens.stripMarginSide + PlumTheme.layout.systemsColumnWidth)) {
                     SystemRow(name, "248", SystemRowLook.Focused, showName = true, bleedStart = LeftColumnDimens.systemLabelStart)
                 }
@@ -56,9 +55,8 @@ abstract class SystemsNamesFitBase {
         }
         val density = compose.density.density
         val problems = mutableListOf<String>()
-        for (eachFont in listOf(PlumFont.Jost, PlumFont.Sans)) {
+        for (eachFont in listOf(PlumFont.Jost)) {
             for (each in listOf(TextSize.Small, TextSize.Large)) {
-                font = eachFont
                 size = each
                 for (shown in names) {
                     name = shown

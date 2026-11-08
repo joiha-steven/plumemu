@@ -23,6 +23,7 @@ import com.plumemu.coreui.theme.LeftColumnDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.SettingsThreeDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.SettingsColumns
 import com.plumemu.coreui.theme.TextSize
@@ -81,7 +82,7 @@ abstract class SettingsSectionsAlignBase {
             val panelLeft = unclipped(hasTestTag(SettingsTags.PANEL)).left.value
             // Three columns (wide screens up to Large text): the pill ends at the divider and the right column ends at the margin; else as before.
             val width = label.substringBefore("x").toFloat()
-            val isThree = width >= 768f && SettingsColumns.fits(each, PlumThemeSettings.Graphite.font)
+            val isThree = width >= 768f && SettingsColumns.fits(each, PlumFont.Jost)
             val pinned = if (isThree) width - PlumDimens.stripMarginSide.value - SettingsThreeDimens.panelWidth.value else PANEL_LEFT[label]
             val pillRight = if (isThree) SettingsThreeDimens.sectionsWidth.value else (PlumDimens.stripMarginSide + PlumDimens.settingsSectionsWidth).value
             expect("header = hint key cap", near(header, hint), "header $header, hint $hint")

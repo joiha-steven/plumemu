@@ -153,13 +153,71 @@ internal class SettingsSystemOrderTest : SettingsModelHarness() {
     }
 
     @Test
-    fun aUnderAToZOnASystemStillTurnsManualAndSaysSo() {
+    fun aUnderAToZOnASystemChangesNothingUntilItMoves() {
         openSystems()
         move(Direction.Down)
         move(Direction.Down) // megadrive
         press(Action.Enter)
+        assertEquals(SystemOrderSetting.Name, stored.library.systemOrder)
+        assertNull(model.work.notice)
+        move(Direction.Up)
+        press(Action.Enter)
         assertEquals(SystemOrderSetting.Manual, stored.library.systemOrder)
-        assertEquals(listOf("gba", "megadrive", "psx", "snes"), stored.library.manualSystemOrder)
+        assertEquals(listOf("megadrive", "gba", "psx", "snes"), stored.library.manualSystemOrder)
+        assertEquals(SettingsOption.Systems to SettingsNotice.SystemOrderNowManual, model.work.notice)
+    }
+
+    @Test
+    fun bAfterPickingUpKeepsAToZAndSaysNothing() {
+        openSystems()
+        move(Direction.Down)
+        press(Action.Enter)
+        press(Action.Back)
+        assertEquals(SystemOrderSetting.Name, stored.library.systemOrder)
+        assertNull(model.work.notice)
+        assertEquals(listOf("gba", "megadrive", "psx", "snes"), shownIds())
+    }
+
+    @Test
+    fun bAfterAMoveRestoresTheOrderAndTheMode() {
+        openSystems()
+        move(Direction.Down)
+        press(Action.Enter)
+        move(Direction.Down)
+        press(Action.Back)
+        assertEquals(SystemOrderSetting.Name, stored.library.systemOrder)
+        assertNull(model.work.notice)
+        assertEquals(listOf("gba", "megadrive", "psx", "snes"), shownIds())
+    }
+
+    @Test
+    fun afterBAScanAddedSystemFollowsAToZ() {
+        openSystems()
+        move(Direction.Down)
+        press(Action.Enter)
+        press(Action.Back)
+        model.content = SettingsContent(librarySystems = library + LibrarySystem("atari", "Atari 2600", 5, "Atari", 1977))
+        assertEquals(listOf("atari", "gba", "megadrive", "psx", "snes"), shownIds())
+    }
+
+    @Test
+    fun aDropWithNoMoveLeavesAToZ() {
+        openSystems()
+        move(Direction.Down)
+        press(Action.Enter)
+        press(Action.Enter)
+        assertEquals(SystemOrderSetting.Name, stored.library.systemOrder)
+        assertNull(model.work.notice)
+    }
+
+    @Test
+    fun aMoveThenADropTurnsManualAndSaysSo() {
+        openSystems()
+        move(Direction.Down)
+        press(Action.Enter)
+        move(Direction.Down)
+        press(Action.Enter)
+        assertEquals(SystemOrderSetting.Manual, stored.library.systemOrder)
         assertEquals(SettingsOption.Systems to SettingsNotice.SystemOrderNowManual, model.work.notice)
     }
 
@@ -168,6 +226,8 @@ internal class SettingsSystemOrderTest : SettingsModelHarness() {
         actions.settings = stored.copy(library = stored.library.copy(systemOrder = SystemOrderSetting.Maker))
         openSystems()
         model.onSystemDragStart(1, actions.shown, wide)
+        model.onSystemDragStep(1)
+        model.onSystemDragEnd()
         assertEquals(SystemOrderSetting.Manual, stored.library.systemOrder)
         assertEquals(SettingsOption.Systems to SettingsNotice.SystemOrderNowManual, model.work.notice)
     }

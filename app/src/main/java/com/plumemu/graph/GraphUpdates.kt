@@ -10,6 +10,7 @@ import android.os.Build
 import android.util.Log
 import com.plumemu.BuildConfig
 import com.plumemu.coredata.settings.PlumSettings
+import com.plumemu.settings.screen.SettingsActivityActions
 import com.plumemu.settings.screen.SettingsUpdateActions
 import com.plumemu.update.ApkDownloader
 import com.plumemu.update.CertificateSignatureVerifier
@@ -20,7 +21,9 @@ import com.plumemu.update.FileUpdateStore
 import com.plumemu.update.NetworkKind
 import com.plumemu.update.OkHttpUpdateHttp
 import com.plumemu.update.PackageManagerApkInspector
+import com.plumemu.update.ReopenNotice
 import com.plumemu.update.SessionUpdateInstaller
+import com.plumemu.update.UpdateStep
 import com.plumemu.update.Updates
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -67,6 +70,7 @@ internal fun graphUpdates(
         installer = SessionUpdateInstaller(app),
         wallClock = System::currentTimeMillis,
         dataCheck = platformDataCheck(app, http, io)::check,
+        notificationsAllowed = { ReopenNotice.areAllowed(app) },
         onChecked = { manual, outcome -> telemetry?.track(updateCheckEventOf(manual, outcome)) },
         info = { Log.i(UPDATE_TAG, it) },
         log = { Log.w(UPDATE_TAG, it) },
@@ -130,18 +134,29 @@ private fun installedVersionCode(context: Context): Long =
         BuildConfig.VERSION_CODE.toLong()
     }
 
-/** What Settings › About drives of [updates]. */
-internal fun settingsUpdateActions(updates: Updates): SettingsUpdateActions =
+/**
+ * What Settings › About drives of [updates]. The Update press also asks for notifications (Android 13+, through [activity]'s
+ * question) so that "Plumemu updated, tap to open" can show; the update starts first and never waits for the answer.
+ */
+internal fun settingsUpdateActions(
+    updates: Updates,
+    activity: SettingsActivityActions = SettingsActivityActions.None,
+): SettingsUpdateActions =
     object : SettingsUpdateActions {
         override fun checkNow() {
             updates.checkNow()
         }
 
         override fun startUpdate(allowMetered: Boolean) {
-            updates.startUpdate(allowMetered)
+            val started = updates.startUpdate(allowMetered) != null
+            // Only when the download starts or the mobile-data question shows: never offline, while busy or while Install
+            // unknown apps is asked (two system questions stacked). "Download on mobile data" is the same press going on.
+            if (!allowMetered && (started || updates.view.value.step == UpdateStep.AskMetered)) updates.noticeAsk.ask(activity::askNotifications)
         }
 
         override fun cancel() = updates.cancel()
 
         override fun openInstallPermission(): Boolean = updates.openInstallPermission()
+
+        override fun openNotificationSettings(): Boolean = activity.openNotificationSettings()
     }

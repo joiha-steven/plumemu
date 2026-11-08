@@ -101,7 +101,8 @@ internal fun SettingsScreen(
     /** Closes Settings and puts the main screen's cursor on a game in its system's list (Statistics' most-played rows). */
     showOnHome: (systemId: String, gameId: Long) -> Unit = { _, _ -> },
 ) {
-    val model = remember(actions) { SettingsModel(actions) }
+    // Made with its content (as the SideEffect below sets it): the first composition draws the real rows, not empty ones.
+    val model = remember(actions) { SettingsModel(actions).also { it.content = content.copy(hasNoButtonHints = !settings.controls.showButtonHints) } }
     SideEffect { model.showOnHome = showOnHome }
     val sounds = LocalUiSounds.current
     HearFeel(model.feel)
@@ -356,10 +357,13 @@ private fun SettingsStrip(
                     .padding(end = PlumDimens.stripMarginSide),
             horizontalArrangement = Arrangement.spacedBy(if (layout.isSettingsThreeColumns) 0.dp else PlumDimens.columnGap),
         ) {
-            SectionsColumn(model, touch)
+            // Settings' opening composes each column in a frame of its own ([SettingsOpening]); nothing is drawn meanwhile.
+            val stage = LocalSettingsOpeningStage.current
+            if (stage < SettingsOpening.SECTIONS) Spacer(Modifier.width(sectionsColumnWidth(layout))) else SectionsColumn(model, touch)
             if (layout.isSettingsThreeColumns) Spacer(Modifier.width(SettingsThreeDimens.optionsGap))
             // A wide page covers the options: they are not composed then, so no text of theirs lies under the page.
-            if (covered) Spacer(Modifier.width(layout.settingsOptionsWidth)) else OptionsColumn(settings, model, touch, versionName)
+            if (covered) Spacer(Modifier.width(layout.settingsOptionsWidth))
+            else if (stage < SettingsOpening.OPTIONS) Spacer(Modifier.width(layout.settingsOptionsPreviewWidth)) else OptionsColumn(settings, model, touch, versionName)
             if (layout.isSettingsThreeColumns) Spacer(Modifier.width(SettingsThreeDimens.panelGap))
             if (layout.isSettingsThreeColumns) {
                 Spacer(Modifier.width(settingsPanelWidth(layout)))

@@ -12,8 +12,20 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.lazy.LazyListItemInfo
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onPlaced
+import com.plumemu.coreui.theme.ListGlide
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -29,6 +41,7 @@ import com.plumemu.coreui.components.SystemBadge
 import com.plumemu.coreui.components.systemBadgeTextStyle
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.components.plainLayer
 
 /** The band's about text: at most this many lines. */
 internal const val SystemInfoBandAboutMaxLines = 3
@@ -47,12 +60,14 @@ internal fun SystemInfoBand(
     modifier: Modifier = Modifier,
     /** True at the narrow details stop, where only 56 dp of the list shows: the badge and the line would show a cut piece, so they are not drawn (read while drawing). */
     isPeeking: () -> Boolean = { false },
+    /** Not null: the list draws the hairline, under its focus pill ([drawsBandRule]); the band only reports where it lies. */
+    rule: BandRule? = null,
 ) {
     val colors = PlumTheme.colors
     val facts = systemFactsOf(info)
     val lines = facts.candidates(stringResource(R.string.system_facts_separator))
     Column(modifier.fillMaxWidth().testTag(HomeTags.SYSTEM_BAND)) {
-        BoxWithConstraints(Modifier.fillMaxWidth().graphicsLayer { alpha = if (isPeeking()) 0f else 1f }) {
+        BoxWithConstraints(Modifier.fillMaxWidth().plainLayer { alpha = if (isPeeking()) 0f else 1f }) {
             val room = min(maxWidth, visibleWidth)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SystemBadge(info.abbr)
@@ -100,8 +115,48 @@ internal fun SystemInfoBand(
             }
         }
         Spacer(Modifier.height(PlumDimens.systemBandRuleGap))
-        Spacer(Modifier.fillMaxWidth().height(PlumDimens.systemBandRuleWidth).background(colors.sel).testTag(HomeTags.SYSTEM_BAND_RULE))
+        val line = Modifier.fillMaxWidth().height(PlumDimens.systemBandRuleWidth)
+        Spacer((if (rule == null) line.background(colors.sel) else line.onPlaced { rule.line = it }).testTag(HomeTags.SYSTEM_BAND_RULE))
     }
+}
+
+/**
+ * Where the band's hairline lies, for the list that draws it. A row's slab overhangs its row and a gliding pill passes over the band's foot:
+ * the list draws the pill behind its items, so a hairline drawn by the band would cross the slab. The list draws it behind the pill instead.
+ */
+@Stable
+internal class BandRule {
+    internal var line: LayoutCoordinates? = null
+    internal var host: LayoutCoordinates? = null
+}
+
+/**
+ * Draws [rule]'s hairline in [color] behind what follows (put it before the pill's modifier): where the band lies in [list] now, moved with the
+ * glide, and only inside the window and below what [clearTop] px of it the list hides. Read while drawing: a scroll or glide redraws, nothing recomposes.
+ */
+internal fun Modifier.drawsBandRule(
+    rule: BandRule,
+    list: LazyListState,
+    glide: ListGlide,
+    isBand: (LazyListItemInfo) -> Boolean,
+    clearTop: (height: Float) -> Float,
+    color: () -> Color,
+): Modifier =
+    onPlaced { rule.host = it }.drawBehind {
+        // Read so a scroll or a glide redraws this; the place itself comes from the coordinates.
+        if (!BandRuleShown.isOn || list.layoutInfo.visibleItemsInfo.none(isBand)) return@drawBehind
+        glide.offset
+        val host = rule.host?.takeIf { it.isAttached } ?: return@drawBehind
+        val line = rule.line?.takeIf { it.isAttached } ?: return@drawBehind
+        val at = host.localPositionOf(line, Offset.Zero)
+        val lineHeight = line.size.height.toFloat()
+        if (at.y < clearTop(size.height) || at.y + lineHeight > size.height) return@drawBehind
+        drawRect(color(), topLeft = at, size = Size(line.size.width.toFloat(), lineHeight))
+    }
+
+/** Off only in tests, which draw a frame with and without the hairline to see what of it shows past the slab (state: turning it redraws). */
+internal object BandRuleShown {
+    var isOn by mutableStateOf(true)
 }
 
 private fun fits(

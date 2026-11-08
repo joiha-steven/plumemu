@@ -7,7 +7,6 @@ import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.plumemu.coredata.settings.AppearanceSettings
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coreui.testing.ReferenceShots
@@ -28,8 +27,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /*
  * The second screen's picking cards in ready-made sets, drawn through `SettingsTheme`
- * from the stored settings exactly as the window draws them: Super (Plum Sans, Medium), Dot matrix
- * (Plum Mono, Large) and Paper (Plum Serif, Largest), so colours, font and text size all show:
+ * from the stored settings exactly as the window draws them: Super (Medium), Dot matrix
+ * (Large) and Paper (Largest), so colours and text size show:
  * `second_screen_colors_<card>_<roomy|compact>_<set>.png`. The in-game card stays black by design
  * and is not drawn here. `SecondScreenFollowsLookTest` checks the same through the real window.
  */
@@ -56,9 +55,9 @@ abstract class SecondScreenColorSetsScreenshotBase(
         val mismatches = mutableListOf<String>()
         val looks =
             listOf(
-                Triple(ColorSet.Super, FontSetting.Sans, TextSizeSetting.Medium),
-                Triple(ColorSet.DotMatrix, FontSetting.Mono, TextSizeSetting.Large),
-                Triple(ColorSet.Paper, FontSetting.Serif, TextSizeSetting.Largest),
+                Pair(ColorSet.Ivory, TextSizeSetting.Medium),
+                Pair(ColorSet.PeaGreen, TextSizeSetting.Large),
+                Pair(ColorSet.Daylight, TextSizeSetting.Largest),
             )
         val cards =
             listOf(
@@ -66,13 +65,13 @@ abstract class SecondScreenColorSetsScreenshotBase(
                 "system" to SYSTEM_WITH_LAST,
                 "statistics" to SecondScreenContent.Statistics(SecondScreenStatisticsSamples.withCovers),
             )
-        for ((set, font, textSize) in looks) {
+        for ((set, textSize) in looks) {
             for ((card, each) in cards) {
                 val name = "second_screen_colors_${card}_${size.name.lowercase()}_${set.name.lowercase()}"
                 // Each card as it first appears, after the calm mark, so the shots do not depend on their order.
                 content = SecondScreenContent.Calm
                 compose.waitForIdle()
-                stored = PlumSettings(appearance = AppearanceSettings().withColors(set).copy(font = font, textSize = textSize, ownColors = null))
+                stored = PlumSettings(appearance = AppearanceSettings().withColors(set).copy(textSize = textSize, ownColors = null))
                 content = each
                 compose.waitForIdle()
                 try {

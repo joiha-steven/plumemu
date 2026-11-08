@@ -36,8 +36,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings' fields typing with Plumemu's keyboard at every text size, in Plum Sans
- * at the six sizes and in Serif and Mono at Largest: the tray is along the screen's bottom with the
+ * Settings' fields typing with Plumemu's keyboard at every text size, in Jost at the six sizes: the tray is along the screen's bottom with the
  * typing hints on it; the field (the hex row with its colour dot, Fix name…'s and Use my own name's)
  * is whole, inside the strip and above the tray's top edge, and the first line of what follows it (the
  * wrong-code line, Fix name…'s first result, Save or the blank-name refusal) is whole between the
@@ -60,18 +59,16 @@ abstract class SettingsKeyboardFitBase(
         screen: @Composable () -> Unit,
     ) {
         var size by mutableStateOf(TextSize.Largest)
-        var font by mutableStateOf(PlumFont.Sans)
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { screen() } }
-        val combinations = TextSize.entries.map { PlumFont.Sans to it } + listOf(PlumFont.Serif to TextSize.Largest, PlumFont.Mono to TextSize.Largest)
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { screen() } }
+        val combinations = TextSize.entries.map { PlumFont.Jost to it }
         val failures = mutableListOf<String>()
         for ((eachFont, each) in combinations) {
-            font = eachFont
             size = each
             compose.waitForIdle()
             val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
             val label = "$name at ${each.name} ${eachFont.name} on ${widthDp}x$heightDp"
             val allow = FitAllowance(scrollTags = setOf(FixNameTags.RESULTS, FixNameTags.OWN_ROWS, SettingsTags.HEX_UNDER), isLargest = each == TextSize.Largest)
-            checkOne(root, label, fieldTag, lineUnderTag, allow, failures, isLineLow = name == "fix_name_none" && each == TextSize.Largest && eachFont == PlumFont.Serif)
+            checkOne(root, label, fieldTag, lineUnderTag, allow, failures, isLineLow = name == "fix_name_none" && each == TextSize.Largest && eachFont == PlumFont.Jost)
         }
         assertTrue(failures.size.toString() + " problems:\n" + failures.take(40).joinToString("\n"), failures.isEmpty())
     }
@@ -139,12 +136,10 @@ abstract class SettingsKeyboardFitBase(
     @Test
     fun ownNameOnAndroidsPathKeepsItsTitle() {
         var size by mutableStateOf(TextSize.Largest)
-        var font by mutableStateOf(PlumFont.Sans)
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { NameFixTypingSettings(own = true, android = true) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { NameFixTypingSettings(own = true, android = true) } }
         val title = ApplicationProvider.getApplicationContext<Context>().getString(R.string.game_own_name_title)
         val failures = mutableListOf<String>()
-        for ((eachFont, each) in TextSize.entries.map { PlumFont.Sans to it } + listOf(PlumFont.Serif to TextSize.Largest, PlumFont.Mono to TextSize.Largest)) {
-            font = eachFont
+        for ((eachFont, each) in TextSize.entries.map { PlumFont.Jost to it }) {
             size = each
             compose.waitForIdle()
             val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()

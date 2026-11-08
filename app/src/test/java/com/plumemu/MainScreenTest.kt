@@ -72,7 +72,7 @@ class MainScreenTest {
 
         compose.onNodeWithTag(MainScreenTags.TRY_AGAIN).performClick()
         compose.waitForIdle()
-        assertEquals("by a tap on the hint", 2, retries)
+        assertEquals("by a tap on the button", 2, retries)
 
         state.value = HomeState.Ready(FakeHomeContent.board())
         compose.waitForIdle()

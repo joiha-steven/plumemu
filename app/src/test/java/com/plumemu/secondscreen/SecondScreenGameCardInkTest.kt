@@ -49,7 +49,6 @@ class SecondScreenGameCardInkTest {
     @get:Rule
     val rules = rulesAround(compose)
 
-    private var font by mutableStateOf(PlumFont.Jost)
     private var role by mutableStateOf(TypeRole.SecondTitleRoomy)
     private var size by mutableStateOf(SecondScreenGameCardDimens.titleSize)
     private val marks = "\u1EAA \u1EB0 \u1EA8 \u1EA4\u1EC0\u1ED4\u1ED6\u1EE2 gjpqy \u1EAA \u1EB0 \u1EA8"
@@ -61,16 +60,15 @@ class SecondScreenGameCardInkTest {
         var padPx = 0
         var inkPx = 0
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest, font = font)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) {
                 padPx = with(LocalDensity.current) { padding.roundToPx() }
                 inkPx = with(LocalDensity.current) { SecondScreenGameCardDimens.descriptionInkTop.roundToPx() }
                 Box(Modifier.background(Color.Black).padding(padding).width(600.dp)) { BasicText(marks, style = cardStyle(role, size)) }
             }
         }
         val failures = mutableListOf<String>()
-        for (eachFont in PlumFont.entries) {
+        for (eachFont in listOf(PlumFont.Jost)) {
             for ((eachRole, eachSize) in listOf(TypeRole.SecondFactsRoomy to SecondScreenGameCardDimens.descriptionSize)) {
-                font = eachFont
                 role = eachRole
                 size = eachSize
                 compose.waitForIdle()
@@ -92,14 +90,13 @@ class SecondScreenGameCardInkTest {
     @Test
     fun theTitleMarksReachNoFurtherThanTheMargin() {
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest, font = font)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) {
                 androidx.compose.runtime.CompositionLocalProvider(com.plumemu.game.LocalBadgeImages provides CacheOnlyBadges()) {
                     SecondScreenCard(BOARD_GAME.copy(title = marks))
                 }
             }
         }
-        for (each in PlumFont.entries) {
-            font = each
+        for (each in listOf(PlumFont.Jost)) {
             compose.waitForIdle()
             val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
             val row = IntArray(bitmap.width)

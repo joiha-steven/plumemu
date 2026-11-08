@@ -55,10 +55,10 @@ class SettingsBoundsTest {
         compose.onNodeWithTag(SettingsTags.OPTIONS).assertLeftPositionInRootIsEqualTo(optionsLeft).assertWidthIsEqualTo(298.17.dp)
         compose.onNodeWithTag(SettingsTags.PANEL).assertLeftPositionInRootIsEqualTo(panelLeft).assertWidthIsEqualTo(SettingsThreeDimens.panelWidth)
         compose.onNodeWithTag(SettingsTags.option(SettingsOption.Accent)).assertHeightIsEqualTo(40.dp)
-        // Colors, Accent color and Font under Language.
+        // Colors, Accent color and Text size under Language.
         val first = compose.onNodeWithTag(SettingsTags.option(SettingsOption.Colors)).getBoundsInRoot()
         val second = compose.onNodeWithTag(SettingsTags.option(SettingsOption.Accent)).getBoundsInRoot()
-        val third = compose.onNodeWithTag(SettingsTags.option(SettingsOption.Font)).getBoundsInRoot()
+        val third = compose.onNodeWithTag(SettingsTags.option(SettingsOption.TextSize)).getBoundsInRoot()
         assertEquals("rows 42 apart (40 + 2)", 42f, (second.top - first.top).value, 0.01f)
         assertEquals("rows 42 apart (40 + 2)", 42f, (third.top - second.top).value, 0.01f)
         // Language is the first row, above Colors: top 14 + bar 23 (grows with the place name line) + gap 10.

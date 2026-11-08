@@ -108,15 +108,11 @@ internal fun rememberEntryStyles(): EntryStyles {
     // Off Jost the line is the shared card line; in Jost each text takes the board's line and box (Modifier.boardLine).
     val cardEm = base.lineHeight.value / base.fontSize.value
     val isJost = type.font == PlumFont.Jost
-    // The board's weights are the design weights; the Text weight setting moves them as it moves every other text.
-    val textWeight = type.textWeight
     val text = colors.text
     val text2 = colors.text2
     val meta = colors.meta
     val strong = colors.strong
-    return remember(base, scale, isJost, textWeight, text, text2, meta, strong) {
-        fun asked(design: FontWeight) = FontWeight(textWeight.apply(design.weight))
-
+    return remember(base, scale, isJost, text, text2, meta, strong) {
         fun style(
             size: TextUnit,
             weight: FontWeight,
@@ -129,23 +125,23 @@ internal fun rememberEntryStyles(): EntryStyles {
             // Animated: glyphs keep their fractional advances, as the board's browser lays them (Static rounds each to a pixel); figures
             // of one width, as the boards set them.
             return base.copy(
-                fontSize = scaled.sp, lineHeight = (scaled * lineEm).sp, lineHeightStyle = line, fontWeight = asked(weight), color = color,
+                fontSize = scaled.sp, lineHeight = (scaled * lineEm).sp, lineHeightStyle = line, fontWeight = weight, color = color,
                 textMotion = TextMotion.Animated, fontFeatureSettings = TABULAR_FIGURES,
             )
         }
         EntryStyles(
-            title = style(EntryCardDimens.headerTitle, FontWeight.SemiBold, strong),
-            count = style(EntryCardDimens.headerMeta, FontWeight.Normal, meta),
-            label = style(EntryCardDimens.label, FontWeight.SemiBold, meta).copy(letterSpacing = (EntryCardDimens.labelSpacing.value * scale).sp),
-            big = style(EntryCardDimens.big, FontWeight.SemiBold, strong, EntryCardDimens.LINE_BIG),
-            unit = SpanStyle(fontSize = (EntryCardDimens.unit.value * scale).sp, fontWeight = asked(FontWeight.Medium), color = text2),
-            of = SpanStyle(fontSize = (EntryCardDimens.of.value * scale).sp, fontWeight = asked(FontWeight.Normal), color = text2),
-            small = style(EntryCardDimens.small, FontWeight.Normal, text2, EntryCardDimens.LINE_SMALL),
-            status = style(EntryCardDimens.status, FontWeight.Normal, text2, EntryCardDimens.LINE_STATUS),
-            foot = style(EntryCardDimens.aboutText, FontWeight.Normal, meta, EntryCardDimens.LINE_FOOT),
-            captionWhen = style(EntryCardDimens.captionWhen, FontWeight.Normal, text2, EntryCardDimens.LINE_CAPTION_WHEN),
-            captionSystem = style(EntryCardDimens.captionSystem, FontWeight.Normal, meta, EntryCardDimens.LINE_CAPTION_SYSTEM),
-            weekDay = style(EntryCardDimens.weekDay, FontWeight.Normal, meta),
+            title = style(EntryCardDimens.headerTitle, FontWeight.Bold, strong),
+            count = style(EntryCardDimens.headerMeta, FontWeight.Medium, meta),
+            label = style(EntryCardDimens.label, FontWeight.Bold, meta).copy(letterSpacing = (EntryCardDimens.labelSpacing.value * scale).sp),
+            big = style(EntryCardDimens.big, FontWeight.Bold, strong, EntryCardDimens.LINE_BIG),
+            unit = SpanStyle(fontSize = (EntryCardDimens.unit.value * scale).sp, fontWeight = FontWeight.SemiBold, color = text2),
+            of = SpanStyle(fontSize = (EntryCardDimens.of.value * scale).sp, fontWeight = FontWeight.Medium, color = text2),
+            small = style(EntryCardDimens.small, FontWeight.Medium, text2, EntryCardDimens.LINE_SMALL),
+            status = style(EntryCardDimens.status, FontWeight.Medium, text2, EntryCardDimens.LINE_STATUS),
+            foot = style(EntryCardDimens.aboutText, FontWeight.Medium, meta, EntryCardDimens.LINE_FOOT),
+            captionWhen = style(EntryCardDimens.captionWhen, FontWeight.Medium, text2, EntryCardDimens.LINE_CAPTION_WHEN),
+            captionSystem = style(EntryCardDimens.captionSystem, FontWeight.Medium, meta, EntryCardDimens.LINE_CAPTION_SYSTEM),
+            weekDay = style(EntryCardDimens.weekDay, FontWeight.Medium, meta),
             onBoardLines = isJost,
         )
     }
@@ -221,6 +217,15 @@ internal fun EntryHeader(
             modifier = Modifier.padding(start = EntryCardDimens.headerGap).alignByBaseline().testTag(EntryTags.COUNT),
         )
     }
+}
+
+/** The one quiet line of a Recent or Favorites board with no game yet, in the status line's style (muted, as the main screen's). */
+@Composable
+internal fun EntryEmptyLine(
+    text: String,
+    styles: EntryStyles,
+) {
+    BasicText(text, style = styles.status.copy(color = PlumTheme.colors.meta), modifier = Modifier.fillMaxWidth().boardLine(styles.status, styles).testTag(EntryTags.EMPTY))
 }
 
 /** A small capital label ("LAST PLAYED"): one line; a label wider than its room steps down in size (in thirds of a sp) instead of breaking mid-word. */

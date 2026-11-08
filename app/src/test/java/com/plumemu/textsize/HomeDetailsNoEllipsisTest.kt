@@ -39,7 +39,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The details block's labels (GENRE, RATING, PLAYED, LAST PLAYED, EMULATOR, BATTERY) and values never end in an ellipsis, at the six text
- * sizes in every font on the four reference screens: the label drops its letter spacing, then wraps to a second line; a long value
+ * sizes on the four reference screens: the label drops its letter spacing, then wraps to a second line; a long value
  * wraps inside the box and the emulator's name takes a row of its own (the box leaves a cell out whole, never cuts one).
  */
 abstract class HomeDetailsNoEllipsisBase {
@@ -49,7 +49,6 @@ abstract class HomeDetailsNoEllipsisBase {
     val rules = rulesAround(compose)
 
     private var size by mutableStateOf(TextSize.Largest)
-    private var font by mutableStateOf(PlumFont.Sans)
 
     private fun ellipsized(node: SemanticsNode): List<String> {
         // The subtitle and the fact lines are one line with an ellipsis by design; the facts box's values (the emulator's name too) are not.
@@ -85,7 +84,7 @@ abstract class HomeDetailsNoEllipsisBase {
         battery(sample.level)
         var wide = false
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 CompositionLocalProvider(LocalHomePlayFacts provides FakePlayFacts(pace = sample.pace)) {
                     wide = PlumTheme.layout.widthClass == WidthClass.Wide
                     val toDetailsStop = if (PlumTheme.layout.widthClass == WidthClass.Narrow) listOf(Action.Move(Direction.Right)) else emptyList()
@@ -95,9 +94,8 @@ abstract class HomeDetailsNoEllipsisBase {
         }
         val problems = mutableListOf<String>()
         var sawLabel = false
-        for (eachFont in PlumFont.entries) {
+        for (eachFont in listOf(PlumFont.Jost)) {
             for (each in TextSize.entries) {
-                font = eachFont
                 size = each
                 compose.waitForIdle()
                 val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()

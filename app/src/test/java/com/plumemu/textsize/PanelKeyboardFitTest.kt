@@ -46,7 +46,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The game panel's fields typing with Plumemu's keyboard at every text size, in Plum
- * Sans at the six sizes and in Serif and Mono at Largest: the tray is along the screen's bottom with the
+ * Jost at the six sizes: the tray is along the screen's bottom with the
  * hint bar on it; the field is whole, under the top bar and above the tray's top edge, and the first line
  * of what follows it (Fix name's first result, also one whose title wraps; Use my own name's Save or its
  * refusal; Fix box art's status line, also a long "nothing found" and "sign in again") is whole between
@@ -70,15 +70,13 @@ abstract class PanelKeyboardFitBase(
         lineUnderTag: String,
     ) {
         var size by mutableStateOf(TextSize.Largest)
-        var font by mutableStateOf(PlumFont.Sans)
         val panel = OpenPanel(game, screen)
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = panel) }
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = panel) }
         }
-        val combinations = TextSize.entries.map { PlumFont.Sans to it } + listOf(PlumFont.Serif to TextSize.Largest, PlumFont.Mono to TextSize.Largest)
+        val combinations = TextSize.entries.map { PlumFont.Jost to it }
         val failures = mutableListOf<String>()
         for ((eachFont, each) in combinations) {
-            font = eachFont
             size = each
             compose.waitForIdle()
             val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()

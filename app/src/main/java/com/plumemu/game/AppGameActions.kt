@@ -321,6 +321,11 @@ internal class AppGameActions(
         withContext(io) { recent.removeFromRecent(id) }
     }
 
+    override suspend fun restoreToRecent(gameKey: String) {
+        val id = requireId(gameKey)
+        withContext(io) { recent.restoreToRecent(id) }
+    }
+
     override suspend fun chooseEmulator(gameKey: String, emulatorId: String?) {
         val id = requireId(gameKey)
         withContext(io) {

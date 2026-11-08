@@ -36,9 +36,20 @@ EXTRA_FOLDERS = {
     "psx": ["ps1", "playstation", "psone", "ps", "playstation 1"], "psp": ["playstationportable"],
     "ps2": ["playstation2"], "gc": ["gamecube", "ngc", "cube"],
     # MinUI/Onion folder tags ("Sega Master System (SMS)") and stock firmware folders.
-    "mastersystem": ["sms"], "gamegear": ["gg"], "pcengine": ["pce"],
+    "mastersystem": ["sms"], "gamegear": ["gg"], "pcengine": ["pce", "turbografx16"],
     "psvita": ["ps vita", "playstationvita", "playstation vita"],
+    # Names other frontends (ES-DE, Batocera, EmuELEC, OnionOS, Daijisho, MinUI) use. Each belongs to one system.
+    "sega32x": ["32x"], "virtualboy": ["vb", "vboy"], "wonderswan": ["wswan"],
+    "wonderswancolor": ["wswanc"], "pcenginecd": ["pcecd"], "tg-cd": ["turbografxcd"],
+    "neogeocd": ["neocd"], "megacd": ["scd"], "dreamcast": ["dc"],
+    "atari2600": ["a2600", "2600"], "atari5200": ["a5200", "5200"], "atari7800": ["a7800", "7800"],
+    "zxspectrum": ["zxs"], "pokemini": ["pkm"],
 }
+
+# An emulator a source lists for a system that it cannot play (ES-DE gives SAM Coupe only Speccy, a ZX
+# Spectrum emulator that opens no SAM Coupe disk). Removed from that system only; a system left with no
+# emulator is dropped, like any other (2026-11-09 audit; add SimCoupe's RetroArch core when a source lists it).
+WRONG_EMULATORS = {"samcoupe": {"speccy"}}
 
 # Extensions a source lists that are not game files Plumemu can launch. Daijisho's PS Vita players
 # take ".dpt", Daijisho's own placeholder whose title ID lives in Daijisho's database
@@ -135,7 +146,7 @@ DISPLAY_NAMES = {
     "lcdgames": "LCD Games", "lowresnx": "LowRes NX", "lutro": "Lutro", "mame": "MAME",
     "megaduck": "Mega Duck", "mess": "MESS", "moto": "MO/TO", "naomigd": "NAOMI GD-ROM",
     "ngpc": "Neo Geo Pocket Color", "pc": "IBM PC", "pc88": "PC-8800", "pc98": "PC-9800",
-    "pcarcade": "PC Arcade", "pico8": "PICO-8", "pokemini": "Pokemon Mini", "samcoupe": "SAM Coupe",
+    "pcarcade": "PC Arcade", "pico8": "PICO-8", "pokemini": "Pokemon Mini",
     "scummvm": "ScummVM", "sega32x": "Mega Drive 32X", "snesmsu1": "SNES MSU-1", "stv": "Titan Video",
     "steam": "Steam", "tic80": "TIC-80", "triforce": "Triforce", "uzebox": "Uzebox",
     "vircon32": "Vircon32", "wasm4": "WASM-4", "zmachine": "Z-machine", "pet": "Commodore PET", "adam": "Coleco Adam", "pico": "Sega Pico", "intellivision": "Intellivision",
@@ -172,7 +183,7 @@ MAKER_YEAR = {
     "pc88": ("NEC", 1981), "pc98": ("NEC", 1982), "pcengine": ("NEC", 1987), "pcenginecd": ("NEC", 1988),
     "pcfx": ("NEC", 1994), "pet": ("Commodore", 1977), "pico": ("Sega", 1993), "plus4": ("Commodore", 1984),
     "pokemini": ("Nintendo", 2001), "ps2": ("Sony", 2000), "ps3": ("Sony", 2006), "psp": ("Sony", 2004),
-    "pspminis": ("Sony", 2009), "psvita": ("Sony", 2011), "psx": ("Sony", 1994), "samcoupe": ("MGT", 1989),
+    "pspminis": ("Sony", 2009), "psvita": ("Sony", 2011), "psx": ("Sony", 1994),
     "satellaview": ("Nintendo", 1995), "saturn": ("Sega", 1994), "sega32x": ("Sega", 1994),
     "sg-1000": ("Sega", 1983), "sgb": ("Nintendo", 1994), "snes": ("Nintendo", 1990),
     "spectravideo": ("Spectravideo", 1983), "stv": ("Sega", 1994), "sufami": ("Bandai", 1996),
@@ -285,7 +296,6 @@ KIND_END_YEAR = {
     "psp": ("handheld", 2014),  # PlayStation_Portable
     "psvita": ("handheld", 2019),  # PlayStation_Vita
     "psx": ("console", 2006),  # PlayStation_(console)
-    "samcoupe": ("computer", 1992),  # SAM_Coup%C3%A9
     "satellaview": ("add-on", 2000),  # Satellaview
     "saturn": ("console", 2000),  # Sega_Saturn (Japan, the last region)
     "sega32x": ("add-on", 1996),  # 32X
@@ -352,7 +362,7 @@ ABBREVIATION = {
     "pcarcade": "PCARC", "pcengine": "PCE", "pcenginecd": "PCECD", "pcfx": "PCFX", "pet": "PET",
     "pico": "Pico", "pico8": "PICO8", "plus4": "PLUS4", "pokemini": "PMini", "ports": "Ports", "ps2": "PS2",
     "ps3": "PS3", "psp": "PSP", "pspminis": "Minis", "psvita": "Vita", "psx": "PS1", "quake": "Quake",
-    "rpgmaker": "RPGM", "samcoupe": "SAM", "satellaview": "BS-X", "saturn": "SAT", "scummvm": "SCUMM",
+    "rpgmaker": "RPGM", "satellaview": "BS-X", "saturn": "SAT", "scummvm": "SCUMM",
     "sega32x": "32X", "sg-1000": "SG1K", "sgb": "SGB", "snes": "SNES", "snesmsu1": "MSU-1",
     "spectravideo": "SVI", "steam": "Steam", "stv": "STV", "sufami": "SFT", "supergrafx": "SGX",
     "supervision": "WSV", "switch": "NSW", "symbian": "Symb", "tg-cd": "TGCD", "tic80": "TIC80",
@@ -393,7 +403,7 @@ CODE = {
     "pcarcade": "PCA", "pcengine": "PCE", "pcenginecd": "PCD", "pcfx": "PFX", "pet": "PET",
     "pico": "PIC", "pico8": "PI8", "plus4": "PL4", "pokemini": "PKM", "ports": "PRT", "ps2": "PS2",
     "ps3": "PS3", "psp": "PSP", "pspminis": "PSM", "psvita": "VIT", "psx": "PS1", "quake": "QUK",
-    "rpgmaker": "RPG", "samcoupe": "SAM", "satellaview": "BSX", "saturn": "SAT", "scummvm": "SCU",
+    "rpgmaker": "RPG", "satellaview": "BSX", "saturn": "SAT", "scummvm": "SCU",
     "sega32x": "32X", "sg-1000": "SG1", "sgb": "SGB", "snes": "SNS", "snesmsu1": "SMU",
     "spectravideo": "SVI", "steam": "STM", "stv": "STV", "sufami": "SFT", "supergrafx": "SGX",
     "supervision": "WSV", "switch": "NSW", "symbian": "SYM", "tg-cd": "TCD", "tic80": "T80",

@@ -43,6 +43,9 @@ internal interface GameActions {
     /** Takes the game out of Recent; play time and statistics stay. Throws when it could not be written. */
     suspend fun removeFromRecent(gameKey: String)
 
+    /** Undo of [removeFromRecent]: the game is back in Recent where its last play puts it. Throws when it could not be written. */
+    suspend fun restoreToRecent(gameKey: String)
+
     /** Stores [emulatorId] as this game's emulator; null goes back to automatic. */
     suspend fun chooseEmulator(gameKey: String, emulatorId: String?)
 
@@ -154,6 +157,8 @@ internal interface GameActions {
         override suspend fun hide(gameKey: String) = Unit
 
         override suspend fun removeFromRecent(gameKey: String) = Unit
+
+        override suspend fun restoreToRecent(gameKey: String) = Unit
 
         override suspend fun chooseEmulator(gameKey: String, emulatorId: String?) = Unit
 

@@ -53,9 +53,9 @@ class PlumThemeSettingsTest {
     }
 
     @Test
-    fun theDefaultLookIsBlackWithLightTextAndBlue() {
-        assertEquals(Rgb(0x000000), PlumThemeSettings.Default.backgroundColor)
+    fun theDefaultLookIsTheDeepBlueBlackInkWithLightTextAndBlue() {
+        assertEquals(Rgb(0x161A24), PlumThemeSettings.Default.backgroundColor)
         assertEquals(TextMode.Light, PlumThemeSettings.Default.textMode)
-        assertEquals(Rgb(0x3E7BE0), PlumThemeSettings.Default.accentColor)
+        assertEquals(Rgb(0x3A7CEB), PlumThemeSettings.Default.accentColor)
     }
 }

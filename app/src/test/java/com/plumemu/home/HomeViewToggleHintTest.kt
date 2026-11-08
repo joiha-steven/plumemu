@@ -23,9 +23,9 @@ import org.robolectric.annotation.GraphicsMode
  * By touch the SELECT hint ("Grid view" /
  * "List view") is the only way to switch a list and its grid, while B has the system's back gesture, so B Back
  * gives way before SELECT. START Menu and Y Favorite are not in the drop order. A games list's bar at 576 x 432 has 528 dp;
- * A, Y, X, START and SELECT with four 20 dp gaps need, measured: at Largest 614 (Sans), 670 (Serif),
- * 628 (Mono), so there SELECT goes and START and Y stay; at the default size 507 (Sans), 515 (Mono), 542 (Serif),
- * so SELECT stays except in Serif, 14 dp short.
+ * A, Y, X, START and SELECT with four 20 dp gaps need, measured: at Largest more than the bar has, so there SELECT goes
+ * and START and Y stay; at the default size less, so SELECT stays. (Sans, Serif and Mono, measured before the Font setting
+ * went, are gone; the test now runs Jost only.)
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -39,29 +39,27 @@ class HomeViewToggleHintTest {
     private fun isPlaced(action: Action): Boolean =
         compose.onAllNodesWithTag(HomeTags.hint(action), useUnmergedTree = true).fetchSemanticsNodes().any { it.layoutInfo.isPlaced }
 
-    /** Shows the main screen at [actions] in each font at [size] and lists "font: hint" for each of [kept] that is not drawn. */
+    /** Shows the main screen at [actions] at [size] in each of [fonts] and lists "font: hint" for each of [kept] that is not drawn. */
     private fun droppedHints(
         actions: List<Action>,
         kept: List<Action>,
         size: TextSize = TextSize.Largest,
         gridIds: Set<String> = emptySet(),
-        fonts: List<PlumFont> = PlumFont.entries,
+        fonts: List<PlumFont> = listOf(PlumFont.Jost),
     ): List<String> {
-        var font by mutableStateOf(PlumFont.Sans)
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 HomeAt(FakeHomeContent.withArtwork(), actions, gridIds = gridIds)
             }
         }
         return fonts.flatMap { each ->
-            font = each
             compose.waitForIdle()
             kept.filterNot { isPlaced(it) }.map { "$each: $it" }
         }
     }
 
     /** Serif at the default size is 14 dp short of SELECT (see the class comment). */
-    private val fontsWithRoom = listOf(PlumFont.Sans, PlumFont.Mono)
+    private val fontsWithRoom = listOf(PlumFont.Jost)
 
     private val recentGames = listOf(Action.TapItem(Column.Systems, 0), Action.Enter)
 

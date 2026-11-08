@@ -21,8 +21,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /*
  * Settings › Appearance with the Colors row focused, drawn in the set it shows: Plumemu
- * (the default, dark) and Super (a light set whose background and accent are stored as hex codes,
- * so the Background and Accent rows show "Super", not "Custom"). The colours are the set's, not
+ * (the default, dark) and Ivory (a light set whose background and accent are stored as hex codes,
+ * so the Background and Accent rows show "Ivory", not "Custom"). The colours are the set's, not
  * the Graphite/Paper pair, so the shots are named by set: `settings_colors_<size>_<set>.png`, at
  * the two reference sizes like every other shot.
  */
@@ -31,12 +31,12 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class SettingsColorsScreenshotTest {
     @Test
-    fun colorsRowInPlumemuAndSuper() {
+    fun colorsRowInPlumemuAndIvory() {
         val mismatches = mutableListOf<String>()
         for (size in ReferenceShots.Size.Original) {
             RuntimeEnvironment.setQualifiers("w${size.widthDp}dp-h${size.heightDp}dp-land-xhdpi")
             // Ivory's buttons on a background changed by hand: Colors reads Custom, the buttons stay.
-            val shots = listOf(ColorSet.Plumemu to settingsIn(ColorSet.Plumemu), ColorSet.Super to settingsIn(ColorSet.Super), ColorSet.Ivory to ivoryOnGraphite())
+            val shots = listOf(ColorSet.Plumemu to settingsIn(ColorSet.Plumemu), ColorSet.Ivory to settingsIn(ColorSet.Ivory), ColorSet.Ivory to ivoryOnGraphite())
             for ((set, settings) in shots) {
                 val name = "settings_colors_${size.label}_${set.name.lowercase()}${if (settings.appearance.buttonSet != null && settings.appearance.background != set.background.toSetting()) "_tuned" else ""}.png"
                 try {

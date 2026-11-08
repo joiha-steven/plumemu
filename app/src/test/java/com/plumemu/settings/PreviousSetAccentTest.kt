@@ -15,17 +15,28 @@ class PreviousSetAccentTest {
     private fun storedWith(
         set: ColorSet,
         accent: Int,
+        background: Int = set.backgroundColor.value,
     ) = AppearanceSettings(
-        background = ColorSetting.Custom(set.backgroundColor.value),
+        background = ColorSetting.Custom(background),
         textColor = if (set.textMode == TextMode.Dark) TextColorSetting.Dark else TextColorSetting.Light,
         accent = ColorSetting.Custom(accent),
     )
 
     @Test
-    fun theOldAccentOfSuperDotMatrixAndIvoryReadsAsThatSetAndDrawsTheNewAccent() {
-        for ((set, old) in listOf(ColorSet.Super to 0xB22B26, ColorSet.DotMatrix to 0x306130, ColorSet.Ivory to 0x1792B0)) {
-            val stored = storedWith(set, old)
+    fun theOldAccentOfIvoryReadsAsThatSetAndDrawsTheNewAccent() {
+        val stored = storedWith(ColorSet.Ivory, 0x1792B0)
+        assertEquals("reads as Ivory", ColorSet.Ivory, stored.colorSet())
+        assertEquals("draws its new accent", ColorSet.Ivory.accentColor, stored.toThemeSettings(animationsOn = true).accentColor)
+        assertEquals("stored value untouched", ColorSetting.Custom(0x1792B0), stored.accent)
+    }
+
+    @Test
+    fun theOldLooksOfSuperAndDotMatrixReadAsIvoryAndPeaGreen() {
+        val looks = listOf(Triple(ColorSet.Ivory, 0xD9D8D3, 0xB22B26), Triple(ColorSet.Ivory, 0xD9D8D3, 0xAA2924), Triple(ColorSet.PeaGreen, 0xB4DB11, 0x306130))
+        for ((set, background, old) in looks) {
+            val stored = storedWith(set, old, background)
             assertEquals("$set reads as itself", set, stored.colorSet())
+            assertEquals("$set draws its background", set.backgroundColor, stored.toThemeSettings(animationsOn = true).backgroundColor)
             assertEquals("$set draws its new accent", set.accentColor, stored.toThemeSettings(animationsOn = true).accentColor)
             assertEquals("stored value untouched", ColorSetting.Custom(old), stored.accent)
         }
@@ -33,9 +44,9 @@ class PreviousSetAccentTest {
 
     @Test
     fun aGenuinelyCustomAccentNearTheOldOneStaysCustom() {
-        assertNull(storedWith(ColorSet.Super, 0xB32B26).colorSet())
-        assertEquals(Rgb(0xB32B26), storedWith(ColorSet.Super, 0xB32B26).toThemeSettings(animationsOn = true).accentColor)
-        // The old accent with another background is not Super either.
-        assertNull(storedWith(ColorSet.Super, 0xB22B26).copy(background = ColorSetting.Preset("Paper")).colorSet())
+        assertNull(storedWith(ColorSet.Ivory, 0xB32B26, 0xD9D8D3).colorSet())
+        assertEquals(Rgb(0xB32B26), storedWith(ColorSet.Ivory, 0xB32B26, 0xD9D8D3).toThemeSettings(animationsOn = true).accentColor)
+        // The old accent with another background is not Ivory either.
+        assertNull(storedWith(ColorSet.Ivory, 0xB22B26, 0xD9D8D3).copy(background = ColorSetting.Preset("Graphite")).colorSet())
     }
 }

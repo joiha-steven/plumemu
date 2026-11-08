@@ -4,7 +4,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 
 /** Compose text styles for every [TypeRole], read in composables via `PlumTheme.type`. */
@@ -13,7 +12,6 @@ class PlumTypography(
     val font: PlumFont,
     val textSize: TextSize,
     val textMode: TextMode,
-    val textWeight: TextWeight = TextWeight.Default,
     /** Every size times this, for a window whose panel is denser than the main one ([SecondScreenPhysical]); 1 everywhere else. */
     val physicalScale: Float = 1f,
     /** The second screen's type: sizes at [TextSize.secondScreenFactor], not the top screen's [TextSize.factor]. */
@@ -25,6 +23,9 @@ class PlumTypography(
     private val styles: Map<TypeRole, TextStyle> = TypeRole.entries.associateWith(::buildStyle)
 
     operator fun get(role: TypeRole): TextStyle = styles.getValue(role)
+
+    /** The font whose metrics a glyph beside text in [style] must follow (the top bar's Wi-Fi mark): Plum Mono for a mono role's style, else [font]. */
+    fun fontOf(style: TextStyle): PlumFont = if (style.fontFamily == PlumFonts.Mono) PlumFont.Mono else font
 
     val gameTitle: TextStyle get() = get(TypeRole.GameTitle)
     val gameTitleFocused: TextStyle get() = get(TypeRole.GameTitleFocused)
@@ -44,13 +45,20 @@ class PlumTypography(
     val rowYearCurrent: TextStyle get() = get(TypeRole.RowYearCurrent)
     val placeName: TextStyle get() = get(TypeRole.PlaceName)
     val placeCount: TextStyle get() = get(TypeRole.PlaceCount)
+    val placeWords: TextStyle get() = get(TypeRole.PlaceWords)
     val detailsSubtitle: TextStyle get() = get(TypeRole.DetailsSubtitle)
 
-    /** A region or system code ([TypeRole.Tag]): 11.33 / 600, spaced 0.1 em; the caller writes it in capitals. */
-    val tag: TextStyle by lazy { get(TypeRole.Tag).copy(letterSpacing = 0.1.em) }
+    /** A region or system code ([TypeRole.Tag]): Mono 11, no letter spacing, written as it is. */
+    val tag: TextStyle get() = get(TypeRole.Tag)
+    val systemRowCount: TextStyle get() = get(TypeRole.SystemRowCount)
+    val factNumber: TextStyle get() = get(TypeRole.FactNumber)
+    val ratingNumber: TextStyle get() = get(TypeRole.RatingNumber)
 
-    /** GENRE / RATING / PLAYED: 600, spaced 0.145 em (the board's 1.6 px on 11); the caller writes the words in capitals. */
-    val detailsLabel: TextStyle by lazy { get(TypeRole.DetailsLabel).copy(letterSpacing = 0.145.em) }
+    /** A Statistics tile's figure, a number alone or a phrase: Jost with tabular figures, one face for the row of tiles. */
+    val statisticFigure: TextStyle get() = get(TypeRole.StatisticPhrase)
+
+    /** Genre / Rating / Played / Last played: sentence case, 13, no letter spacing; the caller draws it `muted`. */
+    val detailsLabel: TextStyle get() = get(TypeRole.DetailsLabel)
     val gridFocusTitle: TextStyle get() = get(TypeRole.GridFocusTitle)
     val infoLineTitle: TextStyle get() = get(TypeRole.InfoLineTitle)
     val infoLineMeta: TextStyle get() = get(TypeRole.InfoLineMeta)
@@ -118,22 +126,25 @@ class PlumTypography(
 
     private fun buildStyle(role: TypeRole): TextStyle =
         TextStyle(
-            fontFamily = PlumFonts.familyOf(font),
+            fontFamily = role.familyFor(font),
             fontSize = (role.scaledSizeSp(font, textSize, secondScreen) * physicalScale).sp,
-            fontWeight = FontWeight(role.weightFor(font, textMode, textWeight)),
+            fontWeight = FontWeight(role.weightFor(font, textMode)),
             lineHeight = (role.lineHeightSp(font, textSize, secondScreen) * physicalScale).sp,
+            fontFeatureSettings = if (role.tabular) TABULAR_FIGURES else null,
             // Centre the glyphs in the line and keep the full line box, like CSS line-height.
             lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
         )
 
     private companion object {
+        /** OpenType `tnum`: Jost's tabular figures (every face has the feature; `TypeScaleTest`). */
+        const val TABULAR_FIGURES = "tnum"
         const val DESCRIPTION_LINE_HEIGHT = 1.5f
         const val SETUP_NOTE_LINE_HEIGHT = 1.45f
     }
 
     override fun equals(other: Any?): Boolean =
         other is PlumTypography && other.font == font && other.textSize == textSize && other.textMode == textMode &&
-            other.textWeight == textWeight && other.physicalScale == physicalScale && other.secondScreen == secondScreen
+            other.physicalScale == physicalScale && other.secondScreen == secondScreen
 
-    override fun hashCode(): Int = ((((font.hashCode() * 31 + textSize.hashCode()) * 31 + textMode.hashCode()) * 31 + textWeight.hashCode()) * 31 + physicalScale.hashCode()) * 31 + secondScreen.hashCode()
+    override fun hashCode(): Int = (((font.hashCode() * 31 + textSize.hashCode()) * 31 + textMode.hashCode()) * 31 + physicalScale.hashCode()) * 31 + secondScreen.hashCode()
 }

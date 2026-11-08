@@ -82,7 +82,7 @@ class PlumComposeColors private constructor(
     /** The glass tile of the second screen (gradient, edge, foot shade; [GlassTile]). */
     val glass: GlassLook get() = tokens.value.glass
 
-    /** The rule between a card's parts and the stub of an empty column ([LineToken]); the board's `line`. */
+    /** The rule between a card's parts and the stub of an empty column ([ToneLadder.line]): [ToneLadder.LINE] of L* off the page toward the text. */
     val line: Color get() = tokens.value.line
 
     /** The fill of a meter's track under its inset shadow ([MeterTrackToken]). */
@@ -207,10 +207,7 @@ class PlumComposeColors private constructor(
 
             private fun darkTheme(tokens: PlumColors) = TextMode.of(tokens.text, tokens.bg) == TextMode.Light
 
-            private fun keyColour(
-                tokens: PlumColors,
-                dark: Boolean,
-            ) = ColorMath.mix(tokens.bg, tokens.text, if (dark) FlatFace.KEY_DARK else FlatFace.KEY_LIGHT).toComposeColor()
+            private fun keyColour(tokens: PlumColors) = ToneLadder.level(tokens.bg, ToneLadder.TOP).toComposeColor()
 
             /**
              * The board's body ink (Graphite #C6C2B9, Paper #4C4942): the text [BODY_DARK] / [BODY_LIGHT] of the way from the background, kept only
@@ -250,7 +247,7 @@ class PlumComposeColors private constructor(
 
             fun of(tokens: PlumColors): Tokens {
                 val dark = darkTheme(tokens)
-                val keyFace = FlatFace.key(keyColour(tokens, dark), dark)
+                val keyFace = FlatFace.key(keyColour(tokens), dark)
                 val collar = CollarLook.of(tokens.bg, tokens.text, dark)
                 return Tokens(
                     bg = tokens.bg.toComposeColor(),
@@ -283,7 +280,7 @@ class PlumComposeColors private constructor(
                     card = CardLook.of(tokens.bg, tokens.text, dark),
                     dark = dark,
                     glass = GlassLook.of(tokens.bg, dark),
-                    line = LineToken.of(tokens.text, dark),
+                    line = ToneLadder.line(tokens.bg, tokens.text).toComposeColor(),
                     meterTrack = MeterTrackToken.of(tokens.bg, dark),
                     playedBar = PlayedBarToken.of(tokens.bg, dark),
                 )

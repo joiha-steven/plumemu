@@ -42,7 +42,6 @@ import com.plumemu.account.AccountStatus
 import com.plumemu.account.RaAccountStatus
 import com.plumemu.coredata.settings.BoxArtRegionSetting
 import com.plumemu.coredata.settings.ColorSetting
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.InGameSetting
 import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.PlumSettings
@@ -51,7 +50,6 @@ import com.plumemu.coredata.settings.SoundLevel
 import com.plumemu.coredata.settings.SwitchSystemWithSetting
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coredata.settings.TextSizeSetting
-import com.plumemu.coredata.settings.TextWeightSetting
 import com.plumemu.coreui.components.KeyState
 import com.plumemu.coreui.components.StripeAnchor
 import com.plumemu.coreui.components.borderDrawn
@@ -317,7 +315,7 @@ internal fun optionValue(
         SettingsOption.Language ->
             OptionValue.Opens(languageName(AppLanguages.byTag(settings.appearance.language)?.tag))
         SettingsOption.Colors -> OptionValue.Choice(stringResource(choiceName(option, option.choiceIndex(settings, textSizeInUse()))), opensPanel = true)
-        SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight, SettingsOption.LeftEdge, SettingsOption.GridSize, SettingsOption.SortGames, SettingsOption.SystemOrder,
+        SettingsOption.TextSize, SettingsOption.LeftEdge, SettingsOption.GridSize, SettingsOption.SortGames, SettingsOption.SystemOrder,
         SettingsOption.SecondScreenInGame, SettingsOption.BoxArtRegion, SettingsOption.Keyboard, SettingsOption.SwitchSystemWith, SettingsOption.Sounds,
         ->
             OptionValue.Choice(stringResource(choiceName(option, option.choiceIndex(settings, textSizeInUse()))))
@@ -333,6 +331,7 @@ internal fun optionValue(
         SettingsOption.Rescan -> OptionValue.Text(if (content.isScanning) stringResource(R.string.settings_rescan_running) else "")
         SettingsOption.SystemEmulator -> OptionValue.Opens(emulatorValue(content.systems.getOrNull(index)))
         SettingsOption.FilesNotAdded -> OptionValue.Opens(filesNotAddedValue(content))
+        SettingsOption.UnreadableFolders -> OptionValue.Opens(unreadableRowValue(content))
         // Shown as the board's switch; A asks Android, which is the only one that can change it.
         SettingsOption.UseAsHome -> OptionValue.Switch(content.isHomeApp)
         SettingsOption.Version -> OptionValue.Text(versionName)
@@ -416,6 +415,7 @@ internal fun optionLabel(
 ): String =
     when (option) {
         SettingsOption.SystemEmulator -> content.systems.getOrNull(index)?.name.orEmpty()
+        SettingsOption.UnreadableFolders -> unreadableRowLabel(content)
         SettingsOption.HiddenGames -> stringResource(R.string.settings_hidden_games, rememberCountFormat().format(content.hiddenGames.size))
         SettingsOption.UnidentifiedGames -> stringResource(R.string.settings_unidentified_games, rememberCountFormat().format(content.unidentifiedGames.size))
         SettingsOption.ScraperStatus -> boxArtLineOf(content.account, content.boxArt)?.let { boxArtLineText(it) }.orEmpty()
@@ -444,7 +444,6 @@ internal object SettingsTags {
     const val OPTIONS = "settings_options"
     const val PANEL = "settings_panel"
     const val PANEL_LIST = "settings_panel_list"
-    const val FONT_CARD = "settings_font_card"
 
     /** Library › Systems: the panel, its list, and in each row the name, the "Hidden" label and the drag handle. */
     const val SYSTEMS_PANEL = "settings_systems_panel"

@@ -61,11 +61,9 @@ abstract class UpdateNoticeFitBase(
         check: (at: String, problems: MutableList<String>) -> Unit,
     ) {
         var size by mutableStateOf(TextSize.Small)
-        var font by mutableStateOf(PlumFont.Sans)
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { content() } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { content() } }
         val problems = mutableListOf<String>()
-        for (eachFont in PlumFont.entries) {
-            font = eachFont
+        for (eachFont in listOf(PlumFont.Jost)) {
             for (each in TextSize.entries) {
                 size = each
                 compose.waitForIdle()

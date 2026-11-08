@@ -26,13 +26,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.invisibleToUser
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.plumemu.R
 import com.plumemu.coredata.settings.LeftEdgeSetting
@@ -57,8 +59,9 @@ import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.WidthClass
 import com.plumemu.coreui.theme.fadingIn
-import com.plumemu.coreui.theme.rememberContentFade
+import com.plumemu.coreui.theme.rememberSlidingSwap
 import com.plumemu.coreui.theme.rememberListGlide
+import com.plumemu.coreui.components.plainLayer
 
 /**
  * The strip: system column and games list on one row wider than the screen, moved
@@ -72,7 +75,10 @@ internal fun HomeStrip(
     gridIds: Set<String>,
     onAction: (Action) -> Unit,
     modifier: Modifier = Modifier,
-    isPanelOpen: Boolean = false,
+    /** Whether the game panel is open; read only where it is needed, so opening it does not recompose the strip. */
+    isPanelOpen: () -> Boolean = { false },
+    /** The open card's slide, 0 to 1 (read while drawing): the details column fades out with it. */
+    panelSlide: () -> Float = { if (isPanelOpen()) 1f else 0f },
     positions: GamesPagePositions,
     showSystemInfo: Boolean = true,
 ) {
@@ -116,19 +122,23 @@ internal fun HomeStrip(
     // The strip runs from bar to bar and ends on both: nothing it draws stands in a bar.
     // The Apps grid's preview beside the systems shows whole columns only (AppsGridWindow.kt); measured, so a move recomposes nothing.
     val appsPreview = rememberAppsPreview(content, state, layout)
+    // A card open over the column would cut its title or cover by its bottom edge: the column fades out with the card's slide (alpha read while drawing, no relayout) and is out of semantics while one is open.
+    val panelOpen = rememberUpdatedState(isPanelOpen)
+    val detailsHidden = remember(panelOpen) { { panelOpen.value() } }
+    val slide = rememberUpdatedState(panelSlide)
     Box(modifier = modifier.then(Modifier.clipSidesLeavingRoom(room = 0.dp)).stripDrag(state).testTag(HomeTags.STRIP)) {
         Row(
             modifier =
                 Modifier
                     .fillMaxHeight()
                     .wrapContentWidth(align = Alignment.Start, unbounded = true)
-                    .graphicsLayer { translationX = state.translationX },
+                    .plainLayer { translationX = state.translationX },
             horizontalArrangement = Arrangement.spacedBy(PlumDimens.columnGap),
         ) {
             // Starts at the screen edge: the 24 dp margin is inside the column, so the selector can run under the edge.
             SystemsColumn(content, state, onAction, Modifier.width(PlumDimens.stripMarginSide + PlumTheme.layout.systemsColumnWidth).fillMaxHeight(), isPanelOpen)
             if (showsGrid) {
-                CompositionLocalProvider(LocalAppsSpread provides appsPreview.spread) { GamesGrid(content, state, onAction, appsPreview.modifier.width(gamesWidth).fillMaxHeight(), isPanelOpen) }
+                CompositionLocalProvider(LocalAppsSpread provides appsPreview.spread) { GamesGrid(content, state, onAction, appsPreview.modifier.width(gamesWidth).fillMaxHeight(), isPanelOpen()) }
                 PrefetchNeighbourCovers(content, state, gridIds)
             } else {
                 // The list's width in px as it is laid out (the bleed of boardListStart included), for the pill images built ahead.
@@ -140,7 +150,7 @@ internal fun HomeStrip(
             }
             // Beside the list on wide screens; on narrow ones the third stop, after list or grid.
             if (showsDetails && (layout.widthClass == WidthClass.Wide || detailsWidth > 0.dp)) {
-                DetailsColumn(content, state, onAction, Modifier.width(detailsWidth).fillMaxHeight().inStrip().then(if (stretch != null) Modifier.graphicsLayer { translationX = stretch.followerShift() } else Modifier), detailsWidth)
+                DetailsColumn(content, state, onAction, Modifier.width(detailsWidth).fillMaxHeight().inStrip().fadedWith({ slide.value() }, detailsHidden).then(if (stretch != null) Modifier.plainLayer { translationX = stretch.followerShift() } else Modifier), detailsWidth)
             }
         }
         if (!hideFade) EdgeFade(Modifier.align(Alignment.CenterEnd).testTag(HomeTags.EDGE_FADE))
@@ -157,13 +167,13 @@ private fun SystemsColumn(
     state: StripState,
     onAction: (Action) -> Unit,
     modifier: Modifier,
-    isPanelOpen: Boolean,
+    isPanelOpen: () -> Boolean,
 ) {
     val listState = rememberLazyListState()
     // The counts peek out left of a narrow game card: not drawn while it is open (read while drawing, so no row recomposes).
     val panelOpen = rememberUpdatedState(isPanelOpen)
     val isNarrow = PlumTheme.layout.widthClass == WidthClass.Narrow
-    val countHidden = remember(panelOpen, isNarrow) { { isNarrow && panelOpen.value } }
+    val countHidden = remember(panelOpen, isNarrow) { { isNarrow && panelOpen.value() } }
     val glide = rememberListGlide(stride = PlumTheme.layout.systemRowHeight, glowRoom = true)
     val numbers = rememberCountFormat()
     // The names fade with the strip's real position as it slides to the peek (read while drawing).
@@ -240,13 +250,13 @@ private fun GamesList(
     positions: GamesPagePositions,
     onAction: (Action) -> Unit,
     modifier: Modifier,
-    isPanelOpen: Boolean,
+    isPanelOpen: () -> Boolean,
     showsPlace: Boolean,
     showSystemInfo: Boolean,
 ) {
     val entryIndex by remember(state) { derivedStateOf { state.focus.systemIndex } }
     // Read by each row's derived look, so opening the game panel recomposes only the focused row.
-    val panelOpen = rememberUpdatedState(isPanelOpen)
+    val panelOpen = remember(isPanelOpen) { derivedStateOf { isPanelOpen() } }
     val entry = content.entries.getOrNull(entryIndex) ?: return
     if (entry.rows.isEmpty() && content.isLibraryEmpty) {
         EmptyLibraryMessage(modifier.inStrip(), onAction)
@@ -263,7 +273,7 @@ private fun GamesList(
     }
     // L1/R1 with the games focused: the next system's games fade in instead of popping. Moves in
     // the system column swap the preview at once (a held key would strobe it).
-    val fade = rememberContentFade(entry.id) { fadesSystemSwap(state) }
+    val fade = rememberSlidingSwap(entry.id, { state.focus.systemIndex }, wrapsAt = content.entries.size) { fadesSystemSwap(state) }
     GamesPages(content, entryIndex, gridIds, state, onAction, panelOpen, positions, showsPlace, showSystemInfo, modifier.testTag(HomeTags.GAMES).fadingIn(fade))
 }
 
@@ -329,3 +339,7 @@ internal fun firstIndexShowing(
     row: Int,
     fit: Int,
 ): Int = if (row < fit) 0 else row - fit + 1
+
+/** Drawn at 1 - [slide] and out of semantics while [hidden] is true; both read while drawing, so a change recomposes and lays out nothing. */
+private fun Modifier.fadedWith(slide: () -> Float, hidden: () -> Boolean): Modifier =
+    plainLayer { alpha = 1f - slide().coerceIn(0f, 1f) }.semantics { if (hidden()) invisibleToUser() }

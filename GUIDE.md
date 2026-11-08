@@ -8,7 +8,7 @@ in the [README](README.md#controls).
 Plumemu needs one folder that holds your games, with **one subfolder per system**. You pick it
 in setup with Android's folder picker; Plumemu reads only what you pick and asks for no storage
 permission. More folders (an SD card, a second drive) can be added in setup with "+ Add another
-folder", or later in Settings › Library › ROM folders.
+folder", or later in Settings › Library › Game folders.
 
 ```
 ROMs/
@@ -70,7 +70,7 @@ folder.
 ### Leaving out a sub-folder
 
 To keep a sub-folder out of your library (demos, backups, a half-sorted pile), open Settings ›
-Library › ROM folders, choose the folder, then "Skip a sub-folder…". Its games leave the library
+Library › Game folders, choose the folder, then "Skip a sub-folder…". Its games leave the library
 on the next scan, with their favorites and play time. Choose it under "Skipped" to read it again.
 Nothing on disk changes.
 
@@ -79,6 +79,12 @@ Nothing on disk changes.
 If a folder's name matches no system but holds files an emulator can open, Settings › Library
 lists it as "Unknown folder" with its file count, and Home tells you when a new one appears. Open
 it and pick its system, or choose Ignore this folder. Plumemu never renames or moves your files.
+
+### A folder Plumemu could not read
+
+If the last scan could not read a folder (an SD card taken out, say), Settings › Library shows
+"Folder could not be read". Its games stay in your library until it reads again. Choose Scan again,
+or Skip this folder to leave it out.
 
 ## What it reads
 
@@ -124,12 +130,13 @@ Install emulators from their own developers. Plumemu finds the ones installed (i
   file names. Wrong name? Game menu › Fix name; your fix stays.
 - **Source builds** have no name packs, so games are named from their cleaned file names; Fix name
   still works.
-- **Covers**: a game without box art gets a drawn poster cover with its title, so the grid view
-  works for every system with no account. Android games and Ports show their app icon.
-- **Box art** is optional: sign in with your own free [ScreenScraper](https://www.screenscraper.fr)
-  account in setup or in Settings › Accounts › ScreenScraper. It downloads on Wi-Fi only. Wrong
-  cover? Game menu › Fix box art. Box art region, for games with no box in their own region, is in
-  the ScreenScraper panel.
+- **Covers**: a game without box art gets a card in its system's color with its title, so the
+  grid view works for every system with no account. Android games and Ports show their app icon.
+- **Box art** is optional. Setup asks "Download box art?" (No to begin with). Default source
+  fetches box fronts from libretro's public server with no account; or sign in with your own free
+  [ScreenScraper](https://www.screenscraper.fr) account for box art and game details. Change it
+  later in Settings › Box art & accounts. It downloads on Wi-Fi only. Wrong cover? Game menu › Fix
+  box art. Box art region, for games with no box in their own region, is in the ScreenScraper panel.
 
 ## Achievements
 
@@ -137,20 +144,21 @@ To see a game's achievements, sign in to [RetroAchievements](https://retroachiev
 
 1. On retroachievements.org, open your settings and copy your user name and your Web API key. Use
    the key, not your password.
-2. In Plumemu open Settings › Accounts › RetroAchievements and type both (Paste in Plumemu's
+2. In Plumemu open Settings › Box art & accounts › RetroAchievements and type both (Paste in Plumemu's
    keyboard helps). Sign in checks them.
 3. Open a game's Info: its achievements show with badges, points and dates, and a game you have
    mastered has a small trophy in the list.
 
 Plumemu only shows achievements; your emulator awards them, signed in there on its own. Some
 `.chd`, `.rvz` and `.wia` files may not match a game yet, and 3DS, MS-DOS and Arduboy games show
-none. Settings › Accounts › RetroAchievements › Sign out removes your name, key and progress.
+none. Settings › Box art & accounts › RetroAchievements › Sign out removes your name, key and progress.
 
 ## Lists and keeping things tidy
 
 - **Recent, Favorites and Apps** sit at the top of the system column. Y adds or removes a favorite.
 - **Recent** keeps 10, 20 or 50 games (Settings › Library › Recent size; 20 to begin with). In a
-  game's menu, "Remove from Recent" takes one out; Settings › Library › Clear Recent… empties it.
+  game's menu, "Remove from Recent" takes one out (Undo brings it back for four seconds);
+  Settings › Library › Clear Recent… empties it.
   Play time and statistics stay either way.
 - **Search**: X.
 - **Hide a game**: game menu › Hide; or Not a game for a file that is not one. Both come back in
@@ -173,8 +181,10 @@ field. Settings › Controls › Keyboard switches to Android's keyboard.
 
 ## Look
 
-Settings › Appearance: ten ready-made [color sets](COLORS.md) or your own colors, text size and
-weight, Fade list edges and Language. Settings › Home screen: grid size and the left edge strip.
+Settings › Appearance: seventeen ready-made [color sets](COLORS.md) or your own colors, text size,
+Fade list edges and Language. Every screen uses Jost in one weight. The focused cover or app lifts a
+little inside its own space with a thin light rim; buttons and switches are flat, and a switch that
+is off is outlined. Settings › Home screen: grid size and the left edge strip.
 Settings › Controls: Confirm with B, sounds and vibration. List or grid is SELECT on the main
 screen.
 
@@ -184,7 +194,9 @@ screen.
   to a file; Restore puts it back.
 - When a new version is out, the top bar shows "Update" and the version; START opens it. You can
   also use Settings › About › Update. It installs the new version, keeping your library and
-  settings, and afterwards a card shows what is new, once. Only the official build has this; if you built Plumemu from the source, install new
+  settings. Afterwards Plumemu opens itself again, or shows a notification to tap if Android keeps it
+  from coming to the front (Settings › About › Updates can turn notifications on), and a card shows
+  what is new, once. Only the official build has this; if you built Plumemu from the source, install new
   versions yourself.
 
 ## Something wrong?

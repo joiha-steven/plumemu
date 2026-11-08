@@ -64,11 +64,10 @@ class HomeFavoriteBoundsTest {
             DpRect((r.left / density).dp, (r.top / density).dp, (r.right / density).dp, (r.bottom / density).dp)
         }
 
-    private var font by mutableStateOf(PlumFont.Sans)
 
     private fun showGames() {
         compose.setContent {
-            PlumTheme(TableText.Graphite.copy(font = font)) {
+            PlumTheme(TableText.Graphite) {
                 HomeAt(FakeHomeContent.withFavorites(longTitle = true), BoardGamesFocused)
             }
         }
@@ -118,8 +117,7 @@ class HomeFavoriteBoundsTest {
         val order = listOf(Action.Play, Action.Back, Action.ToggleFavorite, Action.Search, Action.Menu, Action.JumpLetterNext)
         val report = StringBuilder()
         showGames()
-        for (each in PlumFont.entries) {
-            font = each
+        for (each in listOf(PlumFont.Jost)) {
             compose.waitForIdle()
             for (required in listOf(Action.Play, Action.ToggleFavorite, Action.Search, Action.Menu)) {
                 assertTrue("$each: ${required::class.simpleName} is shown", isShown(required))

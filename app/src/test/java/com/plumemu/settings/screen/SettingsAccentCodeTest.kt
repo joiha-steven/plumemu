@@ -9,7 +9,7 @@ import org.junit.Test
 
 internal class SettingsAccentCodeTest : SettingsModelHarness() {
     init {
-        startOnRedSans()
+        startOnRed()
     }
 
     private fun openAccent() {

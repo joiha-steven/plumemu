@@ -42,7 +42,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The battery line on the game card, measured: in the card's foot (above the file line, or on the bottom margin without
- * one), with the battery glyph first, inside the margins at all six text sizes in every font; none for a game never measured
+ * one), with the battery glyph first, inside the margins at all six text sizes; none for a game never measured
  * or before the play facts are known; the time only, as the board says it (no pace), and none while charging; dropped whole
  * (never cut) where the height runs out.
  */
@@ -163,7 +163,7 @@ abstract class SecondScreenBatteryLineBase(
     }
 
     /**
-     * At every text size in every font, with every wording from the shortest to the longest
+     * At every text size, with every wording from the shortest to the longest
      * ([BATTERY_LINE_SAMPLES]), the line shows all its words: one line, or wrapped to two between words.
      * A cut is found at the last line it is allowed too ([batteryLineCut]), not only on one line. Where
      * the whole sentence does not fit, the words "on this charge" give way ([WORDS_GIVE_WAY]); where not even
@@ -174,12 +174,12 @@ abstract class SecondScreenBatteryLineBase(
         val cut = mutableListOf<String>()
         val short = mutableListOf<String>()
         val leftOut = mutableListOf<String>()
-        for (font in PlumFont.entries) {
+        for (font in listOf(PlumFont.Jost)) {
             for (textSize in TextSize.entries) {
                 for (sample in BATTERY_LINE_SAMPLES) {
                     battery(level = sample.level, isCharging = false)
                     for ((name, game) in cards) {
-                        show(game.copy(batteryPace = sample.pace), PlumThemeSettings.Default.copy(textSize = textSize, font = font))
+                        show(game.copy(batteryPace = sample.pace), PlumThemeSettings.Default.copy(textSize = textSize))
                         val label = "$font $textSize $name, ${sample.label}"
                         if (all(PickingBatteryTags.LINE).isEmpty()) {
                             leftOut += label
@@ -290,19 +290,11 @@ abstract class SecondScreenBatteryLineBase(
  */
 private val WORDS_GIVE_WAY: Map<SecondSize, List<String>> = mapOf(SecondSize.Roomy to emptyList(), SecondSize.Compact to emptyList())
 
-/** Each of the named `cards` with every wording, at Huge and Largest in Plum Serif (in the order the test visits them). */
-private fun leftOutIn(cards: List<String>) =
-    listOf("Huge", "Largest").flatMap { size -> BATTERY_LINE_SAMPLES.flatMap { sample -> cards.map { "Serif $size $it, ${sample.label}" } } }
-
 /**
  * Measured, as [WORDS_GIVE_WAY]: where the card's height runs out and the foot's battery line is dropped whole (the file line
- * goes first), never cut. Only Plum Serif at Huge and Largest on Compact (the battery line is 11.33, the info-line step, so it needs more room than before), and not a game with no description (its tiles leave the room).
+ * goes first), never cut. None in Jost (it was Plum Serif at Huge and Largest on Compact, before the Font setting went).
  */
-private val LINE_LEFT_OUT: Map<SecondSize, List<String>> =
-    mapOf(
-        SecondSize.Roomy to emptyList(),
-        SecondSize.Compact to leftOutIn(listOf("board", "no RA", "long title", "long file", "no file")),
-    )
+private val LINE_LEFT_OUT: Map<SecondSize, List<String>> = mapOf(SecondSize.Roomy to emptyList(), SecondSize.Compact to emptyList())
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)

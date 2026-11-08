@@ -29,7 +29,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Info's facts at Largest in Serif on 667 x 375 (they scroll), pressed frame by frame on the test clock
+ * Info's facts at Largest on 667 x 375 (they scroll), pressed frame by frame on the test clock
  * with motion on: a held Down's presses, each a few frames into the last one's 180 ms slide, stop at
  * exactly the places single presses with motion off stop at; and a Down during a finger's fling is
  * not dropped: the fling gives way and the facts go where the press aimed from where the fling was.
@@ -59,7 +59,7 @@ class InfoFactsPressFramesTest {
 
     private fun show() {
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest, font = PlumFont.Serif, animationsOn = isMotionOn)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest, animationsOn = isMotionOn)) {
                 HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = panel)
             }
         }

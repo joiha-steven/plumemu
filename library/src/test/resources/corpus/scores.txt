@@ -1,6 +1,12 @@
 # Corpus scores that must not get worse (library corpus harness).
 # passed/total may only gain passes; missing and junk-shown counts may only fall.
 # Written only by: ./gradlew :library:testDebugUnitTest --tests '*CorpusTest' -Pcorpus.update=true
+audit system 10/10  # 100.0%
+audit grouping 9/9  # 100.0%
+audit name 9/9  # 100.0%
+audit name-readable 9/9  # 100.0%
+audit missing 0
+audit junk-shown 0
 device-gaps system 7/7  # 100.0%
 device-gaps grouping 7/7  # 100.0%
 device-gaps name 7/7  # 100.0%

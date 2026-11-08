@@ -95,6 +95,44 @@ class ColorWriteTest {
         assertEquals(ColorSetting.Custom(0x5A8BCF), black.writeAccent(ColorSetting.Custom(0x5A8BCF)).appearance.accent)
     }
 
+    /** WCAG contrast ratio, written out here so the test does not lean on the code it checks. */
+    private fun contrast(
+        a: Rgb,
+        b: Rgb,
+    ): Double {
+        fun lum(c: Rgb): Double {
+            fun ch(v: Int): Double = (v / 255.0).let { if (it <= 0.04045) it / 12.92 else Math.pow((it + 0.055) / 1.055, 2.4) }
+            return 0.2126 * ch((c.value shr 16) and 0xFF) + 0.7152 * ch((c.value shr 8) and 0xFF) + 0.0722 * ch(c.value and 0xFF)
+        }
+        val (hi, lo) = lum(a).coerceAtLeast(lum(b)) to lum(a).coerceAtMost(lum(b))
+        return (hi + 0.05) / (lo + 0.05)
+    }
+
+    @Test
+    fun aRefusedAccentIsSuggestedByTheReadabilityRuleAndReadsOnThePage() {
+        val daylight = black.withColors(ColorSet.Daylight)
+        val page = ColorSet.Daylight.backgroundColor
+        val refused = daylight.writeAccent(ColorSetting.Custom(0xFFD400)) // yellow on a light page
+        assertEquals(daylight, refused.appearance)
+        assertEquals(ColorRole.Accent, refused.refusal?.role)
+        val suggested = refused.refusal!!.nearest
+        assertEquals(Readability.suggest(Rgb(0xFFD400), page, ColorRole.Accent), suggested)
+        assertTrue("suggestion reaches 3.5:1 (${contrast(suggested, page)})", contrast(suggested, page) >= 3.5)
+        assertTrue(Readability.passes(suggested, page, ColorRole.Accent))
+    }
+
+    @Test
+    fun aRefusedTextIsSuggestedByTheReadabilityRuleAndReads() {
+        val daylight = black.withColors(ColorSet.Daylight)
+        val page = ColorSet.Daylight.backgroundColor
+        val faint = TextColorSetting.Custom(0xD8D6CC) // barely off the page
+        val refused = daylight.writeText(faint)
+        assertEquals(ColorRole.Text, refused.refusal?.role)
+        val suggested = refused.refusal!!.nearest
+        assertEquals(Readability.suggest(Rgb(0xD8D6CC), page, ColorRole.Text), suggested)
+        assertTrue(Readability.passes(suggested, page, ColorRole.Text))
+    }
+
     @Test
     fun everySetsColoursPassEveryWriteUnchanged() {
         for (set in ColorSet.entries) {

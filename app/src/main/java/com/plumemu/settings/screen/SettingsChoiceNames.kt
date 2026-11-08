@@ -37,7 +37,6 @@ import com.plumemu.account.RaAccountStatus
 import com.plumemu.coredata.settings.BoxArtRegionSetting
 import com.plumemu.secondscreen.isSecondScreenOn
 import com.plumemu.coredata.settings.ColorSetting
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.InGameSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SortGamesSetting
@@ -50,7 +49,6 @@ import com.plumemu.coredata.settings.LeftEdgeSetting
 import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.SwitchSystemWithSetting
 import com.plumemu.coredata.settings.TextSizeSetting
-import com.plumemu.coredata.settings.TextWeightSetting
 import com.plumemu.coreui.theme.AccentPreset
 import com.plumemu.coreui.theme.BackgroundPreset
 import com.plumemu.coreui.theme.ColorSet
@@ -78,7 +76,6 @@ internal fun choiceName(
     when (option) {
         // The sets in order, then Custom (SettingsOption.choiceIndex counts the same way).
         SettingsOption.Colors -> ColorSet.entries.getOrNull(index)?.let(::colorSetName) ?: R.string.settings_color_custom
-        SettingsOption.Font -> fontName(FontSetting.entries[index])
         SettingsOption.TextSize ->
             when (TextSizeSetting.entries[index]) {
                 TextSizeSetting.Small -> R.string.settings_size_small
@@ -87,12 +84,6 @@ internal fun choiceName(
                 TextSizeSetting.Larger -> R.string.settings_size_larger
                 TextSizeSetting.Huge -> R.string.settings_size_huge
                 TextSizeSetting.Largest -> R.string.settings_size_largest
-            }
-        SettingsOption.TextWeight ->
-            when (TextWeightSetting.entries[index]) {
-                TextWeightSetting.Thin -> R.string.settings_weight_thin
-                TextWeightSetting.Medium -> R.string.settings_weight_medium
-                TextWeightSetting.Bold -> R.string.settings_weight_bold
             }
         SettingsOption.LeftEdge -> leftEdgeNameRes(index)
         SettingsOption.GridSize ->
@@ -153,14 +144,6 @@ internal fun textColorName(
         is TextColorSetting.Custom -> background?.let { ColorPages.textPresetNameOn(it, text) } ?: R.string.settings_color_custom
     }
 
-internal fun fontName(font: FontSetting): Int =
-    when (font) {
-        FontSetting.Jost -> R.string.settings_font_jost
-        FontSetting.Sans -> R.string.settings_font_sans
-        FontSetting.Serif -> R.string.settings_font_serif
-        FontSetting.Mono -> R.string.settings_font_mono
-    }
-
 /**
  * The name the Background or Accent row shows for [setting]. An own colour is "Custom", unless it is
  * the colour of a ready-made set (the current one first) or of a vivid preset: then that name ("Pocket"), not a code.
@@ -176,7 +159,8 @@ internal fun colorName(
             // Each row is named by its own colour: the set or vivid preset whose colour it is, even when another row has moved away from that set.
             val rgb = setting.rgb and RGB_MASK
             fun ColorSet.previous() = if (isBackground) previousBackgrounds else previousAccents
-            val ofPrevious = set?.takeIf { Rgb(rgb) in it.previous() }
+            // A removed set's colour names only the set its whole look now reads as (the current one), never a stray own colour.
+            val ofPrevious = set?.takeIf { Rgb(rgb) in it.previous() || Rgb(rgb) in it.formerColours(isBackground) }
             val named = ofPrevious ?: set?.takeIf { (if (isBackground) it.backgroundColor else it.accentColor).value == rgb } ?: ColorSet.entries.firstOrNull { (if (isBackground) it.backgroundColor else it.accentColor).value == rgb }
                 ?: ColorSet.entries.firstOrNull { Rgb(rgb) in it.previous() }
             val vivid = if (isBackground) ColorPages.vividBackgrounds.firstOrNull { it.color.value == rgb } else null
@@ -189,7 +173,10 @@ internal fun colorName(
         is ColorSetting.BySystem -> stringResource(R.string.settings_accent_by_system)
         is ColorSetting.Preset ->
             if (isBackground) {
-                stringResource(backgroundName(BackgroundPreset.entries.firstOrNull { it.name == setting.name } ?: BackgroundPreset.Black))
+                val preset = BackgroundPreset.entries.firstOrNull { it.name == setting.name } ?: BackgroundPreset.Black
+                // A removed set's or the old default's preset page that the current set took over, or a page the set may stand on (Plumemu on
+                // true black), reads as that set ("Plumemu", not "Black").
+                if (set != null && (preset.color in set.formerColours(true) || preset.color in set.pageVariants)) stringResource(colorSetName(set)) else stringResource(backgroundName(preset))
             } else {
                 stringResource(accentName(AccentPreset.entries.firstOrNull { it.name == setting.name } ?: AccentPreset.Default))
             }
@@ -199,15 +186,22 @@ internal fun colorName(
 internal fun colorSetName(set: ColorSet): Int =
     when (set) {
         ColorSet.Plumemu -> R.string.settings_colors_plumemu
-        ColorSet.Paper -> R.string.settings_colors_paper
+        ColorSet.Daylight -> R.string.settings_colors_daylight
+        ColorSet.Ultramarine -> R.string.settings_colors_ultramarine
+        ColorSet.Magenta -> R.string.settings_colors_magenta
+        ColorSet.Peach -> R.string.settings_colors_peach
+        ColorSet.Matcha -> R.string.settings_colors_matcha
+        ColorSet.Mocha -> R.string.settings_colors_mocha
+        ColorSet.FrontLoader -> R.string.settings_colors_front_loader
+        ColorSet.SpiceCube -> R.string.settings_colors_spice_cube
+        ColorSet.PeaGreen -> R.string.settings_colors_pea_green
         ColorSet.Pocket -> R.string.settings_colors_pocket
-        ColorSet.DotMatrix -> R.string.settings_colors_dot_matrix
-        ColorSet.Super -> R.string.settings_colors_super
-        ColorSet.Indigo -> R.string.settings_colors_indigo
-        ColorSet.Charcoal -> R.string.settings_colors_charcoal
+        ColorSet.Lavender -> R.string.settings_colors_lavender
+        ColorSet.RedAndGold -> R.string.settings_colors_red_and_gold
         ColorSet.Ivory -> R.string.settings_colors_ivory
+        ColorSet.ClearGrape -> R.string.settings_colors_clear_grape
+        ColorSet.ColdGrey -> R.string.settings_colors_cold_grey
         ColorSet.Banana -> R.string.settings_colors_banana
-        ColorSet.Cream -> R.string.settings_colors_cream
     }
 
 private const val RGB_MASK = 0xFFFFFF
@@ -241,3 +235,6 @@ internal fun leftEdgeNameRes(index: Int): Int =
         LeftEdgeSetting.Codes -> R.string.settings_left_edge_codes
         LeftEdgeSetting.Letters -> R.string.settings_left_edge_letters
     }
+
+/** The backgrounds or accents of the looks [ColorSet.formerLooks] that now read as this set. */
+private fun ColorSet.formerColours(isBackground: Boolean): List<Rgb> = formerLooks.map { if (isBackground) it.background else it.accent }

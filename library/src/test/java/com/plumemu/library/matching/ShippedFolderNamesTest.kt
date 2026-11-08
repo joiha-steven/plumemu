@@ -86,7 +86,22 @@ class ShippedFolderNamesTest {
             "MD" to "megadrive", "Mega CD" to "megacd", "Sega CD" to "megacd", "MD CD" to null,
             "SMS" to "mastersystem", "SNES" to "snes", "GG" to "gamegear", "FC" to "nes", "FDS" to "fds",
             "PCE" to "pcengine", "PC Engine CD" to "pcenginecd", "NGP" to "ngp", "NGPC" to "ngpc",
-            "SS" to null, "DC" to null, "PlayStation 3" to "ps3", "01 - PS3" to "ps3", "1. GBC" to "gbc",
+            "SS" to null, "DC" to "dreamcast", "PlayStation 3" to "ps3", "01 - PS3" to "ps3", "1. GBC" to "gbc",
+        ),
+    )
+
+    @Test
+    fun namesOtherFrontendsUse() = assertFolders(
+        mapOf(
+            "32x" to "sega32x", "vb" to "virtualboy", "vboy" to "virtualboy", "wswan" to "wonderswan",
+            "wswanc" to "wonderswancolor", "wsc" to "wonderswancolor", "pcecd" to "pcenginecd",
+            "turbografx16" to "pcengine", "tg16" to "pcengine", "turbografxcd" to "tg-cd", "neocd" to "neogeocd",
+            "scd" to "megacd", "dc" to "dreamcast", "a2600" to "atari2600", "2600" to "atari2600",
+            "a5200" to "atari5200", "5200" to "atari5200", "a7800" to "atari7800", "7800" to "atari7800",
+            "coleco" to "colecovision", "zxs" to "zxspectrum", "pokemini" to "pokemini", "pkm" to "pokemini",
+            "gw" to "gameandwatch",
+            // Not claimed: too many systems answer to these.
+            "ms" to null, "tgcd16" to null,
         ),
     )
 
@@ -155,10 +170,12 @@ class ShippedFolderNamesTest {
         for ((file, id) in listOf("a.gba" to "gba", "a.sfc" to "snes", "a.nes" to "nes", "a.nds" to "nds", "a.z64" to "n64",
             "a.a26" to "atari2600", "a.fds" to "fds", "a.gb" to "gb", "a.gbc" to "gbc", "a.md" to "megadrive",
             "a.sms" to "mastersystem", "a.gg" to "gamegear", "a.pce" to "pcengine", "a.nsp" to "switch",
-            "a.ndd" to "n64dd", "a.v64" to "n64")) {
+            "a.ndd" to "n64dd", "a.v64" to "n64",
+            // The extension is also a folder name of its only system now, so the file goes to it.
+            "a.32x" to "sega32x")) {
             assertEquals(file, FileMatch.Matched(id), at(file))
         }
-        for (file in listOf("a.zip", "a.7z", "a.bin", "a.iso", "a.chd", "a.cue", "a.m3u", "a.pbp", "a.cso", "a.32x",
+        for (file in listOf("a.zip", "a.7z", "a.bin", "a.iso", "a.chd", "a.cue", "a.m3u", "a.pbp", "a.cso",
             "a.cdt", "a.bat", "a.conf", "a.lha", "a.sgx", "a.tar", "a.ngc", "a.rar")) {
             assertEquals(file, FileMatch.AmbiguousExtension, at(file))
         }

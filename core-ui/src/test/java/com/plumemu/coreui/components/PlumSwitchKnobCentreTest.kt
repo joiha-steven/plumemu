@@ -12,7 +12,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.theme.Depth
 import com.plumemu.coreui.theme.PlumColors
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumTheme
@@ -29,8 +28,7 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
 
 /**
- * The knob's body plus its solid edge (not the drop shadow) sits on the track's centre line (a deliberate change from the Controls board, whose body
- * alone is centred): measured in pixels on the Thor's 3x density and on 2x, both themes, on and off, focused and not.
+ * The flat thumb sits on the track's centre line: measured in pixels on the Thor's 3x density and on 2x, both themes, on and off, focused and not.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -54,29 +52,25 @@ open class PlumSwitchKnobCentreTest {
         val lip = SwitchSliderDimens.switchLip.value * d + 16 * d // the 16 dp of padding around the switch is in the capture
         val trackH = SwitchSliderDimens.switchTrackHeight.value * d
         val trackW = SwitchSliderDimens.switchTrackWidth.value * d
-        val knob = SwitchSliderDimens.switchKnob.value * d
-        val seat = colors.collar.seat
-        val x = (if (on) lip + trackW - 2 * d - knob / 2 else lip + 2 * d + knob / 2).toInt()
+        val thumb = if (on) colors.collar.flat.thumb else colors.collar.flat.thumbOff
+        val x = (if (on) lip + trackW - trackH / 2 else lip + trackH / 2).toInt()
         val tol = 10f / 255
-        // From the row after the track's first (at a fractional density that row is half lip, half track: a step that is not the knob).
-        val rows = (lip.toInt() + 1 until (lip + trackH).toInt() + (6 * d).toInt())
-        // The body's top is the first hard step down the column, its highlight row included (the track's own inset shadow fades gently).
-        val step = rows.firstOrNull { it > rows.first() && px[x, it].dist(px[x, it - 1]) > 0.25f }
-        assertTrue("no knob body found at x=$x", step != null)
-        val top = step!!
-        // The body ends where its solid side starts (the off track is nearly the side's colour, so look only below the knob's middle).
-        val side = rows.filter { it > top + knob / 2 && px[x, it].dist(seat.side) < tol }
-        assertTrue("no knob side found at x=$x", side.isNotEmpty())
-        // The thick edge is the run of side-coloured rows under the body; the knob (body plus edge) is what must sit centred.
-        // The shadow under it is nearly the same colour on a dark theme, so the run stops at the edge's thickness (`SeatLook.cap` thick, 2 dp, at `Depth.THICKNESS`).
-        val edge = 2 * d * Depth.THICKNESS
-        var end = side.first()
-        while (end + 1 < rows.last && end + 1 - side.first() < edge - 0.5f && px[x, end + 1].dist(seat.side) < tol) end++
-        val bottom = end + 1
-        val knobCentre = (top + bottom) / 2f
+        // The flat thumb is one solid colour: the rows of its colour down the thumb's own column are its body (its 1 dp shadow and the track differ from it).
+        // The off thumb has the off outline's colour, which also paints the track's top and bottom rows: take only the run through the centre.
+        val centreRow = (lip + trackH / 2).toInt()
+        var first = centreRow
+        var last = centreRow
+        while (px[x, first - 1].dist(thumb) < tol) first--
+        while (px[x, last + 1].dist(thumb) < tol) last++
+        val rows = if (px[x, centreRow].dist(thumb) < tol) (first..last).toList() else emptyList()
+        assertTrue("no thumb found at x=$x", rows.isNotEmpty())
+        val top = rows.first()
+        val bottom = rows.last() + 1
+        assertTrue("the thumb's rows are not one run: $top..$bottom (${rows.size} rows)", rows.size == bottom - top)
+        val thumbCentre = (top + bottom) / 2f
         val trackCentre = lip + trackH / 2f
-        val off = (knobCentre - trackCentre) / d
-        assertTrue("knob body plus edge rows $top..$bottom centre $knobCentre, track centre $trackCentre: off by $off dp", abs(off) <= 0.5f)
+        val off = (thumbCentre - trackCentre) / d
+        assertTrue("thumb rows $top..$bottom centre $thumbCentre, track centre $trackCentre: off by $off dp", abs(off) <= 0.5f)
     }
 
     @Test fun graphiteOn() = check(PlumThemeSettings.Graphite, on = true, focused = false)

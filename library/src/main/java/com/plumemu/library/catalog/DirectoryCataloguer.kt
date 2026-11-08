@@ -5,6 +5,7 @@ import com.plumemu.library.matching.FolderMatch
 import com.plumemu.library.matching.SystemMatcher
 import com.plumemu.identify.name.Region
 import com.plumemu.identify.name.TitleCase
+import com.plumemu.identify.name.FileBaseName
 import com.plumemu.identify.name.TitleCleaner
 import com.plumemu.library.scan.DocumentEntry
 import java.util.Locale
@@ -109,7 +110,7 @@ class DirectoryCataloguer(
             val match = matcher.matchFile(folder, file.name)
             val described = MatchedFile(
                 item = file,
-                baseName = DiscMarkers.canonical(file.name.substringBeforeLast('.')),
+                baseName = DiscMarkers.canonical(FileBaseName.ofListed(file.name)),
                 extension = file.name.substringAfterLast('.', missingDelimiterValue = "").lowercase(Locale.ROOT),
                 systemId = (match as? FileMatch.Matched)?.systemId.orEmpty(),
             )
@@ -216,7 +217,7 @@ class DirectoryCataloguer(
                 if (discGroup != null) discGroup = folderTitle
             } else if (TitleCleaner.withoutDiscTag(file.baseName).isBlank()) {
                 // `Disc 1.chd` outside a game's folder: show the file's own words, not "(Disc 1)".
-                cleaned = TitleCleaner.clean(file.item.name.substringBeforeLast('.'))
+                cleaned = TitleCleaner.clean(FileBaseName.ofListed(file.item.name))
             }
         }
         val game = CataloguedGame(

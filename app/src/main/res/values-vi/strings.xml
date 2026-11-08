@@ -69,6 +69,8 @@
     <string name="home_hint_unfavorite">Bỏ yêu thích</string>
     <!-- X: open search. -->
     <string name="home_hint_search">Tìm kiếm</string>
+    <string name="home_hint_undo">Hoàn tác</string>
+    <string name="home_notice_removed_from_recent">Đã xóa khỏi Gần đây</string>
     <string name="home_hint_sort">Sắp xếp</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
@@ -148,8 +150,8 @@
     <string name="setup_folder_desc">Chọn thư mục chứa ROM của bạn. Các thư mục con như snes hay psx sẽ tự khớp với hệ máy tương ứng.</string>
     <string name="setup_folder_point_opens">Trình chọn thư mục của Android sẽ mở ra. Hãy đến thư mục chứa trò chơi của bạn.</string>
     <!-- No button name: it differs by Android version. -->
-    <string name="setup_folder_point_use">Sau đó xác nhận thư mục ấy ngay trong trình chọn.</string>
-    <string name="setup_folder_point_private">Plumemu chỉ thấy những thư mục bạn chọn</string>
+    <string name="setup_folder_point_use">Sau đó xác nhận thư mục ấy trong trình chọn. Trên một số máy cần chạm vào màn hình.</string>
+    <string name="setup_folder_point_private">Plumemu chỉ thấy những thư mục bạn chọn.</string>
     <string name="setup_choose_folder">Chọn thư mục</string>
     <string name="setup_set_up_later">Thiết lập sau</string>
     <string name="setup_folder_remove">Xóa thư mục này</string>
@@ -546,6 +548,7 @@
     <string name="settings_hint_section">Mục</string>
     <!-- Hint bar label beside A in a list of choices: a verb, pick the focused one. -->
     <string name="settings_hint_choose">Chọn</string>
+    <string name="settings_hint_skip">Bỏ qua</string>
     <string name="settings_hint_try_again">Thử lại</string>
     <!-- Narrow screens: opens the focused option's explanation as a further stop (the right button). -->
     <string name="settings_hint_more">Xem thêm</string>
@@ -574,6 +577,12 @@
     <string name="settings_folder_body">Tệp vẫn nằm trên máy. Chọn một thư mục con đã bỏ qua để đọc lại.</string>
     <string name="settings_folder_skip_one">Bỏ qua một thư mục con…</string>
     <string name="settings_folder_skipped">Đã bỏ qua</string>
+    <string name="settings_unreadable_row">Không đọc được thư mục</string>
+    <string name="settings_unreadable_title_many">Không đọc được thư mục</string>
+    <string name="settings_unreadable_body">Lần quét vừa rồi Plumemu không đọc được thư mục này. Game bạn đã xoá khỏi đây vẫn nằm trong thư viện cho tới khi đọc được nó; lần quét sau sẽ thử lại.</string>
+    <string name="settings_unreadable_body_many">Lần quét vừa rồi Plumemu không đọc được các thư mục này. Game bạn đã xoá khỏi đó vẫn nằm trong thư viện cho tới khi đọc được chúng; lần quét sau sẽ thử lại.</string>
+    <string name="settings_unreadable_scan_again">Quét lại</string>
+    <string name="settings_unreadable_skip">Bỏ qua thư mục này</string>
     <string name="settings_folder_remove">Gỡ thư mục này…</string>
     <string name="settings_folder_skip_failed">Không lưu được thay đổi đó. Chưa có gì thay đổi.</string>
     <string name="settings_skip_subfolder_title">Bỏ qua một thư mục con</string>
@@ -898,21 +907,26 @@
     <!-- Ready-made colour sets (never a console's or a brand's name. -->
     <string name="settings_colors">Bộ màu</string>
     <string name="settings_colors_panel_help">Chọn một bộ màu. Muốn tự tạo, hãy đổi Màu nền hoặc Màu chữ ở bên dưới. Màu bạn tự tạo nằm trong mục Tùy chỉnh.</string>
-    <string name="settings_colors_paper">Giấy</string>
+    <string name="settings_colors_daylight">Ban ngày</string>
+    <string name="settings_colors_ultramarine">Lam đậm</string>
+    <string name="settings_colors_magenta">Hồng sen</string>
+    <string name="settings_colors_peach">Đào</string>
+    <string name="settings_colors_matcha">Trà xanh</string>
+    <string name="settings_colors_mocha">Cà phê sữa</string>
+    <string name="settings_colors_front_loader">Máy băng</string>
+    <string name="settings_colors_spice_cube">Hộp gia vị</string>
+    <string name="settings_colors_pea_green">Đậu xanh</string>
     <string name="settings_colors_pocket">Bỏ túi</string>
-    <string name="settings_colors_dot_matrix">Ma trận điểm</string>
-    <string name="settings_colors_super">Super</string>
-    <string name="settings_colors_indigo">Chàm</string>
-    <string name="settings_colors_charcoal">Than</string>
+    <string name="settings_colors_lavender">Oải hương</string>
+    <string name="settings_colors_red_and_gold">Đỏ và vàng</string>
     <string name="settings_colors_ivory">Ngà</string>
+    <string name="settings_colors_clear_grape">Nho trong</string>
+    <string name="settings_colors_cold_grey">Xám lạnh</string>
     <string name="settings_colors_banana">Chuối</string>
-    <string name="settings_colors_cream">Kem</string>
     <string name="settings_background">Màu nền</string>
     <string name="settings_text_color">Màu chữ</string>
     <string name="settings_accent">Màu nhấn</string>
-    <string name="settings_font">Phông chữ</string>
     <string name="settings_text_size">Cỡ chữ</string>
-    <string name="settings_text_weight">Độ dày chữ</string>
     <string name="settings_left_edge">Dải bên trái</string>
     <string name="settings_grid_size">Cỡ lưới</string>
     <string name="settings_bg_graphite">Than chì</string>
@@ -978,9 +992,6 @@
     <string name="settings_size_larger">Lớn hơn</string>
     <string name="settings_size_huge">Rất lớn</string>
     <string name="settings_size_largest">Lớn nhất</string>
-    <string name="settings_weight_thin">Mỏng</string>
-    <string name="settings_weight_medium">Vừa</string>
-    <string name="settings_weight_bold">Đậm</string>
     <string name="settings_left_edge_counts">Số trò chơi</string>
     <string name="settings_left_edge_codes">Mã hệ máy</string>
     <string name="settings_left_edge_letters">Chữ cái</string>
@@ -1009,12 +1020,10 @@
     <string name="settings_color_adjusted_accent">Đã đổi màu nhấn để vẫn dễ thấy</string>
     <string name="settings_color_adjusted_both">Đã đổi màu chữ và màu nhấn để vẫn dễ đọc</string>
     <string name="settings_accent_body">Tô màu hệ máy đang chọn, chấm đánh dấu, công tắc và nút bấm. Theo hệ máy: mỗi hệ máy một màu riêng.</string>
-    <string name="settings_font_body">Phông chữ cho mọi chữ trong Plumemu.</string>
     <string name="settings_text_size_body">Đổi cỡ toàn bộ chữ trong Plumemu. Cỡ chữ của Android vẫn áp dụng thêm.</string>
-    <string name="settings_text_weight_body">Đổi độ dày của toàn bộ chữ trong Plumemu.</string>
     <string name="settings_left_edge_body">Dải hẹp bên trái hiện gì khi bạn đang ở danh sách trò chơi: số trò chơi của mỗi hệ máy, mã ngắn của từng hệ máy, hoặc các chữ cái của danh sách đang xem.</string>
     <string name="settings_grid_size_body">Cỡ ảnh bìa ở dạng lưới, áp dụng cho mọi hệ máy, Gần đây và Yêu thích. Nhỏ hiện nhiều trò chơi nhất cùng lúc, Lớn hiện ít nhất.</string>
-    <!-- Sample lines in the colour and font panels (the board's). -->
+    <!-- Sample lines in the colour panel (the board's). -->
 
     <!-- Advanced (includes the confirm-button option) -->
     <string name="settings_confirm_bottom">Xác nhận bằng B</string>
@@ -1252,7 +1261,7 @@
     <string name="report_error_refused">Máy chủ không nhận báo cáo này. Hãy kiểm tra địa chỉ email. Nội dung bạn viết vẫn còn, có thể thử lại.</string>
     <string name="report_error_unavailable">Bản Plumemu này không gửi được báo cáo. Hãy dùng Xuất nhật ký rồi tự gửi tệp đó.</string>
     <string name="report_error_not_saved">Không lưu được báo cáo trên thiết bị này.</string>
-    <string name="settings_privacy_body">Thư viện, cài đặt và thời gian chơi của bạn nằm trong bộ nhớ riêng của Plumemu trên thiết bị này và không bao giờ được gửi đi. Chỉ khi bạn bật (Cài đặt › Giới thiệu › Gửi thống kê sử dụng), Plumemu gửi số liệu sử dụng ẩn danh và báo cáo sự cố cho nhà phát triển: quốc gia, mẫu thiết bị, phiên bản Android và ứng dụng, màn hình và cài đặt bạn dùng, thời gian chơi theo hệ máy. Với trò chơi mà Plumemu không nhận ra được tên, ứng dụng còn gửi, mỗi lần cài đặt một lần, hệ máy, cách lưu tệp, dung lượng, CRC-32 và mã sản phẩm hoặc số sê-ri đĩa đọc từ chính trò chơi. Không bao giờ gửi tên trò chơi, từ khóa tìm kiếm hay tài khoản ScreenScraper. Báo cáo sự cố có thể chứa đường dẫn tệp. Khi tắt, Plumemu gửi một lượt đếm ẩn danh “đã tắt”, rồi không gửi gì nữa. Báo cáo lỗi chỉ được gửi khi bạn nhấn Gửi trong mục Báo lỗi, và có thể chứa nhật ký bạn chọn đính kèm, với đường dẫn tệp. Dữ liệu đã gửi được lưu giữ không thời hạn. Mỗi ngày một lần khi có Wi-Fi, Plumemu hỏi plumemu-app.stevensdesk.com xem có phiên bản mới hơn không; Cloudflare, nơi lưu trữ máy chủ này, sẽ thấy địa chỉ IP của bạn. Có thể tắt việc này trong Cài đặt › Giới thiệu › Cập nhật. Lần kiểm tra hằng ngày đó cũng tải dữ liệu nền tảng mới (danh sách hệ máy và trình giả lập) từ cùng máy chủ; không gửi thêm gì khác. Nếu bạn có tài khoản ScreenScraper, Plumemu gửi cho ScreenScraper tên tệp, dung lượng và mã kiểm tra (checksum) của từng trò chơi, cùng tên trò chơi khi những thông tin đó không cho kết quả, để tìm ảnh bìa. Với tùy chọn Chỉ bìa hộp, Plumemu tải ảnh mặt hộp từ máy chủ công khai của libretro, thumbnails.libretro.com, khi có Wi-Fi, với tên trò chơi nằm trong địa chỉ; máy chủ đó thấy địa chỉ IP của bạn. Nếu bạn có tài khoản RetroAchievements, Plumemu gửi cho retroachievements.org tên người dùng, khóa và số RetroAchievements của từng trò chơi, khi bạn mở thông tin trò chơi, sau khi chơi và mỗi ngày một lần khi có Wi-Fi; ảnh huy hiệu lấy từ media.retroachievements.org. Khóa được lưu mã hóa trên thiết bị này, không bao giờ nằm trong bản sao lưu hay nhật ký. Đăng xuất là dừng gửi. Thời gian chơi chính xác, nếu bạn bật trong Cài đặt \u203A Thống kê, xin quyền Truy cập dữ liệu sử dụng của Android các sự kiện trong khoảng thời gian của lượt chơi và chỉ giữ lại những sự kiện của game hoặc ứng dụng bạn mở từ Plumemu cùng sự kiện về màn hình; ngoài độ dài lượt chơi không lưu gì thêm và không bao giờ gửi đi.</string>
+    <string name="settings_privacy_body">Thư viện, cài đặt và thời gian chơi của bạn nằm trong bộ nhớ riêng của Plumemu trên thiết bị này và không bao giờ được gửi đi. Chỉ khi bạn bật (Cài đặt › Giới thiệu › Gửi thống kê sử dụng), Plumemu gửi số liệu sử dụng ẩn danh và báo cáo sự cố cho nhà phát triển: quốc gia, mẫu thiết bị, phiên bản Android và ứng dụng, màn hình và cài đặt bạn dùng, thời gian chơi theo hệ máy. Với trò chơi mà Plumemu không nhận ra được tên, ứng dụng còn gửi, mỗi lần cài đặt một lần, hệ máy, cách lưu tệp, dung lượng, CRC-32 và mã sản phẩm hoặc số sê-ri đĩa đọc từ chính trò chơi. Không bao giờ gửi tên trò chơi, từ khóa tìm kiếm hay tài khoản ScreenScraper. Báo cáo sự cố có thể chứa đường dẫn tệp. Khi tắt, Plumemu gửi một lượt đếm ẩn danh “đã tắt”, rồi không gửi gì nữa. Báo cáo lỗi chỉ được gửi khi bạn nhấn Gửi trong mục Báo lỗi, và có thể chứa nhật ký bạn chọn đính kèm, với đường dẫn tệp. Dữ liệu đã gửi được lưu giữ không thời hạn. Mỗi ngày một lần khi có Wi-Fi, Plumemu hỏi plumemu-app.stevensdesk.com xem có phiên bản mới hơn không; Cloudflare, nơi lưu trữ máy chủ này, sẽ thấy địa chỉ IP của bạn. Có thể tắt việc này trong Cài đặt › Giới thiệu › Cập nhật. Lần kiểm tra hằng ngày đó cũng tải dữ liệu nền tảng mới (danh sách hệ máy và trình giả lập) từ cùng máy chủ; không gửi thêm gì khác. Nếu bạn có tài khoản ScreenScraper, Plumemu gửi cho ScreenScraper tên tệp, dung lượng và mã kiểm tra (checksum) của từng trò chơi, cùng tên trò chơi khi những thông tin đó không cho kết quả, để tìm ảnh bìa. Với nguồn mặc định, Plumemu tải ảnh mặt hộp từ máy chủ công khai của libretro, thumbnails.libretro.com, khi có Wi-Fi, với tên trò chơi nằm trong địa chỉ; máy chủ đó thấy địa chỉ IP của bạn. Nếu bạn có tài khoản RetroAchievements, Plumemu gửi cho retroachievements.org tên người dùng, khóa và số RetroAchievements của từng trò chơi, khi bạn mở thông tin trò chơi, sau khi chơi và mỗi ngày một lần khi có Wi-Fi; ảnh huy hiệu lấy từ media.retroachievements.org. Khóa được lưu mã hóa trên thiết bị này, không bao giờ nằm trong bản sao lưu hay nhật ký. Đăng xuất là dừng gửi. Thời gian chơi chính xác, nếu bạn bật trong Cài đặt \u203A Thống kê, xin quyền Truy cập dữ liệu sử dụng của Android các sự kiện trong khoảng thời gian của lượt chơi và chỉ giữ lại những sự kiện của game hoặc ứng dụng bạn mở từ Plumemu cùng sự kiện về màn hình; ngoài độ dài lượt chơi không lưu gì thêm và không bao giờ gửi đi.</string>
     <!-- Updates -->
     <string name="settings_update_value_downloading">Đang tải…</string>
     <string name="settings_update_value_installing">Đang cài…</string>
@@ -1300,6 +1309,18 @@
     <string name="settings_update_confirm">Hãy xác nhận cập nhật trên màn hình của Android. Nếu chưa cài được, hãy chọn Cập nhật để thử lại.</string>
     <string name="settings_update_cancelled">Đã hủy cập nhật.</string>
     <string name="settings_update_aborted">Chưa cài bản cập nhật.</string>
+    <!-- Updates panel, after Update was pressed on Android 13 or newer: why Android is about to ask to allow notifications. -->
+    <string name="settings_update_notice_reason">Android sẽ hỏi có cho phép thông báo không. Plumemu chỉ hiện một thông báo sau khi cập nhật, để bạn chạm vào là mở Plumemu.</string>
+    <!-- Updates panel, notifications off: Plumemu cannot always reopen itself after the update. -->
+    <string name="settings_update_notice_off">Thông báo đang tắt, nên sau khi cập nhật Plumemu có thể không tự mở. Nhấn Home để quay lại.</string>
+    <!-- Updates panel, notifications off and Plumemu not the home app: the Home button would not bring it back. -->
+    <string name="settings_update_notice_off_not_home">Thông báo đang tắt, nên sau khi cập nhật Plumemu có thể không tự mở. Hãy mở lại từ danh sách ứng dụng.</string>
+    <!-- Updates panel, notifications off: opens Android's notification settings for Plumemu. -->
+    <string name="settings_update_notifications_button">Bật thông báo</string>
+    <!-- The one notification, shown after an update when Plumemu could not reopen itself. Channel name, title, text. -->
+    <string name="update_notice_channel">Cập nhật</string>
+    <string name="update_notice_title">Plumemu đã được cập nhật</string>
+    <string name="update_notice_text">Chạm để mở.</string>
     <string name="settings_update_failed_offline">Đã dừng tải: không kết nối được máy chủ cập nhật.</string>
     <string name="settings_update_failed_timeout">Đã dừng tải: máy chủ cập nhật không phản hồi kịp.</string>
     <string name="settings_update_failed_http">Không tải được: máy chủ cập nhật gặp sự cố.</string>
@@ -1314,8 +1335,21 @@
 
     <!-- ScreenScraper account: setup's box art step and Settings › Library. -->
     <string name="setup_box_art_title">Ảnh bìa từ ScreenScraper</string>
-    <string name="setup_box_art_desc">Ảnh bìa và thông tin trò chơi lấy từ ScreenScraper, bằng tài khoản miễn phí của riêng bạn trên screenscraper.fr. Bạn cũng có thể đăng nhập sau trong Cài đặt › Bìa và tài khoản › Bìa hộp.</string>
-    <string name="setup_box_art_skip">Bỏ qua</string>
+    <string name="setup_box_art_desc">Ảnh bìa và thông tin trò chơi lấy từ ScreenScraper, bằng tài khoản miễn phí của riêng bạn trên screenscraper.fr. Bạn cũng có thể đăng nhập sau trong Cài đặt › Bìa và tài khoản.</string>
+    <string name="setup_box_art_ask_title">Tải ảnh bìa về?</string>
+    <string name="setup_box_art_ask_desc">Ảnh hộp của từng trò chơi. Có thể đổi bất cứ lúc nào trong Cài đặt › Bìa và tài khoản.</string>
+    <string name="setup_box_art_no">Không</string>
+    <string name="setup_box_art_no_line">Không dùng mạng. Plumemu tự vẽ bìa.</string>
+    <string name="setup_box_art_yes">Có</string>
+    <string name="setup_box_art_yes_line">Mặt trước hộp qua Wi-Fi. Chọn nguồn ở bước sau.</string>
+    <string name="setup_box_art_yes_line_libretro">Mặt trước hộp từ libretro qua Wi-Fi. Không cần tài khoản, không có chi tiết trò chơi.</string>
+    <string name="setup_box_art_source_title">Chọn nguồn</string>
+    <string name="setup_box_art_source_desc">Cả hai chỉ tải qua Wi-Fi. Có thể đổi bất cứ lúc nào trong Cài đặt › Bìa và tài khoản.</string>
+    <string name="setup_box_art_default">Nguồn mặc định</string>
+    <string name="setup_box_art_default_line">Mặt trước hộp từ libretro. Không cần tài khoản, không có chi tiết trò chơi.</string>
+    <string name="setup_box_art_account">Tài khoản ScreenScraper</string>
+    <string name="setup_box_art_account_line">Bìa hộp kèm năm phát hành, điểm đánh giá, thể loại, nhà phát hành và mô tả. Cần tài khoản miễn phí từ screenscraper.fr.</string>
+    <string name="setup_box_art_skip">Để sau</string>
     <!-- The question before the sign-in form. -->
     <string name="setup_confirm_title">Nút nào để xác nhận?</string>
     <string name="setup_confirm_desc">Nút A để xác nhận, nút B để quay lại. Muốn ngược lại? Chọn “Dùng nút B”.</string>
@@ -1326,8 +1360,6 @@
     <string name="setup_confirm_again_desc">Dùng phím điều hướng để chọn nút bạn dùng. Chọn nút đang dùng sẽ đi tiếp.</string>
     <string name="setup_look_title">Chọn giao diện</string>
     <string name="setup_look_desc">Chọn màu sắc. Bạn có thể đổi bất cứ lúc nào trong Cài đặt › Giao diện.</string>
-    <string name="setup_box_art_question_title">Ảnh bìa</string>
-    <string name="setup_box_art_question_desc">Nơi Plumemu lấy ảnh bìa cho trò chơi của bạn. Có thể đổi bất cứ lúc nào trong Cài đặt › Bìa và tài khoản › Bìa hộp.</string>
     <string name="setup_ready_box_art">Ảnh bìa: đang tải ngầm</string>
     <string name="setup_ready_box_art_offline">Ảnh bìa: bắt đầu khi có mạng</string>
     <string name="setup_ready_box_art_sign_in">Ảnh bìa: hãy đăng nhập lại trong Cài đặt › Bìa và tài khoản</string>
@@ -1358,6 +1390,7 @@
     <string name="settings_account_value_sign_in">Đăng nhập</string>
     <string name="settings_account_value_signed_in">Đã đăng nhập</string>
     <string name="settings_account_body">Ảnh bìa và thông tin trò chơi lấy từ ScreenScraper, bằng tài khoản miễn phí của riêng bạn trên screenscraper.fr. Mật khẩu được mã hóa và lưu trên thiết bị này.</string>
+    <string name="settings_account_sign_up">Chưa có tài khoản? Tạo miễn phí tại screenscraper.fr.</string>
     <string name="settings_account_sign_out">Đăng xuất</string>
     <string name="settings_account_sign_in_again">Đăng nhập lại</string>
     <string name="settings_account_sign_out_failed">Plumemu không đăng xuất được. Hãy thử lại.</string>
@@ -1566,7 +1599,7 @@
     <string name="settings_box_art_source_body">Nơi Plumemu lấy bìa hộp. Nhấn A để chọn.</string>
     <string name="settings_box_art_source_screenscraper">Bìa hộp và thông tin game</string>
     <string name="settings_box_art_source_screenscraper_line">Bìa hộp kèm năm phát hành, điểm đánh giá, thể loại, nhà phát hành và mô tả. Cần tài khoản ScreenScraper miễn phí.</string>
-    <string name="settings_box_art_source_libretro">Chỉ bìa hộp</string>
+    <string name="settings_box_art_source_libretro">Nguồn mặc định</string>
     <string name="settings_box_art_source_libretro_line">Mặt trước hộp từ libretro qua Wi-Fi. Không có chi tiết. Không cần tài khoản.</string>
     <string name="settings_box_art_source_own">Bìa riêng của Plumemu</string>
     <string name="settings_box_art_source_own_line">Không dùng mạng. Plumemu tự vẽ bìa áp phích cho mỗi game.</string>

@@ -1,5 +1,7 @@
 package com.plumemu.setup
 
+import com.plumemu.coreui.theme.fadingIn
+import com.plumemu.coreui.theme.rememberSlidingSwap
 import com.plumemu.keyboard.PasteBoard
 import com.plumemu.telemetry.ScreenId
 import com.plumemu.usage.TrackError
@@ -186,7 +188,9 @@ private fun Body(
 ) {
     val covers = setupKeyboardCovers()
     val trayCut = Modifier.aboveTray({ state.boxArt?.isTrayUp == true }, covers)
-    Box(Modifier.fillMaxSize().padding(horizontal = PlumDimens.stripMarginSide)) {
+    // A step forward slides in from the right, a step back from the left, as it fades in.
+    val stepSwap = rememberSlidingSwap(state.step, { state.step.ordinal }, vertical = false)
+    Box(Modifier.fillMaxSize().padding(horizontal = PlumDimens.stripMarginSide).fadingIn(stepSwap)) {
         val title = stepTitle(state).let { if (state.boxArt?.isTrayUp == true) it.copy(description = null) else it }
         val content: @Composable ColumnScope.() -> Unit = {
             when {
@@ -228,7 +232,11 @@ private fun stepTitleOf(state: SetupUiState): StepTitle =
         SetupStep.SecondScreen -> StepTitle(stringResource(R.string.setup_second_screen_title), stringResource(R.string.setup_second_screen_desc))
         SetupStep.BoxArt ->
             if (state.boxArt == null) {
-                StepTitle(stringResource(R.string.setup_box_art_question_title), stringResource(R.string.setup_box_art_question_desc))
+                if (state.isBoxArtSourceOpen) {
+                    StepTitle(stringResource(R.string.setup_box_art_source_title), stringResource(R.string.setup_box_art_source_desc))
+                } else {
+                    StepTitle(stringResource(R.string.setup_box_art_ask_title), stringResource(R.string.setup_box_art_ask_desc))
+                }
             } else {
                 StepTitle(stringResource(R.string.setup_box_art_title), stringResource(R.string.setup_box_art_desc))
             }
@@ -442,7 +450,7 @@ private fun SetupTopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(PlumDimens.setupDotsGap), verticalAlignment = Alignment.CenterVertically) {
-            BasicText(text = stringResource(R.string.setup_top_bar), style = style.copy(color = colors.text2), maxLines = 1)
+            BasicText(text = stringResource(R.string.setup_top_bar), style = PlumTheme.type.meta.copy(color = colors.text2), maxLines = 1)
             StepDots(current = stepIndex, count = stepCount)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(PlumDimens.topBarItemGap), verticalAlignment = Alignment.CenterVertically) {
@@ -480,7 +488,7 @@ private fun SetupHints(
             -> R.string.setup_hint_remove
             SetupControl.AddFolder -> R.string.setup_hint_add_folder
             SetupControl.Continue -> R.string.setup_hint_continue
-            SetupControl.UseSecondScreen, SetupControl.SkipSecondScreen, SetupControl.UseBoxArt, SetupControl.BoxArtLibretro, SetupControl.BoxArtOwnCovers,
+            SetupControl.UseSecondScreen, SetupControl.SkipSecondScreen, SetupControl.UseBoxArt, SetupControl.BoxArtLibretro, SetupControl.BoxArtOwnCovers, SetupControl.BoxArtYes,
             SetupControl.Look0, SetupControl.Look1, SetupControl.Look2, SetupControl.Look3, SetupControl.Look4, SetupControl.Look5,
             -> R.string.setup_hint_select
             SetupControl.ConfirmKeep, SetupControl.ConfirmUseB -> R.string.setup_hint_select

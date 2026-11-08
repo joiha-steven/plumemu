@@ -83,8 +83,10 @@ internal fun HomeTopBar(
     val afterGame = rememberShownAchievements()
     val unlocked = afterGame.line
     val unlockedLead = unlocked?.let { pluralStringResource(R.plurals.home_notice_achievements, it.count, numbers.format(it.count)) }
-    val noticeLead = unlockedLead ?: notice?.let { noticeLead(it, numbers) }
-    val noticeTail = if (unlocked != null) unlocked.gameTitle else notice?.let { noticeTail(it, content, numbers) }
+    val shownUndo = rememberShownUndo()
+    val undo = shownUndo.line
+    val noticeLead = undo?.first ?: unlockedLead ?: notice?.let { noticeLead(it, numbers) }
+    val noticeTail = if (undo != null) undo.second else if (unlocked != null) unlocked.gameTitle else notice?.let { noticeTail(it, content, numbers) }
     TopBar(
         place =
             if (noticeLead != null) {
@@ -102,7 +104,7 @@ internal fun HomeTopBar(
         charging = charging,
         chargingDescription = stringResource(R.string.battery_charging),
         modifier = Modifier.testTag(HomeTags.TOP_BAR),
-        placeAlpha = if (unlocked != null) afterGame.alpha else shown.alpha,
+        placeAlpha = if (undo != null) shownUndo.alpha else if (unlocked != null) afterGame.alpha else shown.alpha,
         pill = updateName?.let { stringResource(R.string.home_update_pill, it) },
         onPill = onSettings,
         typing = typing,
@@ -210,12 +212,7 @@ internal fun hintsFor(
         column == Column.Details -> listOfNotNull(play, pushRight.takeIf { !showsGrid }, back, favorite, HintSpec(R.string.home_key_start, R.string.home_hint_menu, Action.Menu))
         // Apps' grid has one fixed size and L1 R1 do nothing there: no L1 R1 hint.
         showsGrid && (isApps || entry?.isAppGamesGrid == true) ->
-            listOfNotNull(
-                play,
-                back,
-                switchSystem(content, shoulders),
-                HintSpec(R.string.home_key_select, R.string.home_hint_list_view, Action.ToggleView),
-            )
+            appsGridHints(play, back, search, switchSystem(content, shoulders))
         // L1 R1 change the grid size here, not the system (the system column is a Back away).
         showsGrid ->
             listOfNotNull(
@@ -438,11 +435,13 @@ internal fun HomeHints(
     }
     // A on the empty state does what its focused button says; the reason is collected only while that message is up.
     val emptyButton = rememberEmptyButton(column == Column.Systems && content.asksForFolderAt(entry))
+    val undoOffered = LocalRecentUndoOffered.current()
     val hints =
-        searchHintsShown ?: typingHints ?: remember(content, column, entry, showsGrid, letters, shoulders, panel, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, hasDetailsStop, emptyButton) {
-            panel?.let { panelHints(it, letters) } ?: hintsFor(content, column, entry, showsGrid, letters, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, shoulders, hasDetailsStop, emptyButton)
+        searchHintsShown ?: typingHints ?: remember(content, column, entry, showsGrid, letters, shoulders, panel, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, hasDetailsStop, emptyButton, undoOffered) {
+            panel?.let { panelHints(it, letters) } ?: hintsFor(content, column, entry, showsGrid, letters, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, shoulders, hasDetailsStop, emptyButton).withUndo(undoOffered, letters)
         }
-    val drops = if (isTyping || isPanelTrayUp) TYPING_HINT_DROP_ORDER else if (showsGrid) GRID_HINT_DROP_ORDER else HINT_DROP_ORDER
+    // While Undo is offered X stays on every bar that has it (Search is dropped last), or its key would work with no hint drawn.
+    val drops = (if (isTyping || isPanelTrayUp) TYPING_HINT_DROP_ORDER else if (showsGrid && entry?.isIconGrid == true) APPS_GRID_HINT_DROP_ORDER else if (showsGrid) GRID_HINT_DROP_ORDER else HINT_DROP_ORDER).let { if (undoOffered && panel == null && searchHintsShown == null) it - Action.Search else it }
     val dropOrder = remember(hints, drops) { drops.flatMap { action -> hints.indices.filter { hints[it].action == action } } }
     val views: @Composable () -> Unit = remember(hints, onAction, onCycleGridSize) { { hints.forEach { HintView(it, onAction, onCycleGridSize) } } }
     if (searchHintsShown == null && showsGrid && column == Column.Games && entry != null) {
@@ -508,6 +507,7 @@ private val TYPING_HINT_DROP_ORDER = listOf(Action.NextSystem, Action.ToggleView
 internal object HomeTags {
     const val TOP_BAR = "home_top_bar"
     const val HINT_BAR = "home_hint_bar"
+    const val GRID_FOCUS_TITLE = "home_grid_focus_title"
     const val STRIP = "home_strip"
     const val SYSTEMS = "home_systems"
     const val GAMES = "home_games"

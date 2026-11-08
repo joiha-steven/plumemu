@@ -54,8 +54,10 @@ internal data class SetupLocal(
     val hasSkippedSecondScreen: Boolean = false,
     /** The box art step's form, made each time the step opens. */
     val boxArt: SignInForm? = null,
-    /** "Box art and game info" needed a sign-in: the step shows [boxArt], not the choices. */
+    /** "ScreenScraper account" needed a sign-in: the step shows [boxArt], not the choices. */
     val isBoxArtFormOpen: Boolean = false,
+    /** "Yes" was chosen in a build with ScreenScraper: the step shows the source page (and the form opens from it). */
+    val isBoxArtSourceOpen: Boolean = false,
     /** The name of a sign-in this setup saw succeed: the step stays signed in even before the stored status says so. */
     val signedInHere: String? = null,
     /** What the confirm step stored (or kept) in this setup; null until it is answered. */

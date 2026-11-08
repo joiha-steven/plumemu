@@ -174,18 +174,20 @@ internal class SettingsWork(
     /**
      * ROM folders › a folder: skips the sub-folder [key] ([skip]) or reads it again, stored and then scanned by
      * the graph in the process's scope, so closing Settings loses nothing. False while the same sub-folder's
-     * change is still being stored. A failure is said on the folder's page.
+     * change is still being stored. A failure is said on [option]'s panel (or row), where the person acted: the folder's page
+     * by default, Library › Folder could not be read for its Skip this folder.
      */
     fun skipSubfolder(
         key: FolderKey,
         skip: Boolean,
         content: SettingsContent,
+        option: SettingsOption = SettingsOption.RomFolders,
     ): Boolean {
         if (key in skipping || key in content.skippingFolders) return false
         skipping = skipping + key
         actions.skipSubfolder(key.folderId, key.relativePath, skip) { stored ->
             skipping = skipping - key
-            if (!stored) notice = SettingsOption.RomFolders to SettingsNotice.SkipFailed
+            if (!stored) notice = option to SettingsNotice.SkipFailed
         }
         return true
     }

@@ -49,7 +49,7 @@ class InfoLineGapTest {
         assertEquals("the gap between the title and the meta, dp", 9.33f, gapDp, 0.4f)
         assertEquals("the title's size", 16f, result.layoutInput.style.fontSize.value, 0.01f)
         val metaSize = result.layoutInput.text.spanStyles.first { it.item.fontSize.isSp }.item.fontSize.value
-        assertEquals("the meta's size", 11.33f, metaSize, 0.01f)
+        assertEquals("the meta's size (11 since the mono step)", 11f, metaSize, 0.01f)
     }
 
     /**

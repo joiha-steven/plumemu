@@ -39,7 +39,7 @@ Send. Share log in Report a problem only shares the log file where you choose; P
 nothing itself. Reports are kept by the developer, with no time limit.
 
 Two other things go over the network: the update check, below, which carries nothing about you,
-box art, if you choose Box art only or sign in to ScreenScraper, and achievements, if you sign in
+box art, if you choose the default source or sign in to ScreenScraper, and achievements, if you sign in
 to RetroAchievements.
 
 ## Update check
@@ -70,7 +70,7 @@ Check for updates in Settings › About › Updates.
 Box art and game details come from [ScreenScraper](https://www.screenscraper.fr), using your own
 ScreenScraper account. Without an account Plumemu does not contact ScreenScraper at all.
 
-**With no account**, if you choose Box art only in the setup or in Settings, Plumemu downloads box
+**With no account**, if you choose the default source (libretro) in the setup or in Settings, Plumemu downloads box
 fronts on Wi-Fi from the libretro thumbnail server (`thumbnails.libretro.com`). Each download has
 the game's name in its address; no account and nothing else is sent. The server sees your IP
 address, as for any web request. Choose Plumemu's own covers and no box art server is contacted.

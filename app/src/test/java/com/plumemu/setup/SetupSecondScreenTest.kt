@@ -150,7 +150,7 @@ class SetupSecondScreenTest {
         press(model, Action.Back)
         val back = model.state.value
         assertEquals(SetupStep.BoxArt, back.step)
-        assertEquals(SetupControl.BoxArtLibretro, back.focus)
+        assertEquals("No was answered", SetupControl.BoxArtOwnCovers, back.focus)
         assertTrue("the scan goes on", source.scan.value.isBusy)
         assertNull(source.secondScreenAnswer)
 

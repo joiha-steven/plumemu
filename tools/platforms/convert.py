@@ -327,6 +327,10 @@ def finish(systems, registry, skipped, dj_players=None):
                 raise ConvertError(f"EXTRA_EXTENSIONS gives {sorted(claimed)} to {system_id}, which {other_id} lists too")
     for system_id in sorted(systems):
         s = systems[system_id]
+        wrong = tables.WRONG_EMULATORS.get(system_id, set())
+        if wrong - set(s["emulators"]):
+            raise ConvertError(f"WRONG_EMULATORS names {sorted(wrong - set(s['emulators']))} for {system_id}, which does not list it")
+        s["emulators"] = [e for e in s["emulators"] if e not in wrong]
         if not s.get("apps") and (not s["emulators"] or not s["extensions"] - tables.EXCLUDED_EXTENSIONS.get(system_id, set())):
             # No launchable emulator, or games that are not files (store ids): nothing to scan.
             dropped.append(system_id)

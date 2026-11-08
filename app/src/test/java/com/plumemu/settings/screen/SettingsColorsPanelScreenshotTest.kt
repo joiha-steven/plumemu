@@ -20,7 +20,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /*
  * Settings › Appearance › Colors' panel, the cursor on Ivory's tile, drawn in the set it
- * is on: Charcoal (dark, coloured glyphs) and Super (light, coloured glyphs), at both reference
+ * is on: Cold grey (dark, coloured glyphs) and Ivory (light, coloured glyphs), at both reference
  * sizes and at Medium and Largest; and on own colours (Graphite), where Custom has its tile:
  * `settings_colors_panel_<size>_<set>[_largest].png`.
  */
@@ -34,8 +34,8 @@ class SettingsColorsPanelScreenshotTest {
         val graphite = AppearanceSettings(background = ColorSetting.Preset("Graphite"))
         val looks =
             listOf(
-                "charcoal" to graphite.withColors(ColorSet.Charcoal).copy(ownColors = null),
-                "super" to graphite.withColors(ColorSet.Super).copy(ownColors = null),
+                "coldgrey" to graphite.withColors(ColorSet.ColdGrey).copy(ownColors = null),
+                "ivory" to graphite.withColors(ColorSet.Ivory).copy(ownColors = null),
                 "custom" to graphite,
             )
         for (size in ReferenceShots.Size.Original) {

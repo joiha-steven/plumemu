@@ -135,7 +135,8 @@ internal fun SetupButton(
         label = text,
         kind = if (isPrimary) ButtonKind.Primary else ButtonKind.Secondary,
         focused = isFocused,
-        modifier = modifier.then(if (hangAbove > 0.dp) Modifier.hangAbove(hangAbove) else Modifier),
+        // A hanging collar belongs to a form short of room, which has no rest to keep.
+        modifier = modifier.then(if (hangAbove > 0.dp) Modifier.hangAbove(hangAbove) else Modifier.buttonStop()),
         maxLines = maxLines,
         collarSize = collarSize,
     )

@@ -19,9 +19,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
@@ -29,6 +32,8 @@ import androidx.compose.ui.unit.Dp
 import com.plumemu.coreui.theme.MaskOpaque
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import kotlin.math.ceil
+import kotlin.math.floor
 
 /**
  * The 32 dp fade at the right edge over content that runs past it (docs/design/rules.md › The
@@ -111,7 +116,7 @@ const val BAR_FADE_BOTTOM = "bar_fade_bottom"
  */
 @Stable
 interface EdgeFades {
-    /** Whether the list can scroll at all: the mask's offscreen layer is kept while it can, not made per scroll. */
+    /** Whether the list can scroll at all: the mask and the pixel snap apply only while it can. */
     val canScroll: Boolean
 
     /** How far the fade reaches down from the top edge of a list [height] px tall, in px, at most [fadePx]; 0 for none. */
@@ -142,8 +147,8 @@ val EdgeClearsKey = SemanticsPropertyKey<EdgeFades>("EdgeClears")
 
 /**
  * Fades the content itself to transparent over [PlumDimens.listFadeBand] at the top and bottom edges [fades] asks
- * for: an alpha mask (offscreen layer, `DstIn` gradient), so it is right on any background and a cover's
- * shadow fades with it, where [ListEdgeFade] paints the background over the rows. Put it on the list's visible
+ * for: an alpha mask (`DstIn` gradient), so it is right on any background and a cover's
+ * shadow fades with it, where [ListEdgeFade] paints the background over the rows. There is no layer over the whole list (it redrew every row each frame on a handheld): rows the mask leaves alone are drawn straight and only the bands it touches go through a band-sized layer ([drawMasked]); [snapToPixels] keeps the content on whole pixels as that layer did. Put it on the list's visible
  * bounds (before a glide's taller layout). Draws only; touches pass through. With [isOn] false (the person turned
  * the fade off, [com.plumemu.coreui.theme.PlumTheme.edgeFadeOn]) it adds nothing: the edges stay flat.
  */
@@ -152,33 +157,29 @@ fun Modifier.listEdgeFadeMask(
     isOn: Boolean,
 ): Modifier =
     if (!isOn) this else semantics { this[EdgeFadesKey] = fades }
-        .graphicsLayer { compositingStrategy = if (fades.canScroll) CompositingStrategy.Offscreen else CompositingStrategy.Auto }
+        .snapToPixels { fades.canScroll }
         .drawWithContent {
-            drawContent()
+            if (!fades.canScroll) {
+                drawContent()
+                return@drawWithContent
+            }
             val fadePx = PlumDimens.listFadeBand.toPx()
-            val top = fades.top(fadePx, size.height).coerceIn(0f, size.height)
-            val bottom = fades.bottom(fadePx, size.height).coerceIn(0f, size.height)
-            val clearTop = fades.clearTop(size.height).coerceIn(0f, size.height)
-            val clearBottom = fades.clearBottom(size.height).coerceIn(0f, size.height)
-            if (clearTop > 0f) drawRect(Color.Transparent, size = Size(size.width, clearTop), blendMode = BlendMode.DstIn)
-            if (clearBottom > 0f) drawRect(Color.Transparent, topLeft = Offset(0f, size.height - clearBottom), size = Size(size.width, clearBottom), blendMode = BlendMode.DstIn)
-            if (top > 0f) {
-                drawRect(maskBrush(atBottom = false, from = 0f, length = top), size = Size(size.width, top), blendMode = BlendMode.DstIn)
-            }
-            if (bottom > 0f) {
-                val from = size.height - bottom
-                drawRect(
-                    maskBrush(atBottom = true, from = from, length = bottom),
-                    topLeft = Offset(0f, from),
-                    size = Size(size.width, bottom),
-                    blendMode = BlendMode.DstIn,
-                )
-            }
+            val h = size.height
+            val top = fades.top(fadePx, h).coerceIn(0f, h)
+            val bottom = fades.bottom(fadePx, h).coerceIn(0f, h)
+            val clearTop = fades.clearTop(h).coerceIn(0f, h)
+            val clearBottom = fades.clearBottom(h).coerceIn(0f, h)
+            val ops = ArrayList<MaskOp>(4)
+            if (clearTop > 0f) ops.add(MaskOp(0f, clearTop, null))
+            if (clearBottom > 0f) ops.add(MaskOp(h - clearBottom, h, null))
+            if (top > 0f) ops.add(MaskOp(0f, top, maskBrush(atBottom = false, from = 0f, length = top)))
+            if (bottom > 0f) ops.add(MaskOp(h - bottom, h, maskBrush(atBottom = true, from = h - bottom, length = bottom)))
+            drawMasked(ops)
         }
 
 /**
  * [listEdgeFadeMask] for a list that keeps [room] px past each end of its visible window (a [com.plumemu.coreui.theme.ListGlide]'s taller layout, see
- * [com.plumemu.coreui.theme.ListGlide.withFadeMask]): the offscreen layer then holds the room too, so the slab of a first or last row is not cut at the window.
+ * [com.plumemu.coreui.theme.ListGlide.withFadeMask]): the mask then covers the room too (same banding as [listEdgeFadeMask]), so the slab of a first or last row is not cut at the window.
  * With [rampsOn] false only the cut rows are hidden, no ramp is drawn (the fade setting is off). The fade is measured on the window. Where the list continues past an edge (it fades there) the room is cleared, so a row cut by the window shows no more of itself; where it ends the room stays open for the slab.
  */
 internal fun Modifier.listEdgeFadeMaskInRoom(
@@ -191,34 +192,113 @@ internal fun Modifier.listEdgeFadeMaskInRoom(
         this[EdgeClearsKey] = fades
         if (rampsOn) this[EdgeFadesKey] = fades
     }
-        .graphicsLayer { compositingStrategy = if (fades.canScroll) CompositingStrategy.Offscreen else CompositingStrategy.Auto }
+        .snapToPixels { fades.canScroll }
         .drawWithContent {
-            drawContent()
+            if (!fades.canScroll) {
+                drawContent()
+                return@drawWithContent
+            }
             val pad = room()
             val height = size.height - 2f * pad
-            if (height <= 0f) return@drawWithContent
+            if (height <= 0f) {
+                drawContent()
+                return@drawWithContent
+            }
             val fadePx = PlumDimens.listFadeBand.toPx()
             val top = if (rampsOn) fades.top(fadePx, height).coerceIn(0f, height) else 0f
             val bottom = if (rampsOn) fades.bottom(fadePx, height).coerceIn(0f, height) else 0f
             val clearTop = fades.clearTop(height).coerceIn(0f, height)
             val clearBottom = fades.clearBottom(height).coerceIn(0f, height)
-            if (clearTop > 0f) drawRect(Color.Transparent, size = Size(size.width, pad + clearTop), blendMode = BlendMode.DstIn)
-            if (clearBottom > 0f) drawRect(Color.Transparent, topLeft = Offset(0f, pad + height - clearBottom), size = Size(size.width, clearBottom + pad), blendMode = BlendMode.DstIn)
+            val ops = ArrayList<MaskOp>(6)
+            if (clearTop > 0f) ops.add(MaskOp(0f, pad + clearTop, null))
+            if (clearBottom > 0f) ops.add(MaskOp(pad + height - clearBottom, size.height, null))
             if (top > 0f) {
-                drawRect(Color.Transparent, size = Size(size.width, pad), blendMode = BlendMode.DstIn)
-                drawRect(maskBrush(atBottom = false, from = pad, length = top), topLeft = Offset(0f, pad), size = Size(size.width, top), blendMode = BlendMode.DstIn)
+                ops.add(MaskOp(0f, pad, null))
+                ops.add(MaskOp(pad, pad + top, maskBrush(atBottom = false, from = pad, length = top)))
             }
             if (bottom > 0f) {
                 val from = pad + height - bottom
-                drawRect(Color.Transparent, topLeft = Offset(0f, pad + height), size = Size(size.width, pad), blendMode = BlendMode.DstIn)
-                drawRect(
-                    maskBrush(atBottom = true, from = from, length = bottom),
-                    topLeft = Offset(0f, from),
-                    size = Size(size.width, bottom),
-                    blendMode = BlendMode.DstIn,
-                )
+                ops.add(MaskOp(pad + height, size.height, null))
+                ops.add(MaskOp(from, pad + height, maskBrush(atBottom = true, from = from, length = bottom)))
+            }
+            drawMasked(ops)
+        }
+
+/** One vertical mask rectangle over the node's full width: [brush] null clears it, else a `DstIn` ramp. */
+private class MaskOp(val top: Float, val bottom: Float, val brush: Brush?)
+
+/**
+ * Draws the content masked by [ops] (multiplied, as consecutive `DstIn` rects were) without an offscreen layer over the whole node: the
+ * rows the mask leaves alone are drawn straight, a row fully cleared is skipped, and only the rows an op touches (its edges snapped out to
+ * whole px, so a fractional edge keeps its partly covered row) go through a layer of just that strip. Every strip is clipped to the
+ * node's width like the old node-wide layer was.
+ */
+private fun ContentDrawScope.drawMasked(ops: List<MaskOp>) {
+    val w = size.width
+    val h = size.height
+    val cuts = ArrayList<Float>(2 + ops.size * 4)
+    cuts.add(0f)
+    cuts.add(h)
+    for (op in ops) {
+        for (e in floatArrayOf(op.top, op.bottom)) {
+            cuts.add(floor(e).coerceIn(0f, h))
+            cuts.add(ceil(e).coerceIn(0f, h))
+        }
+    }
+    cuts.sort()
+    var layerFrom = -1f
+    var layerTo = -1f
+    var prev = cuts[0]
+    for (i in 1 until cuts.size) {
+        val a = prev
+        val b = cuts[i]
+        if (b <= a) continue
+        prev = b
+        var cleared = false
+        var touched = false
+        for (op in ops) {
+            if (op.top < b && op.bottom > a) {
+                touched = true
+                if (op.brush == null && op.top <= a && op.bottom >= b) cleared = true
             }
         }
+        if (touched && !cleared) {
+            if (layerFrom < 0f) layerFrom = a
+            layerTo = b
+            continue
+        }
+        if (layerFrom >= 0f) {
+            drawMaskedStrip(layerFrom, layerTo, w, ops)
+            layerFrom = -1f
+        }
+        if (!touched) clipRect(0f, a, w, b) { this@drawMasked.drawContent() }
+    }
+    if (layerFrom >= 0f) drawMaskedStrip(layerFrom, layerTo, w, ops)
+}
+
+private fun ContentDrawScope.drawMaskedStrip(
+    from: Float,
+    to: Float,
+    w: Float,
+    ops: List<MaskOp>,
+) {
+    clipRect(0f, from, w, to) {
+        drawIntoCanvas { canvas ->
+            val layer = Paint()
+            canvas.saveLayer(Rect(0f, from, w, to), layer)
+            this@drawMaskedStrip.drawContent()
+            for (op in ops) {
+                if (op.top >= to || op.bottom <= from) continue
+                if (op.brush == null) {
+                    drawRect(Color.Transparent, Offset(0f, op.top), Size(w, op.bottom - op.top), blendMode = BlendMode.DstIn)
+                } else {
+                    drawRect(op.brush, Offset(0f, op.top), Size(w, op.bottom - op.top), blendMode = BlendMode.DstIn)
+                }
+            }
+            canvas.restore()
+        }
+    }
+}
 
 /** The mask ramp over [length] px from [from], the same curve as [ListEdgeFade]: at the bottom opaque to clear, at the top clear to opaque. */
 internal fun maskBrush(

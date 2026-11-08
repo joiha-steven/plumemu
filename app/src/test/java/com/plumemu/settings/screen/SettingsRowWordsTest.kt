@@ -83,7 +83,7 @@ class SettingsRowWordsTest {
     /** The kinds of value are told apart by their mark: "‹ X ›" cycles, "X »" opens a panel, a read-only row has none. */
     @Test
     fun cyclingValuesAndPanelValuesCarryDifferentMarks() {
-        val cycling = listOf(SettingsOption.Font, SettingsOption.TextSize, SettingsOption.SortGames, SettingsOption.Keyboard, SettingsOption.SwitchSystemWith)
+        val cycling = listOf(SettingsOption.TextSize, SettingsOption.SortGames, SettingsOption.Keyboard, SettingsOption.SwitchSystemWith)
         for ((option, value) in valuesOf(cycling)) {
             assertEquals(option.name + ": " + value, true, value is OptionValue.Choice)
         }

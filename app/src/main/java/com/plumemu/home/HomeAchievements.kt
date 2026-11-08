@@ -67,7 +67,7 @@ internal fun rememberShownAchievements(): ShownAchievements {
     val isMotionOn by rememberUpdatedState(PlumTheme.motion.isOn)
     LaunchedEffect(source) {
         source.collect { next ->
-            val spec = tween<Float>(PlumMotion.FADE_IN_MS, easing = PlumMotion.EaseOut)
+            val spec = tween<Float>(PlumMotion.FADE_IN_MS, easing = PlumMotion.Decelerate)
             suspend fun fadeTo(target: Float) = if (isMotionOn) { alpha.animateTo(target, spec); Unit } else alpha.snapTo(target)
             fadeTo(0f)
             shown = next

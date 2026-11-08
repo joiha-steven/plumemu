@@ -72,6 +72,16 @@ internal interface BringStops {
     fun focusedOn(stop: BringStop)
 
     fun focusLeft(stop: BringStop)
+
+    /** A button of the panel, placed: its rest keeps it whole or only a peek under the fade ([buttonStop]). */
+    fun placeButton(button: LayoutCoordinates) = Unit
+}
+
+/** On a button inside a scrolling panel: the panel's rest never leaves it cut through its label. */
+@Composable
+internal fun Modifier.buttonStop(): Modifier {
+    val stops = LocalBringStops.current ?: return this
+    return onPlaced { stops.placeButton(it) }
 }
 
 internal val LocalBringStops = compositionLocalOf<BringStops?> { null }

@@ -5,6 +5,7 @@ import android.os.BatteryManager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -44,7 +45,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Info of a game measured before: the battery line is the ninth row, after Play time, in
- * the table's own roles (no label: the glyph names it); at the six sizes in every font, with the shortest to the longest
+ * the table's own roles (no label: the glyph names it); at the six sizes, with the shortest to the longest
  * wording ([BATTERY_LINE_SAMPLES]), nothing is ellipsized (the battery row not even at Largest, where Info's other values
  * may be: [batteryLineCut]), clipped, too short or on top of another and every row, the battery row and
  * "Name from" included, can be read whole with Up and Down ([InfoReadThrough]). A game never
@@ -88,7 +89,7 @@ abstract class GameInfoBatteryFitBase(
         var size by mutableStateOf(sizes.first().second)
         var font by mutableStateOf(sizes.first().first)
         val info = InfoReadThrough(OpenPanel(GameRef("1", facts.title), PanelScreen.Info(facts)))
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { info.screen() } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { info.screen() } }
         val failures = mutableListOf<String>()
         for ((eachFont, each) in sizes) {
             font = eachFont
@@ -98,8 +99,8 @@ abstract class GameInfoBatteryFitBase(
             val label = "${each.name} ${eachFont.name} on ${widthDp}x$heightDp"
             val allow = FitAllowance(setOf(GamePanelTags.ROWS, GamePanelTags.FACTS_SCROLL), ellipsisUnder = GamePanelTags.FACTS, isLargest = each == TextSize.Largest)
             // The table's other rows are held to Info's own measure (every size in Sans, Large and Largest in Serif and Mono:
-            // GameInfoArcadeFitTest); the battery row, below, at every size in every font.
-            if (eachFont == PlumFont.Sans || each == TextSize.Large || each == TextSize.Largest) textProblems(root, allow).mapTo(failures) { "$label: $it" }
+            // GameInfoArcadeFitTest); the battery row, below, at every size.
+            if (eachFont == PlumFont.Jost || each == TextSize.Large || each == TextSize.Largest) textProblems(root, allow).mapTo(failures) { "$label: $it" }
             // The other values may end in "…" at Largest (Info's table); the battery row never: its numbers are the point.
             if (facts.batteryPace != null) {
                 val text = compose.onAllNodesWithTag(PickingBatteryTags.TEXT, useUnmergedTree = true).fetchSemanticsNodes().singleOrNull()
@@ -112,7 +113,7 @@ abstract class GameInfoBatteryFitBase(
         return failures
     }
 
-    private val everySize = PlumFont.entries.flatMap { font -> TextSize.entries.map { font to it } }
+    private val everySize = listOf(PlumFont.Jost).flatMap { font -> TextSize.entries.map { font to it } }
 
     // The system's battery broadcast is sticky; a test can only send one with this deprecated call.
     @Suppress("DEPRECATION")
@@ -157,16 +158,17 @@ abstract class GameInfoBatteryFitBase(
 
     @Test
     fun theRowSaysTheLineAfterPlayTime() {
-        assertNone(problems(facts(BatteryPace(minutesOnCharge = 120.0, percentPerHour = 30.0)), listOf(PlumFont.Sans to TextSize.Small)))
+        assertNone(problems(facts(BatteryPace(minutesOnCharge = 120.0, percentPerHour = 30.0)), listOf(PlumFont.Jost to TextSize.Small)))
         compose.onNodeWithText("2 h on this charge · 30%\u00A0an\u00A0hour", useUnmergedTree = true).assertExists()
         val last = compose.onNodeWithTag(GamePanelTags.fact(8), useUnmergedTree = true).fetchSemanticsNode()
         val before = compose.onNodeWithTag(GamePanelTags.fact(7), useUnmergedTree = true).fetchSemanticsNode()
-        assertTrue("the battery row under Play time", last.boundsInRoot.top >= before.boundsInRoot.bottom - 1f)
+        // Positions, not clipped bounds: on a short window (667x375 in Jost) the table scrolls and the last row starts below the window.
+        assertTrue("the battery row under Play time", last.positionInRoot.y >= before.positionInRoot.y + before.size.height - 1f)
     }
 
     @Test
     fun aGameNeverMeasuredHasTheEightRows() {
-        assertNone(problems(facts(null), listOf(PlumFont.Sans to TextSize.Small)))
+        assertNone(problems(facts(null), listOf(PlumFont.Jost to TextSize.Small)))
         assertEquals(0, compose.onAllNodesWithTag(GamePanelTags.fact(8), useUnmergedTree = true).fetchSemanticsNodes().size)
         assertEquals(0, compose.onAllNodesWithTag(PickingBatteryTags.LINE, useUnmergedTree = true).fetchSemanticsNodes().size)
     }

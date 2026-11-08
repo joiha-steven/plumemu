@@ -90,6 +90,24 @@ object TitleCleaner {
     private fun fold(baseName: String): String =
         baseName.split('\u00b4').joinToString("\u00b4") { Normalizer.normalize(it, Normalizer.Form.NFKC) }
 
+    /**
+     * Without trailing separators; `+` stuck to the last word stays ("Zzgame Quest+" is another
+     * game than "Zzgame Quest"), one after a space joins tags ("Game [id]+[update]") and goes.
+     */
+    private fun String.trimTail(): String {
+        var end = length
+        while (end > 0 && this[end - 1] in TRIM_END) {
+            if (this[end - 1] == '+') {
+                var start = end - 1
+                while (start > 0 && this[start - 1] == '+') start--
+                // A run of `+` stuck to a word is the title's ("C++").
+                if (start > 0 && this[start - 1] !in TRIM_END) break
+            }
+            end--
+        }
+        return substring(0, end)
+    }
+
     /** Cleans [baseName], the file name without its extension. */
     fun clean(baseName: String, dropCopySuffix: Boolean = false): CleanTitle {
         val regions = mutableListOf<Region>()
@@ -113,8 +131,8 @@ object TitleCleaner {
         val disc = discGroup.find(name)?.let { m ->
             DiscTag(m.groupValues[1].toInt(), m.groupValues[2].toIntOrNull())
         }
-        var title = bracketGroup.replace(name, " ").replace(spaces, " ").trim().trimEnd { it in TRIM_END }
-        title = title.replaceFirst(ReleaseTags.trailingVersion, "").trimEnd { it in TRIM_END }.trimStart { it in TRIM_START }
+        var title = bracketGroup.replace(name, " ").replace(spaces, " ").trim().trimTail()
+        title = title.replaceFirst(ReleaseTags.trailingVersion, "").trimTail().trimStart { it in TRIM_START }
         title = moveTrailingArticle(title)
         if (title.isEmpty()) title = folded.trim()
         return CleanTitle(title, sortName(title), regions.distinct(), disc, variant)
@@ -179,7 +197,7 @@ object TitleCleaner {
     /** [plain]: also the name without any group, which [clean] would not give (a site mark or scene word kept). */
     private fun addGroupForms(name: String, out: KeptCollector, plain: Boolean, ungated: Boolean) {
         val groups = bracketGroup.findAll(name).toList()
-        val bare = bracketGroup.replace(name, " ").replace(spaces, " ").trim().trimEnd { it in TRIM_END }.trimStart { it in TRIM_START }
+        val bare = bracketGroup.replace(name, " ").replace(spaces, " ").trim().trimTail().trimStart { it in TRIM_START }
         if (plain && bare.isNotEmpty()) out.add(moveTrailingArticle(bare), ungated)
         if (ReleaseTags.trailingVersion.containsMatchIn(bare)) out.add(moveTrailingArticle(bare), ungated)
         if (groups.isEmpty()) return
@@ -213,7 +231,7 @@ object TitleCleaner {
             if (text.isEmpty()) continue
             out.add(text, ungated)
             if (ReleaseTags.trailingVersion.containsMatchIn(text)) {
-                out.add(text.replaceFirst(ReleaseTags.trailingVersion, "").trimEnd { it in TRIM_END }, ungated)
+                out.add(text.replaceFirst(ReleaseTags.trailingVersion, "").trimTail(), ungated)
             }
         }
     }
@@ -228,7 +246,7 @@ object TitleCleaner {
             from = group.range.last + 1
         }
         text.append(name, from, name.length)
-        return text.toString().replace(spaces, " ").trim().trimEnd { it in TRIM_END }.trimStart { it in TRIM_START }
+        return text.toString().replace(spaces, " ").trim().trimTail().trimStart { it in TRIM_START }
     }
 
     /**

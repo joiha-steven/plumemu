@@ -1,6 +1,7 @@
 package com.plumemu.coreui.theme
 
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isUnspecified
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -8,90 +9,95 @@ import org.junit.Test
 class TypeScaleTest {
     @Test
     fun sizesAndWeightsMatchTheDesignTable() {
-        // The type ramp (docs/design/rules.md › Type); the old size is in the comment where it changed.
+        // The type ramp and the one weight scale (docs/design/rules.md › Type); the old size is in the comment where it changed.
         val expected =
             mapOf(
-                TypeRole.GameTitle to (16f to 400),
-                TypeRole.GameTitleFocused to (16f to 500),
-                TypeRole.GameTitleCurrent to (16f to 600),
+                TypeRole.GameTitle to (16f to 500),
+                TypeRole.GameTitleFocused to (16f to 600),
+                TypeRole.GameTitleCurrent to (16f to 700),
                 // One step above the rows (17 before the ramp).
-                TypeRole.MessageTitle to (20f to 500),
-                TypeRole.FontSample to (16f to 400), // 17
-                TypeRole.SystemName to (16f to 400), // 15
-                TypeRole.SystemNameCurrent to (16f to 600), // 15
-                TypeRole.SystemNameFocused to (16f to 500), // 15
-                TypeRole.SettingsOption to (16f to 400),
-                TypeRole.SettingsOptionFocused to (16f to 500),
-                TypeRole.DetailsTitleWide to (20f to 600), // 19
-                TypeRole.DetailsTitleNarrow to (20f to 600),
-                TypeRole.TopBar to (13f to 400),
-                TypeRole.Meta to (13f to 400),
-                TypeRole.SmallFact to (13f to 400), // 12
+                TypeRole.MessageTitle to (20f to 600),
+                TypeRole.FontSample to (16f to 500), // 17
+                TypeRole.SystemName to (16f to 500), // 15
+                TypeRole.SystemNameCurrent to (16f to 700), // 15
+                TypeRole.SystemNameFocused to (16f to 600), // 15
+                TypeRole.SettingsOption to (16f to 500),
+                TypeRole.SettingsOptionFocused to (16f to 600),
+                TypeRole.DetailsTitleWide to (20f to 700), // 19
+                TypeRole.DetailsTitleNarrow to (20f to 700),
+                TypeRole.TopBar to (13f to 500), // Mono
+                TypeRole.Meta to (13f to 500),
+                TypeRole.SmallFact to (13f to 500), // 12
                 // The current year in the narrow details stop (Nova-3-details: 12, weight 600).
-                TypeRole.SmallFactCurrent to (13f to 600),
+                TypeRole.SmallFactCurrent to (13f to 700),
                 // The games list's right-hand text: the board's 10 and 8 raised, the year to 13 and the tag to the info line's step (Thor build 1299).
-                TypeRole.RowYear to (13f to 400),
-                TypeRole.RowYearCurrent to (13f to 600),
-                TypeRole.Tag to (11.33f to 600), // RowRegion
+                TypeRole.RowYear to (13f to 500),
+                TypeRole.RowYearCurrent to (13f to 500),
+                TypeRole.Tag to (11f to 500), // RowRegion; Mono 11, 11.33 before the mono step
+                TypeRole.SystemRowCount to (13f to 500), // Mono
+                TypeRole.FactNumber to (13f to 500), // Jost, tabular figures
+                TypeRole.RatingNumber to (13f to 500), // Mono, a figure alone
+                TypeRole.StatisticPhrase to (20f to 700), // Jost, tabular figures
                 // The top bar place and details block (board px / 1.5, then the ramp's nearest step; 11 where the board's is smaller).
-                TypeRole.PlaceName to (20f to 600),
-                TypeRole.PlaceCount to (11f to 400),
-                TypeRole.DetailsLabel to (11f to 600),
-                TypeRole.DetailsSubtitle to (11f to 400),
+                TypeRole.PlaceName to (20f to 700),
+                TypeRole.PlaceCount to (11f to 500), // Jost, tabular figures
+                TypeRole.PlaceWords to (11f to 500),
+                TypeRole.DetailsLabel to (13f to 500), // sentence case, 11 / 600 tracked caps before the mono step
+                TypeRole.DetailsSubtitle to (11f to 500),
                 // The focused title on the grid's bar (RP5-3-grid-snes: 14, weight 600).
-                TypeRole.GridFocusTitle to (13f to 600),
+                TypeRole.GridFocusTitle to (13f to 700),
                 // The grid's info line from the Covers board (24 px and 17 px over 1.5).
-                TypeRole.InfoLineTitle to (16f to 600),
-                TypeRole.InfoLineMeta to (11.33f to 400),
+                TypeRole.InfoLineTitle to (16f to 700),
+                TypeRole.InfoLineMeta to (11f to 500), // 11.33 before the mono step (the nearest ramp step)
                 // 12 before the ramp; 13 cut the Small grid's landscape titles from Huge (from Large in Serif).
-                TypeRole.SmallTileTitle to (11f to 600),
-                TypeRole.SmallTileYear to (11f to 400), // smallFact (12) before the ramp
-                TypeRole.HintLabel to (13f to 400), // 12
-                TypeRole.KeyCap to (10f to 600),
-                TypeRole.SetupTitleWide to (26f to 600),
-                TypeRole.SetupTitleNarrow to (20f to 600), // 22
-                TypeRole.SetupPoint to (16f to 400), // 15
-                TypeRole.SetupButton to (16f to 600), // 15
-                TypeRole.SetupButtonQuiet to (16f to 400), // 15
-                TypeRole.SetupChoice to (16f to 400),
-                TypeRole.SetupChoiceFocused to (16f to 500),
-                TypeRole.SetupChoiceCurrent to (16f to 600),
-                TypeRole.SetupRowTitle to (13f to 400), // 14
-                TypeRole.SetupRowTitleFocused to (13f to 500), // 14
-                TypeRole.SetupCount to (16f to 600),
-                TypeRole.Badge to (11f to 700),
-                TypeRole.SystemTag to (13f to 700),
-                TypeRole.SettingsInkSample to (28f to 600),
-                TypeRole.SettingsSwatchGlyph to (20f to 400),
+                TypeRole.SmallTileTitle to (11f to 700),
+                TypeRole.SmallTileYear to (11f to 500), // smallFact (12) before the ramp
+                TypeRole.HintLabel to (13f to 500), // 12
+                TypeRole.KeyCap to (10f to 700),
+                TypeRole.SetupTitleWide to (26f to 700),
+                TypeRole.SetupTitleNarrow to (20f to 700), // 22
+                TypeRole.SetupPoint to (16f to 500), // 15
+                TypeRole.SetupButton to (16f to 700), // 15
+                TypeRole.SetupButtonQuiet to (16f to 500), // 15
+                TypeRole.SetupChoice to (16f to 500),
+                TypeRole.SetupChoiceFocused to (16f to 600),
+                TypeRole.SetupChoiceCurrent to (16f to 700),
+                TypeRole.SetupRowTitle to (13f to 500), // 14
+                TypeRole.SetupRowTitleFocused to (13f to 600), // 14
+                TypeRole.SetupCount to (16f to 700),
+                TypeRole.Badge to (11f to 800),
+                TypeRole.SystemTag to (13f to 800),
+                TypeRole.SettingsInkSample to (28f to 700),
+                TypeRole.SettingsSwatchGlyph to (20f to 500),
                 // The board's 22 / 800: no such face in plum-fonts yet.
-                TypeRole.SettingsAboutTitle to (20f to 600),
-                TypeRole.SettingsPanelMeta to (11f to 400),
-                TypeRole.SettingsPanelItemFocused to (13f to 500),
-                TypeRole.SettingsPanelAction to (13f to 600),
-                TypeRole.ColorTileName to (11f to 400),
-                TypeRole.ColorTileNameCurrent to (11f to 600),
+                TypeRole.SettingsAboutTitle to (20f to 700),
+                TypeRole.SettingsPanelMeta to (11f to 500),
+                TypeRole.SettingsPanelItemFocused to (13f to 600),
+                TypeRole.SettingsPanelAction to (13f to 700),
+                TypeRole.ColorTileName to (11f to 500),
+                TypeRole.ColorTileNameCurrent to (11f to 700),
                 // Second screen, picking: Roomy then Compact (docs/design/rules.md › Second screen).
-                TypeRole.SecondTopRoomy to (16f to 400), // 15
-                TypeRole.SecondTitleRoomy to (36f to 600),
-                TypeRole.SecondStarRoomy to (20f to 400), // 24
-                TypeRole.SecondFactsRoomy to (16f to 400), // 17
-                TypeRole.SecondTitleCompact to (26f to 600), // 27
-                TypeRole.SecondStarCompact to (20f to 400),
-                TypeRole.SecondFactsCompact to (16f to 400), // 15
+                TypeRole.SecondTopRoomy to (16f to 500), // 15
+                TypeRole.SecondTitleRoomy to (36f to 700),
+                TypeRole.SecondStarRoomy to (20f to 500), // 24
+                TypeRole.SecondFactsRoomy to (16f to 500), // 17
+                TypeRole.SecondTitleCompact to (26f to 700), // 27
+                TypeRole.SecondStarCompact to (20f to 500),
+                TypeRole.SecondFactsCompact to (16f to 500), // 15
                 // Second screen, the App and Apps cards' title.
-                TypeRole.SecondDetailsTitleRoomy to (26f to 600),
-                TypeRole.SecondDetailsTitleCompact to (20f to 600), // 22
+                TypeRole.SecondDetailsTitleRoomy to (26f to 700),
+                TypeRole.SecondDetailsTitleCompact to (20f to 700), // 22
                 // Second screen in game, the battery part: the design's 17 and 15 are 16 on the ramp.
-                TypeRole.SecondBatteryLeftRoomy to (36f to 600),
-                TypeRole.SecondBatteryUnitRoomy to (20f to 400),
-                TypeRole.SecondBatteryLeftCompact to (26f to 600),
-                TypeRole.SecondBatteryUnitCompact to (16f to 400),
-                TypeRole.SecondBatteryLine to (16f to 400),
+                TypeRole.SecondBatteryLeftRoomy to (36f to 700),
+                TypeRole.SecondBatteryUnitRoomy to (20f to 500),
+                TypeRole.SecondBatteryLeftCompact to (26f to 700),
+                TypeRole.SecondBatteryUnitCompact to (16f to 500),
+                TypeRole.SecondBatteryLine to (16f to 500),
                 // The on-screen keyboard (design/rules.md › Keyboard; the board's 16 and 13).
-                TypeRole.KeyboardKey to (16f to 400),
-                TypeRole.KeyboardKeyFocused to (16f to 600),
-                TypeRole.KeyboardWord to (13f to 400),
-                TypeRole.KeyboardWordStrong to (13f to 600),
+                TypeRole.KeyboardKey to (16f to 500),
+                TypeRole.KeyboardKeyFocused to (16f to 700),
+                TypeRole.KeyboardWord to (13f to 500),
+                TypeRole.KeyboardWordStrong to (13f to 700),
             )
         assertEquals(expected, TypeRole.entries.associateWith { it.sizeSp to it.weight })
     }
@@ -99,7 +105,7 @@ class TypeScaleTest {
     @Test
     fun everySizeIsOnTheRamp() {
         // One ramp instead of 13 sizes a step apart. A new role picks a step; it does not add a size.
-        val topRamp = setOf(11f, 11.33f, 13f, 16f, 20f, 26f)
+        val topRamp = setOf(11f, 13f, 16f, 20f, 26f)
         val secondRamp = setOf(16f, 20f, 26f, 36f)
         // Glyphs drawn as icons inside a shape, not read as text: the only sizes allowed off the ramp.
         // KeyCap: at 11 a letter no longer fits the round 20 cap (21 wide).
@@ -137,14 +143,15 @@ class TypeScaleTest {
     @Test
     fun theListTagsAreAtTheFloorAndGrowWithTheTextSize() {
         // The region and system code and the year beside it were 8 and 10 dp (the board's) and read too small on the Thor: the 11 dp floor or more.
+        // The role's size is the ramp step; Mono draws it at 0.96 of that, which is a face tuning (digits as tall as Jost's).
         val floor = 11f
         for (role in listOf(TypeRole.Tag, TypeRole.RowYear, TypeRole.RowYearCurrent)) {
-            assertTrue("$role", role.scaledSizeSp(PlumFont.Jost, TextSize.Small) >= floor)
+            assertTrue("$role", role.sizeSp >= floor)
         }
-        // Weight 600 (Thin draws the table's weight; Medium and Bold move it up like every role).
-        assertEquals(600, TypeRole.Tag.weightFor(PlumFont.Jost, TextMode.Light, TextWeight.Thin))
-        assertEquals(11.33f * 1.5f, TypeRole.Tag.scaledSizeSp(PlumFont.Jost, TextSize.Largest), 1e-3f)
-        assertEquals(13f, TypeRole.RowYear.scaledSizeSp(PlumFont.Jost, TextSize.Small), 1e-6f)
+        // Weight 500 in Mono, which has no 600.
+        assertEquals(500, TypeRole.Tag.weightFor(PlumFont.Jost, TextMode.Light))
+        assertEquals(11f * MONO_FACE_FACTOR * 1.5f, TypeRole.Tag.scaledSizeSp(PlumFont.Jost, TextSize.Largest), 1e-3f)
+        assertEquals(13f * MONO_FACE_FACTOR, TypeRole.RowYear.scaledSizeSp(PlumFont.Jost, TextSize.Small), 1e-6f)
     }
 
     @Test
@@ -195,40 +202,37 @@ class TypeScaleTest {
     @Test
     fun noWeightChangeOnDarkBackgrounds() {
         for (font in PlumFont.entries) {
-            assertEquals(500, TypeRole.GameTitleFocused.weightFor(font, TextMode.Light, TextWeight.Thin))
-            assertEquals(500, TypeRole.GameTitleFocused.weightFor(font, TextMode.Dark, TextWeight.Thin))
+            assertEquals(600, TypeRole.GameTitleFocused.weightFor(font, TextMode.Light))
+            assertEquals(600, TypeRole.GameTitleFocused.weightFor(font, TextMode.Dark))
         }
     }
 
     @Test
-    fun thinIsTodaysTableAndMediumAndBoldMoveEveryRoleUp() {
-        // Thin 400/500/600 (badge keeps its 600 face), Medium 500/600/700 (badge 800), Bold 700/800/800 (badge 800; Bold moves 3 steps along 400-800, capped).
+    fun oneWeightScaleBodyFocusedTitleBadge() {
+        // The scale of every screen (the Text weight setting is gone): body 500, focused 600, titles 700, badges 800; Mono never above 500.
         for (role in TypeRole.entries) {
-            val thinExpected = if (role.weight == 700) 600 else role.weight
-            assertEquals("$role Thin", thinExpected, role.weightFor(PlumFont.Sans, TextMode.Light, TextWeight.Thin))
-            assertEquals("$role default is Medium", minOf(role.weight + 100, 800), role.weightFor(PlumFont.Sans, TextMode.Dark))
-            assertEquals("$role Medium", minOf(role.weight + 100, 800), role.weightFor(PlumFont.Sans, TextMode.Dark, TextWeight.Medium))
-            assertEquals("$role Bold", minOf(role.weight + 300, 800), role.weightFor(PlumFont.Sans, TextMode.Dark, TextWeight.Bold))
+            assertTrue("$role is on a face", role.weight in listOf(500, 600, 700, 800))
+            assertEquals("$role", if (role.mono) minOf(role.weight, 500) else role.weight, role.weightFor(PlumFont.Jost, TextMode.Dark))
         }
-        assertEquals(800, TypeRole.Badge.weightFor(PlumFont.Sans, TextMode.Light, TextWeight.Medium))
-        assertEquals(800, TypeRole.Badge.weightFor(PlumFont.Sans, TextMode.Light, TextWeight.Bold))
-        assertEquals(700, TypeRole.GameTitle.weightFor(PlumFont.Mono, TextMode.Light, TextWeight.Bold))
+        assertEquals(500, TypeRole.GameTitle.weightFor(PlumFont.Jost, TextMode.Light))
+        assertEquals(600, TypeRole.GameTitleFocused.weightFor(PlumFont.Jost, TextMode.Light))
+        assertEquals(700, TypeRole.GameTitleCurrent.weightFor(PlumFont.Jost, TextMode.Light))
+        assertEquals(700, TypeRole.DetailsTitleWide.weightFor(PlumFont.Jost, TextMode.Light))
+        assertEquals(800, TypeRole.Badge.weightFor(PlumFont.Jost, TextMode.Light))
+        assertEquals(500, TypeRole.RowYearCurrent.weightFor(PlumFont.Jost, TextMode.Light))
     }
 
     @Test
-    fun typographyCarriesTheTextWeight() {
-        val thin = PlumTypography(PlumFont.Sans, TextSize.Small, TextMode.Light, TextWeight.Thin)
-        val bold = PlumTypography(PlumFont.Sans, TextSize.Small, TextMode.Light, TextWeight.Bold)
-        assertEquals(androidx.compose.ui.text.font.FontWeight(400), thin.gameTitle.fontWeight)
-        assertEquals(androidx.compose.ui.text.font.FontWeight(700), bold.gameTitle.fontWeight)
-        assertEquals(androidx.compose.ui.text.font.FontWeight(800), bold.gameTitleCurrent.fontWeight)
-        assertTrue(thin != bold)
+    fun typographyDrawsTheScale() {
+        val type = PlumTypography(PlumFont.Jost, TextSize.Small, TextMode.Light)
+        assertEquals(androidx.compose.ui.text.font.FontWeight(500), type.gameTitle.fontWeight)
+        assertEquals(androidx.compose.ui.text.font.FontWeight(700), type.gameTitleCurrent.fontWeight)
     }
 
     @Test
     fun theHintBarStopsGrowingAtMedium() {
         val sans = PlumFont.Sans
-        // Labels and key caps: 13 and 10 sp times the font factor, at 1.1 from Medium up.
+        // Labels and key caps: 13 sp times the font factor and 10 sp times the font factor, at 1.1 from Medium up.
         for (size in listOf(TextSize.Medium, TextSize.Large, TextSize.Largest)) {
             assertEquals("hint label at ${size.name}", 13f * sans.sizeFactor * 1.1f, TypeRole.HintLabel.scaledSizeSp(sans, size), 0.001f)
             assertEquals("key cap at ${size.name}", 10f * sans.sizeFactor * 1.1f, TypeRole.KeyCap.scaledSizeSp(sans, size), 0.001f)
@@ -239,5 +243,76 @@ class TypeScaleTest {
         val largest = PlumLayout(768.dp, 432.dp, textScale = TextSize.Largest.heightScale, hintScale = TextSize.Largest.hintHeightScale)
         assertEquals(22.dp * 1.1f, largest.hintBarHeight)
         assertEquals(PlumDimens.keyCapHeight * 1.1f, largest.keyCapHeight)
+    }
+
+    /** Numbers and codes: the roles drawn wholly in Plum Mono (docs/design/rules.md › Type). Every other role is Jost; a phrase of figures and words is in [tabularRoles]. */
+    private val monoRoles =
+        setOf(
+            TypeRole.TopBar,
+            TypeRole.RowYear,
+            TypeRole.RowYearCurrent,
+            TypeRole.Tag,
+            TypeRole.SystemRowCount,
+            TypeRole.RatingNumber,
+        )
+
+    /** Phrases that mix figures and words: Jost with tabular figures, never Mono. */
+    private val tabularRoles = setOf(TypeRole.PlaceCount, TypeRole.FactNumber, TypeRole.StatisticPhrase)
+
+    @Test
+    fun onlyTheNumberAndCodeRolesResolveToMono() {
+        val type = PlumTypography(PlumFont.Jost, TextSize.Small, TextMode.Light)
+        assertEquals(monoRoles, TypeRole.entries.filter { it.mono }.toSet())
+        for (role in TypeRole.entries) {
+            val expected = if (role in monoRoles) PlumFonts.Mono else PlumFonts.Jost
+            assertEquals("$role", expected, type[role].fontFamily)
+            // No tracking on a mono role: it is already even.
+            if (role in monoRoles) assertTrue("$role has letter spacing", type[role].letterSpacing.isUnspecified)
+        }
+        // Labels over the facts are words: Jost, 13, plain.
+        assertEquals(13f, type.detailsLabel.fontSize.value, 1e-6f)
+        assertTrue(type.detailsLabel.letterSpacing.isUnspecified)
+    }
+
+    @Test
+    fun phraseRolesAreJostWithTabularFiguresAndNothingElseIs() {
+        val type = PlumTypography(PlumFont.Jost, TextSize.Small, TextMode.Light)
+        assertEquals(tabularRoles, TypeRole.entries.filter { it.tabular }.toSet())
+        for (role in TypeRole.entries) {
+            assertEquals("$role", if (role in tabularRoles) "tnum" else null, type[role].fontFeatureSettings)
+            if (role in tabularRoles) assertEquals("$role", PlumFonts.Jost, type[role].fontFamily)
+        }
+        // A row of Statistics tiles is one group: every figure, "73%" too, is the Jost phrase.
+        assertEquals(type[TypeRole.StatisticPhrase], type.statisticFigure)
+    }
+
+    @Test
+    fun everyJostFaceHasTheTabularFiguresFeature() {
+        val faces = java.io.File("src/main/res/font").listFiles { f -> f.name.startsWith("jost_") }.orEmpty()
+        assertEquals(5, faces.size)
+        for (face in faces) assertTrue("${face.name} has no tnum", String(face.readBytes(), Charsets.ISO_8859_1).contains("tnum"))
+    }
+
+    @Test
+    fun aMonoRoleKeepsItsJostLineAndTakesWeight500() {
+        val jost = PlumFont.Jost
+        for (size in TextSize.entries) {
+            for (role in monoRoles) {
+                val factor = size.factor
+                val asJost = role.sizeSp * factor * jost.lineHeightEm
+                assertEquals("$role line at ${size.name}", asJost, role.lineHeightSp(jost, size), 1e-3f)
+                assertEquals("$role size at ${size.name}", role.sizeSp * MONO_FACE_FACTOR * factor, role.scaledSizeSp(jost, size), 1e-3f)
+            }
+        }
+        for (role in monoRoles) {
+            assertEquals("$role", 500, role.weightFor(jost, TextMode.Light))
+        }
+    }
+
+    @Test
+    fun wifiAndChargingGlyphsFollowMonoBesideMonoDigits() {
+        val type = PlumTypography(PlumFont.Jost, TextSize.Small, TextMode.Light)
+        assertEquals(PlumFont.Mono, type.fontOf(type.topBar))
+        assertEquals(PlumFont.Jost, type.fontOf(type.meta))
     }
 }

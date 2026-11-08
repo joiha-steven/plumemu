@@ -242,6 +242,8 @@ class SecondScreenInGameTest : SecondScreenHostTestBase() {
         assertTrue("the statistics card in the window: ${textsOf(host.shownWindow!!)}", "23\u00A0h 10\u00A0min" in textsOf(host.shownWindow!!))
         startAGame()
         assertEquals(WindowMode.InGameClock, host.shownMode)
+        // The window's content sits in a full-size layer: the new card is laid out in the frame a device draws.
+        pixelsOf(host.shownWindow!!)
         val texts = textsOf(host.shownWindow!!)
         assertTrue("the clock card: $texts", formatClock(activity, now) in texts)
         assertTrue("no statistics in game: $texts", texts.none { "23\u00A0h 10\u00A0min" in it || "Statistics" in it })

@@ -5,6 +5,7 @@ import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.update.CheckOutcome
 import com.plumemu.update.LastCheck
+import com.plumemu.update.NoticeLine
 import com.plumemu.update.UpdateFailure
 import com.plumemu.update.UpdateManifest
 import com.plumemu.update.UpdateStep
@@ -147,6 +148,54 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
         assertEquals(listOf("update metered", "allow", "cancel"), updateCalls)
     }
 
+    private val off = found.copy(notice = NoticeLine.NotificationsOff)
+
+    @Test
+    fun turnOnNotificationsShowsOnlyWhileNotificationsAreOff() {
+        for (notice in listOf(NoticeLine.None, NoticeLine.Reason)) {
+            assertFalse("$notice", UpdatePanelItem.TurnOnNotifications in updatesPanelItems(found.copy(notice = notice)))
+        }
+        assertEquals(listOf(UpdatePanelItem.Update, UpdatePanelItem.TurnOnNotifications, UpdatePanelItem.CheckNow, UpdatePanelItem.CheckDaily), updatesPanelItems(off))
+        assertEquals(listOf(UpdatePanelItem.Cancel, UpdatePanelItem.TurnOnNotifications), updateStepItems(off.copy(step = UpdateStep.Downloading(1, 2))))
+        assertEquals("nothing found: no update line, no button", emptyList<UpdatePanelItem>(), updateStepItems(UpdateView(notice = NoticeLine.NotificationsOff)))
+    }
+
+    @Test
+    fun theKeysReachTurnOnNotificationsAndAOpensTheSettings() {
+        about.content = about.content.copy(update = off)
+        openPanel()
+        assertEquals(UpdatePanelItem.Update, itemAtCursor())
+        pressHere(Action.Move(Direction.Down))
+        assertEquals(UpdatePanelItem.TurnOnNotifications, itemAtCursor())
+        pressHere(Action.Enter)
+        assertEquals(listOf("notifications"), updateCalls)
+        pressHere(Action.Move(Direction.Up))
+        assertEquals(UpdatePanelItem.Update, itemAtCursor())
+    }
+
+    @Test
+    fun aTapOpensTheNotificationSettings() {
+        about.content = about.content.copy(update = off)
+        openPanel()
+        val index = updatesPanelItems(off).indexOf(UpdatePanelItem.TurnOnNotifications)
+        // Like every button: the first tap focuses it, the second uses it.
+        about.onTapPanelItem(index, actions.shown, wide)
+        assertEquals(emptyList<String>(), updateCalls)
+        about.onTapPanelItem(index, actions.shown, wide)
+        assertEquals(listOf("notifications"), updateCalls)
+    }
+
+    @Test
+    fun theButtonGoesWhenNotificationsAreOnAndTheCursorIsNotLeftOnIt() {
+        about.content = about.content.copy(update = off)
+        openPanel()
+        pressHere(Action.Move(Direction.Down))
+        assertEquals(UpdatePanelItem.TurnOnNotifications, itemAtCursor())
+        about.content = about.content.copy(update = found)
+        assertFalse(itemAtCursor() == UpdatePanelItem.TurnOnNotifications)
+        assertFalse(UpdatePanelItem.TurnOnNotifications in updatesPanelItems(about.content.update))
+    }
+
     @Test
     fun whileItDownloadsTheOnlyButtonIsCancel() {
         about.content = about.content.copy(update = found)
@@ -258,6 +307,11 @@ internal class FakeUpdateActions : SettingsUpdateActions {
 
     override fun openInstallPermission(): Boolean {
         calls += "allow"
+        return true
+    }
+
+    override fun openNotificationSettings(): Boolean {
+        calls += "notifications"
         return true
     }
 }

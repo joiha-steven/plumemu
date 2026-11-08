@@ -22,7 +22,7 @@ import org.junit.Test
  */
 internal class SettingsAccentBySystemTest : SettingsModelHarness() {
     init {
-        startOnRedSans() // these tests walk the accent presets from Red
+        startOnRed() // these tests walk the accent presets from Red
     }
 
     private val bySystemIndex = ColorPages.bySystemIndex

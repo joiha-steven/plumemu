@@ -114,14 +114,12 @@ object GlassDimens {
 }
 
 /**
- * The well of a meter's track and its shadows (the boards' `sunk`): on dark themes the background [TOWARD_BLACK_DARK] of the way toward
- * black; on light ones [LIGHT] toward the boards' warm shadow colour (`60,40,20`: #ECE8DF gives #E0DBD0). Over it the boards'
+ * The well of a meter's track and its shadows (the boards' `sunk`): the tone ladder's sunken step ([ToneLadder.SUNKEN]), the page's own
+ * hue on dark and light alike. Over it the boards'
  * `inset 0 3px 6px` [shade], `inset 0 -1px 0` white at [BOTTOM_LINE], and under it the `0 1px 0` [lip]. A thinner track is darker all
  * through, as the shadow is the same size.
  */
 object MeterTrackToken {
-    const val TOWARD_BLACK_DARK = 0.40
-    const val LIGHT = 0.07
     const val SHADE_DARK = 0.70f
     const val SHADE_LIGHT = 0.315f
     const val BOTTOM_LINE = 0.05f
@@ -140,14 +138,14 @@ object MeterTrackToken {
     fun of(
         bg: Rgb,
         dark: Boolean,
-    ): Color = if (dark) ColorMath.mix(bg, Rgb(0x000000), TOWARD_BLACK_DARK).toComposeColor() else ColorMath.mix(bg, SHADOW, LIGHT).toComposeColor()
+    ): Color = ToneLadder.level(bg, ToneLadder.SUNKEN).toComposeColor()
 }
 
 /**
  * A played column of the week chart (the boards' `muted` at 0.55, over the tile): on dark themes the background moved [DARK] of the way
  * toward a cool light grey, on light ones [LIGHT] toward a warm dark brown (the boards' `muted` are tinted like their pages),
  * at [ALPHA]. Not text: it is no `muted` (that one keeps 4.6:1); a column is a bar of a chart whose value is also written, and an
- * empty day stays fainter still ([LineToken]).
+ * empty day stays fainter still ([ToneLadder.line]).
  */
 object PlayedBarToken {
     const val ALPHA = 0.55f
@@ -164,17 +162,6 @@ object PlayedBarToken {
         bg: Rgb,
         dark: Boolean,
     ): Color = ColorMath.mix(bg, if (dark) COOL else WARM, if (dark) DARK else LIGHT).toComposeColor().copy(alpha = ALPHA)
-}
-
-/** The rule between a card's parts and the stub of an empty column: the text at 10 % on dark, 12 % on light (the board's `line`). */
-object LineToken {
-    const val ALPHA_DARK = 0.10f
-    const val ALPHA_LIGHT = 0.12f
-
-    fun of(
-        text: Rgb,
-        dark: Boolean,
-    ): Color = text.toComposeColor().copy(alpha = if (dark) ALPHA_DARK else ALPHA_LIGHT)
 }
 
 /** The accent glow in a corner of the second screen's page. */

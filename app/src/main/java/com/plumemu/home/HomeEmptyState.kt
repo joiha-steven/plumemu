@@ -132,10 +132,9 @@ internal fun EmptyLibraryMessage(
     val colors = PlumTheme.colors
     val type = PlumTheme.type
     CentredBox(modifier, onScreen) {
-                EmptyStack(
+        EmptyStack(
             modifier =
                 Modifier
-                    .padding(horizontal = PlumDimens.edgeFade)
                     .then(if (why == EmptyLibrary.NoFolder) Modifier.clickable(interactionSource = null, indication = null) { onAction(Action.Enter) } else Modifier)
                     .testTag(HomeTags.EMPTY_MESSAGE),
             // The board's empty state title is 600 (the ramp's message title is 500).
@@ -143,13 +142,14 @@ internal fun EmptyLibraryMessage(
             // A refused folder ask says why above the body, as before.
             body = { BasicText(lines(problem, body), style = type.meta.copy(textAlign = TextAlign.Center), color = { colors.body }) },
             buttons = {
-                ButtonsRow(EmptyStateDimens.gap) {
+                ButtonsRow(EmptyStateDimens.gap, EmptyStateDimens.buttonBleed) {
                     buttons.forEachIndexed { i, button ->
                         PlumButton(
                             label = stringResource(button.label()),
                             kind = if (i == 0) ButtonKind.Primary else ButtonKind.Secondary,
                             focused = notices.emptyFocus.inButtons && i == focused,
-                            maxLines = 2,
+                            // One line when the label fits, else it wraps; never an ellipsis.
+                            maxLines = 4,
                             modifier =
                                 Modifier
                                     .testTag(HomeTags.emptyButton(button))
@@ -166,6 +166,41 @@ internal fun EmptyLibraryMessage(
     }
 }
 
+/**
+ * An empty-state message outside the home list (the library error): the same title, body and one focused primary button
+ * as the home empty states, centred in [modifier]'s area. A tap on the button or A calls [onPress] ([onPress] is the caller's to wire).
+ */
+@Composable
+internal fun EmptyStateWithButton(
+    title: String,
+    body: String,
+    buttonLabel: String,
+    onPress: () -> Unit,
+    modifier: Modifier = Modifier,
+    buttonModifier: Modifier = Modifier,
+) {
+    val colors = PlumTheme.colors
+    val type = PlumTheme.type
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        EmptyStack(
+            modifier = Modifier,
+            title = { BasicText(title, style = type.messageTitle.copy(fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center), color = { colors.text }) },
+            body = { BasicText(body, style = type.meta.copy(textAlign = TextAlign.Center), color = { colors.body }) },
+            buttons = {
+                ButtonsRow(EmptyStateDimens.gap, EmptyStateDimens.buttonBleed) {
+                    PlumButton(
+                        label = buttonLabel,
+                        kind = ButtonKind.Primary,
+                        focused = true,
+                        maxLines = 4,
+                        modifier = buttonModifier.clickable(interactionSource = null, indication = null) { onPress() },
+                    )
+                }
+            },
+        )
+    }
+}
+
 /** Title, body and buttons one under the other, centred, [EmptyStateDimens.gap] apart; the body gives way when the height is short. */
 @Composable
 private fun EmptyStack(
@@ -176,11 +211,13 @@ private fun EmptyStack(
 ) {
     Layout(content = { title(); body(); buttons() }, modifier = modifier) { measurables, constraints ->
         val width = constraints.maxWidth
-        val loose = Constraints(maxWidth = width)
-        val bodyLoose = Constraints(maxWidth = minOf(width, EmptyStateDimens.bodyWidth.roundToPx()))
+        val textRoom = width - PlumDimens.edgeFade.roundToPx() * 2
+        val loose = Constraints(maxWidth = textRoom.coerceAtLeast(0))
+        val bodyLoose = Constraints(maxWidth = minOf(textRoom, EmptyStateDimens.bodyWidth.roundToPx()).coerceAtLeast(0))
         val titleP = measurables[0].measure(loose)
         val bodyP = measurables[1].measure(bodyLoose)
-        val buttonsP = measurables[2].measure(loose)
+        // The text keeps 32 dp clear on each side; a button that needs more than the area reaches into its margins, evenly on both sides (a label never breaks or ends in an ellipsis).
+        val buttonsP = measurables[2].measure(Constraints(maxWidth = textRoom.coerceAtLeast(0) + EmptyStateDimens.buttonBleed.roundToPx() * 2))
         val g = EmptyStateDimens.gap.roundToPx()
         fun heightOf(parts: List<Placeable>) = parts.sumOf { it.height } + g * (parts.size - 1)
         // The body gives way while the height is short (the largest text sizes); the title and the buttons stay.
@@ -220,17 +257,18 @@ private fun CentredBox(
     }
 }
 
-/** The buttons side by side, centred; one under the other when the row is wider than the space. */
+/** The buttons side by side, centred; one under the other when the row is wider than the space (the text room; the room given is wider by the button bleed on each side, [sideBySideInset] takes it off). */
 @Composable
 private fun ButtonsRow(
     gap: Dp,
+    sideBySideInset: Dp,
     content: @Composable () -> Unit,
 ) {
     Layout(content = content) { measurables, constraints ->
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
         val placeables = measurables.map { it.measure(Constraints(maxWidth = loose.maxWidth)) }
         val g = gap.roundToPx()
-        val sideBySide = placeables.sumOf { it.width } + g * (placeables.size - 1) <= constraints.maxWidth
+        val sideBySide = placeables.sumOf { it.width } + g * (placeables.size - 1) <= constraints.maxWidth - sideBySideInset.roundToPx() * 2
         val width = if (sideBySide) placeables.sumOf { it.width } + g * (placeables.size - 1) else placeables.maxOf { it.width }
         val height = if (sideBySide) placeables.maxOf { it.height } else placeables.sumOf { it.height } + g * (placeables.size - 1)
         layout(width, height) {

@@ -62,10 +62,9 @@ class SettingsRepositoryTest {
         val s = open().settings.first()
 
         assertEquals(PlumSettings.Defaults, s)
-        assertEquals(ColorSetting.Preset("Black"), s.appearance.background)
+        assertEquals(ColorSetting.Custom(0x161A24), s.appearance.background)
         assertEquals(TextColorSetting.Light, s.appearance.textColor)
-        assertEquals(ColorSetting.Custom(0x3E7BE0), s.appearance.accent)
-        assertEquals(FontSetting.Jost, s.appearance.font)
+        assertEquals(ColorSetting.Custom(0x3A7CEB), s.appearance.accent)
         assertNull("text size is not picked until the person picks one", s.appearance.textSize)
         assertEquals("the grid at Medium", GridSizeSetting.Medium, s.appearance.gridSize)
         assertEquals("every system is a list until SELECT", emptySet<String>(), s.appearance.gridSystems)
@@ -100,7 +99,6 @@ class SettingsRepositoryTest {
                 background = ColorSetting.Custom(0x123456),
                 textColor = TextColorSetting.Dark,
                 accent = ColorSetting.Custom(0xABCDEF),
-                font = FontSetting.Mono,
                 textSize = TextSizeSetting.Largest,
                 gridSize = GridSizeSetting.Small,
                 gridSystems = setOf("snes", "psp"),
@@ -143,7 +141,7 @@ class SettingsRepositoryTest {
         repo.setHomeScreen(HomeScreenSettings(showApps = false))
         repo.setLibrary(LibrarySettings(scanOnStartup = false))
         repo.setAdvanced(AdvancedSettings(usageStatistics = false))
-        repo.setAppearance(AppearanceSettings(font = FontSetting.Serif))
+        repo.setAppearance(AppearanceSettings(gridSize = GridSizeSetting.Small))
         repo.markSetupCompleted()
         repo.markHomeRoleAsked()
 
@@ -152,7 +150,7 @@ class SettingsRepositoryTest {
         assertEquals(false, s.homeScreen.showApps)
         assertEquals(false, s.library.scanOnStartup)
         assertEquals(false, s.advanced.usageStatistics)
-        assertEquals(FontSetting.Serif, s.appearance.font)
+        assertEquals(GridSizeSetting.Small, s.appearance.gridSize)
         assertEquals(SetupFlags(setupCompleted = true, homeRoleAsked = true), s.flags)
     }
 
@@ -267,18 +265,16 @@ class SettingsRepositoryTest {
         val job = Job()
         val raw = PreferenceDataStoreFactory.create(scope = CoroutineScope(Dispatchers.IO + job), produceFile = { file })
         raw.edit {
-            it[SettingsCodec.Keys.font] = "Pixel"
             it[SettingsCodec.Keys.background] = "#12345"
             it[SettingsCodec.Keys.holdToScrollFaster] = false
         }
         job.cancelAndJoin()
 
         val s = open().settings.first()
-        assertEquals(FontSetting.Jost, s.appearance.font)
-        assertEquals(ColorSetting.Preset("Black"), s.appearance.background)
+        assertEquals(ColorSetting.Custom(0x161A24), s.appearance.background)
         assertEquals("known values next to it still read", false, s.controls.holdToScrollFaster)
-        assertTrue(logLines.toString(), logLines.any { "appearance.font" in it })
-        assertTrue("values are never logged: $logLines", logLines.none { "Pixel" in it || "#12345" in it })
+        assertTrue(logLines.toString(), logLines.any { "appearance.background" in it })
+        assertTrue("values are never logged: $logLines", logLines.none { "#12345" in it })
     }
 
     @Test
@@ -311,11 +307,11 @@ class SettingsRepositoryTest {
         // An install from before the grid sizes: other appearance keys written, no grid size.
         var job = Job()
         var raw = PreferenceDataStoreFactory.create(scope = CoroutineScope(Dispatchers.IO + job), produceFile = { file })
-        raw.edit { it[SettingsCodec.Keys.font] = "Serif" }
+        raw.edit { it[SettingsCodec.Keys.textColor] = "Dark" }
         job.cancelAndJoin()
         val before = open().settings.first().appearance
         assertEquals(GridSizeSetting.Medium, before.gridSize)
-        assertEquals("the person's other choices stay", FontSetting.Serif, before.font)
+        assertEquals("the person's other choices stay", TextColorSetting.Dark, before.textColor)
         assertTrue("a missing key is not an unknown value: $logLines", logLines.isEmpty())
         closeAll()
 
@@ -329,7 +325,7 @@ class SettingsRepositoryTest {
 
         val damaged = open().settings.first().appearance
         assertEquals(GridSizeSetting.Medium, damaged.gridSize)
-        assertEquals(FontSetting.Serif, damaged.font)
+        assertEquals(TextColorSetting.Dark, damaged.textColor)
         assertTrue(logLines.toString(), logLines.any { "appearance.grid_size" in it })
         assertTrue("values are never logged: $logLines", logLines.none { "Huge" in it })
     }
@@ -345,7 +341,7 @@ class SettingsRepositoryTest {
             job.cancelAndJoin()
             assertEquals(stored, open().settings.first().appearance.gridSize.name)
             closeAll()
-            open().update { it.copy(appearance = it.appearance.copy(font = FontSetting.Mono)) }
+            open().update { it.copy(appearance = it.appearance.copy(textSize = TextSizeSetting.Huge)) }
             closeAll()
             assertEquals("another save keeps $stored", stored, open().settings.first().appearance.gridSize.name)
             closeAll()

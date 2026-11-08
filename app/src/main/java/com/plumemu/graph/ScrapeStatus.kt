@@ -38,7 +38,7 @@ internal sealed interface ScrapeStatus {
      */
     data class Running(val counts: ScrapeCounts?, val gamesPerMinute: Double?) : ScrapeStatus
 
-    /** "Box art only": the last pictures asked for could not be had, and no run waits; [why] is what to tell the person. */
+    /** "Default source": the last pictures asked for could not be had, and no run waits; [why] is what to tell the person. */
     data class Failed(val counts: ScrapeCounts?, val why: PictureFailure) : ScrapeStatus
 
     /** Asked for, every condition met: WorkManager starts it in a moment. */
@@ -101,7 +101,7 @@ internal fun scrapeStatusOf(
     usesAccount: Boolean = true,
     pictureFailure: PictureFailure? = null,
 ): ScrapeStatus {
-    // "Box art only" needs no account: its state comes from the run alone.
+    // "Default source" needs no account: its state comes from the run alone.
     if (usesAccount) accountOnlyStatus(account)?.let { return it }
     if (pausedByPerson) return ScrapeStatus.PausedByPerson(counts)
     if (pause != null && pause.resumeAtMillis > now) return ScrapeStatus.Paused(counts, pause.resumeAtMillis, pause.reason)

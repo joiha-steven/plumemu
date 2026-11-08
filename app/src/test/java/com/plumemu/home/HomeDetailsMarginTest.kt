@@ -77,7 +77,7 @@ abstract class HomeDetailsMarginBase {
         var stop by mutableStateOf(Stop.Games)
         val content = content(title)
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = PlumFont.Sans)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 CompositionLocalProvider(LocalHomePlayFacts provides FakePlayFacts()) {
                     key(stop) { HomeAt(content, actions(stop)) }
                 }

@@ -33,7 +33,7 @@ import kotlin.math.exp
 /**
  * The slab's lift and glow as drawn, against the Gaussians they are: each layer is the slab's rounded box moved down by its drop ([FocusSlab.NEAR_DROP_DP],
  * [FocusSlab.FAR_DROP_DP]) and blurred by its sigma, at the strength the look carries ([FocusSlab.liftAlpha]); the glow is the box blurred by
- * [SlabDimens.glowSigma]. The lift is the brown shadow on a light page and white light on a dark one, so its share is read as how far a pixel
+ * [SlabDimens.glowSigma]. The lift is a shadow on every page: black on a dark one, brown on a light one, so its share is read as how far a pixel
  * moved from the page toward the layer's ink. The measurements are taken on the row's middle, where the profile is that of a straight edge.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -128,15 +128,15 @@ class SlabSoftEdgeTest {
             val image = draw(theme, theme.colors.slab, Color.Transparent)
             for (dp in listOf(0.5f, 2f, 4f, 7f, 12f)) {
                 for (above in listOf(false, true)) {
-                    assertEquals("${theme.settings.backgroundColor} $dp dp ${if (above) "above" else "below"}", expectedLift(theme.colors.slab, dp, above), lift(theme, dp, above, image), LIFT_TOLERANCE)
+                    assertEquals("${theme.settings.backgroundColor} $dp dp ${if (above) "above" else "below"}", expectedLift(theme.colors.slab, dp, above), lift(theme, dp, above, image), maxOf(LIFT_TOLERANCE, oneLevel(theme)))
                 }
             }
         }
     }
 
     @Test
-    fun theLiftIsLightOnADarkPageAndShadeOnALightOne() {
-        for ((theme, ink) in listOf(graphite to 1f, paper to 0.2f)) {
+    fun theLiftIsAShadowOnADarkPageAndOnALightOne() {
+        for ((theme, ink) in listOf(graphite to 0f, paper to 0.2f)) {
             val look = theme.colors.slab
             assertEquals(ink, look.near!!.color.red, 0.15f)
             val image = draw(theme, look, Color.Transparent)
@@ -145,7 +145,7 @@ class SlabSoftEdgeTest {
         }
     }
 
-    /** One 8-bit step of the channel [share] reads, as a share: the smallest difference a pixel can show. */
+    /** One 8-bit step of the channel [share] reads, as a share: the smallest difference a pixel can show (a black shadow on a near-black page has few). */
     private fun oneLevel(theme: Theme): Double {
         val ink = theme.colors.slab.near!!.color
         val span = listOf(abs(ink.red - theme.page.red), abs(ink.green - theme.page.green), abs(ink.blue - theme.page.blue)).max()

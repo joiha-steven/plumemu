@@ -75,9 +75,9 @@ class TopBarStatusTest {
     @Test
     fun theClockAndThePercentageAreNeverUnderTheListTagAndYear() {
         show()
-        for (font in PlumFont.entries) {
+        for (font in listOf(PlumFont.Jost)) {
             for (size in TextSize.entries) {
-                settings = PlumThemeSettings.Graphite.copy(font = font, textSize = size)
+                settings = PlumThemeSettings.Graphite.copy(textSize = size)
                 compose.waitForIdle()
                 val floor = maxOf(TypeRole.Tag, TypeRole.RowYear).scaledSizeSp(font, size)
                 val bar = TypeRole.TopBar.scaledSizeSp(font, size)

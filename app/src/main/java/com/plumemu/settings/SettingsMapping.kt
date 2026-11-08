@@ -5,7 +5,6 @@ import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.ConfirmButtonSetting
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.ControlsSettings
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.GridSizeSetting
 import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.PlumSettings
@@ -19,12 +18,10 @@ import com.plumemu.coreui.theme.BackgroundChoice
 import com.plumemu.coreui.theme.BackgroundPreset
 import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.coreui.theme.GridSize
-import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.Rgb
 import com.plumemu.coreui.theme.TextMode
 import com.plumemu.coreui.theme.TextSize
-import com.plumemu.coreui.theme.TextWeight
 import com.plumemu.keyboard.KeyboardChoice
 
 /*
@@ -43,21 +40,13 @@ internal fun AppearanceSettings.toColorsAndLook(animationsOn: Boolean): PlumThem
     // A set's accent from an earlier version still reads and draws as that set (ColorSet.previousAccents); stored data is not touched.
     ColorSet.settled(rawColorsAndLook(animationsOn))
 
-private fun AppearanceSettings.rawColorsAndLook(animationsOn: Boolean): PlumThemeSettings =
+internal fun AppearanceSettings.rawColorsAndLook(animationsOn: Boolean): PlumThemeSettings =
     PlumThemeSettings(
         background = background.toBackgroundChoice(),
         text = textColor.toRgb(),
         accent = accent.toAccentChoice(),
-        font = when (font) {
-            FontSetting.Jost -> PlumFont.Jost
-            FontSetting.Sans -> PlumFont.Sans
-            FontSetting.Serif -> PlumFont.Serif
-            FontSetting.Mono -> PlumFont.Mono
-        },
         // Same names on both sides; null stays null, which the theme reads as TextSize.Default (Large).
         textSize = textSize?.let { picked -> TextSize.valueOf(picked.name) },
-        // Same names on both sides; not picked is the default (Medium).
-        textWeight = textWeight?.let { picked -> TextWeight.valueOf(picked.name) } ?: TextWeight.Default,
         animationsOn = animationsOn,
         gridSize = when (gridSize) {
             GridSizeSetting.Small -> GridSize.Small

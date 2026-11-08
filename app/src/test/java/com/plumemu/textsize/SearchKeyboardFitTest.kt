@@ -35,8 +35,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Search with Plumemu's keyboard at every text size, in Plum Sans at the six sizes
- * and in Serif and Mono at Largest: the top bar's query, count, clock and battery are whole; the hint
+ * Search with Plumemu's keyboard at every text size, in Jost at the six sizes: the top bar's query, count, clock and battery are whole; the hint
  * bar sits on the tray under the keys, its hints whole and apart from the keys; the results run on
  * under the tray's top edge with no empty band between them; with no match the line sits above the
  * tray; on the results (tray down) a focused row deep in the list is fully shown.
@@ -58,12 +57,10 @@ abstract class SearchKeyboardFitBase(
         assertions: (root: SemanticsNode, label: String, failures: MutableList<String>) -> Unit,
     ) {
         var size by mutableStateOf(TextSize.Largest)
-        var font by mutableStateOf(PlumFont.Sans)
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { HomeAt(content, BoardGamesFocused, search = search) } }
-        val combinations = TextSize.entries.map { PlumFont.Sans to it } + listOf(PlumFont.Serif to TextSize.Largest, PlumFont.Mono to TextSize.Largest)
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { HomeAt(content, BoardGamesFocused, search = search) } }
+        val combinations = TextSize.entries.map { PlumFont.Jost to it }
         val failures = mutableListOf<String>()
         for ((eachFont, each) in combinations) {
-            font = eachFont
             size = each
             compose.waitForIdle()
             val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()

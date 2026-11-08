@@ -35,8 +35,7 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * Info of an arcade game, its Arcade set row (short name and the description's bracket texts) in
  * the File row's place, at every text size, the way `TextSizeScreensTest.gamePanelInfo` checks Info
- * (kept apart: that file is at the length limit): at the six sizes in Plum Sans and at Large and
- * Largest in Serif and Mono, no text is ellipsized below Largest, clipped, too short or on top of
+ * (kept apart: that file is at the length limit): at the six sizes in Jost, no text is ellipsized below Largest, clipped, too short or on top of
  * another, and every fact row can be read whole with Up and Down ([InfoReadThrough]). Only a
  * deliberately long detail may end in an ellipsis below Largest.
  */
@@ -75,7 +74,7 @@ abstract class GameInfoArcadeFitBase(
         var font by mutableStateOf(sizes.first().first)
         val info = InfoReadThrough(OpenPanel(GameRef("arcade-1", facts.title), PanelScreen.Info(facts)))
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { info.screen() }
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { info.screen() }
         }
         val failures = mutableListOf<String>()
         for ((eachFont, each) in sizes) {
@@ -95,8 +94,7 @@ abstract class GameInfoArcadeFitBase(
     private fun assertNone(failures: List<String>) = assertTrue(failures.size.toString() + " problems:\n" + failures.take(40).joinToString("\n"), failures.isEmpty())
 
     private val everySize =
-        TextSize.entries.map { PlumFont.Sans to it } +
-            listOf(PlumFont.Serif, PlumFont.Mono).flatMap { listOf(it to TextSize.Large, it to TextSize.Largest) }
+        TextSize.entries.map { PlumFont.Jost to it }
 
     /**
      * A set whose detail fits the value's lines ("Final Fight (World, set 1)"). A one-line title: a
@@ -110,7 +108,7 @@ abstract class GameInfoArcadeFitBase(
     /** The set that tells "Cadillacs and Dinosaurs" apart is whole, never ellipsized, at the default size. */
     @Test
     fun dinouIsShownWholeAtMedium() {
-        val failures = problems("game_info_dinou", arcadeFacts("Cadillacs and Dinosaurs", ArcadeSetFacts("dinou", listOf("USA 930201"))), listOf(PlumFont.Sans to TextSize.Small)) { false }
+        val failures = problems("game_info_dinou", arcadeFacts("Cadillacs and Dinosaurs", ArcadeSetFacts("dinou", listOf("USA 930201"))), listOf(PlumFont.Jost to TextSize.Small)) { false }
         compose.onNodeWithText("dinou · USA 930201", useUnmergedTree = true).assertExists()
         assertNone(failures)
     }
@@ -159,7 +157,7 @@ abstract class GameInfoArcadeFitBase(
     /** A description without brackets ("Gauntlet II"): the short name alone. */
     @Test
     fun noBracketsShowsTheShortNameAlone() {
-        val failures = problems("game_info_gaunt2", arcadeFacts("Gauntlet II", ArcadeSetFacts("gaunt2", emptyList())), listOf(PlumFont.Sans to TextSize.Small)) { false }
+        val failures = problems("game_info_gaunt2", arcadeFacts("Gauntlet II", ArcadeSetFacts("gaunt2", emptyList())), listOf(PlumFont.Jost to TextSize.Small)) { false }
         compose.onNodeWithText("gaunt2", useUnmergedTree = true).assertExists()
         assertNone(failures)
     }

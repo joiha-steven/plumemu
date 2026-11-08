@@ -109,7 +109,7 @@ class WideDetailsLayoutTest {
         compose.waitForIdle()
         val cover = bounds(HomeTags.DETAILS_COVER)
         val column = bounds(HomeTags.DETAILS)
-        assertTrue("the cover is at most its full height and at least 0.85 of its floor (a title of two lines takes up to that): ${cover.height}", cover.height <= PlumDimens.detailsCoverHeightWide.value + 0.5f && cover.height >= PlumDimens.detailsCoverMinWide.value * 0.85f - 0.5f)
+        assertTrue("the cover is at most its full height and at least 0.77 of its floor (the squeezed floor of a two-line title; 0.85 before the facts labels grew to 13): ${cover.height}", cover.height <= PlumDimens.detailsCoverHeightWide.value + 0.5f && cover.height >= PlumDimens.detailsCoverMinWide.value * 0.77f - 0.5f)
         assertEquals(cover.bottom + PlumDimens.detailsBlockGapWide.value, bounds(HomeTags.DETAILS_TITLE).top, 0.5f)
         val facts = bounds(HomeTags.DETAILS_FACTS)
         assertTrue("the held facts block is whole inside the column (${facts.bottom} of ${column.bottom})", facts.height > 0f && facts.bottom <= column.bottom + 0.5f)
@@ -121,9 +121,9 @@ class WideDetailsLayoutTest {
      * box keeping its shape, and no text of the column is drawn over the cover.
      */
     @Test
-    fun atLargestSerifTheCoverShrinksAndNoTextOverlapsIt() {
+    fun atLargestTheCoverShrinksAndNoTextOverlapsIt() {
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Default.copy(textSize = TextSize.Largest, font = PlumFont.Serif)) {
+            PlumTheme(PlumThemeSettings.Default.copy(textSize = TextSize.Largest)) {
                 CoverDetailsBoard(rememberSource { coverArtSource() }, withSuperMetroidTitled(TWO_LINE_TITLE))
             }
         }
@@ -158,7 +158,7 @@ class WideDetailsLayoutTest {
     fun theCoverGivesWayInTheFrameTheTitleAppears() {
         lateinit var state: StripState
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Default.copy(textSize = TextSize.Largest, font = PlumFont.Serif)) {
+            PlumTheme(PlumThemeSettings.Default.copy(textSize = TextSize.Largest)) {
                 HomeWithArt(rememberSource { coverArtSource() }, BoardSystemsFocused, withSuperMetroidTitled(TWO_LINE_TITLE), onState = { state = it })
             }
         }
@@ -180,17 +180,17 @@ class WideDetailsLayoutTest {
     }
 
     /**
-     * The text-only column without box art (signed out) at Largest in Serif, a two-line title: the text comes first, so the
+     * The text-only column without box art (signed out) at Largest, a two-line title: the text comes first, so the
      * facts are whole inside the column, and the poster above shows only when at least [PlumDimens.posterMinHeight] is left
      * (else it is left out and the title starts at the column's top).
      */
     @Test
-    fun atLargestSerifTheTextOnlyColumnKeepsItsTextAndDropsAPosterThatIsTooSmall() {
+    fun atLargestTheTextOnlyColumnKeepsItsTextAndDropsAPosterThatIsTooSmall() {
         val metroid = LibraryLikeContent.idAt(LibraryLikeContent.SUPER_METROID).toString()
         val library = LibraryLikeContent.of()
         val renamed = library.withEntries(library.entries.map { e -> e.copy(rows = e.rows.map { if (it.id == metroid) it.copy(title = TWO_LINE_TITLE) else it }) })
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Default.copy(textSize = TextSize.Largest, font = PlumFont.Serif)) {
+            PlumTheme(PlumThemeSettings.Default.copy(textSize = TextSize.Largest)) {
                 CompositionLocalProvider(LocalHomePlayFacts provides FakePlayFacts()) {
                     HomeAt(renamed, LibraryLikeContent.gamesFocused(LibraryLikeContent.SUPER_METROID))
                 }
@@ -233,7 +233,7 @@ class WideDetailsLayoutTest {
         const val COVER = "test_cover"
         const val TITLE = "test_title"
 
-        /** Two lines at Largest in Serif in the 248 column. */
+        /** Two lines at Largest in the 248 column. */
         const val TWO_LINE_TITLE = "Super Mario World 2: Yoshi's Island"
 
         const val MAX_FRAMES = 5

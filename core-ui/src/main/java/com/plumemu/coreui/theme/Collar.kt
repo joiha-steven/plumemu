@@ -34,6 +34,8 @@ class CollarLook(
     val ring: Color = groove,
     /** The kit boards' seated parts layer by layer ([SeatLook]): lip, well, caps. */
     val seat: SeatLook = SeatLook.GRAPHITE,
+    /** The flat look of buttons and switches ([FlatPartLook]). */
+    val flat: FlatPartLook = FlatPartLook.GRAPHITE,
 ) {
     companion object {
         /**
@@ -69,6 +71,7 @@ class CollarLook(
                     well = ColorMath.mix(bg, black, DARK_WELL).toComposeColor(),
                     offText = ColorMath.mix(bg, ink, DARK_OFF_TEXT).toComposeColor(),
                     seat = SeatLook.of(bg, text, true),
+                    flat = FlatPartLook.of(bg, text, true),
                 )
             } else {
                 CollarLook(
@@ -85,6 +88,7 @@ class CollarLook(
                     well = ColorMath.mix(bg, SHADE_BROWN, LIGHT_WELL).toComposeColor(),
                     offText = ColorMath.mix(bg, ColorMath.mix(text, SHADE_BROWN, 0.5), LIGHT_OFF_TEXT).toComposeColor(),
                     seat = SeatLook.of(bg, text, false),
+                    flat = FlatPartLook.of(bg, text, false),
                 )
             }
         }

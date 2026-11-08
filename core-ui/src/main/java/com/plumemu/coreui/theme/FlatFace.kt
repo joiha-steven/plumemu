@@ -105,10 +105,6 @@ class FlatFace(
 
         /** The knob of a switch that is on: [onAccent], so it reads on the accent track whatever the accent is. */
         fun knobOn(onAccent: Color) = of(onAccent, 0.18f, 0f, 0.35f)
-
-        /** The key colour is this share of the way from the background to the text (dark theme, light theme). */
-        const val KEY_DARK = 0.17
-        const val KEY_LIGHT = 0.11
         const val RAISE_LIGHT = 0.06f
         const val ACCENT_TOP = 0.30f
         const val OFF_SHADE = 0.18f

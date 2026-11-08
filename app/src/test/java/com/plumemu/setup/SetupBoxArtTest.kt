@@ -23,9 +23,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Setup's box art step: three choices (two without ScreenScraper keys) after the look step, while the
- * scan runs; each writes the setting Settings › Accounts › Box art writes; the sign-in form opens only
- * on "Box art and game info" without a usable account; every sign-in outcome; Skip, Continue and Back.
+ * Setup's box art step after the look step, while the scan runs: page 1 asks No / Yes, Yes opens page 2 (the
+ * source: Default source, ScreenScraper account; a build without ScreenScraper keys has no page 2 and Yes
+ * stores libretro); each answer writes the setting Settings › Accounts › Box art writes; the sign-in form
+ * opens only from the account without a usable one; every sign-in outcome; Not now, Continue and Back.
  */
 class SetupBoxArtTest {
     private val source = FakeSetupSource()
@@ -51,23 +52,32 @@ class SetupBoxArtTest {
 
     private fun SetupModel.form(): SignInForm = requireNotNull(state.value.boxArt) { "the box art step shows its form" }
 
-    /** Continue on the folders, Enter on the look step's tile: the box art choices. */
+    /** Continue on the folders, Enter on the look step's tile: the box art question (page 1). */
     private fun TestScope.toChoices(model: SetupModel) {
         press(model, Action.Enter, Action.Enter)
         assertEquals(SetupStep.BoxArt, model.state.value.step)
         assertNull("the choices first", model.state.value.boxArt)
+        assertFalse("page 1 first", model.state.value.isBoxArtSourceOpen)
+    }
+
+    /** Page 1, then Yes (focused with Down from No): page 2, the sources. */
+    private fun TestScope.toSources(model: SetupModel) {
+        toChoices(model)
+        press(model, Action.Move(Direction.Down), Action.Enter)
+        assertTrue("Yes opens the sources", model.state.value.isBoxArtSourceOpen)
+        assertEquals(SetupStep.BoxArt, model.state.value.step)
     }
 
     /**
-     * To the choices, then "Box art and game info" (focused): the form opens on the username with the keyboard down, A brings it up.
+     * To the sources, then "ScreenScraper account" (focused): the form opens on the username with the keyboard down, A brings it up.
      * With Plumemu's keyboard B then puts the tray away and the form stays; [keepTyping] leaves it up.
      */
     private fun TestScope.openForm(
         model: SetupModel,
         keepTyping: Boolean = false,
     ) {
-        toChoices(model)
-        press(model, Action.Enter)
+        toSources(model)
+        press(model, Action.Move(Direction.Down), Action.Enter)
         val form = model.form()
         assertEquals("the cursor opens on the empty username", SignInItem.Username, form.focus)
         assertFalse("the form opens with the keyboard down", form.isTyping)
@@ -89,28 +99,34 @@ class SetupBoxArtTest {
     }
 
     @Test
-    fun withoutDeveloperKeysThereAreTwoChoicesAndNoAccountIsAsked() = runTest {
+    fun withoutDeveloperKeysYesStoresLibretroAndThereIsNoSourcePage() = runTest {
         val accounts = FakeScraperAccounts(isAvailable = false)
         val model = modelWithAFolder(accounts)
         toChoices(model)
-        assertEquals(listOf(SetupControl.BoxArtLibretro, SetupControl.BoxArtOwnCovers), model.state.value.controls)
-        assertEquals("Box art only is focused", SetupControl.BoxArtLibretro, model.state.value.focus)
-        press(model, Action.Enter)
+        assertEquals(listOf(SetupControl.BoxArtOwnCovers, SetupControl.BoxArtYes), model.state.value.controls)
+        assertEquals("No is focused", SetupControl.BoxArtOwnCovers, model.state.value.focus)
+        press(model, Action.Move(Direction.Down), Action.Enter)
+        assertFalse("never page 2", model.state.value.isBoxArtSourceOpen)
         assertEquals(SetupStep.Scan, model.state.value.step)
         assertEquals(BoxArtSourceSetting.LibretroOnly, source.boxArtSource.value)
         assertTrue("nothing asked", accounts.signIns.isEmpty())
     }
 
     @Test
-    fun theStepHasThreeChoicesAndItsOwnDot() = runTest {
+    fun theStepHasTwoPagesOfTwoChoicesAndOneDot() = runTest {
         val model = modelWithAFolder(FakeScraperAccounts())
         assertEquals("folder, look, box art, library", 4, model.state.value.stepDots)
         toChoices(model)
         val state = model.state.value
         assertEquals(2, state.stepDotIndex)
         assertTrue("the scan was asked for", source.scanRequests > 0)
-        assertEquals(SetupControl.UseBoxArt, state.focus)
-        assertEquals(listOf(SetupControl.UseBoxArt, SetupControl.BoxArtLibretro, SetupControl.BoxArtOwnCovers), state.controls)
+        assertEquals(SetupControl.BoxArtOwnCovers, state.focus)
+        assertEquals(listOf(SetupControl.BoxArtOwnCovers, SetupControl.BoxArtYes), state.controls)
+        press(model, Action.Move(Direction.Down), Action.Enter)
+        assertEquals(listOf(SetupControl.BoxArtLibretro, SetupControl.UseBoxArt), model.state.value.controls)
+        assertEquals(SetupControl.BoxArtLibretro, model.state.value.focus)
+        assertEquals("still one dot", 2, model.state.value.stepDotIndex)
+        assertEquals(4, model.state.value.stepDots)
     }
 
     @Test
@@ -118,21 +134,27 @@ class SetupBoxArtTest {
         val model = modelWithAFolder(FakeScraperAccounts())
         toChoices(model)
         press(model, Action.Move(Direction.Up))
-        assertEquals(SetupControl.UseBoxArt, model.state.value.focus)
-        press(model, Action.Move(Direction.Down))
+        assertEquals(SetupControl.BoxArtOwnCovers, model.state.value.focus)
+        press(model, Action.Move(Direction.Down), Action.Move(Direction.Down))
+        assertEquals(SetupControl.BoxArtYes, model.state.value.focus)
+        press(model, Action.Move(Direction.Up))
+        assertEquals(SetupControl.BoxArtOwnCovers, model.state.value.focus)
+        press(model, Action.Move(Direction.Down), Action.Enter)
+        press(model, Action.Move(Direction.Up))
         assertEquals(SetupControl.BoxArtLibretro, model.state.value.focus)
         press(model, Action.Move(Direction.Down), Action.Move(Direction.Down))
-        assertEquals(SetupControl.BoxArtOwnCovers, model.state.value.focus)
+        assertEquals(SetupControl.UseBoxArt, model.state.value.focus)
         press(model, Action.Move(Direction.Up))
         assertEquals(SetupControl.BoxArtLibretro, model.state.value.focus)
     }
 
     @Test
-    fun boxArtOnlyWritesLibretroOnlyAndGoesOnToTheScan() = runTest {
+    fun theDefaultSourceWritesLibretroOnlyAndGoesOnToTheScan() = runTest {
         val accounts = FakeScraperAccounts()
         val model = modelWithAFolder(accounts)
-        toChoices(model)
-        press(model, Action.Move(Direction.Down), Action.Enter)
+        toSources(model)
+        assertNull("Yes alone writes nothing", source.boxArtSource.value)
+        press(model, Action.Enter)
         assertEquals(BoxArtSourceSetting.LibretroOnly, source.boxArtSource.value)
         assertEquals(SetupStep.Scan, model.state.value.step)
         source.endScan()
@@ -146,7 +168,7 @@ class SetupBoxArtTest {
     fun ownCoversWritesTheSettingAndTheLibraryStepHasNoBoxArtLine() = runTest {
         val model = modelWithAFolder(FakeScraperAccounts())
         toChoices(model)
-        press(model, Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Enter)
+        press(model, Action.Enter)
         assertEquals(BoxArtSourceSetting.OwnCovers, source.boxArtSource.value)
         source.endScan()
         runCurrent()
@@ -158,28 +180,30 @@ class SetupBoxArtTest {
     fun aTapAnswersInOnePress() = runTest {
         val tapOwn = modelWithAFolder(FakeScraperAccounts())
         toChoices(tapOwn)
-        press(tapOwn, Action.TapItem(Column.Games, 2))
+        press(tapOwn, Action.TapItem(Column.Games, 0))
         assertEquals(BoxArtSourceSetting.OwnCovers, source.boxArtSource.value)
         assertEquals(SetupStep.Scan, tapOwn.state.value.step)
 
         val tapUse = modelWithAFolder(FakeScraperAccounts())
         toChoices(tapUse)
-        press(tapUse, Action.TapItem(Column.Games, 0))
+        press(tapUse, Action.TapItem(Column.Games, 1))
+        assertTrue("a tap on Yes opens the sources", tapUse.state.value.isBoxArtSourceOpen)
+        press(tapUse, Action.TapItem(Column.Games, 1))
         assertEquals(SignInItem.Username, tapUse.form().focus)
     }
 
     @Test
     fun aFailedWriteSaysSoAndStaysOnTheChoices() = runTest {
         val model = modelWithAFolder(FakeScraperAccounts())
-        toChoices(model)
+        toSources(model)
         source.boxArtFailure = IllegalStateException("disk")
-        press(model, Action.Move(Direction.Down), Action.Enter)
+        press(model, Action.Enter)
         assertEquals(SetupStep.BoxArt, model.state.value.step)
         assertEquals(SetupMessage.SaveFailed, model.state.value.message)
     }
 
     @Test
-    fun backFromTheChoicesGoesToTheLookAndFromTheFormToTheChoices() = runTest {
+    fun backGoesFormToSourcesToQuestionToTheLookToTheFolders() = runTest {
         val model = modelWithAFolder(FakeScraperAccounts())
         // Android's keyboard: Back while typing leaves the form at once (Plumemu's tray goes down first, SetupOwnKeyboardTest).
         model.keyboardChoice = KeyboardChoice.Android
@@ -188,7 +212,8 @@ class SetupBoxArtTest {
         form.onUsernameChange("plumtester")
         press(model, Action.Back)
         assertEquals(SetupStep.BoxArt, model.state.value.step)
-        assertNull("back to the choices", model.state.value.boxArt)
+        assertNull("back to the sources", model.state.value.boxArt)
+        assertTrue(model.state.value.isBoxArtSourceOpen)
         assertEquals(SetupControl.UseBoxArt, model.state.value.focus)
         assertNull("nothing was written", source.boxArtSource.value)
 
@@ -197,6 +222,10 @@ class SetupBoxArtTest {
         assertFalse("and the form opens with the keyboard down", model.form().isTyping)
 
         press(model, Action.Back, Action.Back)
+        assertEquals("from the sources: the question, on Yes", SetupStep.BoxArt, model.state.value.step)
+        assertFalse(model.state.value.isBoxArtSourceOpen)
+        assertEquals(SetupControl.BoxArtYes, model.state.value.focus)
+        press(model, Action.Back)
         assertEquals(SetupStep.Look, model.state.value.step)
         press(model, Action.Back)
         assertEquals(SetupStep.Folders, model.state.value.step)
@@ -224,11 +253,11 @@ class SetupBoxArtTest {
     @Test
     fun skippingTheFormGoesOnWithNothingWritten() = runTest {
         val model = modelWithAFolder(FakeScraperAccounts())
-        toChoices(model)
+        toSources(model)
         source.endScan()
         runCurrent()
         assertEquals("the scan ended, the step stays", SetupStep.BoxArt, model.state.value.step)
-        press(model, Action.Enter)
+        press(model, Action.Move(Direction.Down), Action.Enter)
         assertEquals("the form stays too", SetupStep.BoxArt, model.state.value.step)
         press(model, Action.TapItem(Column.Games, 3))
         assertEquals("Skip: on to the next step (the scan has ended)", SetupStep.Ready, model.state.value.step)
@@ -273,7 +302,10 @@ class SetupBoxArtTest {
         assertEquals("plumtester", model.form().signedInAs)
 
         press(model, Action.Back)
-        assertEquals("signed in: Back goes to the look step", SetupStep.Look, model.state.value.step)
+        assertEquals("signed in: Back goes to the sources too", SetupStep.BoxArt, model.state.value.step)
+        assertNull(model.state.value.boxArt)
+        assertTrue(model.state.value.isBoxArtSourceOpen)
+        assertEquals(SetupControl.UseBoxArt, model.state.value.focus)
     }
 
     @Test
@@ -294,8 +326,8 @@ class SetupBoxArtTest {
     fun touchTypesInTheFieldsAndPressesSignIn() = runTest {
         val accounts = FakeScraperAccounts()
         val model = modelWithAFolder(accounts)
-        toChoices(model)
-        press(model, Action.TapItem(Column.Games, 0))
+        toSources(model)
+        press(model, Action.TapItem(Column.Games, 1))
         val form = model.form()
         press(model, Action.TapItem(Column.Games, 1))
         assertEquals(SignInItem.Password, form.focus)
@@ -307,9 +339,12 @@ class SetupBoxArtTest {
     }
 
     @Test
-    fun aStoredAccountMakesTheFirstChoiceTheAnswerAtOnce() = runTest {
+    fun aStoredAccountOpensOnYesThenScreenScraperAndTheAccountIsTheAnswerAtOnce() = runTest {
         val model = modelWithAFolder(FakeScraperAccounts(initial = AccountStatus.SignedIn("plumtester")))
         toChoices(model)
+        assertEquals("box art is in force: Yes", SetupControl.BoxArtYes, model.state.value.focus)
+        press(model, Action.Enter)
+        assertEquals("the account in force: ScreenScraper", SetupControl.UseBoxArt, model.state.value.focus)
         press(model, Action.Enter)
         assertEquals("no form with an account stored", SetupStep.Scan, model.state.value.step)
         assertEquals(BoxArtSourceSetting.ScreenScraper, source.boxArtSource.value)
@@ -322,8 +357,8 @@ class SetupBoxArtTest {
     fun aRefusedAccountOpensTheFormWithItsNameToSignInAgain() = runTest {
         val accounts = FakeScraperAccounts(initial = AccountStatus.SignedIn("plumtester", isRefused = true))
         val model = modelWithAFolder(accounts)
-        toChoices(model)
-        press(model, Action.Enter)
+        toSources(model)
+        press(model, Action.Move(Direction.Down), Action.Enter)
         val form = model.form()
         assertNull("a refused password is not signed in", form.signedInAs)
         assertEquals("the name is filled in", "plumtester", form.username)
@@ -335,8 +370,9 @@ class SetupBoxArtTest {
         press(model, Action.Back)
         assertSame("the first B puts the tray away and the form stays", form, model.state.value.boxArt)
         press(model, Action.Back)
-        assertNull("Back: the choices", model.state.value.boxArt)
-        press(model, Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Enter)
+        assertNull("Back: the sources", model.state.value.boxArt)
+        press(model, Action.Back)
+        press(model, Action.TapItem(Column.Games, 0))
         source.endScan()
         runCurrent()
         assertEquals(SetupStep.Ready, model.state.value.step)
@@ -364,7 +400,7 @@ class SetupBoxArtTest {
         val model = modelWithAFolder(FakeScraperAccounts())
         toChoices(model)
         assertEquals("folder, look, box art, second screen, library", 5, model.state.value.stepDots)
-        press(model, Action.Move(Direction.Down), Action.Enter)
+        press(model, Action.Enter)
         assertEquals(SetupStep.SecondScreen, model.state.value.step)
         assertEquals(3, model.state.value.stepDotIndex)
     }
@@ -376,14 +412,117 @@ class SetupBoxArtTest {
         openForm(model)
         typeAndSignIn(model)
         assertTrue(model.form().isChecking)
-        // B leaves the form (the check goes on), then Box art only is chosen.
+        // B leaves the form (the check goes on), then the default source is chosen.
         press(model, Action.Back)
         assertNull("the form is left", model.state.value.boxArt)
-        press(model, Action.Move(Direction.Down), Action.Enter)
+        press(model, Action.Move(Direction.Up), Action.Enter)
         assertEquals(BoxArtSourceSetting.LibretroOnly, source.boxArtSource.value)
         accounts.release()
         runCurrent()
         assertEquals("the late answer leaves the choice", BoxArtSourceSetting.LibretroOnly, source.boxArtSource.value)
+    }
+
+    @Test
+    fun yesThenScreenScraperWithAUsableAccountStoresItWithoutAForm() = runTest {
+        val model = modelWithAFolder(FakeScraperAccounts(initial = AccountStatus.SignedIn("plumtester")))
+        toChoices(model)
+        press(model, Action.Enter, Action.Enter)
+        assertEquals(BoxArtSourceSetting.ScreenScraper, source.boxArtSource.value)
+        assertEquals(SetupStep.Scan, model.state.value.step)
+        assertNull(model.state.value.boxArt)
+    }
+
+    @Test
+    fun yesThenScreenScraperWithoutAnAccountOpensTheForm() = runTest {
+        val model = modelWithAFolder(FakeScraperAccounts())
+        toSources(model)
+        press(model, Action.Move(Direction.Down), Action.Enter)
+        assertEquals(SetupStep.BoxArt, model.state.value.step)
+        model.form()
+        assertNull("nothing is stored before the sign-in", source.boxArtSource.value)
+    }
+
+    @Test
+    fun backFromThePageOneGoesToThePreviousStepAndEnteringAgainOpensPageOne() = runTest {
+        val model = modelWithAFolder(FakeScraperAccounts())
+        toSources(model)
+        press(model, Action.Back, Action.Back)
+        assertEquals(SetupStep.Look, model.state.value.step)
+        press(model, Action.Enter)
+        assertEquals(SetupStep.BoxArt, model.state.value.step)
+        assertFalse("entering opens page 1", model.state.value.isBoxArtSourceOpen)
+        assertNull(model.state.value.boxArt)
+    }
+
+    @Test
+    fun backFromTheScanReopensPageOneOnTheStoredAnswer() = runTest {
+        val model = modelWithAFolder(FakeScraperAccounts())
+        toSources(model)
+        press(model, Action.Enter) // Default source
+        assertEquals(SetupStep.Scan, model.state.value.step)
+        press(model, Action.Back)
+        assertEquals(SetupStep.BoxArt, model.state.value.step)
+        assertFalse("page 1, not the sources", model.state.value.isBoxArtSourceOpen)
+        assertEquals("Yes after the default source", SetupControl.BoxArtYes, model.state.value.focus)
+
+        press(model, Action.Enter)
+        assertEquals("Yes opens the source in force", SetupControl.BoxArtLibretro, model.state.value.focus)
+    }
+
+    @Test
+    fun backFromReadyAfterNoReopensPageOneOnNo() = runTest {
+        val model = modelWithAFolder(FakeScraperAccounts())
+        toChoices(model)
+        press(model, Action.Enter)
+        source.endScan()
+        runCurrent()
+        assertEquals(SetupStep.Ready, model.state.value.step)
+        press(model, Action.Back)
+        assertEquals(SetupStep.BoxArt, model.state.value.step)
+        assertEquals(SetupControl.BoxArtOwnCovers, model.state.value.focus)
+    }
+
+    @Test
+    fun yesWhileNoIsBeingStoredDoesNotOpenThePageTwo() = runTest {
+        val model = modelWithAFolder(FakeScraperAccounts())
+        toChoices(model)
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        source.writeGate = gate
+        press(model, Action.Enter) // No, the write is held
+        press(model, Action.Move(Direction.Down), Action.Enter) // Yes, too late
+        assertFalse("no page switch under a pending store", model.state.value.isBoxArtSourceOpen)
+        gate.complete(Unit)
+        runCurrent()
+        assertEquals(BoxArtSourceSetting.OwnCovers, source.boxArtSource.value)
+        assertEquals(SetupStep.Scan, model.state.value.step)
+    }
+
+    @Test
+    fun backWhileTheDefaultSourceIsBeingStoredDoesNotClosePageTwo() = runTest {
+        val model = modelWithAFolder(FakeScraperAccounts())
+        toSources(model)
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        source.writeGate = gate
+        press(model, Action.Enter) // Default source, the write is held
+        press(model, Action.Back)
+        assertTrue("page 2 stays under a pending store", model.state.value.isBoxArtSourceOpen)
+        gate.complete(Unit)
+        runCurrent()
+        assertEquals(BoxArtSourceSetting.LibretroOnly, source.boxArtSource.value)
+        assertEquals(SetupStep.Scan, model.state.value.step)
+    }
+
+    @Test
+    fun aFailedStoresNoteOnPageTwoIsGoneAfterBackToPageOne() = runTest {
+        val model = modelWithAFolder(FakeScraperAccounts())
+        toSources(model)
+        source.boxArtFailure = IllegalStateException("disk")
+        press(model, Action.Enter)
+        assertEquals(SetupMessage.SaveFailed, model.state.value.message)
+        press(model, Action.Back)
+        assertFalse(model.state.value.isBoxArtSourceOpen)
+        assertNull("the note belonged to page 2", model.state.value.message)
+        assertEquals(SetupControl.BoxArtYes, model.state.value.focus)
     }
 
     private companion object {

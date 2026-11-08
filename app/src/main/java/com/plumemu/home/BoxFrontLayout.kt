@@ -1,12 +1,14 @@
 package com.plumemu.home
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
@@ -16,95 +18,133 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
-import com.plumemu.coreui.theme.BOX_BAND_BOTTOM
 import com.plumemu.coreui.components.trimBeforeEllipsis
-import com.plumemu.coreui.theme.BOX_BAND_TEXT
-import com.plumemu.coreui.theme.BOX_BAND_TOP
-import com.plumemu.coreui.theme.BOX_DOTS
-import com.plumemu.coreui.theme.POSTER_PALETTE
+import com.plumemu.coreui.theme.BOX_GRAIN
+import com.plumemu.coreui.theme.BOX_MARK_ALPHA
+import com.plumemu.coreui.theme.BoxFieldLook
 import com.plumemu.coreui.theme.POSTER_TITLE_FLOOR_SP
-import com.plumemu.coreui.theme.PosterDice
-import com.plumemu.coreui.theme.PosterLook
-import com.plumemu.coreui.theme.boxCapsAlpha
-import com.plumemu.coreui.theme.posterHash
+import com.plumemu.coreui.theme.PlumFonts
 import java.util.Locale
-import kotlin.math.hypot
 import kotlin.math.max
+import kotlin.random.Random
 import kotlin.math.min
 
+/** Test-only counters: how many card images were built and how many times one was drawn. Null in the app. */
+internal class BoxFrontProbe {
+    var builds = 0
+    var imageDraws = 0
+}
+
+internal var boxFrontProbe: BoxFrontProbe? = null
+
 /**
- * The drawn box front of a game without box art, from the board's "Covers, whole, in a thin collar" CSS (Super Metroid and
- * Contra III): a light band on top with the system's name and three dots, a radial-gradient field, a small line under the
- * band (Publisher · Year), the big title at the bottom left and shapes bleeding in from the sides. Sizes are the board's px
- * scaled by the cover's height over the board's 156 (`u`); title and band text sizes follow the cover's shape between the
- * board's two covers. The field's colours, the shapes and the title's ink come from the title's hash ([PosterDice]).
- * Text is measured once and never clipped by the painter: a long title is cut by hand and ends in "…".
+ * The drawn box front of a game without box art: a card in the system's colour (a light to dark diagonal, [BOX_GRAIN] grain like
+ * the cover pictures', a big faint first letter); the system's short code (Mono 500, white at 80 %) sits at the top left and
+ * the title (Jost 700, white, up to three lines) at the bottom left. Sizes are the board's px scaled by the cover's height over
+ * the board's 156 (`u`); the title and the code follow the cover's shape between the board's two covers. Text is measured once
+ * and never clipped by the painter: a long title is cut by hand and ends in "…". The card is drawn once into an image
+ * ([render]); the screen only draws that image.
  */
 internal class BoxFrontLayout private constructor(
-    private val size: Size,
-    val look: PosterLook,
-    u: Float,
+    val size: Size,
+    private val look: BoxFieldLook,
+    private val seed: Long,
     /** Null when the title's size would fall under [POSTER_TITLE_FLOOR_SP]: no title rather than an unreadable one. */
     val title: TextLayoutResult?,
     val titleTopLeft: Offset,
-    val caps: TextLayoutResult?,
-    val capsTopLeft: Offset,
-    val system: TextLayoutResult?,
-    private val systemTopLeft: Offset,
-    val shapes: List<BoxShape>,
-    private val dots: List<Pair<Color, Offset>>,
-    private val dotRadius: Float,
+    /** The system's short code; null when the cover is too small for [SMALL_TEXT_FLOOR_SP]. */
+    val code: TextLayoutResult?,
+    val codeTopLeft: Offset,
+    /** The title's first letter, drawn large at the bottom right and cut by the card's edges; null when the title has none. */
+    val mark: TextLayoutResult?,
+    val markTopLeft: Offset,
 ) {
-    val bandHeight = BAND * u
-    private val field = Rect(0f, bandHeight, size.width, size.height)
     private val fieldBrush =
-        run {
-            val centre = Offset(field.width * 0.28f, field.top + field.height * 0.18f)
-            val radius = hypot(max(centre.x, field.right - centre.x), max(centre.y - field.top, field.bottom - centre.y))
-            Brush.radialGradient(0f to look.top, 0.45f to look.bottom, 1f to look.band, center = centre, radius = radius)
-        }
-    private val bandBrush = Brush.verticalGradient(listOf(BOX_BAND_TOP, BOX_BAND_BOTTOM), startY = 0f, endY = bandHeight)
+        Brush.linearGradient(
+            0f to look.top,
+            1f to look.bottom,
+            start = Offset.Zero,
+            end = Offset(size.width, size.height),
+        )
 
-    fun draw(scope: DrawScope) =
+    private fun drawField(scope: DrawScope) = scope.drawRect(fieldBrush)
+
+    private fun drawTexts(scope: DrawScope) =
         with(scope) {
-            clipRect(0f, 0f, size.width, size.height) {
-                drawRect(fieldBrush, topLeft = field.topLeft, size = field.size)
-                clipRect(field.left, field.top, field.right, field.bottom) { for (shape in shapes) shape.draw(this) }
-                drawRect(bandBrush, size = Size(size.width, bandHeight))
-                for ((colour, centre) in dots) drawCircle(colour, dotRadius, centre)
-                if (system != null) drawText(system, topLeft = systemTopLeft)
-                if (caps != null) drawText(caps, topLeft = capsTopLeft)
-                if (title != null) drawText(title, topLeft = titleTopLeft)
-            }
+            if (mark != null) drawText(mark, topLeft = markTopLeft)
+            if (code != null) drawText(code, topLeft = codeTopLeft)
+            if (title != null) drawText(title, topLeft = titleTopLeft)
         }
+
+    /** Fine monochrome noise over the field, the cover pictures' grain family: the same for the same title and size. */
+    private fun addGrain(image: ImageBitmap) {
+        val bitmap = image.asAndroidBitmap()
+        val w = bitmap.width
+        val h = bitmap.height
+        val pixels = IntArray(w * h)
+        bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
+        val random = Random(seed)
+        for (i in pixels.indices) {
+            val n = random.nextInt(-BOX_GRAIN, BOX_GRAIN + 1)
+            val c = pixels[i]
+            val r = (((c shr 16) and 0xFF) + n).coerceIn(0, 255)
+            val g = (((c shr 8) and 0xFF) + n).coerceIn(0, 255)
+            val b = ((c and 0xFF) + n).coerceIn(0, 255)
+            pixels[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b // the field is opaque
+        }
+        bitmap.setPixels(pixels, 0, w, 0, 0, w, h)
+    }
+
+    /** The card as an image of exactly its size: built once, then drawn as is. Null before the cover has a size. */
+    fun render(density: Density): ImageBitmap? {
+        if (!hasSize(size)) return null
+        val image = ImageBitmap(size.width.toInt().coerceAtLeast(1), size.height.toInt().coerceAtLeast(1))
+        val canvas = Canvas(image)
+        CanvasDrawScope().draw(density, LayoutDirection.Ltr, canvas, size) { drawField(this) }
+        addGrain(image)
+        // The texts go on after the grain: crisp letters on a grained field.
+        CanvasDrawScope().draw(density, LayoutDirection.Ltr, canvas, size) { drawTexts(this) }
+        boxFrontProbe?.let { it.builds++ }
+        return image
+    }
 
     companion object {
-        /** The board's cover is 156 px tall with a 25 px band; text and shapes are given in board px. */
+        /** The board's cover is 156 px tall; text is given in board px. */
         private const val BOARD_HEIGHT = 156f
-        private const val BAND = 25f
-        private const val DOT = 9f
-        private const val DOT_GAP = 4f
-        private const val DOTS_RIGHT = 10f
-        private const val BAND_TEXT_LEFT = 12f
-        private const val CAPS_TOP = 9f
-        private const val CAPS_SIZE = 7f
+        private const val CODE_TOP = 10f
+        /** The code is a label: this share of the title's size. */
+        private const val CODE_OF_TITLE = 0.62f
+        private const val MARK_HEIGHT = 0.9f
+        private const val MARK_BLEED = 0.1f
         private const val TITLE_BOTTOM = 10f
         private const val LEFT_SHARE = 0.0705f
-        private const val TITLE_LINES = 2
+        private const val TITLE_LINES = 3
         private const val ELLIPSIS = "…"
 
-        /** The smallest size of the band text and the small line, in sp: a cover too small for it shows none. */
+        /** The smallest size of the code, in sp: a cover too small for it shows none. */
         private const val SMALL_TEXT_FLOOR_SP = 4f
-        private const val SHAPE_SALT = 0x5DEECE66DL
 
         /** The most sizes [fitTitle] tries: 0.93 a step reaches the floor from 20 times it in about 43. */
         private const val FIT_STEPS = 64
 
-        /** The board's two covers: 112 x 156 (title 12, band text 7 with 1 spacing) and 214 x 156 (19, 10, 2). Other shapes lie between or beyond. */
+        /** The board's two covers: 112 x 156 (title 12, code 7) and 214 x 156 (19, 10). Other shapes lie between or beyond. */
         private const val NARROW_ASPECT = 112f / 156f
         private const val WIDE_ASPECT = 214f / 156f
+
+        /** Measured before it has a size, the shape is 0/0 and every text size NaN, which no floor test catches: no text then. */
+        private fun hasSize(size: Size) = size.width > 0f && size.height > 0f && size.width.isFinite() && size.height.isFinite()
+
+        private fun seedOf(title: String, size: Size): Long = title.hashCode().toLong() * 31 + size.width.toLong() * 7919 + size.height.toLong()
+
+        /** Only the field and its grain, no text and no letter: the titled tile's ground (the card's own drawing, so the two never drift apart). */
+        fun fieldOnly(
+            title: String,
+            look: BoxFieldLook,
+            size: Size,
+        ): BoxFrontLayout = BoxFrontLayout(size, look, seedOf(title, size), null, Offset.Zero, null, Offset.Zero, null, Offset.Zero)
 
         fun of(
             measurer: TextMeasurer,
@@ -112,64 +152,49 @@ internal class BoxFrontLayout private constructor(
             title: String,
             system: String,
             systemShort: String,
-            line: String,
-            family: FontFamily?,
+            look: BoxFieldLook,
             size: Size,
         ): BoxFrontLayout {
             val u = size.height / BOARD_HEIGHT
-            val look = POSTER_PALETTE[PosterDice(posterHash(title)).next(POSTER_PALETTE.size)]
             val t = ((size.width / size.height - NARROW_ASPECT) / (WIDE_ASPECT - NARROW_ASPECT)).coerceIn(0f, 1f)
             val left = size.width * LEFT_SHARE
-            val bandHeight = BAND * u
             val smallFloor = with(density) { SMALL_TEXT_FLOOR_SP.sp.toPx() }
-            // Measured before it has a size, the shape is 0/0 and every text size NaN, which no floor test catches: no text then.
-            val hasSize = size.width > 0f && size.height > 0f && size.width.isFinite() && size.height.isFinite()
+            val hasSize = hasSize(size)
 
-            // Band text: the short name when the cover has one (SNES), tracked caps, between the left edge and the dots.
-            val bandPx = (7f + 3f * t) * u
-            val dotsWidth = (3 * DOT + 2 * DOT_GAP + DOTS_RIGHT) * u
-            val systemName = systemShort.ifBlank { system }.uppercase(Locale.ROOT)
-            val systemLayout =
-                if (!hasSize || systemName.isBlank() || bandPx < smallFloor) {
+            val titlePx = (12f + 7f * t) * u
+            val codePx = CODE_OF_TITLE * titlePx
+            val codeText = systemShort.ifBlank { system }.uppercase(Locale.ROOT)
+            val codeLayout =
+                if (!hasSize || codeText.isBlank() || codePx < smallFloor) {
                     null
                 } else {
-                    oneLine(measurer, systemName, textStyle(density, family, bandPx, FontWeight.ExtraBold, BOX_BAND_TEXT, (1f + t) * u), size.width - BAND_TEXT_LEFT * u - dotsWidth - 6 * u)
+                    oneLine(measurer, codeText, textStyle(density, PlumFonts.Mono, codePx, FontWeight.Medium, look.code), size.width - left * 2)
                 }
-            val systemTopLeft = systemLayout?.let { Offset(BAND_TEXT_LEFT * u, (bandHeight - it.size.height) / 2f) } ?: Offset.Zero
+            val codeTopLeft = Offset(left, CODE_TOP * u)
+            val codeBottom = codeTopLeft.y + (codeLayout?.size?.height ?: 0)
 
-            var dotX = size.width - DOTS_RIGHT * u
-            val dots =
-                BOX_DOTS.asReversed().map { colour ->
-                    dotX -= DOT * u
-                    Pair(colour, Offset(dotX + DOT * u / 2f, bandHeight / 2f)).also { dotX -= DOT_GAP * u }
-                }
-
-            // The small line, 9 board px under the band.
-            val capsPx = CAPS_SIZE * u
-            val capsLayout =
-                line.uppercase(Locale.ROOT).takeIf { hasSize && it.isNotBlank() && capsPx >= smallFloor }?.let {
-                    oneLine(measurer, it, textStyle(density, family, capsPx, FontWeight.Bold, look.ink.copy(alpha = boxCapsAlpha(look))), size.width - left * 2)
-                }
-            val capsTopLeft = Offset(left, bandHeight + CAPS_TOP * u)
-            val capsSize = Size(capsLayout?.size?.width?.toFloat() ?: (size.width - left * 2), capsLayout?.size?.height?.toFloat() ?: (capsPx * 1.2f))
-
-            // The title: at the board's size for this shape; smaller only until no word is broken; two lines at most, then "…".
-            val titlePx = (12f + 7f * t) * u
+            // The title: at the board's size for this shape; smaller only until no word is broken; three lines at most, then "…".
             val titleFloor = with(density) { POSTER_TITLE_FLOOR_SP.sp.toPx() }
-            val room = size.height - TITLE_BOTTOM * u - (capsTopLeft.y + capsSize.height) - 3 * u
+            val room = size.height - TITLE_BOTTOM * u - codeBottom - 3 * u
             val titleLayout =
                 if (!hasSize || titlePx < titleFloor || title.isBlank()) {
                     null
                 } else {
-                    fitTitle(measurer, density, title, family, titlePx, titleFloor, (size.width - left * 2).toInt().coerceAtLeast(1), room, look.ink)
+                    fitTitle(measurer, density, title, titlePx, titleFloor, (size.width - left * 2).toInt().coerceAtLeast(1), room, look.title)
                 }
             val titleTopLeft = Offset(left, size.height - TITLE_BOTTOM * u - (titleLayout?.size?.height ?: 0))
-
-            val keepOut = ArrayList<Rect>(2)
-            titleLayout?.let { keepOut += Rect(titleTopLeft, Size(it.size.width.toFloat(), it.size.height.toFloat())).inflate(3 * u) }
-            keepOut += Rect(capsTopLeft, capsSize).inflate(3 * u)
-            val shapes = planShapes(Rect(0f, bandHeight, size.width, size.height), keepOut, look, PosterDice(posterHash(title) xor SHAPE_SALT))
-            return BoxFrontLayout(size, look, u, titleLayout, titleTopLeft, capsLayout, capsTopLeft, systemLayout, systemTopLeft, shapes, dots, DOT * u / 2f)
+            val mark =
+                markOf(title)?.takeIf { hasSize }?.let { letter ->
+                    // Jost's capitals stand about 0.7 em tall: the size that makes the letter 0.9 of the shorter side.
+                    val side = min(size.width, size.height)
+                    measure(measurer, letter, textStyle(density, PlumFonts.Jost, side * MARK_HEIGHT / 0.7f, FontWeight.ExtraBold, look.mark.copy(alpha = BOX_MARK_ALPHA)), null)
+                }
+            val markTopLeft =
+                mark?.let {
+                    val bleed = min(size.width, size.height) * MARK_BLEED
+                    Offset(size.width + bleed - it.size.width, size.height + bleed - it.firstBaseline)
+                } ?: Offset.Zero
+            return BoxFrontLayout(size, look, seedOf(title, size), titleLayout, titleTopLeft, codeLayout, codeTopLeft, mark, markTopLeft)
         }
 
         private fun textStyle(
@@ -237,12 +262,11 @@ internal class BoxFrontLayout private constructor(
             return c
         }
 
-        /** The title at the board's [startPx] (smaller, down to [floorPx], only while a word is wider than the line or the lines are too tall), two lines at most, the last ending in "…". */
+        /** The title at the board's [startPx] (smaller, down to [floorPx], only while a word is wider than the line or the lines are too tall), three lines at most, the last ending in "…". */
         private fun fitTitle(
             measurer: TextMeasurer,
             density: Density,
             text: String,
-            family: FontFamily?,
             startPx: Float,
             floorPx: Float,
             maxWidth: Int,
@@ -253,14 +277,88 @@ internal class BoxFrontLayout private constructor(
             if (!startPx.isFinite() || !floorPx.isFinite() || floorPx <= 0f) return null
             var px = startPx
             repeat(FIT_STEPS) {
-                val style = textStyle(density, family, px, FontWeight.ExtraBold, ink, lineHeightPx = px * 1.05f)
+                val style = textStyle(density, PlumFonts.Jost, px, FontWeight.Bold, ink, lineHeightPx = px * 1.05f)
                 val whole = measure(measurer, text, style, maxWidth)
-                val result = if (breaksWord(whole, text)) null else cutToLines(measurer, text, style, maxWidth, whole)
+                val result = if (breaksWord(whole, text)) null else balanced(measurer, text, style, maxWidth, cutToLines(measurer, text, style, maxWidth, whole))
                 if (result != null && result.size.height <= room) return result
                 if (px <= floorPx) return result ?: oneLine(measurer, text, style, maxWidth.toFloat())
                 px = max(px * 0.93f, floorPx)
             }
             return null
+        }
+
+        /** [text]'s first letter or digit in capitals, after a leading "The ": the card's big letter; null when it has none. */
+        internal fun markOf(text: String): String? {
+            val trimmed = text.trim()
+            val body = if (trimmed.length > 4 && trimmed.startsWith("the ", ignoreCase = true)) trimmed.substring(4) else trimmed
+            var i = 0
+            while (i < body.length) {
+                val cp = body.codePointAt(i)
+                if (Character.isLetterOrDigit(cp)) return String(Character.toChars(cp)).uppercase(Locale.ROOT)
+                i += Character.charCount(cp)
+            }
+            return null
+        }
+
+        /** [result] with its line breaks moved, when it is whole and has several lines, to the most even ones (see [balance]). */
+        private fun balanced(
+            measurer: TextMeasurer,
+            text: String,
+            style: TextStyle,
+            maxWidth: Int,
+            result: TextLayoutResult,
+        ): TextLayoutResult {
+            if (result.lineCount < 2 || result.layoutInput.text.text != text) return result
+            val broken = balance(measurer, text, style, maxWidth, result.lineCount) ?: return result
+            return measure(measurer, broken, style, maxWidth)
+        }
+
+        /**
+         * [text] with newlines at the breaks, in [lines] lines each within [maxWidth], that make the lines most even (the widest
+         * line as narrow as it can be, then the least spread); a break that leaves a last line of two characters or fewer ("2")
+         * is taken only when there is no other. Null when no choice of breaks fits.
+         */
+        internal fun balance(
+            measurer: TextMeasurer,
+            text: String,
+            style: TextStyle,
+            maxWidth: Int,
+            lines: Int,
+        ): String? {
+            val words = text.trim().split(' ').filter { it.isNotEmpty() }
+            if (lines < 2 || lines > TITLE_LINES || words.size < lines) return null
+            val widths = HashMap<Pair<Int, Int>, Int>()
+
+            fun width(
+                from: Int,
+                to: Int,
+            ) = widths.getOrPut(from to to) { measure(measurer, words.subList(from, to).joinToString(" "), style, null).size.width }
+
+            // Every way to cut the words into `left` runs, as the end of each run.
+            fun cuts(
+                from: Int,
+                left: Int,
+            ): List<List<Int>> =
+                if (left == 1) {
+                    listOf(listOf(words.size))
+                } else {
+                    (from + 1..words.size - left + 1).flatMap { end -> cuts(end, left - 1).map { listOf(end) + it } }
+                }
+            val choices = cuts(0, lines).map { ends -> (listOf(0) + ends).zipWithNext() }.filter { runs -> runs.all { (a, b) -> width(a, b) <= maxWidth } }
+            if (choices.isEmpty()) return null
+
+            fun lastLength(runs: List<Pair<Int, Int>>) = words.subList(runs.last().first, runs.last().second).joinToString(" ").length
+            val roomy = choices.filter { lastLength(it) > 2 }.ifEmpty { choices }
+            val best =
+                roomy.minWith(
+                    compareBy<List<Pair<Int, Int>>> { runs -> runs.maxOf { (a, b) -> width(a, b) } }
+                        .thenBy { runs ->
+                            val ws = runs.map { (a, b) -> width(a, b).toDouble() }
+                            val mean = ws.average()
+                            ws.sumOf { (it - mean) * (it - mean) }
+                        },
+                )
+            return best.joinToString("\n") { (a, b) -> words.subList(a, b).joinToString(" ") }
         }
 
         private fun cutToLines(

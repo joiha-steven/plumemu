@@ -5,7 +5,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.text.TextLayoutResult
 import com.plumemu.coredata.settings.AppearanceSettings
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coreui.testing.ReferenceShots
@@ -26,9 +25,9 @@ import kotlin.math.abs
 
 /**
  * The second screen's picking card follows the top screen's look ("the lower
- * screen changes exactly like the upper one when choosing colours, theme, font"): through the real
- * window, a change of Colors, Font or Text size in the stored settings redraws the card in that
- * set's background, that font and that size, with no restart.
+ * screen changes exactly like the upper one when choosing colours and theme"): through the real
+ * window, a change of Colors or Text size in the stored settings redraws the card in that
+ * set's background and that size, with no restart.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -36,9 +35,8 @@ import kotlin.math.abs
 class SecondScreenFollowsLookTest : SecondScreenHostTestBase() {
     private fun look(
         set: ColorSet,
-        font: FontSetting = FontSetting.Sans,
         size: TextSizeSetting = TextSizeSetting.Medium,
-    ) = PlumSettings(appearance = AppearanceSettings().withColors(set).copy(font = font, textSize = size, ownColors = null))
+    ) = PlumSettings(appearance = AppearanceSettings().withColors(set).copy(textSize = size, ownColors = null))
 
     /** The colour most of the window is drawn in: the card's background. */
     private fun backgroundOf(host: SecondScreenHost): Int =
@@ -47,7 +45,7 @@ class SecondScreenFollowsLookTest : SecondScreenHostTestBase() {
     /**
      * Each text on the card and the style it is laid out with. The window is drawn first: its Compose
      * view measures and lays out when drawn, and Robolectric runs no frame traversal for it, so a
-     * change that only moves sizes (Text size, Font) would otherwise not be laid out yet.
+     * change that only moves sizes (Text size) would otherwise not be laid out yet.
      */
     private fun textStyles(host: SecondScreenHost): Map<String, androidx.compose.ui.text.TextStyle> {
         pixelsOf(host.shownWindow!!)
@@ -60,17 +58,17 @@ class SecondScreenFollowsLookTest : SecondScreenHostTestBase() {
     }
 
     @Test
-    fun colorsFontAndTextSizeReachThePickingCard() {
-        settings.value = look(ColorSet.Super)
+    fun colorsAndTextSizeReachThePickingCard() {
+        settings.value = look(ColorSet.Ivory)
         val host = startHost()
         feed.offer(GAME_WITH_STAR)
         // The feed settles before it shows what is offered.
         idle(500)
-        assertEquals("Super's background", ColorSet.Super.backgroundColor.value, backgroundOf(host))
+        assertEquals("Ivory's background", ColorSet.Ivory.backgroundColor.value, backgroundOf(host))
         val medium = textStyles(host)
         assertTrue("the card shows text: $medium", medium.isNotEmpty())
 
-        settings.value = look(ColorSet.Super, size = TextSizeSetting.Largest)
+        settings.value = look(ColorSet.Ivory, size = TextSizeSetting.Largest)
         idle(500)
         val largest = textStyles(host)
         var compared = 0
@@ -82,20 +80,16 @@ class SecondScreenFollowsLookTest : SecondScreenHostTestBase() {
         }
         assertTrue("the same texts at Medium and Largest: ${medium.keys} / ${largest.keys}", compared > 0)
 
-        settings.value = look(ColorSet.DotMatrix, font = FontSetting.Mono, size = TextSizeSetting.Largest)
+        settings.value = look(ColorSet.PeaGreen, size = TextSizeSetting.Largest)
         idle(500)
-        assertEquals("Dot matrix's background", ColorSet.DotMatrix.backgroundColor.value, backgroundOf(host))
-        val mono = PlumTypography(PlumFont.Mono, TextSize.Largest, TextMode.Dark).panelBody.fontFamily
-        val inMono = textStyles(host)
-        assertTrue("texts to check", inMono.isNotEmpty())
-        for ((text, style) in inMono) assertEquals("'$text' in Plum Mono", mono, style.fontFamily)
+        assertEquals("Pea Green's background", ColorSet.PeaGreen.backgroundColor.value, backgroundOf(host))
+        val jost = PlumTypography(PlumFont.Jost, TextSize.Largest, TextMode.Dark).panelBody.fontFamily
+        val inJost = textStyles(host)
+        assertTrue("texts to check", inJost.isNotEmpty())
+        for ((text, style) in inJost) assertEquals("'$text' in Jost", jost, style.fontFamily)
 
-        settings.value = look(ColorSet.Paper, font = FontSetting.Serif)
+        settings.value = look(ColorSet.Daylight)
         idle(500)
-        assertEquals("Paper's background", ColorSet.Paper.backgroundColor.value, backgroundOf(host))
-        val serif = PlumTypography(PlumFont.Serif, TextSize.Medium, TextMode.Dark).panelBody.fontFamily
-        val inSerif = textStyles(host)
-        assertTrue("texts to check", inSerif.isNotEmpty())
-        for ((text, style) in inSerif) assertEquals("'$text' in Plum Serif", serif, style.fontFamily)
+        assertEquals("Paper's background", ColorSet.Daylight.backgroundColor.value, backgroundOf(host))
     }
 }

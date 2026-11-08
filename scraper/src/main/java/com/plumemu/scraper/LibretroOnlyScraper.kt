@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import java.io.File
 
 /**
- * The scraper of "Box art only": box fronts from libretro's public thumbnail server and nothing
+ * The scraper of "Default source": box fronts from libretro's public thumbnail server and nothing
  * else. It never calls ScreenScraper, sends no credential and needs no account or developer key;
  * [scrape] answers [ScrapeResult.NoMatch] without a request, so the run's no-match step asks
  * [fallbackArt] (libretro) for every game and keeps the poster cover where libretro has none.

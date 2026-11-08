@@ -72,7 +72,7 @@ internal fun HomeAt(
             wifi = wifi,
             charging = charging,
             gridIds = gridIds,
-            panel = panel,
+            panel = { panel },
             showHints = showHints,
             pushRightToPlay = pushRightToPlay,
             showSystemInfo = showSystemInfo,

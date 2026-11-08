@@ -71,6 +71,19 @@ class GraphSettingsLibraryTest {
         assertEquals(listOf(true, true, false), shown.map { it.isCounted })
     }
 
+    @Test
+    fun theStoredUnreadablePathsReachSettingsOnePerLineAndNoneWhenNull() {
+        val folders =
+            listOf(
+                folder(1, "a", scanned = true).copy(unreadablePaths = "psx\ngba/hacks"),
+                folder(2, "b", scanned = true),
+                folder(3, "c", scanned = true).copy(unreadablePaths = ""),
+            )
+        val shown = settingsFolders(folders, emptyList(), isHeld = { true }, unreadable = emptySet())
+        assertEquals(listOf(listOf("psx", "gba/hacks"), emptyList(), emptyList()), shown.map { it.unreadablePaths })
+        assertEquals("a folder with unreadable sub-folders is still readable itself", listOf(false, false, false), shown.map { it.isUnavailable })
+    }
+
     private fun folder(
         id: Long,
         uri: String,

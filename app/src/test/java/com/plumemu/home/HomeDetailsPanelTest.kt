@@ -103,19 +103,19 @@ class HomeDetailsPanelTest {
     @Test
     fun aGameNeverPlayedWithNoRatingOrGenre() {
         show("", null, PlayFacts(null, 0, "Asked on Play"))
-        check(listOf("PLAYED", "LAST PLAYED", "EMULATOR"))
+        check(listOf("Played", "Last played", "Emulator"))
     }
 
     @Test
     fun aLongGenreBesideTheOtherCells() {
         show("Role Playing Game", 17, PlayFacts(null, 0, "Asked on Play"))
-        check(listOf("GENRE", "RATING", "PLAYED", "LAST PLAYED", "EMULATOR"))
+        check(listOf("Genre", "Rating", "Played", "Last played", "Emulator"))
     }
 
     @Test
     fun everyCellFilled() {
         show("Action, Adventure", 17, PlayFacts(2, 252, "RetroArch: Snes9x"))
-        check(listOf("GENRE", "RATING", "PLAYED", "LAST PLAYED", "EMULATOR"))
+        check(listOf("Genre", "Rating", "Played", "Last played", "Emulator"))
     }
 
     private companion object {

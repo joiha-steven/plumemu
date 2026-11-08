@@ -18,6 +18,7 @@ import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.GridSize
+import com.plumemu.coreui.theme.FocusLift
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
@@ -91,7 +92,7 @@ abstract class HomeGridClipBase {
         val strip = checkNotNull(state)
         val index = compose.runOnIdle { strip.focus.rowOf(entryId) }
         val node = compose.onAllNodes(isCover, useUnmergedTree = true).fetchSemanticsNodes().firstOrNull { it.config.first { c -> c.key.name == "TestTag" }.value.toString() == HomeTags.cover(index) } ?: return 1f..0f
-        val reach = (PlumDimens.focusRingOutset.value + PlumDimens.focusRingKeyline.value + PlumDimens.focusHaloReach.value) * compose.density.density + node.size.width * (PlumDimens.FOCUSED_COVER_SCALE - 1f) / 2f
+        val reach = FocusLift.reach.value * compose.density.density
         return (node.positionInRoot.x - reach)..(node.positionInRoot.x + node.size.width + reach)
     }
 
@@ -186,8 +187,8 @@ abstract class HomeGridClipBase {
             check("$label down $i")
             val after = cells()
             // Whole and clear of the bottom fade: a row only partly under it is one the grid may scroll to.
-            // The focus ring and glow of the row below reach past it: whole means clear of the fade with those too.
-            val reach = (PlumDimens.focusRingOutset.value + PlumDimens.focusRingKeyline.value + PlumDimens.focusHaloReach.value) * density
+            // The focus rim and glow of the row below reach past it: whole means clear of the fade with those too.
+            val reach = FocusLift.reach.value * density
             val wasWhole = next != null && next.second + reach <= (gridBounds.bottom - PlumDimens.listFadeBand).value * density + 0.5f && next.first >= gridBounds.top.value * density
             val still = before[focusIndex]?.first == after[focusIndex]?.first
             if (wasWhole && !still) problems += "$label down $i: the row below stood whole in the grid and the grid scrolled anyway (${next?.first}..${next?.second}, reach $reach, grid to ${gridBounds.bottom.value * density}, before ${before[focusIndex]}, after ${after[focusIndex]})"

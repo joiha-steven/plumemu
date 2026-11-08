@@ -461,6 +461,7 @@ internal fun settingsFolders(
             systemCount = count?.systemCount ?: 0,
             isCounted = folder.lastScanFinishedAt != null,
             isUnavailable = folder.id in unreadable || !isHeld(folder.treeUri),
+            unreadablePaths = folder.unreadablePaths?.split('\n')?.filter { it.isNotEmpty() }.orEmpty(),
         )
     }
 }

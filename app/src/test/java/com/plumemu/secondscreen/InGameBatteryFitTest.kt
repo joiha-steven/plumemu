@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.InGameDimens
-import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
@@ -34,7 +33,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The battery part measured: at both corners of the drift (-4, -12 and +4, +12 dp),
- * at all six text sizes in Plum Sans and in every font at Largest, in 24 and 12 hours, with the
+ * at all six text sizes in Jost, in 24 and 12 hours, with the
  * widest words: nothing nearer than 20 dp to an edge, no text cut, the parts in order without
  * overlapping, the chart's labels apart, and the chart at least its minimum height, the parts giving
  * way where they must (printed, and pinned: only where measured).
@@ -91,9 +90,8 @@ abstract class InGameBatteryFitBase(
 
     private fun checkAll(
         textSize: TextSize,
-        font: PlumFont,
     ) {
-        settings = PlumThemeSettings(font = font, textSize = textSize)
+        settings = PlumThemeSettings(textSize = textSize)
         for (hours12 in listOf(false, true)) {
             twelveHour = hours12
             for (s in InGameBatterySamples.widest + InGameBatterySamples.mockups) {
@@ -101,7 +99,7 @@ abstract class InGameBatteryFitBase(
                 for (corner in listOf(DpOffset((-4).dp, (-12).dp), DpOffset(4.dp, 12.dp))) {
                     shift = corner
                     compose.waitForIdle()
-                    check("${size.name} ${font.name} ${textSize.name} ${if (hours12) 12 else 24} ${s.name} at $corner", s)
+                    check("${size.name} Jost ${textSize.name} ${if (hours12) 12 else 24} ${s.name} at $corner", s)
                 }
             }
         }
@@ -225,18 +223,20 @@ abstract class InGameBatteryFitBase(
     }
 
     @Test
-    fun everyTextSizeInPlumSans() {
-        for (textSize in TextSize.entries) checkAll(textSize, PlumFont.Sans)
-        report("Plum Sans")
-        val upToLarge = listOf(TextSize.Small, TextSize.Medium, TextSize.Large).map { " $it " }
-        assertEquals("nothing gives way up to Large", emptyList<String>(), gaveWay.filter { case -> upToLarge.any { it in case } })
-        assertEquals("the chart's labels never give way in Plum Sans", emptyList<String>(), gaveWay.filter { it.endsWith(": labels") })
+    fun everyTextSizeInJost() {
+        for (textSize in TextSize.entries) checkAll(textSize)
+        report("Jost")
+        val upToMedium = listOf(TextSize.Small, TextSize.Medium).map { " $it " }
+        assertEquals("nothing gives way at Small and Medium", emptyList<String>(), gaveWay.filter { case -> upToMedium.any { it in case } })
+        val atLarge = gaveWay.filter { " ${TextSize.Large} " in it }.map { it.substringAfter(": ") }.toSortedSet()
+        assertEquals("what gives way at Large (measured)", expectedAtLarge, atLarge)
+        assertEquals("the chart's labels never give way in Jost", emptyList<String>(), gaveWay.filter { it.endsWith(": labels") })
     }
 
     @Test
-    fun everyFontAtLargest() {
-        for (font in PlumFont.entries) checkAll(TextSize.Largest, font)
-        report("every font at Largest")
+    fun jostAtLargest() {
+        checkAll(TextSize.Largest)
+        report("Jost at Largest")
         assertEquals("what gives way at Largest (measured)", expectedAtLargest, gaveWay.map { it.substringAfter(": ") }.toSortedSet())
     }
 
@@ -244,7 +244,10 @@ abstract class InGameBatteryFitBase(
         println("In-game battery part ${size.name}, $label: smallest chart $minChart dp; gave way: ${gaveWay.distinct()}")
     }
 
-    /** The parts that give way somewhere at Largest in some font ("ring", "empty at", "note", "labels", "start label", "facts"), measured. */
+    /** The parts that give way at Large in Jost, measured (Compact only: its "empty at" goes first, from Large on). */
+    protected open val expectedAtLarge: Set<String> = emptySet()
+
+    /** The parts that give way somewhere at Largest ("ring", "empty at", "note", "labels", "start label", "facts"), measured. */
     protected abstract val expectedAtLargest: Set<String>
 
     private companion object {
@@ -257,13 +260,14 @@ abstract class InGameBatteryFitBase(
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class InGameBatteryRoomyFitTest : InGameBatteryFitBase(SecondSize.Roomy) {
-    override val expectedAtLargest: Set<String> = sortedSetOf("empty at", "note", "ring")
+    override val expectedAtLargest: Set<String> = sortedSetOf("empty at", "note")
 }
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class InGameBatteryCompactFitTest : InGameBatteryFitBase(SecondSize.Compact) {
-    // The labels only in Plum Serif, whose lines are the tallest.
+    // Measured for Jost alone (the only face): "empty at" gives way from Large; the ring and the labels never do.
+    override val expectedAtLarge: Set<String> = sortedSetOf("empty at")
     override val expectedAtLargest: Set<String> = sortedSetOf("empty at", "facts", "note")
 }

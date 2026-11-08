@@ -65,6 +65,24 @@ internal abstract class SettingsFolderModel(
         backToFilesNotAdded()
     }
 
+    /**
+     * A on Library › Folder could not be read: Scan again starts Rescan library and puts the cursor on its row, where the
+     * scan's progress shows; a folder's item skips that folder (stored, then scanned by the graph), and the item leaves.
+     */
+    protected fun onUnreadableEnter(index: Int) {
+        when (val item = unreadablePanelItems(content).getOrNull(index) ?: return feel.report(Outcome.Nothing)) {
+            UnreadablePanelItem.ScanAgain -> {
+                val rescan = SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.Rescan)
+                val library = SettingsSection.Library
+                if (rescan >= 0) moveTo(focus.copy(column = SettingsColumn.Options, page = null, panelIndex = 0, rememberedOption = focus.rememberedOption + (library to rescan)))
+                work.rescan()
+            }
+            is UnreadablePanelItem.Skip ->
+                if (!work.skipSubfolder(item.folder.key, skip = true, content, SettingsOption.UnreadableFolders)) return feel.report(Outcome.Nothing)
+        }
+        feel.report(Outcome.Activated)
+    }
+
     /** Back or an answer on an unknown folder's page: to Files not added, on its line. */
     protected fun backToFilesNotAdded() = moveTo(SettingsListPages.backToFilesNotAdded(focus, content))
 

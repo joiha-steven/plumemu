@@ -2,7 +2,6 @@ package com.plumemu.coreui.testing
 
 import androidx.compose.runtime.Composable
 import com.github.takahirom.roborazzi.captureRoboImage
-import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
@@ -85,25 +84,22 @@ object ReferenceShots {
     }
 
     /**
-     * `<screen>_<size>_<preset>.png` for the default font (Jost); other fonts add `_<font>`
-     * (`home_768x432_paper_serif.png`); a text size other than
-     * Medium adds its name last (`home_768x432_paper_largest.png`).
+     * `<screen>_<size>_<preset>.png`; a text size other than Small adds its name last
+     * (`home_768x432_paper_largest.png`).
      */
     fun fileName(
         screen: String,
         size: Size,
         preset: Preset,
-        font: PlumFont = PlumFont.Default,
         textSize: TextSize = TextSize.Small,
     ): String {
-        val fontSuffix = if (font == PlumFont.Default) "" else "_${font.name.lowercase()}"
         val sizeSuffix = if (textSize == TextSize.Small) "" else "_${textSize.name.lowercase()}"
-        return "${screen}_${size.label}_${preset.label}$fontSuffix$sizeSuffix.png"
+        return "${screen}_${size.label}_${preset.label}$sizeSuffix.png"
     }
 
     /**
-     * Captures [content] inside [PlumTheme] at every [Size] and [Preset], in each of [fonts]
-     * at [textSize] (Medium by default; the default font only by default; key screens add Serif and Mono, docs/conventions/testing.md).
+     * Captures [content] inside [PlumTheme] at every [Size] and [Preset]
+     * at [textSize] (Small by default).
      * [content] sees the screen size through `PlumTheme.layout`, as on a device.
      *
      * Every shot is taken and compared even when an earlier one differs; the test then fails
@@ -111,28 +107,24 @@ object ReferenceShots {
      */
     fun capture(
         screen: String,
-        fonts: List<PlumFont> = listOf(PlumFont.Default),
         textSize: TextSize = TextSize.Small,
         sizes: List<Size> = Size.Original,
         content: @Composable () -> Unit,
     ) {
         require(screen.matches(Regex("[a-z0-9_]+"))) { "screen name must be snake_case, got '$screen'" }
-        require(fonts.isNotEmpty()) { "fonts must not be empty" }
         val mismatches = mutableListOf<String>()
         for (size in sizes) {
             // xhdpi: twice the dp, sharp enough to judge the fonts in the PNG.
             RuntimeEnvironment.setQualifiers("w${size.widthDp}dp-h${size.heightDp}dp-land-xhdpi")
             for (preset in Preset.entries) {
-                for (font in fonts) {
-                    val name = fileName(screen, size, preset, font, textSize)
-                    try {
-                        captureRoboImage(filePath = "$OUTPUT_DIR/$name") {
-                            PlumTheme(preset.settings.copy(font = font, textSize = textSize)) { content() }
-                        }
-                    } catch (e: AssertionError) {
-                        // Collected, not swallowed: rethrown below together with the others.
-                        mismatches += "$name: ${e.message}"
+                val name = fileName(screen, size, preset, textSize)
+                try {
+                    captureRoboImage(filePath = "$OUTPUT_DIR/$name") {
+                        PlumTheme(preset.settings.copy(textSize = textSize)) { content() }
                     }
+                } catch (e: AssertionError) {
+                    // Collected, not swallowed: rethrown below together with the others.
+                    mismatches += "$name: ${e.message}"
                 }
             }
         }

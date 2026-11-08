@@ -19,7 +19,6 @@ import com.plumemu.coredata.settings.SetupFlags
 import com.plumemu.coredata.settings.SystemOrderSetting
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coredata.settings.TextSizeSetting
-import com.plumemu.coredata.settings.TextWeightSetting
 import com.plumemu.coredata.settings.UpdateSettings
 import java.util.Locale
 import org.json.JSONArray
@@ -49,10 +48,8 @@ object SettingsJson {
                     .put("background", SettingsCodec.encodeColor(s.appearance.background))
                     .put("textColor", s.appearance.textColor.stored)
                     .put("accent", SettingsCodec.encodeColor(s.appearance.accent))
-                    .put("font", s.appearance.font.name)
                     // Not picked yet stays "not picked", so the restored device's screen width still decides.
                     .put("textSize", s.appearance.textSize?.name ?: JSONObject.NULL)
-                    .put("textWeight", s.appearance.textWeight?.name ?: JSONObject.NULL)
                     .put("leftEdge", s.appearance.leftEdge?.name ?: JSONObject.NULL)
                     .put("edgeFade", s.appearance.edgeFade)
                     .put("gridSize", s.appearance.gridSize.name)
@@ -167,9 +164,7 @@ object SettingsJson {
                             background = color(a, APPEARANCE, "background", d.appearance.background),
                             textColor = textColor(a, APPEARANCE, "textColor", d.appearance.textColor),
                             accent = color(a, APPEARANCE, "accent", d.appearance.accent, bySystem = true),
-                            font = enum(a, APPEARANCE, "font", d.appearance.font),
                             textSize = optionalEnum<TextSizeSetting>(a, APPEARANCE, "textSize"),
-                            textWeight = optionalEnum<TextWeightSetting>(a, APPEARANCE, "textWeight"),
                             leftEdge = optionalEnum<LeftEdgeSetting>(a, APPEARANCE, "leftEdge"),
                             // Older backups have no key: on, the default.
                             edgeFade = bool(a, APPEARANCE, "edgeFade", d.appearance.edgeFade),

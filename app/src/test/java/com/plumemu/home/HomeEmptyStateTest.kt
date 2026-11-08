@@ -285,14 +285,12 @@ class HomeEmptyStateTest {
     private fun assertFits(
         why: EmptyLibrary,
         what: String,
-        /** Button labels that may end in an ellipsis: at 576 x 432 the stacked button is a few dp short of "Files not" at Largest. */
-        longLabels: Set<String> = emptySet(),
     ) {
         val largest = TableText.Default.copy(textSize = TextSize.Largest)
         show(why, largest)
         val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
         val message = compose.onNodeWithTag(HomeTags.EMPTY_MESSAGE, useUnmergedTree = true).fetchSemanticsNode()
-        val problems = textProblems(message, FitAllowance(isLargest = true, ellipsisTexts = longLabels))
+        val problems = textProblems(message, FitAllowance(isLargest = true))
         assertTrue("$what: ${problems.joinToString()} message=${message.boundsInRoot} parent=${message.parent?.boundsInRoot}", problems.isEmpty())
         val screen = root.boundsInRoot
         val hintTop = compose.onNodeWithTag(HomeTags.HINT_BAR, useUnmergedTree = true).getUnclippedBoundsInRoot().top
@@ -318,7 +316,7 @@ class HomeEmptyStateTest {
 
     @Test
     @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
-    fun noGamesFitsAtLargest576() = assertFits(EmptyLibrary.NoGames, "no games 576x432", longLabels = setOf("Files not added"))
+    fun noGamesFitsAtLargest576() = assertFits(EmptyLibrary.NoGames, "no games 576x432")
 
     @Test
     @Config(qualifiers = "w832dp-h468dp-land-xhdpi")

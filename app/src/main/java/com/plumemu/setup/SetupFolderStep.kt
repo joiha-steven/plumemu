@@ -6,24 +6,28 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import com.plumemu.R
 import com.plumemu.coreinput.Action
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.home.rememberCountFormat
+import kotlin.math.roundToInt
 
 /**
  * The folder step (the board's RP5-O0 before a folder is chosen, RP5-O1 and Nova-7 after): three
@@ -102,20 +106,34 @@ private fun ColumnScope.ChosenFoldersContent(
     StepNote(state.message, R.string.setup_folder_note)
 }
 
-/**
- * One of the three plain lines: a `muted` dot (accent dots mean focus), 15 in `text2`, at least 32
- * high (a long line wraps: to three at the largest text in a long translation).
- */
+/** A bullet on the middle of the text's first line (a wrapped line leaves it there), the text centred in a minimum height. */
 @Composable
 private fun SetupPoint(text: String) {
     val colors = PlumTheme.colors
-    Row(
-        Modifier.heightIn(min = PlumTheme.layout.setupPointHeight),
-        horizontalArrangement = Arrangement.spacedBy(PlumDimens.setupPointGap),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.size(PlumDimens.focusDot).background(colors.muted, CircleShape))
-        BasicText(text = text, style = PlumTheme.type.setupPoint.copy(color = colors.text2), maxLines = 3, overflow = TextOverflow.Ellipsis)
+    val minHeight = PlumTheme.layout.setupPointHeight
+    var firstLineCentre by remember { mutableFloatStateOf(0f) }
+    Layout(
+        content = {
+            Box(Modifier.size(PlumDimens.focusDot).background(colors.muted, CircleShape).testTag(SetupTags.POINT_DOT))
+            BasicText(
+                text = text,
+                style = PlumTheme.type.setupPoint.copy(color = colors.text2),
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+                onTextLayout = { firstLineCentre = (it.getLineTop(0) + it.getLineBottom(0)) / 2f },
+                modifier = Modifier.testTag(SetupTags.POINT_TEXT),
+            )
+        },
+    ) { measurables, constraints ->
+        val gap = PlumDimens.setupPointGap.roundToPx()
+        val dot = measurables[0].measure(Constraints())
+        val label = measurables[1].measure(Constraints(maxWidth = (constraints.maxWidth - dot.width - gap).coerceAtLeast(0)))
+        val height = maxOf(minHeight.roundToPx(), label.height)
+        layout(dot.width + gap + label.width, height) {
+            val labelTop = (height - label.height) / 2
+            label.placeRelative(dot.width + gap, labelTop)
+            dot.placeRelative(0, labelTop + (firstLineCentre - dot.height / 2f).roundToInt())
+        }
     }
 }
 

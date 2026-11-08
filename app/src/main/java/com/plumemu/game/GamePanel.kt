@@ -1,6 +1,7 @@
 package com.plumemu.game
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +26,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.getValue
@@ -89,10 +91,14 @@ import com.plumemu.home.KeepFocusedVisible
 import com.plumemu.settings.screen.ChevronSide
 import com.plumemu.settings.screen.ValueChevron
 
+/** The card's slide, 0 closed to 1 open. Already open on the first frame (a screenshot, a restored screen): no slide. Home shares it with the details column's fade. */
+@Composable
+internal fun rememberPanelSlide(isOpen: Boolean): Animatable<Float, AnimationVector1D> = remember { Animatable(if (isOpen) 1f else 0f) }
+
 /**
  * The game panel: a raised card on the page's right margin, between the top bar's gap and the hint
  * bar's gap, drawn over the page with no scrim or fade (the page keeps its own look up to the
- * card's shadow). Width: [CardDimens.menuWidth] (or [CardDimens.pickerWidth] for the emulator
+ * card's shadow; only the wide details column fades out as the card slides in and back as it leaves, on [progress], the card's own slide, read while drawing). Width: [CardDimens.menuWidth] (or [CardDimens.pickerWidth] for the emulator
  * lists) on wide screens, `width − 48` on narrow ones. Everything inside is `panelInset` from the
  * card's edge on both sides. It slides in and out with the strip's 180 ms ease-out
  * (`graphicsLayer` only), and jumps when motion is off. While open, a tap outside it is Back.
@@ -106,6 +112,7 @@ internal fun GamePanelOverlay(
     onAction: (Action) -> Unit,
     modifier: Modifier = Modifier,
     keyboardCovers: Dp = 0.dp,
+    progress: Animatable<Float, AnimationVector1D> = rememberPanelSlide(panel != null),
 ) {
     val layout = PlumTheme.layout
     val isWide = layout.widthClass == WidthClass.Wide
@@ -116,10 +123,22 @@ internal fun GamePanelOverlay(
     val lastShown = remember { arrayOfNulls<OpenPanel>(1) }
     if (panel != null) lastShown[0] = panel
     // Already open on the first frame (a screenshot, a restored screen): no slide.
-    val progress = remember { Animatable(if (isOpen) 1f else 0f) }
     val spec = PlumTheme.motion.slideSpec<Float>()
-    LaunchedEffect(isOpen) { progress.animateTo(if (isOpen) 1f else 0f, spec) }
+    // Opening composes the card in one frame and its body (header, rows, their text) in the next, the slide waiting for the
+    // body: the card is still off the screen's edge then, so nothing shows part-drawn, and the panel's measuring no longer
+    // piles into one frame. Already open on the first frame (a screenshot, a restored screen): whole at once.
+    var hasBody by remember { mutableStateOf(isOpen) }
+    LaunchedEffect(isOpen) {
+        // Runs once the card's frame is done: the body composes in the next frame, as the slide's first one (still at 0).
+        if (isOpen) hasBody = true
+        progress.animateTo(if (isOpen) 1f else 0f, spec)
+        if (!isOpen) hasBody = false
+    }
     val isGone by remember { derivedStateOf { progress.value == 0f } }
+    // Sliding out, the rows are inert; one lambda for both, read per action, so closing does not recompose the whole body.
+    val currentIsOpen by rememberUpdatedState(isOpen)
+    val currentOnAction by rememberUpdatedState(onAction)
+    val bodyActions = remember { { action: Action -> if (currentIsOpen) currentOnAction(action) else IGNORE_ACTIONS(action) } }
     val shown = lastShown[0]
     if (shown == null || (!isOpen && isGone)) return
     // This box is the area between the top bar's gap and the hint bar's gap: the card sits on the page's outer margin at its right.
@@ -155,7 +174,7 @@ internal fun GamePanelOverlay(
             // Sliding out, the rows are inert: a tap there would otherwise fall through to the
             // strip as a Details tap (narrow details stop: Play).
             // The panel is a raised card: its focused row's slab is the lighter one made for a card.
-            CompositionLocalProvider(LocalSlabOnCard provides true) { PanelBody(shown, if (isOpen) onAction else IGNORE_ACTIONS, keyboardCovers) }
+            if (hasBody) CompositionLocalProvider(LocalSlabOnCard provides true) { PanelBody(shown, bodyActions, keyboardCovers) }
         }
     }
 }

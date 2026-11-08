@@ -46,7 +46,7 @@ internal fun PlaceText(
     BoxWithConstraints(modifier.wrapContentHeight(unbounded = true).graphicsLayer { this.alpha = alpha() }) {
         val nameStyle =
             if (compact) {
-                type.placeName.copy(fontSize = type.topBar.fontSize, lineHeight = type.topBar.lineHeight)
+                type.placeName.copy(fontSize = type.meta.fontSize, lineHeight = type.meta.lineHeight)
             } else {
                 placeNameStyle(type.placeName) { measurer.measure(parts.name, it, maxLines = 1).size.width <= constraints.maxWidth }
             }
@@ -55,7 +55,8 @@ internal fun PlaceText(
                 BasicText(text = parts.name, style = nameStyle, color = name, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.alignByBaseline())
             }
             if (parts.rest.isNotEmpty()) {
-                BasicText(text = parts.rest, style = type.placeCount, color = count, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).alignByBaseline())
+                // A count (it has a digit: "248 games") is a phrase: Jost with tabular figures; other words (Settings' "› Rules") are plain Jost.
+                BasicText(text = parts.rest, style = if (parts.rest.any(Char::isDigit)) type.placeCount else type.placeWords, color = count, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).alignByBaseline())
             }
         }
     }

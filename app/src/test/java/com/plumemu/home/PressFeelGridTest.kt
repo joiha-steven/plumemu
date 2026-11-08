@@ -7,6 +7,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.captureToImage
@@ -18,6 +19,7 @@ import com.plumemu.coreui.theme.AccentPreset
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.CollarDimens
+import com.plumemu.coreui.theme.FocusLift
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
@@ -50,6 +52,8 @@ class PressFeelGridTest {
     private val held = mutableStateOf<Set<String>>(emptySet())
     private var accent = Color.Unspecified
     private var background = Color.Unspecified
+    private var dark = true
+    private var ink = Color.Unspecified
 
     private fun PixelMap.at(point: Offset): Color = this[point.x.roundToInt().coerceIn(0, width - 1), point.y.roundToInt().coerceIn(0, height - 1)]
 
@@ -70,6 +74,8 @@ class PressFeelGridTest {
             PlumTheme(PlumThemeSettings.Default.copy(accent = AccentChoice.Preset(AccentPreset.Red))) {
                 accent = PlumTheme.colors.accent
                 background = PlumTheme.colors.bg
+                dark = PlumTheme.colors.isDark
+                ink = PlumTheme.colors.text
                 CompositionLocalProvider(LocalHeldKeys provides held) {
                     HomeWithArt(rememberSource { coverArtSource() }, gridActions(FakeHomeContent.BOARD_SNES_INDEX, 0), gridIds = setOf("snes"))
                 }
@@ -90,26 +96,26 @@ class PressFeelGridTest {
 
         // The focused cover is lifted (drawn larger about its collar's centre) and dips about that same centre, collar and box together:
         // the lit groove stands just outside the box, scaled by both, on every side.
-        val s = PlumMotion.PRESS_SCALE * PlumDimens.FOCUSED_COVER_SCALE
+        val s = PlumMotion.PRESS_SCALE * 1f
         val centre = Offset(drawn.center.x, (drawn.top - CollarSize.Cover.topPadding.value * density + drawn.bottom + CollarSize.Cover.bottomPadding.value * density) / 2f)
         fun dip(v: Float, pivot: Float) = pivot + (v - pivot) * s
         val dipped = Rect(dip(drawn.left, centre.x), dip(drawn.top, centre.y), dip(drawn.right, centre.x), dip(drawn.bottom, centre.y))
-        val groove = CollarDimens.coverGroove.value * density * s / 2f
-        val sides =
-            mapOf(
-                "top" to (Offset(dipped.center.x, dipped.top) to Offset(0f, -1f)),
-                "bottom" to (Offset(dipped.center.x, dipped.bottom) to Offset(0f, 1f)),
-                "left" to (Offset(dipped.left, dipped.center.y) to Offset(-1f, 0f)),
-                "right" to (Offset(dipped.right, dipped.center.y) to Offset(1f, 0f)),
-            )
         assertNotEquals("the cover dipped", resting.at(Offset(dipped.center.x, dipped.top - 1f)), pressed.at(Offset(dipped.center.x, dipped.top - 1f)))
-        for ((side, edgeAndOut) in sides) {
-            val (edge, out) = edgeAndOut
-            // Not the bottom: the box's drop shadow falls on its groove there.
-            if (side == "bottom") continue
-            // The groove is about 2.7 px thick and the dipped edge falls on a fraction of a px: the lit groove is within a px of the edge's own place.
-            val around = listOf(-1f, 0f, 1f).map { pressed.at(edge + out * (groove + it)) }
-            assertTrue("$side: the lit groove dipped with the cover ($around)", around.any { it.near(litGroove(accent)) })
+        // The rim dips with the cover: the rim-coloured pixels' span is narrower while pressed.
+        val rim = FocusLift.rimColor(dark, ink).compositeOver(background)
+        val region = Rect(drawn.left - 24f * density, drawn.top - 24f * density, drawn.right + 24f * density, drawn.bottom + 24f * density)
+        fun span(map: androidx.compose.ui.graphics.PixelMap): Float {
+            var l = Int.MAX_VALUE
+            var r = -1
+            for (y in region.top.toInt()..region.bottom.toInt()) for (x in region.left.toInt()..region.right.toInt()) {
+                if (map[x, y].near(rim)) {
+                    l = minOf(l, x)
+                    r = maxOf(r, x)
+                }
+            }
+            return (r - l).toFloat()
         }
+        assertTrue("the rim is on the resting cover (${span(resting)})", span(resting) > drawn.width)
+        assertTrue("the rim dipped with the cover: ${span(pressed)} against ${span(resting)} at rest", span(pressed) < span(resting) - 2f)
     }
 }

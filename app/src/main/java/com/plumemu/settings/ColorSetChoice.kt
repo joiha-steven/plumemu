@@ -29,7 +29,7 @@ internal fun AppearanceSettings.effectiveButtonSet(): ColorSet? =
     if (buttonSet == null) {
         colorSet()?.takeIf { it.buttons != null }
     } else {
-        ColorSet.entries.firstOrNull { it.name == buttonSet && it.buttons != null }
+        buttonSet?.let(ColorSet::named)?.takeIf { it.buttons != null }
     }
 
 /** The stored value for "these buttons": the set's name, or None for a set without any. */
@@ -65,7 +65,7 @@ internal fun AppearanceSettings.customButtonSet(): ColorSet? =
     if (colorSet() == null) {
         effectiveButtonSet()
     } else {
-        ownColors?.buttonSet?.let { name -> ColorSet.entries.firstOrNull { it.name == name && it.buttons != null } }
+        ownColors?.buttonSet?.let { name -> ColorSet.named(name)?.takeIf { it.buttons != null } }
     }
 
 /**
@@ -84,7 +84,9 @@ internal fun AppearanceSettings.colorsCycle(): List<ColorSet?> {
  * These settings with [entry] picked on the Colors row. A set moves Background, Text color and
  * Accent color to its values; when the current colours match no set they are kept as the person's
  * own colours first, so Custom (null) brings them back exactly. Picking what is already current
- * changes nothing; Custom without own colours kept changes nothing either.
+ * changes nothing; Custom without own colours kept changes nothing either. A set worn on one of its
+ * other pages ([ColorSet.pageVariants]: Plumemu on true Black, as setup gives an OLED screen) is kept
+ * the same way when left, and picking that set again brings that page back.
  */
 internal fun AppearanceSettings.withColors(entry: ColorSet?): AppearanceSettings {
     val current = colorSet()
@@ -93,8 +95,12 @@ internal fun AppearanceSettings.withColors(entry: ColorSet?): AppearanceSettings
         return if (entry == null || effectiveButtonSet() == entry.takeIf { it.buttons != null }) this else copy(buttonSet = entry.buttonSetName())
     }
     // The own colours keep the buttons in use with them, so Custom brings back the same look.
-    val own = if (current == null) OwnColors(background, textColor, accent, effectiveButtonSet().buttonSetName()) else ownColors
+    val onVariant = current != null && toColorsAndLook(animationsOn = true).backgroundColor in current.pageVariants
+    val own = if (current == null || onVariant) OwnColors(background, textColor, accent, effectiveButtonSet().buttonSetName()) else ownColors
     if (entry == null) return own?.let { withColorsOf(it).copy(ownColors = it, buttonSet = it.buttonSet ?: AppearanceSettings.BUTTONS_NONE) } ?: this
+    if (own != null && withColorsOf(own).colorSet() == entry) {
+        return withColorsOf(own).copy(buttonSet = entry.buttonSetName(), ownColors = own)
+    }
     return copy(
         buttonSet = entry.buttonSetName(),
         background = entry.background.toSetting(),

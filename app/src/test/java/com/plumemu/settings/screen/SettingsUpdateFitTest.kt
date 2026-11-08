@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollTo
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
@@ -14,6 +15,7 @@ import com.plumemu.home.rulesAround
 import com.plumemu.update.CheckOutcome
 import com.plumemu.update.LastCheck
 import com.plumemu.update.NoteSection
+import com.plumemu.update.NoticeLine
 import com.plumemu.update.SectionKind
 import com.plumemu.update.UpdateManifest
 import com.plumemu.update.UpdateStep
@@ -51,9 +53,12 @@ class SettingsUpdateFitTest {
     fun everyButtonStaysInsideThePanelAtTheBigSizes() {
         var size by mutableStateOf(TextSize.Larger)
         var step by mutableStateOf<UpdateStep>(UpdateStep.AskMetered)
+        // The notice line (the longest one, Plumemu not the home app) is part of the frame at every size where it can show:
+        // it comes with the press, so with the mobile-data question, not with the Install unknown apps step (nothing is asked there).
+        val notice = { next: UpdateStep -> if (next == UpdateStep.NeedsPermission) NoticeLine.None else NoticeLine.NotificationsOff }
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
-                SettingsAt(focus, content = SettingsContent(update = UpdateView(LastCheck(1, CheckOutcome.Found), release, step = step)))
+                SettingsAt(focus, content = SettingsContent(update = UpdateView(LastCheck(1, CheckOutcome.Found), release, step = step, notice = notice(step))))
             }
         }
         val problems = mutableListOf<String>()
@@ -69,6 +74,14 @@ class SettingsUpdateFitTest {
                 }
             }
         }
+        // The mobile-data step with the notice line has a third button, Turn on notifications: past the first screen, reached by scrolling.
+        size = TextSize.Largest
+        step = UpdateStep.AskMetered
+        compose.waitForIdle()
+        val panel = compose.onNodeWithTag(SettingsTags.UPDATE_PANEL, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        compose.onNodeWithTag(SettingsTags.panelItem(2), useUnmergedTree = true).performScrollTo()
+        val third = compose.onNodeWithTag(SettingsTags.panelItem(2), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        if (third.bottom > panel.bottom || third.top < panel.top) problems += "Largest AskMetered Turn on notifications ${third.top}..${third.bottom} outside ${panel.top}..${panel.bottom} after scrolling"
         assertTrue(problems.joinToString("\n"), problems.isEmpty())
     }
 }

@@ -82,16 +82,19 @@ internal object SetupFakes {
             hasSecondScreenStep = true,
         )
 
-    /** The box art question while the scan runs (Use my account focused), before any form. */
+    /** The box art question (page 1) while the scan runs, focused on No. */
     val boxArtQuestion =
         SetupUiState(
             step = SetupStep.BoxArt,
             folders = listOf(romsFolder.copy(isCounted = false)),
             systems = boardSystems,
             isScanning = true,
-            focus = SetupControl.UseBoxArt,
+            focus = SetupControl.BoxArtOwnCovers,
             hasScreenScraper = true,
         )
+
+    /** The same step on page 2, the sources, focused on the default one. */
+    val boxArtSources = boxArtQuestion.copy(focus = SetupControl.BoxArtLibretro, isBoxArtSourceOpen = true)
 
     /** The box art step while the scan runs, its form in [form]'s state (account/AccountShots.kt). */
     fun boxArt(form: SignInForm) =

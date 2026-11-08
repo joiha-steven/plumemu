@@ -239,7 +239,7 @@ class SettingsPanelRestsTest {
         if (isFirst) {
             compose.setContent {
                 val now = scene ?: return@setContent
-                PlumTheme(PlumThemeSettings.Graphite.copy(font = now.font, textSize = TextSize.Largest)) {
+                PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) {
                     key(now) {
                         geometry = settingsGeometry(PlumTheme.layout)
                         model = remember { SettingsModel(NoActions, now.focus).also { it.content = now.content } }
@@ -260,7 +260,7 @@ class SettingsPanelRestsTest {
         option: SettingsOption,
         page: PanelPage,
         body: Int,
-    ) = PlumFont.entries.forEach { font ->
+    ) = listOf(PlumFont.Jost).forEach { font ->
         val content = SettingsContent()
         val section = SettingsSection.entries.firstOrNull { option in it.rowsIn(content) }
         val open = section?.let { SettingsFocus(column = SettingsColumn.Panel, section = it, rememberedOption = mapOf(it to it.rowsIn(content).indexOf(option)), page = page) }
@@ -294,7 +294,7 @@ class SettingsPanelRestsTest {
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
     fun aboutsUpAlwaysMoves() {
         val content = SettingsContent(platformData = PlatformDataVersion(6, "0".repeat(64), "2026-11-01"))
-        panel(optionsAt(SettingsOption.Version), content, PlumFont.Serif)
+        panel(optionsAt(SettingsOption.Version), content, PlumFont.Jost)
         key(Direction.Right)
         assertEquals("Right enters the panel", PanelPage.ReadOnly, model.focus.page)
         val opening = aboutTop()

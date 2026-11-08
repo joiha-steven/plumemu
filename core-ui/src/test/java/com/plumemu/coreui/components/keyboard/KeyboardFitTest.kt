@@ -10,7 +10,6 @@ import androidx.compose.ui.test.onRoot
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.KeyboardDimens
 import com.plumemu.coreui.theme.PlumDimens
-import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
@@ -109,22 +108,20 @@ abstract class KeyboardFitTest {
     }
 
     @Test
-    fun noLabelIsCutAtTheLargestTextInAnyFont() {
+    fun noLabelIsCutAtTheLargestText() {
         show()
         val halfGap = KeyboardDimens.keyboardKeyGap.value / 2 * pxPerDp()
         val problems = mutableListOf<String>()
-        for (font in PlumFont.entries) {
-            for (action in listOf("Search", "Sign in", "Next", "Done")) {
-                for (page in KeyboardPage.entries) {
-                    // Shift locked: the letters in upper case, the widest they get.
-                    val newSpec = KeyboardSpec(action, hasShift = true, startPage = page)
-                    compose.runOnIdle { settings = settings.copy(font = font, textSize = TextSize.Largest) }
-                    use(newSpec, newSpec.startModel().copy(shift = ShiftMode.Locked))
-                    val (found, seen) = labelProblems(compose.onRoot(useUnmergedTree = true).fetchSemanticsNode(), halfGap)
-                    // Every key but the three icons has a label.
-                    assertEquals("$font $page labels", KeyboardLayout.rows(page, true).sumOf { it.size } - if (page == KeyboardPage.Letters) 3 else 2, seen)
-                    problems += found.map { "$font, $action, $page: $it" }
-                }
+        for (action in listOf("Search", "Sign in", "Next", "Done")) {
+            for (page in KeyboardPage.entries) {
+                // Shift locked: the letters in upper case, the widest they get.
+                val newSpec = KeyboardSpec(action, hasShift = true, startPage = page)
+                compose.runOnIdle { settings = settings.copy(textSize = TextSize.Largest) }
+                use(newSpec, newSpec.startModel().copy(shift = ShiftMode.Locked))
+                val (found, seen) = labelProblems(compose.onRoot(useUnmergedTree = true).fetchSemanticsNode(), halfGap)
+                // Every key but the three icons has a label.
+                assertEquals("$page labels", KeyboardLayout.rows(page, true).sumOf { it.size } - if (page == KeyboardPage.Letters) 3 else 2, seen)
+                problems += found.map { "$action, $page: $it" }
             }
         }
         assertEquals(emptyList<String>(), problems)

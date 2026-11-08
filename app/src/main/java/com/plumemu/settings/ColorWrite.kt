@@ -4,6 +4,7 @@ import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coreui.theme.ColorRole
+import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.coreui.theme.Readability
 import com.plumemu.coreui.theme.Rgb
 
@@ -12,7 +13,9 @@ import com.plumemu.coreui.theme.Rgb
  * unreadable is stored by hand. A background keeps the text and accent if they still read and moves
  * them (lightness only) if not; a text or accent pick that does not read is refused. The result
  * says what happened so the screen can tell the person; the stored value is the only thing these
- * functions change. What is drawn for a stored value that fails is settled by core-ui's
+ * functions change. Each write starts from the colours drawn ([withSettledColors]): a removed set's
+ * look or a set's earlier colour is stored as its successor together with the change, so the old
+ * page never comes back. What is drawn for a stored value that fails is settled by core-ui's
  * `PlumThemeSettings`, not here.
  */
 
@@ -50,14 +53,17 @@ internal fun AppearanceSettings.writeBackground(
     baseText: TextColorSetting = textColor,
     baseAccent: ColorSetting = accent,
 ): ColorWrite {
+    val start = withSettledColors()
+    // A panel passes the accent it opened with; the stored one stands for the accent drawn.
+    val accentBase = if (baseAccent == accent) start.accent else baseAccent
     val background = color.toBackgroundChoice().color
-    val settled = Readability.settle(background, baseText.toRgb(), baseAccent.toAccentChoice())
+    val settled = Readability.settle(background, baseText.toRgb(), accentBase.toAccentChoice())
     return ColorWrite(
         appearance =
-            copy(
+            start.copy(
                 background = color,
                 textColor = if (settled.textAdjusted) settled.text.toTextSetting() else baseText,
-                accent = if (settled.accentAdjusted) settled.accent.toSetting() else baseAccent,
+                accent = if (settled.accentAdjusted) settled.accent.toSetting() else accentBase,
             ),
         textAdjusted = settled.textAdjusted,
         accentAdjusted = settled.accentAdjusted,
@@ -66,15 +72,16 @@ internal fun AppearanceSettings.writeBackground(
 
 /** [pick] as the text, or a refusal when it does not read on the current background. */
 internal fun AppearanceSettings.writeText(pick: TextColorSetting): ColorWrite {
-    val background = background.toBackgroundChoice().color
+    val start = withSettledColors()
+    val background = start.background.toBackgroundChoice().color
     val text = pick.toRgb()
     if (!Readability.passes(text, background, ColorRole.Text)) {
-        return ColorWrite(this, ColorRefusal(ColorRole.Text, Readability.nearestPassing(text, background, ColorRole.Text)))
+        return ColorWrite(this, ColorRefusal(ColorRole.Text, Readability.suggest(text, background, ColorRole.Text)))
     }
     // A preset accent follows the text's mode, so the new mode's colour must read too.
-    val settled = Readability.settle(background, text, accent.toAccentChoice())
+    val settled = Readability.settle(background, text, start.accent.toAccentChoice())
     return ColorWrite(
-        appearance = copy(textColor = pick, accent = if (settled.accentAdjusted) settled.accent.toSetting() else accent),
+        appearance = start.copy(textColor = pick, accent = if (settled.accentAdjusted) settled.accent.toSetting() else start.accent),
         accentAdjusted = settled.accentAdjusted,
     )
 }
@@ -82,13 +89,27 @@ internal fun AppearanceSettings.writeText(pick: TextColorSetting): ColorWrite {
 /** [pick] as the accent, or a refusal when it is below 3:1 on the background (with the text mode drawn now). */
 internal fun AppearanceSettings.writeAccent(pick: ColorSetting): ColorWrite {
     // By system is never refused: each system's colour is settled on the background when drawn, and the fallback when the background changes.
-    if (pick is ColorSetting.BySystem) return ColorWrite(copy(accent = pick))
+    if (pick is ColorSetting.BySystem) return ColorWrite(withSettledColors().copy(accent = pick))
     val theme = toColorsAndLook(animationsOn = true)
     val resolved = pick.toAccentChoice().resolve(theme.textMode)
     if (!Readability.passes(resolved, theme.backgroundColor, ColorRole.Accent)) {
-        return ColorWrite(this, ColorRefusal(ColorRole.Accent, Readability.nearestPassing(resolved, theme.backgroundColor, ColorRole.Accent)))
+        return ColorWrite(this, ColorRefusal(ColorRole.Accent, Readability.suggest(resolved, theme.backgroundColor, ColorRole.Accent)))
     }
-    return ColorWrite(copy(accent = pick))
+    return ColorWrite(withSettledColors().copy(accent = pick))
+}
+
+/**
+ * These settings with the background and accent drawn in place of the stored ones where they differ ([ColorSet.settled]: a removed set's
+ * look, a set's earlier colour); the same settings otherwise.
+ */
+internal fun AppearanceSettings.withSettledColors(): AppearanceSettings {
+    val stored = rawColorsAndLook(animationsOn = true)
+    val drawn = ColorSet.settled(stored)
+    if (drawn.background == stored.background && drawn.accent == stored.accent) return this
+    return copy(
+        background = if (drawn.background != stored.background) drawn.background.toSetting() else background,
+        accent = if (drawn.accent != stored.accent) drawn.accent.toSetting() else accent,
+    )
 }
 
 /** [pick] as the background, or a refusal when neither Light nor Dark text can read on it (middle lightness). */

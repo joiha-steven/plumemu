@@ -65,6 +65,7 @@ internal interface SetupSource {
     suspend fun applyLook(
         set: ColorSet,
         textSize: TextSizeSetting?,
+        blackPage: Boolean = false,
     )
 
     /** The colour set in force when it is one of the sets; null for own colours. The look step opens on it. */

@@ -55,7 +55,7 @@ class Launching internal constructor(
                 choices,
                 ContentResolverDocumentProbe(app.contentResolver),
                 ContentResolverSmallFileReader(app.contentResolver),
-                ActivityStarter { app.startActivity(it) }.observedBy(startObserver),
+                ActivityStarter { LaunchAnimation.start(app, it) }.observedBy(startObserver),
                 playTime,
                 AndroidLauncherLog,
                 Dispatchers.IO,

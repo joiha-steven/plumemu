@@ -7,6 +7,9 @@ object EmptyStateDimens {
     /** Between the title, the body and the buttons, and between the two buttons. */
     val gap = 11.dp
 
+    /** How far a button may be wider than the text room (the games area less the text's 32 clear each side), on each side: it stays clear of the right margin and the edge fade. */
+    val buttonBleed = 12.dp
+
     /**
      * The body's widest line: the board's 420 px (280 dp) for its 19 px (12.67 dp) text, grown with the ramp's 13 so the board's
      * line breaks stay (280 x 13 / 12.67).

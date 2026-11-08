@@ -59,7 +59,8 @@ internal fun ColumnScope.LookStepContent(
             sets.forEachIndexed { column, set ->
                 val control = SetupControl.lookTile(row * SetupLooks.COLUMNS + column) ?: return@forEachIndexed
                 val isFocused = state.focus == control
-                val look = remember(set) { ColorTileLook(PlumColors.derive(set.backgroundColor, set.textMode, set.accentColor), set.buttons) }
+                val page = state.deviceLook.pageOf(set).color
+                val look = remember(set, page) { ColorTileLook(PlumColors.derive(page, set.textMode, set.accentColor), set.buttons) }
                 Column(
                     Modifier.weight(1f).setupControl(state, control, onAction).testTag(SetupTags.LOOK_TILE),
                     verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsColorTileNameGap),

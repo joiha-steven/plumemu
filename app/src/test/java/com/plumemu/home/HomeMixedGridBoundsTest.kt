@@ -193,7 +193,7 @@ class HomeMixedGridBoundsTest {
         val drawn = Rect(tile.left.value * density, tile.top.value * density, tile.right.value * density, tile.bottom.value * density)
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         // The focused collar is drawn larger about its centre (never laid out larger): its groove, hugging the tile, is scaled with it.
-        val lift = PlumDimens.FOCUSED_COVER_SCALE
+        val lift = 1f
         val centre = Offset(drawn.center.x, (drawn.top - CollarSize.Cover.topPadding.value * density + drawn.bottom + CollarSize.Cover.bottomPadding.value * density) / 2f)
         fun lifted(edge: Offset) = centre + (edge - centre) * lift
         val groove = CollarDimens.coverGroove.value * density / 2f * lift
@@ -205,7 +205,7 @@ class HomeMixedGridBoundsTest {
             )
         for ((side, edgeAndOut) in sides) {
             val (edge, out) = edgeAndOut
-            assertTrue("the groove is lit just outside the tile's $side edge (lifted with the collar)", pixels.at(edge + out * groove).near(litGroove(accent)))
+            assertTrue("the groove stays unlit just outside the tile's $side edge", !pixels.at(edge + out * groove).near(litGroove(accent)))
         }
     }
 

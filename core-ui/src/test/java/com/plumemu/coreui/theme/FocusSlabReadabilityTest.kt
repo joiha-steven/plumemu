@@ -86,6 +86,6 @@ class FocusSlabReadabilityTest {
         const val BAR_ON_SLAB_MIN = 2.5
         const val FILL_MIN_DARK = 1.10
         const val FILL_MIN_LIGHT = 1.10
-        const val EDGE_MIN_LIGHT = 1.2
+        const val EDGE_MIN_LIGHT = 1.12
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.runtime.Immutable
 
 /** Motion tokens (design/rules.md › Shapes and motion). */
 object PlumMotion {
+    /** The strip, a game panel and the keyboard tray sliding, the segmented control's cap, a switch's knob ([PlumMotionState.slideSpec]). */
     const val DURATION_MS: Int = 180
 
     /**
@@ -22,18 +23,43 @@ object PlumMotion {
     /** The shortest a held step's glide gets: the fastest repeat is 32 ms (2 frames at 60 Hz), and a glide longer than the gap would leave rows undrawn and be cut by the one-row cap. */
     const val GLIDE_HELD_MIN_MS: Int = 32
 
-    /** The focused cover growing to its larger size on arrival, and back on leave (ease-out, scale only). */
+    /** The focused cover growing to its larger size and its rim fading in on arrival (on [Decelerate]). */
     const val FOCUS_GROW_MS: Int = 150
 
-    /**
-     * The light band crossing the focused cover once, and how long focus must rest on the cover before it starts: past [FOCUS_GROW_MS],
-     * as a band that starts while the cover still grows slows the grid's next move.
-     */
-    const val FOCUS_SWEEP_MS: Int = 400
-    const val FOCUS_SWEEP_REST_MS: Int = 300
+    /** The cover the focus left shrinking back and its rim fading out (on [Decelerate]); the rims cross-fade, none travels. */
+    const val FOCUS_LEAVE_MS: Int = 150
 
     /** New content fading in where old content stood (a list swap, a panel's sub-screen, search). */
     const val FADE_IN_MS: Int = 110
+
+    /**
+     * A whole screen arriving (Settings opening or closing, the home coming back from a game): the
+     * incoming screen settles from [SCREEN_DEPTH] nearer or further to its place while it fades in,
+     * on [Decelerate]. Only the incoming screen moves; the one it replaces is already gone.
+     */
+    const val SCREEN_MS: Int = 240
+
+    /** How far a screen starts from its place, as a share of its size: deeper (smaller) going in, nearer (larger) coming back. */
+    const val SCREEN_DEPTH: Float = 0.04f
+
+    /** The home growing into the focused cover or row as a game or app starts, while it fades into the background. */
+    const val LAUNCH_DEPTH: Float = 0.08f
+
+    /**
+     * How long the home moves into the item before the game's window is asked for: only until its motion is visibly under
+     * way (a quarter of [SCREEN_MS]); the rest runs while the window opens, and where Android honours it the window's own
+     * growth from the item carries the motion. Every ms here is a ms later to the game.
+     */
+    const val LAUNCH_LEAD_MS: Long = 60
+
+    /** How far the home fades as a game starts: to a dim, never to black, so the hand-over to the game's window never flashes. */
+    const val LAUNCH_DIM: Float = 0.45f
+
+    /**
+     * Another system's games swapping in (L2/R2): they fade in while sliding [SWAP_SHIFT_DP] from the side
+     * the step came from, over [GLIDE_MS] on [Decelerate], so the swap reads as one more step of the column.
+     */
+    const val SWAP_SHIFT_DP: Float = 16f
 
     /** A press shorter than this still shows the whole dip (never with motion off: the release is then at once). */
     const val PRESS_MIN_VISIBLE_MS: Long = 100
@@ -66,10 +92,13 @@ object PlumMotion {
     /** CSS `ease-in-out`, for the slow breathing of the scan indicator. */
     val EaseInOut: Easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)
 
-    /** CSS `ease-out`, the curve the board animates with. */
+    /** CSS `ease-out`: presses and raises only (a key's own dip, not something travelling across the screen). */
     val EaseOut: Easing = CubicBezierEasing(0f, 0f, 0.58f, 1f)
 
-    /** Ease-out cubic (CSS `cubic-bezier(.33, 1, .68, 1)`): fast start, soft landing; the list glide's curve. */
+    /**
+     * Ease-out cubic (CSS `cubic-bezier(.33, 1, .68, 1)`): fast start, soft landing. The one curve of everything that moves or
+     * appears: glides, slides, swaps, screens, fades and the focus growing, so two things moving together never part ways.
+     */
     val Decelerate: Easing = CubicBezierEasing(0.33f, 1f, 0.68f, 1f)
 
     /**
@@ -88,6 +117,6 @@ object PlumMotion {
 data class PlumMotionState(
     val isOn: Boolean,
 ) {
-    /** The strip's slide: 180 ms ease-out, or an instant jump when motion is off. */
-    fun <T> slideSpec(): AnimationSpec<T> = if (isOn) tween(PlumMotion.DURATION_MS, easing = PlumMotion.EaseOut) else snap()
+    /** The strip's, a panel's and the tray's slide: 180 ms on [PlumMotion.Decelerate], or an instant jump when motion is off. */
+    fun <T> slideSpec(): AnimationSpec<T> = if (isOn) tween(PlumMotion.DURATION_MS, easing = PlumMotion.Decelerate) else snap()
 }

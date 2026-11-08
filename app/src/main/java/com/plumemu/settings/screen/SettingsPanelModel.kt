@@ -31,6 +31,10 @@ internal abstract class SettingsPanelModel(
     var licenseScroll: Int by mutableIntStateOf(0)
         protected set
 
+    /** Key moves made while the focus was in a panel: the panels keep a button whole after one of them, not on entering or when their content changes. */
+    var panelPresses by mutableIntStateOf(0)
+        protected set
+
     /** Whether the open licence text can scroll that way; the page sets it (it knows its size). */
     var licenseCanScroll: (down: Boolean) -> Boolean = { true }
 
@@ -132,6 +136,7 @@ internal abstract class SettingsPanelModel(
             PanelPage.RemoveFolder -> onRemoveEnter(index)
             PanelPage.Folder -> onFolderPageEnter(index)
             PanelPage.SkipSubfolder -> onSkipPickEnter(index)
+            PanelPage.UnreadableFolders -> onUnreadableEnter(index)
             PanelPage.HiddenGames -> SettingsListPages.unhideAt(index, content, work, focus)?.let(::moveTo) ?: closePanel()
             PanelPage.FilesNotAdded -> SettingsListPages.toUnknownFolder(index, content, focus)?.let(::moveTo) ?: feel.report(Outcome.Nothing)
             PanelPage.UnidentifiedGames -> openNameFix(index)
@@ -275,6 +280,7 @@ internal abstract class SettingsPanelModel(
                     boxArtPanelEntries(before).getOrNull(at)?.let { now.indexOf(it) }?.takeIf { it >= 0 } ?: at.coerceAtMost(now.lastIndex)
                 }
                 PanelPage.FilesNotAdded -> SettingsListPages.filesNotAddedLineAfter(at, before, after)
+                PanelPage.UnreadableFolders -> unreadableIndexAfter(at, before, after)
                 // A folder that left goes back to the list; while it is there the page stays on the same item.
                 PanelPage.UnknownFolder ->
                     if (SettingsListPages.unknownFolderAt(focus, after) == null) return SettingsListPages.backToFilesNotAdded(focus, after) else at
@@ -312,6 +318,7 @@ internal abstract class SettingsPanelModel(
             UpdatePanelItem.DownloadAnyway -> actions.updates.startUpdate(allowMetered = true)
             UpdatePanelItem.AllowInstalls -> actions.updates.openInstallPermission()
             UpdatePanelItem.Cancel -> actions.updates.cancel()
+            UpdatePanelItem.TurnOnNotifications -> actions.updates.openNotificationSettings()
             UpdatePanelItem.CheckNow -> actions.updates.checkNow()
             // From the stored value inside the write, like every switch.
             UpdatePanelItem.CheckDaily -> actions.update { SettingsOption.CheckUpdatesDaily.toggled(it) }
@@ -510,8 +517,8 @@ internal abstract class SettingsPanelModel(
     }
 
     /**
-     * Picks up the focused system. With A–Z or Maker & year in force the order becomes Manual,
-     * starting from the order on screen, and the panel says so once.
+     * Picks up the focused system. Nothing is stored yet: A–Z or Maker & year turns Manual only
+     * when the drop leaves the order changed (B puts everything back as it was).
      */
     protected fun pickUpSystem(
         rows: List<LibrarySystem>,
@@ -519,29 +526,34 @@ internal abstract class SettingsPanelModel(
     ) {
         val carry = systems.pickUp(rows, focusedSystemIndex.coerceIn(0, rows.lastIndex)) ?: return
         if (focusedSystemIndex != carry.fromIndex) moveTo(focus.copy(panelIndex = FIRST_SYSTEM_ITEM + carry.fromIndex))
-        if (settings.library.systemOrder != SystemOrderSetting.Manual) {
-            val shown = carry.order
-            actions.update { stored -> stored.withManualSystems(shown) }
-            work.say(SettingsOption.Systems, SettingsNotice.SystemOrderNowManual)
-        }
+        carriedUnder = settings.library.systemOrder
         feel.report(Outcome.Activated)
     }
+
+    /** The order in force when the carried system was picked up. */
+    private var carriedUnder = SystemOrderSetting.Manual
 
     protected fun carrySystemTo(index: Int) {
         val to = systems.carryTo(index) ?: return
         moveTo(focus.copy(panelIndex = FIRST_SYSTEM_ITEM + to))
     }
 
-    /** A: the system stays where it is now; the whole order is stored as Manual. */
+    /**
+     * A: the system stays where it is now; the whole order is stored as Manual. A drop with no
+     * move under A–Z or Maker & year stores nothing and keeps the order.
+     */
     protected fun dropSystem() {
-        val order = systems.drop(content) ?: return
-        actions.update { stored -> stored.withManualSystems(order) }
+        val moved = systems.carryMoved
+        val order = systems.drop(content, followStored = carriedUnder != SystemOrderSetting.Manual) ?: return
+        val manual = carriedUnder == SystemOrderSetting.Manual
+        if (moved || manual) actions.update { stored -> stored.withManualSystems(order) }
+        if (moved && !manual) work.say(SettingsOption.Systems, SettingsNotice.SystemOrderNowManual)
         feel.report(Outcome.Activated)
     }
 
     /** B: the system goes back to where it was picked up; nothing more is stored. */
     protected fun cancelSystemCarry() {
-        val at = systems.cancel() ?: return
+        val at = systems.cancel(followStored = carriedUnder != SystemOrderSetting.Manual) ?: return
         if (at != focusedSystemIndex) moveTo(focus.copy(panelIndex = FIRST_SYSTEM_ITEM + at))
         feel.report(Outcome.WentBack)
     }

@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
  */
 @Immutable
 data class PlumThemeSettings(
-    val background: BackgroundChoice = BackgroundChoice.Preset(BackgroundPreset.Black),
+    val background: BackgroundChoice = ColorSet.Plumemu.background,
     /**
      * The stored text colour: any colour; [TextMode.Light] and [TextMode.Dark] `.color` are its
      * presets. What is drawn is [textColor], which differs only when this cannot be read on the
@@ -37,11 +37,8 @@ data class PlumThemeSettings(
      */
     val text: Rgb = TextMode.Light.color,
     val accent: AccentChoice = ColorSet.Plumemu.accent,
-    val font: PlumFont = PlumFont.Default,
     /** Null until the person picks a size: then [TextSize.Default], Large. */
     val textSize: TextSize? = null,
-    /** Settings › Appearance › Text weight: how heavy every text role is drawn. */
-    val textWeight: TextWeight = TextWeight.Default,
     val animationsOn: Boolean = true,
     /** The home grid's size (L1 / R1 and the Size hint): [PlumLayout.gridSize]. */
     val gridSize: GridSize = GridSize.Default,
@@ -77,7 +74,7 @@ data class PlumThemeSettings(
     val legacyNavigationBarScrim: Rgb get() = TextMode.Dark.color
 
     companion object {
-        /** The default look: Black, light text, Red. */
+        /** The default look: the Plumemu set (deep blue-black ink, light text, blue). */
         val Default = PlumThemeSettings()
 
         /** The dark preset of every screenshot test (no longer the default). */
@@ -88,7 +85,7 @@ data class PlumThemeSettings(
     }
 }
 
-private val LocalPlumColors = staticCompositionLocalOf { PlumComposeColors.from(PlumColors.derive(BackgroundPreset.Black.color, TextMode.Light)) }
+private val LocalPlumColors = staticCompositionLocalOf { PlumComposeColors.from(PlumColors.derive(ColorSet.Plumemu.backgroundColor, TextMode.Light)) }
 private val LocalPlumType = staticCompositionLocalOf { PlumTypography(PlumFont.Default, TextSize.Default, TextMode.Light) }
 /** Internal so the test fixtures' `ProvideGridSize` can swap the grid size of a subtree. */
 internal val LocalPlumLayout = staticCompositionLocalOf { PlumLayout(width = WidthClass.WIDE_MIN_WIDTH, height = 432.dp) }
@@ -150,11 +147,11 @@ fun PlumTheme(
     val storedMode = settings.textMode
     val shownMode by remember(storedMode, colorPreview) { derivedStateOf { colorPreview?.value?.textMode ?: storedMode } }
     val type =
-        remember(settings.font, textSize, shownMode, settings.textWeight) {
-            PlumTypography(settings.font, textSize, shownMode, settings.textWeight)
+        remember(textSize, shownMode) {
+            PlumTypography(PlumFont.Jost, textSize, shownMode)
         }
     val layout =
-        remember(containerSize, density, textSize, settings.gridSize, settings.font) {
+        remember(containerSize, density, textSize, settings.gridSize) {
             with(density) {
                 PlumLayout(
                     width = containerSize.width.toDp(),
@@ -165,9 +162,9 @@ fun PlumTheme(
                     textScale = textSize.heightScale,
                     hintScale = textSize.hintHeightScale,
                     // The line of the name's 16 step: the 20 name reaches into the margins around the bar, so the content stays at the boards' place.
-                    topBarLine = (TypeRole.PlaceName.lineHeightSp(settings.font, textSize) * PLACE_NAME_STEP_SP / TypeRole.PlaceName.sizeSp).sp.toDp(),
+                    topBarLine = (TypeRole.PlaceName.lineHeightSp(PlumFont.Jost, textSize) * PLACE_NAME_STEP_SP / TypeRole.PlaceName.sizeSp).sp.toDp(),
                     gridSize = settings.gridSize,
-                    settingsThreeFit = SettingsColumns.fits(textSize, settings.font),
+                    settingsThreeFit = SettingsColumns.fits(textSize, PlumFont.Jost),
                     pixelsPerDp = this.density,
                 )
             }
@@ -199,7 +196,7 @@ fun ProvidePhysicalTextScale(
     content: @Composable () -> Unit,
 ) {
     val type = PlumTheme.type
-    val scaled = remember(type, scale) { PlumTypography(type.font, type.textSize, type.textMode, type.textWeight, scale, secondScreen = true) }
+    val scaled = remember(type, scale) { PlumTypography(type.font, type.textSize, type.textMode, scale, secondScreen = true) }
     CompositionLocalProvider(LocalPlumType provides scaled, content = content)
 }
 
@@ -210,13 +207,13 @@ fun ProvideSecondScreenText(content: @Composable () -> Unit) {
     if (type.secondScreen) {
         content()
     } else {
-        val second = remember(type) { PlumTypography(type.font, type.textSize, type.textMode, type.textWeight, type.physicalScale, secondScreen = true) }
+        val second = remember(type) { PlumTypography(type.font, type.textSize, type.textMode, type.physicalScale, secondScreen = true) }
         CompositionLocalProvider(LocalPlumType provides second, content = content)
     }
 }
 
 /**
- * Only [settings]' type (font, Text size, text mode) for [content], for something that reads
+ * Only [settings]' type (Text size, text mode; always Jost) for [content], for something that reads
  * nothing else from the theme and stays up for long: no colours built, no layout, and no observer
  * of Android's animator scale (the second screen's in-game battery part, up all play).
  * The Text size left unpicked is [TextSize.Default] (Large), as in [PlumTheme].
@@ -228,8 +225,8 @@ fun ProvidePlumType(
 ) {
     val textSize = settings.textSize ?: TextSize.Default
     val type =
-        remember(settings.font, textSize, settings.textMode, settings.textWeight) {
-            PlumTypography(settings.font, textSize, settings.textMode, settings.textWeight)
+        remember(textSize, settings.textMode) {
+            PlumTypography(PlumFont.Jost, textSize, settings.textMode)
         }
     CompositionLocalProvider(LocalPlumType provides type, content = content)
 }
@@ -265,6 +262,22 @@ object PlumTheme {
     val edgeFadeOn: Boolean
         @Composable @ReadOnlyComposable
         get() = LocalPlumEdgeFade.current
+}
+
+/**
+ * Only [PlumTheme]'s motion, for a window that draws without the whole theme (the second screen's in-game card): on when
+ * [animationsSetting] is and Android's animator scale is not 0, as [PlumTheme.motion]. The scale is read on each
+ * composition, not observed: a window that asks for motion only when its own content changes (and recomposes then)
+ * keeps no observer while it shows a card that must cost nothing.
+ */
+@Composable
+fun ProvidePlumMotion(
+    animationsSetting: Boolean,
+    content: @Composable () -> Unit,
+) {
+    val isOn = PlumMotion.isMotionOn(readAnimatorScale(LocalContext.current), animationsSetting)
+    val motion = remember(isOn) { PlumMotionState(isOn) }
+    CompositionLocalProvider(LocalPlumMotion provides motion, content = content)
 }
 
 /**

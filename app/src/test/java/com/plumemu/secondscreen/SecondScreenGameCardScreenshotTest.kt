@@ -88,10 +88,10 @@ abstract class SecondScreenGameCardShots(
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w538dp-h468dp-land-369dpi")
 class SecondScreenGameCardScreenshotTest :
-    SecondScreenGameCardShots("second_game", listOf("graphite" to PlumThemeSettings.Graphite.copy(font = PlumFont.Jost), "paper" to PlumThemeSettings.Paper.copy(font = PlumFont.Jost)))
+    SecondScreenGameCardShots("second_game", listOf("graphite" to PlumThemeSettings.Graphite, "paper" to PlumThemeSettings.Paper))
 
 /** A 4:3 bottom screen, 480x360 dp. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w480dp-h360dp-land-369dpi")
-class SecondScreenGameCardCompactScreenshotTest : SecondScreenGameCardShots("second_game_compact", listOf("graphite" to PlumThemeSettings.Graphite.copy(font = PlumFont.Jost)))
+class SecondScreenGameCardCompactScreenshotTest : SecondScreenGameCardShots("second_game_compact", listOf("graphite" to PlumThemeSettings.Graphite))

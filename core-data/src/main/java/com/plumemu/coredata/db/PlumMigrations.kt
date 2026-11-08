@@ -350,6 +350,17 @@ object PlumMigrations {
         }
     }
 
+    /**
+     * Version 19 (a scan says which sub-folders it could not read): `rom_folder.unreadable_paths`, nullable. Only adds a
+     * column: no row is read or written; null on every folder until its next scan. Runs again safely. Going back means a build
+     * with schema 19 or later.
+     */
+    val MIGRATION_18_19: Migration = object : Migration(18, 19) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            if ("unreadable_paths" !in columnsOf(db, "rom_folder")) db.execSQL("ALTER TABLE `rom_folder` ADD COLUMN `unreadable_paths` TEXT")
+        }
+    }
+
     /** The highest rating kept (ScreenScraper's are out of 20, the scraper's `GameDetails.MAX_RATING`). */
     private const val MAX_RATING = 20
 
@@ -391,7 +402,7 @@ object PlumMigrations {
         arrayOf(
             MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
             MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15,
-            migration15To16(rating), MIGRATION_16_17, MIGRATION_17_18,
+            migration15To16(rating), MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19,
         )
 
     private val SESSION_BATTERY_COLUMNS_V8 = listOf("battery_seconds", "charge_start_uah", "charge_end_uah", "battery_draw_ua")

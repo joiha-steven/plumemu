@@ -5,7 +5,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import com.plumemu.R
+import com.plumemu.game.RecentUndo
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.InputRouter
@@ -21,6 +29,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 /**
@@ -39,11 +48,11 @@ class GameMenuRemoveFromRecentScreenTest {
     private lateinit var router: InputRouter
     private var content by mutableStateOf(FakeHomeContent.board())
 
-    private fun show() {
+    private fun show(gridSystems: Set<String> = emptySet()) {
         compose.setContent {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
-            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games)) }
+            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games), gridSystems = gridSystems) }
         }
         compose.waitForIdle()
     }
@@ -118,6 +127,83 @@ class GameMenuRemoveFromRecentScreenTest {
         assertTrue("no game is under the focus: the Recent entry is", games.launched.isEmpty())
         send(Action.Menu)
         assertFalse("START on the systems column opens no game menu", isPanelOpen())
+    }
+
+    private fun removeFirstRecentGame(gridSystems: Set<String> = emptySet()) {
+        games.onRemoveFromRecent = ::dropFromRecent
+        show(gridSystems)
+        send(Action.Enter, Action.Menu)
+        down(REMOVE_ROW)
+        send(Action.Enter)
+        assertEquals(listOf("recent-0"), games.removedFromRecent)
+    }
+
+    private fun str(id: Int) = RuntimeEnvironment.getApplication().getString(id)
+
+    private fun noticeShown() = compose.onAllNodesWithText(str(R.string.home_notice_removed_from_recent), substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+
+    @Test
+    fun theNoticeNamesUndoAndXUndoesIt() {
+        removeFirstRecentGame()
+        assertTrue("the top bar says it", noticeShown())
+        compose.onNodeWithTag(HomeTags.hint(Action.Search), useUnmergedTree = true).assert(hasAnyDescendant(hasText(str(R.string.home_hint_undo), substring = true)))
+        send(Action.Search)
+        assertEquals(listOf("recent-0"), games.restoredToRecent)
+        assertFalse("the notice is gone once undone", noticeShown())
+        compose.onNodeWithTag(HomeTags.hint(Action.Search), useUnmergedTree = true).assert(hasAnyDescendant(hasText(str(R.string.home_hint_search), substring = true)))
+    }
+
+    @Test
+    fun aTapOnTheUndoHintUndoesIt() {
+        removeFirstRecentGame()
+        compose.onNodeWithTag(HomeTags.hint(Action.Search), useUnmergedTree = true).performClick()
+        compose.waitForIdle()
+        assertEquals(listOf("recent-0"), games.restoredToRecent)
+        assertFalse(noticeShown())
+    }
+
+    @Test
+    fun whenTheNoticeTimesOutNothingMoreHappensAndXSearchesAgain() {
+        removeFirstRecentGame()
+        compose.mainClock.advanceTimeBy(RecentUndo.SHOWN_MS + 500)
+        compose.waitForIdle()
+        assertFalse("the notice is gone", noticeShown())
+        assertTrue("the removal stays", games.restoredToRecent.isEmpty())
+        compose.onNodeWithTag(HomeTags.hint(Action.Search), useUnmergedTree = true).assert(hasAnyDescendant(hasText(str(R.string.home_hint_search), substring = true)))
+        send(Action.Search)
+        assertTrue("X is Search again: no undo", games.restoredToRecent.isEmpty())
+    }
+
+    @Test
+    fun aCoverGridHasNoSearchHintSoUndoGetsItsOwnAndATapUndoes() {
+        removeFirstRecentGame(gridSystems = setOf(HomeContent.RECENT_ID))
+        compose.onNodeWithTag(HomeTags.hint(Action.Search), useUnmergedTree = true).assert(hasAnyDescendant(hasText(str(R.string.home_hint_undo), substring = true)))
+        compose.onNodeWithTag(HomeTags.hint(Action.Search), useUnmergedTree = true).performClick()
+        compose.waitForIdle()
+        assertEquals(listOf("recent-0"), games.restoredToRecent)
+    }
+
+    @Test
+    fun openingAnotherGamesMenuEndsTheOfferAndTheLine() {
+        removeFirstRecentGame()
+        assertTrue(noticeShown())
+        send(Action.Menu)
+        assertTrue("the menu of the next game is open", isPanelOpen())
+        assertFalse("the Undo line is gone while the menu is open", noticeShown())
+        send(Action.Search) // X belongs to the panel now
+        assertTrue("X in the menu restored nothing", games.restoredToRecent.isEmpty())
+        send(Action.Back)
+        assertFalse("the offer does not come back", noticeShown())
+        assertTrue(games.restoredToRecent.isEmpty())
+    }
+
+    @Test
+    fun undoAfterTheListChangedRestoresTheRightGame() {
+        removeFirstRecentGame()
+        dropFromRecent("recent-2") // another game left Recent meanwhile
+        compose.waitForIdle()
+        send(Action.Search)
+        assertEquals(listOf("recent-0"), games.restoredToRecent)
     }
 
     private companion object {

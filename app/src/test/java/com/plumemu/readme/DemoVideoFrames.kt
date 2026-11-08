@@ -158,7 +158,7 @@ class DemoVideoFrames {
         var pageRows = 6
         compose.setContent {
             CompositionLocalProvider(LocalGlideClock provides { compose.mainClock.currentTime * 1_000_000L }) {
-                PlumTheme(settings(ColorSet.Indigo).toThemeSettings()) {
+                PlumTheme(settings(ColorSet.SpiceCube).toThemeSettings()) {
                     val bgNow = PlumTheme.colors.bg.value
                     val accentNow = PlumTheme.colors.accent.value
                     val rowsNow = PlumTheme.layout.listRowsThatFit
@@ -279,7 +279,7 @@ class DemoVideoFrames {
         lateinit var state: StripState
         compose.setContent {
             CompositionLocalProvider(LocalGlideClock provides { compose.mainClock.currentTime * 1_000_000L }) {
-                PlumTheme(settings(ColorSet.Charcoal).toThemeSettings()) {
+                PlumTheme(settings(ColorSet.ColdGrey).toThemeSettings()) {
                     val bgNow = PlumTheme.colors.bg.value
                     val accentNow = PlumTheme.colors.accent.value
                     SideEffect { take.colours = "$bgNow $accentNow" }
@@ -311,7 +311,7 @@ class DemoVideoFrames {
         val take = Take("settings")
         begin()
         var focus by mutableStateOf(optionsAt(SettingsOption.Colors))
-        var set by mutableStateOf(ColorSet.Indigo)
+        var set by mutableStateOf(ColorSet.SpiceCube)
         compose.setContent {
             CompositionLocalProvider(LocalGlideClock provides { compose.mainClock.currentTime * 1_000_000L }) {
                 val s = settings(set)
@@ -326,7 +326,7 @@ class DemoVideoFrames {
         compose.waitForIdle()
         take.note("Settings: browse")
         take.seconds(0.8)
-        val browse = listOf(SettingsOption.Accent, SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight)
+        val browse = listOf(SettingsOption.Accent, SettingsOption.TextSize)
         for (o in browse) take.press("DOWN", "move", 0.45) { focus = optionsAt(o) }
         for (o in browse.dropLast(1).reversed() + SettingsOption.Colors) take.press("UP", "move", 0.3) { focus = optionsAt(o) }
         take.seconds(0.2)

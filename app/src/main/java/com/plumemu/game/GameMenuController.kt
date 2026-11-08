@@ -97,6 +97,8 @@ internal class GameMenuController(
     /** Whether a launch is running (Play is ignored until it ends, or until [startLimit] gives up on it). */
     val isLaunching: Boolean get() = starts.isLaunching
 
+    val undo =RecentUndo(scope) { game -> keptWrite { write("restore to recent", game, null) { actions.restoreToRecent(game.key) } } }
+
     /**
      * Starts [game] ([GameStarts.play]): a start closes the panel Play came from, a failure replaces
      * it; "Starting game…" shows when the start takes a moment or on a second Play.
@@ -350,7 +352,7 @@ internal class GameMenuController(
                         }
                     }
             // Once asked, finished even if the person leaves the menu (as Favorite); the list follows the database.
-            PanelCommand.RemoveFromRecent -> work = keptWrite { write("remove from recent", game, open) { actions.removeFromRecent(game.key) } }
+            PanelCommand.RemoveFromRecent -> work = keptWrite { if (write("remove from recent", game, open) { actions.removeFromRecent(game.key) }) { if (panel == null) undo.offer(game) } }
             PanelCommand.OpenInfo -> {
                 val facts = (open.screen as? PanelScreen.Menu)?.facts
                 if (facts != null) {

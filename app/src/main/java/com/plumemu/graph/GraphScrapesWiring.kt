@@ -63,7 +63,7 @@ internal fun graphScrapesFor(
 
 /**
  * Whether the main screen shows box art (grid, details, live pictures): an account is stored, or
- * "Box art only" is chosen (libretro's pictures need no account). Plumemu's own covers with no account
+ * "Default source" is chosen (libretro's pictures need no account). Plumemu's own covers with no account
  * keep it off, as before.
  */
 internal fun boxArtShown(isSignedIn: Flow<Boolean>, settings: Flow<PlumSettings?>): Flow<Boolean> =

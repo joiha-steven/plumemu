@@ -12,6 +12,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import kotlin.math.floor
+import kotlin.math.roundToInt
 import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 
@@ -31,8 +32,8 @@ fun ChargingGlyph(
     color: () -> Color,
     description: String,
     modifier: Modifier = Modifier,
-    /** The font the text beside it is drawn in: the person's, unless the screen fixes its own (the in-game card draws in Plum Sans). */
-    font: PlumFont = PlumTheme.type.font,
+    /** The font the text beside it is drawn in: Mono beside a mono style, else the typography's, unless the screen fixes its own (the in-game card draws in Plum Sans). */
+    font: PlumFont = PlumTheme.type.fontOf(style),
 ) {
     val density = LocalDensity.current
     val height = with(density) { (style.fontSize.toPx() * font.digitHeightEm).toDp() }
@@ -40,7 +41,8 @@ fun ChargingGlyph(
     // The row centres the box on the text line; the digits' ink sits a little off that line centre.
     // Whole pixels: a fractional top edge fades into an extra row of ink and the glyph reads taller and off the digits. Rounded down: the
     // bolt's box is a row shorter than the digits' ink, so a round-to-nearest shift left it a row low at the top bar's 13.
-    val shift = with(density) { floor(style.fontSize.toPx() * font.digitCentreBelowLineCentreEm) }
+    // Mono's centre is nearly on the line centre, where rounding down always meant a row up: it rounds to the nearest.
+    val shift = with(density) { style.fontSize.toPx() * font.digitCentreBelowLineCentreEm }.let { if (font == PlumFont.Mono) it.roundToInt().toFloat() else floor(it) }
     Canvas(modifier.graphicsLayer { translationY = shift }.size(width, height).semantics { contentDescription = description }) {
         val bolt =
             Path().apply {

@@ -11,7 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumDimens
-import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import org.junit.After
 import org.junit.Test
@@ -23,8 +22,9 @@ import java.util.Locale
 
 /**
  * Settings rows and the hint bar in each script Plumemu is being translated into
- * (docs/conventions/translation.md › Fonts): Vietnamese in Plum Sans, Serif and Mono (every
- * precomposed letter is in the three fonts; the third row holds the tallest stacked marks), and
+ * (docs/conventions/translation.md › Fonts): Vietnamese in Jost, the one text face (every
+ * precomposed letter is in its faces, added by tools/fonts/build_jost.py; the third row holds the
+ * tallest stacked marks), and
  * Chinese, Korean and Japanese, which no Plum font has, drawn by Android's fallback letter by
  * letter. Each script is drawn with its locale as the process default, as `AppLocale.wrap` sets
  * it, because Compose chooses the Chinese or Japanese form of a shared Han character from it.
@@ -65,14 +65,13 @@ class ScriptsScreenshotTest {
 
     private fun capture(
         script: Script,
-        fonts: List<PlumFont> = listOf(PlumFont.Default),
     ) {
         Locale.setDefault(Locale.forLanguageTag(script.tag))
-        ReferenceShots.capture(script.shot, fonts) { Rows(script) }
+        ReferenceShots.capture(script.shot) { Rows(script) }
     }
 
     @Test
-    fun vietnamese() = capture(load("script_vietnamese", "vi", "values-vi"), PlumFont.entries)
+    fun vietnamese() = capture(load("script_vietnamese", "vi", "values-vi"))
 
     @Test
     fun chineseSimplified() = capture(load("script_chinese_simplified", "zh-CN", "values-zh"))

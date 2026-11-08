@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.drawscope.inset
 import com.plumemu.coreui.theme.HintKeyDimens
@@ -43,7 +42,6 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalDensity
@@ -104,9 +102,8 @@ fun TopBar(
     val compact = typing()
     val barHeight = if (compact) PlumTheme.layout.topBarHeightTyping else PlumTheme.layout.topBarHeight
     // The colour is read while drawing (`color` below): a moved theme colour redraws the bar and recomposes nothing.
-    val style = PlumTheme.type.topBar
-    // The clock and status read at the bar's own step (13), one above the games list's year and tag.
-    val status = style
+    // The clock and status are numbers: Mono at the bar's own step (13), one above the games list's tag.
+    val status = PlumTheme.type.topBar
     val ink: () -> Color = { colors.text2 }
     Row(
         modifier = modifier.fillMaxWidth().height(barHeight).padding(horizontal = PlumDimens.stripMarginSide),
@@ -115,7 +112,7 @@ fun TopBar(
     ) {
         PlaceText(place, emphasis, placeAlpha, if (middle == null) Modifier.weight(1f) else Modifier.widthIn(min = placeMinWidth), compact)
         middle?.invoke(this)
-        if (pill != null) TopBarPill(pill, style, barHeight, onPill)
+        if (pill != null) TopBarPill(pill, PlumTheme.type.meta, barHeight, onPill)
         StatusText(clock, status, ink)
         WifiStatus(wifi, status, wifiDescription, ink)
         BatteryStatus(battery, charging, status, chargingDescription, ink)
@@ -305,10 +302,10 @@ fun FittingHintBar(
  * [meta] ("1993 · Capcom") on the left from [startInset] (where the grid starts), the hints at
  * the right, 16 apart. Put [Hint]s in [hints], left to right.
  *
- * When they do not all fit (a narrow screen, a large text size, a long title), the hints named in
- * [dropBeforeMeta] go first, but only if that keeps the meta; then the meta goes, then the hints named in [dropOrder] (indices into the hints, first dropped first), so
- * the title is never cut while a hint could make room; a left-out hint is neither drawn nor
- * tappable. Only a title longer than the bar with one hint left is cut, with an ellipsis.
+ * When they do not all fit (a narrow screen, a large text size, a long title) things leave in this order: the hints named in
+ * [dropBeforeMeta] (only if that keeps the meta), the title steps from 16 to 13, the meta, then the title is cut with an ellipsis down
+ * to [PlumDimens.hintTitleMin], and only then the hints named in [dropOrder] (indices into the hints, first dropped first). A left-out
+ * hint is neither drawn nor tappable.
  */
 @Composable
 fun TitledHintBar(
@@ -318,6 +315,7 @@ fun TitledHintBar(
     modifier: Modifier = Modifier,
     dropOrder: List<Int> = emptyList(),
     dropBeforeMeta: List<Int> = emptyList(),
+    titleTag: String? = null,
     hints: @Composable () -> Unit,
 ) {
     val colors = PlumTheme.colors
@@ -337,17 +335,24 @@ fun TitledHintBar(
         val height = constraints.maxHeight
         val hintPlaceables = subcompose(HINTS_SLOT, hints).map { it.measure(Constraints(maxHeight = height)) }
         val widths = hintPlaceables.map { it.width }
-        fun plan(look: InfoLook) = planInfoLine(look, meta.isNotEmpty(), widths, gap, constraints.maxWidth, dropOrder, dropBeforeMeta, measurer)
+        fun plan(look: InfoLook) = planInfoLine(look, meta.isNotEmpty(), widths, gap, constraints.maxWidth, dropOrder, dropBeforeMeta, PlumDimens.hintTitleMin.roundToPx(), measurer)
         // One rule: the title takes the board's size, or steps down so that no hint key is dropped. A key named in dropBeforeMeta
         // gives way to the meta by design, so losing only those does not step the title down unless the step would keep them all.
         val board = plan(boardLook)
-        val chosen = if (board.lossless) board else plan(fallbackLook).let { if (it.lossless || !board.acceptable) it else board }
+        val chosen =
+            if (board.lossless && board.whole) {
+                board
+            } else {
+                // The 13 plan wins when it keeps every key, or when the 16 plan would cut a title that shows whole at 13 with the same keys.
+                plan(fallbackLook).let { if (it.lossless || !board.acceptable || (!board.whole && it.keepsAllOf(board))) it else board }
+            }
         val shown = chosen.shown
         fun hintsWidth(): Int = hintPlaceables.indices.filter { shown[it] }.let { kept -> kept.sumOf { hintPlaceables[it].width } + gap * kept.size }
         val titleWidth = (constraints.maxWidth - hintsWidth()).coerceAtLeast(0)
         val titlePlaceable =
             subcompose(TITLE_SLOT) {
-                BasicText(text = chosen.text, style = chosen.style, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val tagged = if (titleTag == null) Modifier else Modifier.testTag(titleTag)
+                BarTitle(chosen.withMeta, chosen.text, title, chosen.style, tagged)
             }.single().measure(Constraints(maxWidth = titleWidth)) // its line may be taller than the bar (Serif 23); the bar keeps its height
         layout(constraints.maxWidth, height) {
             titlePlaceable.placeRelative(0, (height - titlePlaceable.height) / 2)
@@ -376,7 +381,9 @@ private class InfoLook(
 }
 
 /** What a [InfoLook] shows on one bar: the [text], which hints stay, and whether every hint stayed. */
-private class InfoPlan(val style: TextStyle, val text: AnnotatedString, val shown: BooleanArray, val lossless: Boolean, val acceptable: Boolean)
+private class InfoPlan(val style: TextStyle, val text: AnnotatedString, val shown: BooleanArray, val lossless: Boolean, val acceptable: Boolean, val whole: Boolean, val withMeta: Boolean) {
+    fun keepsAllOf(other: InfoPlan): Boolean = shown.indices.all { shown[it] || !other.shown[it] }
+}
 
 /** Which hints and which text stay at [look] in [maxWidth]; see [TitledHintBar] for the order things leave in. */
 private fun planInfoLine(
@@ -387,11 +394,13 @@ private fun planInfoLine(
     maxWidth: Int,
     dropOrder: List<Int>,
     dropBeforeMeta: List<Int>,
+    minTitle: Int,
     measurer: TextMeasurer,
 ): InfoPlan {
     val shown = BooleanArray(hintWidths.size) { true }
     fun hintsWidth(): Int = hintWidths.indices.filter { shown[it] }.let { kept -> kept.sumOf { hintWidths[it] } + gap * kept.size }
     fun fits(text: AnnotatedString): Boolean = measurer.measure(text, look.style, maxLines = 1).size.width + hintsWidth() <= maxWidth
+    val titleWidth by lazy { measurer.measure(look.titleOnly, look.style, maxLines = 1).size.width }
     if (hasMeta && !fits(look.withMeta)) {
         // The meta matters more than these hints: leave them out when that is what lets the meta stay.
         val before = dropBeforeMeta.filter { it in hintWidths.indices && it != 0 }
@@ -402,12 +411,14 @@ private fun planInfoLine(
     if (!withMeta) {
         // Keep the first hint (A) whatever happens: the bar always says what A does.
         for (index in dropOrder.filter { it in hintWidths.indices && it != 0 }) {
-            if (fits(look.titleOnly)) break
+            // The keys named in dropBeforeMeta (L2 R2) leave before the title is cut; the rest only once it is at its minimum.
+            val room = if (index in dropBeforeMeta) titleWidth else minOf(titleWidth, minTitle)
+            if (room + hintsWidth() <= maxWidth) break
             shown[index] = false
         }
     }
     val text = if (withMeta) look.withMeta else look.titleOnly
-    return InfoPlan(look.style, text, shown, shown.all { it }, shown.indices.all { shown[it] || it in dropBeforeMeta })
+    return InfoPlan(look.style, text, shown, shown.all { it }, shown.indices.all { shown[it] || it in dropBeforeMeta }, withMeta || titleWidth + hintsWidth() <= maxWidth, withMeta)
 }
 
 private const val HINTS_SLOT = "hints"
@@ -487,7 +498,7 @@ fun Hint(
                     .testTag(HINT_KEY_CAP_TAG) // outside the layer: its bounds stay the resting cap's
                     // Pressed (design/rules.md › Shapes and motion › Pressed): only the cap dips, and
                     // `press.progress` is read in the layer and draw blocks, never in composition.
-                    .graphicsLayer { translationY = colors.collar.seat.hintCap.travel.toPx() * press.progress.value }
+                    .plainLayer { translationY = colors.collar.seat.hintCap.travel.toPx() * press.progress.value }
                     .height(PlumTheme.layout.keyCapHeight)
                     .defaultMinSize(minWidth = PlumDimens.keyCapMinWidth)
                     // The board's hint CAP (ACCENT CAP for confirm or a button set's colour). Pressed: 1.33 dp down in the capDown face, the letter kept.
@@ -532,4 +543,19 @@ fun keyCapLook(
 ): KeyCapLook {
     val glyph = buttons?.forKeyCap(keyCap) ?: return KeyCapLook(fill = null, letter = colors.text)
     return KeyCapLook(fill = glyph.fill.toComposeColor(), letter = glyph.letter.toComposeColor())
+}
+
+/**
+ * The title of a hint bar. With the meta the whole line fits by construction; a title alone may be cut, and reads right only
+ * through [EllipsisText]. A named function so that tests can tell this text from any other [EllipsisText] (recomposition guard).
+ */
+@Composable
+private fun BarTitle(
+    withMeta: Boolean,
+    line: AnnotatedString,
+    title: String,
+    style: TextStyle,
+    modifier: Modifier,
+) {
+    if (withMeta) BasicText(text = line, style = style, maxLines = 1, modifier = modifier) else EllipsisText(title, style, modifier)
 }

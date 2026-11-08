@@ -68,6 +68,7 @@ internal object GameCardTags {
     const val BARS = "second_game_bars"
     const val ABOUT = "second_game_about_session"
     const val DESCRIPTION = "second_game_description"
+    const val DESCRIPTION_BOX = "second_game_description_box"
     const val BATTERY = "second_game_battery"
     const val FILE = "second_game_file"
 }
@@ -108,7 +109,8 @@ internal fun BoxScope.GameCard(content: SecondScreenContent.Game) {
         val footTop = D.footTop.roundToPx()
         val footGap = D.footGap.roundToPx()
         val upToTiles = headerH + gapHeader + tilesH
-        val oneLine = if (description.isEmpty()) 0 else descriptionStyle.lineHeight.toPx().toInt() + 1
+        // The text layout rounds a line up to a whole pixel; one line is that tall.
+        val oneLine = if (description.isEmpty()) 0 else kotlin.math.ceil(descriptionStyle.lineHeight.toPx()).toInt()
 
         fun foot(withBattery: Boolean, withFile: Boolean): Int {
             val b = if (withBattery) batteryH else 0
@@ -128,7 +130,11 @@ internal fun BoxScope.GameCard(content: SecondScreenContent.Game) {
         val descriptionTop = upToTiles + gapTiles
         // The description's box starts this far above its first line, so the tallest marks are not cut by its clip.
         val inkTop = D.descriptionInkTop.roundToPx()
-        val descriptionH = height - footH - descriptionTop
+        // Whole lines only: a part of the next line under the clip would show as a faded sliver above the file name.
+        // The text layout rounds a line up to a whole pixel.
+        val lineH = kotlin.math.ceil(descriptionStyle.lineHeight.toPx())
+        val descriptionRoom = height - footH - descriptionTop
+        val descriptionH = if (lineH > 0f && description.isNotEmpty()) (descriptionRoom / lineH).toInt() * lineH.toInt() else descriptionRoom
         val descriptionParts =
             if (description.isNotEmpty() && descriptionH >= oneLine) {
                 cardTrace("SS:description") { subcompose("description") { Description(description, descriptionStyle) }.map { it.measure(Constraints.fixed(width, descriptionH + inkTop)) } }
@@ -174,7 +180,7 @@ internal fun gameStyle(
     return base.copy(
         fontSize = base.fontSize * k,
         lineHeight = base.lineHeight * k,
-        fontWeight = FontWeight(role.weightFor(type.font, type.textMode, type.textWeight) + weight - role.weight),
+        fontWeight = FontWeight(role.weightFor(type.font, type.textMode) + weight - role.weight),
         // Glyphs keep their fractional advances, as the board's browser lays them; Static rounds each to a pixel, which over the
         // description's 735 px line is some 13 px wider, so a word the board keeps goes to the next line.
         textMotion = TextMotion.Animated,
@@ -226,6 +232,7 @@ private fun Description(
     Box(
         Modifier
             .fillMaxSize()
+            .testTag(GameCardTags.DESCRIPTION_BOX)
             .onSizeChanged { boxHeight = it.height }
             .clipToBounds()
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }

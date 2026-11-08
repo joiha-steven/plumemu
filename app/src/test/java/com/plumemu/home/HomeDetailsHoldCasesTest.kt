@@ -126,7 +126,7 @@ abstract class HomeDetailsHoldCasesBase(
         val actions = (focus ?: LibraryLikeContent.gamesFocused(metroid)) + if (narrow && hasBoxArt) listOf(Action.Move(Direction.Right)) else emptyList()
         compose.mainClock.autoAdvance = false
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 CompositionLocalProvider(LocalHomePlayFacts provides plays) {
                     if (hasBoxArt) HomeWithArt(source, actions, content) else HomeAt(content, actions)
                 }
@@ -233,7 +233,7 @@ abstract class HomeDetailsHoldCasesBase(
             // The narrow stop's table has the pace as a line under it.
             assertTrue("the battery pace is on show: ${last.texts.map { it.first }}", time.isNotEmpty())
         } else if (size != TextSize.Largest) {
-            assertShownInBox(frames, "BATTERY")
+            assertShownInBox(frames, "Battery")
             val box = last.boxes.getValue("facts")
             val value = last.texts.filter { (t, _) -> t.replace('\u00A0', ' ').let { " h" in it || " min" in it } && t != "4 h 12 min" }
             assertTrue("the battery time is on show: ${last.texts.map { it.first }}", value.isNotEmpty() && value.all { (_, r) -> r.bottom <= box.bottom + TOL })
@@ -339,11 +339,11 @@ abstract class HomeDetailsHoldCasesBase(
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
 class HomeDetailsHoldCases768Test : HomeDetailsHoldCasesBase(narrow = false)
 
-/** The largest text in the serif font at 768 x 432: the tightest the column gets. */
+/** The largest text at 768 x 432: the tightest the column gets. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
-class HomeDetailsHoldCasesLargestSerif768Test : HomeDetailsHoldCasesBase(narrow = false, size = TextSize.Largest, font = PlumFont.Serif)
+class HomeDetailsHoldCasesLargest768Test : HomeDetailsHoldCasesBase(narrow = false, size = TextSize.Largest)
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)

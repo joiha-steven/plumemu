@@ -206,8 +206,10 @@ internal class SetupModel(
                 }
                 Action.Enter -> now.focus?.let(::activate)
                 Action.Back -> {
-                    if (form != null && form.signedInAs == null) {
-                        closeBoxArtForm(form)
+                    if (form != null || (now.step == SetupStep.BoxArt && now.isBoxArtSourceOpen)) {
+                        // A source being stored goes on by itself: a page switch now would be overridden.
+                        if (form == null && isStoring) return@act null
+                        if (form != null) closeBoxArtForm(form) else local.update { it.copy(isBoxArtSourceOpen = false, message = null, requestedFocus = SetupControl.BoxArtYes) }
                         feel.report(Outcome.WentBack)
                     } else {
                         previousStepOf(now.step, now.hasConfirmStep, local.value.lastQuestion)?.let {
@@ -290,6 +292,7 @@ internal class SetupModel(
             SetupControl.UseBoxArt -> chooseScreenScraper()
             SetupControl.BoxArtLibretro -> goOnAfter(SetupStep.BoxArt) { source.setBoxArtSource(BoxArtSourceSetting.LibretroOnly) }
             SetupControl.BoxArtOwnCovers -> goOnAfter(SetupStep.BoxArt) { source.setBoxArtSource(BoxArtSourceSetting.OwnCovers) }
+            SetupControl.BoxArtYes -> chooseBoxArtYes()
             SetupControl.UsageStatistics -> {
                 save { source.setUsageStatistics(!state.value.usageStatistics) }
                 feel.report(Outcome.Activated)
@@ -437,30 +440,36 @@ internal class SetupModel(
         feel.report(Outcome.Activated)
     }
 
-    /** "Box art and game info": a usable account is the choice at once; otherwise the sign-in form, opened with the tray down on the username so Sign in and Skip are seen at once (A on a field opens the tray). */
+    /** "Yes": a ScreenScraper build asks where from (page 2); without it libretro is the only source. */
+    private fun chooseBoxArtYes() {
+        val now = state.value
+        if (now.step != SetupStep.BoxArt || isStoring) return
+        if (!now.hasScreenScraper) return goOnAfter(SetupStep.BoxArt) { source.setBoxArtSource(BoxArtSourceSetting.LibretroOnly) }
+        local.update { if (it.step == SetupStep.BoxArt) it.copy(isBoxArtSourceOpen = true, message = null, requestedFocus = boxArtSourceFocus(now)) else it }
+        feel.report(Outcome.Activated)
+    }
+
+    /** "ScreenScraper account": a usable account is the choice at once; otherwise the sign-in form, opened with the tray down on the username so Sign in and Not now are seen at once (A on a field opens the tray). */
     private fun chooseScreenScraper() {
         if (state.value.step != SetupStep.BoxArt) return
         val usable = (accountStatus.value as? AccountStatus.SignedIn)?.isRefused == false || local.value.signedInHere != null
-        if (usable) {
-            goOnAfter(SetupStep.BoxArt) { source.setBoxArtSource(BoxArtSourceSetting.ScreenScraper) }
-            return
-        }
+        if (usable) return goOnAfter(SetupStep.BoxArt) { source.setBoxArtSource(BoxArtSourceSetting.ScreenScraper) }
         local.value.boxArt?.focusFirstEmpty()
         local.update { if (it.step == SetupStep.BoxArt) it.copy(isBoxArtFormOpen = true) else it }
         feel.report(Outcome.Activated)
     }
 
-    /** Skip goes on storing nothing (`effectiveBoxArtSource`: own covers until an account is usable), as Continue after "Signed in as …"; B goes back ([closeBoxArtForm]). */
+    /** Not now goes on storing nothing (`effectiveBoxArtSource`: own covers until an account is usable), as Continue after "Signed in as …"; B goes back ([closeBoxArtForm]). */
     private fun leaveBoxArtForm() {
         val form = local.value.boxArt ?: return
         form.stopTyping()
         goForward(SetupStep.BoxArt, if (form.signedInAs != null) SetupAction.Next else SetupAction.Skip)
     }
 
-    /** The sign-in form goes back to the choices; the keyboard goes with it. */
+    /** The sign-in form goes back to the source page, signed in or not; the keyboard goes with it. */
     private fun closeBoxArtForm(form: SignInForm) {
         form.stopTyping()
-        local.update { if (it.step == SetupStep.BoxArt) it.copy(isBoxArtFormOpen = false, requestedFocus = SetupControl.UseBoxArt) else it }
+        local.update { if (it.step == SetupStep.BoxArt) it.copy(isBoxArtFormOpen = false, message = null, requestedFocus = SetupControl.UseBoxArt) else it }
     }
 
     /**
@@ -488,7 +497,7 @@ internal class SetupModel(
     private fun answerLook(control: SetupControl) {
         val set = control.lookIndex?.let(SetupLooks.sets::getOrNull) ?: return
         goOnAfter(SetupStep.Look) {
-            source.applyLook(set, deviceLook.textSize)
+            source.applyLook(set, deviceLook.textSize, blackPage = deviceLook.pageOf(set) != set.background)
             local.update { it.copy(pickedLook = control) }
         }
     }
@@ -560,7 +569,7 @@ internal class SetupModel(
                 SetupStep.Scan, SetupStep.Ready -> null
             }
         val form = if (to == SetupStep.BoxArt) newBoxArtForm(accounts, accountStatus.value, l.signedInHere, keyboardChoice) else l.boxArt
-        return l.copy(step = to, message = null, requestedFocus = focus, boxArt = form, isBoxArtFormOpen = false)
+        return l.copy(step = to, message = null, requestedFocus = focus, boxArt = form, isBoxArtFormOpen = false, isBoxArtSourceOpen = false)
     }
 
     private fun stepLeft(

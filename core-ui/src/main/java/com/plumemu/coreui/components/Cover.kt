@@ -26,6 +26,7 @@ import com.plumemu.coreui.theme.PlumTheme
  * than an empty box. The title wraps between words up to [maxLines]; [onTitleLayout] sees how it
  * was laid out (a caller drops the subtitle when the title did not fit). [modifier] sets the size;
  * [corner]: 8 landscape, 6 portrait. [rim] (a grid's rim light, [drawCoverRim]) is drawn over the tile just inside its edge; transparent: none. [titleStyle] and [subtitleStyle] are the small grid's 11 there; a null
+ * [fill] replaces the flat `sel` background (the app's drawn field), with [titleColor] and [subtitleColor] to read on it.
  * [title] leaves the tile without one (the details column names the game right under it).
  */
 @Composable
@@ -41,12 +42,15 @@ fun CoverTile(
     subtitleStyle: TextStyle = PlumTheme.type.smallFact,
     onTitleLayout: (TextLayoutResult) -> Unit = {},
     rim: Color = Color.Transparent,
+    fill: Modifier? = null,
+    titleColor: Color? = null,
+    subtitleColor: Color? = null,
 ) {
     val colors = PlumTheme.colors
     val shape = RoundedCornerShape(corner)
     Column(
         modifier =
-            modifier.clip(shape).background(colors.sel, shape).then(
+            modifier.clip(shape).then(fill ?: Modifier.background(colors.sel, shape)).then(
                 if (rim == Color.Transparent) Modifier else Modifier.drawWithContent { drawContent(); drawCoverRim(rim, corner.toPx()) },
             ).padding(padding),
         verticalArrangement = Arrangement.spacedBy(PlumDimens.titleLineGap, alignment = Alignment.Bottom),
@@ -54,7 +58,7 @@ fun CoverTile(
         if (title != null) {
             BasicText(
                 text = title,
-                style = titleStyle.copy(color = colors.text2),
+                style = titleStyle.copy(color = titleColor ?: colors.text2),
                 maxLines = maxLines,
                 overflow = TextOverflow.Ellipsis,
                 modifier = titleModifier,
@@ -62,7 +66,7 @@ fun CoverTile(
             )
         }
         if (!subtitle.isNullOrEmpty()) {
-            BasicText(text = subtitle, style = subtitleStyle.copy(color = colors.muted), maxLines = 1)
+            BasicText(text = subtitle, style = subtitleStyle.copy(color = subtitleColor ?: colors.muted), maxLines = 1)
         }
     }
 }

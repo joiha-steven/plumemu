@@ -79,7 +79,8 @@ internal abstract class SetupKeyboardPathHarness {
         }
         compose.runOnIdle { model.onPicked(PickResult.Picked(SetupFakes.ROMS_TREE)) }
         compose.waitForIdle()
-        press(confirm, confirm, confirm)
+        // Continue, the look tile, then the box art question: Yes (down, A), the ScreenScraper account (down, A).
+        press(confirm, confirm, KeyEvent.KEYCODE_DPAD_DOWN, confirm, KeyEvent.KEYCODE_DPAD_DOWN, confirm)
         assertNotNull("the box art step shows its form", model.state.value.boxArt)
         if (startTyping) press(confirm)
     }

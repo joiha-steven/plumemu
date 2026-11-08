@@ -175,6 +175,21 @@ abstract class SecondScreenGameCardBase(
     }
 
     @Test
+    fun aCutDescriptionShowsWholeLinesOnly() {
+        for (textSize in listOf(TextSize.Medium, TextSize.Largest)) {
+            show(withDescription(BOARD_DESCRIPTION.repeat(6)), PlumThemeSettings.Default.copy(textSize = textSize))
+            val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+            compose.onNodeWithTag(GameCardTags.DESCRIPTION).fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+            val layout = layouts.single()
+            val line = layout.getLineBottom(0) - layout.getLineTop(0)
+            val visible = bounds(GameCardTags.DESCRIPTION_BOX).height - px(SecondScreenGameCardDimens.descriptionInkTop)
+            val lines = visible / line
+            assertTrue("$size $textSize: the cut description shows $lines lines (line $line px, ${visible}px visible), not a whole number", kotlin.math.abs(lines - Math.round(lines)) * line <= 1f)
+            assertTrue("$size $textSize: the text continues past the room", layout.size.height > visible)
+        }
+    }
+
+    @Test
     fun aVeryLongTitleStaysOnOneLineBesideTheSystem() {
         show(BOARD_GAME.copy(title = LONG_TITLE))
         val title = bounds(GameCardTags.TITLE)
@@ -248,9 +263,9 @@ abstract class SecondScreenGameCardBase(
 
     @Test
     fun theLargestTextFitsInEveryFont() {
-        for (font in PlumFont.entries) {
+        for (font in listOf(PlumFont.Jost)) {
             for ((name, each) in cases) {
-                show(each, PlumThemeSettings.Default.copy(textSize = TextSize.Largest, font = font))
+                show(each, PlumThemeSettings.Default.copy(textSize = TextSize.Largest))
                 assertWhole("$size $font $name")
             }
         }

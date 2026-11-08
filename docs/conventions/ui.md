@@ -18,7 +18,7 @@
 - One focus style everywhere: a tinted pill with an accent ring (rows, `focusPill`) or an accent ring
   (covers, icons, swatches), both with the focus halo on dark themes (never on a light one; drawn with `drawFocusHalo`, no blur, never laid out, never over the item); no dot means focus. Accent text without a fill means "current, not
   focused". Two focused rows on one screen is a defect.
-- Fonts: the three Plum fonts (Sans, Serif, Mono), each with its tuning row.
+- Fonts: Jost is the only text face (the Font setting is gone); the Plum families stay for glyphs and numbers.
 - A row's right-hand text: `year · region` ("1994 · USA") in a single system's list with box art (the year alone where `listShowsPlace` says there is no room: narrow beside the details, Largest text; the region alone without box art); the system's short name in
   Recent, Favorites and Search, except at the narrow details stop, where the 56 dp list peek shows the year.
 - Focus must always be visible: the focused row or cell has the focus background or ring; a
@@ -34,8 +34,15 @@ All durations are tokens in `PlumMotion` (`core-ui`); screens never type a numbe
 
 - Only `transform` and `alpha` change (`graphicsLayer`, draw phase); layout is never animated, so
   a frame costs no measure or layout pass on a weak GPU and CPU.
-- The strip slides over `DURATION_MS` (180 ms), ease-out. New content fades in over `FADE_IN_MS`
-  (110 ms), ease-out, alpha only.
+- One curve for everything that moves or appears: `PlumMotion.Decelerate` (ease-out cubic). CSS
+  ease-out only for presses and raises. No springs, no overshoot.
+- The strip, a game panel and the keyboard tray slide over `DURATION_MS` (180 ms). New content fades
+  in over `FADE_IN_MS` (110 ms), alpha only.
+- A whole screen arrives with depth over `SCREEN_MS` (240 ms): from `SCREEN_DEPTH` (4 %) smaller going
+  in, from 4 % larger coming back (`FadeIn(depth)`). A step sideways (L2/R2, a setup step) slides
+  `SWAP_SHIFT_DP` (16 dp) in from its side while fading (`rememberSlidingSwap`). A started game or app:
+  the home moves into the focused item and dims (`LAUNCH_DEPTH`, `LAUNCH_DIM`), the window asked for
+  `LAUNCH_LEAD_MS` in. The second screen uses the same tokens.
 - Every list and grid glides after its jump (home, Apps, search, the game panels, Settings) over
   `GLIDE_MS` (200 ms) on a decelerating curve: the list scrolls in layout at once, then its rows are
   drawn where they were and travel to their place. The focus pill (lists) and the focus ring (grids)

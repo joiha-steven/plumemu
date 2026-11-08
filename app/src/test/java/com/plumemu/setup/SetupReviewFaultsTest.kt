@@ -54,15 +54,15 @@ class SetupReviewFaultsTest {
         val model = model()
         model.onPicked(PickResult.Picked("content://x/tree/primary%3AROMs"))
         runCurrent()
-        // Continue, the look tile, Box art only: the scan.
-        press(model, Action.Enter, Action.Enter, Action.Move(Direction.Down), Action.Enter)
+        // Continue, the look tile, Yes, the default source: the scan.
+        press(model, Action.Enter, Action.Enter, Action.Move(Direction.Down), Action.Enter, Action.Enter)
         assertEquals(SetupStep.Scan, model.state.value.step)
         // Back to the box art question: the wait stops. A second screen appears; the question is answered again.
         press(model, Action.Back)
         assertEquals(SetupStep.BoxArt, model.state.value.step)
         source.secondScreenQuestion.value = ScreenKind.BuiltIn
         runCurrent()
-        press(model, Action.Move(Direction.Down), Action.Enter)
+        press(model, Action.Enter, Action.Enter)
         assertEquals(SetupStep.SecondScreen, model.state.value.step)
         // It is unplugged while asked about: the screen shows the scan, and the library must still come.
         source.secondScreenQuestion.value = null

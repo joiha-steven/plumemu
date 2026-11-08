@@ -102,7 +102,7 @@ private fun TileLabel(text: String) {
 
 private const val LABEL_SEPARATOR = " · "
 
-private const val LABEL_WEIGHT = 600
+private const val LABEL_WEIGHT = 700
 
 /** Whether the card's texts sit on the board's line boxes ([boardLine]). */
 @Composable

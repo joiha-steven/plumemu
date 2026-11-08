@@ -424,7 +424,7 @@ class AppGraph(
                 ),
             backupWork = backupWorkOf(backup),
             restoreWork = restoreWorkOf(restore),
-            updates = settingsUpdateActions(updates),
+            updates = settingsUpdateActions(updates, activity),
             problemReports = problemReportActionsOf(problemReports, appScope, Dispatchers.Main.immediate),
             reportDraft = reportDraft,
         )

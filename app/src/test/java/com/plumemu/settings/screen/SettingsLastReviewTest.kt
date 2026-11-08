@@ -28,7 +28,6 @@ import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.components.SystemRowTags
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumDimens
-import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
@@ -69,7 +68,7 @@ class SettingsLastReviewTest {
     private lateinit var geometry: SettingsGeometry
     private var density = Density(1f)
 
-    private class Scene(val focus: SettingsFocus, val content: SettingsContent, val size: TextSize, val settings: PlumSettings, val font: PlumFont, val form: ProblemReportForm?)
+    private class Scene(val focus: SettingsFocus, val content: SettingsContent, val size: TextSize, val settings: PlumSettings, val form: ProblemReportForm?)
 
     private var scene by mutableStateOf<Scene?>(null)
 
@@ -78,15 +77,14 @@ class SettingsLastReviewTest {
         content: SettingsContent = SettingsContent(),
         size: TextSize = TextSize.Large,
         settings: PlumSettings = stored,
-        font: PlumFont = PlumFont.Jost,
         form: ProblemReportForm? = null,
     ) {
         val isFirst = scene == null
-        scene = Scene(focus, content, size, settings, font, form)
+        scene = Scene(focus, content, size, settings, form)
         if (isFirst) {
             compose.setContent {
                 val now = scene ?: return@setContent
-                PlumTheme(now.settings.toThemeSettings().copy(textSize = now.size, font = now.font)) {
+                PlumTheme(now.settings.toThemeSettings().copy(textSize = now.size)) {
                     key(now) {
                         geometry = settingsGeometry(PlumTheme.layout)
                         density = LocalDensity.current
@@ -194,10 +192,9 @@ class SettingsLastReviewTest {
     fun theColourCodeLabelStaysOnOneLine() {
         val content = SettingsContent()
         for (size in listOf(TextSize.Large, TextSize.Largest)) {
-            // Plum Serif at Largest does not fit the narrow column even with the dot gone: there, and only there, the label takes two lines.
-            for (font in PlumFont.entries.filter { size != TextSize.Largest || it != PlumFont.Serif }) {
-                open(colorPageAt(SettingsOption.Accent, stored), content, size, font = font)
-                assertEquals("$size $font", 1, textNode(string(R.string.settings_hex_label)).lines().lineCount)
+            run {
+                open(colorPageAt(SettingsOption.Accent, stored), content, size)
+                assertEquals(size.name, 1, textNode(string(R.string.settings_hex_label)).lines().lineCount)
             }
         }
     }
@@ -220,11 +217,11 @@ class SettingsLastReviewTest {
     }
 
     private fun stackedButtonsAreOneWidth() {
-        for (font in listOf(PlumFont.Jost, PlumFont.Serif)) {
-            open(panelRow(SettingsOption.ClearRecent).copy(column = SettingsColumn.Panel, page = PanelPage.Confirm, panelIndex = 0), size = TextSize.Largest, font = font)
+        run {
+            open(panelRow(SettingsOption.ClearRecent).copy(column = SettingsColumn.Panel, page = PanelPage.Confirm, panelIndex = 0), size = TextSize.Largest)
             val cancel = bounds(SettingsTags.panelItem(SettingsModel.CONFIRM_CANCEL))
             val clear = bounds(SettingsTags.panelItem(SettingsModel.CONFIRM_RESET))
-            if (cancel.top != clear.top) assertEquals("$font: stacked $cancel and $clear", cancel.width, clear.width, 1f)
+            if (cancel.top != clear.top) assertEquals("stacked $cancel and $clear", cancel.width, clear.width, 1f)
         }
     }
 
@@ -271,26 +268,14 @@ class SettingsLastReviewTest {
     @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
     fun systemOrderSharesTheNamesEdgeAndSizeAt576() = systemsOrderShares()
 
-    @Test
-    @Config(qualifiers = "w832dp-h468dp-land-xhdpi")
-    fun fontCardsAreOneHeightAndClearOfTheirEdge() {
-        open(panelRow(SettingsOption.Font), size = TextSize.Largest)
-        val cards = compose.onAllNodes(hasTestTag(SettingsTags.FONT_CARD), useUnmergedTree = true).fetchSemanticsNodes().filter { it.layoutInfo.isPlaced }
-        assertTrue("cards ${cards.size}", cards.size >= 2)
-        assertEquals("one height", 1, cards.map { it.size.height }.distinct().size)
-        val text = compose.onAllNodes(hasText(string(R.string.settings_sample_game_2)), useUnmergedTree = true).fetchSemanticsNodes().filter { it.layoutInfo.isPlaced }
-        val room = px(PlumDimens.settingsTwoLineRowPadding.value) - 1f
-        cards.zip(text).forEach { (card, sample) -> assertTrue("${sample.size} clear of ${card.size}", (card.size.height - sample.size.height) / 2 >= room) }
-    }
-
     private fun sectionsKeepTheirRhythm() {
-        for (font in PlumFont.entries) {
-            open(SettingsFocus(column = SettingsColumn.Sections, section = SettingsSection.Library), ShotContent.library, TextSize.Largest, font = font)
+        run {
+            open(SettingsFocus(column = SettingsColumn.Sections, section = SettingsSection.Library), ShotContent.library, TextSize.Largest)
             val labels =
                 compose.onAllNodesWithTag(SystemRowTags.LABEL, useUnmergedTree = true).fetchSemanticsNodes().filter { it.layoutInfo.isPlaced && it.boundsInRoot.height > 0f }.map { it.boundsInRoot }.sortedBy { it.top }
             val gaps = labels.zipWithNext { a, b -> b.top - a.bottom }
             assertTrue("labels $labels", gaps.isNotEmpty())
-            assertTrue("$font: label gaps $gaps", gaps.max() - gaps.min() <= px(2f))
+            assertTrue("label gaps $gaps", gaps.max() - gaps.min() <= px(2f))
         }
     }
 

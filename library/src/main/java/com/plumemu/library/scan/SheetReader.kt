@@ -10,8 +10,12 @@ import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 import java.util.Locale
 
-/** What the sheets of one directory name: sheet document id → document ids of the files of the same directory it names. */
-internal class SheetParts(val bySheet: Map<String, Set<String>>) {
+/**
+ * What the sheets of one directory name: sheet document id → document ids of the files of the same
+ * directory it names. [someUnread]: a sheet could not be opened or read, so the directory is listed
+ * again by the next scan (else the files it names would keep rows of their own until it changes).
+ */
+internal class SheetParts(val bySheet: Map<String, Set<String>>, val someUnread: Boolean = false) {
     companion object {
         val NONE = SheetParts(emptyMap())
     }
@@ -36,16 +40,29 @@ internal class SheetReader(private val tree: DocumentTree) {
         val byName = files.associateBy { it.name }
         val byLowerName = files.groupBy { it.name.lowercase(Locale.ROOT) }
         val bySheet = LinkedHashMap<String, Set<String>>()
+        var someUnread = false
         for (sheet in sheets) {
-            val names = namesIn(sheet) ?: continue
+            val names = namesIn(sheet)
+            if (names == null) {
+                someUnread = true
+                continue
+            }
             val found = LinkedHashSet<String>()
-            for (name in names) {
+            for (written in names) {
+                // `./Disc 1.chd` (or `.\Disc 1.chd`) is in the sheet's own folder, as the naming pass reads it.
+                val name = withoutCurrentFolder(written)
                 val part = byName[name] ?: byLowerName[name.lowercase(Locale.ROOT)]?.firstOrNull() ?: continue
                 found += part.documentId
             }
             if (found.isNotEmpty()) bySheet[sheet.documentId] = found
         }
-        return SheetParts(bySheet)
+        return SheetParts(bySheet, someUnread)
+    }
+
+    private fun withoutCurrentFolder(name: String): String {
+        var rest = name
+        while (rest.startsWith("./") || rest.startsWith(".\\")) rest = rest.substring(2)
+        return rest
     }
 
     private fun namesIn(sheet: DocumentEntry): List<String>? {

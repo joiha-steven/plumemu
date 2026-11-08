@@ -18,8 +18,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /*
- * The main screen's hint bar in the five sets with coloured A/B/X/Y glyphs: Super,
- * Charcoal, Ivory, Banana and Pocket, at both reference sizes, games focused; and Super with "Confirm with B", where
+ * The main screen's hint bar in the five sets with coloured A/B/X/Y glyphs: Front loader,
+ * Cold grey, Ivory, Banana and Pocket, at both reference sizes, games focused; and Front loader with "Confirm with B", where
  * the confirm hint reads B in B's colour: `home_glyphs_<size>_<set>[_confirm_b].png`.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -30,7 +30,7 @@ class HomeHintGlyphsScreenshotTest {
     fun hintBarInTheSetsWithGlyphColours() {
         val mismatches = mutableListOf<String>()
         val shots =
-            listOf(ColorSet.Super, ColorSet.Charcoal, ColorSet.Ivory, ColorSet.Banana, ColorSet.Pocket).map { it to ConfirmButtonSetting.Right } + (ColorSet.Super to ConfirmButtonSetting.Bottom)
+            listOf(ColorSet.FrontLoader, ColorSet.ColdGrey, ColorSet.Ivory, ColorSet.Banana, ColorSet.Pocket).map { it to ConfirmButtonSetting.Right } + (ColorSet.FrontLoader to ConfirmButtonSetting.Bottom)
         for (size in ReferenceShots.Size.Original) {
             RuntimeEnvironment.setQualifiers("w${size.widthDp}dp-h${size.heightDp}dp-land-xhdpi")
             for ((set, confirm) in shots) {

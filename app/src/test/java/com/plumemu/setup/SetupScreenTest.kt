@@ -115,7 +115,7 @@ class SetupScreenTest {
         assertEquals("a tap on the hint", 3, pickerOpened)
     }
 
-    /** On the look step: its preselected tile; then on box art: its first choice (Box art only without ScreenScraper keys). */
+    /** On the look step: its preselected tile; then on box art: its first choice (No). */
     private fun passLookAndBoxArt() {
         send(Action.Enter)
         send(Action.Enter)
@@ -134,14 +134,14 @@ class SetupScreenTest {
         compose.onNodeWithText(text(R.string.setup_look_title)).assertIsDisplayed()
         compose.onNodeWithTag(SetupTags.control(SetupControl.Look0)).performClick() // touch: a tile
         compose.waitForIdle()
-        compose.onNodeWithTag(SetupTags.control(SetupControl.BoxArtLibretro)).performClick() // touch: Box art only
+        compose.onNodeWithTag(SetupTags.control(SetupControl.BoxArtOwnCovers)).performClick() // touch: No
         compose.waitForIdle()
         compose.onNodeWithText(text(R.string.setup_scan_title)).assertIsDisplayed()
         compose.onNodeWithTag(SetupTags.PROGRESS).assertIsDisplayed()
 
         compose.onNodeWithTag(SetupTags.HINT_BACK).performClick() // touch: the B Back hint, to the question just before the scan
         compose.waitForIdle()
-        compose.onNodeWithText(text(R.string.setup_box_art_question_title)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.setup_box_art_ask_title)).assertIsDisplayed()
         send(Action.Back)
         send(Action.Back)
         compose.onNodeWithText(text(R.string.setup_folder_title)).assertIsDisplayed()
@@ -150,7 +150,7 @@ class SetupScreenTest {
         passLookAndBoxArt()
         compose.onNodeWithText(text(R.string.setup_scan_title)).assertIsDisplayed()
         send(Action.Back)
-        compose.onNodeWithText(text(R.string.setup_box_art_question_title)).assertIsDisplayed() // the question just before the scan
+        compose.onNodeWithText(text(R.string.setup_box_art_ask_title)).assertIsDisplayed() // the question just before the scan
     }
 
     @Test
@@ -167,9 +167,9 @@ class SetupScreenTest {
         compose.onNodeWithText(text(R.string.setup_second_screen_desc)).assertIsDisplayed()
         compose.onNodeWithTag(SetupTags.HINT_BACK).performClick() // touch: the B Back hint
         compose.waitForIdle()
-        compose.onNodeWithText(text(R.string.setup_box_art_question_title)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.setup_box_art_ask_title)).assertIsDisplayed()
 
-        send(Action.Enter) // Box art only again
+        send(Action.Enter) // No again
         send(Action.Enter) // Use it, focused for a built-in screen
         assertEquals(true, source.secondScreenAnswer)
         compose.onNodeWithText(text(R.string.setup_scan_title)).assertIsDisplayed()

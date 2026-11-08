@@ -72,7 +72,7 @@ class SlabBoardValuesTest {
         }
     }
 
-    /** The rim: a thin hairline, white on dark and brown on light, lit white at two corners. */
+    /** The rim: a thin white hairline on dark and light alike (full white on light), lit white at two corners. */
     @Test
     fun theSlabRimIsThinAndLitAtItsCorners() {
         val g = SlabLook.of(Rgb(0x111214), Rgb(0xEBE7DD), dark = true)
@@ -80,7 +80,8 @@ class SlabBoardValuesTest {
         assertEquals(Color.White, g.top.copy(alpha = 1f))
         assertEquals(true, g.top.alpha > g.edge.alpha)
         val p = SlabLook.of(Rgb(0xECE8DF), Rgb(0x1D1D1F), dark = false)
-        assertEquals(Color(0x3C, 0x28, 0x14), p.edge.copy(alpha = 1f))
+        assertEquals(Color.White, p.edge.copy(alpha = 1f))
+        assertEquals("the light rim is white itself", 1f, p.edge.alpha, 0f)
         assertEquals(Color.White, p.top.copy(alpha = 1f))
         assertEquals(0.667f, SlabDimens.edge.value, 0.001f)
     }
@@ -116,13 +117,13 @@ class SlabBoardValuesTest {
         assertEquals(700, SlabLook.of(pbg, ptext, dark = false).regionWeight)
     }
 
-    /** The board's card gradient (#2C2E34 to #1A1B1F, Paper #FBFAF7 to #F3F0EA) averages #22 23 27 and #F7F5F1. */
+    /** The card's fill is the tone ladder's raised step: [ToneLadder.RAISED] L* above the page (the mean of its gradient, one L* either side). */
     @Test
-    fun theCardFillIsTheMeanOfTheBoardsGradient() {
-        val paper = RaisedCard.fill(Rgb(0xECE8DF), Rgb(0x1D1D1F), dark = false)
-        within(247, paper) { it.red }
-        within(245, paper) { it.green }
-        within(240, paper) { it.blue }
+    fun theCardFillIsTheRaisedStepOfThePage() {
+        for (bg in listOf(Rgb(0xECE8DF), Rgb(0x111214), Rgb(0x1E1030))) {
+            val card = RaisedCard.fill(bg, Rgb(0x1D1D1F), dark = ColorMath.lightness(bg) < 50)
+            assertEquals("card on $bg", ColorMath.lightness(bg) + ToneLadder.RAISED, ColorMath.lightness(card), 0.5)
+        }
         assertEquals(1.0, RaisedCard.shadowAlpha(dark = true), 0.0)
         assertEquals(0.4 * Depth.SHADOW, RaisedCard.SHADOW_NEAR, 1e-6)
         assertEquals(0.6 * Depth.SHADOW, RaisedCard.SHADOW_FAR, 1e-6)
@@ -154,7 +155,7 @@ class SlabBoardValuesTest {
         }
     }
 
-    /** The lift's two layers, the same on every theme: the board's `0 3px 6px` and `0 16px 32px` at [Depth.SHADOW_REACH] of their reach; the insets are gone (alpha 0). */
+    /** The lift's two layers (a shadow on every theme), the same on every theme: the board's `0 3px 6px` and `0 16px 32px` at [Depth.SHADOW_REACH] of their reach; the insets are gone (alpha 0). */
     @Test
     fun theSlabLiftLayersAreTheSameOnEveryTheme() {
         fun check(
@@ -173,8 +174,8 @@ class SlabBoardValuesTest {
         val g = SlabLook.of(Rgb(0x111214), Rgb(0xEBE7DD), dark = true)
         assertEquals("graphite inset top", 0f, g.insetTop?.color?.alpha ?: 0f, 0f)
         assertEquals("graphite inset bottom", 0f, g.insetBottom?.color?.alpha ?: 0f, 0f)
-        check("graphite near", g.near, Color.White, 2f * Depth.SHADOW_REACH, 2f * Depth.SHADOW_REACH)
-        check("graphite far", g.far, Color.White, 10.667f * Depth.SHADOW_REACH, 10.667f * Depth.SHADOW_REACH)
+        check("graphite near", g.near, Color.Black, 2f * Depth.SHADOW_REACH, 2f * Depth.SHADOW_REACH)
+        check("graphite far", g.far, Color.Black, 10.667f * Depth.SHADOW_REACH, 10.667f * Depth.SHADOW_REACH)
         val p = SlabLook.of(Rgb(0xECE8DF), Rgb(0x1D1D1F), dark = false)
         assertEquals(null, p.insetTop)
         assertEquals("paper inset bottom", 0f, p.insetBottom?.color?.alpha ?: 0f, 0f)
@@ -185,7 +186,7 @@ class SlabBoardValuesTest {
         assertEquals(4f * Depth.GLOW_REACH, SlabDimens.barGlowSigma.value, 0.01f)
     }
 
-    /** A custom dark purple page (the Nova's kind) derives the same recipe: white over its own colour, lit from beneath. */
+    /** A custom dark purple page (the Nova's kind) derives the same recipe: white rim over its own colour, a shadow beneath. */
     @Test
     fun aCustomDarkPurpleThemeDerivesTheRecipe() {
         val bg = Rgb(0x1E1030)
@@ -194,7 +195,7 @@ class SlabBoardValuesTest {
         assertEquals("lighter than the page", true, top.red > 0x1E / 255f)
         assertEquals("still purple", true, top.blue > top.green)
         assertEquals(Color.White, look.edge.copy(alpha = 1f))
-        assertEquals(Color.White, look.far?.color?.copy(alpha = 1f))
+        assertEquals("the lift is a shadow", Color.Black, look.far?.color?.copy(alpha = 1f))
         assertEquals(0f, look.ring.alpha, 0f)
     }
 }

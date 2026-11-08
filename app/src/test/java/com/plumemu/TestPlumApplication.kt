@@ -7,6 +7,7 @@ class TestPlumApplication : PlumApplication() {
     override fun makeTelemetry(): Telemetry? = null
 
     override fun onCreate() {
+        unstickMainChoreographer()
         resetComposeDispatcher()
         super.onCreate()
     }

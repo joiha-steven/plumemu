@@ -78,6 +78,14 @@ class DiscGroupingTest {
         MatchedFile(name, DiscMarkers.canonical(name.substringBeforeLast('.')), name.substringAfterLast('.'), system)
 
     @Test
+    fun theShownDiscDoesNotDependOnTheListingOrder() {
+        val files = listOf(file("Duo (Disc 1).iso"), file("Duo (Disc 1).chd"), file("Duo (Disc 2).chd"))
+        val forward = DiscGrouping.group(files).single().file.item
+        val reversed = DiscGrouping.group(files.reversed()).single().file.item
+        assertEquals(forward, reversed)
+    }
+
+    @Test
     fun discCountIsTheNumberOfDiscsForADiscSetAndAPlaylistAlike() {
         // Disc 1 kept twice (.chd and .iso) is one disc, with or without the playlist.
         val discs = listOf(file("Duo (Disc 1).chd"), file("Duo (Disc 1).iso"), file("Duo (Disc 2).chd"))

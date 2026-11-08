@@ -15,7 +15,7 @@ import com.plumemu.coreui.theme.PlumTheme
 
 /** The kinds of value at the right of a Settings row (decision 0011 point 4), one row each, tagged by [ValueRow]. */
 internal enum class ValueRow(val option: SettingsOption) {
-    CycleFocused(SettingsOption.Font),
+    CycleFocused(SettingsOption.LeftEdge),
     CycleResting(SettingsOption.TextSize),
     SubPage(SettingsOption.RomFolders),
     SubPageBare(SettingsOption.Licenses),

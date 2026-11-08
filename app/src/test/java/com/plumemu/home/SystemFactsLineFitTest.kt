@@ -44,7 +44,7 @@ class SystemFactsLineFitTest {
         val content = FakeHomeContent.board().withArcadeAbout()
         val index = content.entries.indexOfFirst { it.id == BOARD_ARCADE_ID }
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = PlumFont.Serif)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 HomeAt(content, listOf(Action.TapItem(Column.Systems, index), Action.Enter))
             }
         }

@@ -39,10 +39,6 @@ class SettingsScreenshotTest {
             SettingsAt(colorPageAt(SettingsOption.Background, settings), settings)
         }
 
-    /** Text weight focused, showing the default ‹ Medium ›, with its explanation beside (wide). */
-    @Test
-    fun appearanceTextWeight() = ReferenceShots.capture("settings_appearance_text_weight") { SettingsAt(optionsAt(SettingsOption.TextWeight), settingsForShot()) }
-
     /** Left edge focused, showing the default ‹ Game counts ›, with its explanation beside (wide). */
     @Test
     fun appearanceLeftEdge() = ReferenceShots.capture("settings_appearance_left_edge") { SettingsAt(optionsAt(SettingsOption.LeftEdge), settingsForShot()) }

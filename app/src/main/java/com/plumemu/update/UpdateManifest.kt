@@ -25,6 +25,8 @@ data class UpdateManifest(
     val notesUrl: String?,
     /** The notes grouped by kind, in [SectionKind] order; empty when the manifest has none, then [notes] is shown. */
     val sections: List<NoteSection> = emptyList(),
+    /** Dex metadata files built with this APK, by API range; empty when the manifest has none or none was readable. */
+    val dexMetadata: List<DexMetadataFile> = emptyList(),
 )
 
 /** What a group of notes is about, in the order the panel lists them. */
@@ -135,7 +137,7 @@ object UpdateManifests {
         val released = string(root, "released").also { if (!ISO_DATE.matches(it)) throw BadField("released", "not an ISO date") }
         val notes = notes(root)
         val notesUrl = if (root.has("notesUrl") && !root.isNull("notesUrl")) httpsUrl(string(root, "notesUrl")) else null
-        return UpdateManifest(versionCode, versionName, apkUrl, size, sha256, minSdk, released, notes, notesUrl, sections(root))
+        return UpdateManifest(versionCode, versionName, apkUrl, size, sha256, minSdk, released, notes, notesUrl, sections(root), dexMetadata(root, manifestUrl))
     }
 
     private fun string(
@@ -210,18 +212,74 @@ object UpdateManifests {
     private const val MAX_KIND_LOG = 20
 
     /**
+     * The optional `dexMetadata`. It only speeds up the first runs after an update, so it never refuses
+     * the manifest: an entry that is wrong in any way is dropped alone, and entries whose API ranges
+     * overlap (which one would be meant is unknown) drop the whole field. Each drop is logged under `PlumUpdate`.
+     */
+    private fun dexMetadata(
+        root: JSONObject,
+        manifestUrl: String,
+    ): List<DexMetadataFile> {
+        if (!root.has("dexMetadata") || root.isNull("dexMetadata")) return emptyList()
+        val array = root.opt("dexMetadata") as? JSONArray ?: return droppedDexMetadata("not a list")
+        if (array.length() > DexMetadata.MAX_ENTRIES) return droppedDexMetadata("more than ${DexMetadata.MAX_ENTRIES} entries")
+        val entries =
+            (0 until array.length()).mapNotNull { i ->
+                try {
+                    dexMetadataEntry(array.opt(i) as? JSONObject ?: throw BadField("dexMetadata", "not an object"), manifestUrl)
+                } catch (e: BadField) {
+                    Log.w(TAG, "Manifest field dexMetadata: entry ${i + 1} dropped (${e.problem})")
+                    null
+                }
+            }
+        if (DexMetadata.overlap(entries)) return droppedDexMetadata("API ranges overlap")
+        return entries
+    }
+
+    private fun dexMetadataEntry(
+        entry: JSONObject,
+        manifestUrl: String,
+    ): DexMetadataFile {
+        val minSdk = long(entry, "minSdk")
+        if (minSdk < DexMetadata.FIRST_SDK || minSdk > Int.MAX_VALUE) throw BadField("minSdk", "below ${DexMetadata.FIRST_SDK} or out of range")
+        val maxSdk =
+            if (entry.has("maxSdk") && !entry.isNull("maxSdk")) {
+                long(entry, "maxSdk").also { if (it < minSdk || it > Int.MAX_VALUE) throw BadField("maxSdk", "below minSdk or out of range") }.toInt()
+            } else {
+                null
+            }
+        val url = sameOriginUrl(string(entry, "file"), manifestUrl, "file", ".dm")
+        val size = long(entry, "size").also { if (it <= 0 || it > DexMetadata.MAX_BYTES) throw BadField("size", "out of range") }
+        val sha256 = string(entry, "sha256").also { if (!HEX_64.matches(it)) throw BadField("sha256", "not 64 hex digits") }.lowercase(Locale.ROOT)
+        return DexMetadataFile(minSdk.toInt(), maxSdk, url, size, sha256)
+    }
+
+    private fun droppedDexMetadata(why: String): List<DexMetadataFile> {
+        Log.w(TAG, "Manifest field dexMetadata: $why; the update installs without it")
+        return emptyList()
+    }
+
+    /**
      * The APK's address, relative to the manifest. It must stay on the manifest's own server (scheme,
      * host and port): the privacy notes promise requests go to that one host.
      */
     private fun apkUrl(
         relative: String,
         manifestUrl: String,
+    ): String = sameOriginUrl(relative, manifestUrl, "apk", ".apk")
+
+    /** [relative] resolved against the manifest's address; on any other server, or not ending in [suffix], a [BadField] for [field]. */
+    private fun sameOriginUrl(
+        relative: String,
+        manifestUrl: String,
+        field: String,
+        suffix: String,
     ): String {
-        val base = uri(manifestUrl) ?: throw BadField("apk", "the manifest's own address is not a URL")
-        val resolved = uri(relative)?.let { base.resolve(it) } ?: throw BadField("apk", "not a URL")
+        val base = uri(manifestUrl) ?: throw BadField(field, "the manifest's own address is not a URL")
+        val resolved = uri(relative)?.let { base.resolve(it) } ?: throw BadField(field, "not a URL")
         val sameOrigin = resolved.scheme.equals(base.scheme, ignoreCase = true) && resolved.host.equals(base.host, ignoreCase = true) && resolved.port == base.port
-        if (!sameOrigin) throw BadField("apk", "not on the manifest's server")
-        if (!resolved.path.orEmpty().endsWith(".apk")) throw BadField("apk", "not an .apk")
+        if (!sameOrigin) throw BadField(field, "not on the manifest's server")
+        if (!resolved.path.orEmpty().endsWith(suffix)) throw BadField(field, "not a $suffix")
         return resolved.toString()
     }
 

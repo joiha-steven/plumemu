@@ -49,9 +49,9 @@ abstract class RowYearRegionFitBase {
     private fun show(
         actions: List<Action>,
         size: TextSize = TextSize.Largest,
-        font: PlumFont = PlumFont.Sans,
+        font: PlumFont = PlumFont.Jost,
     ) = compose.setContent {
-        PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) {
+        PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
             HomeAt(content, toList + actions)
         }
     }
@@ -63,7 +63,7 @@ abstract class RowYearRegionFitBase {
         size: TextSize = TextSize.Largest,
         wholeTitle: Boolean = true,
         regionCode: String = "USA",
-        font: PlumFont = PlumFont.Sans,
+        font: PlumFont = PlumFont.Jost,
     ) {
         region = regionCode
         show(emptyList(), size, font)
@@ -120,9 +120,6 @@ class RowYearRegionFit768Test : RowYearRegionFitBase() {
     @Test fun besideTheDetailsAtHugeWithAWideRegion() = titleStaysWhole("768x432 Huge WLD", text = "1995", size = TextSize.Huge, regionCode = "WLD")
 
     @Test fun besideTheDetailsAtLargerWithAWideRegion() = titleStaysWhole("768x432 Larger WLD", text = "1995 · WLD", size = TextSize.Larger, regionCode = "WLD")
-
-    // Mono's wide letters leave no room for the region from Large (the default size).
-    @Test fun besideTheDetailsAtLargeInMono() = titleStaysWhole("768x432 Large Mono", text = "1995", size = TextSize.Large, font = PlumFont.Mono)
 
     // From Huge the systems column grows, the 400 dp list shrinks and year · region would cut the title: the year alone.
     @Test fun besideTheDetailsAtLargestKeepsTheYear() = titleStaysWhole("768x432 Largest", text = "1995")

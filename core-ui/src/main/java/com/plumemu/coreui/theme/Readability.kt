@@ -98,6 +98,109 @@ object Readability {
     }
 
     /**
+     * The colour to offer when [colour] is refused for [role] on [page] (design/rules.md > Suggesting a colour); [colour] itself when it passes.
+     * Unlike [nearestPassing], which settles a stored colour and keeps its HSL hue and saturation, a suggestion may change more to look right:
+     * - it moves OKLCH lightness, keeping the hue the eye sees and as much chroma as sRGB shows there;
+     * - an accent aims at [SUGGESTED_ACCENT_CONTRAST], where the sets live, not at the floor;
+     * - an accent that would keep under [MUD_CHROMA] of its chroma (dark yellow turning olive) turns its hue up to [MUD_TURN_DEGREES] away
+     *   from yellow ([YELLOW_HUE]), toward the neighbour that holds its colour: yellow to marigold, orange to rust, lime to green;
+     * - on a coloured page (chroma at least [COLOURED_PAGE]) an accent within [CLASH_DEGREES] of the page's hue is offered at the opposite hue
+     *   (180°, then 150° and 210°, then 120° and 240°), at least as colourful as the page;
+     * - text keeps quiet: the page's own hue at chroma at most [TEXT_CHROMA].
+     * Falls back to [nearestPassing] where none of that passes.
+     */
+    fun suggest(
+        colour: Rgb,
+        page: Rgb,
+        role: ColorRole,
+    ): Rgb {
+        if (passes(colour, page, role)) return colour
+        val own = Oklch.of(colour)
+        val ground = Oklch.of(page)
+        val found =
+            when (role) {
+                ColorRole.Text -> {
+                    val hue = if (ground.c >= GREY_PAGE) ground.h else own.h
+                    moveLightness(Oklch(own.l, minOf(own.c, TEXT_CHROMA), hue), page) { passes(it, page, ColorRole.Text) }
+                }
+                ColorRole.Accent -> {
+                    val clashes = ground.c >= COLOURED_PAGE && hueDistance(own.h, ground.h) < Math.toRadians(CLASH_DEGREES)
+                    val starts =
+                        if (clashes) {
+                            OPPOSITE_TURNS.map { Oklch(own.l, maxOf(own.c, ground.c), ground.h + Math.toRadians(it)) }
+                        } else {
+                            listOf(own)
+                        }
+                    starts.firstNotNullOfOrNull { accentWithoutMud(it, page) }
+                }
+            }
+        return found ?: nearestPassing(colour, page, role)
+    }
+
+    /** [start] moved in OKLCH lightness to [SUGGESTED_ACCENT_CONTRAST] on [page], its hue turned when the move would muddy it; null when nothing passes. */
+    private fun accentWithoutMud(
+        start: Oklch,
+        page: Rgb,
+    ): Rgb? {
+        val reaches = { c: Rgb -> ColorMath.contrast(c, page) >= SUGGESTED_ACCENT_CONTRAST }
+        val straight = moveLightness(start, page, reaches) ?: return null
+        if (start.c < GREY_PAGE || kept(straight, start) >= MUD_CHROMA) return straight
+        var best = straight
+        val away = if (((Math.toDegrees(start.h) % 360) + 360) % 360 < YELLOW_HUE) -1 else 1
+        var turn = MUD_TURN_STEP
+        while (turn <= MUD_TURN_DEGREES) {
+            val turned = moveLightness(start.copy(h = start.h + away * Math.toRadians(turn)), page, reaches)
+            if (turned != null) {
+                if (kept(turned, start) >= MUD_CHROMA) return turned
+                if (kept(turned, start) > kept(best, start)) best = turned
+            }
+            turn += MUD_TURN_STEP
+        }
+        return best
+    }
+
+    private fun kept(
+        moved: Rgb,
+        start: Oklch,
+    ) = Oklch.of(moved).c / start.c
+
+    /** The nearest OKLCH lightness of [start] (its hue, chroma clipped to sRGB) that [ok] accepts, the higher contrast when both ways tie. */
+    private fun moveLightness(
+        start: Oklch,
+        page: Rgb,
+        ok: (Rgb) -> Boolean,
+    ): Rgb? {
+        for (step in 0..LIGHTNESS_STEPS) {
+            val shift = step / LIGHTNESS_STEPS.toDouble()
+            val found = listOf(start.l + shift, start.l - shift).filter { it in 0.0..1.0 }.distinct().map { start.copy(l = it).toRgb() }.filter(ok)
+            if (found.isNotEmpty()) return found.maxBy { ColorMath.contrast(it, page) }
+        }
+        return null
+    }
+
+    private fun hueDistance(
+        a: Double,
+        b: Double,
+    ): Double {
+        val d = ((Math.toDegrees(a - b) % 360) + 360) % 360
+        return Math.toRadians(minOf(d, 360 - d))
+    }
+
+    /** Where suggested accents land: the sets' own margin over the 3:1 floor. */
+    const val SUGGESTED_ACCENT_CONTRAST = 3.5
+    const val MUD_CHROMA = 0.85
+    const val MUD_TURN_DEGREES = 40.0
+    private const val MUD_TURN_STEP = 5.0
+
+    /** OKLCH hue of the purest yellow: a muddy hue below it turns toward red, one above it toward green. */
+    const val YELLOW_HUE = 110.0
+    const val COLOURED_PAGE = 0.06
+    const val CLASH_DEGREES = 60.0
+    const val TEXT_CHROMA = 0.04
+    private const val GREY_PAGE = 0.02
+    private val OPPOSITE_TURNS = listOf(180.0, 150.0, 210.0, 120.0, 240.0)
+
+    /**
      * True when some text colour can read on [background]: Light or Dark passes. Middle backgrounds
      * (relative luminance about 0.083 to 0.35 at 7:1, e.g. #808080) allow none, so they are never offered or
      * accepted as a background; backgrounds already stored there

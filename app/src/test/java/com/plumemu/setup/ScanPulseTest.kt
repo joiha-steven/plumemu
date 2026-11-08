@@ -162,18 +162,16 @@ class ScanPulseTest {
         return layout.lineCount
     }
 
-    /** Runs [check] at every text size and in Mono; returns the most lines the text took at any of them. */
+    /** Runs [check] at every text size; returns the most lines the text took at any of them. */
     private fun everySizeAndFont(check: (String) -> Int): Int {
         var mostLines = 1
         var size by mutableStateOf(TextSize.Largest)
-        var font by mutableStateOf(PlumFont.Sans)
         compose.mainClock.autoAdvance = false
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { content() }
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { content() }
         }
-        val all = TextSize.entries.map { PlumFont.Sans to it } + listOf(PlumFont.Mono to TextSize.Large, PlumFont.Mono to TextSize.Largest)
+        val all = TextSize.entries.map { PlumFont.Jost to it }
         for ((f, z) in all) {
-            font = f
             size = z
             compose.mainClock.advanceTimeByFrame()
             compose.mainClock.advanceTimeByFrame()
@@ -185,7 +183,7 @@ class ScanPulseTest {
     private lateinit var content: @Composable () -> Unit
 
     @Test
-    fun theSetupDotStaysByTheFirstLineAtEveryTextSizeAndInMono() {
+    fun theSetupDotStaysByTheFirstLineAtEveryTextSize() {
         content = { SetupAt(SetupFakes.scanning) }
         val mostLines = everySizeAndFont { assertDotBesideFirstLine(SetupTags.SCAN_PULSE, SetupTags.SCAN_LINE, "setup $it") }
         assertTrue("the setup line never wrapped (most lines: $mostLines)", mostLines > 1)
@@ -193,7 +191,7 @@ class ScanPulseTest {
 
     @Test
     fun theRescanPanelDotStaysByTheFirstLineEvenWhenTheLineWraps() {
-        // The longest progress line: big numbers in the naming phase, so the larger sizes and fonts wrap it.
+        // The longest progress line: big numbers in the naming phase, so the larger sizes wrap it.
         val longest = ScanReport(phase = ScanPhase.Naming, gamesNamed = 123_456, gamesToName = 234_567)
         content = { SettingsAt(optionsAt(SettingsOption.Rescan), content = ShotContent.library.copy(isScanning = true, scan = longest)) }
         val mostLines = everySizeAndFont { assertDotBesideFirstLine(SettingsPanelTags.SCAN_PULSE, SettingsPanelTags.STATUS, "rescan panel $it") }

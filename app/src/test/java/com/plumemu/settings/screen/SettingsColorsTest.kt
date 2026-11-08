@@ -15,6 +15,7 @@ import com.plumemu.settings.colorSet
 import com.plumemu.settings.colorsCycle
 import com.plumemu.settings.toSetting
 import com.plumemu.settings.toThemeSettings
+import com.plumemu.settings.withColors
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -43,12 +44,11 @@ internal class SettingsColorsTest : SettingsModelHarness() {
         assertEquals(OptionKind.Choice, SettingsOption.Colors.kind)
     }
 
-    /** Pocket, DotMatrix and Banana moved their background with the dark text #1C1C1E: the old stored one is still the set. */
+    /** Pocket and Banana moved their background with the dark text #1C1C1E: the old stored one is still the set. */
     @Test
     fun anOldStoredBackgroundOfAMovedSetStillShowsItsNameAndDrawsTheNewOne() {
         val moved = listOf(
             Triple(ColorSet.Pocket, 0xCDCCC4, R.string.settings_colors_pocket),
-            Triple(ColorSet.DotMatrix, 0xB4DB11, R.string.settings_colors_dot_matrix),
             Triple(ColorSet.Banana, 0xF2CD3C, R.string.settings_colors_banana),
         )
         for ((set, old, name) in moved) {
@@ -66,7 +66,7 @@ internal class SettingsColorsTest : SettingsModelHarness() {
         }
     }
 
-    /** The stored dark text is a name (Dark), so every dark-text set, Paper included, still reads as itself. */
+    /** The stored dark text is a name (Dark), so every dark-text set, Daylight included, still reads as itself. */
     @Test
     fun everyDarkTextSetReadsAsItselfFromStoredDarkText() {
         for (set in ColorSet.entries.filter { it.textMode == com.plumemu.coreui.theme.TextMode.Dark }) {
@@ -80,35 +80,35 @@ internal class SettingsColorsTest : SettingsModelHarness() {
         actions.settings = PlumSettings.Defaults
         assertEquals(ColorSet.Plumemu, PlumSettings.Defaults.appearance.colorSet())
         assertEquals(R.string.settings_colors_plumemu, shown())
-        assertEquals("ten sets, no Custom without own colours", 10, SettingsOption.Colors.choiceCount(actions.settings))
+        assertEquals("17 sets, no Custom without own colours", 17, SettingsOption.Colors.choiceCount(actions.settings))
     }
 
     @Test
     fun pickingASetMovesAllThreeRowsToItsValues() {
         onColors(PlumSettings.Defaults.appearance)
         move(Direction.Right)
-        assertEquals(ColorSetting.Preset("Paper"), appearance.background)
+        assertEquals("a set is stored as own-colour hexes", ColorSetting.Custom(0xECEBE5), appearance.background)
         assertEquals(TextColorSetting.Dark, appearance.textColor)
-        assertEquals(ColorSetting.Preset("Red"), appearance.accent)
-        assertEquals(R.string.settings_colors_paper, shown())
+        assertEquals(ColorSetting.Custom(0x2A64D8), appearance.accent)
+        assertEquals(R.string.settings_colors_daylight, shown())
         move(Direction.Right)
-        assertEquals("not a preset: the own-colour hex", ColorSetting.Custom(0xD2D1CA), appearance.background)
-        assertEquals(TextColorSetting.Dark, appearance.textColor)
-        assertEquals(ColorSetting.Custom(0x8C1D4E), appearance.accent)
-        assertEquals(R.string.settings_colors_pocket, shown())
+        assertEquals(ColorSetting.Custom(0x0F2142), appearance.background)
+        assertEquals(TextColorSetting.Light, appearance.textColor)
+        assertEquals(ColorSetting.Custom(0xF4B740), appearance.accent)
+        assertEquals(R.string.settings_colors_ultramarine, shown())
         // Every set, stepped to in order, is the one the row then shows, with its three values.
         for (set in ColorSet.entries.drop(3)) {
             move(Direction.Right)
             assertEquals(set, appearance.colorSet())
             assertEquals(set.textMode.name, appearance.textColor.stored)
         }
-        assertEquals(R.string.settings_colors_cream, shown())
+        assertEquals(R.string.settings_colors_banana, shown())
         assertNull("sets picked from sets keep no own colours", appearance.ownColors)
         move(Direction.Right)
-        assertEquals("right stops at the last set", ColorSet.Cream, appearance.colorSet())
+        assertEquals("right stops at the last set", ColorSet.Banana, appearance.colorSet())
         press(Action.Enter)
         assertEquals("A opens the panel instead of stepping", PanelPage.ColorSets, model.focus.page)
-        assertEquals(ColorSet.Cream, appearance.colorSet())
+        assertEquals(ColorSet.Banana, appearance.colorSet())
         press(Action.Back)
         pickInColorsPanel(ColorSet.Plumemu)
         assertEquals(ColorSet.Plumemu, appearance.colorSet())
@@ -119,12 +119,17 @@ internal class SettingsColorsTest : SettingsModelHarness() {
     }
 
     @Test
-    fun aSetsAccentThatIsAPresetsColourIsStoredAsThatPreset() {
+    fun everySetIsStoredAsItsOwnHexColoursNeverAPresetName() {
         onColors(PlumSettings.Defaults.appearance)
-        repeat(ColorSet.Charcoal.ordinal) { move(Direction.Right) }
-        assertEquals(ColorSet.Charcoal, appearance.colorSet())
-        assertEquals("#5FD38D is Green with light text", ColorSetting.Preset("Green"), appearance.accent)
-        assertEquals(ColorSetting.Custom(0x2A2B2E), appearance.background)
+        repeat(ColorSet.ColdGrey.ordinal) { move(Direction.Right) }
+        assertEquals(ColorSet.ColdGrey, appearance.colorSet())
+        assertEquals(ColorSetting.Custom(0x8EC3FF), appearance.accent)
+        assertEquals(ColorSetting.Custom(0x272B32), appearance.background)
+        for (set in ColorSet.entries) {
+            val stored = AppearanceSettings().withColors(ColorSet.Banana).withColors(set)
+            assertTrue("$set background", stored.background is ColorSetting.Custom)
+            assertTrue("$set accent", stored.accent is ColorSetting.Custom)
+        }
     }
 
     @Test
@@ -139,7 +144,7 @@ internal class SettingsColorsTest : SettingsModelHarness() {
             actions.settings = PlumSettings(appearance = edited)
             assertNull("$edited", edited.colorSet())
             assertEquals(R.string.settings_color_custom, shown())
-            assertEquals("Custom is the value it is on", 11, SettingsOption.Colors.choiceCount(actions.settings))
+            assertEquals("Custom is the value it is on", 18, SettingsOption.Colors.choiceCount(actions.settings))
         }
         // Through the model: Text color › Light on Pocket is refused (unreadable), so a hand change that
         // reads is needed: a different accent from the Accent row's panel is covered above.
@@ -165,9 +170,9 @@ internal class SettingsColorsTest : SettingsModelHarness() {
         assertEquals(ColorSet.Plumemu, appearance.colorSet())
         assertEquals(OwnColors(own.background, own.textColor, own.accent, buttonSet = "None"), appearance.ownColors)
         move(Direction.Right)
-        assertEquals(ColorSet.Paper, appearance.colorSet())
+        assertEquals(ColorSet.Daylight, appearance.colorSet())
         assertEquals("a set picked from a set keeps them", OwnColors(own.background, own.textColor, own.accent, buttonSet = "None"), appearance.ownColors)
-        assertEquals("Custom stays in the cycle", 11, SettingsOption.Colors.choiceCount(actions.settings))
+        assertEquals("Custom stays in the cycle", 18, SettingsOption.Colors.choiceCount(actions.settings))
         move(Direction.Left)
         move(Direction.Left)
         assertEquals("left stops at the first set", ColorSet.Plumemu, appearance.colorSet())
@@ -189,20 +194,21 @@ internal class SettingsColorsTest : SettingsModelHarness() {
         actions.settings = actions.settings.copy(appearance = appearance.copy(background = ColorSetting.Preset("Plum")))
         assertNull(appearance.colorSet())
         move(Direction.Left)
-        assertEquals(ColorSet.Cream, appearance.colorSet())
+        assertEquals(ColorSet.Banana, appearance.colorSet())
         assertEquals(ColorSetting.Preset("Plum"), appearance.ownColors?.background)
     }
 
     @Test
     fun withoutOwnColoursTheCycleHasNoCustom() {
-        val onPaper = PlumSettings.Defaults.appearance.copy(background = ColorSetting.Preset("Paper"), textColor = TextColorSetting.Dark, accent = ColorSetting.Preset("Red"))
-        assertEquals(ColorSet.entries.toList(), onPaper.colorsCycle())
-        onColors(onPaper)
+        // The removed Super set's stored look (own colours) reads as Ivory.
+        val onSuper = PlumSettings.Defaults.appearance.copy(background = ColorSetting.Custom(0xD9D8D3), textColor = TextColorSetting.Dark, accent = ColorSetting.Custom(0xAA2924))
+        assertEquals(ColorSet.entries.toList(), onSuper.colorsCycle())
+        onColors(onSuper)
         repeat(ColorSet.entries.size) { move(Direction.Right) }
-        assertEquals("right stops at the last set: no Custom after it", ColorSet.Cream, appearance.colorSet())
+        assertEquals("right stops at the last set: no Custom after it", ColorSet.Banana, appearance.colorSet())
         assertNull(appearance.ownColors)
         // Own colours that are a set's (a hand-made file) bring nothing a set does not: no Custom either.
-        val keptAsSet = onPaper.copy(ownColors = OwnColors(ColorSetting.Preset("Black"), TextColorSetting.Light, ColorSetting.Custom(0x3E7BE0)))
+        val keptAsSet = onSuper.copy(ownColors = OwnColors(ColorSetting.Preset("Black"), TextColorSetting.Light, ColorSetting.Custom(0x3E7BE0)))
         assertFalse(null in keptAsSet.colorsCycle())
     }
 
@@ -213,7 +219,7 @@ internal class SettingsColorsTest : SettingsModelHarness() {
         move(Direction.Left)
         move(Direction.Left)
         move(Direction.Left)
-        assertEquals("Custom, then Cream, Banana, Ivory", ColorSet.Ivory, appearance.colorSet())
+        assertEquals("Custom, then Banana, Cold grey, Clear grape", ColorSet.ClearGrape, appearance.colorSet())
         assertEquals("the own colours are the ones before the first press", ColorSetting.Preset("Graphite"), appearance.ownColors?.background)
     }
 

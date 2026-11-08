@@ -5,7 +5,6 @@ import com.plumemu.R
 import com.plumemu.coredata.settings.BoxArtRegionSetting
 import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.ConfirmButtonSetting
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.InGameSetting
 import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.SwitchSystemWithSetting
@@ -16,7 +15,6 @@ import com.plumemu.coredata.settings.SystemOrderSetting
 import com.plumemu.coredata.settings.GridSizeSetting
 import com.plumemu.coredata.settings.LeftEdgeSetting
 import com.plumemu.coredata.settings.TextSizeSetting
-import com.plumemu.coredata.settings.TextWeightSetting
 import com.plumemu.secondscreen.SecondScreen
 import com.plumemu.secondscreen.isSecondScreenOn
 import com.plumemu.settings.colorSet
@@ -45,7 +43,7 @@ internal enum class SettingsSection(
     ),
     Appearance(
         R.string.settings_section_appearance,
-        listOf(SettingsOption.Language, SettingsOption.Colors, SettingsOption.Accent, SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight),
+        listOf(SettingsOption.Language, SettingsOption.Colors, SettingsOption.Accent, SettingsOption.TextSize),
     ),
     HomeScreen(
         R.string.settings_section_home_screen,
@@ -94,7 +92,7 @@ internal enum class SettingsSection(
 
     /**
      * The rows shown for [content]: in Emulators one [SettingsOption.SystemEmulator] per system with
-     * games; in Controls Vibration only on a device with a vibrator; in Home screen Grid size only while Show button hints is off; in Library Systems after Sort games (only while a system has games), Files not added, then "Unidentified games (n)"
+     * games; in Controls Vibration only on a device with a vibrator; in Home screen Grid size only while Show button hints is off; in Library "Folder could not be read" after Rescan library (only while a scan could not read a sub-folder), Systems after Sort games (only while a system has games), Files not added, then "Unidentified games (n)"
      * and "Hidden games (n)", each only while it has games, then Clear Recent… last; in Second screen In
      * game after the switch only while it is on (Settings has no dimmed rows); nothing in a section that is not [shownIn]. A build from source has
      * no statistics server and no update manifest: none of the rows that need them is listed, and Export logs,
@@ -111,7 +109,11 @@ internal enum class SettingsSection(
             // ScreenScraper (its status line only in a build without credentials), then RetroAchievements.
             this == Accounts -> accountRowsIn(content) + options
             this == Library ->
-                options + listOfNotNull(SettingsOption.Systems.takeIf { content.librarySystems.isNotEmpty() }) +
+                listOf(SettingsOption.RomFolders, SettingsOption.Rescan) +
+                    // Right under Rescan library, whose Scan again it offers: only while a scan could not read a sub-folder.
+                    listOfNotNull(SettingsOption.UnreadableFolders.takeIf { unreadableFolders(content).isNotEmpty() }) +
+                    (options - SettingsOption.RomFolders - SettingsOption.Rescan) +
+                    listOfNotNull(SettingsOption.Systems.takeIf { content.librarySystems.isNotEmpty() }) +
                     SettingsOption.FilesNotAdded +
                     listOfNotNull(
                         SettingsOption.UnidentifiedGames.takeIf { content.unidentifiedGames.isNotEmpty() },
@@ -177,11 +179,9 @@ internal enum class SettingsOption(
     /** A row of Colors' panel, not of the list ([COLORS_TEXT_ITEM]). */
     TextColor(R.string.settings_text_color, OptionKind.Swatch),
     Accent(R.string.settings_accent, OptionKind.Swatch),
-    Font(R.string.settings_font, OptionKind.Choice),
     TextSize(R.string.settings_text_size, OptionKind.Choice),
 
     /** ‹ Thin › / ‹ Medium › / ‹ Bold ›: how heavy every text role is drawn; not picked is Medium. */
-    TextWeight(R.string.settings_text_weight, OptionKind.Choice),
 
     /** ‹ Game counts › / ‹ System codes › / ‹ Letters ›: what the home screen's peek shows while a games list is focused; not picked is Game counts. */
     LeftEdge(R.string.settings_left_edge, OptionKind.Choice),
@@ -249,6 +249,12 @@ internal enum class SettingsOption(
     /** ‹ A–Z › / ‹ Maker & year › / ‹ Manual ›: how the main screen's system column is arranged. Never a row: the first item of the Systems panel. */
     SystemOrder(R.string.settings_system_order, OptionKind.Choice),
 
+    /**
+     * "psx »" or "2 folders »": listed only while the last scan of a folder could not list some sub-folders ([unreadableFolders]);
+     * its panel says so and offers Scan again and Skip this folder ([PanelPage.UnreadableFolders]).
+     */
+    UnreadableFolders(R.string.settings_unreadable_row, OptionKind.Opens),
+
     /** "16 shown »": System order, then every system with games, to arrange (A picks one up) and hide (Y). Listed while a system has games. */
     Systems(R.string.settings_systems, OptionKind.Opens),
 
@@ -286,7 +292,7 @@ internal enum class SettingsOption(
 
     /**
      * "Box art »" with the source in force as its value: its panel ([PanelPage.BoxArtSource]) lists the three
-     * choices (ScreenScraper, Box art only, Plumemu's own covers), each with one line on what it brings; A applies.
+     * choices (ScreenScraper, Default source, Plumemu's own covers), each with one line on what it brings; A applies.
      */
     BoxArtSource(R.string.settings_box_art_source, OptionKind.Opens),
 
@@ -445,6 +451,9 @@ internal enum class PanelPage {
 
     /** Library › Files not added: every line of [SettingsContent.notAdded]; A on a folder's line opens that folder's page. */
     FilesNotAdded,
+
+    /** Library › Folder could not be read: Scan again, then each unreadable sub-folder; A skips it ([unreadablePanelItems]). */
+    UnreadableFolders,
 }
 
 /**
@@ -458,9 +467,7 @@ internal fun SettingsOption.choiceIndex(
 ): Int =
     when (this) {
         SettingsOption.Colors -> settings.appearance.let { it.colorsCycle().indexOf(it.colorSet()) }
-        SettingsOption.Font -> settings.appearance.font.ordinal
         SettingsOption.TextSize -> (settings.appearance.textSize ?: defaultTextSize).ordinal
-        SettingsOption.TextWeight -> (settings.appearance.textWeight ?: TextWeightSetting.Default).ordinal
         SettingsOption.LeftEdge -> (settings.appearance.leftEdge ?: LeftEdgeSetting.Default).ordinal
         SettingsOption.GridSize -> settings.appearance.gridSize.ordinal
         SettingsOption.SortGames -> SortChoices(settings.library.sortGames, sorts).options.indexOf(settings.library.sortGames)
@@ -477,9 +484,7 @@ internal fun SettingsOption.choiceCount(settings: PlumSettings, sorts: SortChoic
     when (this) {
         // Custom is a value only while there is a custom look to be on or go back to.
         SettingsOption.Colors -> settings.appearance.colorsCycle().size
-        SettingsOption.Font -> FontSetting.entries.size
         SettingsOption.TextSize -> TextSizeSetting.entries.size
-        SettingsOption.TextWeight -> TextWeightSetting.entries.size
         SettingsOption.LeftEdge -> LeftEdgeSetting.entries.size
         SettingsOption.GridSize -> GridSizeSetting.entries.size
         SettingsOption.SortGames -> SortChoices(settings.library.sortGames, sorts).options.size
@@ -517,9 +522,7 @@ private fun SettingsOption.withAppearanceChoice(
     settings.withAppearance {
         when (this@withAppearanceChoice) {
             SettingsOption.Colors -> it.withColors(it.colorsCycle()[index])
-            SettingsOption.Font -> it.copy(font = FontSetting.entries[index])
             SettingsOption.TextSize -> it.copy(textSize = TextSizeSetting.entries[index])
-            SettingsOption.TextWeight -> it.copy(textWeight = TextWeightSetting.entries[index])
             SettingsOption.LeftEdge -> it.copy(leftEdge = LeftEdgeSetting.entries[index])
             SettingsOption.GridSize -> it.copy(gridSize = GridSizeSetting.entries[index])
             else -> it

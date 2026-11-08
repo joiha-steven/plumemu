@@ -39,7 +39,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The wide details block's second row, LAST PLAYED | EMULATOR | BATTERY, at 768 x 432 and 832 x 468: the battery cell shows the time on a
- * charge at all six text sizes in every font, whole (never left out, never cut); with no estimate the cell is left out and the other two keep their columns; the old line under
+ * charge at all six text sizes, whole (never left out, never cut); with no estimate the cell is left out and the other two keep their columns; the old line under
  * the block is gone.
  */
 abstract class HomeDetailsBatteryCellBase {
@@ -52,7 +52,6 @@ abstract class HomeDetailsBatteryCellBase {
     private val FULL_FIRST_ROW = GameDetails(year = 1994, publisher = "Nintendo", genre = "Action", rating = 9, players = "1", description = "")
 
     private var size by mutableStateOf(TextSize.Small)
-    private var font by mutableStateOf(PlumFont.Sans)
 
     // The system's battery broadcast is sticky; a test can only send one with this deprecated call.
     @Suppress("DEPRECATION")
@@ -61,7 +60,7 @@ abstract class HomeDetailsBatteryCellBase {
             Intent(Intent.ACTION_BATTERY_CHANGED).putExtra(BatteryManager.EXTRA_LEVEL, 83).putExtra(BatteryManager.EXTRA_SCALE, 100),
         )
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 CompositionLocalProvider(LocalHomePlayFacts provides FakePlayFacts(pace = pace)) {
                     HomeAt(LibraryLikeContent.of(hasBoxArt = true, metroidDetails = FULL_FIRST_ROW), LibraryLikeContent.gamesFocused(LibraryLikeContent.SUPER_METROID))
                 }
@@ -80,9 +79,8 @@ abstract class HomeDetailsBatteryCellBase {
     fun theTimeOnAChargeIsOnScreenAtEverySizeInEveryFont() {
         show(BATTERY_LINE_SAMPLES[1].pace)
         val problems = mutableListOf<String>()
-        for (eachFont in PlumFont.entries) {
+        for (eachFont in listOf(PlumFont.Jost)) {
             for (each in TextSize.entries) {
-                font = eachFont
                 size = each
                 compose.waitForIdle()
                 val tag = "${each.name} ${eachFont.name}"
@@ -95,7 +93,7 @@ abstract class HomeDetailsBatteryCellBase {
                 // The cell says "About 2 h 45 min"; where the three rows leave no room for the word it says "2 h 45 min" (never in Jost at Medium).
                 val time = all.map { it.replace("\u00A0", " ") }
                 val mustSayAbout = eachFont == PlumFont.Jost && each == TextSize.Small
-                if (!(all.contains("BATTERY") && ("About 2 h 45 min" in time || (!mustSayAbout && "2 h 45 min" in time)))) problems += "$tag: $all"
+                if (!(all.contains("Battery") && ("About 2 h 45 min" in time || (!mustSayAbout && "2 h 45 min" in time)))) problems += "$tag: $all"
                 if (all.any { it.contains("\u2026") }) problems += "$tag: cut with an ellipsis $all"
                 if (findTagged(details(), "picking_battery_line") != null) problems += "$tag: the old line is still there"
                 notFullyShown(cell, compose.onRoot(useUnmergedTree = true).fetchSemanticsNode())?.let { problems += "$tag: the cell $it" }
@@ -110,7 +108,7 @@ abstract class HomeDetailsBatteryCellBase {
         val block = findTagged(details(), HomeTags.DETAILS_FACTS)!!
         assertNull("a cell with no estimate", findTagged(details(), HomeTags.DETAILS_BATTERY))
         val all = texts(block)
-        assertTrue("no BATTERY label", all.none { it.first == "BATTERY" })
+        assertTrue("no BATTERY label", all.none { it.first == "Battery" })
         assertTrue("five labels", all.count { it.first in LABELS } == 5)
         assertTrue("no dash", all.none { it.first.trim() in setOf("-", "\u2013", "\u2014") })
         // Five cells in the rows the arrangement gives them (HomeDetailsShares.kt): every row starts at the box's left edge.
@@ -136,7 +134,7 @@ abstract class HomeDetailsBatteryCellBase {
     }
 
     private companion object {
-        val LABELS = setOf("GENRE", "RATING", "PLAYED", "LAST PLAYED", "EMULATOR", "BATTERY")
+        val LABELS = setOf("Genre", "Rating", "Played", "Last played", "Emulator", "Battery")
     }
 }
 

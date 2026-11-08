@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import com.plumemu.coreinput.Action
@@ -155,15 +156,15 @@ abstract class AppsGridWholeCellsBase {
     }
 
     /**
-     * The focus ring stands on the cell it is drawn for while the strip is dragged from the games back toward the systems (the preview's spread opens again): the ring's
+     * The focus rim stands on the cell it is drawn for while the strip is dragged from the games back toward the systems (the preview's spread opens again): the ring's
      * centre is the focused cell's, not where the unspread grid would have put it.
      */
     protected fun theRingStandsOnItsSpreadCell() {
         val appsIndex = FakeHomeContent.board().entries.indexOfFirst { it.id == HomeContent.APPS_ID }
-        var accent = androidx.compose.ui.graphics.Color.Unspecified
+        var rim = androidx.compose.ui.graphics.Color.Unspecified
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite) {
-                accent = PlumTheme.colors.accent
+                rim = com.plumemu.coreui.theme.FocusLift.rimColor(PlumTheme.colors.isDark, PlumTheme.colors.text).compositeOver(PlumTheme.colors.bg)
                 HomeAt(content(), listOf(Action.TapItem(Column.Systems, appsIndex), Action.Enter, Action.TapItem(Column.Games, 3)), gridIds = setOf(HomeContent.APPS_ID))
             }
         }
@@ -177,9 +178,9 @@ abstract class AppsGridWholeCellsBase {
             val xs = mutableListOf<Int>()
             for (y in 0 until image.height) for (x in 0 until image.width) {
                 val c = image[x, y]
-                if (kotlin.math.abs(c.red - accent.red) + kotlin.math.abs(c.green - accent.green) + kotlin.math.abs(c.blue - accent.blue) < 0.06f) xs += x
+                if (kotlin.math.abs(c.red - rim.red) + kotlin.math.abs(c.green - rim.green) + kotlin.math.abs(c.blue - rim.blue) < 0.06f) xs += x
             }
-            assertTrue("no ring pixels found", xs.size > 20)
+            assertTrue("no rim pixels found", xs.size > 20)
             return grid.positionInRoot.x + xs.min() - cell.positionInRoot.x
         }
         val resting = ringLeftOfCell()

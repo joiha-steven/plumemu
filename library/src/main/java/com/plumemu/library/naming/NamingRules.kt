@@ -21,8 +21,11 @@ import com.plumemu.identify.arcade.ArcadeSystems
  * 4: every system: a title's own version, brackets and scene words are kept when the pack has
  * them (`TitleCleaner.keptForms`), names written together or without "&" are matched
  * (`MatchKey.runTogether`), and discs are identified by their track sizes (`TrackSizes`).
+ * 5: every system: a `+` ending a title stays, the packs' other regions (Latin America, Mexico,
+ * Portugal, ...) are regions, short upper-case tags (`(AGA)`, `(ECS)`) are not GoodTools regions,
+ * and a zip's manual or picture is not its ROM.
  */
-const val NAMING_RULES_VERSION = 4
+const val NAMING_RULES_VERSION = 5
 
 /** The systems whose naming changed in each version above 0. */
 private val CHANGES: Map<Int, Set<String>> = mapOf(
@@ -31,11 +34,11 @@ private val CHANGES: Map<Int, Set<String>> = mapOf(
 )
 
 /**
- * The latest version that names every system's rows again (3 did, 4 does), not a list of
+ * The latest version that names every system's rows again (3 and 4 did, 5 does), not a list of
  * systems: a rule that reaches all of them (file-name cleaning, the code-versus-file-name choice)
  * has no system list worth keeping. A later version needing only some systems goes in [CHANGES].
  */
-internal const val ALL_SYSTEMS_SINCE = 4
+internal const val ALL_SYSTEMS_SINCE = 5
 
 /** True when rows named when the last marking used [storedVersion] were named by rules that reached every system. */
 internal fun allSystemsNamedDifferentlySince(storedVersion: Int): Boolean = storedVersion < ALL_SYSTEMS_SINCE

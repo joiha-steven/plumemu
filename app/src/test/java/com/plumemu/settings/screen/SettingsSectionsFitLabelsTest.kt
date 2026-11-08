@@ -46,28 +46,25 @@ abstract class SettingsSectionsFitLabelsBase(private val isWide: Boolean) {
     @Test
     fun everyLabelFitsWithTheSlabInset() {
         var size by mutableStateOf(TextSize.Small)
-        var font by mutableStateOf(PlumFont.Jost)
         var focus by mutableStateOf(SettingsFocus(column = SettingsColumn.Sections, section = SettingsSection.Library))
         var density = Density(1f)
         var three = true
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 density = LocalDensity.current
                 three = PlumTheme.layout.isSettingsThreeColumns
                 SettingsAt(focus, content = ShotContent.library)
             }
         }
         val problems = mutableListOf<String>()
-        for (eachFont in PlumFont.entries) {
-            // Three columns (768): every size that keeps them. Otherwise (two columns, 576): the smallest in Jost and Sans; larger, a long label takes two lines (the test below).
+        for (eachFont in listOf(PlumFont.Jost)) {
+            // Three columns (768): every size that keeps them. Otherwise (two columns, 576): the smallest; larger, a long label takes two lines (the test below).
             val sizes =
                 when {
                     isWide && SettingsColumns.fits(TextSize.Small, eachFont) -> TextSize.entries.filter { SettingsColumns.fits(it, eachFont) }
-                    eachFont == PlumFont.Jost || eachFont == PlumFont.Sans -> listOf(TextSize.Small)
-                    else -> emptyList()
+                    else -> listOf(TextSize.Small)
                 }
             for (each in sizes) {
-                font = eachFont
                 size = each
                 for (column in listOf(SettingsColumn.Sections, SettingsColumn.Options)) {
                     for (section in SettingsSection.shownIn(ShotContent.library)) {
@@ -95,13 +92,11 @@ abstract class SettingsSectionsFitLabelsBase(private val isWide: Boolean) {
     @Test
     fun noLabelIsCutAtAnySize() {
         var size by mutableStateOf(TextSize.Small)
-        var font by mutableStateOf(PlumFont.Jost)
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { SettingsAt(SettingsFocus(column = SettingsColumn.Sections, section = SettingsSection.Library), content = ShotContent.library) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { SettingsAt(SettingsFocus(column = SettingsColumn.Sections, section = SettingsSection.Library), content = ShotContent.library) } }
         val problems = mutableListOf<String>()
         val sections = SettingsSection.shownIn(ShotContent.library)
-        for (eachFont in PlumFont.entries) {
+        for (eachFont in listOf(PlumFont.Jost)) {
             for (each in TextSize.entries) {
-                font = eachFont
                 size = each
                 compose.waitForIdle()
                 val rows = sections.map { compose.onNodeWithTag(SettingsTags.section(it), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot }

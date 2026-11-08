@@ -26,6 +26,17 @@ class DirectoryCataloguerTest {
     private val dreamcast = SystemMatcher(listOf(com.plumemu.library.matching.SystemRule("dreamcast", setOf("dreamcast"), setOf("gdi", "bin", "cdi"))))
 
     @Test
+    fun anInnerExtensionIsNotPartOfTheTitle() {
+        assertEquals("Zzgame", catalogue("ps2", "Zzgame (USA).nkit.iso").games.single().title)
+        assertEquals("Zzgame", catalogue("gba", "Zzgame.gba.zip").games.single().title)
+        assertEquals("Dr. Zzgame", catalogue("gba", "Dr. Zzgame.gba").games.single().title)
+        // A long or digit-only last extension still goes (`.scummvm`, `.psvita`, vic20's `.20`).
+        val longExtensions = SystemMatcher(listOf(com.plumemu.library.matching.SystemRule("scummvm", setOf("scummvm"), setOf("scummvm", "20"))))
+        assertEquals("Zzgame Quest", DirectoryCataloguer(longExtensions).catalogue(longExtensions.matchFolder("scummvm"), files("Zzgame Quest.scummvm")).games.single().title)
+        assertEquals("Zzgame", DirectoryCataloguer(longExtensions).catalogue(longExtensions.matchFolder("scummvm"), files("Zzgame.20")).games.single().title)
+    }
+
+    @Test
     fun emptyDirectoryGivesNoGames() {
         assertEquals(DirectoryCatalogue(emptyList(), 0, 0), cataloguer.catalogue(FolderMatch.Unknown, emptyList()))
     }

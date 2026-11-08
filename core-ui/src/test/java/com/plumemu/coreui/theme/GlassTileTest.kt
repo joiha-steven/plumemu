@@ -11,6 +11,9 @@ import org.junit.Test
 class GlassTileTest {
     private fun colorsOf(set: ColorSet) = PlumColors.derive(set.backgroundColor, set.textMode, set.accentColor)
 
+    /** The Paper board's page (the boards' light theme), which no set has any more. */
+    private fun paperColors() = PlumColors.derive(BackgroundPreset.Paper.color, TextMode.Dark, Rgb(0x9E2A3A))
+
     private fun isDark(colors: PlumColors) = TextMode.of(colors.text, colors.bg) == TextMode.Light
 
     private fun assertNear(
@@ -43,7 +46,7 @@ class GlassTileTest {
 
     @Test
     fun paperGlassRunsFromWhiteToTheBoardsFoot() {
-        val colors = colorsOf(ColorSet.Paper)
+        val colors = paperColors()
         val glass = GlassLook.of(colors.bg, isDark(colors))
         assertNear("top", 0xFFFFFF, glass.top, slack = 0)
         assertNear("foot", 0xFAF8F3, glass.foot, slack = 0)
@@ -58,16 +61,14 @@ class GlassTileTest {
         assertEquals(0f, glass.highlight.alpha, 0f)
     }
 
+    /** The rule between a card's parts is the tone ladder's line: the page moved [ToneLadder.LINE] L* toward the text, on dark and light pages. */
     @Test
-    fun lineIsTheTextAtTheBoardsShare() {
-        val graphite = colorsOf(ColorSet.Plumemu)
-        val paper = colorsOf(ColorSet.Paper)
-        val dark = LineToken.of(graphite.text, dark = true)
-        val light = LineToken.of(paper.text, dark = false)
-        assertEquals(0.10f, dark.alpha, 0.003f)
-        assertEquals(0.12f, light.alpha, 0.003f)
-        assertEquals(graphite.text.toComposeColor().toArgb() and 0xFFFFFF, dark.toArgb() and 0xFFFFFF)
-        assertEquals(paper.text.toComposeColor().toArgb() and 0xFFFFFF, light.toArgb() and 0xFFFFFF)
+    fun lineIsThePageMovedTowardTheText() {
+        for (set in listOf(ColorSet.Plumemu, ColorSet.Daylight, ColorSet.Banana)) {
+            val line = ToneLadder.line(set.backgroundColor, set.textMode.color)
+            val sign = if (set.textMode == TextMode.Light) 1 else -1
+            assertEquals("$set line", ColorMath.lightness(set.backgroundColor) + sign * ToneLadder.LINE, ColorMath.lightness(line), 0.5) // 8-bit steps on a dark page are about 0.4 L*
+        }
     }
 
     @Test
@@ -82,19 +83,22 @@ class GlassTileTest {
         assertTrue(failures.joinToString("\n"), failures.isEmpty())
     }
 
+    /** The meter's well is the tone ladder's sunken step: [ToneLadder.SUNKEN] L* off the page, the page's own hue, on dark and light pages. */
     @Test
-    fun meterTrackWellIsTheBoardsSunkColour() {
-        // The boards' `sunk`: #E0DBD0 on Paper, #0A0B0D on Graphite (ours sits on the theme's #0E0F11). The inset shadow over it is drawn
-        // by the meter and pinned by the shot measurements (game card 2, system card 2 on Paper; see the work log).
-        assertNear("paper well", 0xE0DBD0, MeterTrackToken.of(colorsOf(ColorSet.Paper).bg, dark = false), slack = 2)
-        assertNear("graphite well", 0x0A0B0D, MeterTrackToken.of(Rgb(0x0E0F11), dark = true), slack = 3)
+    fun meterTrackWellIsTheSunkenStepOfThePage() {
+        for (set in listOf(ColorSet.Plumemu, ColorSet.Daylight, ColorSet.Banana)) {
+            val dark = isDark(colorsOf(set))
+            val well = MeterTrackToken.of(set.backgroundColor, dark).toArgb() and 0xFFFFFF
+            assertEquals("$set well", ColorMath.lightness(set.backgroundColor) + ToneLadder.SUNKEN, ColorMath.lightness(Rgb(well)), 0.3)
+            assertEquals("$set well is the ladder's", ToneLadder.level(set.backgroundColor, ToneLadder.SUNKEN), Rgb(well))
+        }
     }
 
     @Test
     fun paperPlayedColumnMatchesTheBoardOverItsTile() {
         // The board's `muted` #9A958B at opacity 0.55 over the tile where the bars stand (#FBFBF8 in our shot); the rendered board is 199,195,188
         // on the game card and 199,195,187 on Recent. Tolerance 2 per channel.
-        val paper = colorsOf(ColorSet.Paper)
+        val paper = paperColors()
         val onTile = PlayedBarToken.of(paper.bg, dark = false).compositeOver(Color(0xFFFBFBF8))
         assertNear("paper played column, game card", 0xC7C3BC, onTile, slack = 2)
         assertNear("paper played column, Recent", 0xC7C3BB, onTile, slack = 2)

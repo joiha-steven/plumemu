@@ -5,7 +5,6 @@ import com.plumemu.account.AccountStatus
 import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.ConfirmButtonSetting
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.GridSizeSetting
 import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.SwitchSystemWithSetting
@@ -13,7 +12,6 @@ import com.plumemu.coredata.settings.SoundLevel
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coredata.settings.LeftEdgeSetting
-import com.plumemu.coredata.settings.TextWeightSetting
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import org.junit.Assert.assertEquals
@@ -84,17 +82,8 @@ internal class SettingsModelTest : SettingsModelHarness() {
     }
 
     @Test
-    fun fontAndTextSizeStepWithLeftRightAndWrapWithA() {
-        startOnRedSans() // the steps below run Sans, Serif, Mono from Plum Sans
+    fun textSizeStepsWithLeftRightAndWrapsWithA() {
         openSection(SettingsSection.Appearance)
-        focusOption(SettingsOption.Font)
-        press(Action.Enter)
-        assertEquals(FontSetting.Serif, appearance.font)
-        press(Action.Enter)
-        assertEquals(FontSetting.Mono, appearance.font)
-        move(Direction.Left)
-        assertEquals(FontSetting.Serif, appearance.font)
-
         focusOption(SettingsOption.TextSize)
         move(Direction.Left)
         assertEquals(TextSizeSetting.Small, appearance.textSize)
@@ -121,50 +110,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
     }
 
     @Test
-    fun textWeightFollowsTextSizeAndShowsMediumUntilPickedThenStepsAndWraps() {
-        val rows = SettingsSection.Appearance.rowsIn(model.content)
-        assertEquals("right after Text size", rows.indexOf(SettingsOption.TextSize) + 1, rows.indexOf(SettingsOption.TextWeight))
-        assertEquals(OptionKind.Choice, SettingsOption.TextWeight.kind)
-        assertEquals(3, SettingsOption.TextWeight.choiceCount(actions.settings))
-        openSection(SettingsSection.Appearance)
-        focusOption(SettingsOption.TextWeight)
-        assertNull("nothing is stored until a weight is picked", appearance.textWeight)
-        assertEquals(
-            "not picked shows Medium",
-            R.string.settings_weight_medium,
-            choiceName(SettingsOption.TextWeight, SettingsOption.TextWeight.choiceIndex(actions.settings, TextSizeSetting.Medium)),
-        )
-
-        move(Direction.Left)
-        assertEquals(TextWeightSetting.Thin, appearance.textWeight)
-        move(Direction.Left)
-        assertEquals("left stops at Thin", TextWeightSetting.Thin, appearance.textWeight)
-        move(Direction.Right)
-        move(Direction.Right)
-        assertEquals(TextWeightSetting.Bold, appearance.textWeight)
-        move(Direction.Right)
-        assertEquals("right stops at Bold", TextWeightSetting.Bold, appearance.textWeight)
-        press(Action.Enter)
-        assertEquals("A wraps", TextWeightSetting.Thin, appearance.textWeight)
-        assertNull("the text size is not touched", appearance.textSize)
-    }
-
-    @Test
-    fun aTapOnTheTextWeightValueStepsItAndTheNamesAreThinMediumBold() {
-        openSection(SettingsSection.Appearance)
-        val index = SettingsSection.Appearance.rowsIn(model.content).indexOf(SettingsOption.TextWeight)
-        model.onTapValue(index, actions.settings, wide) // the first tap focuses and steps, as for Text size
-        assertEquals(TextWeightSetting.Bold, appearance.textWeight)
-        model.onTapValue(index, actions.settings, wide)
-        assertEquals("a tap past the end wraps", TextWeightSetting.Thin, appearance.textWeight)
-        assertEquals(
-            listOf(R.string.settings_weight_thin, R.string.settings_weight_medium, R.string.settings_weight_bold),
-            TextWeightSetting.entries.indices.map { choiceName(SettingsOption.TextWeight, it) },
-        )
-    }
-
-    @Test
-    fun leftEdgeFollowsTextWeightShowsGameCountsUntilPickedThenStepsAndWraps() {
+    fun leftEdgeFollowsSystemInfoShowsGameCountsUntilPickedThenStepsAndWraps() {
         val rows = SettingsSection.HomeScreen.rowsIn(model.content)
         assertEquals("right after System info", rows.indexOf(SettingsOption.SystemInfo) + 1, rows.indexOf(SettingsOption.LeftEdge))
         assertEquals(OptionKind.Choice, SettingsOption.LeftEdge.kind)
@@ -188,7 +134,6 @@ internal class SettingsModelTest : SettingsModelHarness() {
         assertEquals("right stops at Letters", LeftEdgeSetting.Letters, appearance.leftEdge)
         press(Action.Enter)
         assertEquals("A wraps", LeftEdgeSetting.Counts, appearance.leftEdge)
-        assertNull("the text weight is not touched", appearance.textWeight)
     }
 
     @Test
@@ -304,7 +249,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
 
     @Test
     fun resetAllNeedsAConfirmAndKeepsSetupFlags() {
-        actions.settings = actions.settings.copy(appearance = AppearanceSettings(font = FontSetting.Mono, textWeight = TextWeightSetting.Bold, leftEdge = LeftEdgeSetting.Letters))
+        actions.settings = actions.settings.copy(appearance = AppearanceSettings(textSize = TextSizeSetting.Huge, leftEdge = LeftEdgeSetting.Letters))
         openSection(SettingsSection.Advanced)
         focusOption(SettingsOption.ResetAll)
         press(Action.Enter)
@@ -323,14 +268,8 @@ internal class SettingsModelTest : SettingsModelHarness() {
         press(Action.Enter)
         assertEquals(1, actions.resetsAll)
         assertEquals(SettingsOption.ResetAll, model.doneOption)
-        assertEquals(FontSetting.Jost, appearance.font)
         assertNull("Reset all puts the text size back to not picked, which is Large", appearance.textSize)
-        assertNull("Reset all puts the text weight back to not picked, which is Medium", appearance.textWeight)
         assertNull("Reset all puts the left edge back to not picked, which is Game counts", appearance.leftEdge)
-        assertEquals(
-            R.string.settings_weight_medium,
-            choiceName(SettingsOption.TextWeight, SettingsOption.TextWeight.choiceIndex(actions.settings, TextSizeSetting.Medium)),
-        )
         assertTrue(actions.settings.flags.setupCompleted)
         press(Action.Back)
         move(Direction.Up)

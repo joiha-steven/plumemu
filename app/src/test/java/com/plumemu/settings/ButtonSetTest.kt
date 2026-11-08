@@ -34,12 +34,12 @@ class ButtonSetTest {
     @Test
     fun pickingASetWithoutButtonsBringsTheUsualGlyphsBack() {
         val ivory = fresh.withColors(ColorSet.Ivory)
-        val paper = ivory.withColors(ColorSet.Paper)
+        val paper = ivory.withColors(ColorSet.Daylight)
         assertEquals(AppearanceSettings.BUTTONS_NONE, paper.buttonSet)
         assertNull(paper.effectiveButtonSet())
-        // Super and Charcoal swap in their own colours.
-        assertEquals(ColorSet.Super, paper.withColors(ColorSet.Super).effectiveButtonSet())
-        assertEquals(ColorSet.Charcoal, paper.withColors(ColorSet.Charcoal).effectiveButtonSet())
+        // Ivory and Cold grey swap in their own colours.
+        assertEquals(ColorSet.Ivory, paper.withColors(ColorSet.Ivory).effectiveButtonSet())
+        assertEquals(ColorSet.ColdGrey, paper.withColors(ColorSet.ColdGrey).effectiveButtonSet())
     }
 
     /** An install from before the setting: colours exactly Ivory's and no stored value read as Ivory's buttons, and settling writes it. */
@@ -63,8 +63,8 @@ class ButtonSetTest {
     @Test
     fun customBringsBackTheButtonsThatWentWithTheOwnColours() {
         val tunedIvory = fresh.withColors(ColorSet.Ivory).copy(background = ColorSetting.Preset("Graphite"))
-        val onPaper = tunedIvory.withColors(ColorSet.Paper)
-        assertNull("Paper has no buttons", onPaper.effectiveButtonSet())
+        val onPaper = tunedIvory.withColors(ColorSet.Daylight)
+        assertNull("Daylight has no buttons", onPaper.effectiveButtonSet())
         assertEquals("Ivory", onPaper.ownColors?.buttonSet)
         val back = onPaper.withColors(null)
         assertNull(back.colorSet())

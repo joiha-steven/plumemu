@@ -6,6 +6,7 @@ import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.BackgroundPreset
+import com.plumemu.coreui.theme.ColorSet
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -25,9 +26,9 @@ class MainActivityAppearanceTest {
     private fun windowBackground(activity: MainActivity): Int = (activity.window.decorView.background as ColorDrawable).color
 
     @Test
-    fun aFirstLaunchPaintsBlack() {
+    fun aFirstLaunchPaintsThePlumemuPage() {
         val activity = Robolectric.buildActivity(MainActivity::class.java).setup().get()
-        assertEquals(BackgroundPreset.Black.color.toArgb(), windowBackground(activity))
+        assertEquals(ColorSet.Plumemu.backgroundColor.toArgb(), windowBackground(activity))
     }
 
     @Test

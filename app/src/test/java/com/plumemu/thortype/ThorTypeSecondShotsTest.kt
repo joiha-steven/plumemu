@@ -41,7 +41,7 @@ class ThorTypeSecondShotsTest {
     @Test
     fun theCard() {
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(font = PlumFont.Jost)) {
+            PlumTheme(PlumThemeSettings.Graphite) {
                 WithPhysicalTextScale(SecondScreenPhysical.thor) { CompositionLocalProvider(LocalBadgeImages provides CacheOnlyBadges()) { SecondScreenCard(content) } }
             }
         }

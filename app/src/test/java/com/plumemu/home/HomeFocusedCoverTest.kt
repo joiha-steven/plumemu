@@ -18,6 +18,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.DpRect
@@ -29,8 +30,8 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.CollarDimens
 import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.coreui.theme.GridSize
+import com.plumemu.coreui.theme.FocusLift
 import com.plumemu.coreui.theme.PlumDimens
-import com.plumemu.coreui.theme.focusedCoverScale
 import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.theme.PlumTheme
 import androidx.compose.ui.graphics.ImageBitmap
@@ -50,7 +51,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * The focused grid cover: not moved or grown, whole at every
+ * The focused grid cover: laid out where it was and drawn 3.5 % larger about its pivot, whole at every
  * edge of the grid (top row, first and last column, last row) at both reference widths, its collar's groove
  * lit around the picture, its neighbours never moved; and every tile names its game in
  * every state of its art (no result yet, none, a picture still decoding, a file that cannot be read).
@@ -95,15 +96,28 @@ class HomeFocusedCoverTest {
         return Rect(node.positionInRoot, androidx.compose.ui.geometry.Size(node.size.width.toFloat(), node.size.height.toFloat()))
     }
 
-    /** [picture] (as laid out) drawn [PlumDimens.FOCUSED_COVER_SCALE] larger about its collar's centre: where the focused cover's picture is on screen. */
-    private fun liftedPicture(picture: Rect): Rect {
+    private fun isShown(index: Int) = compose.onAllNodesWithTag(HomeTags.cover(index), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+
+    /** Which edges of the grid cover [index] stands on (first and last of its row, the first row): the pivot of its lift. */
+    private fun edgesOf(index: Int): LiftEdges {
+        val me = cell(index).top
+        val row = (maxOf(0, index - 40)..index + 40).filter { isShown(it) && cell(it).top == me }
+        return LiftEdges(atLeft = index == row.first(), atRight = index == row.last(), atTop = isShown(0) && cell(0).top == me)
+    }
+
+    /** [picture] (as laid out) of cover [index] drawn [FocusLift.SCALE] larger about its pivot: where the focused cover's picture is on screen. */
+    private fun liftedPicture(
+        picture: Rect,
+        index: Int,
+    ): Rect {
         val d = compose.density.density
         val collar = Rect(
             picture.left - CollarSize.Cover.sidePadding.value * d, picture.top - CollarSize.Cover.topPadding.value * d,
             picture.right + CollarSize.Cover.sidePadding.value * d, picture.bottom + CollarSize.Cover.bottomPadding.value * d,
         )
-        val s = focusedCoverScale(maxOf(collar.width, collar.height) / d)
-        val c = collar.center
+        val s = FocusLift.SCALE
+        val edges = edgesOf(index)
+        val c = FocusLift.pivot(collar, edges.atLeft, edges.atRight, edges.atTop)
         return Rect(c.x + (picture.left - c.x) * s, c.y + (picture.top - c.y) * s, c.x + (picture.right - c.x) * s, c.y + (picture.bottom - c.y) * s)
     }
 
@@ -182,11 +196,11 @@ class HomeFocusedCoverTest {
     ) {
         val density = compose.density.density
         val resting = restingPicture(index)
-        val drawn = liftedPicture(resting)
+        val drawn = liftedPicture(resting, index)
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         // Past the picture's antialiased last pixel, still inside the art.
         val inside = 4f
-        val groove = CollarDimens.coverGroove.value * density * focusedCoverScale(maxOf(drawn.width, drawn.height) / density)
+        val groove = CollarDimens.coverGroove.value * density * FocusLift.SCALE
         val sides =
             mapOf(
                 "top" to (Offset(drawn.center.x, drawn.top) to Offset(0f, -1f)),
@@ -203,14 +217,14 @@ class HomeFocusedCoverTest {
             val lit = (1..8).map { pixels.at(edge + out * (groove * it / 4f)) }.minBy { abs(it.red - litGroove(accent).red) + abs(it.green - litGroove(accent).green) + abs(it.blue - litGroove(accent).blue) }
             // Unconditional, and tight enough for a dark picture: only a picture that is really missing leaves the two pixels equal.
             assertTrue("$label: the picture reaches its $side edge (not cut): picture $picture, groove $lit", maxOf(abs(picture.red - lit.red), abs(picture.green - lit.green), abs(picture.blue - lit.blue)) > 0.02f)
-            assertTrue("$label: the groove is lit in the accent on the $side side ($lit)", lit.near(litGroove(accent)))
+            assertTrue("$label: the groove stays unlit on the $side side ($lit)", !lit.near(litGroove(accent)))
         }
         // The lifted collar and its ring (the halo may fade into the bar gaps) keep clear of both bars.
-        val reach = PlumDimens.focusRingOutset.value
+        val reach = FocusLift.reach.value
         val top = compose.onNodeWithTag(HomeTags.TOP_BAR, useUnmergedTree = true).getUnclippedBoundsInRoot()
         val hints = compose.onNodeWithTag(HomeTags.HINT_BAR, useUnmergedTree = true).getUnclippedBoundsInRoot()
-        assertTrue("$label: the ring stays under the top bar", drawn.top / density - CollarSize.Cover.topPadding.value * PlumDimens.FOCUSED_COVER_SCALE - reach >= top.bottom.value - EPSILON)
-        assertTrue("$label: the ring stays over the hint bar", drawn.bottom / density + CollarSize.Cover.bottomPadding.value * PlumDimens.FOCUSED_COVER_SCALE + reach <= hints.top.value + EPSILON)
+        assertTrue("$label: the ring stays under the top bar", drawn.top / density - CollarSize.Cover.topPadding.value * 1f - reach >= top.bottom.value - EPSILON)
+        assertTrue("$label: the ring stays over the hint bar", drawn.bottom / density + CollarSize.Cover.bottomPadding.value * 1f + reach <= hints.top.value + EPSILON)
         // Layout is unchanged by the lift: the box stands where it does at rest.
         val cell = cell(index)
         assertEquals("$label: centred on its cell", (cell.left.value + cell.right.value) / 2f, resting.center.x / density, EPSILON)

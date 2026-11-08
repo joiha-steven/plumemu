@@ -38,7 +38,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [28], qualifiers = "w768dp-h432dp-land-xhdpi")
 internal class SettingsHexKeyboardTest : SettingsModelHarness() {
     init {
-        startOnRedSans() // the "+" is reached by walking the accent presets from Red
+        startOnRed() // the "+" is reached by walking the accent presets from Red
     }
 
     private val compose = appComposeRule()

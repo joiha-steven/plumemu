@@ -70,8 +70,8 @@ class SetupBoundsTest {
         assertDp("title top: 14 + 23 + 10 + 34", 81.dp, title.top)
         val button = bounds(SetupTags.control(SetupControl.ChooseFolder))
         assertDp("content column: 24 + 260 + 48", 332.dp, button.left)
-        // The first point ("Android's folder picker opens. Go to your games folder.") wraps to two lines here: 15 more than three single lines.
-        assertDp("three points (one of two lines), three gaps of 8, then 12", 228.dp, button.top)
+        // The first two points ("Android's folder picker opens. …" and "Then confirm … a touch of the screen.") wrap to two lines here: 30 more than three single lines.
+        assertDp("three points (two of two lines), three gaps of 8, then 12", 243.dp, button.top)
         assertDp("button height: the 38 cap and its collar", BUTTON_WITH_COLLAR, button.bottom - button.top)
         val hints = bounds(SetupTags.HINTS)
         assertDp("hint bar ends at the bottom margin", 432.dp - PlumDimens.footerBelow, hints.bottom)
@@ -159,34 +159,44 @@ class SetupBoundsTest {
         assertFitsAboveTheHints("Not now", notNow)
     }
 
-    /** The box art choices: three rows of one width, one above the other with the setup gap, the first under the title or beside it. */
-    private fun assertBoxArtChoicesStacked(): List<DpRect> {
-        show(SetupFakes.boxArtQuestion)
-        val rows =
-            listOf(SetupControl.UseBoxArt, SetupControl.BoxArtLibretro, SetupControl.BoxArtOwnCovers)
-                .map { bounds(SetupTags.control(it)) }
+    /** One page of the box art step: two rows of one width, one above the other with the setup gap, the first under the title or beside it. */
+    private fun assertBoxArtChoicesStacked(state: SetupUiState): List<DpRect> {
+        show(state)
+        val rows = state.controls.map { bounds(SetupTags.control(it)) }
+        assertEquals("two choices", 2, rows.size)
         assertDp("same width", rows[0].right - rows[0].left, rows[1].right - rows[1].left)
-        assertDp("same width", rows[0].right - rows[0].left, rows[2].right - rows[2].left)
-        assertDp("same gap", rows[1].top - rows[0].bottom, rows[2].top - rows[1].bottom)
-        assertDp("same left", rows[0].left, rows[2].left)
+        assertDp("same left", rows[0].left, rows[1].left)
+        assertDp("the setup gap", PlumDimens.setupContentGap, rows[1].top - rows[0].bottom)
         return rows
+    }
+
+    private fun assertWideBoxArtPage(state: SetupUiState) {
+        val rows = assertBoxArtChoicesStacked(state)
+        assertDp("the first choice level with the title", bounds(SetupTags.TITLE).top, rows[0].top)
+        assertFitsAboveTheHints("last choice", rows[1])
+    }
+
+    private fun assertNarrowBoxArtPage(state: SetupUiState) {
+        val rows = assertBoxArtChoicesStacked(state)
+        assertDp("left margin", 24.dp, rows[0].left)
+        assertTrue("under the title", rows[0].top > bounds(SetupTags.TITLE).bottom)
     }
 
     @Test
     @Config(qualifiers = WIDE)
-    fun wideBoxArtChoicesStandBesideTheTitleAndFitAboveTheHints() {
-        val rows = assertBoxArtChoicesStacked()
-        assertDp("the first choice level with the title", bounds(SetupTags.TITLE).top, rows[0].top)
-        assertFitsAboveTheHints("Plumemu's own covers", rows[2])
-    }
+    fun wideBoxArtQuestionStandsBesideTheTitleAndFitsAboveTheHints() = assertWideBoxArtPage(SetupFakes.boxArtQuestion)
+
+    @Test
+    @Config(qualifiers = WIDE)
+    fun wideBoxArtSourcesStandBesideTheTitleAndFitAboveTheHints() = assertWideBoxArtPage(SetupFakes.boxArtSources)
 
     @Test
     @Config(qualifiers = NARROW)
-    fun narrowBoxArtChoicesFollowTheTitleAtTheLeftMargin() {
-        val rows = assertBoxArtChoicesStacked()
-        assertDp("left margin", 24.dp, rows[0].left)
-        assertTrue("under the title", rows[0].top > bounds(SetupTags.TITLE).bottom)
-    }
+    fun narrowBoxArtQuestionFollowsTheTitleAtTheLeftMargin() = assertNarrowBoxArtPage(SetupFakes.boxArtQuestion)
+
+    @Test
+    @Config(qualifiers = NARROW)
+    fun narrowBoxArtSourcesFollowTheTitleAtTheLeftMargin() = assertNarrowBoxArtPage(SetupFakes.boxArtSources)
 
     @Test
     @Config(qualifiers = WIDE)

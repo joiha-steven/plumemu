@@ -13,9 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
@@ -25,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.theme.ButtonDimens
+import com.plumemu.coreui.theme.FlatPartDimens
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumTheme
 
@@ -32,14 +31,15 @@ import com.plumemu.coreui.theme.PlumTheme
 enum class ButtonKind { Primary, Secondary, Quiet, Danger }
 
 /**
- * A pill button in a [CollarSize.Control] collar (the V2 look). [kind]: Primary has an accent cap with text on accent; Secondary a
- * `collarCap` cap with text colour; Danger the same with the danger colour; Quiet shows only its text until it is [focused] or
- * pressed, then the collar and cap appear. Focus lights the groove in the accent with the halo (Secondary and Danger text turns
- * strong / semi-bold); a press sinks the cap into its edge; [enabled] false draws the off face with muted text (no fade), and
- * the button swallows touches, so a `clickable` in [modifier] never fires. The cap is `PlumTheme.layout.setupButtonHeight` high
- * (it grows with text size) and the collar is added outside it; [maxLines] 2 lets the label wrap and the cap grow.
+ * A pill button, flat (docs/design/rules.md > Flat parts): [kind] Primary is a solid accent cap with text on accent; Secondary a solid ladder
+ * cap with text colour; Danger the same with the danger colour; Quiet shows only its text until it is [focused] or pressed, then the cap
+ * appears. Each cap has a hairline, and on a light page a 1 dp drop shadow. Focus draws the glued rim (`drawGluedRim`; Secondary and Danger
+ * text turns strong / semi-bold); a press takes the fill one step toward the page's contrast side and moves nothing; [enabled] false
+ * draws the flat off cap with muted text (no fade), and the button swallows touches, so a `clickable` in [modifier] never fires. The cap is
+ * `PlumTheme.layout.setupButtonHeight` high (it grows with text size) and [collarSize]'s room is added outside it (the part keeps its
+ * footprint); [maxLines] 2 lets the label wrap and the cap grow.
  * [state] is the press and lift state; pass one only to hold a press (a test). The caller passes taps through [modifier] and decides `focused`; core-ui does not read input.
- * Reaches the collar's shadow below its bounds and the halo around it: leave that unclipped.
+ * The rim's glow and shadow reach `FlatPartDimens.focusRimRoom` past the cap: leave that unclipped.
  */
 @Composable
 fun PlumButton(
@@ -59,22 +59,15 @@ fun PlumButton(
     val quiet = kind == ButtonKind.Quiet
     val key = state
     val lit = focused && enabled
-    // The groove's light and the halo grow in FOCUS_GROW_MS, like Modifier.collar(focused).
+    // The rim grows in FOCUS_GROW_MS.
     val focus = remember { Animatable(if (lit) 1f else 0f) }
     val motionOn = PlumTheme.motion.isOn
     LaunchedEffect(lit, motionOn) {
-        focus.animateTo(if (lit) 1f else 0f, if (motionOn) tween(PlumMotion.FOCUS_GROW_MS, easing = PlumMotion.EaseOut) else snap())
+        focus.animateTo(if (lit) 1f else 0f, if (motionOn) tween(PlumMotion.FOCUS_GROW_MS, easing = PlumMotion.Decelerate) else snap())
     }
     Box(
         modifier =
             modifier
-                .drawBehind {
-                    // A quiet button has no collar at rest; it appears with focus or a press.
-                    if (!quiet || focus.value > 0f || key.press > 0f) {
-                        val partHeight = size.height - collarSize.padding.let { (it.calculateTopPadding() + it.calculateBottomPadding()).toPx() }
-                        drawCollar(colors.collar, collarSize, partHeight / 2, focus.value, accent = colors.accent, glow = colors.partGlow)
-                    }
-                }
                 .padding(collarSize.padding)
                 .semantics {
                     role = Role.Button
@@ -84,17 +77,9 @@ fun PlumButton(
                 .then(if (enabled) Modifier.keyDrive(key, focused) else Modifier)
                 .drawWithContent {
                     val shown = if (quiet) enabled && (focus.value > 0f || key.press > 0f) else true
-                    val press = if (enabled) key.press else 1f
-                    val seat = colors.collar.seat
-                    val cap =
-                        when {
-                            !enabled -> seat.offCap
-                            kind == ButtonKind.Primary -> seat.buttonAccent(colors.accent)
-                            else -> seat.buttonCap
-                        }
-                    // The board's CAP (ACCENT CAP for the main one) layer by layer; pressed and off sit 2 dp down in the capDown / capOff face.
-                    if (shown) drawCssCap(cap, press = press)
-                    translate(top = cap.travel.toPx() * press) { this@drawWithContent.drawContent() }
+                    // The flat look (docs/design/rules.md > Flat parts): a solid cap and its hairline, the rim on focus; a press changes the fill only, nothing moves.
+                    if (shown) drawFlatButton(colors.collar.flat, colors.accent, kind == ButtonKind.Primary, enabled, if (enabled) key.press else 0f, focus.value)
+                    drawContent()
                 }
                 // Inside the caller's clickable: a child that consumes the touch keeps the parent's tap from firing.
                 .then(if (enabled) Modifier else Modifier.pointerInput(Unit) { swallowTouches() })

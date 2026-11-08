@@ -24,6 +24,7 @@ internal class FakeGameActions(
     val favorites = mutableListOf<Pair<String, Boolean>>()
     val hidden = mutableListOf<String>()
     val removedFromRecent = mutableListOf<String>()
+    val restoredToRecent = mutableListOf<String>()
     val choices = mutableListOf<Pair<String, String?>>()
     val systemChoices = mutableListOf<Pair<String, String>>()
     val downloadPages = mutableListOf<String>()
@@ -36,6 +37,7 @@ internal class FakeGameActions(
     var readError: Exception? = null
     var onHide: (String) -> Unit = {}
     var onRemoveFromRecent: (String) -> Unit = {}
+    var onRestoreToRecent: (String) -> Unit = {}
     var onFavorite: (String, Boolean) -> Unit = { _, _ -> }
 
     /** When set, reads (facts, emulators) wait for it (a slow database). */
@@ -121,6 +123,13 @@ internal class FakeGameActions(
         writeError?.let { throw it }
         removedFromRecent += gameKey
         onRemoveFromRecent(gameKey)
+    }
+
+    override suspend fun restoreToRecent(gameKey: String) {
+        writeError?.let { throw it }
+        removedFromRecent -= gameKey
+        restoredToRecent += gameKey
+        onRestoreToRecent(gameKey)
     }
 
     override suspend fun chooseEmulator(gameKey: String, emulatorId: String?) {

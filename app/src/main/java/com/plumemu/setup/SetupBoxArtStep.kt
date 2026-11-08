@@ -13,9 +13,10 @@ import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreinput.Column as StripColumn
 
 /**
- * "Box art": the same three choices as Settings › Accounts › Box art, one above the other (two in a build
- * without ScreenScraper), each with its one line. "Box art and game info" without a usable account shows
- * the sign-in form (Sign in and Skip; Skip goes back to the choices). Taps reach the model through the
+ * "Box art": page 1 asks "Download box art?" (No, Yes), page 2 (a build with ScreenScraper, after Yes) asks
+ * for the source (Default source, ScreenScraper account), each choice with its one line. "ScreenScraper
+ * account" without a usable account shows the sign-in form (Sign in and Not now; Not now goes on, B goes
+ * back to page 2). Taps reach the model through the
  * router like setup's other controls (`TapItem` with the control's or the form's item place).
  */
 @Composable
@@ -44,15 +45,15 @@ private fun ColumnScope.BoxArtChoices(
     onAction: (Action) -> Unit,
 ) {
     state.controls.forEach { control ->
-        val source = sourceOf(control) ?: return@forEach
+        val name = choiceName(control) ?: return@forEach
         SetupChoice(
-            label = stringResource(boxArtChoiceName(source)),
-            sub = stringResource(boxArtChoiceLine(source)),
+            label = stringResource(name),
+            sub = stringResource(choiceLine(control, state.hasScreenScraper)),
             subMaxLines = 4,
             look =
                 when {
                     state.focus == control -> ChoiceLook.Focused
-                    state.boxArtSource == source -> ChoiceLook.Current
+                    isInForce(control, state.boxArtSource) -> ChoiceLook.Current
                     else -> ChoiceLook.Plain
                 },
             modifier = Modifier.setupControl(state, control, onAction),
@@ -61,25 +62,35 @@ private fun ColumnScope.BoxArtChoices(
     if (state.message != null) StepNote(state.message, R.string.setup_folder_note)
 }
 
-private fun sourceOf(control: SetupControl): BoxArtSourceSetting? =
+/** The source a control stands for, to mark the choice in force; "Yes" stands for every source that downloads. */
+private fun isInForce(
+    control: SetupControl,
+    source: BoxArtSourceSetting?,
+): Boolean =
     when (control) {
-        SetupControl.UseBoxArt -> BoxArtSourceSetting.ScreenScraper
-        SetupControl.BoxArtLibretro -> BoxArtSourceSetting.LibretroOnly
-        SetupControl.BoxArtOwnCovers -> BoxArtSourceSetting.OwnCovers
+        SetupControl.BoxArtOwnCovers -> source == BoxArtSourceSetting.OwnCovers
+        SetupControl.BoxArtYes -> source == BoxArtSourceSetting.LibretroOnly || source == BoxArtSourceSetting.ScreenScraper
+        SetupControl.BoxArtLibretro -> source == BoxArtSourceSetting.LibretroOnly
+        SetupControl.UseBoxArt -> source == BoxArtSourceSetting.ScreenScraper
+        else -> false
+    }
+
+private fun choiceName(control: SetupControl): Int? =
+    when (control) {
+        SetupControl.BoxArtOwnCovers -> R.string.setup_box_art_no
+        SetupControl.BoxArtYes -> R.string.setup_box_art_yes
+        SetupControl.BoxArtLibretro -> R.string.setup_box_art_default
+        SetupControl.UseBoxArt -> R.string.setup_box_art_account
         else -> null
     }
 
-// The words of Settings › Accounts › Box art: one source of truth for what each choice says.
-private fun boxArtChoiceName(source: BoxArtSourceSetting): Int =
-    when (source) {
-        BoxArtSourceSetting.ScreenScraper -> R.string.settings_box_art_source_screenscraper
-        BoxArtSourceSetting.LibretroOnly -> R.string.settings_box_art_source_libretro
-        BoxArtSourceSetting.OwnCovers -> R.string.settings_box_art_source_own
-    }
-
-private fun boxArtChoiceLine(source: BoxArtSourceSetting): Int =
-    when (source) {
-        BoxArtSourceSetting.ScreenScraper -> R.string.settings_box_art_source_screenscraper_line
-        BoxArtSourceSetting.LibretroOnly -> R.string.settings_box_art_source_libretro_line
-        BoxArtSourceSetting.OwnCovers -> R.string.settings_box_art_source_own_line
+private fun choiceLine(
+    control: SetupControl,
+    hasScreenScraper: Boolean,
+): Int =
+    when (control) {
+        SetupControl.BoxArtOwnCovers -> R.string.setup_box_art_no_line
+        SetupControl.BoxArtYes -> if (hasScreenScraper) R.string.setup_box_art_yes_line else R.string.setup_box_art_yes_line_libretro
+        SetupControl.BoxArtLibretro -> R.string.setup_box_art_default_line
+        else -> R.string.setup_box_art_account_line
     }

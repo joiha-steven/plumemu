@@ -1,0 +1,13 @@
+# File names from the 2026-11-09 scan and identification audit (docs/plans/2026-11-09-scan-identify-audit.md).
+# Hand-written; expected titles are the official (DAT) titles. Format: tools/corpus/FORMAT.md.
+path	size	system	game	title	tags	content
+Nintendo - GameCube/Super Smash Bros. Melee (USA) (Rev 2).nkit.iso	1459978240	gc	a01	Super Smash Bros. Melee	inner-extension	-
+Nintendo - Wii/Super Mario Galaxy (USA).nkit.iso	4699979776	wii	a02	Super Mario Galaxy	inner-extension	-
+Nintendo - Game Boy Advance/Metroid Fusion (USA).gba.zip	4194304	gba	a03	Metroid Fusion	inner-extension	-
+Nintendo - Switch/Cave Story+ (USA).nsp	180000000	switch	a04	Cave Story+	plus-title	-
+Commodore - Amiga/Alien Breed 3D (AGA).adf	901120	amiga	a05	Alien Breed 3D (AGA) || Alien Breed 3D	short-tag	-
+Commodore - Amiga/Alien Breed 3D (ECS).adf	901120	amiga	a06	Alien Breed 3D (ECS) || Alien Breed 3D	short-tag	-
+Sony - PlayStation/Crash Bandicoot (USA).chd	500000000	psx	a07	Crash Bandicoot	other-region	-
+Sony - PlayStation/Crash Bandicoot (Latin America).chd	500000000	psx	a07	Crash Bandicoot	other-region	-
+Watara - Supervision/Crystball (USA, Europe).sv	32768	supervision	a08	Crystball	save-like-extension	-
+PICO-8/celeste.p8.png	15000	pico8	a09	celeste || Celeste	image-like-extension	-

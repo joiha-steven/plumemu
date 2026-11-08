@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.plumemu.R
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coreui.components.ListEdgeFade
+import com.plumemu.coreui.theme.FlatPartDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.WidthClass
@@ -41,6 +42,7 @@ import com.plumemu.setup.SetupProgressBar
 import com.plumemu.setup.bringIntoViewWhen
 import com.plumemu.update.CheckFailure
 import com.plumemu.update.CheckOutcome
+import com.plumemu.update.NoticeLine
 import com.plumemu.update.UpdateFailure
 import com.plumemu.update.UpdateManifest
 import com.plumemu.update.UpdateStep
@@ -72,6 +74,9 @@ internal interface SettingsUpdateActions {
     /** Android's Install unknown apps screen for Plumemu; false when there is none. */
     fun openInstallPermission(): Boolean
 
+    /** Android's notification settings for Plumemu (shown while notifications are off); false when there is none. */
+    fun openNotificationSettings(): Boolean
+
     object None : SettingsUpdateActions {
         override fun checkNow() = Unit
 
@@ -80,11 +85,13 @@ internal interface SettingsUpdateActions {
         override fun cancel() = Unit
 
         override fun openInstallPermission(): Boolean = false
+
+        override fun openNotificationSettings(): Boolean = false
     }
 }
 
 /** What the Updates panel can focus, top to bottom: the update's own buttons, Check now, the daily switch. */
-internal enum class UpdatePanelItem { Update, DownloadAnyway, AllowInstalls, Cancel, CheckNow, CheckDaily }
+internal enum class UpdatePanelItem { Update, DownloadAnyway, AllowInstalls, Cancel, TurnOnNotifications, CheckNow, CheckDaily }
 
 /**
  * The buttons for where the update is: none while a check runs (the line says "Checking for
@@ -112,7 +119,13 @@ private fun stepItems(step: UpdateStep): List<UpdatePanelItem> =
     }
 
 /** The update's buttons for the panel: none with nothing found. */
-internal fun updateStepItems(view: UpdateView): List<UpdatePanelItem> = if (view.found == null) emptyList() else updatePanelItems(view)
+internal fun updateStepItems(view: UpdateView): List<UpdatePanelItem> =
+    if (view.found == null) {
+        emptyList()
+    } else {
+        // Under the notice line: Android's permission question shows no gamepad focus, so the settings are one press away.
+        updatePanelItems(view) + if (view.notice == NoticeLine.NotificationsOff) listOf(UpdatePanelItem.TurnOnNotifications) else emptyList()
+    }
 
 /** Everything the panel can focus: Check now stays through an update, whose status then says why it does nothing. */
 internal fun updatesPanelItems(view: UpdateView): List<UpdatePanelItem> = updateStepItems(view) + UpdatePanelItem.CheckNow + UpdatePanelItem.CheckDaily
@@ -280,6 +293,7 @@ internal fun UpdatePanel(
                     notes = { UpdateNotes(found, model, Modifier) },
                     bottom = {
                         UpdateStatus(view, isOnCheckNow = focused == UpdatePanelItem.CheckNow)
+                        UpdateNoticeLine(view, isHomeApp = model.content.isHomeApp)
                         if (updateStepItems(view).isNotEmpty()) buttons { it != UpdatePanelItem.CheckNow }
                     },
                 )
@@ -354,6 +368,24 @@ private fun UpdateStatus(
     }
 }
 
+/**
+ * After Update was pressed: why Android is about to ask for notifications, or (notifications off) that Plumemu may not open by
+ * itself after the update; Home brings it back only when Plumemu is the home app, else the apps list does. Nothing before the press or when notifications are on.
+ */
+@Composable
+internal fun UpdateNoticeLine(
+    view: UpdateView,
+    isHomeApp: Boolean,
+) {
+    val text =
+        when (view.notice) {
+            NoticeLine.None -> return
+            NoticeLine.Reason -> R.string.settings_update_notice_reason
+            NoticeLine.NotificationsOff -> if (isHomeApp) R.string.settings_update_notice_off else R.string.settings_update_notice_off_not_home
+        }
+    BasicText(stringResource(text), style = PlumTheme.type.panelBody.copy(color = PlumTheme.colors.text), modifier = Modifier.onRowTextLine().testTag(SettingsPanelTags.UPDATE_NOTICE))
+}
+
 /** The last check holds a finished answer: no check runs and no update runs. */
 private fun isCheckAnswer(view: UpdateView): Boolean = !view.isChecking && !view.isUpdateRunning
 
@@ -390,12 +422,12 @@ private fun UpdateButtons(
             val isFocused = item == focused && model.focus.panelIndex == index
             SetupButton(
                 text = stringResource(updateItemText(item)),
-                isPrimary = item != UpdatePanelItem.Cancel && (item != UpdatePanelItem.CheckNow || view.found == null),
+                isPrimary = item != UpdatePanelItem.Cancel && item != UpdatePanelItem.TurnOnNotifications && (item != UpdatePanelItem.CheckNow || view.found == null),
                 isFocused = isFocused,
                 maxLines = 2,
                 modifier =
                     Modifier.fillMaxWidth()
-                        .bringIntoViewWhen(isFocused && (keepsInView || item == UpdatePanelItem.CheckNow), ring = PlumDimens.focusRingOutset, below = PlumDimens.listFadeBand)
+                        .bringIntoViewWhen(isFocused && (keepsInView || item == UpdatePanelItem.CheckNow), ring = FlatPartDimens.focusRimRoom, below = PlumDimens.listFadeBand)
                         .tapTarget { touch.onPanelItem(index) }
                         .testTag(SettingsTags.panelItem(index)),
             )
@@ -457,6 +489,7 @@ private fun updateItemText(item: UpdatePanelItem): Int =
         UpdatePanelItem.DownloadAnyway -> R.string.settings_update_download_anyway
         UpdatePanelItem.AllowInstalls -> R.string.settings_update_allow
         UpdatePanelItem.Cancel -> R.string.settings_cancel
+        UpdatePanelItem.TurnOnNotifications -> R.string.settings_update_notifications_button
         UpdatePanelItem.CheckNow -> R.string.settings_updates_check_now
         UpdatePanelItem.CheckDaily -> R.string.settings_check_updates_daily
     }

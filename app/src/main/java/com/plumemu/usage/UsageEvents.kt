@@ -7,7 +7,6 @@ import com.plumemu.coredata.settings.LeftEdgeSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coredata.settings.TextSizeSetting
-import com.plumemu.coredata.settings.TextWeightSetting
 import com.plumemu.coreui.theme.AccentPreset
 import com.plumemu.coreui.theme.BackgroundPreset
 import com.plumemu.coreui.theme.TextMode
@@ -142,9 +141,7 @@ internal fun settingChanges(
         choice(SettingsOption.Background, backgroundWord(a.background), backgroundWord(b.background))
         choice(SettingsOption.TextColor, textWord(a.textColor), textWord(b.textColor))
         choice(SettingsOption.Accent, accentWord(a.accent), accentWord(b.accent))
-        choice(SettingsOption.Font, a.font, b.font)
         choice(SettingsOption.TextSize, a.textSize ?: TextSizeSetting.Default, b.textSize ?: TextSizeSetting.Default)
-        choice(SettingsOption.TextWeight, a.textWeight ?: TextWeightSetting.Default, b.textWeight ?: TextWeightSetting.Default)
         choice(SettingsOption.LeftEdge, a.leftEdge ?: LeftEdgeSetting.Default, b.leftEdge ?: LeftEdgeSetting.Default)
         choice(SettingsOption.GridSize, a.gridSize, b.gridSize)
         val c = before.controls

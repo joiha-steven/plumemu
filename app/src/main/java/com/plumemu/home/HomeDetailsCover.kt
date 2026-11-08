@@ -58,6 +58,7 @@ internal fun CollaredDetailsCover(
                     modifier = Modifier.testTag(HomeTags.DETAILS_COVER_BOX).coverBoxShadow(corner),
                     poster = shownPoster,
                     posterAspect = posterAspect,
+                    tileSystem = poster,
                 )
             }
         }

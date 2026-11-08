@@ -329,6 +329,7 @@ internal fun DetailsCover(
         shrinksToFit = shrinksToFit,
         poster = shownPoster,
         posterAspect = posterAspect,
+        tileSystem = poster,
     )
 }
 
@@ -408,8 +409,9 @@ internal fun Facts(
         }
         Spacer(Modifier.width(PlumDimens.factsColumnGap))
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PlumDimens.factsRowGap)) {
-            values.forEach { value ->
-                BasicText(text = value, style = style.copy(color = colors.text2), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag(HomeTags.DETAILS_FACT_VALUE))
+            // Last played and play time are phrases (Jost, tabular figures); the emulator's name is a word.
+            values.forEachIndexed { index, value ->
+                BasicText(text = value, style = (if (index < 2) PlumTheme.type.factNumber else style).copy(color = colors.text2), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag(HomeTags.DETAILS_FACT_VALUE))
             }
         }
     }

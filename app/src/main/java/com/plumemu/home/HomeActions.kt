@@ -56,6 +56,8 @@ internal fun FollowRouterActions(
         LaunchedEffect(router, state, menu, lifecycle) {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 router.actions.collect { action ->
+                    // Hidden under Settings coming in: Settings has the presses.
+                    if (callbacks().isLeaving()) return@collect
                     currentOnEachAction()
                     // An open game panel takes every action; search and the strip's focus wait underneath.
                     // Each of the three says what the action did ([Feel]) where it changes its state.
@@ -63,6 +65,11 @@ internal fun FollowRouterActions(
                     if (menu.onAction(action).also { router.textEntry = textEntryFor(search, menu) }) return@collect
                     if (search.isOpen) {
                         onSearchAction(action, search, router, feel, menu, markedNow)
+                        return@collect
+                    }
+                    // While Remove from Recent's Undo is offered X (or a tap on the hint that says so) undoes it instead of searching.
+                    if (action == Action.Search && menu.undo.game != null) {
+                        feel.act { menu.undo.take().also { if (it) feel.report(Outcome.Activated) } }
                         return@collect
                     }
                     // From here the main screen's own reading: Switch system with trades the pairs.

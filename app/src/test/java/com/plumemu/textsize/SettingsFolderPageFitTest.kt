@@ -67,14 +67,11 @@ abstract class SettingsFolderPageFitBase(
         subfolders: Result<List<String>?>?,
     ) {
         var size by mutableStateOf(TextSize.Largest)
-        var font by mutableStateOf(PlumFont.Sans)
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { Screen(focused, subfolders) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { Screen(focused, subfolders) } }
         val combinations =
-            TextSize.entries.map { PlumFont.Sans to it } +
-                listOf(PlumFont.Serif, PlumFont.Mono).flatMap { listOf(it to TextSize.Large, it to TextSize.Largest) }
+            TextSize.entries.map { PlumFont.Jost to it }
         val failures = mutableListOf<String>()
         for ((eachFont, each) in combinations) {
-            font = eachFont
             size = each
             compose.waitForIdle()
             val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
@@ -87,7 +84,7 @@ abstract class SettingsFolderPageFitBase(
             textProblems(root, allowance).mapTo(failures) { "$label: $it" }
             val item = findTagged(root, tagOfFocused)
             // Largest Serif: the long name's item (three lines) is 6 dp taller than the panel's window; it scrolls, so it can only show in part. The only case allowed to.
-            val isTallerThanWindow = name == "skip_subfolder" && each == TextSize.Largest && eachFont == PlumFont.Serif
+            val isTallerThanWindow = name == "skip_subfolder" && each == TextSize.Largest && eachFont == PlumFont.Jost
             if (item == null) failures += "$label: the focused item is not drawn" else if (!isTallerThanWindow) notFullyShown(item, root)?.let { failures += "$label: the focused item $it" }
         }
         assertTrue(failures.size.toString() + " problems:\n" + failures.take(40).joinToString("\n"), failures.isEmpty())

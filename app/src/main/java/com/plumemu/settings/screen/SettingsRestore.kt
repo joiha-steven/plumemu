@@ -18,6 +18,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.plumemu.R
 import com.plumemu.coredata.backup.BackupKind
+import com.plumemu.coreui.theme.FlatPartDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.graph.AccountInFile
 import com.plumemu.graph.RestoreProblem
@@ -302,7 +303,7 @@ private fun PanelButtons(
                 isPrimary = isPrimary,
                 isFocused = isFocused,
                 maxLines = 2,
-                modifier = Modifier.fillMaxWidth().bringIntoViewWhen(isFocused, ring = PlumDimens.focusRingOutset).tapTarget { touch.onPanelItem(index) }.testTag(SettingsTags.panelItem(index)),
+                modifier = Modifier.fillMaxWidth().bringIntoViewWhen(isFocused, ring = FlatPartDimens.focusRimRoom).tapTarget { touch.onPanelItem(index) }.testTag(SettingsTags.panelItem(index)),
             )
         }
     }

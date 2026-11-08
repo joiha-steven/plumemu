@@ -171,6 +171,14 @@ class FileUpdateStore(
                 .put(
                     "sections",
                     JSONArray(m.sections.map { JSONObject().put("kind", it.kind.key).put("items", JSONArray(it.items)) }),
+                ).put(
+                    "dexMetadata",
+                    JSONArray(
+                        m.dexMetadata.map {
+                            JSONObject().put("minSdk", it.minSdk).put("maxSdk", it.maxSdk ?: JSONObject.NULL)
+                                .put("url", it.url).put("size", it.size).put("sha256", it.sha256)
+                        },
+                    ),
                 )
 
         private fun decodeManifest(f: JSONObject): UpdateManifest {
@@ -186,7 +194,27 @@ class FileUpdateStore(
                 notes = List(notes.length()) { notes.getString(it) },
                 notesUrl = if (f.isNull("notesUrl")) null else f.getString("notesUrl"),
                 sections = decodeSections(f.optJSONArray("sections")),
+                dexMetadata = decodeDexMetadata(f.optJSONArray("dexMetadata")),
             )
+        }
+
+        /** A record written before dex metadata existed has none; an entry this version cannot read is skipped (the APK installs alone). */
+        private fun decodeDexMetadata(array: JSONArray?): List<DexMetadataFile> {
+            array ?: return emptyList()
+            return List(array.length()) { i ->
+                try {
+                    val e = array.getJSONObject(i)
+                    DexMetadataFile(
+                        minSdk = e.getInt("minSdk"),
+                        maxSdk = if (e.isNull("maxSdk")) null else e.getInt("maxSdk"),
+                        url = e.getString("url"),
+                        size = e.getLong("size"),
+                        sha256 = e.getString("sha256"),
+                    )
+                } catch (e: JSONException) {
+                    null
+                }
+            }.filterNotNull()
         }
 
         /** A record written before sections existed has none; an entry this version cannot read is skipped, so the notes show. */

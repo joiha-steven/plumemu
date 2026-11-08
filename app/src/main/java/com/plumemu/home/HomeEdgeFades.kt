@@ -18,6 +18,8 @@ internal class GridEdgeFades(
     /** How far the focused cover's ring reaches past its row, as a share of the row's height and in px; negative for a grid that lifts nothing past its rows. */
     private val liftShare: Float = -1f,
     private val ringPx: Float = 0f,
+    /** Room the fade has finished in below the run's end (home's footer gap): a bottom row is judged by [minShown] of it counting this room, or one a hair short vanishes. */
+    private val bottomGapPx: Float = 0f,
     private val focused: () -> Int,
 ) : EdgeFades, BarRunner {
     override val canScroll: Boolean
@@ -71,7 +73,7 @@ internal class GridEdgeFades(
     ): Boolean {
         if (minShown <= 0f) return false
         val top = item.offset.y + topRoom + glide.offset
-        return top < height - CUT_PX && top + item.size.height > height + CUT_PX && height - top < minShown * item.size.height
+        return top < height - CUT_PX && top + item.size.height > height + CUT_PX && height + bottomGapPx - top < minShown * item.size.height
     }
 
     private companion object {

@@ -49,13 +49,12 @@ class TopBarFitTest {
 
     /** The name's laid-out line: its size in sp and whether it was cut. */
     private fun name(
-        font: PlumFont,
         size: TextSize,
         text: String,
         rest: String,
     ): Pair<Float, Boolean> {
         compose.runOnIdle {
-            settings = settings.copy(font = font, textSize = size)
+            settings = settings.copy(textSize = size)
             place = if (rest.isEmpty()) text else "$text · $rest"
             emphasis = text
         }
@@ -67,50 +66,44 @@ class TopBarFitTest {
         return layout.layoutInput.style.fontSize.value to (layout.isLineEllipsized(0) || layout.getLineRight(0) > layout.layoutInput.constraints.maxWidth)
     }
 
-    private fun full(font: PlumFont, size: TextSize) = TypeRole.PlaceName.scaledSizeSp(font, size)
+    private fun full(size: TextSize) = TypeRole.PlaceName.scaledSizeSp(PlumFont.Jost, size)
 
-    private fun stepped(font: PlumFont, size: TextSize) = full(font, size) * PLACE_NAME_STEP_DOWN / TypeRole.PlaceName.sizeSp
+    private fun stepped(size: TextSize) = full(size) * PLACE_NAME_STEP_DOWN / TypeRole.PlaceName.sizeSp
 
     @Test
-    fun aLongSystemNameStepsDownTo16BeforeItIsCutInEveryFont() {
+    fun aLongSystemNameStepsDownTo16BeforeItIsCut() {
         show()
         val text = "Nintendo Entertainment System"
-        for (font in PlumFont.entries) {
-            val (sp, cut) = name(font, TextSize.Largest, text, "248 games")
-            // Measured at 576x432 Largest: no font fits it whole at 20 (Jost needs 423.5 of 364.5 dp).
-            assertEquals("$font: steps down to 16", stepped(font, TextSize.Largest), sp, 0.01f)
-            // With no battery drawing the status is narrower: at 16 only Jost fits it whole; Sans (since Largest is 1.5), Serif and Mono are ellipsised.
-            assertEquals("$font: whole at 16 in Jost, cut in Sans, Serif and Mono ($last)", font != PlumFont.Jost, cut)
-            val (medium, mediumCut) = name(font, TextSize.Small, text, "248 games")
-            assertEquals("$font Medium: drawn in 20", full(font, TextSize.Small), medium, 0.01f)
-            assertFalse("$font Medium: whole at 20", mediumCut)
-        }
+        val (sp, cut) = name(TextSize.Largest, text, "248 games")
+        // Measured at 576x432 Largest: it does not fit whole at 20 (Jost needs 423.5 of 364.5 dp).
+        assertEquals("steps down to 16", stepped(TextSize.Largest), sp, 0.01f)
+        // At 16 Jost fits it whole.
+        assertFalse("whole at 16 ($last)", cut)
+        val (medium, mediumCut) = name(TextSize.Small, text, "248 games")
+        assertEquals("Small: drawn in 20", full(TextSize.Small), medium, 0.01f)
+        assertFalse("Small: whole at 20", mediumCut)
     }
 
     @Test
     fun aNameIsNeverCutAt20NorDrawnAt16WhenItFitsAt20() {
         show()
-        for (font in PlumFont.entries) {
-            for (size in TextSize.entries) {
-                for (text in listOf("Homebrew and Translations Collection", "Nintendo Entertainment System", "SNES")) {
-                    val (sp, cut) = name(font, size, text, "1,284 games")
-                    val atFull = kotlin.math.abs(sp - full(font, size)) < 0.01f
-                    assertTrue("$font $size $text: 20 or its step down ($sp)", atFull || kotlin.math.abs(sp - stepped(font, size)) < 0.01f)
-                    if (atFull) assertFalse("$font $size $text: never cut at 20", cut)
-                }
+        for (size in TextSize.entries) {
+            for (text in listOf("Homebrew and Translations Collection", "Nintendo Entertainment System", "SNES")) {
+                val (sp, cut) = name(size, text, "1,284 games")
+                val atFull = kotlin.math.abs(sp - full(size)) < 0.01f
+                assertTrue("$size $text: 20 or its step down ($sp)", atFull || kotlin.math.abs(sp - stepped(size)) < 0.01f)
+                if (atFull) assertFalse("$size $text: never cut at 20", cut)
             }
         }
         // A short name is drawn in 20 even at the largest text size.
-        assertEquals(full(PlumFont.Mono, TextSize.Largest), name(PlumFont.Mono, TextSize.Largest, "SNES", "1,284 games").first, 0.01f)
+        assertEquals(full(TextSize.Largest), name(TextSize.Largest, "SNES", "1,284 games").first, 0.01f)
     }
 
     @Test
     fun theSettingsCrumbKeepsSettingsIn20AndCutsTheDimRest() {
         show()
-        for (font in PlumFont.entries) {
-            val (sp, cut) = name(font, TextSize.Largest, "Settings", "General › Text size and screen layout")
-            assertEquals("$font: Settings in 20", full(font, TextSize.Largest), sp, 0.01f)
-            assertFalse("$font: Settings whole ($last)", cut)
-        }
+        val (sp, cut) = name(TextSize.Largest, "Settings", "General › Text size and screen layout")
+        assertEquals("Settings in 20", full(TextSize.Largest), sp, 0.01f)
+        assertFalse("Settings whole ($last)", cut)
     }
 }

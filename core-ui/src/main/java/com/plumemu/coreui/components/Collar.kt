@@ -73,8 +73,8 @@ enum class CollarSize(
 
     val padding: PaddingValues get() = PaddingValues(start = lip + groove, top = lip + groove, end = lip + groove, bottom = lipBottom + grooveBottom)
 
-    /** The lip's corner past the groove's: the lip itself (concentric rings), except a cover's lip, which the board rounds less. */
-    val lipCornerAdd: Dp get() = if (this == Cover) CollarDimens.coverLipCornerAdd else lip
+    /** The lip's corner past the groove's: the lip itself, so the rings are concentric (a cover's too). */
+    val lipCornerAdd: Dp get() = lip
 
     /** The outer corner (px) of this collar round a part of corner [partCorner] px in a [size] px box. */
     fun outerCorner(density: Density, partCorner: Float, size: Size): Float =
@@ -383,7 +383,7 @@ fun Modifier.collar(
     val motionOn = PlumTheme.motion.isOn
     LaunchedEffect(focused, motionOn) {
         val target = if (focused) 1f else 0f
-        progress.animateTo(target, if (motionOn) tween(PlumMotion.FOCUS_GROW_MS, easing = PlumMotion.EaseOut) else snap())
+        progress.animateTo(target, if (motionOn) tween(PlumMotion.FOCUS_GROW_MS, easing = PlumMotion.Decelerate) else snap())
     }
     return collar(collarSize, radius, error) { progress.value }
 }

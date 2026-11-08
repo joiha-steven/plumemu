@@ -34,7 +34,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The wide details block with every cell filled (GENRE, RATING, PLAYED, LAST PLAYED, EMULATOR, BATTERY) at 768 x 432, Small to Largest text,
- * in every font: the cells that leave are the first of BATTERY, EMULATOR, GENRE, RATING (the cover keeps its height, PLAYED and LAST PLAYED stay), the
+ * : the cells that leave are the first of BATTERY, EMULATOR, GENRE, RATING (the cover keeps its height, PLAYED and LAST PLAYED stay), the
  * battery value is whole when it is shown, and no text is cut, ends in an ellipsis or overlaps another.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -59,15 +59,6 @@ class HomeDetailsAllCellsTest {
     }
 
     @Test
-    fun everyCellFilledAtSmallInSerif() = everyCellFilledFits(PlumFont.Serif, TextSize.Small)
-
-    @Test
-    fun everyCellFilledAtLargeInSerif() = everyCellFilledFits(PlumFont.Serif, TextSize.Large)
-
-    @Test
-    fun everyCellFilledAtLargestInSerif() = everyCellFilledFits(PlumFont.Serif, TextSize.Largest)
-
-    @Test
     fun everyCellFilledAtSmallInJost() = everyCellFilledFits(PlumFont.Jost, TextSize.Small)
 
     @Test
@@ -76,43 +67,17 @@ class HomeDetailsAllCellsTest {
     @Test
     fun everyCellFilledAtLargestInJost() = everyCellFilledFits(PlumFont.Jost, TextSize.Largest)
 
-    @Test
-    fun everyCellFilledAtSmallInSans() = everyCellFilledFits(PlumFont.Sans, TextSize.Small)
-
-    @Test
-    fun everyCellFilledAtLargeInSans() = everyCellFilledFits(PlumFont.Sans, TextSize.Large)
-
-    @Test
-    fun everyCellFilledAtLargestInSans() = everyCellFilledFits(PlumFont.Sans, TextSize.Largest)
-
-    @Test
-    fun everyCellFilledAtSmallInMono() = everyCellFilledFits(PlumFont.Mono, TextSize.Small)
-
-    @Test
-    fun everyCellFilledAtLargeInMono() = everyCellFilledFits(PlumFont.Mono, TextSize.Large)
-
-    @Test
-    fun everyCellFilledAtLargestInMono() = everyCellFilledFits(PlumFont.Mono, TextSize.Largest)
-
-    // 832 x 468 (Retroid Pocket 6) at the default size: the same checks, in the default font and the others.
+    // 832 x 468 (Retroid Pocket 6) at the default size: the same checks, in Jost.
     @Test
     @Config(qualifiers = "w832dp-h468dp-land-xhdpi")
     fun everyCellFilledAtLargeOn832InJost() = everyCellFilledFits(PlumFont.Jost, TextSize.Large)
-
-    @Test
-    @Config(qualifiers = "w832dp-h468dp-land-xhdpi")
-    fun everyCellFilledAtLargeOn832InSerif() = everyCellFilledFits(PlumFont.Serif, TextSize.Large)
-
-    @Test
-    @Config(qualifiers = "w832dp-h468dp-land-xhdpi")
-    fun everyCellFilledAtLargeOn832InMono() = everyCellFilledFits(PlumFont.Mono, TextSize.Large)
 
     // The genre is one line with an ellipsis; a list too long for its share shows its first genre.
     @Test
     fun genreIsOneLineAtLargeInJost() {
         val details = GameDetails(year = 1994, publisher = "Nintendo", genre = "Action, Adventure", players = "1", description = "", rating = 17)
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Large, font = PlumFont.Jost)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Large)) {
                 HomeAt(LibraryLikeContent.of(hasBoxArt = true, metroidDetails = details), LibraryLikeContent.gamesFocused(LibraryLikeContent.SUPER_METROID))
             }
         }
@@ -136,7 +101,7 @@ class HomeDetailsAllCellsTest {
         )
         val details = GameDetails(year = 1994, publisher = "Nintendo", genre = "Action, Adventure", players = "1", description = "", rating = 17)
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 CompositionLocalProvider(LocalHomePlayFacts provides FakePlayFacts(pace = sample.pace)) {
                     HomeAt(LibraryLikeContent.of(hasBoxArt = true, metroidDetails = details), LibraryLikeContent.gamesFocused(LibraryLikeContent.SUPER_METROID))
                 }
@@ -149,11 +114,11 @@ class HomeDetailsAllCellsTest {
         val shown = all.map(::text)
         // Cells that do not fit leave whole in this order; the ones missing are always its first few, and PLAYED and LAST PLAYED stay.
         // The battery's time is whole; it says "About" only where its row has room for the word.
-        val dropOrder = listOf("BATTERY" to "14 h 15 min", "EMULATOR" to "Snes9x", "GENRE" to "Action", "RATING" to "8.5")
+        val dropOrder = listOf("Battery" to "14 h 15 min", "Emulator" to "Snes9x", "Genre" to "Action", "Rating" to "8.5")
         val missing = dropOrder.filter { it.first !in shown }
         assertTrue("$font $size: missing ${missing.map { it.first }} is not a prefix of the drop order: $shown", missing == dropOrder.take(missing.size))
-        assertTrue("$font $size: LAST PLAYED stays: $shown", "LAST PLAYED" in shown)
-        assertTrue("$font $size: PLAYED stays: $shown", "PLAYED" in shown)
+        assertTrue("$font $size: LAST PLAYED stays: $shown", "Last played" in shown)
+        assertTrue("$font $size: PLAYED stays: $shown", "Played" in shown)
         for ((label, value) in dropOrder.filter { it !in missing }) {
             if (value != null) assertTrue("$font $size: $label value whole: $shown", shown.any { it.contains(value) })
         }

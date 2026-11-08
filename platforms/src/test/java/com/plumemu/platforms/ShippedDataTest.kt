@@ -319,4 +319,12 @@ class ShippedDataTest {
             assertNotNull_(catalog.system(systemId), "$packageName -> $systemId")
         }
     }
+
+    /** Speccy opens ZX Spectrum files only; no source lists an emulator for SAM Coupe, so the system is not shipped (tables.WRONG_EMULATORS). */
+    @Test
+    fun samCoupeIsNotShippedWithASpectrumEmulator() {
+        val catalog = loadShipped()
+        assertTrue("samcoupe has no right emulator in the data", catalog.systems.none { it.id == "samcoupe" })
+        assertTrue("speccy stays on the ZX Spectrum", "speccy" in catalog.systems.first { it.id == "zxspectrum" }.emulatorIds)
+    }
 }

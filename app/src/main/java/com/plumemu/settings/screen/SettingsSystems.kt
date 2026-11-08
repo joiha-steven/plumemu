@@ -58,7 +58,7 @@ import java.util.Locale
  * Settings › Library › Systems: what System order means, System order (‹ › and A step it), then every
  * system with games in the main screen's order. A picks the focused one up (the row turns solid accent with an `onAccent` ring), Up / Down carry it (held: as
  * fast as the router repeats), L1 / R1 to the top / bottom, A drops it, B puts it back. Picking up
- * while the order is A–Z or Maker & year switches it to Manual from the order on screen. Y hides
+ * stores nothing; the order turns Manual only when a drop leaves it changed (B restores it). Y hides
  * or shows the focused system; one always stays shown. Touch: a tap focuses, a long press on the
  * handle drags, a tap on "Hidden" shows it again (and the "Y Hide" hint hides).
  */
@@ -93,6 +93,9 @@ internal class SettingsSystems {
     var locale: Locale = Locale.getDefault()
 
     val isCarrying: Boolean get() = carry != null
+
+    /** The carried system sits somewhere other than where it was picked up. */
+    val carryMoved: Boolean get() = carry?.let { it.order != it.before } ?: false
 
     /** The rows, top to bottom: the held order, else the stored arrangement ([SystemOrder], as the main screen). */
     fun rows(
@@ -161,21 +164,25 @@ internal class SettingsSystems {
      * Puts the carried system down where it is: the panel's order to store (systems a scan added
      * meanwhile at the end, A to Z), or null when nothing was carried. The panel keeps showing it.
      */
-    fun drop(content: SettingsContent): List<String>? {
+    fun drop(
+        content: SettingsContent,
+        followStored: Boolean = false,
+    ): List<String>? {
         val now = carry ?: return null
         carry = null
         val placed = now.order.toSet()
         val added = content.librarySystems.filter { it.id !in placed }
         val order = now.order + SystemOrder.arrange(added, SystemArrangement(), locale) { it.facts }.map { it.id }
-        held = order
+        // Nothing moved under A–Z or Maker & year: the panel follows the stored order again.
+        held = if (followStored && now.order == now.before) null else order
         return order
     }
 
     /** B: the carried system goes back where it was; its old index. */
-    fun cancel(): Int? {
+    fun cancel(followStored: Boolean = false): Int? {
         val now = carry ?: return null
         carry = null
-        held = now.before
+        held = if (followStored) null else now.before
         return now.fromIndex
     }
 

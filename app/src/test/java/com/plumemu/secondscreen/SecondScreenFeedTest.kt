@@ -373,4 +373,118 @@ class SecondScreenFeedTest {
             feed.setFollowing(false)
             assertEquals(false, feed.isFollowing.value)
         }
+
+    @Test
+    fun theFirstOfferAfterTheWindowShowsHasNoSettle() =
+        runTest {
+            val feed = feed { played(1) }
+            feed.setFollowing(true)
+            feed.offer(game(1))
+            after(FILL_WAIT_MS)
+            assertTrue("shown well before SETTLE_MS, with its facts", FILL_WAIT_MS < SETTLE_MS)
+            assertEquals(played(1), feed.content.value)
+        }
+
+    @Test
+    fun theSecondOfferStillWaitsTheSettle() =
+        runTest {
+            val feed = feed()
+            feed.setFollowing(true)
+            feed.offer(game(1))
+            after(1)
+            assertEquals(game(1), feed.content.value)
+            feed.offer(game(2))
+            after(SETTLE_MS - 1)
+            assertEquals(game(1), feed.content.value)
+            after(1)
+            assertEquals(game(2), feed.content.value)
+        }
+
+    @Test
+    fun theFirstOfferAfterTheWindowShowsAgainIsImmediateAgain() =
+        runTest {
+            val feed = feed()
+            feed.setFollowing(true)
+            feed.offer(game(1))
+            after(1)
+            feed.setFollowing(false)
+            feed.setFollowing(true)
+            feed.offer(game(2))
+            after(1)
+            assertEquals(game(2), feed.content.value)
+        }
+
+    @Test
+    fun aMoveRightAfterTheFirstOfferCancelsItAndSettles() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            val feed = feed { gate.await(); played((it as SecondScreenContent.Game).gameId!!.toInt()) }
+            feed.setFollowing(true)
+            feed.offer(game(1))
+            after(50)
+            feed.offer(game(2))
+            gate.complete(Unit)
+            after(SETTLE_MS - 1)
+            assertEquals("the first read was cancelled", SecondScreenContent.Calm, feed.content.value)
+            after(1)
+            assertEquals(played(2), feed.content.value)
+        }
+
+    @Test
+    fun theSameCardOfferedAgainWhileItWaitsKeepsItsWait() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            val feed = feed { gate.await(); played(1) }
+            feed.setFollowing(true)
+            feed.offer(game(1))
+            after(50)
+            feed.offer(game(1))
+            gate.complete(Unit)
+            after(1)
+            assertEquals("the library read again: the first card is not settled again", played(1), feed.content.value)
+        }
+
+    @Test
+    fun theSameCardOfferedAgainIsReadOnceMoreAfterTheSettle() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            var reads = 0
+            val feed =
+                feed {
+                    reads++
+                    if (reads == 1) {
+                        gate.await()
+                        played(1)
+                    } else {
+                        played(1).copy(playTimeMinutes = 45)
+                    }
+                }
+            feed.setFollowing(true)
+            feed.offer(game(1))
+            after(10)
+            feed.offer(game(1))
+            gate.complete(Unit)
+            after(1)
+            assertEquals("the first read shows at once", played(1), feed.content.value)
+            after(SETTLE_MS)
+            assertEquals("then a fresher record is read again", played(1).copy(playTimeMinutes = 45), feed.content.value)
+        }
+
+    @Test
+    fun aMoveAfterTheSameCardOfferedAgainCancelsBoth() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            val feed = feed { gate.await(); played((it as SecondScreenContent.Game).gameId!!.toInt()) }
+            feed.setFollowing(true)
+            feed.offer(game(1))
+            after(10)
+            feed.offer(game(1))
+            after(10)
+            feed.offer(game(2))
+            gate.complete(Unit)
+            after(SETTLE_MS - 1)
+            assertEquals("game 1 never shown", SecondScreenContent.Calm, feed.content.value)
+            after(1)
+            assertEquals(played(2), feed.content.value)
+        }
 }

@@ -32,7 +32,7 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * Settings' columns by text size on a wide screen: three up to Large, two above (`PlumLayout.isSettingsThreeColumns`), and in
  * three columns every text of the sections column, every option row and every right-column panel is whole (no ellipsis, nothing
- * cut sideways, nothing on top of another) in every font. One class per language and screen: English, Vietnamese, French and
+ * cut sideways, nothing on top of another) . One class per language and screen: English, Vietnamese, French and
  * Spanish at 768x432 and 832x468.
  */
 abstract class SettingsColumnsFitBase {
@@ -44,17 +44,15 @@ abstract class SettingsColumnsFitBase {
     @Test
     fun threeColumnsWhereTheyFitAndTwoAbove() {
         var size by mutableStateOf(TextSize.Small)
-        var font by mutableStateOf(PlumFont.Sans)
         var three = false
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 three = PlumTheme.layout.isSettingsThreeColumns
                 SettingsAt(SettingsFocus(section = SettingsSection.Appearance))
             }
         }
-        for (eachFont in PlumFont.entries) {
+        for (eachFont in listOf(PlumFont.Jost)) {
             for (each in TextSize.entries) {
-                font = eachFont
                 size = each
                 compose.waitForIdle()
                 assertEquals("three columns at $each in ${eachFont.name}", SettingsColumns.fits(each, eachFont), three)
@@ -63,14 +61,13 @@ abstract class SettingsColumnsFitBase {
         }
     }
 
-    /** Every section, every option row of it focused (and the sections themselves focused), at each text size that uses three columns, in every font. */
+    /** Every section, every option row of it focused (and the sections themselves focused), at each text size that uses three columns, . */
     @Test
     fun everythingIsWholeInThreeColumns() {
         var size by mutableStateOf(TextSize.Small)
-        var font by mutableStateOf(PlumFont.Sans)
         var focus by mutableStateOf(SettingsFocus(section = SettingsSection.Library))
         val content = ShotContent.library
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { SettingsAt(focus, content = content) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { SettingsAt(focus, content = content) } }
         val stops = mutableListOf<SettingsFocus>()
         for (section in SettingsSection.shownIn(content)) {
             stops += SettingsFocus(column = SettingsColumn.Sections, section = section)
@@ -81,9 +78,8 @@ abstract class SettingsColumnsFitBase {
         val failures = mutableListOf<String>()
         // The lists scroll and a right-column panel may drop what does not fit below (the colour name, sample rows): only sideways cuts count there.
         val allow = FitAllowance(scrollTags = setOf(SettingsTags.OPTION_LIST, SettingsTags.SECTIONS, SettingsTags.PANEL))
-        for (eachFont in PlumFont.entries) {
+        for (eachFont in listOf(PlumFont.Jost)) {
             for (each in TextSize.entries.filter { SettingsColumns.fits(it, eachFont) }) {
-                font = eachFont
                 size = each
                 for (stop in stops) {
                     focus = stop

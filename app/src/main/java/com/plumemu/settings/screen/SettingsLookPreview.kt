@@ -48,7 +48,7 @@ internal enum class PreviewKind {
     /** The whole look: colours, background, text and accent. */
     Look,
 
-    /** The focused row's text is a sample in the type as set (size, weight, font). */
+    /** The focused row's text is a sample in the type as set (size, weight). */
     Sample,
 }
 
@@ -56,7 +56,7 @@ internal enum class PreviewKind {
 internal fun previewKindOf(option: SettingsOption): PreviewKind? =
     when (option) {
         SettingsOption.Colors, SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent -> PreviewKind.Look
-        SettingsOption.TextSize, SettingsOption.TextWeight, SettingsOption.Font -> PreviewKind.Sample
+        SettingsOption.TextSize -> PreviewKind.Sample
         else -> null
     }
 
@@ -159,7 +159,7 @@ internal fun PanelWithLookPreview(
 ) {
     val kind = previewKindOf(option).takeIf { !option.hostsItsPreview }
     PanelWithPreview(kind, allowed = !model.focus.isWidePage(), bodyYields = kind == PreviewKind.Sample) {
-        SettingsPanel(option, settings, model, touch, versionName)
+        CompositionLocalProvider(LocalPanelPresses provides model.panelPresses) { SettingsPanel(option, settings, model, touch, versionName) }
     }
 }
 

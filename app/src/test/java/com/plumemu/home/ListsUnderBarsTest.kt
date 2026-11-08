@@ -61,7 +61,7 @@ abstract class ListsUnderBarsBase {
         val seen = node.getBoundsInRoot()
         val all = node.getUnclippedBoundsInRoot()
         // A row's node carries the gap after it, which the last row may leave outside the list.
-        val whole = (seen.bottom - seen.top).value >= (all.bottom - all.top).value - PlumDimens.listRowGap.value - 0.5f && seen.bottom.value <= hintTop() - PlumDimens.listFadeBand.value + 0.5f
+        val whole = (seen.bottom - seen.top).value >= (all.bottom - all.top).value - PlumDimens.listRowGap.value - 0.5f && seen.bottom.value <= fadeTop() + 0.5f
         return seen.takeIf { whole && (seen.bottom - seen.top).value > 1f }
     }
 
@@ -103,18 +103,21 @@ abstract class ListsUnderBarsBase {
 
     private fun hintTop() = hint().top.value
 
+    /** Where the bottom fade starts: its band above the footer gap. */
+    private fun fadeTop() = hintTop() - PlumDimens.footerGap.value - PlumDimens.listFadeBand.value
+
     /** Rows go under the hint bar: at rest the next row shows past the last whole one, up to the bar, with the fade over its end; no bigger than the fade's own band of it is hidden. */
     private fun theNextRowRunsUnderTheBar(settings: PlumThemeSettings) {
         show(settings, 0)
         val whole = (0..60).mapNotNull(::boundsOf).last()
         val image = compose.onRoot().captureToImage().asAndroidBitmap()
         val background = image.getPixel(2, image.height / 2)
-        val under = DpRect(whole.left, whole.bottom + PlumDimens.listRowGap, whole.right, hint().top - PlumDimens.listFadeBand)
+        val under = DpRect(whole.left, whole.bottom + PlumDimens.listRowGap, whole.right, hint().top - PlumDimens.footerGap - PlumDimens.listFadeBand)
         val ink = if (under.top >= under.bottom) 0 else image.ink(under, background)
         assertTrue("ink $ink past the last whole row, ${under.top} to ${under.bottom}", under.top >= under.bottom || ink > STILL_BACKGROUND)
     }
 
-    /** The one fade lies across the whole screen, tight on both bars, one height. */
+    /** The one fade lies across the whole screen, tight under the top bar and on the footer gap above the hint bar, one height. */
     @Test
     fun oneFadeAcrossTheScreen() {
         show(graphite, 40)
@@ -122,7 +125,7 @@ abstract class ListsUnderBarsBase {
         val top = compose.onNodeWithTag(BAR_FADE_TOP, useUnmergedTree = true).getUnclippedBoundsInRoot()
         val bar = compose.onNodeWithTag(HomeTags.TOP_BAR, useUnmergedTree = true).getBoundsInRoot()
         val root = compose.onRoot().getBoundsInRoot()
-        assertEquals("bottom ends on the hint bar", hint().top.value, bottom.bottom.value, 0.6f)
+        assertEquals("bottom ends the footer gap above the hint bar", hint().top.value - PlumDimens.footerGap.value, bottom.bottom.value, 0.6f)
         assertEquals("top starts under the title bar", bar.bottom.value, top.top.value, 0.6f)
         assertEquals("one height", (bottom.bottom - bottom.top).value, (top.bottom - top.top).value, 0.01f)
         assertEquals("the band", PlumDimens.listFadeBand.value, (bottom.bottom - bottom.top).value, 0.01f)
@@ -148,7 +151,7 @@ abstract class ListsUnderBarsBase {
         compose.waitForIdle()
         val entry = content.entries[FakeHomeContent.BOARD_SNES_INDEX].id
         assertEquals("the tapped row has the focus", partRow, state?.focus?.rowOf(entry))
-        assertTrue("row $partRow is whole above the fade", boundsOf(partRow)?.let { it.bottom <= hint().top - PlumDimens.listFadeBand } == true)
+        assertTrue("row $partRow is whole above the fade", boundsOf(partRow)?.let { it.bottom.value <= fadeTop() + 0.5f } == true)
     }
 
     /** At the true end of a list the last row rests whole above the fade. */
@@ -160,7 +163,7 @@ abstract class ListsUnderBarsBase {
         compose.setContent { PlumTheme(paper) { HomeAt(content, actions, showSystemInfo = false) } }
         compose.waitForIdle()
         val last = boundsOf(rows - 1)
-        assertTrue("last row $last whole above the fade, hint at ${hint().top}", last != null && last.bottom <= hint().top - PlumDimens.listFadeBand)
+        assertTrue("last row $last whole above the fade, hint at ${hint().top}", last != null && last.bottom.value <= fadeTop() + 0.5f)
     }
 
     private val graphite = PlumThemeSettings.Graphite

@@ -137,10 +137,15 @@ internal class FakeSetupSource : SetupSource {
     override suspend fun applyLook(
         set: ColorSet,
         textSize: TextSizeSetting?,
+        blackPage: Boolean,
     ) {
         saveFailure?.let { throw it }
         appliedLook = set to textSize
+        appliedBlackPage = blackPage
     }
+
+    /** The last [applyLook]'s black page. */
+    var appliedBlackPage: Boolean? = null
 
     /** Thrown by [setBoxArtSource] while set. */
     var boxArtFailure: Exception? = null

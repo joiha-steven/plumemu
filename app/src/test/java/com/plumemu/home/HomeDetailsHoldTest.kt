@@ -116,7 +116,7 @@ abstract class HomeDetailsHoldBase(private val narrow: Boolean = false) {
             f.factTexts.forEach { (text, box) -> settled.factTexts[text]?.let { same("fact '$text' while it arrived", box, it) } }
         }
         val firstWithValues = frames.first { it.factTexts.size > 1 }
-        assertTrue("the values come all at once, not the genre alone: ${firstWithValues.factTexts.keys}", firstWithValues.factTexts.keys.containsAll(settled.factTexts.keys.filter { it != "RATING" && !it.startsWith("8") }))
+        assertTrue("the values come all at once, not the genre alone: ${firstWithValues.factTexts.keys}", firstWithValues.factTexts.keys.containsAll(settled.factTexts.keys.filter { it != "Rating" && !it.startsWith("8") }))
         same("cover", first.cover, settled.cover)
         same("title", first.title, settled.title)
         if (!narrow) sameRows("subtitle line", first.subtitle, settled.subtitle)

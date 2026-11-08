@@ -23,7 +23,7 @@ internal data class BatteryLineSample(
 }
 
 /**
- * The wordings the fit tests loop through at every text size in every font: the shortest common one, the
+ * The wordings the fit tests loop through at every text size: the shortest common one, the
  * common long one, the longest a real game gives (14 hours, and a two-digit pace with "About"), and the
  * longest the line can say (three-digit hours, exact and with "About").
  */

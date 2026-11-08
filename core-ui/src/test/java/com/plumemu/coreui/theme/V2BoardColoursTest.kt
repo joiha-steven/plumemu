@@ -46,10 +46,12 @@ class V2BoardColoursTest {
         return out
     }
 
+    private val BOARD_BLUE = Rgb(0x3E7BE0)
     private val graphite = PlumThemeSettings.Graphite
     private val paper = PlumThemeSettings.Paper
 
-    private fun colours(s: PlumThemeSettings) = PlumComposeColors.from(PlumColors.derive(s.backgroundColor, s.textMode, s.accentColor))
+    /** The boards were drawn with their blue #3E7BE0, not today's default accent. */
+    private fun colours(s: PlumThemeSettings) = PlumComposeColors.from(PlumColors.derive(s.backgroundColor, s.textMode, BOARD_BLUE))
 
     @Test
     fun graphitePageAndInkAreTheBoards() {

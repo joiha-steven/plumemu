@@ -3,6 +3,46 @@
 What changed in each version of Plumemu, newest first. Downloads are under
 [Releases](../../releases).
 
+## 0.1.4 (9 November 2026)
+
+New colour sets, one typeface, a clearer focus, a simpler setup, and menus and lists that move faster and more smoothly.
+
+### New
+
+- Seventeen colour sets replace the old list, with a new deep blue default and true black on handhelds with OLED screens.
+- The focused cover or app lifts a little inside its own space, with a thin light rim and a soft glow, so nothing overlaps.
+- Setup asks whether to download box art, No by default, then lets you pick the default source or your ScreenScraper account.
+- Removing a game from Recent offers Undo for four seconds.
+- Settings lists the folders the last scan could not read, with Scan again and a way to skip each one.
+- A game without box art gets a card in its system's colour with its title, and covers still loading show the same card.
+
+### Improved
+
+- Every screen uses Jost in one weight, and the clock, battery and years use a monospaced face, so Font and Text weight are gone.
+- Covers have rounder corners, and buttons and switches are flat, with an outline on a switch that is off.
+- Screens move as one, and Settings and the game menu open faster: Settings rises from behind, another system slides in.
+- Lists and the cover grid scroll with fewer slow frames, and the Thor's bottom screen shows its card much sooner.
+- From the next update on, Plumemu installs already compiled for your handheld, so it is quick from the first start.
+
+### Fixed
+
+- The scan names more games correctly, and games in a folder it cannot read stay in your library until the folder reads again.
+- Plumemu asks to become your home screen only once your library has a game.
+- Pressing A in System order no longer switches it to Manual, and a library error now has a Try again button.
+- A card over the game details no longer cuts the title or cover, and the last row of a list ends above the button hints.
+- From the next update, Plumemu opens itself again or shows a notification to tap; Updates can turn notifications on.
+
+### Known issues
+
+- Wii games in RVZ or WIA are not checked for achievements, and 3DS, MS-DOS and Arduboy games show none yet.
+- The second screen is tested on the AYN Thor only, and most translations other than French have not been read by a native speaker.
+- Android's own folder picker cannot be finished with a gamepad on some handhelds: use touch for that step.
+- After this update, and later ones if notifications are off, press Home (twice on some handhelds) to come back to Plumemu.
+
+### Not in this version
+
+- No screenshots or videos of games yet.
+
 ## 0.1.3 (7 November 2026)
 
 One calmer glass look, lists that run under the bars, a shorter Settings and a faster menu.

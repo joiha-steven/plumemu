@@ -6,16 +6,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import kotlin.math.abs
 
 /**
- * The focused row's slab (docs/design/rules.md > The focus slab): one glass recipe for every colour set, each layer a step of perceived lightness
+ * The focused row's slab (docs/design/rules.md > Focus and current, the focused row): one glass recipe for every colour set, each layer a step of perceived lightness
  * (CIE L*) from what lies under it, so a dark and a light theme draw the same object at the same strength:
- *  - fill: white over the page or card. On a dark theme [FILL_TOP_L] at the top to [FILL_BOTTOM_L] at the foot above it, [DARK_GAIN] more on black (the eye takes a step on a
- *    dark page for less). On a light theme the shares [LIGHT_TOP] to [LIGHT_BOTTOM] of white, those same steps on Paper and more on a mid-tone page, which white frosts more;
- *  - rim: a hairline [RIM_SIDE_L] off the page, white on a dark theme and the brown [shadowTint] on a light one, and white at two opposite corners, [RIM_LIT_L] above the fill or as far as white goes;
- *  - lift: two soft layers [LIFT_NEAR_L] and [LIFT_FAR_L] off the page: a shadow where the page can show one, light where it is too dark to.
- * A near-white page leaves white little room: there the rim and the lift carry the slab. Derived from the background only, so every colour set and custom colour has one; the accent paints the bar.
+ *  - fill: the page or card lit toward white, keeping its hue. On a dark theme [FILL_TOP_L] at the top to [FILL_BOTTOM_L] at the foot above it, [DARK_GAIN] more on
+ *    black (the eye takes a step on a dark page for less). On a light theme only [LIGHT_TOP_L] to [LIGHT_BOTTOM_L]: the pane stays below white, so the white rim shows;
+ *  - rim: a white hairline, [RIM_SIDE_L] above the fill along the sides on a dark theme and white itself on a light one, and white at two opposite corners, [RIM_LIT_L]
+ *    above the fill or as far as white goes;
+ *  - lift: two soft shadows [LIFT_NEAR_L] and [LIFT_FAR_L] off the page, black on a dark theme and the brown [shadowTint] on a light one; never a glow.
+ * Dark and light draw the same rimmed pane over the same shadow. A pure white page leaves the white rim nothing to show against: there only the shadow carries the slab
+ * (the sets keep their light pages at most about L* 93). Derived from the background only, so every colour set and custom colour has one; the accent paints the bar.
  */
 object FocusSlab {
     /** The gradient's three stops over [under] (the page, or the card under it): top, [MID_AT], bottom. */
@@ -23,23 +24,19 @@ object FocusSlab {
         under: Rgb,
         dark: Boolean,
     ): List<Rgb> =
-        if (dark) {
-            listOf(FILL_TOP_L, FILL_MID_L, FILL_BOTTOM_L).map { lit(under, it) }
-        } else {
-            listOf(LIGHT_TOP, LIGHT_MID, LIGHT_BOTTOM).map { ColorMath.mix(under, WHITE, it) }
-        }
+        steps(dark).map { lit(under, it) }
+
+    private fun steps(dark: Boolean) = if (dark) listOf(FILL_TOP_L, FILL_MID_L, FILL_BOTTOM_L) else listOf(LIGHT_TOP_L, LIGHT_MID_L, LIGHT_BOTTOM_L)
 
     /** The gradient's mean over its height (for contrast checks and flat samples). */
     fun fill(
         bg: Rgb,
         text: Rgb,
         dark: Boolean,
-    ): Rgb =
-        if (dark) {
-            lit(bg, MID_AT * (FILL_TOP_L + FILL_MID_L) / 2 + (1 - MID_AT) * (FILL_MID_L + FILL_BOTTOM_L) / 2)
-        } else {
-            ColorMath.mix(bg, WHITE, MID_AT * (LIGHT_TOP + LIGHT_MID) / 2 + (1 - MID_AT) * (LIGHT_MID + LIGHT_BOTTOM) / 2)
-        }
+    ): Rgb {
+        val (top, mid, bottom) = steps(dark)
+        return lit(bg, MID_AT * (top + mid) / 2 + (1 - MID_AT) * (mid + bottom) / 2)
+    }
 
     /** [fill] where the slab sits on a raised card. */
     fun fillOnCard(
@@ -57,21 +54,18 @@ object FocusSlab {
     /** The rim's lit corners as a white overlay over [fill]. */
     fun topAlpha(fill: Rgb) = ColorMath.shareForLightness(fill, WHITE, RIM_LIT_L)
 
-    /** The rim's strength along the sides, as an overlay of [edgeInk] over [fill]: what takes it to [RIM_SIDE_L] off [bg]. */
+    /** The rim's strength along the sides, as a white overlay over [fill]: [RIM_SIDE_L] above it on a dark theme, white itself on a light one. */
     fun edgeAlpha(
         fill: Rgb,
         bg: Rgb,
         dark: Boolean,
-    ): Double {
-        val rim = ColorMath.lightness(bg) + if (dark) RIM_SIDE_L else -RIM_SIDE_L
-        return ColorMath.shareForLightness(fill, edgeInk(dark), abs(ColorMath.lightness(fill) - rim))
-    }
+    ): Double = if (dark) ColorMath.shareForLightness(fill, WHITE, RIM_SIDE_L) else 1.0
 
-    /** The rim's colour along the sides: white on a dark theme, the brown [shadowTint] on a light one. */
-    fun edgeInk(dark: Boolean): Rgb = if (dark) WHITE else SHADOW_TINT_LIGHT
+    /** The rim's colour along the sides: white on every theme. */
+    fun edgeInk(dark: Boolean): Rgb = WHITE
 
-    /** What lifts the slab off [bg]: light on a dark theme, whose page cannot show a shadow, and shade on a light one. */
-    fun liftInk(dark: Boolean): Rgb = edgeInk(dark)
+    /** What lifts the slab off [bg]: a shadow on every theme ([shadowTint]), never a glow. */
+    fun liftInk(dark: Boolean): Rgb = shadowTint(dark)
 
     /** A lift layer's strength over [bg], for a step of [step] L*. */
     fun liftAlpha(
@@ -125,11 +119,11 @@ object FocusSlab {
     const val FILL_MID_L = 5.5
     const val FILL_BOTTOM_L = 4.0
     const val DARK_GAIN = 0.33
-    const val LIGHT_TOP = 0.92
-    const val LIGHT_MID = 0.65
-    const val LIGHT_BOTTOM = 0.48
-    const val RIM_SIDE_L = 20.0 * Depth.RAISE
-    const val RIM_LIT_L = 50.0 * Depth.RAISE
+    const val LIGHT_TOP_L = 3.5
+    const val LIGHT_MID_L = 3.0
+    const val LIGHT_BOTTOM_L = 2.5
+    const val RIM_LIT_L = 30.0 * Depth.RAISE
+    const val RIM_SIDE_L = RIM_LIT_L * 2 / 3
     const val LIFT_NEAR_L = 10.0 / 3.0 * Depth.SHADOW
     const val LIFT_FAR_L = 35.0 / 6.0 * Depth.SHADOW
 

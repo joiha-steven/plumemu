@@ -25,11 +25,14 @@ class KeyCapLookTest {
     /** The ready-made colours by letter (docs/design/rules.md › Colour), with the letter colour on each. */
     private val expected: Map<ColorSet, Map<String, Pair<Int, Rgb>>> =
         mapOf(
-            ColorSet.Super to mapOf("A" to (0xC8302B to white), "B" to (0xD9A400 to dark), "X" to (0x2B54B5 to white), "Y" to (0x2E8B4A to white)),
-            ColorSet.Charcoal to mapOf("A" to (0x3E6FD8 to white), "B" to (0x2E9A47 to dark), "X" to (0xD9A400 to dark), "Y" to (0xD9A400 to dark)),
-            ColorSet.Ivory to mapOf("A" to (0xCF3A3A to white), "B" to (0xD9A400 to dark), "X" to (0x2F6FDB to white), "Y" to (0x2E9A47 to dark)),
-            ColorSet.Banana to mapOf("A" to (0xC8302B to white), "B" to (0x0E7C7C to white), "X" to (0x926B00 to white), "Y" to (0x926B00 to white)),
+            ColorSet.FrontLoader to mapOf("A" to (0xD22A35 to white), "B" to (0xD22A35 to white), "X" to (0x3A3B40 to white), "Y" to (0x3A3B40 to white)),
+            ColorSet.SpiceCube to mapOf("A" to (0x2EA557 to dark), "B" to (0xD93A3E to white), "X" to (0xBDBCC8 to dark), "Y" to (0xBDBCC8 to dark)),
             ColorSet.Pocket to mapOf("A" to (0x8C1D4E to white), "B" to (0x8C1D4E to white), "X" to (0x8C1D4E to white), "Y" to (0x8C1D4E to white)),
+            ColorSet.Lavender to mapOf("A" to (0x4E3591 to white), "B" to (0x4E3591 to white), "X" to (0xB2A5DB to dark), "Y" to (0xB2A5DB to dark)),
+            ColorSet.RedAndGold to mapOf("A" to (0x9A1B2F to white), "B" to (0x9A1B2F to white), "X" to (0xC69A1E to dark), "Y" to (0xC69A1E to dark)),
+            ColorSet.Ivory to mapOf("A" to (0xCF3A3A to white), "B" to (0xD9A400 to dark), "X" to (0x2F6FDB to white), "Y" to (0x2E9A47 to dark)),
+            ColorSet.ColdGrey to mapOf("A" to (0x3E6FD8 to white), "B" to (0x2E9A47 to dark), "X" to (0xD9A400 to dark), "Y" to (0xD9A400 to dark)),
+            ColorSet.Banana to mapOf("A" to (0xC8302B to white), "B" to (0x0E7C7C to white), "X" to (0x926B00 to white), "Y" to (0x926B00 to white)),
         )
 
     @Test
@@ -68,19 +71,19 @@ class KeyCapLookTest {
                 assertEquals(colors.text, look.letter)
             }
         }
-        // Super with one colour changed by hand is Custom, but its buttons stay.
-        val edited = themeOf(ColorSet.Super).copy(text = Rgb(0x000000))
+        // Ivory with one colour changed by hand is Custom, but its buttons stay.
+        val edited = themeOf(ColorSet.Ivory).copy(text = Rgb(0x000000))
         assertNull(ColorSet.matching(edited))
-        assertEquals(ColorSet.Super.buttons, edited.buttonSet?.buttons)
+        assertEquals(ColorSet.Ivory.buttons, edited.buttonSet?.buttons)
         // No button set (Custom colours picked from nothing): the usual glyphs.
-        assertNull(keyCapLook("A", edited.copy(buttonSet = null).buttonSet?.buttons, colorsOf(ColorSet.Super)).fill)
+        assertNull(keyCapLook("A", edited.copy(buttonSet = null).buttonSet?.buttons, colorsOf(ColorSet.Ivory)).fill)
     }
 
     /** "Confirm with B" swaps what the letters do, not their colours: the cap that reads B is B's colour. */
     @Test
     fun theColourFollowsTheLetterNotTheRole() {
-        val buttons = ColorSet.Super.buttons!!
-        val colors = colorsOf(ColorSet.Super)
+        val buttons = ColorSet.Ivory.buttons!!
+        val colors = colorsOf(ColorSet.Ivory)
         val confirmWithA = keyCapLook("A", buttons, colors)
         val confirmWithB = keyCapLook("B", buttons, colors)
         assertEquals(buttons.a.fill.toComposeColor(), confirmWithA.fill)

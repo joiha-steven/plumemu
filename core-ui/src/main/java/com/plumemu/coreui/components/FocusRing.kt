@@ -8,7 +8,11 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.plumemu.coreui.theme.CssShadow
+import com.plumemu.coreui.theme.FlatPartDimens
 import com.plumemu.coreui.theme.FocusHalo
+import com.plumemu.coreui.theme.FocusLift
 import com.plumemu.coreui.theme.PlumDimens
 
 /**
@@ -34,49 +38,34 @@ fun DrawScope.drawFocusRing(
 }
 
 /**
- * The focus ring of a grid item: hugging the item's own shape, a [PlumDimens.focusRingGap] wide band of the
- * screen's [gap] colour just outside it, then the [ring] ([PlumDimens.focusRingWidth], the accent), then the focus [halo] outside the ring (never over the item). The
- * glow under the item is its own colour, drawn by the caller. Colours are passed as values, so a caller reads them
- * (States) inside its draw block and nothing recomposes when one changes. Reaches [PlumDimens.focusRingOutset] past the item.
+ * The focus rim of a button or a switch: the shared rim stroke ([drawRimStroke]: [FocusLift.rimWidth] of [rim], glued to the edge of the rounded
+ * rectangle at [topLeft] of [size], corner [corner] px, no gap, nothing scaled) over a tight glow and a small depth shadow (tinted [shade]),
+ * faded by [strength] (0..1). The glow and the shadow are two layers of ONE cached image (`drawCssShadows`); no layer, no clip, nothing laid
+ * out. It reaches [FlatPartDimens.focusRimRoom] past the part: leave that unclipped. [rim] is [FocusLift.rimColor] of the page.
  */
-fun DrawScope.drawGridFocusRing(
-    topLeft: Offset,
-    itemSize: Size,
-    corner: Dp,
-    ring: Color,
-    gap: Color,
-    halo: Color = Color.Transparent,
-) {
-    drawFocusHalo(topLeft, itemSize, corner.toPx(), PlumDimens.focusRingOutset.toPx(), halo)
-    val gapWidth = PlumDimens.focusRingGap.toPx()
-    drawOutline(topLeft, itemSize, gapWidth / 2, corner.toPx(), gap, gapWidth)
-    drawRing(topLeft, itemSize, corner, ring)
-}
-
-/**
- * The focus mark of a grid cover whose collar's outer edge is the rounded rectangle at [topLeft] of [size] with corner [corner]
- * (px), faded in by [strength] (0..1): a [PlumDimens.focusRingGap] band of the screen's [gap] colour, the [ring]
- * ([PlumDimens.focusRingWidth]) and a [PlumDimens.focusRingKeyline] band of [gap] again so the ring's outside is always the screen colour
- * (its contrast never depends on what lies beyond). Only strokes outside the shape: never laid out, no image to build, so a focus move
- * costs a handful of strokes. Colours are values, read by the caller while drawing. The ring reaches [PlumDimens.focusRingOutset] past
- * the collar. No halo: it would show only where no neighbour stands, so the mark would be lopsided.
- */
-fun DrawScope.drawCoverFocusMark(
+internal fun DrawScope.drawGluedRim(
     topLeft: Offset,
     size: Size,
     corner: Float,
-    ring: Color,
-    gap: Color,
+    rim: Color,
+    dark: Boolean,
+    shade: Color,
     strength: Float,
 ) {
     if (strength <= 0f) return
-    val outset = PlumDimens.focusRingOutset.toPx()
-    val keyline = PlumDimens.focusRingKeyline.toPx()
-    drawOutline(topLeft, size, outset + keyline / 2, corner, gap.copy(alpha = gap.alpha * strength), keyline)
-    val gapWidth = PlumDimens.focusRingGap.toPx()
-    drawOutline(topLeft, size, gapWidth / 2, corner, gap.copy(alpha = gap.alpha * strength), gapWidth)
-    val width = PlumDimens.focusRingWidth.toPx()
-    drawOutline(topLeft, size, gapWidth + width / 2, corner, ring.copy(alpha = ring.alpha * strength), width)
+    val glow = if (dark) FlatPartDimens.GLOW_ALPHA_DARK else FlatPartDimens.GLOW_ALPHA_LIGHT
+    val drop = if (dark) FlatPartDimens.SHADOW_ALPHA_DARK else FlatPartDimens.SHADOW_ALPHA_LIGHT
+    drawCssShadows(
+        listOf(
+            CssShadow(shade.copy(alpha = drop), FlatPartDimens.shadowDrop, FlatPartDimens.shadowBlur, spread = FocusLift.rimWidth, glow = true),
+            CssShadow(rim.copy(alpha = glow), 0.dp, FocusLift.glowSigma * 2, spread = FocusLift.rimWidth, glow = true),
+        ),
+        topLeft,
+        size,
+        corner,
+        strength,
+    )
+    drawRimStroke(topLeft, size, corner, rim.copy(alpha = rim.alpha * strength))
 }
 
 private fun DrawScope.drawRing(

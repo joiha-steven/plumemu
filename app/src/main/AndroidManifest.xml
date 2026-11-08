@@ -14,6 +14,9 @@
          through a PackageInstaller session, only after the person chose Update. Android 8+ also asks
          the person once (Install unknown apps). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- One notification, "Plumemu updated, tap to open", only when Android refused to reopen Plumemu after its own update.
+         Android 13+ asks the person once, when they press Update in Settings; nothing is sent anywhere. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Uninstall from Apps: the app menu's Uninstall starts Android's own confirmation
          (ACTION_DELETE), which from Android 9 needs this normal permission. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />

@@ -126,11 +126,16 @@ class CoverCollarSpecTest {
     }
 
     @Test
-    fun theLipIsRoundedNinePxRoundASixPxGroove() {
-        // SPEC: lip radius 9 px = 6 dp, groove 6 px = 4 dp, art 4 px; the lip is not concentric with the groove.
-        val density = Density(1.5f)
-        assertEquals(9f, CollarSize.Cover.outerCorner(density, with(density) { CollarDimens.coverBoxCorner.toPx() }, Size(300f, 300f)), 0.01f)
-        assertEquals(6f, (CollarDimens.coverBoxCorner + CollarSize.Cover.groove + CollarSize.Cover.lipCornerAdd).value, 0.01f)
+    fun theFrameCornerIsThePictureCornerPlusTheFrameWidth() {
+        // Picture 6 dp, frame 10 dp: concentric (the frame's width is groove plus lip, 4 dp), at every density.
+        assertEquals(6f, CollarDimens.coverBoxCorner.value, 0.001f)
+        assertEquals(10f, CollarDimens.coverFrameCorner.value, 0.001f)
+        assertEquals(CollarDimens.coverBoxCorner.value + CollarSize.Cover.sidePadding.value, CollarDimens.coverFrameCorner.value, 0.001f)
+        for (d in listOf(1f, 1.5f, 2f, 2.625f)) {
+            val density = Density(d)
+            val outer = CollarSize.Cover.outerCorner(density, with(density) { CollarDimens.coverBoxCorner.toPx() }, Size(900f, 900f))
+            assertEquals("density $d", 10f * d, outer, 0.01f)
+        }
     }
 
     /**

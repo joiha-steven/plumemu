@@ -3,7 +3,6 @@ package com.plumemu.home
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
 import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.theme.PlumFont
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -24,7 +23,7 @@ class HomeScreenshotTest {
 
     @Test
     fun gamesFocused() =
-        ReferenceShots.capture("home_games", sizes = ReferenceShots.Size.entries, fonts = PlumFont.entries) { HomeAt(FakeHomeContent.board(), BoardGamesFocused) }
+        ReferenceShots.capture("home_games", sizes = ReferenceShots.Size.entries) { HomeAt(FakeHomeContent.board(), BoardGamesFocused) }
 
     @Test
     fun emptyLibrary() = ReferenceShots.capture("home_empty") { HomeAt(FakeHomeContent.noGames()) }

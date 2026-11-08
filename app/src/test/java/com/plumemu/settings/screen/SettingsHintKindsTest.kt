@@ -56,7 +56,7 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
 
     @Test
     fun valuesSwitchesAndChoicePanelsSayChange() {
-        for (option in listOf(SettingsOption.Colors, SettingsOption.Accent, SettingsOption.Font)) {
+        for (option in listOf(SettingsOption.Colors, SettingsOption.Accent)) {
             assertEquals(option.name, R.string.settings_hint_change, hintOn(SettingsSection.Appearance, option))
         }
         assertEquals(R.string.settings_hint_change, hintOn(SettingsSection.HomeScreen, SettingsOption.ClockAndBattery))
@@ -123,9 +123,7 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 SettingsOption.Background to change,
                 SettingsOption.TextColor to change,
                 SettingsOption.Accent to change,
-                SettingsOption.Font to change,
                 SettingsOption.TextSize to change,
-                SettingsOption.TextWeight to change,
                 SettingsOption.LeftEdge to change,
                 SettingsOption.GridSize to change,
                 SettingsOption.ConfirmBottom to change,
@@ -159,6 +157,7 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 // A choice of emulators, like Colors' panel: "Change".
                 SettingsOption.SystemEmulator to change,
                 SettingsOption.FilesNotAdded to open,
+                SettingsOption.UnreadableFolders to open,
                 SettingsOption.PushRightToPlay to change,
                 SettingsOption.ShowButtonHints to change,
                 SettingsOption.Keyboard to change,

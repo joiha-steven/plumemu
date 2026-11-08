@@ -112,13 +112,13 @@ class SettingsSectionsScrollCueTest {
     /** An opened section's rows fade the same way (seen cut by a hard line on the Pocket 6): at its first row only the bottom, at its last only the top. */
     @Test
     fun anOpenedSectionFadesWhereItContinues() {
-        val last = SettingsSection.Appearance.rowsIn(ShotContent.library).lastIndex
+        val last = SettingsSection.Controls.rowsIn(ShotContent.library).lastIndex
         var row by mutableStateOf(0)
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) {
                 key(row) {
                     SettingsAt(
-                        SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Appearance, rememberedOption = mapOf(SettingsSection.Appearance to row)),
+                        SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Controls, rememberedOption = mapOf(SettingsSection.Controls to row)),
                         content = ShotContent.library,
                     )
                 }
@@ -131,7 +131,7 @@ class SettingsSectionsScrollCueTest {
             val range = compose.onNodeWithTag(SettingsTags.OPTION_LIST, useUnmergedTree = true).fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange]
             val down = range.value() < range.maxValue()
             val up = range.value() > 0f
-            assertTrue("row $at: Appearance scrolls at Largest on 576", down || up)
+            assertTrue("row $at: Controls scrolls at Largest on 576", down || up)
             assertEquals("row $at: bottom fade iff it can scroll down", down, shown(FADE_BOTTOM_SUFFIX))
             assertEquals("row $at: top fade iff it can scroll up", up, shown(FADE_TOP_SUFFIX))
         }
@@ -140,20 +140,22 @@ class SettingsSectionsScrollCueTest {
         assertTrue("at the last row the top fades", shown(FADE_TOP_SUFFIX))
     }
 
-    /** A fade never dims the focused row: Text size opens low in Appearance at the largest text with a row past it, and its slab edge is as bright at its bottom as at its top. */
+    /** A fade never dims the focused row: the second-last row of Controls (Appearance has five rows and no longer scrolls at Largest on 576) at the largest text, with a row past it, and its slab edge is as bright at its bottom as at its top. */
     @Test
     fun aFadeStopsShortOfTheFocusedRow() {
-        val row = SettingsSection.Appearance.rowsIn(ShotContent.library).indexOf(SettingsOption.TextSize)
+        val rows = SettingsSection.Controls.rowsIn(ShotContent.library)
+        val focused = rows[rows.lastIndex - 1]
+        val row = rows.indexOf(focused)
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) {
-                SettingsAt(SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Appearance, rememberedOption = mapOf(SettingsSection.Appearance to row)), content = ShotContent.library)
+                SettingsAt(SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Controls, rememberedOption = mapOf(SettingsSection.Controls to row)), content = ShotContent.library)
             }
         }
         compose.waitForIdle()
-        assertTrue("the rows continue past Text weight", compose.onAllNodesWithTag(SettingsTags.OPTION_LIST + FADE_BOTTOM_SUFFIX, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        assertTrue("the rows continue past the focused row", compose.onAllNodesWithTag(SettingsTags.OPTION_LIST + FADE_BOTTOM_SUFFIX, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
         val image = compose.onRoot().captureToImage().asAndroidBitmap()
         val d = compose.density.density
-        val box = compose.onNodeWithTag(SettingsTags.option(SettingsOption.TextSize), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val box = compose.onNodeWithTag(SettingsTags.option(focused), useUnmergedTree = true).getUnclippedBoundsInRoot()
         val x = ((box.left.value + (box.right.value - box.left.value) * 0.4f) * d).toInt()
         // The slab's border: the bottom side is a lighter line over the fill's dark end, a little past the row's bounds (the slab may bleed).
         val xs = (x - 5)..(x + 5)

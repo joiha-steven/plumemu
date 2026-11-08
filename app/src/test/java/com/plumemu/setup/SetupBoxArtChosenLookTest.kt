@@ -53,7 +53,7 @@ class SetupBoxArtChosenLookTest {
 
     @Test
     fun theChosenCardHasNoFillAndTheFocusedOneDoes() {
-        val state = SetupFakes.boxArtQuestion.copy(focus = SetupControl.UseBoxArt, boxArtSource = BoxArtSourceSetting.LibretroOnly)
+        val state = SetupFakes.boxArtSources.copy(focus = SetupControl.UseBoxArt, boxArtSource = BoxArtSourceSetting.LibretroOnly)
         compose.setContent {
             density = LocalDensity.current
             PlumTheme(theme) {

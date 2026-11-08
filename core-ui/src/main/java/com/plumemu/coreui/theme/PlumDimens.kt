@@ -123,9 +123,10 @@ object PlumDimens {
 
     /**
      * The game row's right inset at the narrow details stop, where the list is slid out to its last 56 dp and the year is all that shows:
-     * 5 keeps a year at the largest text size (about 50 dp, Sans and Bold) whole inside the 56 dp that show.
+     * 5 keeps a year whole inside the 56 dp that show, up to Huge; at Largest it is 3 (a Jost year at Bold is 52 dp there).
      */
     val gameRowPeekEndPadding = 5.dp
+    val gameRowPeekEndPaddingLargest = 3.dp
 
     val gameRowPadding = 23.33.dp
 
@@ -447,6 +448,7 @@ object PlumDimens {
 
     /** Between hints, and between the focused title and the hints, on the grid's bottom bar: 16 to a key cap, less the collar's 7 dp of side room. */
     val gridHintGap = 9.dp
+    val hintTitleMin = 96.dp // the least room the grid bar's focused title keeps (about 12 characters at 13): a long title is cut to it before a key leaves
 
     /** Between the focused title and the text after it on the grid's info line (the Covers board's 14 px flex gap; no separator dot). */
     val infoLineGap = 9.33.dp
@@ -460,8 +462,8 @@ object PlumDimens {
     /** Rows and buttons. */
     val cornerRow = 8.dp
     val cornerSetupChoice = 10.dp
-    val cornerCoverLandscape = 8.dp
-    val cornerCoverPortrait = 6.dp
+    val cornerCoverLandscape = CollarDimens.coverBoxCorner
+    val cornerCoverPortrait = CollarDimens.coverBoxCorner
 
     /** Key caps are fully round: corner = height / 2. */
     val keyCapHeight = 20.67.dp
@@ -501,18 +503,9 @@ object PlumDimens {
     /** Gap between the focused item and its ring. */
     val focusRingGap = 3.dp
 
-    /** How much larger a focused Apps tile (icon and name) is drawn, about its centre, lifted [focusedLift] up, by the grid over its clip, never by layout (`PlumLayoutTest`, `GridFocusBoundsTest`). */
-    const val FOCUSED_ICON_SCALE = 1.13f
-
-    /** How much larger a focused grid cover (its whole collar) is drawn about its centre, at most: `focusedCoverScale` (`GridCoverFocusTest`). */
-    const val FOCUSED_COVER_SCALE = 1.04f
-
-    /** How far a focused grid item rises, at full growth. */
-    val focusedLift = 2.5.dp
-
     /**
-     * The gap between the top bar and the cover grid (the other screens keep [barGap]): the lifted tallest row's upward half of
-     * the 8 % growth (263 dp, PSP at Large on 768: 10.5) plus the ring's 5.5 dp outset is 16.0, so the lift and its ring clear the top bar.
+     * The gap between the top bar and the cover grid (the other screens keep [barGap]): the focused tallest row's upward half of
+     * the 3.5 % growth (263 dp, PSP at Large on 768: 4.6) plus [FocusLift.reach] (6.5) is 11.1, so the lift, rim and glow clear the top bar.
      */
     val gridTopGap = 14.dp
 
@@ -562,18 +555,6 @@ object PlumDimens {
     const val COVER_GLOW_MIN_VALUE = 0.6f
 
     /**
-     * The one light band that sweeps across the focused cover (design/rules.md › Focus and current):
-     * white at this peak opacity, as wide as this share of the cover's span along its direction, the
-     * direction this many degrees below horizontal.
-     */
-    const val FOCUS_SWEEP_ALPHA = 0.28f
-
-    /** The light band's colour: white on both themes (a light, not a tint). */
-    val focusSweepColor = androidx.compose.ui.graphics.Color.White
-    const val FOCUS_SWEEP_WIDTH = 0.45f
-    const val FOCUS_SWEEP_ANGLE_DEGREES = 25f
-
-    /**
      * A cover in the Favorites grid whose game was just unfavorited (Y) and is still shown until the person leaves
      * the list: the Favorites list drops the row's star, the grid has none, so the cover is dimmed instead. The app
      * had no dim alpha before this (it dims text through the `muted` colour); the focused cover is dimmed too.
@@ -588,7 +569,7 @@ object PlumDimens {
     const val FOCUS_HALO_STEPS = 7
     /** Focus ring reach past its item (gap + width): space a grid keeps clear around covers. */
     val focusRingOutset = focusRingGap + focusRingWidth
-    /** A band of the screen colour outside a focused cover's ring, for the ring's contrast; with [focusRingOutset] it stays inside [gridGapDown]. */
+    /** A band of the screen colour round a ring, for the ring's contrast (Settings' colour grid). */
     val focusRingKeyline = 2.dp
 
     /** The grid cover's hairline, drawn just inside its edge (`PlumColors.coverEdge`): no layout change. */

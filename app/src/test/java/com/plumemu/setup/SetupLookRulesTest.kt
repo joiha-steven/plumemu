@@ -2,6 +2,8 @@ package com.plumemu.setup
 
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coreinput.Direction
+import com.plumemu.coreui.theme.BackgroundChoice
+import com.plumemu.coreui.theme.BackgroundPreset
 import com.plumemu.coreui.theme.ColorSet
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -23,6 +25,15 @@ class SetupLookRulesTest {
     fun aThorIsOledSoNearBlackIsSuggested() {
         assertEquals(ColorSet.Plumemu, deviceLookOf(facts("AYN", "Thor")).colorSet)
         assertEquals(ColorSet.Plumemu, deviceLookOf(facts("ayn", "THOR", 640f, 360f)).colorSet)
+    }
+
+    @Test
+    fun anOledScreenGetsTrueBlackUnderTheDefaultSetOnly() {
+        val oled = deviceLookOf(facts("AYN", "Thor"))
+        assertEquals(BackgroundChoice.Preset(BackgroundPreset.Black), oled.pageOf(ColorSet.Plumemu))
+        assertEquals("another set keeps its page", ColorSet.Daylight.background, oled.pageOf(ColorSet.Daylight))
+        val lcd = deviceLookOf(facts("Moorechip", "Retroid Pocket Nova", 576f, 432f))
+        assertEquals("elsewhere the default is the ink", ColorSet.Plumemu.background, lcd.pageOf(ColorSet.Plumemu))
     }
 
     @Test

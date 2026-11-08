@@ -22,7 +22,7 @@ import org.junit.Test
  * opens from its row and comes back to it; every colour rule of the pages still holds there.
  */
 internal class SettingsColorsPanelRowsTest : SettingsModelHarness() {
-    private fun start(appearance: AppearanceSettings = PlumSettings.Defaults.appearance) {
+    private fun start(appearance: AppearanceSettings = OLD_DEFAULT_LOOK) {
         actions.settings = PlumSettings(appearance = appearance, flags = SetupFlags(setupCompleted = true))
         openSection(SettingsSection.Appearance)
     }
@@ -160,8 +160,8 @@ internal class SettingsColorsPanelRowsTest : SettingsModelHarness() {
         val own = ColorSetting.Custom(0x2C1111)
         start(AppearanceSettings(background = own, textColor = TextColorSetting.Light, accent = ColorSetting.Custom(0x123456)))
         focusOption(SettingsOption.Colors)
-        pickInColorsPanel(ColorSet.Paper)
-        assertEquals(ColorSet.Paper, appearance.colorSet())
+        pickInColorsPanel(ColorSet.Daylight)
+        assertEquals(ColorSet.Daylight, appearance.colorSet())
         pickInColorsPanel(null)
         assertEquals("Custom restores the own background", own, appearance.background)
         assertEquals(ColorSetting.Custom(0x123456), appearance.accent)
@@ -170,7 +170,7 @@ internal class SettingsColorsPanelRowsTest : SettingsModelHarness() {
 
     @Test
     fun aRowsColourNeverMovesTheButtonSet() {
-        start(PlumSettings.Defaults.appearance.withColors(ColorSet.Super))
+        start(PlumSettings.Defaults.appearance.withColors(ColorSet.Ivory))
         val buttons = appearance.buttonSet
         focusOption(SettingsOption.Background)
         press(Action.Enter)

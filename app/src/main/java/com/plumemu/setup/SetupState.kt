@@ -67,14 +67,17 @@ internal enum class SetupControl {
     Look4,
     Look5,
 
-    /** "Box art and game info": ScreenScraper; without a usable account it opens the sign-in form. */
+    /** Page 2, "ScreenScraper account": without a usable account it opens the sign-in form. */
     UseBoxArt,
 
-    /** "Box art only": libretro's box fronts, no account. */
+    /** Page 2, "Default source": libretro's box fronts, no account. */
     BoxArtLibretro,
 
-    /** "Plumemu's own covers": no network. */
+    /** Page 1, "No": Plumemu's own covers, no network. */
     BoxArtOwnCovers,
+
+    /** Page 1, "Yes": opens page 2 (the source), or stores libretro in a build without ScreenScraper. */
+    BoxArtYes,
     TryAgain,
     UsageStatistics,
     StartPlaying,
@@ -114,6 +117,8 @@ internal data class SetupFolder(
     val isUnavailable: Boolean = false,
     /** The person removed it and the removal has not landed (it waits for a running scan): a second A is ignored. */
     val isRemoving: Boolean = false,
+    /** Sub-folders (paths below it) its last finished scan could not list; that scan deleted nothing. */
+    val unreadablePaths: List<String> = emptyList(),
 )
 
 /** A plain message on the step, in place of the note under it. */
@@ -209,16 +214,18 @@ internal data class SetupUiState(
      * decided (or answered in this setup). Without it the step and its dot do not exist.
      */
     val hasSecondScreenStep: Boolean = false,
-    /** The build can use ScreenScraper (developer credentials): the box art step has three choices, else two. */
+    /** The build can use ScreenScraper (developer credentials): the box art step has a source page, else "Yes" stores libretro. */
     val hasScreenScraper: Boolean = false,
     /**
-     * The sign-in form once the person chose "Box art and game info" without a usable account (or a refused
+     * The sign-in form once the person chose "ScreenScraper account" without a usable account (or a refused
      * one); it holds its own focus ([SignInForm.focus]). Null while the step shows its choices.
      */
     val boxArt: SignInForm? = null,
+    /** The box art step shows its second page (the source), or the sign-in form that came from it. */
+    val isBoxArtSourceOpen: Boolean = false,
     /** The box art source in force (the stored choice, else from the account); the step marks it. Null before the first read. */
     val boxArtSource: BoxArtSourceSetting? = null,
-    /** Box art will download: a ScreenScraper account is usable, or "Box art only" is chosen (what the statistics count). */
+    /** Box art will download: a ScreenScraper account is usable, or "Default source" is chosen (what the statistics count). */
     val isBoxArtComing: Boolean = false,
     /** What Ready says about box art: only what is true now ([boxArtLineOf]). */
     val boxArtLine: BoxArtLine = BoxArtLine.None,
@@ -255,7 +262,7 @@ internal data class SetupUiState(
     val gameCount: Int get() = systems.sumOf { it.gameCount }
     val systemCount: Int get() = systems.size
     val controls: List<SetupControl>
-        get() = if (hasLoadFailed) listOf(SetupControl.TryAgain, SetupControl.SetUpLater) else controlsOf(step, folders.size, hasScanFailed, asksAboutStatistics, hasScreenScraper)
+        get() = if (hasLoadFailed) listOf(SetupControl.TryAgain, SetupControl.SetUpLater) else controlsOf(step, folders.size, hasScanFailed, asksAboutStatistics, hasScreenScraper, isBoxArtSourceOpen)
 
     /**
      * What the input router must send: the form's typing keys while it types
@@ -271,6 +278,7 @@ internal fun controlsOf(
     hasScanFailed: Boolean,
     asksAboutStatistics: Boolean = true,
     hasScreenScraper: Boolean = true,
+    boxArtSourceOpen: Boolean = false,
 ): List<SetupControl> =
     when (step) {
         SetupStep.Folders ->
@@ -282,24 +290,28 @@ internal fun controlsOf(
         SetupStep.SecondScreen -> listOf(SetupControl.UseSecondScreen, SetupControl.SkipSecondScreen)
         SetupStep.Confirm -> listOf(SetupControl.ConfirmKeep, SetupControl.ConfirmUseB)
         SetupStep.Look -> List(SetupLooks.sets.size) { SetupControl.lookTile(it) }.filterNotNull()
-        // The three choices (two without ScreenScraper); the sign-in form has its own items and focus (account/SignInForm.kt).
+        // Page 1 asks No / Yes; page 2 (ScreenScraper builds only) the source; the sign-in form has its own items and focus (account/SignInForm.kt).
         SetupStep.BoxArt ->
-            listOfNotNull(SetupControl.UseBoxArt.takeIf { hasScreenScraper }, SetupControl.BoxArtLibretro, SetupControl.BoxArtOwnCovers)
+            if (boxArtSourceOpen && hasScreenScraper) {
+                listOf(SetupControl.BoxArtLibretro, SetupControl.UseBoxArt)
+            } else {
+                listOf(SetupControl.BoxArtOwnCovers, SetupControl.BoxArtYes)
+            }
         SetupStep.Scan -> if (hasScanFailed) listOf(SetupControl.TryAgain) else emptyList()
         SetupStep.Ready -> listOfNotNull(SetupControl.UsageStatistics.takeIf { asksAboutStatistics }, SetupControl.StartPlaying)
     }
 
 /**
  * The focus a step opens with: its main button, which is always last (Continue, Start playing);
- * the second screen, look and box art steps ask for their own; without ScreenScraper the box art
- * step opens on "Box art only".
+ * the second screen, look and box art steps ask for their own; the box art pages fall back to
+ * "No" and "Default source".
  */
 internal fun focusIn(
     controls: List<SetupControl>,
     requested: SetupControl?,
 ): SetupControl? =
     requested?.takeIf { it in controls }
-        ?: SetupControl.UseBoxArt.takeIf { it in controls }
+        ?: SetupControl.BoxArtOwnCovers.takeIf { it in controls }
         ?: SetupControl.BoxArtLibretro.takeIf { it in controls }
         ?: SetupControl.ConfirmKeep.takeIf { it in controls }
         ?: SetupControl.ChooseFolder.takeIf { it in controls }

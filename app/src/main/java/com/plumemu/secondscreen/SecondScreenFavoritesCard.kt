@@ -25,6 +25,7 @@ import com.plumemu.coreui.theme.EntryCardDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.home.CoverImages
 import com.plumemu.home.rememberCountFormat
+import com.plumemu.settings.LocalButtonLetters
 
 /**
  * The Favorites card (board `SecondFavorites`): the name and game count, then the favourites' covers (each whole in its collar, one
@@ -44,6 +45,7 @@ internal fun BoxScope.FavoritesCard(
     val systemsText = pluralStringResource(R.plurals.second_screen_on_systems, content.systemCount, numbers.format(content.systemCount))
     val allText = pluralStringResource(R.plurals.home_games_count, content.gameCount, numbers.format(content.gameCount))
     val shownOf = stringResource(R.string.second_screen_shown_of, "%1\$s", numbers.format(content.gameCount))
+    val emptyText = stringResource(R.string.home_favorites_empty, stringResource(LocalButtonLetters.current.favorite))
     val ready = content.isArtRead && content.games.isNotEmpty()
     SubcomposeLayout(Modifier.align(Alignment.TopStart).entryCardPlace()) { constraints ->
         val width = constraints.maxWidth
@@ -82,8 +84,11 @@ internal fun BoxScope.FavoritesCard(
                 used = top + rows.size * cell + (rows.size - 1) * rowGap + statusGap + (status.maxOfOrNull { it.height } ?: 0)
             }
         }
+        val isEmpty = content.isArtRead && content.games.isEmpty()
+        val emptyLine = if (isEmpty) subcompose("empty") { EntryEmptyLine(emptyText, styles) }.map { it.measure(Constraints(maxWidth = width)) } else emptyList()
         layout(width, height) {
             header.forEach { it.place(0, 0) }
+            emptyLine.forEach { it.place(0, headerHeight + EntryCardDimens.headerBottom.roundToPx()) }
             if (shownCount > 0) {
                 val cell = entryCoverCell(EntryCardDimens.favoritesCoverHeight).roundToPx()
                 val rowGap = EntryCardDimens.favoritesRowGap.roundToPx()

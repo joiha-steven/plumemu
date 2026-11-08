@@ -162,6 +162,7 @@ internal class SettingsModel(
         // A held key stays where its press landed: its repeats must not open a page's writes or step the row it left a panel for.
         if (isHeldMove && hasPressCrossed) return@act
         val before = focus
+        if (move != null && before.column == SettingsColumn.Panel) panelPresses++
         handle(action, settings, geometry)
         if (move != null && !move.isRepeat) hasPressCrossed = focus.column != before.column || focus.page != before.page
     }
@@ -569,6 +570,7 @@ internal class SettingsModel(
                 SettingsOption.Language -> PanelPage.Language to languagePanelIndex(settings.appearance.language)
                 SettingsOption.ReportProblem -> return openReport().let { true }
                 SettingsOption.RomFolders -> PanelPage.Folders to 0
+                SettingsOption.UnreadableFolders -> PanelPage.UnreadableFolders to 0
                 SettingsOption.HiddenGames, SettingsOption.UnidentifiedGames -> SettingsListPages.listPageOf.getValue(option) to 0
                 SettingsOption.FilesNotAdded -> PanelPage.FilesNotAdded to content.notAdded.indexOfFirst { it !is NotAddedItem.Heading }.coerceAtLeast(0)
                 SettingsOption.SystemEmulator -> PanelPage.Emulators to (systemAtFocus()?.currentIndex ?: 0)

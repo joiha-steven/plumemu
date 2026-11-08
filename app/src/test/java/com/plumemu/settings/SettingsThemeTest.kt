@@ -5,11 +5,11 @@ import androidx.compose.ui.graphics.Color
 import com.plumemu.coredata.settings.AdvancedSettings
 import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.ColorSetting
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.BackgroundPreset
+import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.toComposeColor
 import com.plumemu.home.appComposeRule
@@ -44,17 +44,17 @@ class SettingsThemeTest {
             }
         }
         compose.waitForIdle()
-        assertEquals(BackgroundPreset.Black.color.toComposeColor(), background)
+        assertEquals(ColorSet.Plumemu.backgroundColor.toComposeColor(), background)
         assertEquals(true, motionOn)
         assertEquals("Jost", fontName)
 
         stored.value = PlumSettings(
-            appearance = AppearanceSettings(ColorSetting.Preset("Paper"), TextColorSetting.Dark, font = FontSetting.Mono),
+            appearance = AppearanceSettings(ColorSetting.Preset("Paper"), TextColorSetting.Dark),
             advanced = AdvancedSettings(animations = false),
         )
         compose.waitForIdle()
         assertEquals(BackgroundPreset.Paper.color.toComposeColor(), background)
         assertEquals("Animations off stops motion", false, motionOn)
-        assertEquals("Mono", fontName)
+        assertEquals("Jost is the only face", "Jost", fontName)
     }
 }

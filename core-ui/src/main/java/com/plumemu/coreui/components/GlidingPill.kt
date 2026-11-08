@@ -102,6 +102,12 @@ class GlidingPill internal constructor(
     private var lastTop = Float.NaN
     private var lastMoveAt = Long.MIN_VALUE
 
+    /** Told where the slab is drawn each frame (the games list and search: a start grows from it); null for other lists. */
+    internal var origin: com.plumemu.coreui.theme.LaunchOrigin? = null
+
+    /** The node the pill draws in, for [origin]. */
+    internal var drawnIn: LayoutCoordinates? = null
+
     /** True when another node draws this pill's halo ([GlidingPillHost.drawHalo], outside the list's clip): [draw] then leaves it out. */
     internal var haloElsewhere = false
 
@@ -188,10 +194,12 @@ class GlidingPill internal constructor(
         input: PillInput,
     ) = with(scope) {
         val (top, height) = place(input) ?: run {
+            if (input.isOn) origin?.clear()
             // Animations off: the rows draw the fill and edge; the halo (and the light blob) is still drawn here, outside the list's clip, so it is the one motion-on draws.
             if (!input.isOn && !haloElsewhere && input.scroll == null) drawHaloOnly(scope, input)
             return@with
         }
+        origin?.note(drawnIn, androidx.compose.ui.geometry.Rect(0f, top, size.width, top + height))
         val colors = input.colors
         val p = press?.progress?.value ?: 0f
         val scale = if (p == 0f) 1f else 1f - (1f - PlumMotion.PRESS_SCALE) * p
@@ -448,6 +456,8 @@ fun rememberGlidingPill(
     haloOutside: Boolean = false,
     /** The slab draws the light themes' blue blob (the games list only). */
     blob: Boolean = false,
+    /** Told where the slab is drawn: the games list and search pass the home's [com.plumemu.coreui.theme.LocalLaunchOrigin]. */
+    origin: com.plumemu.coreui.theme.LaunchOrigin? = null,
     /** The list's width in px when known before it is laid out: its slab's images are then built in the background once the page is composed, not in the frame that first shows it. */
     warmWidthPx: Int = 0,
     /** Px the slab's right end stands from the list's, read while drawing ([drawWithEndMoved]): a list that changes width with the strip's stop. */
@@ -469,6 +479,7 @@ fun rememberGlidingPill(
         }
     pill.measuresRows = rowsVary
     pill.haloElsewhere = haloOutside
+    pill.origin = origin
     if (warmWidthPx > 0 && !rowsVary) {
         // Restarts on any movement of the list or the focus: nothing is built while a key is held or a page scrolls.
         LaunchedEffect(pill, input, warmWidthPx) {
@@ -482,7 +493,7 @@ fun rememberGlidingPill(
         GlidingPillHost(
             if (isOn) pill else null,
             if (haloHere) pill else null,
-            Modifier.drawBehind { if (endMovedPx == null) pill.draw(this, input) else drawWithEndMoved(endMovedPx()) { pill.draw(this, input) } },
+            Modifier.onPlaced { pill.drawnIn = it }.drawBehind { if (endMovedPx == null) pill.draw(this, input) else drawWithEndMoved(endMovedPx()) { pill.draw(this, input) } },
             Modifier.onPlaced { pill.content = it },
             input,
         )

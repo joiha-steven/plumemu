@@ -16,7 +16,7 @@ import org.junit.Test
 class SetupBoxArtLineTest {
     private val source = FakeSetupSource()
 
-    /** Folder, Continue, look, Box art only; then [chosen] and the account are set as the store would hold them. */
+    /** Folder, Continue, look, Yes, Default source; then [chosen] and the account are set as the store would hold them. */
     private fun TestScope.readyWith(
         chosen: BoxArtSourceSetting,
         status: AccountStatus = AccountStatus.SignedOut,
@@ -28,7 +28,7 @@ class SetupBoxArtLineTest {
         runCurrent()
         model.onPicked(PickResult.Picked("content://x/tree/primary%3AROMs"))
         runCurrent()
-        for (action in listOf(Action.Enter, Action.Enter, Action.Move(Direction.Down), Action.Enter)) {
+        for (action in listOf(Action.Enter, Action.Enter, Action.Move(Direction.Down), Action.Enter, Action.Enter)) {
             model.onAction(action)
             runCurrent()
         }

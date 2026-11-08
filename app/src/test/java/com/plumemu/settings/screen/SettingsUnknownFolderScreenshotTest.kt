@@ -14,7 +14,7 @@ import org.robolectric.annotation.GraphicsMode
 class SettingsUnknownFolderScreenshotTest {
     private val xbox = SettingsFolderRow(FolderKey(1, "Xbox 360"), 3, FolderAnswer.Unanswered)
     private val long = SettingsFolderRow(FolderKey(1, "Roms from the old external drive (backup 2019)"), 1, FolderAnswer.Unanswered)
-    private val halo = SettingsFolderRow(FolderKey(2, "Halo"), 0, FolderAnswer.OfSystem("x360", "Xbox 360"))
+    private val halo = SettingsFolderRow(FolderKey(2, "Halo"), 0, FolderAnswer.OfSystem("xbox 360", "Xbox 360"))
     private val docs = SettingsFolderRow(FolderKey(2, "Docs"), 0, FolderAnswer.Ignored)
     private val saving = SettingsFolderRow(FolderKey(2, "Wii U"), 0, FolderAnswer.Ignored)
     private val systems =

@@ -146,10 +146,10 @@ abstract class TextTileWordsBase {
             title = text
             for ((name, each) in shapes) {
                 shape = each
-                for (font in PlumFont.entries) {
+                for (font in listOf(PlumFont.Jost)) {
                     for (size in TextSize.entries) {
                         for (grid in GridSize.entries) {
-                            settings = PlumThemeSettings.Graphite.copy(font = font, textSize = size)
+                            settings = PlumThemeSettings.Graphite.copy(textSize = size)
                             gridSize = grid
                             compose.waitForIdle()
                             check("$name $font $size $grid", text)?.let { failures += it }

@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -20,8 +21,8 @@ import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.theme.CollarDimens
 import com.plumemu.coreui.theme.GridSize
 import com.plumemu.coreui.theme.AppsGridDimens
+import com.plumemu.coreui.theme.FocusLift
 import com.plumemu.coreui.theme.PlumDimens
-import com.plumemu.coreui.theme.focusedCoverScale
 import com.plumemu.coreui.theme.PlumTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -35,10 +36,10 @@ import kotlin.math.roundToInt
 
 /**
  * The focused item of a grid stays whole inside the screen's room for it at the first and last column and the first and last row,
- * at 768x432 and 576x432. Apps grid: the focused icon and its ring (gap and accent band) stay under the top bar, above the hint
- * bar, between the screen's side margin and the grid's right edge, and the ring is really drawn on the pixels just outside it.
- * Cover grid (the collar look): the box stays in its cell (layout), is drawn larger, its groove lights in the accent, and the larger collar
- * with its ring stays inside the same room.
+ * at 768x432 and 576x432 (`FocusLift`). Apps grid: the focused icon grown 3.5 % about its centre and its rim and glow stay under the top bar,
+ * above the hint bar, between the screen's side margin and the grid's right edge, and the rim is really drawn on the pixels just outside it.
+ * Cover grid (the collar look): the box stays in its cell (layout), is drawn larger, its groove stays unlit, and the larger collar with its
+ * rim stays inside the same room (measured with the growth about the centre, which is more than any pivot grows outward).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -50,6 +51,9 @@ class GridFocusBoundsTest {
     val rules = rulesAround(compose)
 
     private var accent = Color.Unspecified
+    private var dark = true
+    private var ink = Color.Unspecified
+    private var background = Color.Unspecified
     private var state: StripState? = null
     private var columns = 0
 
@@ -59,6 +63,9 @@ class GridFocusBoundsTest {
         compose.setContent {
             PlumTheme(TableText.Default.copy(gridSize = gridSize)) {
                 accent = PlumTheme.colors.accent
+                dark = PlumTheme.colors.isDark
+                ink = PlumTheme.colors.text
+                background = PlumTheme.colors.bg
                 columns = PlumTheme.layout.gridColumns(com.plumemu.coreui.theme.CoverShape.Landscape)
                 appsColumnCount = appsGridColumns(PlumTheme.layout)
                 content()
@@ -88,7 +95,7 @@ class GridFocusBoundsTest {
         compose.waitForIdle()
         val d = compose.density.density
         val lifted = liftedOf(resting(index))
-        val outset = PlumDimens.focusRingOutset.value * d
+        val outset = FocusLift.reach.value * d
         val grid = dp(HomeTags.GRID)
         val top = dp(HomeTags.TOP_BAR).bottom.value * d
         val hints = dp(HomeTags.HINT_BAR).top.value * d
@@ -99,8 +106,9 @@ class GridFocusBoundsTest {
         assertTrue("$label: ring above the hint bar (${lifted.bottom + outset} vs $hints)", lifted.bottom + outset <= hints + 0.5f)
         assertTrue("$label: ring inside the left margin (${lifted.left - outset} vs $minLeft)", lifted.left - outset >= minLeft - 0.5f)
         assertTrue("$label: ring clear of the next column (${lifted.right + outset} vs $maxRight)", lifted.right + outset <= maxRight + 0.5f)
-        // The accent band is drawn, uncut, in the middle of each side just outside the gap.
-        val band = (PlumDimens.focusRingGap.value + PlumDimens.focusRingWidth.value / 2f) * d
+        // The rim is drawn, uncut, in the middle of each side, its middle half a rim-width outside the grown icon's edge.
+        val band = FocusLift.rimWidth.value * d / 2f
+        val rim = FocusLift.rimColor(dark, ink).compositeOver(background)
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         val sides = mapOf(
             "top" to (lifted.center.x to lifted.top - band), "bottom" to (lifted.center.x to lifted.bottom + band),
@@ -108,16 +116,16 @@ class GridFocusBoundsTest {
         )
         for ((side, at) in sides) {
             val p = pixels[at.first.roundToInt(), at.second.roundToInt()]
-            assertTrue("$label: the accent ring is drawn on the $side side", abs(p.red - accent.red) < 0.12f && abs(p.green - accent.green) < 0.12f && abs(p.blue - accent.blue) < 0.12f)
+            assertTrue("$label: the rim is drawn on the $side side", abs(p.red - rim.red) < 0.12f && abs(p.green - rim.green) < 0.12f && abs(p.blue - rim.blue) < 0.12f)
         }
     }
 
-    /** The focused tile's icon, in px: the ring stands on it and nothing grows. */
+    /** The focused tile's icon grown about its centre, in px: the rim stands on it. */
     private fun appsIcon(rest: Rect): Rect {
         val d = compose.density.density
-        val side = AppsGridDimens.appsGridTileIcon.value * d
-        val top = rest.top + AppsGridDimens.appsGridTilePadding.value * d
-        return Rect(rest.center.x - side / 2f, top, rest.center.x + side / 2f, top + side)
+        val side = AppsGridDimens.appsGridTileIcon.value * d * FocusLift.SCALE
+        val centre = rest.top + (AppsGridDimens.appsGridTilePadding.value + AppsGridDimens.appsGridTileIcon.value / 2f) * d
+        return Rect(rest.center.x - side / 2f, centre - side / 2f, rest.center.x + side / 2f, centre + side / 2f)
     }
 
     private fun assertApps(label: String) {
@@ -139,14 +147,14 @@ class GridFocusBoundsTest {
         return box.translate(-cell.left.value * d, -cell.top.value * d)
     }
 
-    /** The collar (px) round the box as laid out, drawn [focusedCoverScale] larger about its centre. */
+    /** The collar (px) round the box as laid out, drawn larger about its centre by the lift. */
     private fun liftedCollar(box: Rect): Rect {
         val d = compose.density.density
         val collar = Rect(
             box.left - CollarSize.Cover.sidePadding.value * d, box.top - CollarSize.Cover.topPadding.value * d,
             box.right + CollarSize.Cover.sidePadding.value * d, box.bottom + CollarSize.Cover.bottomPadding.value * d,
         )
-        val s = focusedCoverScale(collar.maxDimension / d)
+        val s = FocusLift.SCALE
         return Rect(collar.center.x - collar.width * s / 2f, collar.center.y - collar.height * s / 2f, collar.center.x + collar.width * s / 2f, collar.center.y + collar.height * s / 2f)
     }
 
@@ -160,7 +168,7 @@ class GridFocusBoundsTest {
     private fun liftedAboutCollar(box: Rect): Rect {
         val d = compose.density.density
         val c = Rect(box.left, box.top - CollarSize.Cover.topPadding.value * d, box.right, box.bottom + CollarSize.Cover.bottomPadding.value * d).center
-        val s = focusedCoverScale(liftBase(box) / d)
+        val s = FocusLift.SCALE
         return Rect(c.x + (box.left - c.x) * s, c.y + (box.top - c.y) * s, c.x + (box.right - c.x) * s, c.y + (box.bottom - c.y) * s)
     }
 
@@ -222,10 +230,10 @@ class GridFocusBoundsTest {
                 val box = resting(index)
                 val after = boxInCell(index)
                 assertTrue("$label $size $index: the box stays in its cell ($before vs $after)", abs(before.left - after.left) < 0.5f && abs(before.top - after.top) < 0.5f && abs(before.width - after.width) < 0.5f && abs(before.height - after.height) < 0.5f)
-                assertTrue("$label $size $index: the groove is lit in the accent", near(grooveAt(liftedAboutCollar(box), compose.onRoot().captureToImage().toPixelMap(), focusedCoverScale(liftBase(box) / d)), litGroove(accent)))
+                assertTrue("$label $size $index: the groove stays unlit", !near(grooveAt(liftedAboutCollar(box), compose.onRoot().captureToImage().toPixelMap(), 1f), litGroove(accent)))
                 val side = CollarSize.Cover.sidePadding.value * d
-                // The ring (outset) round the larger collar; the halo may fade into the gaps.
-                val reach = PlumDimens.focusRingOutset.value * d
+                // The rim and glow (reach) round the larger collar.
+                val reach = FocusLift.reach.value * d
                 val collar = liftedCollar(box)
                 val grid = dp(HomeTags.GRID)
                 val top = dp(HomeTags.TOP_BAR).bottom.value * d

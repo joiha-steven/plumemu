@@ -6,6 +6,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.res.stringResource
 import com.plumemu.R
+import com.plumemu.coreui.theme.LocalLaunchOrigin
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.strip.StripFocus
 import com.plumemu.coreinput.strip.StripState
@@ -183,12 +184,13 @@ internal fun FollowHomeOnSecondScreen(
     buildSystems: (HomeContent) -> GameSystems = GameSystems::of,
 ) {
     val names = EntryNames(stringResource(R.string.home_entry_recent), stringResource(R.string.home_entry_favorites))
+    val origin = LocalLaunchOrigin.current
     LaunchedEffect(feed, content, state, search, menu, names) {
         feed.isFollowing.collectLatest { following ->
             if (!following) return@collectLatest
             val systems = withContext(Dispatchers.Default) { buildSystems(content) }
             snapshotFlow { lookOf(state, search, menu) }
-                .map { secondScreenContentOf(content, it, systems, names) }
+                .map { look -> secondScreenContentOf(content, look, systems, names).also { SecondScreenMotion.noteOffered(it, look.focus, content.entries.size, origin) } }
                 .distinctUntilChanged()
                 .collect(feed::offer)
         }

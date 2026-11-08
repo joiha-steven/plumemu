@@ -60,7 +60,7 @@ fun PlumSegmented(
     val slide = remember { Animatable(selected.toFloat()) }
     val motionOn = PlumTheme.motion.isOn
     LaunchedEffect(selected, motionOn) {
-        slide.animateTo(selected.toFloat(), if (motionOn) tween(PlumMotion.DURATION_MS, easing = PlumMotion.EaseOut) else snap())
+        slide.animateTo(selected.toFloat(), if (motionOn) tween(PlumMotion.DURATION_MS, easing = PlumMotion.Decelerate) else snap())
     }
     val showFocusMark = focused && enabled && focusedIndex != null && focusedIndex != selected
     Row(

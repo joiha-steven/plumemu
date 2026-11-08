@@ -2,11 +2,10 @@ package com.plumemu.coreui.theme
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
-import java.text.Normalizer
+import androidx.compose.ui.graphics.toArgb
 import java.util.Locale
 
-/** One poster cover's colours: the gradient's [top] and [bottom], the system [band] and the [ink] of the title and band text. */
+/** An app game card's colours: the gradient's [top] and [bottom], the system [band] and the [ink] of the title and band text. */
 @Immutable
 data class PosterLook(
     val top: Color,
@@ -15,10 +14,8 @@ data class PosterLook(
     val ink: Color,
 )
 
-/** White title ink of the deep looks. */
+/** White ink of an app game card. */
 val POSTER_INK_WHITE = Color.White
-private val INK_WHITE = POSTER_INK_WHITE
-private val INK_DARK = Color(0xFF14142B)
 
 /** The inner frame of an app game's card. */
 val POSTER_FRAME_COLOR = Color.White.copy(alpha = 0.35f)
@@ -35,115 +32,82 @@ const val POSTER_BAND_FLOOR_SP = 6f
 /** Letter spacing of the system name on an app game card's band, in em. */
 const val POSTER_BAND_SPACING_EM = 0.12f
 
-/**
- * The 23 looks (contrast measured, lowest 4.66:1): a drawn box front's field and the colours of its shapes.
- * Hand-tuned in OKLCH, from a bright hue to a deeper neighbour 10-25 degrees away; 12 deep ones with a
- * white title, 11 light ones with a near-black title, the ink passing 4.5:1 against both gradient ends
- * and the band. A title's hash ([PosterDice]) picks them, so one character apart gives an unrelated look.
- */
-val POSTER_PALETTE: List<PosterLook> =
-    listOf(
-        PosterLook(Color(0xFFDF1E39), Color(0xFFAD0549), Color(0xFF870037), INK_WHITE), // ruby
-        PosterLook(Color(0xFFD81E70), Color(0xFF9D1172), Color(0xFF7C0059), INK_WHITE), // rose
-        PosterLook(Color(0xFFCD1AA5), Color(0xFF841495), Color(0xFF670075), INK_WHITE), // magenta
-        PosterLook(Color(0xFFAA3BC9), Color(0xFF6724AD), Color(0xFF50008F), INK_WHITE), // orchid
-        PosterLook(Color(0xFF8448D9), Color(0xFF452CB4), Color(0xFF340399), INK_WHITE), // violet
-        PosterLook(Color(0xFF5C53DA), Color(0xFF2137A6), Color(0xFF121A8C), INK_WHITE), // indigo
-        PosterLook(Color(0xFF306CE2), Color(0xFF004B96), Color(0xFF003670), INK_WHITE), // cobalt
-        PosterLook(Color(0xFF047BB5), Color(0xFF035397), Color(0xFF003D73), INK_WHITE), // ocean
-        PosterLook(Color(0xFF017F7F), Color(0xFF065D6D), Color(0xFF044551), INK_WHITE), // teal
-        PosterLook(Color(0xFF018455), Color(0xFF066357), Color(0xFF034B41), INK_WHITE), // emerald
-        PosterLook(Color(0xFF1E8515), Color(0xFF056641), Color(0xFF034D30), INK_WHITE), // forest
-        PosterLook(Color(0xFF9C3B96), Color(0xFF5B2987), Color(0xFF450E6E), INK_WHITE), // plum
-        PosterLook(Color(0xFFFDE836), Color(0xFFFFB334), Color(0xFFE39A01), INK_DARK), // lemon
-        PosterLook(Color(0xFFFFBE3F), Color(0xFFFF8C08), Color(0xFFDC7702), INK_DARK), // marigold
-        PosterLook(Color(0xFFFFAF7E), Color(0xFFFF7A66), Color(0xFFEC5542), INK_DARK), // peach
-        PosterLook(Color(0xFFFEA6C4), Color(0xFFFE62B7), Color(0xFFE2459E), INK_DARK), // flamingo
-        PosterLook(Color(0xFFC0F447), Color(0xFF61DC6B), Color(0xFF43C251), INK_DARK), // lime
-        PosterLook(Color(0xFF6FF5C0), Color(0xFF3BD5BE), Color(0xFF07BBA4), INK_DARK), // mint
-        PosterLook(Color(0xFF65F0F0), Color(0xFF43CAE7), Color(0xFF18B1CD), INK_DARK), // aqua
-        PosterLook(Color(0xFF8ED5FE), Color(0xFF67AAFF), Color(0xFF4390EE), INK_DARK), // sky
-        PosterLook(Color(0xFFCEB5FF), Color(0xFFA28DFE), Color(0xFF8A70EC), INK_DARK), // lavender
-        PosterLook(Color(0xFFFFA194), Color(0xFFFD617A), Color(0xFFE44A65), INK_DARK), // coral
-        PosterLook(Color(0xFFF5ADF9), Color(0xFFD180F4), Color(0xFFB767D9), INK_DARK), // lilac
-    )
+/** The most the title turns the system colour's hue, in degrees either way. */
+const val BOX_HUE_SPREAD = 25
 
-/** [title] without case, accents, punctuation or spaces: what the look is picked from. */
-fun posterTitleKey(title: String): String {
-    val decomposed = Normalizer.normalize(title.lowercase(Locale.ROOT), Normalizer.Form.NFKD)
-    val key = StringBuilder()
-    var i = 0
-    while (i < decomposed.length) {
-        val codePoint = decomposed.codePointAt(i)
-        i += Character.charCount(codePoint)
-        if (Character.getType(codePoint) == Character.NON_SPACING_MARK.toInt()) continue
-        if (Character.isLetterOrDigit(codePoint)) key.appendCodePoint(codePoint)
-    }
-    return key.toString()
-}
+/** The big first letter: a lighter tone of the field at this strength. */
+const val BOX_MARK_ALPHA = 0.12f
 
-/** The title's mixed 64-bit hash: FNV-1a over the code points of [posterTitleKey], so the same game gets the same value on every screen and device. */
-fun posterHash(title: String): Long {
-    val key = posterTitleKey(title)
-    var h = -3750763034362895579L // FNV offset basis
-    var i = 0
-    while (i < key.length) {
-        val codePoint = key.codePointAt(i)
-        i += Character.charCount(codePoint)
-        h = (h xor codePoint.toLong()) * 1099511628211L
-    }
-    return h
-}
+/** The grain over the field, the most one channel moves (of 255): fine monochrome noise like the cover pictures'. */
+const val BOX_GRAIN = 12
 
-/**
- * A stream of choices that depends only on its seed (SplitMix64: every step mixes all bits, so titles one character apart get
- * unrelated looks). The drawn box front takes its field colour, its shapes and their places from one stream per title.
- */
-class PosterDice(
-    seed: Long,
+/** The code (the system's short name) is the title's white at this strength. */
+const val BOX_CODE_ALPHA = 0.8f
+
+/** The field's base where no system is known: a grey, which the recipe leaves grey. */
+val BOX_NEUTRAL_BASE = Color(0xFF8A8D96)
+
+/** The year on the titled tile: the code's white at its strength. */
+val BOX_YEAR_INK = Color.White.copy(alpha = BOX_CODE_ALPHA)
+
+/** The contrast white keeps on the lightest part of the field with the big letter and the strongest grain on it; a little over 4.5:1. */
+private const val BOX_TITLE_CONTRAST = 4.7
+
+/** The field's colours: the lighter [top] (top left), the darker [bottom] (bottom right), the big letter's [mark], and the white [title] and [code] ink. */
+@Immutable
+class BoxFieldLook(
+    val top: Color,
+    val bottom: Color,
+    val mark: Color,
 ) {
-    private var state = seed
-
-    /** The next choice in `0 until bound`. */
-    fun next(bound: Int): Int {
-        state += -7046029254386353131L
-        var z = state
-        z = (z xor (z ushr 30)) * -4658895280553007687L
-        z = (z xor (z ushr 27)) * -7723592293110705685L
-        z = z xor (z ushr 31)
-        return ((z ushr 1) % bound).toInt()
-    }
+    val title: Color = Color.White
+    val code: Color = Color.White.copy(alpha = BOX_CODE_ALPHA)
 }
 
-/** Index into [POSTER_PALETTE] for [title]: the first choice of its [PosterDice], so the same game wears the same field everywhere. */
-fun posterLookIndex(title: String): Int = PosterDice(posterHash(title)).next(POSTER_PALETTE.size)
+/** [c] with the strongest grain added: the lightest a pixel of that colour can be. */
+fun boxLightestPixel(c: Rgb): Rgb = Rgb.fromChannels(minOf(255, c.red + BOX_GRAIN).toDouble(), minOf(255, c.green + BOX_GRAIN).toDouble(), minOf(255, c.blue + BOX_GRAIN).toDouble())
 
-/** The lit centre of a shape's soft shading: [colour] 40 % toward white (the board's sun goes from #F4BA34 to #FFE08A). */
-fun boxHighlight(colour: Color): Color = androidx.compose.ui.graphics.lerp(colour, Color.White, 0.4f)
-
-/** The board's drawn box front: band, dots and band text (the parts that never change), as colours. */
-val BOX_BAND_TOP = Color(0xFFD9D9D6)
-val BOX_BAND_BOTTOM = Color(0xFFBDBDB9)
-val BOX_BAND_TEXT = Color(0xFF3A3A3A)
-val BOX_DOTS = listOf(Color(0xFFD23A2C), Color(0xFFF2B630), Color(0xFF2F6BD0))
+/** The turn of the hue for [title], in degrees from -[BOX_HUE_SPREAD] to +[BOX_HUE_SPREAD]; the same title always gets the same turn. */
+fun boxHueTurn(title: String): Int {
+    val h = title.lowercase(Locale.ROOT).fold(1125899906842597L) { a, c -> 31 * a + c.code }
+    val mixed = (h xor (h ushr 29)) * -0x61c8864680b583ebL
+    return ((mixed ushr 33) % (2 * BOX_HUE_SPREAD + 1)).toInt() - BOX_HUE_SPREAD
+}
 
 /**
- * Opacity of [look]'s small line under the band: the board's 0.8 where that still passes 4.5:1 on all three field colours, else
- * the first step above that does (the ruby's white line needs 1.0).
+ * The drawn box front's field from the system's colour [base]: its hue turned by [boxHueTurn] of [title], saturated and
+ * mid-dark so white reads on it on every page (a card stands off Paper as a picture does), lighter at the top left and darker
+ * at the bottom right. Near-grey colours stay grey. The lightest part keeps [BOX_TITLE_CONTRAST] against white.
  */
-fun boxCapsAlpha(look: PosterLook): Float {
-    fun ratio(
-        a: Color,
-        b: Color,
-    ) = (maxOf(a.luminance(), b.luminance()) + 0.05f) / (minOf(a.luminance(), b.luminance()) + 0.05f)
-    var alpha = 0.8f
-    while (alpha < 1f) {
-        val passes =
-            listOf(look.top, look.bottom, look.band).all { field ->
-                ratio(Color(look.ink.red * alpha + field.red * (1 - alpha), look.ink.green * alpha + field.green * (1 - alpha), look.ink.blue * alpha + field.blue * (1 - alpha)), field) >= 4.5f
-            }
-        if (passes) return alpha
-        alpha += 0.05f
+fun boxFieldFor(
+    base: Color,
+    title: String,
+): BoxFieldLook {
+    val (hue0, sat0, _) = ColorMath.toHsl(Rgb(base.toArgb() and 0xFFFFFF))
+    val hue = ((hue0 + boxHueTurn(title) / 360.0) % 1.0 + 1.0) % 1.0
+    val sat = if (sat0 < 0.12) sat0 else sat0.coerceIn(0.55, 0.85)
+    val white = Rgb(0xFFFFFF)
+
+    fun reads(lightness: Double): Boolean {
+        val field = ColorMath.fromHsl(hue, sat, lightness)
+        val mark = ColorMath.fromHsl(hue, sat * 0.9, (lightness + 0.3).coerceAtMost(0.9))
+        return ColorMath.contrast(white, boxLightestPixel(ColorMath.mix(field, mark, BOX_MARK_ALPHA.toDouble()))) >= BOX_TITLE_CONTRAST
     }
-    return 1f
+    var lo = 0.05
+    var hi = 0.5
+    val top =
+        if (reads(hi)) {
+            hi
+        } else {
+            repeat(18) {
+                val mid = (lo + hi) / 2
+                if (reads(mid)) lo = mid else hi = mid
+            }
+            lo
+        }
+    return BoxFieldLook(
+        top = ColorMath.fromHsl(hue, sat, top).toComposeColor(),
+        bottom = ColorMath.fromHsl(hue, (sat + 0.05).coerceAtMost(1.0), top * 0.55).toComposeColor(),
+        mark = ColorMath.fromHsl(hue, sat * 0.9, (top + 0.3).coerceAtMost(0.9)).toComposeColor(),
+    )
 }

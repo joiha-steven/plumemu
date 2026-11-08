@@ -3,7 +3,6 @@ package com.plumemu.home
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
 import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.TextSize
 import com.plumemu.home.search.SearchIndex
 import com.plumemu.home.search.SearchState
@@ -24,7 +23,7 @@ import org.robolectric.annotation.GraphicsMode
 class HomeD3ScreenshotTest {
     @Test
     fun gamesWithFavorites() =
-        ReferenceShots.capture("home_favorites", fonts = PlumFont.entries) {
+        ReferenceShots.capture("home_favorites") {
             HomeAt(FakeHomeContent.withFavorites(longTitle = true), BoardGamesFocused)
         }
 

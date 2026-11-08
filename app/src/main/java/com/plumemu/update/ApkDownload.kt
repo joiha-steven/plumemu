@@ -56,7 +56,7 @@ class ApkDownloader(
             val done = File(dir, "plumemu-${manifest.versionCode}.apk")
             var kept = false
             try {
-                val result = copyAndCheck(manifest, part, onProgress)
+                val result = copyAndCheck(manifest.apkUrl, manifest.size, manifest.sha256, part, onProgress)
                 if (result != null) return@withContext result
                 if (!part.renameTo(done)) return@withContext DownloadResult.Failed(UpdateFailure.Storage, "could not rename the download")
                 kept = true
@@ -69,9 +69,43 @@ class ApkDownloader(
             }
         }
 
-    /** Null when the file in [part] is whole and matches; a failure otherwise. */
-    private suspend fun copyAndCheck(
+    /**
+     * Downloads [entry], the dex metadata of [manifest]'s APK, as `plumemu-<versionCode>.dm` beside it,
+     * checking its size, SHA-256 and that it is a zip holding the profile. Null on any failure, said in
+     * one [log] line: the APK then installs alone. A cancel is not a failure: it is thrown on.
+     */
+    suspend fun downloadDexMetadata(
         manifest: UpdateManifest,
+        entry: DexMetadataFile,
+        log: (String) -> Unit,
+    ): File? =
+        withContext(io) {
+            dir.mkdirs()
+            val part = File(dir, "plumemu-${manifest.versionCode}.dm.part")
+            val done = File(dir, "plumemu-${manifest.versionCode}.dm")
+            var kept = false
+            try {
+                val failed = copyAndCheck(entry.url, entry.size, entry.sha256, part) { _, _ -> }
+                when {
+                    failed != null -> log("Update dex metadata not used: ${failed.failure} (${failed.detail})")
+                    !DexMetadata.hasProfile(part) -> log("Update dex metadata not used: not a zip holding ${DexMetadata.PROFILE_ENTRY}")
+                    !part.renameTo(done) -> log("Update dex metadata not used: could not rename the download")
+                    else -> kept = true
+                }
+                if (kept) done else null
+            } finally {
+                if (!kept) {
+                    part.delete()
+                    done.delete()
+                }
+            }
+        }
+
+    /** Null when the file in [part] is whole and matches [size] and [sha256]; a failure otherwise. */
+    private suspend fun copyAndCheck(
+        url: String,
+        size: Long,
+        sha256: String,
         part: File,
         onProgress: (Long, Long) -> Unit,
     ): DownloadResult.Failed? {
@@ -79,14 +113,14 @@ class ApkDownloader(
         val count: Long
         try {
             val copied =
-                http.open(manifest.apkUrl).use { body ->
-                    if (body.length >= 0 && body.length != manifest.size) {
-                        return DownloadResult.Failed(UpdateFailure.SizeMismatch, "server says ${body.length} bytes, manifest ${manifest.size}")
+                http.open(url).use { body ->
+                    if (body.length >= 0 && body.length != size) {
+                        return DownloadResult.Failed(UpdateFailure.SizeMismatch, "server says ${body.length} bytes, manifest $size")
                     }
                     // Cancel ends a read stalled on the network at once (`use` closes the body afterwards, here).
-                    closeOnCancel(body::cancel) { copy(body, part, manifest.size, digest, onProgress) }
+                    closeOnCancel(body::cancel) { copy(body, part, size, digest, onProgress) }
                 }
-            count = copied ?: return DownloadResult.Failed(UpdateFailure.SizeMismatch, "more than ${manifest.size} bytes")
+            count = copied ?: return DownloadResult.Failed(UpdateFailure.SizeMismatch, "more than $size bytes")
         } catch (e: UpdateNetException) {
             // A cancelled call fails with an IOException too: a cancel is not a network failure.
             currentCoroutineContext().ensureActive()
@@ -103,9 +137,9 @@ class ApkDownloader(
             currentCoroutineContext().ensureActive()
             return DownloadResult.Failed(UpdateFailure.Storage, "cache file: ${e.javaClass.simpleName}")
         }
-        if (count != manifest.size) return DownloadResult.Failed(UpdateFailure.SizeMismatch, "got $count bytes, manifest ${manifest.size}")
+        if (count != size) return DownloadResult.Failed(UpdateFailure.SizeMismatch, "got $count bytes, manifest $size")
         val hex = digest.digest().toHex()
-        if (hex != manifest.sha256) return DownloadResult.Failed(UpdateFailure.HashMismatch, "sha256 $hex, manifest ${manifest.sha256}")
+        if (hex != sha256) return DownloadResult.Failed(UpdateFailure.HashMismatch, "sha256 $hex, manifest $sha256")
         return null
     }
 

@@ -96,7 +96,11 @@ internal fun GamesPages(
         state = pages,
         modifier =
             modifier.semantics { this[GamesPagesInfo] = probe }.drawBehind {
-                val host = content.entries.getOrNull(state.focus.systemIndex)?.let { halos.hosts[it.id] } ?: return@drawBehind
+                val shown = state.focus.systemIndex
+                // Until the row stands at the focused page (a switch moves it in the next composition), that page is placed off to the
+                // side and draws nothing here: its halo alone would stand over an empty list.
+                if (pages.firstVisibleItemIndex != shown || pages.firstVisibleItemScrollOffset != 0) return@drawBehind
+                val host = content.entries.getOrNull(shown)?.let { halos.hosts[it.id] } ?: return@drawBehind
                 if (stretch == null) host.drawHalo(this) else drawWithEndMoved(stretch.rowEndShift()) { host.drawHalo(this) }
             }.overflowingSlot(stretch),
         userScrollEnabled = false,
@@ -245,7 +249,7 @@ private fun EntryGames(
     val endMovedPx = remember(stretch) { stretch?.let { it::rowEndShift } }
     // The focus pill is drawn by the list, so it glides from row to row; read while drawing.
     val pill =
-        rememberGlidingPill(listState, glide, rowHeight = layout.gameRowHeight, stride = layout.gameRowHeight + PlumDimens.listRowGap, haloOutside = true, blob = true, warmWidthPx = listPillWidthPx, endMovedPx = endMovedPx) {
+        rememberGlidingPill(listState, glide, rowHeight = layout.gameRowHeight, stride = layout.gameRowHeight + PlumDimens.listRowGap, haloOutside = true, blob = true, origin = com.plumemu.coreui.theme.LocalLaunchOrigin.current, warmWidthPx = listPillWidthPx, endMovedPx = endMovedPx) {
             val row = state.focus.rowOf(entry.id)
             if (gameLook(state.focus, entry.id, row, panelOpen.value) == GameRowLook.Focused) row + bandItems else -1
         }
@@ -258,14 +262,18 @@ private fun EntryGames(
     val rowGapPx = with(density) { PlumDimens.listRowGap.toPx() }
     val clips = remember(listState, glide, state, entry.id, bandItems, rowGapPx, topRoomPx, isShown) { BarRunClips(listState, glide, topRoomPx, gapBelow = rowGapPx, isShown = isShown) { state.focus.rowOf(entry.id) + bandItems } }
     FollowBarRunner(clips)
+    // The band's hairline is drawn here, under the pill, or it would cross the slab of the first row.
+    val bandRule = remember { BandRule() }
+    val colors = PlumTheme.colors
+    val ruleBehind = if (info == null) Modifier else Modifier.drawsBandRule(bandRule, listState, glide, isBand = { it.key == SYSTEM_BAND_KEY }, clearTop = clips::clearTop) { colors.sel }
     pill.Provide {
         LazyColumn(
             state = listState,
-            modifier = modifier.backToSlot(stretch).then(pill.modifier).overflowingSlot(stretch).then(glide.withFadeMask(clips, isOn = false, hidesCutRows = true)),
+            modifier = modifier.backToSlot(stretch).then(ruleBehind).then(pill.modifier).overflowingSlot(stretch).then(glide.withFadeMask(clips, isOn = false, hidesCutRows = true)),
             contentPadding = stretch.listPadding(top = glide.extra + barRoom.top, bottom = glide.extra + with(density) { rest.below.toDp() }),
             // No spacing: each game row carries its own gap (its tap area).
         ) {
-            if (info != null) item(key = SYSTEM_BAND_KEY, contentType = SYSTEM_BAND_KEY) { SystemInfoBand(info, visibleWidth, isPeeking = { state.focus.column == com.plumemu.coreinput.Column.Details }) }
+            if (info != null) item(key = SYSTEM_BAND_KEY, contentType = SYSTEM_BAND_KEY) { SystemInfoBand(info, visibleWidth, isPeeking = { state.focus.column == com.plumemu.coreinput.Column.Details }, rule = bandRule) }
             itemsIndexed(entry.rows, key = { _, row -> row.id }) { index, row ->
                 GamesListItem(index, row, entry.id, hasBoxArt, entry.kind.mixesSystems, showsPlace, isShown, forms, state, onAction, panelOpen)
             }

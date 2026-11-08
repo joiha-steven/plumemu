@@ -125,7 +125,12 @@ class SlabCssRowTest {
 
     private fun checkRim(settings: PlumThemeSettings) {
         val s = shot(settings)
-        assertTrue("lit corners are stronger than the sides", s.look.top.alpha > s.look.edge.alpha * 2)
+        // Dark: the corners are RIM_LIT_L above the fill, the sides RIM_SIDE_L, so the corners are stronger. Light: the sides are full white already.
+        if (settings.backgroundColor == PlumThemeSettings.Graphite.backgroundColor) {
+            assertTrue("lit corners are stronger than the sides", s.look.top.alpha > s.look.edge.alpha)
+        } else {
+            assertEquals("light sides are white itself", 1f, s.look.edge.alpha, 0f)
+        }
         // Between the lit corners: the top edge's middle and the bottom edge's middle are the faint rim.
         rimAt(s, left + width / 2, top, 0)
         rimAt(s, left + width / 2, top + height - 1, height - 1)

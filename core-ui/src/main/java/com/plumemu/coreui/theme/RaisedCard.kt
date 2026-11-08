@@ -6,24 +6,22 @@ import androidx.compose.ui.unit.dp
 
 /**
  * The raised card the game panel and its questions stand on (docs/design/rules.md > Cards): the board's PANEL. Its fill is the
- * CSS gradient from [top] to [bottom]; [fill] is their mean, for what is drawn over the card as a flat colour (the slab's under-colour).
- * Dark: the background moved toward the cool surface ink (`CollarLook.surfaceInk`), [TOP_DARK] at the top and [BOTTOM_DARK] at the
- * bottom (the board's rgba(44,46,52,.92) and rgba(26,27,31,.94) over #111214 resolve to #2A2C31 and #191A1E); light: toward white,
- * [TOP_LIGHT] and [BOTTOM_LIGHT] (the board's #FBFAF7 and #F3F0EA). Derived from the background and the text only, so every colour
- * set has one. The edge and shadow shares are the board's.
+ * CSS gradient from [top] to [bottom], the tone ladder's raised step one L* above and below ([ToneLadder.RAISED]), so it keeps the
+ * page's hue on every set; [fill] is their mean, for what is drawn over the card as a flat colour (the slab's under-colour).
+ * The edge and shadow shares are the board's.
  */
 object RaisedCard {
     fun top(
         bg: Rgb,
         text: Rgb,
         dark: Boolean,
-    ): Rgb = if (dark) ColorMath.mix(bg, CollarLook.surfaceInk(text), TOP_DARK) else ColorMath.mix(bg, WHITE, TOP_LIGHT)
+    ): Rgb = ToneLadder.level(bg, ToneLadder.RAISED + 1)
 
     fun bottom(
         bg: Rgb,
         text: Rgb,
         dark: Boolean,
-    ): Rgb = if (dark) ColorMath.mix(bg, CollarLook.surfaceInk(text), BOTTOM_DARK) else ColorMath.mix(bg, WHITE, BOTTOM_LIGHT)
+    ): Rgb = ToneLadder.level(bg, ToneLadder.RAISED - 1)
 
     fun fill(
         bg: Rgb,
@@ -32,11 +30,6 @@ object RaisedCard {
     ): Rgb = ColorMath.mix(top(bg, text, dark), bottom(bg, text, dark), 0.5)
 
     fun shadowAlpha(dark: Boolean) = if (dark) SHADOW_DARK else SHADOW_LIGHT
-
-    const val TOP_DARK = 0.12
-    const val BOTTOM_DARK = 0.04
-    const val TOP_LIGHT = 0.78
-    const val BOTTOM_LIGHT = 0.35
 
     /** The CSS border: white at .14 with its top side at .22 on dark; the board's brown at .06 with a white top side on light. */
     const val EDGE_DARK = 0.14f
@@ -48,7 +41,6 @@ object RaisedCard {
     /** The peak alpha of the near (`0 2px 4px`) and the far (`0 30px 60px`) shadow at strength 1 (Graphite; Paper is 0.45 of it, brown). */
     const val SHADOW_NEAR = 0.4 * Depth.SHADOW
     const val SHADOW_FAR = 0.6 * Depth.SHADOW
-    private val WHITE = Rgb(0xFFFFFF)
 }
 
 /**

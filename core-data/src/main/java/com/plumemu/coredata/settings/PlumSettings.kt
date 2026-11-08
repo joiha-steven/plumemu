@@ -1,7 +1,7 @@
 package com.plumemu.coredata.settings
 
 /**
- * Every stored setting the alpha uses, immutable. Defaults are the product's defaults: Black, light text, accent #3E7BE0, Jost,
+ * Every stored setting the alpha uses, immutable. Defaults are the product's defaults: the deep ink #161A24, light text, accent #3A7CEB, Jost,
  * Medium text, scan on startup, usage statistics on.
  *
  * Plain values only: this module does not know the theme or the input types. The app maps
@@ -74,9 +74,6 @@ sealed interface TextColorSetting {
     }
 }
 
-/** Stored by name: Jost is the default for a person who never picked, a stored Sans, Serif or Mono is kept as it is. */
-enum class FontSetting { Jost, Sans, Serif, Mono }
-
 /**
  * The six text sizes, smallest first. The names are what `appearance.text_size` stores; Small,
  * Medium and Large are the three the file always held, so they keep their meaning.
@@ -93,22 +90,6 @@ enum class TextSizeSetting {
     companion object {
         /** What "not picked" (null) means, on every screen. Same as core-ui `TextSize.Default`. */
         val Default: TextSizeSetting = Large
-    }
-}
-
-/**
- * Settings › Appearance › Text weight, lightest first. The names are what `appearance.text_weight` stores
- * (core-ui `TextWeight` has the same names).
- */
-enum class TextWeightSetting {
-    Thin,
-    Medium,
-    Bold,
-    ;
-
-    companion object {
-        /** What a person who has not picked gets; [AppearanceSettings.textWeight] stays null until a pick. */
-        val Default: TextWeightSetting = Medium
     }
 }
 
@@ -160,10 +141,9 @@ enum class SwitchSystemWithSetting { Triggers, Bumpers }
 
 /** Settings › Appearance. */
 data class AppearanceSettings(
-    val background: ColorSetting = ColorSetting.Preset(DEFAULT_BACKGROUND),
+    val background: ColorSetting = DEFAULT_BACKGROUND,
     val textColor: TextColorSetting = TextColorSetting.Light,
     val accent: ColorSetting = DEFAULT_ACCENT,
-    val font: FontSetting = FontSetting.Jost,
     /** Null until the person picks a size: the app then uses [TextSizeSetting.Default], Large. */
     val textSize: TextSizeSetting? = null,
     /** The main screen's grid, one size for every system (Medium by default). */
@@ -189,8 +169,6 @@ data class AppearanceSettings(
      * (a file from before this setting): the app settles it once, from the colours then current.
      */
     val buttonSet: String? = null,
-    /** Null (never picked, or a file from before the setting) draws Thin for now; the default moves to Medium in a later step. */
-    val textWeight: TextWeightSetting? = null,
     /** Null (never picked, or a file from before the setting) is [LeftEdgeSetting.Default], Counts. */
     val leftEdge: LeftEdgeSetting? = null,
     /** No longer offered or followed (the fade is always on); kept so backups round-trip and older versions restore it. */
@@ -204,9 +182,11 @@ data class AppearanceSettings(
     companion object {
         const val BUTTONS_NONE = "None"
 
-        const val DEFAULT_BACKGROUND = "Black"
-        /** The default accent: #3E7BE0, the Plumemu colour set's (a test holds the two together). */
-        val DEFAULT_ACCENT: ColorSetting = ColorSetting.Custom(0x3E7BE0)
+        /** The default background: #161A24, the Plumemu colour set's (a test holds the two together). Black was the default before. */
+        val DEFAULT_BACKGROUND: ColorSetting = ColorSetting.Custom(0x161A24)
+
+        /** The default accent: #3A7CEB, the Plumemu colour set's (a test holds the two together). */
+        val DEFAULT_ACCENT: ColorSetting = ColorSetting.Custom(0x3A7CEB)
     }
 }
 

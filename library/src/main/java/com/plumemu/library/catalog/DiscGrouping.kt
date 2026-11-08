@@ -102,7 +102,10 @@ internal object DiscGrouping {
         val (tagged, single) = shown.partition { it.extension != "m3u" && TitleCleaner.hasDiscTag(it.baseName) }
         val discSets = tagged.groupBy { it.systemId to TitleCleaner.discBaseKey(it.baseName) }.values.map { set ->
             val first = set.minWith(
-                compareBy({ discTag(it)?.number ?: Int.MAX_VALUE }, { it.baseName.lowercase(Locale.ROOT) }),
+                // Then by extension and exact name: two files of one disc (`.chd` and `.iso`) must not
+                // swap with the order the provider lists them in.
+                compareBy<MatchedFile<T>>({ discTag(it)?.number ?: Int.MAX_VALUE }, { it.baseName.lowercase(Locale.ROOT) })
+                    .thenBy { it.extension }.thenBy { it.baseName },
             )
             DiscSet(first, set)
         }

@@ -43,6 +43,7 @@ class HomeRecompositionTest {
     val rules = rulesAround(compose)
 
     private val calls = mutableListOf<String>()
+    private val stack = mutableListOf<String>()
 
     /** Each call with the test clock's time when it ran: the frame it ran in. */
     private val callTimes = mutableListOf<Pair<String, Long>>()
@@ -59,11 +60,12 @@ class HomeRecompositionTest {
                     dirty2: Int,
                     info: String,
                 ) {
-                    calls += info
+                    calls += if (info.startsWith("com.plumemu.coreui.components.EllipsisText ") && stack.any { it.startsWith("com.plumemu.coreui.components.BarTitle ") }) info + IN_BAR_TITLE else info
+                    stack += info
                     callTimes += info to compose.mainClock.currentTime
                 }
 
-                override fun traceEventEnd() = Unit
+                override fun traceEventEnd() { stack.removeLastOrNull() }
             },
         )
     }
@@ -147,6 +149,14 @@ class HomeRecompositionTest {
     private fun coverCellsShown(): Set<String> =
         compose.onAllNodes(androidx.compose.ui.test.SemanticsMatcher("a cover cell") { node -> node.config.any { (key, value) -> key.name == "TestTag" && (value as? String)?.matches(Regex("home_cover_\\d+")) == true } }, useUnmergedTree = true)
             .fetchSemanticsNodes().map { node -> node.config.first { it.key.name == "TestTag" }.value as String }.toSet()
+
+    /** What a grid move may change in the bar: its title and slot. The EllipsisText of `BarTitle` is allowed, any other one (a systems label) is not. */
+    private fun List<String>.withoutBarTitle(): List<String> {
+        val bar = listOf("GridHintBar", "TitledHintBar", "FocusTitle", "yearAndPublisher", "BarTitle")
+        return filterNot { info -> bar.any { info.substringBefore(' ').endsWith(".$it") } }
+            .filterNot { info -> info.endsWith(IN_BAR_TITLE) }
+            .filterNot { info -> info.substringBefore(' ').startsWith("com.plumemu.coreui.components.TitledHintBar.<anonymous>") }
+    }
 
     private fun moveDownAndCount(state: StripState) {
         compose.runOnIdle {
@@ -413,20 +423,22 @@ class HomeRecompositionTest {
         assertEquals("game rows recomposed on Back from the details stop", 1, count("GameRow"))
     }
 
+    // A move that keeps the column where it is (from the row above Super Nintendo; one row further down the column scrolls to keep three
+    // whole rows past the focus, and a row it brings in is composed for the first time).
     @Test
     fun systemMoveRecomposesOnlyTheTwoSystemRows() {
-        val state = showAt(listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX)))
+        val state = showAt(listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX - 1)))
         moveDownAndCount(state)
         assertEquals("system rows recomposed: ${calls.filter { "SystemRow" in it }}", 2, count("SystemRow"))
-        assertEquals(FakeHomeContent.BOARD_SNES_INDEX + 1, state.focus.systemIndex)
+        assertEquals(FakeHomeContent.BOARD_SNES_INDEX, state.focus.systemIndex)
     }
 
     @Test
     fun systemMoveWithTheSystemInfoBandRecomposesOnlyTheTwoSystemRows() {
-        val state = showAt(listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX)), FakeHomeContent.board().withSystemInfo())
+        val state = showAt(listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX - 1)), FakeHomeContent.board().withSystemInfo())
         moveDownAndCount(state)
         assertEquals("system rows recomposed: ${calls.filter { "SystemRow" in it }}", 2, count("SystemRow"))
-        assertEquals(FakeHomeContent.BOARD_SNES_INDEX + 1, state.focus.systemIndex)
+        assertEquals(FakeHomeContent.BOARD_SNES_INDEX, state.focus.systemIndex)
         // The page just shown was built by this move (Robolectric has no idle time to build it ahead); going back to the
         // page that is already built composes no band and no row again.
         compose.runOnIdle { calls.clear() }
@@ -453,14 +465,11 @@ class HomeRecompositionTest {
         assertEquals("posters recomposed", 0, calls.count { c -> POSTER_FILES.any { "($it:" in c } })
         assertEquals("no rows", 0, count("GameRow") + count("SystemRow"))
         // The bar's title shows the focused game, so it changes on a move; nothing else does.
-        val barTitle = listOf("GridHintBar", "TitledHintBar", "FocusTitle", "yearAndPublisher")
         val others =
             othersThatRan()
                 .filterNot { info -> listOf("CoverTile", "GridCover").any { info.substringBefore(' ').endsWith(".$it") } }
                 .filterNot { info -> "<anonymous>" in info && "HomeGrid.kt" in info }
-                .filterNot { info -> barTitle.any { info.substringBefore(' ').endsWith(".$it") } }
-                // The title's slot of the bar (a subcomposition : the meta and hints give way to it).
-                .filterNot { info -> info.substringBefore(' ').startsWith("com.plumemu.coreui.components.TitledHintBar.<anonymous>") }
+                .withoutBarTitle()
         assertEquals("nothing else of ours recomposes", emptyList<String>(), others)
         assertEquals("grid items: ${calls.filter { "HomeGrid.kt" in it && "<anonymous>" in it }}", 0, calls.count { "HomeGrid.kt" in it && "<anonymous>" in it })
         assertEquals("down one row of three", 3, state.focus.row)
@@ -482,11 +491,9 @@ class HomeRecompositionTest {
         moveDownAndCount(state)
         val covers = listOf("CoverArt", "CoverPicture", "TitledTile", "GridCover", "PosterTile").map { "com.plumemu.home.$it " } + "com.plumemu.coreui.components.CoverTile "
         assertEquals("covers recomposed: ${calls.filter { c -> covers.any { c.startsWith(it) } }}", 0, calls.count { c -> covers.any { c.startsWith(it) } })
-        val barTitle = listOf("GridHintBar", "TitledHintBar", "FocusTitle", "yearAndPublisher")
         val others =
             othersThatRan()
-                .filterNot { info -> barTitle.any { info.substringBefore(' ').endsWith(".$it") } }
-                .filterNot { info -> info.substringBefore(' ').startsWith("com.plumemu.coreui.components.TitledHintBar.<anonymous>") }
+                .withoutBarTitle()
         assertEquals("nothing else of ours recomposes", emptyList<String>(), others)
         val rule = boardSnesPacking(checkNotNull(layout)) // the nearest centre of the next packed row, worked out by hand
         assertTrue("a second row to go to", rule.rows.size > 1)
@@ -509,12 +516,10 @@ class HomeRecompositionTest {
         // covers of a row that comes into view compose once (GridCover, CoverArt, CoverPicture each); no other cover runs.
         val enteredView = (coverCellsShown() - shownBefore).size
         assertEquals("covers recomposed: ${calls.filter { c -> covers.any { c.startsWith(it) } }}", 3 * enteredView, calls.count { c -> covers.any { c.startsWith(it) } })
-        val barTitle = listOf("GridHintBar", "TitledHintBar", "FocusTitle", "yearAndPublisher")
         val others =
             othersThatRan(enteredCovers = enteredView)
                 .filterNot { info -> covers.any { info.startsWith(it) } } // counted above, against the covers that entered
-                .filterNot { info -> barTitle.any { info.substringBefore(' ').endsWith(".$it") } }
-                .filterNot { info -> info.substringBefore(' ').startsWith("com.plumemu.coreui.components.TitledHintBar.<anonymous>") }
+                .withoutBarTitle()
         val coverBodies = others.filter { it.startsWith("com.plumemu.home.GridCover.Cover ") } // run for the covers that came into view only
         assertTrue("GridCover.Cover ran for covers already on screen: $coverBodies", coverBodies.size <= enteredView)
         val newRow = others.filter { "HomeGrid.kt" in it && "<anonymous>" in it } // a packed row item entering view
@@ -542,11 +547,9 @@ class HomeRecompositionTest {
         moveDownAndCount(state)
         val tiles = listOf("AppTile", "AppIconStandIn").map { "com.plumemu.home.$it " }
         assertEquals("tiles recomposed: ${calls.filter { c -> tiles.any { c.startsWith(it) } }}", 0, calls.count { c -> tiles.any { c.startsWith(it) } })
-        val barTitle = listOf("GridHintBar", "TitledHintBar", "FocusTitle", "yearAndPublisher")
         val others =
             othersThatRan()
-                .filterNot { info -> barTitle.any { info.substringBefore(' ').endsWith(".$it") } }
-                .filterNot { info -> info.substringBefore(' ').startsWith("com.plumemu.coreui.components.TitledHintBar.<anonymous>") }
+                .withoutBarTitle()
         assertEquals("nothing else of ours recomposes", emptyList<String>(), others)
         assertEquals("a move loads no icon", loaded, icons.loads.toList())
         assertTrue("the focus moved down a row", state.focus.rowOf(HomeContent.APPS_ID) > 0)
@@ -565,7 +568,7 @@ class HomeRecompositionTest {
     }
 }
 
-private val POSTER_FILES = listOf("HomeCovers.kt", "PosterCover.kt", "BoxFrontLayout.kt", "BoxFrontShapes.kt") // the poster cover's own files
+private val POSTER_FILES = listOf("HomeCovers.kt", "PosterCover.kt", "BoxFrontLayout.kt") // the poster cover's own files
 
 /**
  * The files that hold the details column (box art, text only, the play facts, the battery line under
@@ -584,13 +587,14 @@ internal fun String.isDetailsPart(): Boolean = (startsWith("com.plumemu.home.") 
  */
 internal val CALLS_PER_PASS = mapOf("com.plumemu.home.FactLine" to 2, "com.plumemu.home.currentLocale" to 2, "com.plumemu.home.WideDetails.<anonymous>" to 4, "com.plumemu.home.TextDetails.<anonymous>" to 3)
 
-/** One line at Largest in Serif in the 248 details column. */
+/** One line at Largest in the 248 details column. */
 internal const val ONE_LINE_TITLE = "Contra III"
 
-/** More than one line at Largest in Serif in the 248 details column. */
+/** More than one line at Largest in the 248 details column. */
 internal const val TWO_LINE_TITLE = "Super Mario World 2: Yoshi's Island"
 
 /** Where Super Nintendo sits in [numberedSnes]'s column: after Recent and Favorites (no Apps given, the entry stays). */
 private const val FIRST_SYSTEM = 3
+private const val IN_BAR_TITLE = " [in BarTitle]"
 private const val ROWS = 12
 private const val IDLE_MS = 10_000L

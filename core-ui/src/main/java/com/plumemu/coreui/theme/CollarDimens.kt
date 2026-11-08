@@ -40,11 +40,11 @@ object CollarDimens {
     val coverGroove = (4f / 3f).dp
     val coverGrooveBottom = (4f / 3f).dp
 
-    /** The box's own corner inside a grid cover's collar (the board's 4 px). */
-    val coverBoxCorner = (8f / 3f).dp
+    /** The corner of every cover picture (grid, details, second screen, statistics): one step rounder than the board's 4 px. */
+    val coverBoxCorner = 6.dp
 
-    /** The cover lip's corner past its groove's: the board's 9 px lip round a 6 px groove, 3 px = 2 dp (not the 4 px lip, so 6 dp outside, not 6.67). */
-    val coverLipCornerAdd = 2.dp
+    /** The cover frame's outer corner: the picture's plus the frame's width (groove and lip), so the rings are concentric: 10 dp. */
+    val coverFrameCorner = coverBoxCorner + coverGroove + coverLip
 
     /** The box's own drop shadow in its collar (the board's `0 2px 0` hard one, `0 3px 4px` soft one: sigma 1.33 dp). */
     val boxShadowHardDrop = (4f / 3f).dp * Depth.THICKNESS

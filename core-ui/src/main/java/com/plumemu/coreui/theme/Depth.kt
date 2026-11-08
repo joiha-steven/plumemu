@@ -30,12 +30,3 @@ object Depth {
     const val COVER_FRAME_EDGE_LIGHT = 0.30f
     const val COVER_FRAME_CREST = 0.45f
 }
-
-/**
- * The scale of a focused grid cover whose longer side is [longest] dp: a very large cover grows less, so its ring stays in the grid's
- * gaps and its neighbours whole.
- */
-fun focusedCoverScale(longest: Float): Float {
-    val room = PlumDimens.gridGapDown - PlumDimens.focusRingOutset - PlumDimens.focusRingKeyline
-    return minOf(PlumDimens.FOCUSED_COVER_SCALE, 1f + 2f * room.value / longest.coerceAtLeast(1f))
-}

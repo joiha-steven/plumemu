@@ -62,13 +62,15 @@ abstract class GamesListBottomBase {
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
 class GamesListBottom768Test : GamesListBottomBase() {
-    @Test fun theListEndsOnARowAboveTheHintBar() = listEndsOnARowAboveTheHintBar(fits = 8)
+    // The list ends the footer gap above the hint bar, where its fade ends: on a 432 dp screen the eighth row goes under the fade.
+    @Test fun theListEndsOnARowAboveTheHintBar() = listEndsOnARowAboveTheHintBar(fits = 7)
 }
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w576dp-h432dp-land-xhdpi")
 class GamesListBottom576Test : GamesListBottomBase() {
-    @Test fun theListEndsOnARowAboveTheHintBar() = listEndsOnARowAboveTheHintBar(fits = 8)
+    // The list ends the footer gap above the hint bar, where its fade ends: on a 432 dp screen the eighth row goes under the fade.
+    @Test fun theListEndsOnARowAboveTheHintBar() = listEndsOnARowAboveTheHintBar(fits = 7)
 }
 
 @RunWith(RobolectricTestRunner::class)

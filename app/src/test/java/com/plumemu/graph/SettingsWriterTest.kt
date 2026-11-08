@@ -1,6 +1,6 @@
 package com.plumemu.graph
 
-import com.plumemu.coredata.settings.FontSetting
+import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coredata.settings.PlumSettings
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
@@ -31,13 +31,13 @@ class SettingsWriterTest {
                 }
                 stored = transform(stored)
             }, logged::add)
-        writer.submit { it.copy(appearance = it.appearance.copy(font = FontSetting.Serif)) }
-        writer.submit { it.copy(appearance = it.appearance.copy(font = FontSetting.Mono)) }
+        writer.submit { it.copy(appearance = it.appearance.copy(textSize = TextSizeSetting.Small)) }
+        writer.submit { it.copy(appearance = it.appearance.copy(textSize = TextSizeSetting.Huge)) }
         runCurrent()
-        assertEquals("the second waits for the first", FontSetting.Jost, stored.appearance.font)
+        assertEquals("the second waits for the first", null, stored.appearance.textSize)
         gate.complete(Unit)
         runCurrent()
-        assertEquals("the last change wins", FontSetting.Mono, stored.appearance.font)
+        assertEquals("the last change wins", TextSizeSetting.Huge, stored.appearance.textSize)
     }
 
     @Test
@@ -49,14 +49,14 @@ class SettingsWriterTest {
                 if (calls == 1) throw IOException("/data/user/0/com.plumemu/files/datastore/settings.preferences_pb")
                 stored = transform(stored)
             }, logged::add)
-        writer.submit { it.copy(appearance = it.appearance.copy(font = FontSetting.Serif)) }
+        writer.submit { it.copy(appearance = it.appearance.copy(textSize = TextSizeSetting.Small)) }
         runCurrent()
         assertTrue("Settings is told", writer.failed.value)
-        writer.submit { it.copy(appearance = it.appearance.copy(font = FontSetting.Mono)) }
+        writer.submit { it.copy(appearance = it.appearance.copy(textSize = TextSizeSetting.Huge)) }
         runCurrent()
         assertFalse("cleared once a write lands", writer.failed.value)
         assertEquals(listOf("Settings could not be saved (IOException)"), logged.toList())
-        assertEquals(FontSetting.Mono, stored.appearance.font)
+        assertEquals(TextSizeSetting.Huge, stored.appearance.textSize)
     }
 
     @Test
@@ -69,11 +69,11 @@ class SettingsWriterTest {
                 stored = transform(stored)
             }, logged::add)
         val told = mutableListOf<Int>()
-        writer.submitTold({ it.copy(appearance = it.appearance.copy(font = FontSetting.Serif)) }, { told += 1 })
-        writer.submitTold({ it.copy(appearance = it.appearance.copy(font = FontSetting.Mono)) }, { told += 2 })
+        writer.submitTold({ it.copy(appearance = it.appearance.copy(textSize = TextSizeSetting.Small)) }, { told += 1 })
+        writer.submitTold({ it.copy(appearance = it.appearance.copy(textSize = TextSizeSetting.Huge)) }, { told += 2 })
         runCurrent()
         assertEquals("only the write that failed is told", listOf(1), told)
-        assertEquals(FontSetting.Mono, stored.appearance.font)
+        assertEquals(TextSizeSetting.Huge, stored.appearance.textSize)
     }
 
     @Test

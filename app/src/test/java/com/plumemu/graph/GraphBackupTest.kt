@@ -154,7 +154,7 @@ class GraphBackupTest {
         assertEquals("manifest.json", zip.keys.first())
         val manifest = BackupManifest.fromJson(zip.getValue("manifest.json").decodeToString())
         assertEquals(BackupKind.Everything, manifest.kind)
-        assertEquals("the schema since stored art shapes", 18, manifest.databaseSchemaVersion)
+        assertEquals("the schema since unreadable sub-folders are stored", 19, manifest.databaseSchemaVersion)
         assertEquals(2, manifest.gameCount)
         assertEquals(2, manifest.mediaFileCount)
         assertEquals(300_040L, manifest.mediaBytes)

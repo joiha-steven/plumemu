@@ -22,6 +22,13 @@ internal class GraphRecent(
         return changed > 0
     }
 
+    /** Undo of [removeFromRecent]: [gameId] is back in Recent at the place its last play gives it. False: it was never played. */
+    suspend fun restoreToRecent(gameId: Long): Boolean {
+        val changed = database.playDao().restoreToRecent(gameId)
+        log("Recent: game $gameId restored ($changed row)")
+        return changed > 0
+    }
+
     /** Every game leaves Recent until it is played again; returns how many left it. */
     suspend fun clearRecent(): Int {
         val cleared = database.playDao().clearRecent()

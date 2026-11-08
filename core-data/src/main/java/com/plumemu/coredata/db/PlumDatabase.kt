@@ -71,7 +71,7 @@ abstract class PlumDatabase : RoomDatabase() {
         const val FILE_NAME = "plumemu.db"
 
         /** The schema version above; a restore refuses a database newer than this. */
-        const val SCHEMA_VERSION = 18
+        const val SCHEMA_VERSION = 19
 
         /**
          * Opens the app's database file; call once and keep the instance for the process. With a

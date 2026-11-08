@@ -21,7 +21,6 @@ import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
-import com.plumemu.coreui.theme.TextWeight
 import com.plumemu.game.Beetle
 import com.plumemu.game.DuckStation
 import com.plumemu.game.EmulatorItem
@@ -135,7 +134,7 @@ abstract class TextSizeScreensBase(
         /** Finds the focused item under the whole screen's root; null for a screen with none. */
         val focused: ((SemanticsNode) -> SemanticsNode?)? = null,
         val shoot: Boolean = false,
-        /** What must be whole on screen at Largest in Serif or Mono instead, where [focused] cannot fit by design. */
+        /** What must be whole on screen at Largest instead, where [focused] cannot fit by design. */
         val focusedWhenTooTall: ((SemanticsNode) -> SemanticsNode?)? = null,
         /** Something on the screen always animates (a cursor), so it never goes idle: step the clock instead. */
         val isAnimated: Boolean = false,
@@ -146,7 +145,7 @@ abstract class TextSizeScreensBase(
         val readThrough: InfoReadThrough? = null,
         /** The gap a focused item's node carries under its drawn part (a game row's), which the list's last row may leave outside. */
         val trailingGap: Dp = 0.dp,
-        /** Titles that may end in an ellipsis at Largest in Serif and Mono only ([LONG_TITLES]). */ val longTitles: Set<String> = emptySet(),
+        /** Titles that may end in an ellipsis at Largest only ([LONG_TITLES]). */ val longTitles: Set<String> = emptySet(),
     )
 
     private fun check(
@@ -156,29 +155,24 @@ abstract class TextSizeScreensBase(
     ) {
         // The largest first: a fresh composition at that size is what the shot shows.
         var size by mutableStateOf(TextSize.Largest)
-        var font by mutableStateOf(PlumFont.Sans)
-        var weight by mutableStateOf(TextWeight.Default)
         if (spec.isAnimated) compose.mainClock.autoAdvance = false
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font, textWeight = weight)) { screen() } }
-        // Bold is the heaviest text: the widest the same words get, so Largest in Sans and Mono at Bold is the worst case.
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { screen() } }
+        // Largest first (it takes the shot), then the other sizes.
+        // Each size once: a repeated Largest drew its shot a second time, after Large, and the pair differed.
         val combinations =
-            (listOf(PlumFont.Sans to TextSize.Largest) + TextSize.entries.filter { it != TextSize.Largest }.map { PlumFont.Sans to it } +
-                listOf(PlumFont.Serif, PlumFont.Mono).flatMap { listOf(it to TextSize.Large, it to TextSize.Largest) }).map { Triple(it.first, it.second, TextWeight.Default) } +
-                listOf(PlumFont.Sans, PlumFont.Mono).map { Triple(it, TextSize.Largest, TextWeight.Bold) }
+            (listOf(PlumFont.Jost to TextSize.Largest) + TextSize.entries.filter { it != TextSize.Largest }.map { PlumFont.Jost to it })
         val failures = mutableListOf<String>()
-        for ((eachFont, each, eachWeight) in combinations) {
-            font = eachFont
-            weight = eachWeight
+        for ((eachFont, each) in combinations) {
             size = each
             if (spec.isAnimated) compose.mainClock.advanceTimeBy(ANIMATED_STEP_MS) else compose.waitForIdle()
-            if (spec.shoot && takesShots && each == TextSize.Largest && eachFont == PlumFont.Sans && eachWeight == TextWeight.Default) {
+            if (spec.shoot && takesShots && each == TextSize.Largest && eachFont == PlumFont.Jost) {
                 compose.onRoot().captureRoboImage("${ReferenceShots.OUTPUT_DIR}/textsize_largest_${name}_${widthDp}x${heightDp}_graphite.png")
             }
             val screenRoot = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
             val root = if (spec.rootTag == null) screenRoot else compose.onNodeWithTag(spec.rootTag, useUnmergedTree = true).fetchSemanticsNode()
-            val label = "$name at ${each.name} (${each.factor}) ${eachFont.name} ${eachWeight.name} on ${widthDp}x$heightDp"
-            (textProblems(root, FitAllowance(spec.scrollTags, spec.ellipsisUnder, isLargest = each.factor >= spec.ellipsisFrom.factor, stripTags = homeLists + HomeTags.DETAILS, cutToFit = spec.cutToFit, slidingText = spec.slidingText, oneLine = DETAILS_ONE_LINE, ellipsisTexts = if (each == TextSize.Largest && eachFont != PlumFont.Sans) spec.longTitles else emptySet(), barTags = setOf(HomeTags.TOP_BAR, HomeTags.HINT_BAR))) + spec.readThrough?.unreadRows(compose).orEmpty()).mapTo(failures) { "$label: $it" }
-            (if (each == TextSize.Largest && eachFont != PlumFont.Sans) spec.focusedWhenTooTall ?: spec.focused else spec.focused)?.let { find ->
+            val label = "$name at ${each.name} (${each.factor}) ${eachFont.name} on ${widthDp}x$heightDp"
+            (textProblems(root, FitAllowance(spec.scrollTags, spec.ellipsisUnder, isLargest = each.factor >= spec.ellipsisFrom.factor, stripTags = homeLists + HomeTags.DETAILS, cutToFit = spec.cutToFit, slidingText = spec.slidingText, oneLine = DETAILS_ONE_LINE + HomeTags.GRID_FOCUS_TITLE /* cut to its minimum before a key leaves (rules.md, Hint drop order) */, ellipsisTexts = if (each == TextSize.Largest && eachFont != PlumFont.Jost) spec.longTitles else emptySet(), barTags = setOf(HomeTags.TOP_BAR, HomeTags.HINT_BAR))) + spec.readThrough?.unreadRows(compose).orEmpty()).mapTo(failures) { "$label: $it" }
+            (if (each == TextSize.Largest && eachFont != PlumFont.Jost) spec.focusedWhenTooTall ?: spec.focused else spec.focused)?.let { find ->
                 val node = find(screenRoot)
                 if (node == null) failures += "$label: the focused item is not drawn" else notFullyShown(node, screenRoot, with(compose.density) { spec.trailingGap.toPx() })?.let { failures += "$label: the focused item $it" }
             }
@@ -433,7 +427,7 @@ abstract class TextSizeScreensBase(
         boxArtCheck("game_fix_box_art_daily_limit", BoxArtPanelFixtures.panel(state), tagged(GamePanelTags.row(BOX_ART_NONE_KEY)))
     }
 
-    // The store line leads the picked game's item. The picked row must be whole at every size; only at Largest in Serif or Mono, in the
+    // The store line leads the picked game's item. The picked row must be whole at every size; only at Largest, in the
     // 248 wide panel, line and row together are taller than the list, and there the line (what the person must read) is what must be whole.
     @Test
     fun gamePanelFixBoxArtWaiting() =
@@ -473,7 +467,7 @@ abstract class TextSizeScreensBase(
 
     @Test
     fun setupBoxArtQuestion() =
-        check("setup_box_art_question", Spec(scrollTags = setOf(SetupTags.SCROLL), focused = tagged(SetupTags.control(SetupControl.UseBoxArt)), shoot = true)) {
+        check("setup_box_art_question", Spec(scrollTags = setOf(SetupTags.SCROLL), focused = tagged(SetupTags.control(SetupControl.BoxArtOwnCovers)), shoot = true)) {
             SetupAt(SetupFakes.boxArtQuestion)
         }
 

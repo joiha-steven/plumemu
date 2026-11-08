@@ -78,4 +78,61 @@ class GameMenuRemoveFromRecentTest {
             assertEquals(UiText.Res(R.string.game_error_save_title), menu.panel!!.content.title)
             assertTrue(actions.removedFromRecent.isEmpty())
         }
+
+    private fun TestScope.removeFromRecent(menu: GameMenuController) {
+        menu.openMenu(game, fromRecent = true)
+        menu.down(menu.keys().indexOf(GameMenuEntryId.RemoveFromRecent.name))
+        menu.onAction(Action.Enter)
+    }
+
+    @Test
+    fun aRemovalOffersUndoAndUndoPutsTheGameBackByItsKey() =
+        run {
+            val actions = FakeGameActions()
+            val menu = controller(actions)
+            removeFromRecent(menu)
+            assertEquals(game, menu.undo.game)
+            assertTrue(menu.undo.take())
+            assertEquals(listOf("7"), actions.restoredToRecent)
+            assertNull("the offer is spent", menu.undo.game)
+            assertFalse("a second Undo does nothing", menu.undo.take())
+            assertEquals(listOf("7"), actions.restoredToRecent)
+        }
+
+    @Test
+    fun whenTheOfferTimesOutTheRemovalStaysAndUndoDoesNothing() =
+        run {
+            val actions = FakeGameActions()
+            val menu = controller(actions)
+            removeFromRecent(menu)
+            testScheduler.advanceTimeBy(RecentUndo.SHOWN_MS - 1)
+            assertEquals("still offered just before the end", game, menu.undo.game)
+            testScheduler.advanceTimeBy(2)
+            assertNull(menu.undo.game)
+            assertFalse(menu.undo.take())
+            assertEquals(listOf("7"), actions.removedFromRecent)
+            assertTrue(actions.restoredToRecent.isEmpty())
+        }
+
+    @Test
+    fun aFailedRemovalOffersNoUndo() =
+        run {
+            val menu = controller(FakeGameActions().apply { writeError = IllegalStateException("disk") })
+            removeFromRecent(menu)
+            assertNull(menu.undo.game)
+        }
+
+    @Test
+    fun aFailedUndoShowsTheSaveMessageAndLogsIt() =
+        run {
+            val actions = FakeGameActions()
+            val lines = mutableListOf<String>()
+            val menu = GameMenuController(actions, this) { lines += it }
+            removeFromRecent(menu)
+            actions.writeError = IllegalStateException("disk")
+            assertTrue(menu.undo.take())
+            assertEquals(UiText.Res(R.string.game_error_save_title), menu.panel!!.content.title)
+            assertTrue(lines.any { "restore to recent" in it && "could not be saved" in it })
+            assertTrue(actions.restoredToRecent.isEmpty())
+        }
 }

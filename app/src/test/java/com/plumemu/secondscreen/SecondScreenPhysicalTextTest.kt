@@ -47,7 +47,7 @@ class SecondScreenPhysicalTextTest {
     @get:Rule
     val rules = rulesAround(compose)
 
-    private var settings by mutableStateOf(PlumThemeSettings.Graphite.copy(font = PlumFont.Jost))
+    private var settings by mutableStateOf(PlumThemeSettings.Graphite)
     private var content by mutableStateOf<SecondScreenContent>(BOARD_GAME)
     private var scale by mutableStateOf(SecondScreenPhysical.thor)
 
@@ -55,7 +55,7 @@ class SecondScreenPhysicalTextTest {
         card: SecondScreenContent,
         size: TextSize = TextSize.Large,
     ) {
-        settings = PlumThemeSettings.Graphite.copy(font = PlumFont.Jost, textSize = size)
+        settings = PlumThemeSettings.Graphite.copy(textSize = size)
         content = card
         compose.waitForIdle()
     }

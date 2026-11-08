@@ -2,7 +2,6 @@ package com.plumemu.home
 
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.GridSize
-import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.ProvideGridSize
 import com.plumemu.coreui.theme.TextSize
 import com.plumemu.game.ArcadeSetFacts
@@ -99,16 +98,6 @@ class GamePanelScreenshotTest {
 
     @Test
     fun info() = shot("game_info", OpenPanel(game, PanelScreen.Info(facts)))
-
-    /**
-     * Info too tall for the panel (Largest in Serif): the facts scroll above Back, and the row after
-     * the last whole one is cut at the scroll's bottom edge, part of it in view, so it is plain there is more.
-     */
-    @Test
-    fun infoThatScrolls() =
-        ReferenceShots.capture("game_info_scrolls", fonts = listOf(PlumFont.Serif), textSize = TextSize.Largest) {
-            HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = OpenPanel(game, PanelScreen.Info(facts)))
-        }
 
     /** An arcade set: its regions from the description and the set line, which tells versions apart. */
     @Test

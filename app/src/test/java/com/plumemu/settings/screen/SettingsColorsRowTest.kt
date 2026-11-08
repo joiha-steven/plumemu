@@ -64,35 +64,58 @@ class SettingsColorsRowTest {
         compose.onAllNodesWithText(text(R.string.settings_colors)).assertCountEquals(2) // the row and its panel's title
         compose.onNode(colorsValue(R.string.settings_colors_plumemu), useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.settings_colors_panel_help)).assertExists() // above the row the panel scrolled to
-        // Plumemu is Black with an own-colour accent: the rows below name them.
+        // A fresh install stores Plumemu's own #161A24 and #3A7CEB: the Colors, Background and Accent rows all name the set.
+        compose.onAllNodes(valueText(R.string.settings_colors_plumemu), useUnmergedTree = true).assertCountEquals(3)
+    }
+
+    @Test
+    fun anOldStoredBlackWithTheOldBlueReadsPlumemuOnTheColorsAndBackgroundRows() {
+        show(AppearanceSettings(background = ColorSetting.Preset("Black"), textColor = TextColorSetting.Light, accent = ColorSetting.Custom(0x3E7BE0)))
+        compose.onNode(colorsValue(R.string.settings_colors_plumemu), useUnmergedTree = true).assertIsDisplayed()
+        compose.onAllNodes(valueText(R.string.settings_colors_plumemu), useUnmergedTree = true).assertCountEquals(3)
+        compose.onNode(valueText(R.string.settings_bg_black), useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    /** What setup stores on an OLED handheld: true Black under the Plumemu accent is still the Plumemu set. */
+    @Test
+    fun theOledBlackPageWithThePlumemuAccentReadsPlumemuOnTheColorsAndBackgroundRows() {
+        show(AppearanceSettings(background = ColorSetting.Preset("Black"), textColor = TextColorSetting.Light, accent = ColorSetting.Custom(0x3A7CEB)))
+        compose.onNode(colorsValue(R.string.settings_colors_plumemu), useUnmergedTree = true).assertIsDisplayed()
+        compose.onAllNodes(valueText(R.string.settings_colors_plumemu), useUnmergedTree = true).assertCountEquals(3)
+        compose.onNode(valueText(R.string.settings_bg_black), useUnmergedTree = true).assertDoesNotExist()
+        compose.onNode(valueText(R.string.settings_color_custom), useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun blackWithAnotherAccentIsBlackAndCustom() {
+        show(AppearanceSettings(background = ColorSetting.Preset("Black"), textColor = TextColorSetting.Light, accent = ColorSetting.Preset("Green")))
+        compose.onNode(colorsValue(R.string.settings_color_custom), useUnmergedTree = true).assertIsDisplayed()
         compose.onNode(valueText(R.string.settings_bg_black), useUnmergedTree = true).assertIsDisplayed()
-        // The Accent row names its own-colour accent by the set it belongs to, so "Plumemu" shows on the Colors row and the Accent row.
-        compose.onAllNodes(valueText(R.string.settings_colors_plumemu), useUnmergedTree = true).assertCountEquals(2)
     }
 
     @Test
     fun aSetsOwnHexColoursShowTheSetsNameNotCustom() {
-        show(AppearanceSettings(background = ColorSetting.Custom(0xD9D8D3), textColor = TextColorSetting.Dark, accent = ColorSetting.Custom(0xAA2924)))
-        compose.onNode(colorsValue(R.string.settings_colors_super), useUnmergedTree = true).assertIsDisplayed()
-        compose.onAllNodes(valueText(R.string.settings_colors_super), useUnmergedTree = true).assertCountEquals(3) // Colors, Background and Accent color
+        show(AppearanceSettings(background = ColorSetting.Custom(0xF3EAD0), textColor = TextColorSetting.Dark, accent = ColorSetting.Custom(0x127087)))
+        compose.onNode(colorsValue(R.string.settings_colors_ivory), useUnmergedTree = true).assertIsDisplayed()
+        compose.onAllNodes(valueText(R.string.settings_colors_ivory), useUnmergedTree = true).assertCountEquals(3) // Colors, Background and Accent color
         compose.onNode(valueText(R.string.settings_color_custom), useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
     fun aSetsPreviousAccentStillShowsTheSetsNameNotCustom() {
-        // Stored by Super before the accent changed (#B22B26); the accent row is named by the set it still belongs to.
-        show(AppearanceSettings(background = ColorSetting.Custom(0xD9D8D3), textColor = TextColorSetting.Dark, accent = ColorSetting.Custom(0xB22B26)))
-        compose.onNode(colorsValue(R.string.settings_colors_super), useUnmergedTree = true).assertIsDisplayed()
-        compose.onAllNodes(valueText(R.string.settings_colors_super), useUnmergedTree = true).assertCountEquals(3)
+        // Stored by Ivory before the accent changed (#B22B26); the accent row is named by the set it still belongs to.
+        show(AppearanceSettings(background = ColorSetting.Custom(0xF3EAD0), textColor = TextColorSetting.Dark, accent = ColorSetting.Custom(0x1792B0)))
+        compose.onNode(colorsValue(R.string.settings_colors_ivory), useUnmergedTree = true).assertIsDisplayed()
+        compose.onAllNodes(valueText(R.string.settings_colors_ivory), useUnmergedTree = true).assertCountEquals(3)
         compose.onNode(valueText(R.string.settings_color_custom), useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
     fun theColorsRowReadsCustomButEachRowIsNamedByItsOwnColour() {
-        // Super's background with Blue: no set matches, so Colors says Custom; the background is still Super's colour.
-        show(AppearanceSettings(background = ColorSetting.Custom(0xD9D8D3), textColor = TextColorSetting.Dark, accent = ColorSetting.Preset("Blue")))
+        // Ivory's background with Blue: no set matches, so Colors says Custom; the background is still Ivory's colour.
+        show(AppearanceSettings(background = ColorSetting.Custom(0xF3EAD0), textColor = TextColorSetting.Dark, accent = ColorSetting.Preset("Blue")))
         compose.onNode(colorsValue(R.string.settings_color_custom), useUnmergedTree = true).assertIsDisplayed()
-        compose.onNode(valueText(R.string.settings_colors_super), useUnmergedTree = true).assertIsDisplayed()
+        compose.onNode(valueText(R.string.settings_colors_ivory), useUnmergedTree = true).assertIsDisplayed()
         compose.onNode(valueText(R.string.settings_accent_blue), useUnmergedTree = true).assertIsDisplayed()
     }
 

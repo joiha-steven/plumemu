@@ -20,7 +20,7 @@ class OnAccentFaceTest {
         for (s in listOf(PlumThemeSettings.Graphite, PlumThemeSettings.Paper)) {
             val c = face(s)
             assertEquals("${c.accent}", white, c.onAccentFace)
-            assertEquals("white on the default blue itself", 4.11, ColorMath.contrast(white, c.accent), 0.01)
+            assertEquals("white on the default blue #3A7CEB itself (WCAG: 1.05 / (0.2132 + 0.05))", 3.99, ColorMath.contrast(white, c.accent), 0.01)
         }
     }
 

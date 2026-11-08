@@ -5,6 +5,7 @@ import com.plumemu.update.CheckFailure
 import com.plumemu.update.CheckOutcome
 import com.plumemu.update.LastCheck
 import com.plumemu.update.NoteSection
+import com.plumemu.update.NoticeLine
 import com.plumemu.update.SectionKind
 import com.plumemu.update.UpdateFailure
 import com.plumemu.update.UpdateManifest
@@ -77,6 +78,20 @@ class SettingsUpdatesScreenshotTest {
     @Test fun downloadingWithGroups() = shot("settings_update_groups_downloading", inPanel, foundWith(grouped, UpdateStep.Downloading(3_400_000, 9_800_000)))
 
     @Test fun downloading() = shot("settings_update_downloading", inPanel, SettingsContent(update = found.copy(step = UpdateStep.Downloading(3_400_000, 9_800_000))))
+
+    private val downloadingNote = UpdateStep.Downloading(3_400_000, 9_800_000)
+
+    @Test fun noticeReason() = shot("settings_update_notice_reason", inPanel, SettingsContent(update = found.copy(step = downloadingNote, notice = NoticeLine.Reason)))
+
+    @Test fun noticeOff() = shot("settings_update_notice_off", inPanel, SettingsContent(isHomeApp = true, update = found.copy(step = downloadingNote, notice = NoticeLine.NotificationsOff)))
+
+    @Test fun noticeOffNotHome() = shot("settings_update_notice_off_not_home", inPanel, SettingsContent(update = found.copy(step = downloadingNote, notice = NoticeLine.NotificationsOff)))
+
+    @Test fun noticeOffWithButton() = shot("settings_update_notice_button", inPanel, SettingsContent(isHomeApp = true, update = found.copy(notice = NoticeLine.NotificationsOff)))
+
+    @Test fun noticeOffNotHomeWithButton() = shot("settings_update_notice_button_not_home", inPanel, SettingsContent(update = found.copy(notice = NoticeLine.NotificationsOff)))
+
+    @Test fun noticeOffWithGroups() = shot("settings_update_notice_off_groups", inPanel, SettingsContent(isHomeApp = true, update = found.copy(found = grouped, step = downloadingNote, notice = NoticeLine.NotificationsOff)))
 
     @Test fun metered() = shot("settings_update_metered", inPanel, SettingsContent(update = found.copy(step = UpdateStep.AskMetered)))
 

@@ -15,6 +15,6 @@ internal fun panelTextStartAt(
 ): Float {
     val size = TextSize.entries.firstOrNull { at.endsWith(" ${it.name}") } ?: return PlumDimens.gameRowPadding.value
     // A test that sweeps the fonts names it before the size ("768x432 Sans Large"); the others use Jost.
-    val font = PlumFont.entries.firstOrNull { at.endsWith(" ${it.name} ${size.name}") } ?: PlumFont.Jost
+    val font = listOf(PlumFont.Jost).firstOrNull { at.endsWith(" ${it.name} ${size.name}") } ?: PlumFont.Jost
     return if (wide && SettingsColumns.fits(size, font)) 0f else PlumDimens.gameRowPadding.value
 }

@@ -107,34 +107,36 @@ internal fun ColumnScope.DetailsBlock(
     // Placed for the widest time it can say: a time that changes while the game rests moves nothing.
     val widestFull = battery?.widestFull.orEmpty()
     val widestShort = battery?.widestShort.orEmpty()
-    val labels = factLabels(locale)
+    val labels = factLabels()
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val columnWidth = LocalDetailsColumnWidth.current
     val fit = remember(measurer, density, columnWidth) { LabelFit(measurer, density, columnWidth) }
     val meta = PlumTheme.type.meta
+    val number = PlumTheme.type.factNumber
+    val ratingStyle = PlumTheme.type.ratingNumber
     val labelStyle = PlumTheme.type.detailsLabel
     val dotsPx = with(density) { (PlumDimens.ratingNumberGap + PlumDimens.ratingDotSize * RATING_DOTS + PlumDimens.ratingDotGap * (RATING_DOTS - 1)).roundToPx() }
     val cellHeight = remember(measurer, density, meta, labelStyle) { cellHeightPx(measurer, density, meta, labelStyle) }
     // The arrangement follows the values in hand (a pure function of them), from the reveal on.
     val arrangement =
-        remember(fit, meta, labelStyle, locale, revealed, fullGenre, ratingNumber, playTimeText, lastPlayedText, emulator, batteryFull, widestFull, widestShort, battery?.short, dotsPx) {
+        remember(fit, meta, number, labelStyle, locale, revealed, fullGenre, ratingNumber, playTimeText, lastPlayedText, emulator, batteryFull, widestFull, widestShort, battery?.short, dotsPx) {
             if (!revealed) {
                 null
             } else {
-                fun need(label: String, value: String, extra: Int = 0) = fit.cellShareNeeded(label, labelStyle, value, meta, extra)
+                fun need(label: String, value: String, extra: Int = 0, valueStyle: TextStyle = meta) = fit.cellShareNeeded(label, labelStyle, value, valueStyle, extra)
                 val needs =
                     buildMap {
                         if (fullGenre.isNotEmpty()) put(DetailsCell.GENRE, need(labels.genre, fullGenre))
-                        if (rating.isNotEmpty()) put(DetailsCell.RATING, need(labels.rating, ratingNumber, dotsPx))
-                        if (playTimeText.isNotEmpty()) put(DetailsCell.PLAYED, need(labels.played, playTimeText))
-                        if (lastPlayedText.isNotEmpty()) put(DetailsCell.LAST, need(labels.last, lastPlayedText))
+                        if (rating.isNotEmpty()) put(DetailsCell.RATING, need(labels.rating, ratingNumber, dotsPx, ratingStyle))
+                        if (playTimeText.isNotEmpty()) put(DetailsCell.PLAYED, need(labels.played, playTimeText, valueStyle = number))
+                        if (lastPlayedText.isNotEmpty()) put(DetailsCell.LAST, need(labels.last, lastPlayedText, valueStyle = number))
                         if (emulator.isNotEmpty()) put(DetailsCell.EMULATOR, need(labels.emulator, emulator))
-                        if (batteryFull.isNotEmpty()) put(DetailsCell.BATTERY, maxOf(need(labels.battery, widestFull), need(labels.battery, batteryFull)))
+                        if (batteryFull.isNotEmpty()) put(DetailsCell.BATTERY, maxOf(need(labels.battery, widestFull, valueStyle = number), need(labels.battery, batteryFull, valueStyle = number)))
                     }
                 // GENRE, then EMULATOR, give way in their row down to a floor: the label and a few letters.
                 val floors = mapOf(DetailsCell.GENRE to maxOf(need(labels.genre, FLOOR_TEXT), MIN_SHRUNK_SHARE), DetailsCell.EMULATOR to maxOf(need(labels.emulator, FLOOR_TEXT), MIN_SHRUNK_SHARE))
-                arrangeCells(needs, if (batteryFull.isEmpty()) null else maxOf(need(labels.battery, widestShort), need(labels.battery, battery?.short.orEmpty())), HELD_ROWS, floors)
+                arrangeCells(needs, if (batteryFull.isEmpty()) null else maxOf(need(labels.battery, widestShort, valueStyle = number), need(labels.battery, battery?.short.orEmpty(), valueStyle = number)), HELD_ROWS, floors)
             }
         }
     val batteryText = if (arrangement?.batteryShort == true) battery?.short.orEmpty() else batteryFull
@@ -151,21 +153,21 @@ internal fun ColumnScope.DetailsBlock(
                     drawRect(colors.text.copy(alpha = DIVIDER_ALPHA), Offset.Zero, Size(size.width, PlumDimens.listDividerWidth.toPx()))
                 },
     ) {
-        if (arrangement != null) FactsCells(arrangement, FactTexts(fullGenre, ratingNumber, rating, dots, playTimeText, lastPlayedText, emulator, batteryText), labels, fit)
+        if (arrangement != null) FactsCells(arrangement, FactTexts(fullGenre, ratingNumber, rating, dots, playTimeText, lastPlayedText, emulator, batteryText), labels)
     }
 }
 
 private class FactLabels(val genre: String, val rating: String, val played: String, val last: String, val emulator: String, val battery: String)
 
 @Composable
-private fun factLabels(locale: java.util.Locale) =
+private fun factLabels() =
     FactLabels(
-        stringResource(R.string.home_details_genre).uppercase(locale),
-        stringResource(R.string.home_details_rating_label).uppercase(locale),
-        stringResource(R.string.home_details_play_time).uppercase(locale),
-        stringResource(R.string.home_details_last_played).uppercase(locale),
-        stringResource(R.string.home_details_emulator).uppercase(locale),
-        stringResource(R.string.home_details_battery).uppercase(locale),
+        stringResource(R.string.home_details_genre),
+        stringResource(R.string.home_details_rating_label),
+        stringResource(R.string.home_details_play_time),
+        stringResource(R.string.home_details_last_played),
+        stringResource(R.string.home_details_emulator),
+        stringResource(R.string.home_details_battery),
     )
 
 /** The values of the cells, "" for a cell with nothing to say. */
@@ -173,18 +175,18 @@ private class FactTexts(val genre: String, val ratingNumber: String, val rating:
 
 /** The cells with a value, row by row as [arrangement] has them. */
 @Composable
-private fun FactsCells(arrangement: DetailsArrangement, t: FactTexts, l: FactLabels, fit: LabelFit) {
+private fun FactsCells(arrangement: DetailsArrangement, t: FactTexts, l: FactLabels) {
     fun need(cell: DetailsCell) = arrangement.needs.getValue(cell)
     arrangement.rows.forEachIndexed { row, cells ->
         for (cell in cells) {
             val share = arrangement.shares.getValue(cell)
             when (cell) {
-                DetailsCell.GENRE -> Cell(share, l.genre, t.genre, CellId(DropRank.GENRE, share, row, need(DetailsCell.GENRE)), fit, VALUE_LINES)
-                DetailsCell.RATING -> RatingCell(share, l.rating, t.ratingNumber, t.rating, t.dots, CellId(DropRank.RATING, share, row, need(DetailsCell.RATING)), fit)
-                DetailsCell.PLAYED -> Cell(share, l.played, t.played, CellId(DropRank.PLAYED, share, row, need(DetailsCell.PLAYED)), fit, VALUE_LINES)
-                DetailsCell.LAST -> Cell(share, l.last, t.last, CellId(DropRank.LAST_PLAYED, share, row, need(DetailsCell.LAST)), fit, VALUE_LINES)
-                DetailsCell.EMULATOR -> Cell(share, l.emulator, t.emulator, CellId(DropRank.EMULATOR, share, row, need(DetailsCell.EMULATOR)), fit, VALUE_LINES, HomeTags.DETAILS_EMULATOR)
-                DetailsCell.BATTERY -> Cell(share, l.battery, t.battery, CellId(DropRank.BATTERY, share, row, need(DetailsCell.BATTERY)), fit, VALUE_LINES, HomeTags.DETAILS_BATTERY)
+                DetailsCell.GENRE -> Cell(l.genre, t.genre, CellId(DropRank.GENRE, share, row, need(DetailsCell.GENRE)), VALUE_LINES)
+                DetailsCell.RATING -> RatingCell(l.rating, t.ratingNumber, t.rating, t.dots, CellId(DropRank.RATING, share, row, need(DetailsCell.RATING)))
+                DetailsCell.PLAYED -> Cell(l.played, t.played, CellId(DropRank.PLAYED, share, row, need(DetailsCell.PLAYED)), VALUE_LINES, mono = true)
+                DetailsCell.LAST -> Cell(l.last, t.last, CellId(DropRank.LAST_PLAYED, share, row, need(DetailsCell.LAST)), VALUE_LINES, mono = true)
+                DetailsCell.EMULATOR -> Cell(l.emulator, t.emulator, CellId(DropRank.EMULATOR, share, row, need(DetailsCell.EMULATOR)), VALUE_LINES, testTag = HomeTags.DETAILS_EMULATOR)
+                DetailsCell.BATTERY -> Cell(l.battery, t.battery, CellId(DropRank.BATTERY, share, row, need(DetailsCell.BATTERY)), VALUE_LINES, mono = true, testTag = HomeTags.DETAILS_BATTERY)
             }
         }
     }
@@ -324,32 +326,29 @@ private const val HELD_ROWS = 3
 /** A label (one line) over its value (at most [valueLines], one); only cells with a value are composed. */
 @Composable
 private fun Cell(
-    share: Float,
     label: String,
     value: String,
     id: CellId,
-    fit: LabelFit,
     valueLines: Int,
+    mono: Boolean = false,
     testTag: String? = null,
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
     Column(Modifier.cellId(id).padding(end = PlumDimens.factsColumnGap).then(if (testTag != null) Modifier.testTag(testTag) else Modifier), verticalArrangement = Arrangement.spacedBy(PlumDimens.detailsLabelGap)) {
-        BasicText(text = label, style = fit.labelStyle(label, type.detailsLabel, share).copy(color = colors.muted), maxLines = LABEL_LINES)
-        BasicText(text = value, style = type.meta.copy(color = colors.text), maxLines = valueLines, overflow = TextOverflow.Ellipsis)
+        BasicText(text = label, style = type.detailsLabel.copy(color = colors.muted), maxLines = LABEL_LINES)
+        BasicText(text = value, style = (if (mono) type.factNumber else type.meta).copy(color = colors.text), maxLines = valueLines, overflow = TextOverflow.Ellipsis)
     }
 }
 
 /** The rating cell: the number, then five dots; spoken as one "Rating, 8.5/10". */
 @Composable
 private fun RatingCell(
-    share: Float,
     label: String,
     number: String,
     spoken: String,
     dots: Float,
     id: CellId,
-    fit: LabelFit,
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
@@ -358,9 +357,9 @@ private fun RatingCell(
         Modifier.cellId(id).padding(end = PlumDimens.factsColumnGap).clearAndSetSemantics { contentDescription = description },
         verticalArrangement = Arrangement.spacedBy(PlumDimens.detailsLabelGap),
     ) {
-        BasicText(text = label, style = fit.labelStyle(label, type.detailsLabel, share).copy(color = colors.muted), maxLines = LABEL_LINES)
+        BasicText(text = label, style = type.detailsLabel.copy(color = colors.muted), maxLines = LABEL_LINES)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            BasicText(text = number, style = type.meta.copy(color = colors.text), maxLines = 1)
+            BasicText(text = number, style = type.ratingNumber.copy(color = colors.text), maxLines = 1)
             if (dots > 0f) {
                 Spacer(Modifier.width(PlumDimens.ratingNumberGap))
                 RatingDots(dots)
@@ -393,8 +392,8 @@ internal fun RatingDots(filled: Float) {
 }
 
 /**
- * Picks how a label is set in its cell: with its letter spacing, else without it, and when even that is too wide the
- * caller lets it take a second line (never an ellipsis). A cell is [share] of the wide details column.
+ * Measures the facts' texts against the wide details column: how much of it a cell's label and value need, and whether a value fits.
+ * Labels are plain sentence case with no tracking, so there is one way to set them.
  */
 internal class LabelFit(
     private val measurer: androidx.compose.ui.text.TextMeasurer,
@@ -402,18 +401,6 @@ internal class LabelFit(
     /** The column the cells divide: 248 beside the list, less on a narrow screen's games stop. */
     private val columnWidth: Dp = PlumDimens.detailsColumnWidth,
 ) {
-    fun labelStyle(
-        label: String,
-        spaced: TextStyle,
-        share: Float,
-    ): TextStyle {
-        val width = with(density) { (columnWidth * share).roundToPx() } - gutterPx
-        fun fits(style: TextStyle) =
-            measurer.measure(label, style, softWrap = false, maxLines = 1, constraints = Constraints(maxWidth = Int.MAX_VALUE))
-                .multiParagraph.intrinsics.maxIntrinsicWidth <= width
-        return if (fits(spaced)) spaced else spaced.copy(letterSpacing = TextUnit.Unspecified)
-    }
-
     /** The width of [text] in [style] on one line, in px. */
     fun naturalWidth(
         text: String,
@@ -437,7 +424,7 @@ internal class LabelFit(
         valueStyle: TextStyle,
         extraPx: Int,
     ): Float {
-        val labelWidth = naturalWidth(label, labelStyle(label, labelStyle, THIRD))
+        val labelWidth = naturalWidth(label, labelStyle)
         return (maxOf(labelWidth, naturalWidth(value, valueStyle) + extraPx) + gutterPx).toFloat() / columnPx()
     }
 
@@ -459,7 +446,6 @@ internal class LabelFit(
 /** The width of the details column the facts block is set in: [PlumDimens.detailsColumnWidth] unless a narrow screen's games stop gives less. */
 internal val LocalDetailsColumnWidth = androidx.compose.runtime.staticCompositionLocalOf { PlumDimens.detailsColumnWidth }
 
-private const val THIRD = 1f / 3f
 private const val LABEL_LINES = 1
 
 /** Every value is one line that ends in an ellipsis when its cell is too narrow. */

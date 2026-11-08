@@ -82,13 +82,14 @@ internal fun CoverArt(
     shadowAlpha: Float = 1f,
     poster: PosterSpec? = null,
     posterAspect: Float? = null,
+    tileSystem: PosterSpec? = null,
 ) {
     // Outside the focus modifier and the clip: the focused cover's larger copy does not carry it, and nothing cuts it.
     val shadowed = Modifier.coverShadow(shadow, corner, shadowAlpha)
     if (picture != null) {
         val fitted = fitInside(picture.aspect, size)
         Box(modifier = modifier.size(size), contentAlignment = alignment) {
-            CoverPicture(title, subtitle, picture, fitted, corner, titlePadding, titleStyle, shadowed.then(if (shrinksToFit) Modifier.shrinkInto(fitted).then(pictureModifier) else pictureModifier), hasEdge, shadow?.rim ?: Color.Transparent, poster)
+            CoverPicture(title, subtitle, picture, fitted, corner, titlePadding, titleStyle, shadowed.then(if (shrinksToFit) Modifier.shrinkInto(fitted).then(pictureModifier) else pictureModifier), hasEdge, shadow?.rim ?: Color.Transparent, poster, tileSystem)
         }
     } else if (poster != null && posterAspect != null) {
         // Fitted to the system's shape inside the slot and placed by [alignment], as a picture is (the details column).
@@ -99,12 +100,12 @@ internal fun CoverArt(
     } else if (poster != null) {
         PosterTile(poster, corner, modifier.size(size).then(shadowed).then(pictureModifier), rim = shadow?.rim ?: Color.Transparent)
     } else {
-        TitledTile(title, subtitle, size, corner, titlePadding, titleStyle, modifier.size(size).then(shadowed).then(pictureModifier), rim = shadow?.rim ?: Color.Transparent)
+        TitledTile(title, subtitle, size, corner, titlePadding, titleStyle, tileSystem ?: poster, modifier.size(size).then(shadowed).then(pictureModifier), rim = shadow?.rim ?: Color.Transparent)
     }
 }
 
 /**
- * The titled tile at [size]: as many title lines as it holds, one kept for [subtitle]. Tiles
+ * The titled tile at [size], on the box front's field in [system]'s colour ([rememberTileField]): as many title lines as it holds, one kept for [subtitle]. Tiles
  * taller than wide (portrait cells) tag their title [HomeTags.PORTRAIT_TILE_TITLE], the others
  * [HomeTags.WIDE_TILE_TITLE]: a test may allow an ellipsis under one of them and nowhere else in the
  * grid.
@@ -117,9 +118,11 @@ private fun TitledTile(
     corner: Dp,
     padding: Dp,
     titleStyle: TextStyle,
+    system: PosterSpec?,
     modifier: Modifier,
     rim: Color = Color.Transparent,
 ) {
+    val field = rememberTileField(system, title)
     val type = PlumTheme.type
     val density = LocalDensity.current
     val fitter = currentTileTitleFit()
@@ -157,6 +160,9 @@ private fun TitledTile(
         titleStyle = shownStyle,
         subtitleStyle = factStyle,
         rim = rim,
+        fill = field.fill,
+        titleColor = field.titleInk,
+        subtitleColor = field.yearInk,
     )
 }
 
@@ -222,6 +228,7 @@ private fun CoverPicture(
     hasEdge: Boolean,
     rim: Color,
     poster: PosterSpec?,
+    tileSystem: PosterSpec? = null,
 ) {
     // The grid's rim light on a dark background; on a light one the hairline (the shadow carries the depth there).
     val edge = if (rim == Color.Transparent) PlumTheme.colors.coverEdge else rim
@@ -254,7 +261,7 @@ private fun CoverPicture(
             }
             glowColors.learnSoon(picture, loaded)
             bitmap.value = loaded
-            if (isMotionOn && shown == null) alpha.animateTo(1f, tween(PlumMotion.FADE_IN_MS, easing = PlumMotion.EaseOut)) else alpha.snapTo(1f)
+            if (isMotionOn && shown == null) alpha.animateTo(1f, tween(PlumMotion.FADE_IN_MS, easing = PlumMotion.Decelerate)) else alpha.snapTo(1f)
             isCovered.value = true
         }
     }
@@ -278,7 +285,7 @@ private fun CoverPicture(
                 }.testTag(HomeTags.COVER_PICTURE),
     ) {
         if (!isCovered.value) {
-            if (isUnreadable.value && poster != null) PosterTile(poster, corner, Modifier.size(size), rim = if (hasEdge) edge else Color.Transparent) else TitledTile(title, subtitle, size, corner, padding, titleStyle, Modifier.size(size))
+            if (isUnreadable.value && poster != null) PosterTile(poster, corner, Modifier.size(size), rim = if (hasEdge) edge else Color.Transparent) else TitledTile(title, subtitle, size, corner, padding, titleStyle, poster ?: tileSystem, Modifier.size(size))
         }
     }
 }

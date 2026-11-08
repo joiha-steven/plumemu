@@ -39,6 +39,7 @@ internal fun GridHintBar(
         modifier = Modifier.testTag(HomeTags.HINT_BAR),
         dropOrder = dropOrder,
         dropBeforeMeta = dropBeforeMeta,
+        titleTag = HomeTags.GRID_FOCUS_TITLE,
         hints = hints,
     )
 }

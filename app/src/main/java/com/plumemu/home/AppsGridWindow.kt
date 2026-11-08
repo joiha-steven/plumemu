@@ -16,6 +16,7 @@ import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumLayout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.graphicsLayer
+import com.plumemu.coreui.components.plainLayer
 
 /*
  * The Apps grid's window: only whole cells show. Rows: the window is a whole number of rows high, so no row is cut by its end at rest (the scroll rules
@@ -112,7 +113,7 @@ internal fun Modifier.wholeColumnsWhile(
     isAppsPreview: () -> Boolean,
     active: () -> Boolean,
 ): Modifier =
-    graphicsLayer { clip = active() }
+    plainLayer { clip = active() }
         .layout { measurable, constraints ->
             val placeable = measurable.measure(constraints)
             val each = if (isAppsPreview()) spreadPerColumnPx(placeable.width, columns, gapPx, limitPx) else 0f

@@ -299,6 +299,8 @@ internal object SoftImages {
         val dx: Int,
         val dy: Int,
         val keep: Int = -1,
+        /** The same along y for an image built with `sliceHeight` ([drops]): its first and last [keepY] rows are drawn as they are, the one between fills the rest. */
+        val keepY: Int = -1,
     )
 
     /**
@@ -326,26 +328,47 @@ internal object SoftImages {
         far: Inset,
         glow: Inset?,
         under: Color = Color.Transparent,
+        /**
+         * True: the image is also shared across heights, like [sharedWidth] across widths: built once per look for the shortest box that shows
+         * all of a row's change, with its middle row stretched ([Placed.keepY]); it is padded evenly above and below, so a taller box draws it
+         * [h] - 2 x [Placed.dy] px tall. The F3 lift uses it (a grid's size step changes every cover's height); the other callers keep their images.
+         */
+        sliceHeight: Boolean = false,
     ): Placed? {
         if (w <= 0 || h <= 0) return null
         val shared = sharedWidth(w, corner.coerceIn(0f, min(w, h) / 2f), listOfNotNull(near, far, glow).maxOf { REACH_SIGMAS * it.sigma })
+        val rowReach = listOfNotNull(near, far, glow).maxOf { REACH_SIGMAS * it.sigma }
+        val rowShift = ceil(listOfNotNull(near, far, glow).maxOf { abs(it.dy) }).toInt()
+        val c = corner.coerceIn(0f, min(w, h) / 2f)
+        val sharedH = if (sliceHeight) sharedHeight(h, c, rowReach, rowShift) else h
+        val widestH = if (sliceHeight) sharedHeight(Int.MAX_VALUE, c, rowReach, rowShift) else h
         // Sliced by the look, not by this box: the box that builds the image can be exactly as wide as it, and a wider one takes it from the cache.
         val widest = sharedWidth(Int.MAX_VALUE, corner.coerceIn(0f, min(w, h) / 2f), listOfNotNull(near, far, glow).maxOf { REACH_SIGMAS * it.sigma })
-        val key = DropKey(shared, h, (corner * 100).roundToInt(), layerKey(near), layerKey(far), glow?.let { layerKey(it) }, under.toArgb())
+        val key = DropKey(shared, sharedH, (corner * 100).roundToInt(), layerKey(near), layerKey(far), glow?.let { layerKey(it) }, under.toArgb(), sliceHeight)
         synchronized(dropCache) { dropCache[key] }?.let { return it }
         // Built outside the lock: a background warm-up must not make a draw on the main thread wait for a cached image.
-        val built = traceMiss("Plum:drops") { dropsBuild(shared, h, corner, near, far, glow, under, sliced = shared == widest) } ?: return null
+        val built = traceMiss("Plum:drops") { dropsBuilds.incrementAndGet(); dropsBuild(shared, sharedH, corner, near, far, glow, under, sliced = shared == widest, symmetric = sliceHeight, slicedY = sliceHeight && sharedH == widestH) } ?: return null
         return synchronized(dropCache) { dropCache.getOrPut(key) { built } }
     }
 
-    internal fun dropsBuild(w: Int, h: Int, corner: Float, near: Inset, far: Inset, glow: Inset?, under: Color, sliced: Boolean): Placed? {
+    /** The box height to build a look's image for with `sliceHeight`: a box row is the same from its middle out as far as the corner, the blur and the layers' drop reach. */
+    private fun sharedHeight(
+        h: Int,
+        corner: Float,
+        reach: Float,
+        shift: Int,
+    ): Int = min(h, 2 * (ceil(reach + corner).toInt() + SHARED_ROOM + shift) + 1)
+
+    internal fun dropsBuild(w: Int, h: Int, corner: Float, near: Inset, far: Inset, glow: Inset?, under: Color, sliced: Boolean, symmetric: Boolean = false, slicedY: Boolean = false): Placed? {
         run {
             val r = corner.coerceIn(0f, min(w, h) / 2f)
             val layers = listOfNotNull(near, far, glow)
             fun reach(l: Inset) = ceil(REACH_SIGMAS * l.sigma)
             val left = -ceil(layers.maxOf { reach(it) }).toInt()
-            val top = kotlin.math.floor(layers.minOf { it.dy - reach(it) }).toInt()
-            val bottom = ceil(layers.maxOf { h + it.dy + reach(it) }).toInt()
+            // Symmetric: as far above as below, so that a taller box can slice the middle row out of the image evenly.
+            val room = ceil(layers.maxOf { reach(it) + abs(it.dy) }).toInt()
+            val top = if (symmetric) -room else kotlin.math.floor(layers.minOf { it.dy - reach(it) }).toInt()
+            val bottom = if (symmetric) h + room else ceil(layers.maxOf { h + it.dy + reach(it) }).toInt()
             val bw = w - 2 * left
             val bh = bottom - top
             val xs = FloatArray(bw) { i -> i + left + 0.5f }
@@ -385,11 +408,14 @@ internal object SoftImages {
                     (alpha shl 24) or (r shl 16) or (g shl 8) or bl
                 }
             }
-            return Placed(Bitmap.createBitmap(pixels, bw, bh, Bitmap.Config.ARGB_8888).asImageBitmap(), left, top, if (sliced) (bw - 1) / 2 else -1)
+            return Placed(Bitmap.createBitmap(pixels, bw, bh, Bitmap.Config.ARGB_8888).asImageBitmap(), left, top, if (sliced) (bw - 1) / 2 else -1, if (slicedY) (bh - 1) / 2 else -1)
         }
     }
 
-    private data class DropKey(val w: Int, val h: Int, val corner: Int, val near: List<Int>, val far: List<Int>, val glow: List<Int>?, val under: Int)
+    /** Test hook: how many [drops] images were built (a miss of the cache), so a test can see that a size step builds none. */
+    internal val dropsBuilds = java.util.concurrent.atomic.AtomicInteger()
+
+    private data class DropKey(val w: Int, val h: Int, val corner: Int, val near: List<Int>, val far: List<Int>, val glow: List<Int>?, val under: Int, val tall: Boolean)
 
     private val dropCache = object : LinkedHashMap<DropKey, Placed>(8, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<DropKey, Placed>?) = size > MAX_INSETS

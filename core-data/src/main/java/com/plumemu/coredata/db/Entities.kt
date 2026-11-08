@@ -21,6 +21,11 @@ data class RomFolderEntity(
     @ColumnInfo(name = "display_name") val displayName: String,
     @ColumnInfo(name = "added_at") val addedAt: Long,
     @ColumnInfo(name = "last_scan_finished_at") val lastScanFinishedAt: Long? = null,
+    /**
+     * Directories (relative paths, one per line) the last finished scan could not list; null when it read them all. Scan
+     * state: written only by [ScanDao.setUnreadablePaths] after each scan, cleared when a backup is restored.
+     */
+    @ColumnInfo(name = "unreadable_paths") val unreadablePaths: String? = null,
 )
 
 /**

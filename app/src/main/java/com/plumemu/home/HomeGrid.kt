@@ -28,11 +28,13 @@ import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.components.collar
 import com.plumemu.coreui.components.coverBoxShadow
 import com.plumemu.coreui.theme.CollarDimens
+import com.plumemu.coreui.theme.FocusLift
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -67,7 +69,8 @@ import com.plumemu.coreui.theme.ListGlide
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.fadingIn
-import com.plumemu.coreui.theme.rememberContentFade
+import com.plumemu.coreui.theme.LocalLaunchOrigin
+import com.plumemu.coreui.theme.rememberSlidingSwap
 import com.plumemu.coreui.theme.rememberListGlide
 
 /**
@@ -76,10 +79,9 @@ import com.plumemu.coreui.theme.rememberListGlide
  * as its own shape (its saved picture's, else its system's, [coverAspect]) lets the row, which spans the grid area from where the
  * list starts to the right margin. The Size step picks the column count; rows that do not fit are cut at the strip's edge, as on the board.
  *
- * The focused cover's ring is drawn over the grid, at the cover's place in the lazy layout,
- * rather than by the cover: the ring reaches 5.5 dp past the cover, which the grid's own clip
- * would cut at the top and bottom rows, and a move then only redraws (no cover recomposes).
- * The strip lets the ring into the bar gaps.
+ * The focused cover grows ([FocusLift]) about a pivot that keeps it inside the grid; its rim, light and shadow are drawn round the grid,
+ * at the cover's place in the lazy layout, rather than by the cover: they reach past the cover, which the grid's own clip would cut at
+ * the margins and the top and bottom rows, and a move then only redraws (no cover recomposes). The strip lets them into the bar gaps.
  */
 @Composable
 internal fun GamesGrid(
@@ -90,7 +92,7 @@ internal fun GamesGrid(
     isPanelOpen: Boolean = false,
 ) {
     val entryIndex by remember(state) { derivedStateOf { state.focus.systemIndex } }
-    // The game panel has the focus: the cover drops its ring (one focus mark on screen).
+    // The game panel has the focus: the cover drops its focus (one focus mark on screen).
     val panelOpen = rememberUpdatedState(isPanelOpen)
     val entry = content.entries.getOrNull(entryIndex) ?: return
     // Apps' grid is of icons at one fixed size, without box art.
@@ -114,7 +116,7 @@ internal fun GamesGrid(
     val packed = rememberPackedGrid(entry, columns, targetHeight, gap, coversWidth, art)
     // L1/R1 with the games focused: the next system's games fade in instead of popping. Moves in
     // the system column swap the preview at once (a held key would strobe it).
-    val fade = rememberContentFade(entry.id) { fadesSystemSwap(state) }
+    val fade = rememberSlidingSwap(entry.id, { state.focus.systemIndex }, wrapsAt = content.entries.size) { fadesSystemSwap(state) }
     // A new grid size (or text size) or width re-packs but keeps the grid, its scroll state and the cells that stay in their row:
     // keyed on the system alone, the boxes change size by layout and the cells are not rebuilt (every rebuilt cell asks for its
     // picture in the same frame). The same game stays focused (the focus is its index) and [AlignOnRepack] shows its row whole.
@@ -131,11 +133,9 @@ internal fun GamesGrid(
         val viewport = rememberGridViewportPx(gridState, stripHeight, PlumDimens.gridTopGap, LocalBarRoom.current.bottom + PlumDimens.gridBottomRoom)
         AlignOnRepack(gridState, spans, stripPx, columns, targetHeight, coversWidth) { packed.value.rowOf(state.focus.rowOf(entry.id)) }
         val glide = rememberListGlide(stride = targetHeight * ROW_SCALE_ROOM + rowGap, slabRoom = false)
-        // The collar's focus (groove lit) is the lift slot's 0..1 growth, read in the cell's draw block; the halo is drawn
-        // here, over the grid, so the grid's clip does not cut it at the top and bottom rows.
+        // The focus's rim, light and shadow are drawn here, round the grid, so the grid's clip does not cut them at the margins and bars.
         val motionOn = rememberUpdatedState(PlumTheme.motion.isOn)
         val openingFocus = Snapshot.withoutReadObservation { if (state.focus.column == Column.Games && !panelOpen.value) opening else NO_COVER }
-        val lift = rememberCoverLift(openingFocus) { motionOn.value }
         // A finger's press on a cover: one dip for the grid, drawn by the cell (the focused one too, with the confirm button's).
         val touch = rememberTouchPressScale()
         // Pressed (rules.md > Shapes and motion > Pressed): the focused cover dips about its centre while the confirm button is held.
@@ -143,7 +143,8 @@ internal fun GamesGrid(
             val focus = state.focus
             if (focus.column == Column.Games && !panelOpen.value) focus.rowOf(entry.id) else null
         }
-        val halo = focusHalo(entry, gridState, glide, lift, panelOpen, packed, touch, pressScale, state, motionOn)
+        val outline = rememberFocusOutline(openingFocus, pressScale) { motionOn.value }
+        val halo = focusLift(entry, gridState, glide, outline, panelOpen, packed, touch, state)
         val measurer = rememberTextMeasurer(cacheSize = 64)
         // Remembered: a new fitter would recompose every tile that reads it.
         val fitter = LocalTileTitleFit.current ?: remember(measurer) { TileTitleFit(measurer) }
@@ -153,10 +154,11 @@ internal fun GamesGrid(
         state.setPackedRowsSource(entry.id, source)
         DisposableEffect(state, source) { onDispose { state.clearPackedRowsSource(entry.id, source) } }
         CompositionLocalProvider(LocalTileTitleFit provides fitter) {
-        // Under the ring: the focused cover is drawn over the mask, a row showing too little of itself at a bar is left out.
-        val fades = remember(gridState, glide, state, entry.id, packed) { GridEdgeFades(gridState, glide, with(density) { PlumDimens.gridTopGap.roundToPx().toFloat() }, liftShare = (PlumDimens.FOCUSED_COVER_SCALE - 1f) / 2f, ringPx = with(density) { PlumDimens.focusRingOutset.toPx() }) { packed.value.rowOf(state.focus.rowOf(entry.id)) } }
+        // Under the focus's rim: the focused cover is drawn over the mask, a row showing too little of itself at a bar is left out.
+        val footerGapPx = with(density) { (PlumDimens.footerGap - LocalBarRoom.current.bottom).coerceAtLeast(0.dp).toPx() }
+        val fades = remember(gridState, glide, state, entry.id, packed, footerGapPx) { GridEdgeFades(gridState, glide, with(density) { PlumDimens.gridTopGap.roundToPx().toFloat() }, liftShare = FocusLift.GROWTH_SHARE, ringPx = with(density) { FocusLift.reach.toPx() }, bottomGapPx = footerGapPx) { packed.value.rowOf(state.focus.rowOf(entry.id)) } }
         FollowBarRunner(fades)
-        GridRows(modifier, entry, gridState, packed, spans, viewport, glide, rowGap, density, titleStyle, state, onAction, touch, lift, fade, halo, fades)
+        GridRows(modifier, entry, gridState, packed, spans, viewport, glide, rowGap, density, titleStyle, state, onAction, touch, outline, fade, halo, fades)
         }
         KeepFocusedCellVisible(gridState, 1, spans, viewport, glide) { packed.value.rowOf(state.focus.rowOf(entry.id)) }
         FollowArt(entry.rows) { packed.value.rows.getOrNull(gridState.firstVisibleItemIndex)?.start ?: 0 }
@@ -183,7 +185,7 @@ private fun GridRows(
     state: StripState,
     onAction: (Action) -> Unit,
     touch: TouchPressScale,
-    lift: CoverLift,
+    outline: FocusOutline,
     fade: ContentFade,
     halo: Modifier,
     fades: GridEdgeFades,
@@ -199,7 +201,7 @@ private fun GridRows(
         val rows = packed.value.rows
         items(rows.size, key = { entry.rows[rows[it].start].id }) { at ->
             val row = rows[at]
-            PackedRowBoxes(entry, row, density, titleStyle, state, onAction, touch, lift)
+            PackedRowBoxes(entry, row, at, density, titleStyle, state, onAction, touch, outline)
         }
     }
 }
@@ -234,12 +236,13 @@ private fun AlignOnRepack(
 private fun PackedRowBoxes(
     entry: HomeEntry,
     row: PackedRow,
+    rowIndex: Int,
     density: Density,
     titleStyle: TextStyle,
     state: StripState,
     onAction: (Action) -> Unit,
     touch: TouchPressScale,
-    lift: CoverLift,
+    outline: FocusOutline,
 ) {
     Box(Modifier.fillMaxWidth().height(row.height.dp)) {
         row.boxes.forEachIndexed { k, box ->
@@ -251,7 +254,7 @@ private fun PackedRowBoxes(
                 // The cover is told the box's own width and the snapped width is imposed in layout: a box moving by a fraction of a px
                 // may snap a px wider or narrower, which must not compose the cover again.
                 Box(Modifier.offset { IntOffset(left, 0) }.snappedWidth(right - left)) {
-                    GridCoverAt(entry, index, DpSize(box.width.dp, row.height.dp), titleStyle, state, onAction, touch, lift)
+                    GridCoverAt(entry, index, DpSize(box.width.dp, row.height.dp), liftEdges(k, row.boxes.size, rowIndex), titleStyle, state, onAction, touch, outline)
                 }
             }
         }
@@ -312,11 +315,12 @@ private fun GridCoverAt(
     entry: HomeEntry,
     index: Int,
     cell: DpSize,
+    edges: LiftEdges,
     titleStyle: TextStyle,
     state: StripState,
     onAction: (Action) -> Unit,
     touch: TouchPressScale,
-    lift: CoverLift,
+    outline: FocusOutline,
 ) {
     val row = entry.rows[index]
     val art = LocalHomeArt.current
@@ -324,19 +328,19 @@ private fun GridCoverAt(
     val tap = remember(index, onAction) { Modifier.tapItem(Column.Games, index, onAction).testTag(HomeTags.cover(index)) }
     // Read in the layer, not in composition: a move re-runs two covers' layers, nothing recomposes.
     val focused =
-        remember(state, entry.id, index, touch) {
+        remember(state, entry.id, index, touch, cell, edges, art) {
             touch.modifier(index).drawWithContent {
-                // The focused cover dips with the confirm button as well; a finger's dip is the grid's one.
-                val slot = lift.slotOf(index)
-                // A lifted cover is drawn larger over the grid from its recording (the dip is drawn there).
-                if (slot != null) return@drawWithContent drawCoverForLift(slot, index, entry.id)
-                val dip = touch.scaleOf(index)
-                if (dip < 1f) withTransform({ scale(dip, dip, center) }) { this@drawWithContent.drawContent() } else drawContent()
+                // The focused cover dips with the confirm button as well (a finger's dip is the grid's one) and is lifted by the focus
+                // about the pivot that keeps it inside the grid; its rim, light and shadow are the grid's layer ([focusLift]).
+                val dip = outline.dipOf(index, touch)
+                val lift = outline.liftOf(index)
+                val pivot = if (lift > 0f) pivotOf(coverFrameOf(entry, index, art, Rect(Offset.Zero, size), cell), edges) else center
+                drawLifted(dip, center, lift, pivot) { this@drawWithContent.drawContent() }
             }
         }
     // A game taken out of Favorites stays in the held grid until the person leaves it: dimmed, where the list drops the star.
     val dimmed = entry.kind == EntryKind.Favorites && !row.isFavorite
-    GridCover(row, art.slot(row.scrapeKey), entry.shapeOf(row), entry.posterOf(row), cell, titleStyle, tap, focused, lift, index, fitsShape = entry.kind.mixesSystems, dimmed = dimmed)
+    GridCover(row, art.slot(row.scrapeKey), entry.shapeOf(row), entry.posterOf(row), cell, titleStyle, tap, focused, outline, index, fitsShape = entry.kind.mixesSystems, dimmed = dimmed)
 }
 
 /**
@@ -361,54 +365,63 @@ internal fun Density.collarRect(
     return Rect(box.left - side, box.top - top, box.right + side, box.bottom + bottom)
 }
 
+/** The pivot a cover of [frame] with [edges] is lifted about ([FocusLift.pivot]). */
+private fun pivotOf(
+    frame: Rect,
+    edges: LiftEdges,
+): Offset = FocusLift.pivot(frame, edges.atLeft, edges.atRight, edges.atTop)
+
+/** The collar frame of game [index] in [cell] (px; the box's size [cellDp]): its saved picture's shape, or its system's in a mixed grid, else the whole inner room. */
+private fun Density.coverFrameOf(
+    entry: HomeEntry,
+    index: Int,
+    art: HomeArt,
+    cell: Rect,
+    cellDp: DpSize,
+): Rect {
+    val row = entry.rows.getOrNull(index)
+    val rowShape = row?.let(entry::shapeOf) ?: entry.coverShape
+    val picture = (art.slot(row?.scrapeKey) as? ArtSlot.Found)?.art?.gridPicture(coverInner(cellDp), this)
+    val aspect = picture?.aspect ?: if (entry.kind.mixesSystems) rowShape.widthOverHeight else null
+    return collarRect(aspect, cell)
+}
+
 /**
- * The focus mark of the focused cover's collar (and of the one just left, fading), drawn over the grid so its clip does not cut
- * it at the top and bottom rows; the collar's groove is lit by the cell itself. Reads the focus, the animations and the scroll
- * while drawing: a move or a scroll redraws the mark, nothing recomposes.
+ * The focus of the grid's covers: the rim, light and shadow of each lifted cover, drawn round the grid ([focusLiftLayer]) at the cover's
+ * place in the lazy layout, the frame the cover itself draws in ([GridCoverAt]). Reads the focus, the animations and the scroll while
+ * drawing: a move or a scroll redraws, nothing recomposes.
  */
 @Composable
-private fun focusHalo(
+private fun focusLift(
     entry: HomeEntry,
     gridState: LazyGridState,
     glide: ListGlide,
-    lift: CoverLift,
+    outline: FocusOutline,
     panelOpen: State<Boolean>,
     packed: State<PackedGrid>,
     touch: TouchPressScale,
-    pressScale: () -> Float,
     state: StripState,
-    motionOn: State<Boolean>,
 ): Modifier {
     val colors = PlumTheme.colors
     val art = LocalHomeArt.current
-    val sweep = remember { FocusSweep() }
-    FollowFocusLift(state, entry.id, panelOpen, lift, sweep, motionOn, null)
-    return Modifier.drawWithContent {
-        drawContent()
-        fun drawOne(slot: LiftSlot) {
-            val index = slot.index
-            val grid = packed.value
-            val box = grid.boxOf(index) ?: return
-            val item = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == grid.rowOf(index) } ?: return
-            // Follows its cover while the rows glide, cut where the covers are cut.
-            val shift = glide.offset
-            val width = box.width.dp.toPx()
-            val cellRect = Rect(Offset(item.offset.x + box.x.dp.toPx(), item.offset.y + PlumDimens.gridTopGap.toPx() + shift), Size(width, item.size.height.toFloat()))
-            val inner = coverInner(DpSize(box.width.dp, grid.rows[grid.rowOf(index)].height.dp))
-            val row = entry.rows.getOrNull(index)
-            val rowShape = row?.let(entry::shapeOf) ?: entry.coverShape
-            val picture = (art.slot(row?.scrapeKey) as? ArtSlot.Found)?.art?.gridPicture(inner, this)
-            val aspect = picture?.aspect ?: if (entry.kind.mixesSystems) rowShape.widthOverHeight else null
-            val collar = collarRect(aspect, cellRect)
-            val pressed = if (slot.isFocused) minOf(pressScale(), touch.scaleOf(index)) else 1f
-            val glint = if (slot.isFocused && sweep.progress.isRunning) sweep.progress.value else 0f
-            val draw: DrawScope.() -> Unit = { drawLiftedCover(slot, entry.id, collar, cellRect, pressed, colors, glint) }
-            if (shift == 0f) draw() else clipRect(top = 0f, bottom = size.height, left = -size.width, right = size.width * 2) { draw() }
-        }
-        // The one fading out first, so the focused one is on top.
-        for (slot in lift.slots) if (slot.index != NO_COVER && !slot.isFocused) drawOne(slot)
-        for (slot in lift.slots) if (slot.index != NO_COVER && slot.isFocused) drawOne(slot)
+    FollowFocus(state, entry.id, panelOpen, outline)
+    val origin = LocalLaunchOrigin.current
+    val placed = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    val placement: DrawScope.(Int) -> LiftPlacement? = place@{ index ->
+        val grid = packed.value
+        val box = grid.boxOf(index) ?: return@place null
+        val rowIndex = grid.rowOf(index)
+        val item = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == rowIndex } ?: return@place null
+        // Follows its cover while the rows glide, on the same whole px the cover is laid out on.
+        val left = box.x.dp.roundToPx()
+        val width = (box.x + box.width).dp.roundToPx() - left
+        val cell = Rect(Offset(item.offset.x + left.toFloat(), item.offset.y + PlumDimens.gridTopGap.toPx() + glide.offset), Size(width.toFloat(), item.size.height.toFloat()))
+        val frame = coverFrameOf(entry, index, art, cell, DpSize(box.width.dp, grid.rows[rowIndex].height.dp))
+        val corner = CollarSize.Cover.outerCorner(this, CollarDimens.coverBoxCorner.toPx(), frame.size)
+        val k = index - grid.rows[rowIndex].start
+        LiftPlacement(frame, corner, cell.center, pivotOf(frame, liftEdges(k, grid.rows[rowIndex].boxes.size, rowIndex)))
     }
+    return Modifier.onPlaced { placed[0] = it }.then(focusLiftLayer(outline, touch, glide, colors, placement) { origin?.note(placed[0], it) })
 }
 
 /**
@@ -416,7 +429,7 @@ private fun focusHalo(
  * when there is none, the collar hugging the drawn box and bottom-centred in the [cell] so a row's covers stand on one line.
  * [shape] is the game's system's. With [fitsShape] (Recent and Favorites, whose cells are [MixedGridShape]) the placeholder is that
  * shape fitted in the cell like a picture, so a game without box art keeps its system's shape too. [dimmed]: a Favorites game taken
- * out and still shown ([PlumDimens.UNFAVORITED_COVER_ALPHA]). The groove's light is [lift]'s slot growth for [index], read while drawing.
+ * out and still shown ([PlumDimens.UNFAVORITED_COVER_ALPHA]). The cover draws itself in place, lifted by the focus; its rim, light and shadow are the grid's ([focusLift]).
  */
 @Composable
 private fun GridCover(
@@ -428,7 +441,7 @@ private fun GridCover(
     titleStyle: TextStyle,
     modifier: Modifier,
     focused: Modifier,
-    lift: CoverLift,
+    outline: FocusOutline,
     index: Int,
     fitsShape: Boolean = false,
     dimmed: Boolean = false,
@@ -448,7 +461,7 @@ private fun GridCover(
     val boxAlpha = if (dimmed) PlumDimens.UNFAVORITED_COVER_ALPHA else 1f
     val boxModifier = (if (ownShape) Modifier.testTag(HomeTags.COVER_OWN_SHAPE) else Modifier).coverBoxShadow(corner)
     Box(modifier.size(cell).then(look), contentAlignment = Alignment.BottomCenter) {
-        Box(Modifier.collar(CollarSize.Cover, corner, halo = false) { lift.slotOf(index)?.grow?.value ?: 0f }) {
+        Box(Modifier.collar(CollarSize.Cover, corner, halo = false) { 0f }) {
             if (appIcon != null && appIcon != TileIcon.Missing) {
                 AppGameCover(posterSpec, row.iconKey, appIcon, box, corner, null, boxAlpha, boxModifier, Modifier)
             } else {
@@ -464,6 +477,7 @@ private fun GridCover(
                     subtitle = detailsOf(row, slot)?.year?.toString(),
                     // Not while the result is still being read: the plain tile stands until it is known there is no picture.
                     poster = if (slot is ArtSlot.Unknown && appIcon == null) null else posterSpec,
+                    tileSystem = posterSpec,
                 )
             }
         }

@@ -8,11 +8,9 @@ import org.junit.Test
 
 class ReferenceShotsNamesTest {
     @Test
-    fun theDefaultFontKeepsThePlainNameAndOtherFontsAddTheirs() {
+    fun theNameHasNoFontPartAndAnOtherTextSizeAddsItsOwn() {
         assertEquals("home_768x432_graphite.png", ReferenceShots.fileName("home", Size.Wide, Preset.Graphite))
-        assertEquals("home_576x432_paper.png", ReferenceShots.fileName("home", Size.Narrow, Preset.Paper, PlumFont.Jost))
-        assertEquals("home_576x432_paper_sans.png", ReferenceShots.fileName("home", Size.Narrow, Preset.Paper, PlumFont.Sans))
-        assertEquals("home_768x432_paper_serif.png", ReferenceShots.fileName("home", Size.Wide, Preset.Paper, PlumFont.Serif))
-        assertEquals("home_576x432_graphite_mono.png", ReferenceShots.fileName("home", Size.Narrow, Preset.Graphite, PlumFont.Mono))
+        assertEquals("home_576x432_paper.png", ReferenceShots.fileName("home", Size.Narrow, Preset.Paper, TextSize.Small))
+        assertEquals("home_576x432_paper_largest.png", ReferenceShots.fileName("home", Size.Narrow, Preset.Paper, TextSize.Largest))
     }
 }

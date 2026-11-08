@@ -1,5 +1,10 @@
 package com.plumemu.secondscreen
 
+import androidx.compose.ui.Modifier
+import com.plumemu.coreui.theme.ProvidePlumMotion
+import com.plumemu.coreui.theme.fadingIn
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
 import android.app.Dialog
 import android.app.Presentation
 import android.content.Context
@@ -199,7 +204,7 @@ internal class SecondScreenHost(
     /**
      * The top screen feeds the window only while it shows the picking cards. In game the feed
      * goes back to Calm and stops, so on the way back the card of the game just played is read
-     * again (its new play time) after the settle, never shown stale.
+     * again (its new play time) as the window's first card, without the settle, never shown stale.
      */
     private fun followIfPicking() {
         val up = window ?: return
@@ -371,6 +376,17 @@ internal class SecondScreenHost(
     @Composable
     private fun WindowContent() {
         val shown by mode.collectAsState()
+        val animations by settings.collectAsState()
+        // The in-game card settles in from smaller as a game starts and the cards from larger as it ends, with the top
+        // screen's tokens; the window's first content shows at once. Only the motion setting is read here, not the theme.
+        ProvidePlumMotion(animations?.advanced?.animations ?: true) {
+            val swap = rememberModeSwap(shown)
+            Box(Modifier.fillMaxSize().fadingIn(swap)) { ModeContent(shown) }
+        }
+    }
+
+    @Composable
+    private fun ModeContent(shown: WindowMode) {
         when (shown) {
             // Composed only while shown: the clock's tick and battery listeners exist only then.
             WindowMode.InGameClock -> {

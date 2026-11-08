@@ -47,7 +47,7 @@ class SettingsColumnsNavigationTest {
     @get:Rule
     val rules = rulesAround(compose)
 
-    private val settings = mutableStateOf(PlumSettings(flags = SetupFlags(setupCompleted = true, homeRoleAsked = true)))
+    private val settings = mutableStateOf(PlumSettings(appearance = OLD_DEFAULT_LOOK, flags = SetupFlags(setupCompleted = true, homeRoleAsked = true)))
     private lateinit var router: InputRouter
 
     private val host = SettingsHost(versionName = TEST_VERSION, update = { settings.value = it(settings.value) }, resetAllSettings = {}, resetLibrary = {})

@@ -34,6 +34,8 @@ class SetupFolderWordsTest {
                 assertFalse("${dir.name}: $line names the ROMs folder", "ROMs" in line)
                 assertFalse("${dir.name}: $line names a button or a tap", Regex("Tap|Use this folder|[\u201C\u201D\u2018\u2019\u300C\u300D\"]").containsMatchIn(line))
             }
+            assertTrue("${dir.name}: every bullet ends with a full stop", listOf(opens, use, values["setup_folder_point_private"]!!).all { it.trimEnd().last() in ".\u3002" })
+            assertTrue("${dir.name} has the sign-up line", values["settings_account_sign_up"]?.contains("screenscraper.fr") == true)
             assertFalse("${dir.name}: the pressed-key message is gone", "setup_confirm_press_ab" in values)
         }
     }
@@ -42,7 +44,7 @@ class SetupFolderWordsTest {
     fun theEnglishWordsAreTheSettledOnes() {
         val english = valuesOf(File(res, "values"))
         assertEquals("Android\\'s folder picker opens. Go to your games folder.", english["setup_folder_point_opens"])
-        assertEquals("Then confirm that folder there.", english["setup_folder_point_use"])
+        assertEquals("Then confirm that folder there. On some handhelds this needs a touch of the screen.", english["setup_folder_point_use"])
         assertEquals("Use A", english["setup_confirm_keep"])
     }
 }

@@ -123,12 +123,10 @@ abstract class ChargingTopBarFitBase(
         content: @androidx.compose.runtime.Composable (charging: Boolean) -> Unit,
     ) {
         var size by mutableStateOf(TextSize.Small)
-        var font by mutableStateOf(PlumFont.Sans)
         var charging by mutableStateOf(true)
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { content(charging) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { content(charging) } }
         val problems = mutableListOf<String>()
-        for (eachFont in PlumFont.entries) {
-            font = eachFont
+        for (eachFont in listOf(PlumFont.Jost)) {
             for (each in TextSize.entries) {
                 size = each
                 charging = true

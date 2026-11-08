@@ -370,7 +370,7 @@ data class PlumLayout(
          * the RP5 loses a column at each larger size, and no reference width sits within a few dp
          * of a change of count. The board's 200 (landscape, Large) and 106 (tall, Medium) and G1's
          * 130 (square, Medium) qualify and are kept, so those grids keep today's columns at every
-         * text size.
+         * text size. Square Large is 172 so 640 wide gets fewer columns at Large than at Medium (GridSizeStepsTest).
          */
         internal fun gridCell(
             coverClass: CoverClass,
@@ -387,7 +387,7 @@ data class PlumLayout(
                     when (size) {
                         GridSize.Small -> 99.dp
                         GridSize.Medium -> 130.dp
-                        GridSize.Large -> 168.dp
+                        GridSize.Large -> 172.dp
                     }
                 CoverClass.Tall ->
                     when (size) {

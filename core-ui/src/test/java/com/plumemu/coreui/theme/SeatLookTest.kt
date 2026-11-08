@@ -50,6 +50,9 @@ class SeatLookTest {
         assertEquals("$what inset", inset, s.inset)
     }
 
+    /** The field well is the tone ladder's sunken step of the page (a design change from the boards' #0A0B0D and #E0DBD0). */
+    private fun sunken(page: Int): Int = ToneLadder.level(Rgb(page), ToneLadder.SUNKEN).let { (it.red shl 16) or (it.green shl 8) or it.blue }
+
     @Test
     fun graphiteColoursAreTheBoards() {
         val g = graphite
@@ -64,7 +67,7 @@ class SeatLookTest {
         near("capDown bottom", 0x1E2024, g.capDownStops[1])
         near("capOff", 0x18191C, g.capOff)
         near("side", 0x121316, g.side)
-        near("field well", raised(0x111214, 0x0A0B0D), g.fieldWell)
+        near("field well", sunken(0x111214), g.fieldWell)
         // The word key is the letter cap a step (4 %) lighter.
         near("word key top", lighter(raised(0x111214, 0x2A2C31, 0.10f / 0.12f)), g.wordCap.rest.stops[0], 3)
         near("word key bottom", lighter(0x232529), g.wordCap.rest.stops[1], 3)
@@ -84,7 +87,7 @@ class SeatLookTest {
         near("capDown top", 0xECE7DE, p.capDownStops[0])
         near("capOff", 0xE6E1D7, p.capOff)
         near("side", 0xD3CBBC, p.side)
-        near("field well", raised(0xECE8DF, 0xE0DBD0), p.fieldWell)
+        near("field well", sunken(0xECE8DF), p.fieldWell)
         assertEquals(0.9f, p.lipEllipseHeight)
     }
 

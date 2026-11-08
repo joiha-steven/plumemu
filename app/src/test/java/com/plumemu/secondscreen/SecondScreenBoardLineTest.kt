@@ -29,7 +29,6 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.EntryCardDimens
 import com.plumemu.coreui.theme.PlumFonts
 import com.plumemu.coreui.theme.PlumTheme
-import com.plumemu.coreui.theme.TextWeight
 import com.plumemu.game.LocalBadgeImages
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
@@ -135,17 +134,18 @@ class SecondScreenBoardLineTest {
     }
 
     @Test
-    fun theDescriptionBreaksWhereTheBoardsBrowserDoes() {
-        // The board puts "she" on the first line (729 of 735 px in the browser); with each glyph rounded to a pixel it took 742, and 7 lines to the board's 6.
+    fun theDescriptionBreaksWhereTheScaleDrawsIt() {
+        // The board (weight 400) puts "she" on the first line (729 of 735 px); each glyph rounded to a pixel took 742 and one line more. The one weight scale (500) is a little wider
+        // than the board's 400, so "she" goes down: the breaks are re-measured at the scale and pinned (7 lines, animated glyph advances).
         compose.setContent {
-            PlumTheme(SecondScreenText.Graphite.copy(textWeight = TextWeight.Thin)) { CompositionLocalProvider(LocalBadgeImages provides CacheOnlyBadges()) { SecondScreenCard(BOARD_GAME) } }
+            PlumTheme(SecondScreenText.Graphite) { CompositionLocalProvider(LocalBadgeImages provides CacheOnlyBadges()) { SecondScreenCard(BOARD_GAME) } }
         }
         val layouts = mutableListOf<TextLayoutResult>()
         compose.onNodeWithTag(GameCardTags.DESCRIPTION, useUnmergedTree = true).fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
         val layout = layouts.single()
         val lines = (0 until layout.lineCount).map { BOARD_DESCRIPTION.substring(layout.getLineStart(it), layout.getLineEnd(it)) }
-        assertEquals(lines.joinToString("|"), 6, layout.lineCount)
-        assertTrue(BOARD_DESCRIPTION.substring(0, layout.getLineEnd(0)).trimEnd().endsWith("distress call she"))
+        assertEquals(lines.joinToString("|"), 7, layout.lineCount)
+        assertTrue(BOARD_DESCRIPTION.substring(0, layout.getLineEnd(0)).trimEnd().endsWith("its distress call"))
     }
 
     @Suppress("DEPRECATION")
@@ -156,7 +156,7 @@ class SecondScreenBoardLineTest {
         // its 18 px Menlo box after the 6 px gap. Both lines are now drawn larger than the board's (the small step, 11.33 sp, and 12 sp
         // in the mono face): Jost's own box is 24 px, baseline 18, and the file's baseline 47 px below the battery's top.
         compose.setContent {
-            PlumTheme(SecondScreenText.Graphite.copy(textWeight = TextWeight.Thin)) { CompositionLocalProvider(LocalBadgeImages provides CacheOnlyBadges()) { SecondScreenCard(BOARD_GAME.copy(batteryPace = BatteryPace(minutesOnCharge = 135.0, percentPerHour = 30.0))) } }
+            PlumTheme(SecondScreenText.Graphite) { CompositionLocalProvider(LocalBadgeImages provides CacheOnlyBadges()) { SecondScreenCard(BOARD_GAME.copy(batteryPace = BatteryPace(minutesOnCharge = 135.0, percentPerHour = 30.0))) } }
         }
         val battery = placed(GameCardTags.BATTERY)
         val file = placed(GameCardTags.FILE)

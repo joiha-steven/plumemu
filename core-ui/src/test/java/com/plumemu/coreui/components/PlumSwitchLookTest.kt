@@ -13,7 +13,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.theme.Depth
 import com.plumemu.coreui.theme.PlumColors
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumTheme
@@ -31,9 +30,9 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
 
 /**
- * The V2 switch measured against the Controls board (1 px = 1/1.5 dp): 40 x 22.7 dp track in a 4 dp lip, a 18.7 dp knob, the on track one flat
- * colour (the mean of the board's accent fade, no gradient), the knob the collar's cap face, and the on track's glow tinting the lip
- * (the board's `0 0 12px`), drawn with fading strokes.
+ * The flat switch measured in pixels (docs/design/rules.md > Flat parts): a 40 x 22.7 dp track, the on track one solid accent (every row of a
+ * column the same, no gradient), the off track one solid sunken tone with its hairline, a solid light thumb of 18.7 dp, and no glow or lip
+ * round it (the page's own colour right outside the track).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -62,38 +61,32 @@ class PlumSwitchLookTest {
         val trackH = SwitchSliderDimens.switchTrackHeight.value * d
         val trackW = SwitchSliderDimens.switchTrackWidth.value * d
         val mid = (lip + trackH / 2).toInt()
+        val flat = colors.collar.flat
         // Size: the node is the lip plus the track.
         assertEquals((trackW + 2 * lip).toInt(), on.width)
-        // The on track: the board's `linear-gradient(accent, accentLight)`, top to bottom (its inset shadow fades out 4 dp in).
-        val seat = colors.collar.seat
-        val light = com.plumemu.coreui.theme.SeatLook.accentLight(colors.accent)
-        // Sampled past the track's rounded end (where the inset shadow follows the curve) and left of the knob.
+        // The on track: one solid accent down a column left of the knob, past the rounded end (the hairline is the first pixel row).
         val trackX = (lip + trackH / 2 + 2 * d).toInt()
-        for (y in (lip + 4 * d).toInt()..(lip + trackH - 4 * d).toInt()) {
-            val want = mix(colors.accent, light, ((y + 0.5f - lip) / trackH).coerceIn(0f, 1f))
-            assertTrue("on track at row $y is ${on[trackX, y]}, wanted $want", on[trackX, y].sum(want) < 9f / 255)
+        for (y in (lip + 3 * d).toInt()..(lip + trackH - 3 * d).toInt()) {
+            assertTrue("on track at row $y is ${on[trackX, y]}, wanted ${colors.accent}", on[trackX, y].sum(colors.accent) < 4f / 255)
         }
-        // The off track is the WELL.
-        assertTrue("off track ${off[(lip + trackW - 4 * d).toInt(), mid]}", off[(lip + trackW - 4 * d).toInt(), mid].sum(seat.well) < 3f / 255)
-        // The knob is the CAP (its gradient's middle) on both (on: right end, off: left end).
-        val cap = mix(seat.capStops[0], seat.capStops[1], 0.5f)
-        val knobR = (lip + trackW - 2 * d - SwitchSliderDimens.switchKnob.value * d / 2).toInt()
-        val knobL = (lip + 2 * d + SwitchSliderDimens.switchKnob.value * d / 2).toInt()
-        assertTrue("on knob ${on[knobR, mid]}", on[knobR, mid].sum(cap) < 6f / 255)
-        assertTrue("off knob ${off[knobL, mid]}", off[knobL, mid].sum(cap) < 6f / 255)
-        // The glow: the lip beside an on track moves toward the accent by about the board's 0.12 at `Depth.SHADOW` (half of that at least), the off one is untouched.
-        // The glow reaches [Depth.GLOW_REACH] of the board's: it is read at the lip's pixel next to the track, where the reach is not in question.
-        val atLip = lip.toInt() - 1 // in the node's own coordinates
-        val lipOff = off[atLip, mid]
-        val lipOn = on[atLip, mid]
-        val toAccent = lipOff.sum(colors.accent)
-        assertTrue("the lip beside an on track moved ${lipOn.sum(lipOff)} of $toAccent", lipOn.sum(lipOff) >= 0.06f * Depth.SHADOW * toAccent)
-        assertTrue("the lip must not be fully the accent", lipOn.sum(colors.accent) > 0.5f * toAccent)
+        // The off track: the sunken ladder tone, with its 1.5 dp outline inside the top edge.
+        val offX = (lip + trackW - 4 * d).toInt()
+        val hairX = (lip + trackW * 0.6f).toInt()
+        assertTrue("off track ${off[offX, mid]}", off[offX, mid].sum(flat.track) < 4f / 255)
+        val edgeRow = (lip + 0.75f * d).toInt()
+        assertTrue("off track outline ${off[hairX, edgeRow]}", off[hairX, edgeRow].sum(flat.trackEdge) < 12f / 255)
+        // The thumb: the solid light tone when on (right end), the outline's colour when off (left end).
+        val knobR = (lip + trackW - trackH / 2).toInt()
+        val knobL = (lip + trackH / 2).toInt()
+        assertTrue("on thumb ${on[knobR, mid]}", on[knobR, mid].sum(flat.thumb) < 6f / 255)
+        assertTrue("off thumb ${off[knobL, mid]}", off[knobL, mid].sum(flat.thumbOff) < 6f / 255)
+        // No glow and no lip: just outside the track both are the page's own colour.
+        val atLip = lip.toInt() - 2
+        assertTrue("beside the on track ${on[atLip, mid]}", on[atLip, mid].sum(colors.bg) < 3f / 255)
+        assertTrue("beside the off track ${off[atLip, mid]}", off[atLip, mid].sum(colors.bg) < 3f / 255)
     }
 
     @Test fun graphite() = check(PlumThemeSettings.Graphite)
 
     @Test fun paper() = check(PlumThemeSettings.Paper)
-
-    private fun mix(a: Color, b: Color, t: Float) = Color(a.red + (b.red - a.red) * t, a.green + (b.green - a.green) * t, a.blue + (b.blue - a.blue) * t)
 }

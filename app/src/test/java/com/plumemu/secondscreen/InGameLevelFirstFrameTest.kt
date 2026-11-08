@@ -4,7 +4,6 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.unit.DpOffset
 import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
@@ -21,8 +20,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The clock card learns from the part's layout whether the ring shows, a frame later. On the first
- * frame the level must already show somewhere: here the ring gives way (Plum Mono at Largest, the
- * widest figures, Roomy), so the clock card must still carry it.
+ * frame the level must already show somewhere: here the ring gives way (Spanish, whose words are the longest, at Largest on Roomy;
+ * in English Jost always leaves room for the ring, measured), so the clock card must still carry it.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -35,11 +34,11 @@ class InGameLevelFirstFrameTest {
 
     @Test
     fun theLevelShowsOnTheFirstFrameWhereTheRingGivesWay() {
-        RuntimeEnvironment.setQualifiers("w${SecondSize.Roomy.widthDp}dp-h${SecondSize.Roomy.heightDp}dp-land-xhdpi")
+        RuntimeEnvironment.setQualifiers("es-w${SecondSize.Roomy.widthDp}dp-h${SecondSize.Roomy.heightDp}dp-land-xhdpi")
         val s = InGameBatterySamples.widest.first()
         compose.mainClock.autoAdvance = false
         compose.setContent {
-            PlumTheme(PlumThemeSettings(font = PlumFont.Mono, textSize = TextSize.Largest)) {
+            PlumTheme(PlumThemeSettings(textSize = TextSize.Largest)) {
                 InGameCard(time = "20:08", battery = s.reading, wifi = s.wifi, shift = { DpOffset.Zero }, part = { s.part }, formatTime = InGameBatterySamples.time24)
             }
         }

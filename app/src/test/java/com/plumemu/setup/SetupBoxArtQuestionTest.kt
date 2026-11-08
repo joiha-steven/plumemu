@@ -79,6 +79,14 @@ class SetupBoxArtQuestionTest {
         compose.waitForIdle()
         send(Action.Enter) // Continue: the look step
         send(Action.Enter) // its preselected tile
+        compose.onNodeWithTag(SetupTags.control(SetupControl.BoxArtOwnCovers)).assertIsDisplayed()
+    }
+
+    /** The question, then Yes: page 2, the sources. */
+    private fun showTheSources() {
+        showTheQuestion()
+        send(Action.Move(Direction.Down))
+        send(Action.Enter)
         compose.onNodeWithTag(SetupTags.control(SetupControl.UseBoxArt)).assertIsDisplayed()
     }
 
@@ -101,13 +109,18 @@ class SetupBoxArtQuestionTest {
         }
 
     @Test
-    fun theGamepadStartsOnUseMyAccountWalksBothButtonsAndAOpensTheFormTypingOnTheUsername() {
+    fun theGamepadStartsOnNoWalksBothPagesAndAOnTheAccountOpensTheFormTypingOnTheUsername() {
         showTheQuestion()
         compose.onNodeWithTag(SetupTags.BOX_ART).assertDoesNotExist()
-        assertEquals(SetupControl.UseBoxArt, focus)
+        assertEquals(SetupControl.BoxArtOwnCovers, focus)
         send(Action.Move(Direction.Down))
-        assertEquals(SetupControl.BoxArtLibretro, focus)
+        assertEquals(SetupControl.BoxArtYes, focus)
         send(Action.Move(Direction.Up))
+        assertEquals(SetupControl.BoxArtOwnCovers, focus)
+        send(Action.Move(Direction.Down))
+        send(Action.Enter)
+        assertEquals("Yes opens the sources on the default one", SetupControl.BoxArtLibretro, focus)
+        send(Action.Move(Direction.Down))
         assertEquals(SetupControl.UseBoxArt, focus)
 
         send(Action.Enter)
@@ -122,7 +135,10 @@ class SetupBoxArtQuestionTest {
 
         send(Action.Back)
         compose.onNodeWithTag(SetupTags.BOX_ART).assertDoesNotExist()
-        assertEquals("B from the form: the question, on Use my account", SetupControl.UseBoxArt, focus)
+        assertEquals("B from the form: the sources, on the account", SetupControl.UseBoxArt, focus)
+        send(Action.Back)
+        compose.onNodeWithTag(SetupTags.control(SetupControl.BoxArtYes)).assertIsDisplayed()
+        assertEquals("B from the sources: the question, on Yes", SetupControl.BoxArtYes, focus)
         send(Action.Back)
         compose.onNodeWithText(context.getString(R.string.setup_look_title)).assertIsDisplayed()
     }
@@ -131,8 +147,9 @@ class SetupBoxArtQuestionTest {
 
     @Test
     fun theKeyboardsDoneOnThePasswordSignsInExactlyOnceThroughTheRouter() {
-        showTheQuestion()
-        send(Action.Enter) // Use my account
+        showTheSources()
+        send(Action.Move(Direction.Down))
+        send(Action.Enter) // ScreenScraper account
         val form = requireNotNull(model.state.value.boxArt)
         compose.runOnIdle {
             form.onUsernameChange("plumtester")
@@ -150,7 +167,8 @@ class SetupBoxArtQuestionTest {
 
     @Test
     fun theKeyboardsNextOnTheUsernameMovesToThePasswordOnce() {
-        showTheQuestion()
+        showTheSources()
+        send(Action.Move(Direction.Down))
         send(Action.Enter)
         val form = requireNotNull(model.state.value.boxArt)
         send(Action.Enter)
@@ -164,17 +182,16 @@ class SetupBoxArtQuestionTest {
     }
 
     @Test
-    fun theGamepadsAOnBoxArtOnlyGoesOnToTheScan() {
-        showTheQuestion()
-        send(Action.Move(Direction.Down))
+    fun theGamepadsAOnTheDefaultSourceGoesOnToTheScan() {
+        showTheSources()
         send(Action.Enter)
         compose.onNodeWithText(context.getString(R.string.setup_scan_title)).assertIsDisplayed()
         assertTrue(accounts.signIns.isEmpty())
     }
 
     @Test
-    fun aTapOnUseMyAccountOpensTheFormAndItsBackHintReturnsToTheQuestion() {
-        showTheQuestion()
+    fun aTapOnTheAccountOpensTheFormAndItsBackHintReturnsToTheSources() {
+        showTheSources()
         tap(SetupTags.control(SetupControl.UseBoxArt))
         compose.onNodeWithTag(SetupTags.BOX_ART).assertIsDisplayed()
         assertFalse("the form opens with the keyboard down", keyboardShows)
@@ -184,9 +201,20 @@ class SetupBoxArtQuestionTest {
     }
 
     @Test
-    fun aTapOnPlumemusOwnCoversGoesOnToTheScanInOneTap() {
+    fun aTapOnNoGoesOnToTheScanInOneTap() {
         showTheQuestion()
         tap(SetupTags.control(SetupControl.BoxArtOwnCovers))
         compose.onNodeWithText(context.getString(R.string.setup_scan_title)).assertIsDisplayed()
+    }
+
+    @Test
+    fun tapsOnYesThenTheDefaultSourceOpenTheSourcesThenGoOn() {
+        showTheQuestion()
+        tap(SetupTags.control(SetupControl.BoxArtYes))
+        compose.onNodeWithTag(SetupTags.control(SetupControl.UseBoxArt)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.setup_box_art_source_title)).assertIsDisplayed()
+        tap(SetupTags.control(SetupControl.BoxArtLibretro))
+        compose.onNodeWithText(context.getString(R.string.setup_scan_title)).assertIsDisplayed()
+        assertEquals(com.plumemu.coredata.settings.BoxArtSourceSetting.LibretroOnly, source.boxArtSource.value)
     }
 }

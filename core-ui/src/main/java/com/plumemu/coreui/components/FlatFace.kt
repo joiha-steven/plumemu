@@ -146,7 +146,7 @@ fun Modifier.sunkenField(
     val progress = remember { Animatable(if (focused) 1f else 0f) }
     val motionOn = PlumTheme.motion.isOn
     LaunchedEffect(focused, motionOn) {
-        progress.animateTo(if (focused) 1f else 0f, if (motionOn) tween(PlumMotion.FOCUS_GROW_MS, easing = PlumMotion.EaseOut) else snap())
+        progress.animateTo(if (focused) 1f else 0f, if (motionOn) tween(PlumMotion.FOCUS_GROW_MS, easing = PlumMotion.Decelerate) else snap())
     }
     return drawBehind {
         val x = insetX.toPx()
@@ -192,7 +192,7 @@ fun Modifier.fieldCollar(
     val progress = remember { Animatable(if (focused) 1f else 0f) }
     val motionOn = PlumTheme.motion.isOn
     LaunchedEffect(focused, motionOn) {
-        progress.animateTo(if (focused) 1f else 0f, if (motionOn) tween(PlumMotion.FOCUS_GROW_MS, easing = PlumMotion.EaseOut) else snap())
+        progress.animateTo(if (focused) 1f else 0f, if (motionOn) tween(PlumMotion.FOCUS_GROW_MS, easing = PlumMotion.Decelerate) else snap())
     }
     return drawBehind {
         val pad = CollarSize.Field.padding

@@ -342,6 +342,7 @@ class LibraryScanner(
         if (outcome is FolderOutcome.Scanned) {
             database.scanDao().markScanFinished(folder.id, clock())
             val s = outcome.stats
+            storeUnreadablePaths(folder.id, s.unreadableDirectories)
             Log.i(
                 LOG_TAG,
                 "Folder ${folder.id}: listed ${s.directoriesListed} directories, ${s.directoriesUnchanged} unchanged, " +
@@ -358,6 +359,17 @@ class LibraryScanner(
         }
         emit(ScanEvent.FolderFinished(folder.id, outcome))
         return (outcome as? FolderOutcome.Scanned)?.let { it.stats to scan.addedGameIds }
+    }
+
+    /**
+     * Every finished scan says what it could not list; one that listed everything clears the last one's paths. The column is
+     * newline-joined: a path holding a newline (a legal folder name on ext4) would read back as two folders that do not exist,
+     * and skipping one would store a wrong path, so it is left out and only counted in the log (never a name).
+     */
+    private suspend fun storeUnreadablePaths(folderId: Long, paths: List<String>) {
+        val (odd, kept) = paths.partition { '\n' in it }
+        if (odd.isNotEmpty()) Log.w(LOG_TAG, "Folder $folderId: ${odd.size} unreadable directories with a newline in their path not stored")
+        database.scanDao().setUnreadablePaths(folderId, kept.takeIf { it.isNotEmpty() }?.joinToString("\n"))
     }
 
     /**

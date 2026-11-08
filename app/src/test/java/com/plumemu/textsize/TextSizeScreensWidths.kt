@@ -27,3 +27,13 @@ class TextSizeScreens667Test : TextSizeScreensBase(667, 375)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w576dp-h432dp-land-xhdpi")
 class TextSizeScreens576Test : TextSizeScreensBase(576, 432)
+
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w640dp-h480dp-land-xhdpi")
+class TextSizeScreens640Test : TextSizeScreensBase(640, 480)
+
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w640dp-h432dp-land-xhdpi")
+class TextSizeScreens640x432Test : TextSizeScreensBase(640, 432)

@@ -37,7 +37,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Apps' grid of icons measured at the RP5's 768x432, the RP4 Pro's 576x432
- * and the Thor's top screen, at every text size of the ramp in Sans, Serif and Mono: the columns from
+ * and the Thor's top screen, at every text size of the ramp in Jost: the columns from
  * the width ([appsGridColumns]), tiles of one size within a pixel and even gaps, every icon 56 dp and
  * centred, every name at most two lines inside its tile, and the focused tile's ring inside the screen
  * (between the bars) after scrolling to the last app. The grid size changes none of it.
@@ -86,9 +86,9 @@ class HomeAppsGridBoundsTest {
     private fun assertEveryTextSizeAndFont(screen: String) {
         show()
         val report = StringBuilder()
-        for (font in PlumFont.entries) {
+        for (font in listOf(PlumFont.Jost)) {
             for (size in TextSize.entries) {
-                settings = PlumThemeSettings.Graphite.copy(font = font, textSize = size)
+                settings = PlumThemeSettings.Graphite.copy(textSize = size)
                 compose.waitForIdle()
                 val label = "$screen $font $size"
                 val columns = assertTheTiles(label)

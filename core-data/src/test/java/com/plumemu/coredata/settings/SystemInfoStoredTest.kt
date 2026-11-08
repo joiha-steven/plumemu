@@ -25,7 +25,7 @@ class SystemInfoStoredTest {
             try {
                 val store = PreferenceDataStoreFactory.create(scope = scope) { File(tmp.root, "settings.preferences_pb") }
                 val repo = SettingsRepository(store, SettingsLog { })
-                repo.setAppearance(AppearanceSettings(font = FontSetting.Serif))
+                repo.setAppearance(AppearanceSettings(gridSize = GridSizeSetting.Small))
                 val untouched = repo.settings.first().homeScreen
                 assertNull("another save does not decide it", untouched.showSystemInfo)
                 assertEquals("never set reads as on", true, untouched.isSystemInfoShown)
@@ -33,7 +33,7 @@ class SystemInfoStoredTest {
                 repo.setHomeScreen(untouched.copy(showSystemInfo = false))
                 assertEquals(false, repo.settings.first().homeScreen.showSystemInfo)
                 repo.setHomeScreen(repo.settings.first().homeScreen.copy(showSystemInfo = true))
-                repo.setAppearance(AppearanceSettings(font = FontSetting.Mono))
+                repo.setAppearance(AppearanceSettings(gridSize = GridSizeSetting.Large))
                 assertEquals("an explicit on survives other saves", true, repo.settings.first().homeScreen.showSystemInfo)
             } finally {
                 scope.cancel()

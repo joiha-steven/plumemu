@@ -47,6 +47,21 @@ enum class Region(val code: String, val noIntroName: String) {
             "scandinavia" to SCANDINAVIA, "russia" to RUSSIA,
         )
 
+        /**
+         * Regions the name packs write that have no shown code here: a group of them is still a
+         * region group (not a variant, so its copies group with the others), it just adds no region.
+         */
+        private val namedWithoutCode: Set<String> = setOf(
+            "latin america", "mexico", "portugal", "greece", "poland", "denmark", "norway", "finland",
+            "belgium", "india", "new zealand",
+        )
+
+        /**
+         * GoodTools codes joined in one group (`(JU)`, `(JUE)`, `(UE)`): only these, each once, so a
+         * short upper-case tag (`(AGA)`, `(ECS)`, `(GBC)`) is not read as regions.
+         */
+        private val joinable: Set<Char> = setOf('U', 'E', 'J', 'W', 'K', 'B', 'A')
+
         /** GoodTools single-letter codes, which may be joined: `(U)`, `(JU)`, `(JUE)`. */
         private val byLetter: Map<Char, Region> = mapOf(
             'U' to USA, 'E' to EUROPE, 'J' to JAPAN, 'W' to WORLD, 'K' to KOREA,
@@ -70,7 +85,9 @@ enum class Region(val code: String, val noIntroName: String) {
         fun parseGroup(content: String): List<Region>? {
             parseNamed(content)?.let { return it }
             val letters = content.trim()
-            if (letters.length in 1..4 && letters.all { it in byLetter }) {
+            val isCode = letters.length == 1 && letters[0] in byLetter
+            val isJoined = letters.length in 2..4 && letters.all { it in joinable } && letters.toSet().size == letters.length
+            if (isCode || isJoined) {
                 return letters.mapNotNull { byLetter[it] }.distinct()
             }
             return null
@@ -79,13 +96,15 @@ enum class Region(val code: String, val noIntroName: String) {
         /**
          * The regions of region names only (`USA, Europe`, `US`, `EUR`), without GoodTools letters:
          * for groups and words where a lone letter is not a region (`[US]` in a Switch name, `EUR`
-         * in a scene name). Null when any part is not a region name.
+         * in a scene name). Null when any part is not a region name; empty when every part is a
+         * region the packs name but this enum has no code for (`Latin America`).
          */
         fun parseNamed(content: String): List<Region>? {
             val tokens = content.split(',').map { it.trim() }.filter { it.isNotEmpty() }
             if (tokens.isEmpty()) return null
-            val named = tokens.map { byName[it.lowercase(Locale.ROOT)] }
-            return if (named.all { it != null }) named.filterNotNull().distinct() else null
+            val lower = tokens.map { it.lowercase(Locale.ROOT) }
+            if (!lower.all { it in byName || it in namedWithoutCode }) return null
+            return lower.mapNotNull { byName[it] }.distinct()
         }
     }
 }

@@ -45,7 +45,7 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * Settings › Library › Files not added and an unknown folder's page, System order on top of the Systems panel, and Box art's
  * panel and Clear confirm with no account, at every text size, as `SettingsBackupFitTest`
- * checks Backup: the six sizes in Plum Sans and Large and Largest in Serif and Mono, no text ellipsized (but a folder's own
+ * checks Backup: the six sizes in Jost, no text ellipsized (but a folder's own
  * very long name in the row label, which wraps to two lines and ends in an ellipsis by design), clipped, too short or on top
  * of another, and the focused item fully on screen.
  */
@@ -77,14 +77,11 @@ abstract class SettingsUnknownFolderFitBase(
 
     private fun check(name: String, focused: SettingsFocus, tagOfFocused: String, content: SettingsContent = this.content) {
         var size by mutableStateOf(TextSize.Largest)
-        var font by mutableStateOf(PlumFont.Sans)
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { SettingsAt(focused, content = content) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { SettingsAt(focused, content = content) } }
         val combinations =
-            TextSize.entries.map { PlumFont.Sans to it } +
-                listOf(PlumFont.Serif, PlumFont.Mono).flatMap { listOf(it to TextSize.Large, it to TextSize.Largest) }
+            TextSize.entries.map { PlumFont.Jost to it }
         val failures = mutableListOf<String>()
         for ((eachFont, each) in combinations) {
-            font = eachFont
             size = each
             compose.waitForIdle()
             val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()

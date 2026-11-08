@@ -9,18 +9,20 @@ import org.junit.Test
 class RaisedCardTest {
     private fun lum(c: Rgb) = ColorMath.luminance(c)
 
+    /** The card is the tone ladder's raised step: RAISED + 1 L* off the page at the top, RAISED - 1 at the foot, lighter than the page on every set. */
     @Test
-    fun theCardIsBetweenTheBackgroundAndTheSlabOnEverySet() {
+    fun theCardIsTheRaisedStepOfThePageOnEverySet() {
         val failures = mutableListOf<String>()
         for (set in ColorSet.entries) {
             val colors = PlumColors.derive(set.backgroundColor, set.textMode, set.accentColor)
             val dark = TextMode.of(colors.text, colors.bg) == TextMode.Light
-            val card = lum(RaisedCard.fill(colors.bg, colors.text, dark))
-            val slab = lum(FocusSlab.fill(colors.bg, colors.text, dark))
-            val bg = lum(colors.bg)
-            val between = if (dark) bg < card && card < slab else slab > card && card > bg
-            if (!between) failures += "$set: bg=$bg card=$card slab=$slab"
+            val bgL = ColorMath.lightness(colors.bg)
+            val top = ColorMath.lightness(RaisedCard.top(colors.bg, colors.text, dark)) - bgL
+            val bottom = ColorMath.lightness(RaisedCard.bottom(colors.bg, colors.text, dark)) - bgL
+            if (kotlin.math.abs(top - (ToneLadder.RAISED + 1)) > 0.5) failures += "$set: top is $top L* off the page"
+            if (kotlin.math.abs(bottom - (ToneLadder.RAISED - 1)) > 0.5) failures += "$set: bottom is $bottom L* off the page"
             // The text colours keep 4.5:1 on the card (the slab's own rule is the stricter one).
+            val card = lum(RaisedCard.fill(colors.bg, colors.text, dark))
             val contrast = (maxOf(card, lum(colors.text)) + 0.05) / (minOf(card, lum(colors.text)) + 0.05)
             if (contrast < 4.5) failures += "$set: text on card $contrast"
         }
@@ -54,17 +56,16 @@ class RaisedCardTest {
      * (a cool blue-grey, blue 7 above red at the top); Paper #FBFAF7 to #F3F0EA.
      */
     @Test
-    fun theCardGradientIsTheBoardsPanel() {
-        val bg = Rgb(0x111214)
-        val text = Rgb(0xECE8DE)
-        near(0x2A2C31, RaisedCard.top(bg, text, dark = true))
-        near(0x191A1E, RaisedCard.bottom(bg, text, dark = true))
-        val top = RaisedCard.top(bg, text, dark = true)
+    fun theCardGradientIsTheLadderStepAboveAndBelowRaised() {
+        for (bg in listOf(Rgb(0x111214), Rgb(0x161A24), Rgb(0xECE8DF), Rgb(0xF2CF43))) {
+            val dark = ColorMath.lightness(bg) < 50
+            val text = if (dark) Rgb(0xECE8DE) else Rgb(0x1C1C1E)
+            assertEquals("top on $bg", ToneLadder.level(bg, ToneLadder.RAISED + 1), RaisedCard.top(bg, text, dark))
+            assertEquals("bottom on $bg", ToneLadder.level(bg, ToneLadder.RAISED - 1), RaisedCard.bottom(bg, text, dark))
+        }
+        // The blue-black page keeps its blue: a cool card, not grey.
+        val top = RaisedCard.top(Rgb(0x161A24), Rgb(0xECE8DE), dark = true)
         assertTrue("cool: $top", top.blue - top.red >= 5)
-        val pbg = Rgb(0xECE8DF)
-        val ptext = Rgb(0x1C1C1E)
-        near(0xFBFAF7, RaisedCard.top(pbg, ptext, dark = false))
-        near(0xF3F0EA, RaisedCard.bottom(pbg, ptext, dark = false))
     }
 
     /** A custom dark purple page derives its own card: lighter than the page at the top, still purple, never the Graphite grey. */

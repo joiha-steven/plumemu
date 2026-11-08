@@ -23,7 +23,7 @@ import org.junit.Test
  */
 internal class SettingsColorSlidersTest : SettingsModelHarness() {
     init {
-        startOnRedSans() // the accent presets are walked from Red
+        startOnRed() // the accent presets are walked from Red
     }
 
     private val reported = Reported().also { it.listenTo(model.feel) }
@@ -410,10 +410,10 @@ internal class SettingsColorSlidersTest : SettingsModelHarness() {
         model.onTouchSlider(cells, 0.25f, actions.settings, wide)
         model.onTouchSliderEnd()
         val stored = actions.settings
-        val changed = stored.withAppearance { it.copy(font = com.plumemu.coredata.settings.FontSetting.entries.last()) }
-        assertEquals("a font changed meanwhile shows", changed.appearance.font, preview.over(changed).appearance.font)
+        val changed = stored.withAppearance { it.copy(textSize = com.plumemu.coredata.settings.TextSizeSetting.Largest) }
+        assertEquals("a text size changed meanwhile shows", changed.appearance.textSize, preview.over(changed).appearance.textSize)
         assertEquals("the dragged colour still shows", preview.appearance!!.background, preview.over(changed).appearance.background)
-        preview.settleAgainst(preview.appearance!!.copy(font = changed.appearance.font))
+        preview.settleAgainst(preview.appearance!!.copy(textSize = changed.appearance.textSize))
         assertEquals("the same three colours settle it whatever else differs", null, preview.appearance)
     }
 

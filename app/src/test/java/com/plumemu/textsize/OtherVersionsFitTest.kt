@@ -62,7 +62,7 @@ abstract class OtherVersionsFitBase(
         var size by mutableStateOf(sizes.first().second)
         var font by mutableStateOf(sizes.first().first)
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = panel) }
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = panel) }
         }
         val failures = mutableListOf<String>()
         for ((eachFont, each) in sizes) {
@@ -80,8 +80,7 @@ abstract class OtherVersionsFitBase(
     private fun assertNone(failures: List<String>) = assertTrue(failures.size.toString() + " problems:\n" + failures.take(40).joinToString("\n"), failures.isEmpty())
 
     private val everySize =
-        TextSize.entries.map { PlumFont.Sans to it } +
-            listOf(PlumFont.Serif, PlumFont.Mono).flatMap { listOf(it to TextSize.Large, it to TextSize.Largest) }
+        TextSize.entries.map { PlumFont.Jost to it }
 
     private val menu get() = OpenPanel(game, PanelScreen.Menu(sampleFacts(title = game.title, isArcade = true, versions = sampleArcadeVersions())), focus = 2)
 
@@ -101,7 +100,7 @@ abstract class OtherVersionsFitBase(
 
     @Test
     fun theCurrentVersionIsWholeAtMedium() {
-        val failures = problems("game_menu_versions_medium", menu, listOf(PlumFont.Sans to TextSize.Small)) { false }
+        val failures = problems("game_menu_versions_medium", menu, listOf(PlumFont.Jost to TextSize.Small)) { false }
         compose.onNodeWithText("World 930201", useUnmergedTree = true).assertExists()
         assertNone(failures)
     }

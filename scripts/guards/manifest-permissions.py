@@ -3,7 +3,7 @@
 
 Every `uses-permission` must be on the allow list: INTERNET, ACCESS_NETWORK_STATE, WAKE_LOCK and
 RECEIVE_BOOT_COMPLETED (WorkManager's, normal permissions: RULES R34), REQUEST_INSTALL_PACKAGES (in-app
-updates, owner 2026-10-23), REQUEST_DELETE_PACKAGES (Uninstall from Apps, owner 2026-10-25), VIBRATE (haptics, owner 2026-10-26), PACKAGE_USAGE_STATS (Exact play time, owner 2026-11-02) and the signature-level self permission androidx.core adds for ContextCompat.registerReceiver
+updates, owner 2026-10-23), REQUEST_DELETE_PACKAGES (Uninstall from Apps, owner 2026-10-25), VIBRATE (haptics, owner 2026-10-26), PACKAGE_USAGE_STATS (Exact play time, owner 2026-11-02), POST_NOTIFICATIONS (the one "Plumemu updated" notice, owner 2026-11-09) and the signature-level self permission androidx.core adds for ContextCompat.registerReceiver
 (`com.plumemu[.suffix].DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, see app/CLAUDE.md).
 A new permission needs the owner. Checks the source manifests and the merged debug manifest of
 the app (which includes what libraries add). A `uses-permission` with `tools:node="remove"`
@@ -42,6 +42,9 @@ ALLOWED = {
     # Exact play time (owner, 2026-11-02): Settings > Statistics, off by default. Lets a play count only the time its game was in
     # front. A special access the person grants in Android's Usage access screen; nothing is asked at install.
     "android.permission.PACKAGE_USAGE_STATS",
+    # One notification, "Plumemu updated, tap to open" (owner, 2026-11-09, RULES R73): posted only when Android refused to reopen
+    # Plumemu after its own update. Android 13+ asks the person once, when they press Update; nothing is sent anywhere.
+    "android.permission.POST_NOTIFICATIONS",
 }
 ALLOWED_PATTERN = re.compile(r"^com\.plumemu(\.[A-Za-z0-9_]+)*\.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION$")
 

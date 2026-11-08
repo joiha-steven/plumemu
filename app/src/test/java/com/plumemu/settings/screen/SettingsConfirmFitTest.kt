@@ -30,7 +30,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The two-button confirms that have no list (Reset all settings, Reset library, also when the reset
- * could not be done, and Remove folder) at Largest in Plum Sans and Plum Serif: the focused button,
+ * could not be done, and Remove folder) at Largest in Jost: the focused button,
  * ring included, is whole inside the panel; after a reset, with nothing focused there, the buttons
  * under the result line can be scrolled to (the panel scrolls rather than squeezing them).
  */
@@ -65,9 +65,9 @@ abstract class SettingsConfirmFitBase {
             }
         }
         val problems = mutableListOf<String>()
-        for (font in listOf(PlumFont.Sans, PlumFont.Serif)) {
+        for (font in listOf(PlumFont.Jost)) {
             for (each in cases) {
-                theme = PlumThemeSettings.Graphite.copy(font = font, textSize = TextSize.Largest)
+                theme = PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)
                 case = each
                 // A confirm opens on Cancel; Reset is reached by a tap, as a person does. A panel composed with
                 // Reset already focused scrolls nothing (no layout yet when its request runs), which is not the app's path.

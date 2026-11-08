@@ -80,7 +80,7 @@ abstract class HomeDetailsSynopsisBase(
         val actions = LibraryLikeContent.gamesFocused(metroid) + if (narrow) listOf(Action.Move(Direction.Right)) else emptyList()
         compose.mainClock.autoAdvance = false
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Small, font = PlumFont.Jost)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Small)) {
                 CompositionLocalProvider(LocalHomePlayFacts provides Plays(play)) { HomeWithArt(source, actions, base) }
             }
         }
@@ -175,17 +175,17 @@ class HomeDetailsSynopsis640Test : HomeDetailsSynopsisBase(narrow = true, lines 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
-class HomeDetailsSynopsis768Test : HomeDetailsSynopsisBase(narrow = false, lines = 0..0, coverHeight = 144f)
+class HomeDetailsSynopsis768Test : HomeDetailsSynopsisBase(narrow = false, lines = 0..0, coverHeight = 140f) // 144 before the facts' labels grew from 11 to 13: the cover is at its 140 floor
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w832dp-h468dp-land-xhdpi")
-class HomeDetailsSynopsis832Test : HomeDetailsSynopsisBase(narrow = false, lines = 0..0, coverHeight = 178f)
+class HomeDetailsSynopsis832Test : HomeDetailsSynopsisBase(narrow = false, lines = 0..0, coverHeight = 171f) // 178 before the facts' labels grew from 11 to 13 (a taller block, re-measured)
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w837dp-h471dp-land-367dpi")
-class HomeDetailsSynopsisThorTest : HomeDetailsSynopsisBase(narrow = false, lines = 0..0, coverHeight = 177.87f)
+class HomeDetailsSynopsisThorTest : HomeDetailsSynopsisBase(narrow = false, lines = 0..0, coverHeight = 171.34f) // 177.87 before the facts' labels grew from 11 to 13 (re-measured)
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)

@@ -227,6 +227,7 @@ internal data class PanelGrid(
                 PanelPage.UnidentifiedGames -> PanelGrid(content.unidentifiedGames.size, 1)
                 PanelPage.RemoveFolder -> PanelGrid(2, 2)
                 PanelPage.Folder -> PanelGrid(folderPageItems(content, focus.folderId).size, 1)
+                PanelPage.UnreadableFolders -> PanelGrid(unreadablePanelItems(content).size, 1)
                 PanelPage.SkipSubfolder -> skipPickCount.takeIf { it > 0 }?.let { PanelGrid(it, 1) }
                 PanelPage.Emulators -> PanelGrid(1 + (content.system(focus.systemId)?.choices?.size ?: 0), 1)
                 PanelPage.BackgroundPresets, PanelPage.AccentPresets, PanelPage.TextPresets -> PanelGrid(ColorPages.presetCount(page, ColorPages.backgroundOf(settings)), geometry.presetColumns)

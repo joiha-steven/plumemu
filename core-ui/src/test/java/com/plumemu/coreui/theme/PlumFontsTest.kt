@@ -6,6 +6,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.ResourceFont
 import com.plumemu.coreui.R
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Pins which face draws each design weight, so 500 can never silently fall back to the 600 face. */
@@ -31,7 +32,6 @@ class PlumFontsTest {
     @Test
     fun jostIsTheDefaultFont() {
         assertEquals(PlumFont.Jost, PlumFont.Default)
-        assertEquals(PlumFont.Jost, PlumThemeSettings.Default.font)
     }
 
     @Test
@@ -62,29 +62,23 @@ class PlumFontsTest {
     }
 
     @Test
-    fun focusedRowWeightReachesTheMediumFaceInEveryFont() {
-        // 500 is what a focused row asks for at Thin; no dark-background adjustment may move it off the 500 face.
+    fun focusedRowWeightReachesTheSemiBoldFaceInEveryFont() {
+        // 600 is what a focused row asks for; no dark-background adjustment may move it off the 500 face.
         for (font in PlumFont.entries) {
             for (mode in TextMode.entries) {
-                assertEquals(500, TypeRole.GameTitleFocused.weightFor(font, mode, TextWeight.Thin))
+                assertEquals(600, TypeRole.GameTitleFocused.weightFor(font, mode))
             }
         }
     }
 
     @Test
-    fun thinDrawsTheSameFaceAsBeforeTheSetting() {
-        // The badge once asked 700 and Sans and Serif drew the 600 face; Thin must still draw it.
+    fun everyRoleWeightHasAFaceInEveryFont() {
         for (font in PlumFont.entries) {
-            val asked = TypeRole.Badge.weightFor(font, TextMode.Light, TextWeight.Thin)
-            val face = faceFor(PlumFonts.familyOf(font), FontWeight(asked).let { w -> if (font == PlumFont.Mono && asked == 600) FontWeight.SemiBold else w })
-            val expected =
-                when (font) {
-                    PlumFont.Mono -> R.font.plum_mono_700
-                    PlumFont.Sans -> R.font.plum_sans_600
-                    PlumFont.Jost -> R.font.jost_600
-                    PlumFont.Serif -> R.font.plum_serif_600
-                }
-            assertEquals("$font", expected, face)
+            for (role in TypeRole.entries) {
+                val asked = role.weightFor(font, TextMode.Light)
+                assertTrue("$font $role asks $asked", asked in 500..800)
+                faceFor(role.familyFor(font), FontWeight(asked))
+            }
         }
     }
 }

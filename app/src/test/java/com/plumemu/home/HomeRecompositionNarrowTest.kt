@@ -66,7 +66,7 @@ class HomeRecompositionNarrowTest {
     private lateinit var state: StripState
 
     private fun show() {
-        val largestSerif = PlumThemeSettings.Default.copy(textSize = TextSize.Largest, font = PlumFont.Serif)
+        val largestSerif = PlumThemeSettings.Default.copy(textSize = TextSize.Largest)
         val content = FakeHomeContent.withArtwork()
         val snes = content.entries[FakeHomeContent.BOARD_SNES_INDEX]
         val titles = listOf(ONE_LINE_TITLE, TWO_LINE_TITLE)

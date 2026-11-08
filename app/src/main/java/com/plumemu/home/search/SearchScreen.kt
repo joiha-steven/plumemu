@@ -93,7 +93,7 @@ internal fun SearchTopBar(
     charging: () -> Boolean = { false },
 ) {
     val colors = PlumTheme.colors
-    val style = PlumTheme.type.topBar
+    val style = PlumTheme.type.meta
     val place = stringResource(R.string.home_search_place)
     // The typed text starts on the results' text line (strip margin + peek + row padding, the list's own
     // tokens): the label gives it that room, and only a label wider than that (a large text size) pushes it on.
@@ -122,7 +122,7 @@ internal fun SearchTopBar(
             if (search.query.isNotBlank() && search.isAnswered) {
                 val numbers = rememberCountFormat()
                 val count = search.results.size
-                BasicText(pluralStringResource(R.plurals.home_games_count, count, numbers.format(count)), style = style.copy(color = colors.muted), maxLines = 1)
+                BasicText(pluralStringResource(R.plurals.home_games_count, count, numbers.format(count)), style = PlumTheme.type.factNumber.copy(color = colors.muted), maxLines = 1)
             }
         },
     )
@@ -287,7 +287,7 @@ internal fun SearchResults(
     val panelOpen = rememberUpdatedState(isPanelOpen)
     // The focus pill is drawn by the list, so it glides from row to row; read while drawing.
     val pill =
-        rememberGlidingPill(listState, glide, rowHeight = layout.gameRowHeight, stride = layout.gameRowHeight + PlumDimens.listRowGap, blob = true) {
+        rememberGlidingPill(listState, glide, rowHeight = layout.gameRowHeight, stride = layout.gameRowHeight + PlumDimens.listRowGap, blob = true, origin = com.plumemu.coreui.theme.LocalLaunchOrigin.current) {
             if (resultLook(search, search.row, panelOpen.value) == GameRowLook.Focused) search.row else -1
         }
     pill.Provide {

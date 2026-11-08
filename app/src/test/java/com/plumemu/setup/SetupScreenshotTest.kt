@@ -55,7 +55,7 @@ class SetupScreenshotTest {
 
     @Test
     fun boxArtChoicesWithoutScreenScraperKeys() =
-        ReferenceShots.capture("setup_box_art_two_choices") { SetupAt(SetupFakes.boxArtQuestion.copy(hasScreenScraper = false, focus = SetupControl.BoxArtLibretro)) }
+        ReferenceShots.capture("setup_box_art_two_choices") { SetupAt(SetupFakes.boxArtQuestion.copy(hasScreenScraper = false)) }
 
     @Test
     fun scanInProgress() = ReferenceShots.capture("setup_scan") { SetupAt(SetupFakes.scanning) }

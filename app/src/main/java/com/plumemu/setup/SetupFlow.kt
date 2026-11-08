@@ -131,10 +131,13 @@ internal suspend fun SetupSource.coverageOrNull(log: (String) -> Unit): Emulator
         null
     }
 
-/** The box art step opens on the choice in force, else on its first. */
-internal fun boxArtFocus(now: SetupUiState): SetupControl? =
+/** Page 1 opens on "No", or on "Yes" when box art downloads (libretro or ScreenScraper is in force). */
+internal fun boxArtFocus(now: SetupUiState): SetupControl =
     when (now.boxArtSource) {
-        BoxArtSourceSetting.ScreenScraper -> SetupControl.UseBoxArt.takeIf { now.hasScreenScraper }
-        BoxArtSourceSetting.LibretroOnly -> SetupControl.BoxArtLibretro
-        else -> null
+        BoxArtSourceSetting.ScreenScraper, BoxArtSourceSetting.LibretroOnly -> SetupControl.BoxArtYes
+        else -> SetupControl.BoxArtOwnCovers
     }
+
+/** Page 2 opens on the source in force: "ScreenScraper account", else "Default source". */
+internal fun boxArtSourceFocus(now: SetupUiState): SetupControl =
+    if (now.boxArtSource == BoxArtSourceSetting.ScreenScraper) SetupControl.UseBoxArt else SetupControl.BoxArtLibretro

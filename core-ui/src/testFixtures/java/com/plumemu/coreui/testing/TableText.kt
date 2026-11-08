@@ -5,6 +5,7 @@ import com.plumemu.coreui.theme.PlumThemeSettings
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.plumemu.coreui.theme.TextSize
+import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.TypeRole
 
 /**
@@ -14,7 +15,7 @@ import com.plumemu.coreui.theme.TypeRole
  */
 object TableText {
     /** The top bar at Small in the default font: the line of the place name's 16 step, which is taller than the 18 dp base. */
-    val TopBarHeight = (TypeRole.PlaceName.lineHeightSp(PlumThemeSettings.Default.font, TextSize.Small) * PLACE_NAME_STEP_SP / TypeRole.PlaceName.sizeSp).dp
+    val TopBarHeight = (TypeRole.PlaceName.lineHeightSp(PlumFont.Jost, TextSize.Small) * PLACE_NAME_STEP_SP / TypeRole.PlaceName.sizeSp).dp
 
     /** Where the strip starts at Small: the top margin 14, the bar, the 10 gap. */
     val StripTop = 14.dp + TopBarHeight + 10.dp

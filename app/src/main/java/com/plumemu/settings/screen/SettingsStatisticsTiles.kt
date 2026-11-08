@@ -186,7 +186,7 @@ private fun TileFigure(
     tile: StatisticTile,
 ) {
     val textColor = PlumTheme.colors.text
-    val full = PlumTheme.type[TypeRole.DetailsTitleWide]
+    val full = PlumTheme.type.statisticFigure
     // Measured on the first draw (the line height is kept, so the tile's height, worked out from the full size, does not change).
     var isStepped by remember(figure, full) { mutableStateOf(false) }
     val style = if (isStepped) full.copy(fontSize = full.fontSize * (TypeRole.SettingsOption.sizeSp / TypeRole.DetailsTitleWide.sizeSp)) else full

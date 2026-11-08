@@ -21,11 +21,36 @@ the 837×471 text-size shots as before.
 ## The strip
 
 - Margins 24 left and right, 14 top, 12 bottom (9 under a hint bar). Top bar 18 high at Small or one line of the place name's 16 step (16 sp on the font's line: `PlumLayout.topBarLine`) when that is taller, so it grows with the font and size (23.1 dp in Jost at Small, 25.4 at Large: the strip starts 49.4 down, the board's 49.3); the 20 name's taller line reaches into the margins above and below, never cut; while a keyboard tray is up it keeps 18 × the size's factor (`topBarHeightTyping`) and draws the name in the top bar's 13, so the field and the 36 dp keys fit; bottom hint bar 22 high, 10 between the top bar and the content. **Footer zone**: one token for every screen with hint keys (home list, grid, Search, Settings, setup, the panels over them): 9 above the bar, the 22 bar, 9 under it, 40 in all at Small (`PlumDimens.footerGap`, `footerBelow`, `PlumLayout.footerZone`; the bar grows with the text size, the 9s do not). Pinned by `FooterZoneTest`.
-- Hint bar info line (grid): the focused title is `infoLineTitle` (16 / 600) and the meta after it `infoLineMeta` (the board's 11.33) in `infoMeta` (the board's `text2`: the page 0.84 toward the text on dark, #C9C5BB on Graphite; 0.80 on light, about #4A4740 on Paper; `muted` where a custom palette leaves it under 4.5:1 on the page), centred with the keys in the 22 high bar (the bar and the grid's rows do not change). The meta follows the title after a 9.33 gap (`PlumDimens.infoLineGap`, the board's 14 px), with no dot between them (the meta's own " · " stays between year and publisher). One rule: the title takes 16, or steps down to 13 (`gridFocusTitle`, `smallFact`) so that no hint key is dropped; a fit check, never a per-font or per-size case. The hint that gives way to the meta by design (`dropBeforeMeta`: L2 R2 Switch system) does not step the title down unless 13 would keep it too: at 768 x 432 Small that hint goes either way, so the title stays 16. Checked by `HintTitleStepTest`, `InfoLineGapTest`. A titled tile's title stays `gridFocusTitle` (13).
-- Hint bar: its labels and key caps, and the bar's own height, grow with the text size only up to factor 1.1 (Medium; `TextSize.HINT_FACTOR_CAP`, `PlumLayout.hintScale`), so the bar keeps SELECT on a 576 list in Sans and Mono at the default size; pinned by `TypeScaleTest`, `HomeViewToggleHintTest`. Each hint at its natural width, 9 apart from a label to the next key's collar on every bar (16 to the next cap, less the collar's 7; the board's wide keys have 13 px padding each side, 4 dp wider than the old caps, and 9 keeps A, Y, X, START and SELECT on a 576 list in Sans and Mono at the default size). When they do not all fit (the Nova at 576
-  with A, B, Y, X and START Menu, a wide font, a long language), hints give way in this order:
-  "L2 R2 Switch system" (L2 / R2 switch the entry on every list and grid) first, then "L1 R1 Size" (a game grid only; L1 / R1 change the grid size there), then "B Back", then SELECT; START and Y are not in the order. A hint is never cut and hints never
-  overlap. SELECT gives way before B because by touch SELECT is the only way between a list and its grid, while B has the system's back gesture. At 576 x 432 a games list still has no room for SELECT at Largest (A, Y, X, START and SELECT need 614 to 670 dp of 528) nor in Serif at the default size (542).
+- Hint bar info line (grid): the focused title is `infoLineTitle` (16 / 600) and the meta after it `infoLineMeta` (11 since the mono step: the board's 11.33 left the ramp for its nearest step) in `infoMeta` (the board's `text2`: the page 0.84 toward the text on dark, #C9C5BB on Graphite; 0.80 on light, about #4A4740 on Paper; `muted` where a custom palette leaves it under 4.5:1 on the page), centred with the keys in the 22 high bar (the bar and the grid's rows do not change). The meta follows the title after a 9.33 gap (`PlumDimens.infoLineGap`, the board's 14 px), with no dot between them (the meta's own " · " stays between year and publisher). One rule: the title takes 16, or steps down to 13 (`gridFocusTitle`, `smallFact`) so that no hint key is dropped; a fit check, never a per-font or per-size case. The hint that gives way to the meta by design (`dropBeforeMeta`: L2 R2 Switch system) does not step the title down unless 13 would keep it too: at 768 x 432 Small that hint goes either way, so the title stays 16. Checked by `HintTitleStepTest`, `InfoLineGapTest`. A titled tile's title stays `gridFocusTitle` (13).
+- Hint bar: its labels and key caps, and the bar's own height, grow with the text size only up to factor 1.1 (Medium; `TextSize.HINT_FACTOR_CAP`, `PlumLayout.hintScale`), so the bar keeps SELECT on a 576 list in Sans and Mono at the default size; pinned by `TypeScaleTest`, `HomeViewToggleHintTest`. Each hint at its natural width, 9 apart from a label to the next key's collar on every bar (16 to the next cap, less the collar's 7; the board's wide keys have 13 px padding each side, 4 dp wider than the old caps, and 9 keeps A, Y, X, START and SELECT on a 576 list in Sans and Mono at the default size). When they do not all fit, hints give way as **Hint drop order** (next) says, the one place that order is written; pinned by `HintDropOrderTest`. A hint is never cut and hints never overlap.
+- **Hint drop order** (the one place; `HINT_DROP_ORDER`, `GRID_HINT_DROP_ORDER`, `TYPING_HINT_DROP_ORDER` in `home/HomeBars.kt`, `APPS_GRID_HINT_DROP_ORDER` in `home/AppsHints.kt`, `TitledHintBar` in core-ui). Short of width a bar drops hints from the left of this list; a key not in a bar's list stays, and only a bar still too narrow after the whole list loses keys from its right end. A (Play / Select / Open / Type) is never dropped on any bar. L2 R2 is first everywhere it exists. Where a bar's hints are not drawn, they are neither shown nor tappable.
+
+  | Bar | Leaves first to last | Never leaves by order |
+  |---|---|---|
+  | Games list, details stop, Search results | L2 R2 Switch system, L1 R1 Size (grids only), R3 Sort, B Back, SELECT | A, Y, X, START |
+  | Cover grid (one system, Recent, Favorites) | L2 R2, Y Favorite, L1 R1 Size, B Back, SELECT | A, START |
+  | Apps grid (and installed-games grids) | L2 R2, X Search, START Menu, B Back, SELECT | A |
+  | Systems column | (SELECT) | A, X, START |
+  | Typing (Search keyboard, panel and Settings fields) | L1 R1 Cursor, SELECT Shift, Y 123 | A, B, X, START |
+  | Game panels (menu, Info, messages) | none: A and B only | A, B |
+
+  The two grid bars carry the focused title, then its year and publisher (the meta), in the same room: L2 R2 goes before the meta (by design, and only if that keeps the meta); the title steps from 16 to 13 so that no other key is dropped; if still short the meta goes (L2 R2 always leaves before the title is cut; a title that shows whole at 13 with the same keys beats one cut at 16); then the title is cut with an ellipsis on one line, down to a minimum (`PlumDimens.hintTitleMin`, 96 dp: about 12 characters at the 13 style), and only a bar still short with the title at that minimum drops keys, in the table's order. **A key leaves only once the title is at its minimum**, so a 70-character title keeps B Back, L1 R1 and SELECT where the room allows (the long rows below). Search results and the games list have no title in the bar, so a long title changes nothing there. SELECT outlasts B because by touch SELECT is the only way between a list and its grid, while B has the system's back gesture.
+
+  What stays, measured in Sans, Graphite (`HintDropOrderTest`; "long" is a 70-character focused title, "short" Mega Man X on a cover grid and Gallery in Apps):
+
+  | Bar | 576x432 Small | 576x432 Larger | 640x480 Small | 640x480 Larger | 768x432 Small | 768x432 Larger |
+  |---|---|---|---|---|---|---|
+  | Systems column | A X START SELECT | same | same | same | same | same |
+  | Games list | A B Y X START SELECT | A Y X START SELECT | A B Y X START SELECT | same | A B Y X R3 START SELECT | same |
+  | Details stop (narrow only) | A B Y START | same | same | same | no stop: the list's | the list's |
+  | Cover grid, short | A B L1R1 SELECT | same | A B Y L1R1 SELECT | A B L1R1 SELECT | A B Y L1R1 SELECT | same |
+  | Cover grid, long | A B L1R1 SELECT | same | A B Y L1R1 SELECT | A B L1R1 SELECT | A B Y L1R1 SELECT | A B Y L1R1 SELECT |
+  | Apps grid, short | A B START SELECT | same | A B X START SELECT | same | A B X START L2R2 SELECT | A B X START SELECT |
+  | Apps grid, long | A B START SELECT | A B SELECT | A B X START SELECT | A B START SELECT | A B X START SELECT | same |
+  | Search results | A B X Y START | same | same | same | same | same |
+  | Search typing | A B X START Y L1R1 | same | same | same | same | same |
+
+  Hints are listed left to right as drawn. A games list at 576 Larger has no room for SELECT-and-B together (A, Y, X, START and SELECT need 614 to 670 dp of 528).
 - Columns: systems 200, games list at least 400, details 248, 24 between columns.
 - **Systems column alignment**: every system label starts at the page margin (24), the
   same left line as the top bar text and the first hint key cap, focused or not, so the label never moves when
@@ -38,7 +63,7 @@ the 837×471 text-size shots as before.
   Back change nothing): `SystemBadge` (the V2 board's RAISED chip, `SeatLook.raisedChip`: radial gradient, inset light, inset shade, ring and drop, all derived from the theme; the short name
   in capitals in the `systemTag` role (13 / 700) tracked 0.09 em in `strong`, in the person's chosen font; 34 dp tall times the text size's height
   scale, 12 padding each side, corners 8, wider with the text, never cut; no dot, no outline), 14 to its right the facts line (`meta` 13, `text2`, centred on the badge, one line: it drops the kind, then the
-  maker, to fit between the list's left edge and the screen's right margin), 8 under the badge a 1 dp hairline in `sel`, then
+  maker, to fit between the list's left edge and the screen's right margin), 8 under the badge a 1 dp hairline in `sel` (drawn by the list under its focus pill, so the first row's slab, at rest or gliding, always covers it: `drawsBandRule`, `BandRuleAndFooterFadeTest`), then
   the rows (one row fewer on screen while the band is in view; focus on the first game scrolls the list fully to its top, a deep remembered row opens with the band out of view). Nothing for Recent, Favorites, Apps or a system the platform
   data does not know; a system with no facts shows the badge alone. About text: under the facts line, `meta` 13 `text2`, 4 below it (`factsRowGap`), up to 3 lines, whole or not shown (never an ellipsis), in a column as wide as the facts line's room; the band grows to hold it (the hairline stays 8 below the taller of badge and text). Settings › Home screen › System info off: no band. Checked by
   `SystemInfoBandTest` (numbers at 576, 768 and 837 wide, Small and Largest; a tap keeps its row under the finger; no drift
@@ -118,24 +143,24 @@ One language on every screen, so a glance says where the cursor is:
 
 | State | Look |
 |---|---|
-| Focused row (the slab) | One slab on every focused row (games list, search, Settings rows, the game menu card, with motion on or off), one glass recipe for every colour set: each layer is a step of perceived lightness (CIE L*) from what lies under it, so Graphite, Paper and a custom colour draw the same object at the same strength; a near-white page leaves white little room, so there the rim and the lift carry the slab. Tokens are derived from the theme (`theme/FocusSlab.kt`, `SlabLook.of`), read while drawing, never hard-coded. **Fill**: a vertical gradient of white over the page (on a raised card over the card, `stopsOnCard`), stops at 0, 46 % and 100 %, made opaque. Dark themes: L* +7.5, +5.5 and +4 (`FILL_TOP_L` to `FILL_BOTTOM_L`), up to a third more on black (`DARK_GAIN`: the eye takes a step on a dark page for less). Light themes: white at 92, 65 and 48 % (`LIGHT_TOP` to `LIGHT_BOTTOM`), the same steps on Paper and more on a mid-tone page, which white frosts more. **Rim** 0.667 dp (`SlabDimens.edge`) inside the box, never an even outline: along the sides L* 12 off the page (`RIM_SIDE_L`), white on a dark theme and brown (#3C2814) on a light one, and white at two opposite corners, L* 30 above the fill or as far as white goes (Paper's reach white itself), fading out over 16 % of the diagonal (`SlabLook.rim`). No inset shadows. **Lift**, drawn before the fill as one cached bitmap (`SoftImages.drops`: exact rounded-rect Gaussians composited once, never stacked strokes or `BlurMaskFilter`): near 0.7 dp down, sigma 0.7 dp, L* 2 off the page; far 3.73 dp down, sigma 3.73 dp, L* 3.5 off the page (`LIFT_NEAR_L`, `LIFT_FAR_L`): brown on a light theme, white on a dark one, whose page cannot show a shadow. The glow is the accent at the slab's own strength on every theme (`PlumComposeColors.slabGlow`, sigma `SlabDimens.glowSigma`). **Bar**: 4 x 17.33 dp, radius 2, centred, `SlabDimens.barInset` 8.67 in from the slab's outer edge (the 1 px border plus the CSS 12 px), with its own accent glow (blur 8, sigma 4 dp, `barGlowSigma`). It is on every focused row on every theme: one focus language. Corners half the row's height up to `PlumDimens.cornerFocusPill` (13.33). **No ring and no dot**; `strong` text, weight 500 at the row's size, and the label does not move when focus lands (the text starts `gameRowPadding` 23.33 in). The slab is `SlabDimens.height` 46.67 tall (the board's 70 px) and spans the row's width: a 38 or 40 row is overhung by half the difference above and below (`slabOverhang`; layout does not move), so a list leaves that room at its ends (`ListGlide` widens the list by `SlabDimens.maxOverhang` each end and clips there, `GlidingPill`'s clips bleed by it; with animations off `ListGlide.extra` is that room; the list host's `contentPadding` is `glide.extra`; a list without slabs passes `slabRoom = false`). The focused row's year and region are brighter and heavier than a resting row's (`SlabLook.year` / `region`, `FocusSlab.yearInk`). On a light theme the games list (home and search, `rememberGlidingPill(blob = true)`) also draws the board's blue blob under the slab (`SlabDimens` blob values, `drawBlob`; `PlumComposeColors.slabBlob`, the accent at `FocusHalo.LIGHT_SLAB_PEAK` 0.5): a 2D Gaussian measured on the Paper board's 768 list, sigma 0.285 x the slab's width across, 60 dp tall, centred 18.67 dp below the slab's centre; it already holds the glow, so the slab's own glow is left out there. It is drawn from a cached bitmap without dithering (`SoftShadowStepTest`). Checked by `FocusSlabSameObjectTest` (each layer's step on dark, light and mid-tone pages), `SlabBoardValuesTest`, `SlabCssRowTest` (a rendered row), `SlabListHaloTest`, `SlabMotionOffTest`, `FocusSlabReadabilityTest`, `GlassCustomColorsScreenshotTest`. Not followed yet: the kit boards draw the system list's focus as accent text and a dot, and a dialog's as a focused primary button; ours still puts the slab on the system column. System column: the same slab, starting `gameRowPadding` (14) before the label, so it is inset from the screen edge by margin - 14 (10). The accent dot that remains means "new games" (system row), never focus. **Carried** (Settings > Library > Systems, A picks a system up): the row turns solid accent with an `onAccent` ring and `onAccent` text (`Modifier.carriedPill`), so it is told from focused on every preset. Setup's cards keep their own corners (`cornerSetupChoice`, 10) focused or not (`focusPill(shape = ...)`); display-only sample rows draw the look with `focusPillSample` (no press, no touch) |
-| Focused cover, swatch or button | A button, switch, key or swatch is a collar part: focus lights its groove and the halo glows outside it (`PlumSwatch`, `Modifier.collar`), no ring. Elsewhere a 2.5 dp accent ring, 3 dp away, inside the **focus halo** (below). **A grid cover differs**: its collar's groove fills with the accent, and it is drawn a little larger (1.04 at most) with a 2.5 dp accent ring (3 dp of page colour between collar and ring, then 2 dp of page colour outside it, so its contrast is always against the page) in the wider gaps around it, no halo, so its neighbours stay whole and the mark looks the same on every side; no rise; one light band crosses it as focus rests on it (see Cover focus under Grid). **An Apps tile differs too**: the ring hugs the tile's own shape (its corner radius plus the gap), a 3 dp band of the screen background colour first, then the 2.5 dp accent ring, and no accent glow; under the tile the glow is its icon's colour; it grows and rises (see Grid) and, once focus has rested on it 120 ms, one soft light band sweeps across its face: white at 28 % peak, 45 % of the tile's span wide with soft edges, travelling 25° below horizontal in 400 ms, clipped to the tile's rounded shape, then gone; it plays once per arrival, is cancelled if focus leaves, and does not play when animations are off (`FocusSweep`) |
+| Focused row (the slab) | One slab on every focused row (games list, search, Settings rows, the game menu card, with motion on or off), one glass recipe for every colour set: each layer is a step of perceived lightness (CIE L*) from what lies under it, so a dark page, a light page and a custom colour draw the same object, a rimmed pane of glass over a shadow. A light page must stay below white (the sets' lightest is about L* 93): on pure white the white rim has nothing to show against and only the shadow is left. Tokens are derived from the theme (`theme/FocusSlab.kt`, `SlabLook.of`), read while drawing, never hard-coded. **Fill**: a vertical gradient of the page (on a raised card, of the card: `stopsOnCard`) lit toward white, so it keeps the page's hue, stops at 0, 46 % and 100 %, made opaque. Dark themes: L* +7.5, +5.5 and +4 (`FILL_TOP_L` to `FILL_BOTTOM_L`), up to a third more on black (`DARK_GAIN`: the eye takes a step on a dark page for less). Light themes: L* +3.5, +3 and +2.5 (`LIGHT_TOP_L` to `LIGHT_BOTTOM_L`): the pane stays just above the page, below white, so the white rim shows round it as it does on dark. **Rim** 0.667 dp (`SlabDimens.edge`) inside the box, never an even outline: white on every theme; along the sides L* 12 above the fill on a dark theme (`RIM_SIDE_L`) and white itself on a light one, and at two opposite corners L* 18 above the fill or as far as white goes (`RIM_LIT_L`), fading out over 16 % of the diagonal (`SlabLook.rim`). No inset shadows. **Lift**, drawn before the fill as one cached bitmap (`SoftImages.drops`: exact rounded-rect Gaussians composited once, never stacked strokes or `BlurMaskFilter`): near 0.5 dp down, sigma 0.5 dp, L* 1.33 off the page; far 2.67 dp down, sigma 2.67 dp, L* 2.33 off the page (`LIFT_NEAR_L`, `LIFT_FAR_L`): a shadow on every theme, black on a dark one and brown (#3C2814) on a light one, never a light glow (on a black page it is as deep as black allows). The glow is the accent at the slab's own strength on every theme (`PlumComposeColors.slabGlow`, sigma `SlabDimens.glowSigma`). **Bar**: 4 x 17.33 dp, radius 2, centred, `SlabDimens.barInset` 8.67 in from the slab's outer edge (the 1 px border plus the CSS 12 px), with its own accent glow (sigma 2.4 dp, `barGlowSigma`). It is on every focused row on every theme: one focus language. Corners half the row's height up to `PlumDimens.cornerFocusPill` (13.33). **No ring and no dot**; `strong` text, weight 500 at the row's size, and the label does not move when focus lands (the text starts `gameRowPadding` 23.33 in). The slab is `SlabDimens.height` 46.67 tall (the board's 70 px) and spans the row's width: a 38 or 40 row is overhung by half the difference above and below (`slabOverhang`; layout does not move), so a list leaves that room at its ends (`ListGlide` widens the list by `SlabDimens.maxOverhang` each end and clips there, `GlidingPill`'s clips bleed by it; with animations off `ListGlide.extra` is that room; the list host's `contentPadding` is `glide.extra`; a list without slabs passes `slabRoom = false`). The focused row's year and region are brighter and heavier than a resting row's (`SlabLook.year` / `region`, `FocusSlab.yearInk`). On a light theme the games list (home and search, `rememberGlidingPill(blob = true)`) also draws the board's blue blob under the slab (`SlabDimens` blob values, `drawBlob`; `PlumComposeColors.slabBlob`, the accent at `FocusHalo.LIGHT_SLAB_PEAK` 0.5): a 2D Gaussian measured on the Paper board's 768 list, sigma 0.285 x the slab's width across, 60 dp tall, centred 18.67 dp below the slab's centre; it already holds the glow, so the slab's own glow is left out there. It is drawn from a cached bitmap without dithering (`SoftShadowStepTest`). Checked by `FocusSlabSameObjectTest` (each layer's step on dark, light and mid-tone pages), `SlabBoardValuesTest`, `SlabCssRowTest` (a rendered row), `SlabListHaloTest`, `SlabMotionOffTest`, `FocusSlabReadabilityTest`, `GlassCustomColorsScreenshotTest`. Not followed yet: the kit boards draw the system list's focus as accent text and a dot, and a dialog's as a focused primary button; ours still puts the slab on the system column. System column: the same slab, starting `gameRowPadding` (14) before the label, so it is inset from the screen edge by margin - 14 (10). The accent dot that remains means "new games" (system row), never focus. **Carried** (Settings > Library > Systems, A picks a system up): the row turns solid accent with an `onAccent` ring and `onAccent` text (`Modifier.carriedPill`), so it is told from focused on every preset. Setup's cards keep their own corners (`cornerSetupChoice`, 10) focused or not (`focusPill(shape = ...)`); display-only sample rows draw the look with `focusPillSample` (no press, no touch) |
+| Focused cover, swatch or button | A key or swatch is a collar part: focus lights its groove and the halo glows outside it (`PlumSwatch`, `Modifier.collar`), no ring. A button or a switch is a flat part: focus draws the same rim as a cover's, without the scale (Flat parts, `drawGluedRim`). Elsewhere a 2.5 dp accent ring, 3 dp away, inside the **focus halo** (below). **Focus F3 (the grid cover and the Apps tile; one rim, shared with buttons and switches: `FocusLift` holds its width, colour, alpha and glow sigma, `drawRimStroke` draws it)**: the item grows to `FocusLift.SCALE` (1.035) about a pivot that keeps it inside the grid (last column its right edge, first column its left edge, top row its top edge, any other cell its centre; an Apps icon its centre), so at rest the grid stays flush to the right margin and no column or cover size changes. A `FocusLift.rimWidth` (2 dp) rim sits glued on the item's frame (a cover's glass frame, corner 10; an Apps tile's icon, its own mask corner), concentric, `RIM_ALPHA` 0.96, near-white on a dark page and the page's text ink on a light one; under it a tight glow (sigma 2.25 dp) and a small depth shadow (4 dp down, sigma 4.5 dp; an Apps tile has the glow only, its name stands below). No accent colour. Arriving: the lift grows and the rim fades in over `FOCUS_GROW_MS` on `Decelerate`; the item the focus left shrinks and its rim fades out over `FOCUS_LEAVE_MS`: the rims cross-fade, none travels; animations off switch in one frame; nothing animates at rest. The cell scales by a canvas transform in its own draw and the grid draws light and shadow under the cells and the rim over them from one cached image (`SoftImages.drops`) and one stroke: no layer, no blur (`FocusOutline`, `FocusLiftDraw.kt`, `FocusOutlineTest`, `FocusLiftTest`, `FocusDrawCostTest`). A press dips the item about its cell (Apps: icon) centre and the rim dips with it; a finger's tap moves focus first, so a tapped cover gets the same focus. |
 | Focus halo (decision 0011) | A soft glow in the accent colour just outside today's ring, fading to transparent: `PlumDimens.focusHaloReach` (10 dp) in `FOCUS_HALO_STEPS` (7) bands, alpha falling as (1 - t)^2 from the peak. **Covers (the focused grid cover): the accent at a 55 % peak (`FocusHalo.COVER_PEAK`) on every theme, Paper included, starting 2 dp outside the ring (`focusRingKeyline`). Rows: the focused slab's own glow, the board's `0 0 22px` accent at 0.3 on every theme, plus on a light theme's games list the blue blob (see the slab row). A focused collar part (button, switch, slider, segment, swatch, choice, field, key) also glows on a light theme**: its glow colour is the accent itself at 24 % (the light board's 30 % read back at the edge: 0.12), so a primary button, whose groove and cap are both the accent, still stands off a resting one (`PlumComposeColors.partGlow`, `FocusHalo.partLook`; on a dark theme it is the halo unchanged). The colour is the accent with its lightness clamped to 0.50–0.66 (a dark accent still shows, a bright one does not glare); the peak alpha is 32 %, falling to 16 % as the clamped colour's luminance rises from 0.45 to 0.80 (smoothstep). Maths and tokens: `theme/FocusHalo.kt`; it arrives as `PlumComposeColors.focusGlow` (transparent on a light theme; a light row's blob is `slabBlob`). A collar part's glow is not the row halo's profile: `drawPartGlow` (`components/Collar.kt`) follows the board's `0 0 22px` shadow, a Gaussian edge of sigma 7.33 dp (`CollarDimens.glowSigma`; the slider's collar and knob 4.67, `knobGlowSigma`: the board's 14 px), half the peak at the edge, in `GLOW_BANDS` (8) bands to 2.2 sigmas: it shows 14 dp out on Graphite (board 14), about 12 on Paper (board 11.3 to 12). Drawn as stroked bands, never a blur (a mask filter does not draw on hardware canvases before Android 9) and only outside the shape, so it is never laid out, never covers the item, and a focus move still costs no measure. One function draws it everywhere (`drawFocusHalo` / `drawHaloOutside` in `components/FocusRing.kt`): the row pill (`focusPill`, the gliding pill of the lists and the game menu's `PanelPill`, `focusPillSample`) starts at the pill's edge, a cover, swatch or button ring starts at its outer edge (`focusRingOutset`, 5.5 dp). A list's clip cuts it at the list's top and bottom edge, like the pill |
 | Current, not focused (system while games have focus, section while options have focus, the year of the current game in a peek) | accent text, weight 600, no fill |
 | Preview column (games while systems have focus) | `muted` text, no fill; the remembered row one step brighter (`text2`) |
 
-**Right-hand column of a game row**: the year and the region as two right-aligned columns ("1994" `rowYear` 13, "USA" the tag `tag` 11.33 / 600 spaced 0.1 em, 42.67 and 38 wide times the text scale: the Main board's grid with the region column widened for the larger caps; both grow with the text size) in a system's own list where it has the room (`listShowsPlace`: wide screens below Huge text, and the full-width list while the second screen is up). A row with no year known (no box art, a result still being read, none found) leaves the year's cell empty and keeps its region in its column, never moved. Elsewhere one text: the year alone (`rowYear`) in the list on narrow screens, at Huge and Largest text and at the narrow details stop, the region alone (`tag`) when no year is known; in Recent, Favorites
+**Right-hand column of a game row**: the year and the region as two right-aligned columns ("1994" `rowYear` Mono 13, "USA" the tag `tag` Mono 11, no spacing, 42.67 and 38 wide times the text scale: the Main board's grid with the region column widened for the larger caps; both grow with the text size) in a system's own list where it has the room (`listShowsPlace`: wide screens below Huge text, and the full-width list while the second screen is up). A row with no year known (no box art, a result still being read, none found) leaves the year's cell empty and keeps its region in its column, never moved. Elsewhere one text: the year alone (`rowYear`) in the list on narrow screens, at Huge and Largest text and at the narrow details stop, the region alone (`tag`) when no year is known; in Recent, Favorites
 and Search, which mix systems, the system's short name (`abbr`, at most 5 characters: NES, SNES, GBA, PS1 ...) in the region's caps (`tag`; the Search board's `sys` style, 12 px 600, its 1.4 px spacing drawn as the list's 0.1 em). Resting rows draw them in `muted` (the board's #9A9DA4 / #8C9098 on Graphite; its Paper #6F6B63 / #7A766D fall under the 4.6:1 small-text floor, so `muted` there too); the focused slab draws the year brighter (`SlabLook.year`) and one face heavier, the region brighter (`SlabLook.region`) and as heavy on dark themes, one face heavier on light ones, stepping from the text weight setting's faces; the current year in a peek is accent 600. All on the title's baseline. A long title is cut first; the short name is never cut. At the narrow details stop (list peek 56 dp) the mixed lists show the year or region instead. Checked by `GameRowTrailingTest` (core-ui), `RowTrailingTest`, `RowYearRegionFitTest`.
 
 **Favorite mark**: a star (U+2605, black star) 8 after the title, `smallFact` (13 sp), `meta` colour on every row, focused or
 not (accent stays for focus and current). On Y it appears with alpha 0→1 and scale 0.6→1,
-180 ms ease-out, `graphicsLayer` only; no motion when animations are off. A title too long for
+180 ms on `Decelerate`, `graphicsLayer` only; no motion when animations are off. A title too long for
 the row is cut before the star, never the star.
 
 In the home lists (games and system column) the pill glides from the row it leaves to the row it lands on, like the PS Vita's: the list draws it behind its rows (`rememberGlidingPill`), over `GLIDE_MS` on `Decelerate`, transform and draw only; a move
 during a move starts from where the pill is drawn, a held key keeps it with the focus; with animations off it jumps. The game menu, Fix name, Fix box art and Search's results glide the same way (`rememberPanelPill`: their rows differ in height, so the focused row hands the pill its own box). Other screens' pills jump.
 
-The Apps grid's focus travels the same way (the cover grid's ring does not travel: the lift, ring and groove of the cover that has the focus grow and the one left shrinks back, both in `FOCUS_GROW_MS`): the focus ring glides from the cell it leaves to the cell it lands on, in X within a row and in Y between rows, over `GLIDE_MS` on `Decelerate` (`FocusTravel` in core-ui; the grid's ring pass reads it while drawing, so nothing recomposes). Nothing grows or lifts: the icons and names stay. A move during a move starts from where the ring is drawn; a held key (left, right or down) glides linearly at the repeats' speed; Right at a row's end does not wrap, so nothing travels; with animations off the ring jumps. On a scroll the grid's rows glide (see Lists glide) and the ring, travelling in the same time, stays where it is while the covers change under it.
+Both grids' focus is F3 as described in the row 'Focused cover, swatch or button'; on a scroll the rows glide (see Lists glide) and the lift and rim stay on their item.
 
 Never two filled rows on one screen. The focused item is always on screen (grids scroll so its row shows).
 In a list that scrolls the focus never rides the edge: while the list can still scroll that way, the
@@ -144,7 +169,7 @@ Lists therefore keep three rows past the focus with motion on (the room a 200 ms
 need) and one with it off; see Shapes and motion.
 
 **Lists that scroll show it.** Everything that scrolls runs under the bar or into the panel's edge and fades there, one recipe everywhere: `PlumDimens.listFadeBand` 12, a linear ramp to nothing at the edge, the same top and bottom.
-- **Home** (`BarFades`, `home/BarRun.kt`). The strip is laid out from the top bar's bottom to the hint bar's top; the systems column, the games list, Search and the grids take that whole run, and one fade lies across the screen's whole width, tight on both bars, painted in the background colour over every column. What does not scroll stays where it was (`inStrip`). The bars stand over the fade.
+- **Home** (`BarFades`, `home/BarRun.kt`). The strip is laid out from the top bar's bottom to the hint bar's gap (`footerGap`, 9, above the hint bar; to the screen's edge with the hint bar off); the systems column, the games list, Search and the grids take that whole run, and one fade lies across the screen's whole width, tight under the top bar and ending at the run's foot, painted in the background colour over every column. So the faded rows end as far above the hint keys as the keys stand above the screen's edge (`BandRuleAndFooterFadeTest`). What does not scroll stays where it was (`inStrip`). The bars stand over the fade.
 - **Rest.** A list's first row stands at the strip's top, where it always did. Once scrolled, the room left beside the whole rows is shared evenly, so the same part of a row shows under each bar (`barRows`). The last row at the true end rests whole, clear of the fade. Focus moves as before: the context rows are whole, a tapped part row comes out whole.
 - **Less than a third.** At rest a row showing under a third of itself at an edge is left out; the focused row never, and a heading goes with a row left out under it. Never mid-glide, or rows would pop. The systems column, open or as the numbers beside a list or a grid, holds one centred line in each row, so it leaves out a row under half of itself: under that only glyph tops or feet would show. With the hint bar off the strip is taller and the grids rest in it (`BarRoom.taller`, `HintsOffRestTest`).
 - **Top fade.** Drawn while a column runs under the top bar, and not while a focused row or cover stands in its reach (the band and `SlabDimens.listEndRoom`), so a focus slab keeps its edge. The bottom fade is always drawn: the rest position keeps a focused row clear of it.
@@ -176,14 +201,14 @@ line on the same text line. Numbers asserted by `AchievementsInfoBoundsTest`; sh
 
 
 - **Game panel card insets and pitch (the board's menu card).** The card is 293.33 dp wide (`CardDimens.menuWidth`, the board's 440 px menu card; 360 at Small for Play with and Other versions, `CardDimens.pickerWidth`, grown by the text size factor (432 at Large) up to 60% of the screen, so "Automatic (ask which emulator)" and its "Current" badge, or "RetroArch: mednafen_gba", sit on one line) and on a narrow screen `width - 48`. Everything in it is `panelInset` (2.67 dp, the board's 2.7) from its edge on BOTH sides: a row's slab starts and ends there, so it is centred in the card (the board's slab is 4 px from the left and 24 px from the right, which looks lopsided). Row text, value and chevron, the title, body lines and Info's facts all keep `panelTitleStart` (20.67) from the slab's edge or the inset, 23.33 dp from the card's edge on each side (`OptionRow(sidePadding)`). Rows in the card are `rowHeight` apart with no gap (`panelRowGap` 0: pitch 40, board 40). `GamePanelV2Test.slabInsets*`, `GameCardBoundsTest.menuInsetsAndPitchAreTheBoardsAt768`.
-- **Game panel place.** The card sits on the page's outer margin at the right (`stripMarginSide`, 24), from the top bar's gap (10 under the bar) down to the hint bar's gap: no part of it reaches into the bar gaps. Nothing is drawn over the page behind it, no scrim, edge fade or solid column: the list and the grid keep their own look right up to the card's shadow (only the gaps at the card's rounded corners are filled with the page colour, so the home cover's corner does not show there) (a board dialog's scrim covers its whole frame, and the panel's area is only the strip, so a scrim would end in a hard line at the bars). `GamePanelV2Test.cardIsOnThePageMargins*`, `pageBehindTheCardIsDimmedEvenly*`.
+- **Game panel place.** The card sits on the page's outer margin at the right (`stripMarginSide`, 24), from the top bar's gap (10 under the bar) down to the hint bar's gap: no part of it reaches into the bar gaps. Nothing is drawn over the page behind it, no scrim, edge fade or solid column: the list and the grid keep their own look right up to the card's shadow, and the wide details column alone fades out with the card (its alpha is 1 minus the card's own slide progress, read while drawing, so it is not half blank when the card opens nor cut by a short card on the way out; it jumps with animations off) (only the gaps at the card's rounded corners are filled with the page colour, so the home cover's corner does not show there) (a board dialog's scrim covers its whole frame, and the panel's area is only the strip, so a scrim would end in a hard line at the bars). `GamePanelV2Test.cardIsOnThePageMargins*`, `pageBehindTheCardIsDimmedEvenly*`.
 - **Game panel list end.** A menu row cut by the card's end shows its text by half or more, or not at all, as a row cut at the top does: a sliver is cut away and a row left with no text goes whole (`hiddenAtEndPx`), never the focused row, and what is hidden takes no tap (`ignoringHiddenEnd`).
 - **Game panel foot.** Info's Back sits in the card's foot, at its bottom, with the facts above it taking every dp left (the facts' window always fills down to Back's gap, `FactsFit.viewport` = the room left; what does not fit ends with a cut row and the list's fade; `InfoFactsFillTest`). The footer list ends at the card's own edge, so the slab's shadow is not cut inside the card: one tone under Back. `GamePanelV2Test.backHasOneFooterTone*`, `infoFactsAreWhole*`.
 - **Light-theme glows, measured with room** (`plum_button_glow`, `slider_glow` shots; 40 dp of page all round, so no neighbour or edge cuts them): a focused slider's collar on a light theme glows with `sliderLightGlowSigma` (7.8 dp; the knob keeps 4.67) to 13.5 dp on Paper (board 13.3). A button's glow reaches about 14.5 dp on Graphite and 13.5 on Paper (the board's 8.7 to 14.7 and 11.3 to 12.7). A focused cover glows with the kit's accent glow on light themes too (Cover focus, below); `drawCoverLightGlow` (the earlier blue-grey haze) is no longer drawn.
 
-The game panel (menu, Play with, Info, messages and the core question) is a raised card on the page's right margin (width and place: the three paragraphs above), corners 17.33 (`CardDimens.corner`, the board's 26 px), the board's PANEL gradient (`PlumComposeColors.card` `top` to `bottom`: on dark the background 0.12 then 0.04 toward the cool surface ink, Graphite #2A2C31 to #191A1E, a blue-grey; on light 0.78 then 0.35 toward white, Paper #FBFAF7 to #F3F0EA; `fill` is their mean, for what is drawn over the card flat), the CSS 0.67 dp border inside the box (white at 14 % with its top side at 22 % on dark; the board's brown at 6 % with a white top side on light), and the board's two shadows (`0 2px 4px` at 0.4 and `0 30px 60px` at 0.6, brown at 0.45 of that on light; the far one at 0.45 of the depth-cut reach, 3.15 dp down, sigma 3.15, so it stays close to the card) as cached Gaussian images. The gradient is drawn because the board draws one (the spec wins over decision 0011 for cards). A list's edge fade takes the card's colour where the fade sits. `RaisedCardTest`. No 768 screen board draws a card; the width is the Parts sheet's menu card. The title is the game's name. A menu row that opens something ends in a muted chevron, 12 after its value; its value (`meta`) is shown only when real. The core question's No and Yes are `PlumButton`s side by side under the text, right-aligned, 10.67 apart (the board's 16 px), 18.67 under the body (28 px, the gap that gives way at the largest text), Yes (Primary, focused first) rightmost, No (Secondary) left of it. The question's body is `text2` on a 28/19 line, 6.67 under its title (`CardDimens.question*`). Checked by `GameCardBoundsTest` at 768, 576 and 832 and Largest text; shots `game_card_*`. Inside the card: 15 dp above the title (`CardDimens.padTop`, the board's 22 px) and 15 dp below the last row or button (`CardDimens.padBottom`); a list's bottom padding scrolls with the rows, so a focused row always rests fully inside the card, above it. The core question (buttons only) hugs its content from the same top edge: its height is title, body, buttons and the padding, nothing more (when the largest text leaves it short of height, the gap above the buttons gives way, never the 15 below them); a list panel fills the column. The title carries no accent dot (it carried no state). Checked by `GameCardBoundsTest` (hugging, and the focus walked down every menu row at Largest at 576, 768 and 832).
+The game panel (menu, Play with, Info, messages and the core question) is a raised card on the page's right margin (width and place: the three paragraphs above), corners 17.33 (`CardDimens.corner`, the board's 26 px), the board's PANEL gradient (`PlumComposeColors.card` `top` to `bottom`: the tone ladder's raised step, L* +7 at the top and +5 at the foot above the page, in the page's own hue (Tone ladder under Colour), so a blue page has a blue card and a cream page a cream one; `fill` is their mean, for what is drawn over the card flat), the CSS 0.67 dp border inside the box (white at 14 % with its top side at 22 % on dark; the board's brown at 6 % with a white top side on light), and the board's two shadows (`0 2px 4px` at 0.4 and `0 30px 60px` at 0.6, brown at 0.45 of that on light; the far one at the depth-cut reach, 2.25 dp down, sigma 2.25, so it stays close to the card) as cached Gaussian images. The gradient is drawn because the board draws one (the spec wins over decision 0011 for cards). A list's edge fade takes the card's colour where the fade sits. `RaisedCardTest`. No 768 screen board draws a card; the width is the Parts sheet's menu card. The title is the game's name. A menu row that opens something ends in a muted chevron, 12 after its value; its value (`meta`) is shown only when real. The core question's No and Yes are `PlumButton`s side by side under the text, right-aligned, 10.67 apart (the board's 16 px), 18.67 under the body (28 px, the gap that gives way at the largest text), Yes (Primary, focused first) rightmost, No (Secondary) left of it. The question's body is `text2` on a 28/19 line, 6.67 under its title (`CardDimens.question*`). Checked by `GameCardBoundsTest` at 768, 576 and 832 and Largest text; shots `game_card_*`. Inside the card: 15 dp above the title (`CardDimens.padTop`, the board's 22 px) and 15 dp below the last row or button (`CardDimens.padBottom`); a list's bottom padding scrolls with the rows, so a focused row always rests fully inside the card, above it. The core question (buttons only) hugs its content from the same top edge: its height is title, body, buttons and the padding, nothing more (when the largest text leaves it short of height, the gap above the buttons gives way, never the 15 below them); a list panel fills the column. The title carries no accent dot (it carried no state). Checked by `GameCardBoundsTest` (hugging, and the focus walked down every menu row at Largest at 576, 768 and 832).
 
-The second screen's tiles (the figures on the game, system and Recent cards) are glass, not the card's flat fill (`Modifier.glassTile`, `PlumComposeColors.glass`): a vertical gradient over the page (dark: white at 17 %, 7 % at 46 %, 4.5 % at the foot; light: white to the background 0.7 toward white), a 0.67 dp edge brighter at the top, a short shade along the foot, and the card's shadow cut out under it. A tile is no control, so decision 0011's no-gradient rule does not reach it. On those cards a meter's fill runs from the accent to `accentLight` (a quarter toward white) with a faint glow at its end, the latest bar runs `accentLight` to the accent, an empty day's stub and the rule above the about text are `PlumComposeColors.line`, and the page has the accent glow in its top right corner (`backdropGlow`, peak 15 % dark, 11.5 % light).
+The second screen's tiles (the figures on the game, system and Recent cards) are glass, not the card's flat fill (`Modifier.glassTile`, `PlumComposeColors.glass`): a vertical gradient over the page (dark: white at 17 %, 7 % at 46 %, 4.5 % at the foot; light: white to the background 0.75 toward a warm white `#FFFDFA`), a 0.67 dp edge brighter at the top, a short shade along the foot, and the card's shadow cut out under it. A tile is no control, so decision 0011's no-gradient rule does not reach it. On those cards a meter's fill runs from the accent to `accentLight` (a quarter toward white) with a faint glow at its end, the latest bar runs `accentLight` to the accent, an empty day's stub and the rule above the about text are `PlumComposeColors.line` (the tone ladder's divider), and the page has the accent glow in its top right corner (`backdropGlow`, peak 15 % dark, 11.5 % light).
 The second screen's Android app card follows the game card: the name in the game-title style with an "APP" tag at the right, a large centred icon (the initial on a disc when there is no icon), and the package in the mono file-name style. It keeps the game card's margins; a long name or package is cut with an ellipsis.
 
 ## Settings
@@ -213,7 +238,7 @@ The second screen's Android app card follows the game card: the name in the game
   sections still on screen; Statistics, which has no right column, does the same (its tiles in the narrow, two-to-a-row layout).
   **Fallback**: `SettingsColumns.fits(textSize, font)` (core-ui; pure) decides, and the two-column layout below is used where
   it is false. A label that would not stay whole in the 142 dp the open section's label gets (the Spanish and Vietnamese names of Home screen,
-  the longest) is the first thing to fail: Jost keeps 3 columns up to Large, Plum Sans up to Small, Serif and Mono at none (the same widths as before the factors were raised, one name step up: Jost kept three columns at Large by the 1.2 factor).
+  the longest) is the first thing to fail: Jost keeps 3 columns up to Large (the same widths as before the factors were raised, one name step up: Jost kept three columns at Large by the 1.2 factor).
   `SettingsColumnsFitTest` (768 and 832, English, Vietnamese, French, Spanish, every font and size) pins the table.
 - **Look preview (right column, Appearance)**: the board's card at the top of the right column, 205.33 x 114.67 (x 538.7..744, y 56..170.7 at 768), corner 12, the title 14.67 below it. Inside (dp from the card): list lines 6.67 high at x 12 (y 14.67 and 30.67, 100 and 85.33 wide; y 77.33 and 93.33, 93.33 and 73.33 wide) in the text colour at 16 %; the focused row's mini slab at x 6.67, y 46.67, 117.33 x 20, corner 6.67, drawn at exactly that box in the theme's own slab gradient, border and glow (the shared slab is never as short as 20; its drop shadow and glow are clipped out of the box first) with a text bar 72 x 5.33 at x 13.33 (no accent bar, as the board); a cover tile 61.33 x 46.67 (corner 6.67, 12 from the right, y 14.67) in the board's radial gradient (centre 28 % / 18 %, far-corner radius) from the accent darkened 10, 30 and 50 % at 0, 45 and 100 %, over its drop shadow (y 5.33, sigma 6, black 50 %) and glow (sigma 10, the accent darkened 20 % at 30 %), and a ball 30.67 across (4 from the right, y 9.33) in the radial gradient (centre 34 % / 30 %) accent lightened 45 %, accent, accent darkened 38 % at 0, 42 and 100 %. The card's well is the background pulled 13 % toward black (toward the text on a light theme) with the inset shadow `inset 0 1.33 sigma 2 black 70 %` inside its shape and the board's 0.67 white 8 % line under it, outside the shape (drawn before the clip). Colours are read while drawing and follow the theme, a slider drag included. Options: Colors, Background, Text color, Accent color (the look), Font, Text size, Text weight (the focused row holds a sample line in that type, and grows to hold it); none for any other option, Motion included. **It gives way**: shown only when the panel's own contents and the card fit the column together (on the colour presets pages the swatches, the rest and the title must stay whole beside it; the description under the title leaves before it does, in whole lines, and Font, Text size, Text weight and Fade list edges show the card whenever the rest fits; Font lists four sample rows, so at 768 x 432 they win and the card shows from 832 x 468 at Small text). In three columns the right column's title and description start on the card's left edge (not on the row-text line), title 14.67, description 10.67 on a 16 line, 5.33 apart, measured whatever the layout, never by device; a page that covers the column has none. Checked by `SettingsLookPreviewTest`.
 - **Two columns (Wide, where three do not fit)**: options `width − 320` (448 on the RP5), side panel 248 beside them; the
@@ -246,7 +271,7 @@ the chosen folder as a quiet filled card, "+ Add another folder" and Continue. T
 shows the four biggest systems (hidden on narrow screens), emulators picked ("16 of 18
 systems", the missing ones named), the usage statistics switch (on) and Start playing. Every card
 there start on one line (no card has a focus dot now).
-Buttons are `PlumButton`s in the control collar (the main one in the accent, the others as keys; `SetupButton`): the button's bounds include the collar (cap 38 dp inside it, 52.7 outside; the board's 57 and 79 px), so its outer edge lines up with the column start and keeps at least 10 dp from the part above (Continue and Keep A add `setupButtonSpacer` to the content gap; `SetupButtonCollarTest`). The switch is `PlumSwitch`'s collar look (`SetupSwitch`). A focused choice or info row is the slab (`focusPill`), never a ring; a chosen folder card and the info rows are raised cards (`raisedCard`, corner `CardDimens.corner`). "Pick a look" tiles sit in a cover collar (`CollarSize.Cover`) and focus lights its groove.
+Buttons are `PlumButton`s in the control collar (the main one in the accent, the others as keys; `SetupButton`): the button's bounds include the collar (cap 38 dp inside it, 52.7 outside; the board's 57 and 79 px), so its outer edge lines up with the column start and keeps at least 10 dp from the part above (Continue and Keep A add `setupButtonSpacer` to the content gap; `SetupButtonCollarTest`). The switch is the flat `PlumSwitch` (`SetupSwitch`). A focused choice or info row is the slab (`focusPill`), never a ring; a chosen folder card and the info rows are raised cards (`raisedCard`, corner `CardDimens.corner`). "Pick a look" tiles sit in a cover collar (`CollarSize.Cover`) and focus lights its groove.
 
 ## Depth
 
@@ -256,7 +281,7 @@ The app is thin glass, not moulded plastic. `Depth` in core-ui is the one place 
 
 With no system at all the top bar names the app, with no count ("0 systems, 0 games" read as a result, not an invitation). A library with one way forward (Add folder) offers it on the button only; the hint bar names A where there are two buttons, to say which one it presses (`HomeEmptyStateTest`).
 
-Centred in the games area (from the list's start to the right margin, 32 dp kept clear on each side), one under the other, 11 dp apart (`EmptyStateDimens.gap`): the title (`messageTitle`, `text`), the body (`meta`, `text2`, two lines, at most 280 wide) and the buttons (`PlumButton`: primary in the accent, secondary beside it; one under the other when they do not fit; labels may wrap to two lines). No mark or picture: the board's disc and square read like a missing image on a device. The first button has the focus at rest; Left and Right move it. When the height is short the body goes; the title and buttons always stay. The Settings Statistics invite is the same title and body. Checked by `HomeEmptyNoMarkTest` (nothing above the title).
+Centred in the games area (from the list's start to the right margin, 32 dp kept clear on each side), one under the other, 11 dp apart (`EmptyStateDimens.gap`): the title (`messageTitle`, `text`), the body (`meta`, `text2`, two lines, at most 280 wide) and the buttons (`PlumButton`: primary in the accent, secondary beside it; one under the other when they do not fit; a label is one line when it fits, else it wraps to more lines, never an ellipsis: the buttons may be `EmptyStateDimens.buttonBleed` (12) wider than the text room on each side, so a button ends 20 dp inside the games area, clear of the right margin and the edge fade; at 576 x 432 and Largest English "Files not added" (about 223 dp wide with its cap) does not fit the 164 dp left, so it wraps to two lines; `HomeEmptyButtonsOneLineTest`: no ellipsis, bounds inside the margin, English, French, Vietnamese and Japanese). No mark or picture: the board's disc and square read like a missing image on a device. The first button has the focus at rest; Left and Right move it. When the height is short the body goes; the title and buttons always stay. The Settings Statistics invite is the same title and body. Checked by `HomeEmptyNoMarkTest` (nothing above the title).
 
 ## Grid
 
@@ -275,7 +300,9 @@ Centred in the games area (from the list's start to the right margin, 32 dp kept
   least 5 dp of area from a change of count (`PlumLayoutTest`), and the Thor keeps its columns at
   its default Large text (peek 52.8, area 736). The board's landscape grid (RP5-3, Nova-4) is
   Large, its portrait grid (RP5-4, Nova-5) Medium; square and tall Medium and landscape Large are
-  the grids from before the sizes.
+  the grids from before the sizes. Square Large is 172, not 168, so the Nova at 640 x 480 gets 2 square columns at
+  Large against 3 at Medium from Medium text up (168 drew 3 and 3); at Small text there (area 544) both stay 3, since
+  more than 173.3 would cost the Thor its 4th square Large column at its default Large text (area 731.4): `GridSizeStepsTest`.
 
   | Class, size | Cell | RP5 768 | Thor 837 | RP4 Pro 667 | Nova 576 | Cover width (RP5 / Thor / RP4 Pro / Nova) |
   |---|---|---|---|---|---|---|
@@ -284,7 +311,7 @@ Centred in the games area (from the list's start to the right margin, 32 dp kept
   | Landscape Large | 200 | 3 | 3 | 2 | 2 | 206.7 / 229.7 / 270.5 / 225.0 |
   | Square Small | 99 | 6 | 6 | 5 | 4 | 94.0 / 105.5 / 96.6 / 103.0 |
   | Square Medium | 130 | 4 | 5 | 4 | 3 | 151.0 / 130.6 / 125.8 / 144.0 |
-  | Square Large | 168 | 3 | 4 | 3 | 2 | 208.0 / 168.2 / 174.3 / 226.0 |
+  | Square Large | 172 | 3 | 4 | 3 | 2 | 208.0 / 168.2 / 174.3 / 226.0 |
   | Tall Small | 79 | 7 | 8 | 6 | 5 | 77.7 / 74.1 / 77.2 / 78.4 |
   | Tall Medium | 106 | 5 | 6 | 4 | 4 | 116.8 / 105.5 / 125.8 / 103.0 |
   | Tall Large | 128 | 4 | 5 | 4 | 3 | 151.0 / 130.6 / 125.8 / 144.0 |
@@ -325,7 +352,7 @@ Centred in the games area (from the list's start to the right margin, 32 dp kept
   cover in its system's shape (Poster cover, below); its collar follows that shape, and its corner is the box's.
 - **Apps grid** (its size can't be changed): one fixed size, never the
   Grid size. Icon **72** (`AppsGridDimens.appsGridTileIcon`), centred at the tile's top under 6 of padding, 8 to the
-  name, so the focus ring (5.5 outside the icon) clears it; the name in `meta` (13 at Small, following text size and font), centred, **one line**
+  name, so the focus (the icon's 1.26 dp growth, the 2 dp rim, the glow cut at the name's top) clears it; the name in `meta` (13 at Small, following text size and font), centred, **one line**
   and "…", with hints on or off; 6 under it. Row = 6 + 72 + 8 + one drawn line + 6, rounded up to a whole dp (108 at Small Sans,
   115 at Largest Sans, 121 at Largest Serif), and **2** between rows (`appsGridRowGap`). Columns = `floor((span + 12) / (80 × text scale + 12))` over
   the covers' span (`width − 104`), counted with 12 like the cover grid's column table, but **drawn with the
@@ -337,51 +364,44 @@ Centred in the games area (from the list's start to the right margin, 32 dp kept
   or focused. **Focus as a cover's, lighter**: the cover's thin ring (`drawCoverFocusMark`: 3 gap, 2.5 accent, corner 23 % of the icon's side) on the icon alone, one light sweep on the icon after `FOCUS_SWEEP_REST_MS` of rest. **Nothing grows, lifts or glows**, so every name stays on its row's line at every frame; a press dips the icon and its ring, not the name; the ring travels from the tile left (see Focus and current);
   the focused app's name turns `strong` and one step heavier (400 to 500), the other names stay as they are
   (both names are composed, the one that draws is read while drawing: no recomposition on a move); no other tile is dimmed or
-  changed; the tile focused as the grid opens, with animations off or while idle: no sweep, nothing running (`AppsGrid.kt` shares `CoverLift` and `FocusSweep` with the
+  changed; the tile focused as the grid opens, with animations off or while idle: no sweep, nothing running (`AppsGrid.kt` shares `FocusOutline` with the
   cover grid). An app without an icon: a `sel` round tile with its first letter (`messageTitle`, `text2`).
 - **Cover frame**: the collar's lip is glass, the same recipe as the slab: lightness steps above the page, L* +16, +11 and +8 top to bottom (`Depth.COVER_FRAME_TOP_L` to `BOTTOM_L`), a lit crest along its top (white 0.45 at `Depth.RAISE`), a fine edge that parts it from the page (white on a dark or mid-tone page, the theme's brown on a light one), the lip's outer drops as before. Its thickness is the collar's. It reads on Graphite, Paper and a mid-tone custom colour, where the old lip melted into the page; a near-white page leaves little room, so there the edge carries it. `SeatLook.coverGlass`, inside the collar's cached image: no extra layer per cover. `CoverGlassFrameTest`.
-- **Cover collar** (the Covers board, drawn at 1.5 px per dp): every grid cover, picture, poster or titled tile, sits in a collar like a button's (`CollarSize.Cover`, `drawCollar`): a lip of 2.67 dp (3.33 at the bottom), a groove of 1.33 dp; corners as the board: box 2.67, groove 4, lip 6 (the board's 9 px lip round a 6 px groove, not concentric: `CollarDimens.coverLipCornerAdd`, `CollarSize.outerCorner`). The collar hugs the box's own fitted rectangle, not the cell: the box is fitted (never cropped, never stretched) in the cell less the collar's padding (4 dp each side and above, 4.67 below) and stands bottom-centred, so the collar stands on the cell's bottom and a row reads as a shelf. The box has its own small drop shadow (the board's `0 2px 0` at 55 %, a hard copy 1.33 dp down, and `0 3px 4px` at 40 %, 2 dp down with sigma 1.33 as one cached Gaussian image; `coverBoxShadow`), and the collar is the button's own: the kit LIP (radial gradient and six layers) and WELL, lit in the accent when focused (`drawSeatCollar`; the box does not grow or lift). Nothing is drawn inside the picture's edge (no rim, no hairline). Where a box front is transparent the groove shows through.
-- **Cover focus**: the focused cover is plain to see (on the handhelds the selected cover could not be told apart) and its neighbours stay whole. Its groove fills with the accent; the cover is drawn up to `PlumDimens.FOCUSED_COVER_SCALE` (1.04) larger about its centre, a very large cover less (`focusedCoverScale`), so the growth, the ring and its bands always fit the 18 gaps. The grid's overlay pass (`drawLiftedCover`, `home/CoverFocusDraw.kt`: the cell records itself into the lift slot's layer) draws around the collar a 3 dp band of the page colour, the 2.5 dp accent ring (`focusRingWidth`; contrast with the page is the accent's own, at least 3:1, `Readability.ACCENT_MIN_CONTRAST`) and a 2 dp band of the page colour (`focusRingKeyline`), 7.5 past the collar. No halo: the ring and bands fill the gaps, so a halo could only show where no neighbour stands, on one side. It is drawn, never laid out, and the overlay is not cut by the grid's clip at the first or last row or column; `gridTopGap` (14) under the top bar and `gridBottomRoom` (8) over the `barGap` above the hint bar leave the ring its room (`GridCoverFocusTest` measures all four sides of the ring at 576x432, 640x480, 832x468 and 853x480, three Size steps, Graphite and Paper, one shape and mixed). The kit's Gaussian lip glow and groove glow are not drawn for a grid cover any more. Once focus has rested on a cover `FOCUS_SWEEP_REST_MS`, one light band crosses it (`FocusSweep`, the Apps tile's, over the collar), cancelled if focus leaves, none with animations off. The cover, ring and groove grow in and out in `FOCUS_GROW_MS` (150 ms ease-out; at once with animations off); unfocused covers are not dimmed or changed; the press dip applies to the whole cover; nothing recomposes (`GridCoverFocusTest`, `HomeCoverFocusTest`).
-  The titled tile (a picture or result still on its way): flat `sel`, corners 2.67 dp (the box's), the title in `gridFocusTitle` (13 / 600, `text2`;
-  `smallTileTitle` 11 / 600 at the Small grid size) and the year under it in `smallFact` (13, `muted`;
+- **Cover collar** (the Covers board, drawn at 1.5 px per dp): every grid cover, picture, poster or titled tile, sits in a collar like a button's (`CollarSize.Cover`, `drawCollar`): a lip of 2.67 dp (3.33 at the bottom), a groove of 1.33 dp; corners concentric, a step rounder than the board: picture 6 (`CollarDimens.coverBoxCorner`, the one token for every cover picture), frame 10 = 6 plus the 4 dp the groove and lip add (`CollarDimens.coverFrameCorner`, `CollarSize.outerCorner`; `CoverCollarSpecTest`). The collar hugs the box's own fitted rectangle, not the cell: the box is fitted (never cropped, never stretched) in the cell less the collar's padding (4 dp each side and above, 4.67 below) and stands bottom-centred, so the collar stands on the cell's bottom and a row reads as a shelf. The box has its own small drop shadow (the board's `0 2px 0` at 55 %, a hard copy 1.33 dp down, and `0 3px 4px` at 40 %, 2 dp down with sigma 1.33 as one cached Gaussian image; `coverBoxShadow`), and the collar is the button's own: the kit LIP (radial gradient and six layers) and WELL, lit in the accent when focused (`drawSeatCollar`; the box does not grow or lift). Nothing is drawn inside the picture's edge (no rim, no hairline). Where a box front is transparent the groove shows through.
+- **Cover focus**: see Focus F3 in the focus table: the frame grows 3.5 % about its pivot, the rim sits in the 18 dp gaps (`gridTopGap` under the top bar and `gridBottomRoom` over the `barGap` leave it its room at the first and last row).
+  The titled tile (a picture or result still on its way, or neither picture nor poster): the drawn box front's field and grain (`BoxFrontLayout.fieldOnly`, the game's system colour with the title's hue turn, light to dark, no letter or code; the neutral grey of the same recipe where no system is known), drawn once per size, the title in white and the year in white at 80 % (4.5:1 and 3:1 on the field's lightest point), corners 6 dp (the box's), the title in `gridFocusTitle` (13 / 600;
+  `smallTileTitle` 11 / 600 at the Small grid size) and the year under it in `smallFact` (13;
   `smallTileYear` 11 at Small), 4 apart, at
   the bottom left inside the cover padding (landscape 12, portrait 10), like a box's label; the
   title wraps over the lines the tile holds, and the year gives way when the title needs its line.
-- **Apps tiles** keep their ring, growth, glow and the cover shadow code (`CoverShadow.kt`, `CoverLift`, `FocusSweep`) as above; the cover grid no longer uses the lifted shadow, glow, rim, sweep, growth or ring.
+- **Apps tiles** have the same focus round the icon (grown about its centre, rim, glow) and keep the cover shadow code (`CoverShadow.kt`).
 - **Drawn box front** (a game without a picture: signed out of ScreenScraper, no picture found, or a
-  file that cannot be read; replaces the earlier palette poster). Drawn by Plumemu, never saved and never a picture from outside: the
-  design boards' "Covers, whole, in a thin collar" cover (Super Metroid, Contra III), every part in the board's
-  px over 1.5 scaled by the cover's height over the board's 156 px (`BoxFrontLayout`, app `home/`; SPEC section 21).
-  Fixed on every cover: a light band 25 px tall (`#D9D9D6` to `#BDBDB9`) with the system's short name ("SNES";
-  the full name when there is none) in tracked 800 capitals `#3A3A3A` on the left and the three dots (red,
-  yellow, blue) on the right; the small line "PUBLISHER · YEAR" (700, 7 px) 9 px under the band, with what is
-  known (publisher and year, else the year, else nothing); the big 800 title at the bottom left, 10 px up, line
-  height 1.05, at most two lines and then "…" (never a letter cut, never clipped: it is cut by hand), smaller
-  only while a word is wider than the line. Title and band text sizes run between the board's two covers by the
-  cover's shape (title 12 px at 112 x 156, 19 at 214 x 156; band text 7 and 10); the title is left out under
-  6 sp and the band text and small line under 4 sp, so a tiny cover is shapes only.
-  Varied per title by a hash of the title in lower case without accents or punctuation (`posterHash`, SplitMix64
-  stream `PosterDice`, so "Mega Man 2" and "Mega Man 3" are unrelated): the field is one of the 23 palette looks
-  (`POSTER_PALETTE`, core-ui `theme/PosterPalette.kt`: jewel tones and light pastels, no greys, browns or muddy
-  mixes), drawn as the board's `radial-gradient(circle at 28% 18%, top 0%, bottom 45%, band 100%)`; the ink is
-  white on the 12 deep looks and `#14142B` on the 11 light ones (at least 4.5:1 against all three colours; the
-  small line is the ink at 0.8, raised where that reads under 4.5:1: `boxCapsAlpha`); one to three shapes, circles
-  with the sun's soft radial shading and rounded squares with the slight 145-degree bevel, in colours of the
-  palette's other brightness, of three sizes each, from ten anchors along the edges (they bleed off the edges like
-  the board's sun; a square must show 85 %). A shape never touches the title or the small line: it takes the next
-  anchor, then a smaller size, then is left out. The same cover in the grid (in its system's shape, inside its
-  collar like any box), in the list's cover slot, in Recent, Favorites and the statistics rows, in the details
-  column (above the title, in the cover's place; it shrinks first when text needs the room and is left out under
-  56 dp) and on the second screen's cards. App games keep their icon cards (a gradient of the icon's colour, a
-  frame and a band: `AppCardLayout`). The collar's lit groove shows on every look in Graphite, Paper and every
-  colour set.
-- **Art that is not its slot's shape** (portrait front in a wide slot and the like; `HomeCoverRatioTest`, shots `home_art_ratio_*`): in a grid cell it stands centred on the cell's bottom (in its collar), the collar and corners on the picture. In the wide details column it stands on the column's left edge, the one the title and facts use, on the slot's bottom (the title never moves); its corner is its own class's, 8 from ratio 1.2, else 6 (`pictureCorner`).
+  file that cannot be read; replaces the earlier window strip and palette poster). Drawn by Plumemu, never saved and never a
+  picture from outside, at the system's own shape and in the same collar and corners as a real cover (`BoxFrontLayout`, app
+  `home/`; SPEC section 21). It stands on the shelf like a picture, on every colour set the same: the field is the
+  system's own colour (the By-system accent colours, found by the system's short code; the theme accent where it has none),
+  its hue turned up to 25 degrees either way by a hash of the title, saturated and mid-dark, lighter at the top left and
+  darker at the bottom right (`boxFieldFor`, `BoxFieldLook` in core-ui `theme/PosterPalette.kt`), with a fine monochrome
+  grain like a printed box. No band, no system name strip, no dots, no shapes, no small line. A large letter, the title's
+  first letter or digit (after a leading "The"), Jost 800 about 0.9 of the shorter side, bleeds off the bottom right in a
+  lighter tone of the field at 12 %. Top left: the system's short code ("SNES"; the full name when there is none) in Plum
+  Mono 500, white at 80 %, 0.62 of the title's size, left out under 4 sp. Bottom left, 10 px up: the title in Jost 700,
+  white, line height 1.05, at most three balanced lines (a last line is never two characters or fewer) and then "..."
+  (never a letter cut, never clipped: it is cut by hand), smaller only while a word is wider than the line; 12 px at
+  112 x 156 to 19 at 214 x 156, left out under 6 sp. Text insets and sizes are the board's px over 1.5 scaled by the cover's
+  height over 156. The card is drawn once into an image per (title, system, size, colours) inside `drawWithCache`; a frame
+  only draws that image (`BoxFrontLayoutTest`). The field is chosen so the white title reaches 4.5:1 and the code 3:1 at
+  the field's lightest point under the letter and the grain, and the card stands off the page (at least 2.5:1 on a light
+  page, 1.5:1 on a dark one): `BoxFrontContrastTest`. The titled tile shown while a picture loads (or with neither picture nor poster) stands on the same field and grain with no letter or code, white title and year, drawn once per size (`TitledTileFieldTest`), so nothing changes colour when the picture fades in. The same
+  cover in the grid, the list's cover slot, Recent, Favorites, the statistics rows, the details column and the second
+  screen's cards. App games keep their icon cards (a gradient of the icon's colour, a frame and a band: `AppCardLayout`).
+- **Art that is not its slot's shape** (portrait front in a wide slot and the like; `HomeCoverRatioTest`, shots `home_art_ratio_*`): in a grid cell it stands centred on the cell's bottom (in its collar), the collar and corners on the picture. In the wide details column it stands on the column's left edge, the one the title and facts use, on the slot's bottom (the title never moves); its corner is the cover corner, 6 whatever the ratio (`pictureCorner`).
 - **The details cover keeps its box while its result is read** (`DetailsCoverShapeTest`): the box takes the picture's shape once it is read (a stored value within 2% of it stands, so a large file does not nudge the grid file's shape), the stored shape before that, else the system's, the grid's order, never the whole slot, so it does not shrink when the art lands. A game known to have no picture keeps today's box (poster at the system's shape, or the slot).
 - In the Recent and Favorites grids the bar's meta starts with the game's system ("SNES · 1993 · Capcom"); a Favorites cover whose game was taken out with Y and is still shown is dimmed (`UNFAVORITED_COVER_ALPHA`).
 - The grid's bar: when the title, its meta and the hints do not all fit, the meta goes first, then
-  the hints in the strip's order ("L2 R2 Switch system" first, then "L1 R1 Size", then SELECT, then B Back; the year and publisher are kept over the Switch hint); A stays.
+  the hints in the order of **Hint drop order** (the year and publisher are kept over the Switch hint); A stays.
 
-## Type (Jost; Plum fonts scaled to the same x-height)
+## Type (Jost; Plum Mono for figures and codes)
 
 **One ramp**: the top screen uses **11 · 13 · 16 · 20 · 26** and nothing else; the
 second screen **16 · 20 · 26 · 36** (its Compact top line is the top screen's 13). Sizes one step apart
@@ -390,38 +410,51 @@ shape (the key cap's letter, 10; the "Aa" text colour sample, 28), the second sc
 facts (15, below), and the second screen's in-game clock, a display face rather than text: its time is 84
 on Roomy and 60 on Compact (`InGameDimens` in core-ui's `theme/SecondScreenInGame.kt`, sized in dp so it
 does not follow the text size).
-**Nothing goes under 11.** The games list's right-hand text was the one exception (the tag at 8 and the year at 10, the board's sizes); it was raised on 2026-11-03 after the Thor build 1299: the tag is 11.33 and the year 13, and both grow with the text size.
+**Nothing goes under 11.** The games list's right-hand text was the one exception (the tag at 8 and the year at 10, the board's sizes); it was raised on 2026-11-03 after the Thor build 1299, and 11.33 left the ramp on 2026-11-08: the tag is Mono 11 and the year Mono 13, and both grow with the text size.
 `TypeScaleTest.everySizeIsOnTheRamp` fails on any other size; a new style picks a step.
+
+**Mono is for numbers and codes only, never words**. A `TypeRole` with `mono = true` is drawn in Plum Mono at its ramp size times
+0.96 (`MONO_FACE_FACTOR`: Mono's digits are 0.75 em high, Jost's 0.72, so they stand as tall as Jost's; a face tuning, not a ramp step), on
+the Jost line of the role's size (a row's baselines do not move), no letter spacing, weight 400 or 500 where the role's is 500 or more
+(Mono has no 600 face), **never above 500**: a focused or current mono text keeps the 500 face (a 600 would draw the bold 700 face). The top bar's Wi-Fi and charging glyphs follow Mono's digit metrics beside it (`PlumTypography.fontOf`).
+`TypeScaleTest.onlyTheNumberAndCodeRolesResolveToMono` pins the set: `TopBar` (clock, battery percentage), `RowYear`,
+`RowYearCurrent`, `Tag` (region and system code), `SystemRowCount` (the systems column's counts and codes), `RatingNumber` (the rating's figure alone) (not `KeyCap`: in Mono at 10 or 11 sp, SELECT's cap measures 44.6 or 49.6 against the board's 45.33 and the hint drop table moves, `HomeBoundsTest`, `HintDropOrder*Test`). Everything else, labels included, is Jost. **A phrase that mixes figures and words** ("248 games", "4 h 12 min", "2 days ago"; roles `PlaceCount`, `FactNumber`, `StatisticPhrase`; every Statistics tile figure, "73%" too, since a row of tiles is one group) is wholly Jost with tabular figures (`fontFeatureSettings = "tnum"`, every Jost face has it), never part Mono: one line keeps one face. Statistics, Settings values and the
+second screen's figures join later.
 
 | Use | Size | Weight |
 |---|---|---|
 | Game title in list | 16 | 400, focused 500, current 600 (its menu has the focus) |
 | Centred message title (empty list, no results) | 20 (17 until the ramp) | 500 |
-| Settings › Font panel sample line | 16 (17) | 400 |
+| Font sample line (the Font panel is gone; the role stays for the token sheet) | 16 (17) | 400 |
 | System name; side panel title (Settings, the game menu; `panelTitle`) | 16 (15) | 400, current 600; the panel title 600, at most 2 lines in Settings |
 | Settings option | 16 | 400, focused 500 |
 | Details title | 20 (wide was 19; narrow details stop 20) | 600 |
 | Top bar place name | 20, stepped to 16 when its line does not fit | 600 |
-| Top bar count | 11 (the Covers bar's 11.33), `muted` | 400 |
-| Top bar clock, Wi-Fi glyph, battery percentage; the hint bar subtitle (`InfoLineMeta`: the Covers board's 17 px, one ramp step) | 11.33 | 400 |
+| Top bar count (`PlaceCount`) | Jost 11, tabular figures (the Covers bar's 11.33), `muted` | 400 |
+| Top bar clock, battery percentage (`TopBar`), Wi-Fi glyph beside them | Mono 13 | 400 |
+| The hint bar subtitle (`InfoLineMeta`: the Covers board's 17 px, one ramp step) | 11 (11.33 before the mono step) | 400 |
+| Details facts: labels (Genre, Rating, Played, Last played, Emulator, Battery; `detailsLabel`) in `muted`, sentence case, no letter spacing | 13 (were tracked capitals, 11 / 600) | 400 |
+| Details facts: play time, last played, rating figure, battery value (`FactNumber`); the systems column's counts and codes (`SystemRowCount`) | Mono 13 | 400 |
 | The name while typing; meta lines | 13 | 400 |
 | Years, counts, small facts; hint label; grid bar's focused title; setup's emulator and statistics rows | 13 (were 12, 12, 14, 14) | 400; grid title 600; setup rows focused 500 |
-| Key cap (the hint's letter in its 20-high pill) | 10 (icon, off the ramp: at 11 "A" made the round cap 21 wide) | 600 |
+| Key cap (the hint's letter in its 20-high pill) | 10 in Jost (icon, off the ramp: at 11 "A" made the round cap 21 wide; not Mono, whose word caps such as L1 R1 grow) | 600 |
 | Small grid: a titled tile's title and year | 11 (12) | 600 / 400 |
 | Setup title | 26 (wide), 20 (narrow; was 22) | 600 |
 | Setup's plain lines and buttons | 16 (15) | 400; filled buttons 600 |
 | Settings: "Aa" text colour sample | 28 (icon, off the ramp) | 600 |
 | Settings: "+" of the colour presets | 20 | 400 |
 | Settings › About: app name | 20 (22) | 800 on the board; 600 until plum-fonts ships a heavier face |
-| Settings panels: sample years, font names | 11 | 400 |
+| Settings panels: sample years | 11 | 400 |
 | Settings panels: folder and emulator rows | 13 | 400, focused 500; "+ Add folder" 600 in the accent |
 | Side panel body (Settings' explanations, notices, update notes, errors; `panelBody`) | 13 on a 19.5 line (1.5) | 400, `text2`: the details description's style (was 12 on 1.45 in `muted`) |
 | Badge ("Current", "Default") | 11 | 700 |
 | System tag on its raised chip (`systemTag`) | 13 | 700 |
-| Games list's right-hand text: the tag (region, system code in capitals, `tag`, spaced 0.1 em) and the year (`rowYear`) | 11.33 and 13 (was 8 and 10, the board's 12 and 15 px) | 600 / 400, current year 600 |
+| Games list's right-hand text: the tag (region, system code, `tag`, no letter spacing) and the year (`rowYear`) | Mono 11 and 13 (11.33 and 13 before the mono step; 8 and 10 on the board) | 500 (never above) / 400, current year 500 |
 
-Fonts: Jost (default, drawn unadjusted: its x-height is 0.46), Plum Sans, Plum Serif and Plum Mono, the last two scaled with
-`font-size-adjust 0.53`. (Plum Pixel was dropped.) Jost's static 400-800 faces are built from the OFL variable font
+Fonts: **Jost is the only text face** (drawn unadjusted: its x-height is 0.46); the Font setting was removed on 2026-11-08
+(a settled decision) and a stored value is dropped on the next save. The Plum Sans, Serif and Mono families stay in `PlumFonts`: Sans
+draws the check mark and Wi-Fi glyph, Mono draws numbers and codes (above); Serif and Mono were scaled with `font-size-adjust 0.53`.
+(Plum Pixel was dropped.) Jost's static 400-800 faces are built from the OFL variable font
 (`tools/fonts/build_jost.py`), which adds the Vietnamese horn, hook above and dot below, the arrows, the check mark and the
 dong sign in Jost's own strokes.
 
@@ -430,21 +463,20 @@ Weights are real: Jost, Plum Sans and Plum Serif ship 400, 500,
 current item (600). The only weight still borrowed (core-ui `PlumFonts`, pinned by `PlumFontsTest`) is 600
 in Mono, drawn with the 700 face. The 500 faces draw Inter 520, Literata 500 and JetBrains Mono 655.
 
-**Text weight** (Settings › Appearance; stored as `appearance.text_weight`, core-ui
-`TextWeight`): how many steps every role's weight moves up along 400, 500, 600, 700, 800 (capped at 800): Thin 0, Medium 1, Bold 3
-(Bold at 2 read too light).
-The table's weights are Thin's. The Settings row is ‹ Thin › ‹ Medium › ‹ Bold ›; **the default is Medium**
-(a person who never picked gets Medium, and Thin stays one step away).
+**One weight scale** (the Text weight setting is gone), the same on every screen: the weights in the
+table below are the ones drawn. Every role is one face step heavier than the table the app had before the setting existed
+(`TypeRole.weight`):
 
-| Role | Thin | Medium | Bold |
-|---|---|---|---|
-| Rows | 400 | 500 | 700 |
-| Focused row | 500 | 600 | 800 |
-| Current item, titles | 600 | 700 | 800 |
-| Badges | 700 asked, drawn with the 600 face | 800 | 800 |
+| Role | Weight |
+|---|---|
+| Rows, body, secondary text (`muted` / `text2` by colour, not by weight) | 500 |
+| Focused row | 600 |
+| Current item, titles | 700 |
+| Badges | 800 |
 
-Thin draws exactly what the app drew before the setting existed, so its badge asks 600 (the 600 face).
-Mono follows its own faces (600 uses the 700 face).
+Mono is never above 500 (600 uses the 700 bold face): its roles draw 500. The weights quoted in the Type table rows above and
+in role comments are the board's drawn values, one step lighter than the scale. The second screen's in-game battery part keeps one
+step under the scale (burn-in budget). Chosen by shots at 576x432 and 768x432.
 
 **Text size** (Settings › Appearance): six steps that scale every size in the table above.
 
@@ -487,8 +519,17 @@ A system's card has the badge above its top line and the facts line between the 
 One block, left-aligned, resting on the bottom margin; the space above stays empty; a long title
 grows upwards. A game has its own card (see the note below). The setup question is a `text2` line at the facts size in the same place (it may wrap to two lines at the largest Text sizes). The
 calm screen is only the Plumemu mark (the launcher icon's monochrome shapes cropped to the mark),
-52 high, `chip`, centred. A change of content replaces the block at once: no fade on the second screen (its
-changes run on the top screen's main thread; the card follows only after the cursor rests 250 ms).
+52 high, `chip`, centred. **Motion**: it moves like the top screen, with the same tokens and curve as the top
+screen, nothing of its own. A new card follows the focus as the top screen's system switch does (it slides
+`SWAP_SHIFT_DP` from the side the focus went and fades in, `GLIDE_MS` on `Decelerate`); a change of what the
+window is for (Statistics while Settings is open, the in-game card) settles like a screen
+(`SCREEN_DEPTH`, `SCREEN_MS`): going in (Settings, a game) from smaller, coming back from larger. The window's
+first content, and the first card after the calm mark, show at once: motion is for steps the person took, so a
+wake or a card that arrives on its own does not move (Statistics still settles in: opening Settings is a step). Within
+one list or grid a card comes from where the focused item went on the top screen (a step right in a grid, from the
+right). A card swap runs after the cursor rests, when the top screen has
+stopped moving, so the two screens never share a frame of motion. The in-game clock's burn-in shift stays a
+jump (it must not move at rest). With motion off everything changes at once.
 
 **Top screen while the window is up** (layout C; retired: the top screen keeps its details column and these numbers no longer apply): the games list alone, `width − 96` (741 on
 the Thor at peek 48, 736 at Large text's wider peek), no details column, no narrow details stop
@@ -506,7 +547,7 @@ screen's details column shows, in its words:
 
 | | Roomy | Compact |
 |---|---|---|
-| Cover, top-left on the margins: the large box front at its own shape fitted in a square (a portrait box takes its height, a landscape one its width), corners 8 (6 portrait), not dimmed | 240 square | 168 square |
+| Cover, top-left on the margins: the large box front at its own shape fitted in a square (a portrait box takes its height, a landscape one its width), corner 6, not dimmed | 240 square | 168 square |
 | Beside it, 24 after the cover, from its top: top line (dot, system · region, `meta` 16), 12, title (`text` 600, star kept, cut before it), 12, "1994 · Nintendo", 4, "Racing · 8/10" (genre and ScreenScraper's rating out of 10, one decimal only when not whole, 0 counts as none; no players count; a long genre is cut by measuring, the rating stays) (`text2` 15, one line each, cut at the end; 15 is off the ramp: at 16 the genre beside a 240 cover was cut at Small, kept until the person picks a smaller cover or a cut genre) | title 26, 3 lines | title 20 (22), 2 lines |
 | Under the cover or the text beside it (the lower), 20, full width: the description (`text2` 15 on a line of 22, cut with "…") | at most 3 lines | 2 |
 | Right above the played line, 4 over it and 16 at least under what is above: the file Play launches without its extension ("Silent Hill (USA)", the Info panel's File) (`muted`, one line cut with "…"; none and no gap when unknown). It gives way to the description's last line when both do not fit: at Largest only; on Roomy in Plum Serif, on Compact in every font | 15 | 15 |
@@ -588,8 +629,7 @@ Plumemu's own on-screen keyboard. `PlumKeyboard` in core-ui.
   what the caller gives it (the caller puts its hint bar on it, 6 under the keys; the hint bar keeps its
   usual left margin). Fill `tray`, a 1 dp
   hairline `trayEdge` along its top, and a faint shadow upwards (the board's `box-shadow: 0 -6px 12px -4px`,
-  black at 45 % with light text, 7 % with dark text: the text colour decides, not the background). Mixing towards the text makes the tray lighter on a dark
-  background and darker on a light one; on a coloured background it keeps the hue (Midnight).
+  black at 18 % with light text, 2.8 % with dark text (the board's 45 % and 7 % at `Depth.SHADOW`): the text colour decides, not the background). The tray is the tone ladder's surface step and its word keys the top step (Tone ladder under Colour): lighter than the page on dark and light alike, in the page's own hue.
 - **Keys** (after trying Search on the Thor: "smaller and tidy, not full width, not so
   thick"): 10 columns of **44** with 4 between columns and rows, so a 476 block **centred** on the screen;
   the tray stays edge to edge. Under 476 + 2 × 24 = 524 wide the block shrinks to `width − 48` (none of the
@@ -628,7 +668,7 @@ Plumemu's own on-screen keyboard. `PlumKeyboard` in core-ui.
 - **A field typed with it** (Search): the text in its usual style with a static caret, accent,
   `PlumLayout.caretWidth` (1.5 × the text scale) wide, a line high, never blinking; an empty field shows its
   prompt muted with the caret at its start. A text wider than its room slides left to keep the caret in view.
-  The tray slides up and down by `translationY`, 180 ms ease-out (none with motion off).
+  The tray slides up and down by `translationY`, 180 ms on `Decelerate` (none with motion off).
 - **Cost**: nothing runs while idle (no animation, no caret, no frame callbacks); a focus move
   recomposes the two keys involved; a shift change the 26 letters and the shift key (`PlumKeyboardTest`).
 - Checked by `KeyboardModelTest` (rules), `KeyboardFit*Test` (576, 768, 837 and 667 wide: the block 476 and
@@ -640,13 +680,13 @@ Plumemu's own on-screen keyboard. `PlumKeyboard` in core-ui.
 
 Three settings go in; every other token comes out. There is no "theme": dark and light are just two
 background presets. **Nothing unreadable**: text and accent that cannot be read on the background are refused when
-picked, moved in lightness only (same hue) when a background change breaks them, and drawn adjusted
-when a stored combination fails. One check, `Readability` in core-ui: text passes when every derived
-text token meets the contrast targets in Derived tokens below (text itself at least 7:1 on the background; secondary text reaches 11:1 where the text allows and is the text itself otherwise), the accent at 3:1 on the background. The ready-made sets are held to the other targets, with text itself at 4.5:1 (`ColorSetsTest`).
+picked (with a suggestion that passes: Suggesting a colour, below), moved in lightness only (same hue) when a background change
+breaks them, and drawn adjusted when a stored combination fails. One check, `Readability` in core-ui: text passes when every derived
+text token meets the contrast targets in Derived tokens below (text itself at least 7:1 on the background; secondary text reaches 11:1 where the text allows and is the text itself otherwise), the accent at 3:1 on the background. The ready-made sets pass the same check (text 7:1 on the page) and are held to the other targets below (`ColorSetsTest`).
 
 **Inputs**
 
-- Background: Black `#000000` (default; plain black suits OLED screens), Graphite `#111214`, Midnight `#0B1220`, Plum
+- Background: the default is the Plumemu set's deep blue-black ink `#161A24` (an own colour, not a preset; on an OLED handheld setup's default tile is true Black under the same accent, and that page still reads as the Plumemu set); presets Black `#000000` (plain black suits OLED screens), Graphite `#111214`, Midnight `#0B1220`, Plum
   `#1A1020`, Forest `#0E1A14`, Paper `#ECE8DF`, Sand `#EEE6D6`, Mist `#E8ECF0`, then Lemon, Tangerine, Sky,
   Lavender, Cobalt and Wine (the first page: the 8 presets above and these 6, then "+"), or your own
   colour (the "+" page): a hand-picked palette of 8 hue columns (neutral, red, orange, yellow, green, teal, blue,
@@ -664,12 +704,12 @@ text token meets the contrast targets in Derived tokens below (text itself at le
   keeps the text if it still passes `Readability`; a Light or Dark preset that fails becomes the one with
   the higher contrast against the new background (light text left on a light
   background would hide the Text option itself), any other colour moves in HSL
-  lightness only. Where no text colour can pass (a background of middle lightness, roughly relative
+  lightness only. A refused pick is offered a suggestion (below). Where no text colour can pass (a background of middle lightness, roughly relative
   luminance 0.05 to 0.5) the better of Light and Dark is used. The light/dark **mode** everything else branches on
   (strong text, preset accents, system bar icons) is derived: text lighter than the background is Light.
-- Accent: the default is `#3E7BE0` (a custom colour, not a preset); presets Red, Amber, Lilac, Blue, Green, Mono (the text colour), or custom. Two preset
+- Accent: the default is `#3A7CEB` (a custom colour, not a preset); presets Red, Amber, Lilac, Blue, Green, Mono (the text colour), or custom. Two preset
   sets: with light text `#DA4655` `#E8A13A` `#B583E8` `#6FA8FF` `#5FD38D`; with dark text
-  `#9E2A3A` `#8F5500` `#7A3FC0` `#1F5FBF` `#1A6B3B`. The default `#3E7BE0` is 5.11:1 on the default Black and 4.67:1 on Graphite (the Red preset, a slightly deep crimson, is 4.56:1 on Graphite and 4.99:1 on Black). A picked accent is kept while it reaches 3:1 on the background; one that no longer does moves in lightness only (same hue). Small
+  `#9E2A3A` `#8F5500` `#7A3FC0` `#1F5FBF` `#1A6B3B`. The default `#3A7CEB` is 4.36:1 on the default page and 4.70:1 on Graphite. A picked accent is kept while it reaches 3:1 on the background; one that no longer does moves in lightness only (same hue). Small
   labels such as "Current" and "Default" are badges (accent fill, `onAccent` text, 11 sp bold),
   so they stay readable on tinted panels with any accent.
 
@@ -677,26 +717,56 @@ text token meets the contrast targets in Derived tokens below (text itself at le
 background towards text that reaches n:1 against X)
 
 Derived-token values below are for the Graphite and Paper presets (the screenshot-test pair);
-the default Black derives the same way.
+the default page derives the same way.
 
 | Token | Rule | On Graphite | On Paper |
 |---|---|---|---|
 | `sel` focused row fill | mix(bg, text, 0.10 light text / 0.09 dark text) | `#272728` | `#D9D6CE` |
-| `sel2` small panels | mix(bg, text, 0.05) | `#1C1D1E` | `#E2DED5` |
+| `sel2` small panels | the tone ladder's surface step (+3 L*) | `#17181B` | `#F5F1E7` |
 | `text2` secondary text | reach 11:1 on bg where the text allows, else the text itself | `#CCC9C1` | `#2D2C2D` |
 | `meta` facts, values on focused row | reach 6:1 on `sel` | `#AAA7A1` | `#4A4948` |
 | `muted` small text | reach 4.6:1 on `sel` (so it also holds on the focused row) | `#94928D` | `#5A5958` |
 | `chip` key-cap borders, switch ring | reach 3:1 on bg | `#646360` | `#84827E` |
 | `strong` focused text | white on light text, `#0F0F10` on dark text | `#FFFFFF` | `#0F0F10` |
-| accent | as picked (while it passes); the default is `#3E7BE0`, a preset is the Red of the matching set | `#3E7BE0` (Red `#DA4655`) | `#9E2A3A` (Red) |
-| `onAccent` text on accent | background or text, whichever contrasts more with accent; if that is under 4.5:1, pure black or white, whichever contrasts more (pure black or white is the fallback because the dark text alone misses 4.5:1 on some default reds, for example on Midnight, Plum and Forest; the accent itself is not moved) | `#0E0F11` | `#ECE8DF` |
-| `tray` the keyboard's tray | mix(bg, text, 0.06); on a dark theme mix(bg, `surfaceInk`, 0.033) | `#18191C` | `#E0DCD3` |
-| `trayKey` keyboard keys with a word or icon, the focused key | mix(bg, text, 0.12) | `#2B2C2C` | `#D3D0C8` |
+| accent | as picked (while it passes); the default is `#3A7CEB`, a preset is the colour of the matching set | `#3A7CEB` (Red `#DA4655`) | `#9E2A3A` (Red) |
+| `onAccent` text on accent | background or text, whichever contrasts more with accent; if that is under 4.5:1, pure black or white, whichever contrasts more (pure black or white is the fallback because the dark text alone misses 4.5:1 on some default reds, for example on Midnight, Plum and Forest; the accent itself is not moved) | `#111214` | `#ECE8DF` |
+| `tray` the keyboard's tray | the tone ladder's surface step (+3 L*) | `#17181B` | `#F5F1E7` |
+| `trayKey` keyboard keys with a word or icon, the focused key; the hint and keyboard key face | the tone ladder's top step (+8 L*) | `#212225` | `#FFFFFE` |
+| `line` a card's rules, an empty day's stub | the tone ladder's divider (10 L* toward the text) | `#252629` | `#CFCCC3` |
 | `trayEdge` the tray's top hairline | mix(bg, text, 0.14); on a dark theme mix(bg, `surfaceInk`, 0.155) | `#313438` | `#CFCBC4` |
-| `trayShadow` the tray's upward shadow | black at 45 % with light text, 7 % with dark text: it follows the text colour, not the background (like `strong`), so dark text on a dark background of one's own gets a near-invisible shadow (accepted) | 45 % | 7 % |
+| `trayShadow` the tray's upward shadow | black at 18 % with light text, 2.8 % with dark text (the board's 45 % and 7 % at `Depth.SHADOW`): it follows the text colour, not the background (like `strong`), so dark text on a dark background of one's own gets a near-invisible shadow (accepted) | 18 % | 2.8 % |
 
-Because tokens are mixed from the background, greys pick up its tint (on Plum they are plum
-greys). Accent marks the current system, the focused row's pill ring, focus rings, switches and primary
+Because tokens are mixed from the background or stepped from it, greys pick up its tint (on Plum they are plum
+greys).
+
+**Tone ladder** (`ToneLadder` in core-ui). Every tone a screen lays on its page is the page itself moved a fixed step of
+perceived lightness (CIE L*), keeping the page's OKLCH hue and chroma (chroma cut only where the screen cannot show it), on
+dark and light pages alike, so a blue page has blue cards and a cream page cream ones, never a grey or a white laid over it:
+
+| Step | L* from the page | Used for | On Graphite | On Paper |
+|---|---|---|---|---|
+| Sunken | −4 | field wells, meter tracks (`fieldWell`, `meterTrack`) | `#050507` | `#E0DDD4` |
+| Page | 0 | the background | `#111214` | `#ECE8DF` |
+| Surface | +3 | small panels, the keyboard tray (`sel2`, `tray`) | `#17181B` | `#F5F1E7` |
+| Raised | +6 (+7 at the top, +5 at the foot) | the raised card (`card`) | `#1F2123` to `#1B1D1F` | `#FFFDF7` to `#FBF7ED` |
+| Top | +8 | key faces, word keys (`trayKey`) | `#212225` | `#FFFFFE` |
+| Divider | 10 toward the text | rules and stubs (`line`) | `#252629` | `#CFCCC3` |
+
+Checked by `ToneLadderTest` (every step within 0.3 L* of its target on dark, light and coloured pages, hue kept).
+
+**Suggesting a colour** (`Readability.suggest`). When a picked text or accent is refused, the message offers a colour that
+passes and looks right, not just the nearest lightness of the same HSL values:
+
+1. It moves OKLCH lightness, keeping the hue the eye sees and as much chroma as the screen can show there.
+2. An accent aims at 3.5:1 on the page, the sets' margin, not the 3:1 floor.
+3. No mud: an accent that would keep under 85 % of its chroma (yellow, orange or lime going dark) turns its hue up to 40°
+   toward the neighbour that holds its colour (yellow to marigold, orange to rust, lime to green).
+4. On a coloured page (OKLCH chroma 0.06 or more) an accent within 60° of the page's hue is offered at the opposite hue
+   (180°, then 150° and 210°, then 120° and 240°), at least as colourful as the page. On a grey page any hue is fine.
+5. Text keeps quiet: a suggested text takes the page's own hue at OKLCH chroma 0.04 at most.
+
+The floors stay the floors, and a stored colour is still drawn adjusted by lightness only (same hue). Checked by
+`ReadabilitySuggestTest`. Accent marks the current system, the focused row's pill ring, focus rings, switches and primary
 buttons.
 
 The presets keep every text at least 4.5:1 against what is behind it (`PlumColorsTest`). A colour the person picks has to pass `Readability`, which asks 7:1 for the text itself.
@@ -706,46 +776,54 @@ a choice of the three inputs above; Colors shows the set whose background, text 
 colours equal the current ones exactly, else Custom (the person's own colours, kept when a set is
 picked over them). In `ColorSet` (core-ui `theme/ColorSets.kt`), cycle order:
 
-| Set | Background | Text | Accent | A, B, X, Y glyphs (letter colour in brackets) |
-|---|---|---|---|---|
-| Plumemu | Black `#000000` | Light | `#3E7BE0` (was Red `#DA4655`) | — |
-| Paper | Paper `#ECE8DF` | Dark | Red `#9E2A3A` | — |
-| Pocket | `#D2D1CA` | Dark | `#8C1D4E` | `#8C1D4E` (white) on all four |
-| Dot matrix | `#B8E011` | Dark | `#2E5E2E` | — |
-| Super | `#D9D8D3` | Dark | `#AA2924` | `#C8302B` (white), `#D9A400` (dark), `#2B54B5` (white), `#2E8B4A` (white) |
-| Indigo | `#262158` | Light | `#A79CF5` | — |
-| Charcoal | `#2A2B2E` | Light | Green `#5FD38D` | `#3E6FD8` (white), `#2E9A47` (dark), `#D9A400` (dark), `#D9A400` (dark) |
-| Ivory | `#F3EAD0` | Dark | `#127087` | `#CF3A3A` (white), `#D9A400` (dark), `#2F6FDB` (white), `#2E9A47` (dark) |
-| Banana | `#F2CF43` | Dark | `#1F45A8` | `#C8302B` (white), `#0E7C7C` (white), `#926B00` (white), `#926B00` (white) |
-| Cream | `#E9DFC8` | Dark | `#9A1F2B` | — |
+| Set | Page | Surface | Text | Muted | Accent | Accent text | A, B, X, Y keys (letter) |
+|---|---|---|---|---|---|---|---|
+| Plumemu (default) | `#161A24` | `#1C202B` | `#EBE7DD` | `#9A9997` | `#3A7CEB` | `#FFFFFF` | — |
+| Daylight (light default) | `#ECEBE5` | `#F5F4ED` | `#1C1C1E` | `#5A5A5A` | `#2A64D8` | `#FFFFFF` | — |
+| Ultramarine | `#0F2142` | `#152849` | `#EBE7DD` | `#9CA0A5` | `#F4B740` | `#0F2142` | — |
+| Magenta | `#240F1C` | `#2B1522` | `#EBE7DD` | `#9B9190` | `#F0649D` | `#240F1C` | — |
+| Peach | `#FDE3D3` | `#FFEDE3` | `#1C1C1E` | `#5F5854` | `#00706B` | `#FFFFFF` | — |
+| Matcha | `#E4ECD1` | `#ECF5D9` | `#1C1C1E` | `#585A54` | `#3D6E1C` | `#FFFFFF` | — |
+| Mocha | `#F1E6DA` | `#FAEEE2` | `#1C1C1E` | `#5C5956` | `#A4492A` | `#FFFFFF` | — |
+| Front loader | `#26272B` | `#2C2E32` | `#EBE7DD` | `#A8A6A0` | `#F2545D` | `#000000` | `#D22A35` (W), `#D22A35` (W), `#3A3B40` (W), `#3A3B40` (W) |
+| Spice cube | `#231C50` | `#292357` | `#EBE7DD` | `#A7A2AD` | `#FF9F43` | `#231C50` | `#2EA557` (D), `#D93A3E` (W), `#BDBCC8` (D), `#BDBCC8` (D) |
+| Pea green | `#C6D88F` | `#CEE097` | `#1C1C1E` | `#484D3B` | `#2F5F2F` | `#FFFFFF` | — |
+| Pocket | `#D2D1CA` | `#DBDAD2` | `#1C1C1E` | `#4B4B4B` | `#8C1D4E` | `#FFFFFF` | `#8C1D4E` (W), `#8C1D4E` (W), `#8C1D4E` (W), `#8C1D4E` (W) |
+| Lavender | `#DEDCE6` | `#E7E5EF` | `#1C1C1E` | `#525256` | `#5B3EA1` | `#FFFFFF` | `#4E3591` (W), `#4E3591` (W), `#B2A5DB` (D), `#B2A5DB` (D) |
+| Red and gold | `#F3EBD8` | `#FCF3E0` | `#1C1C1E` | `#5C5A56` | `#9A1B2F` | `#FFFFFF` | `#9A1B2F` (W), `#9A1B2F` (W), `#C69A1E` (D), `#C69A1E` (D) |
+| Ivory | `#F3EAD0` | `#FCF2D8` | `#1C1C1E` | `#5C5A53` | `#127087` | `#FFFFFF` | `#CF3A3A` (W), `#D9A400` (D), `#2F6FDB` (W), `#2E9A47` (D) |
+| Clear grape | `#221838` | `#281F3F` | `#EBE7DD` | `#A39CA2` | `#BE98FF` | `#221838` | — |
+| Cold grey | `#272B32` | `#2D3239` | `#EBE7DD` | `#ACABA6` | `#8EC3FF` | `#272B32` | `#3E6FD8` (W), `#2E9A47` (D), `#D9A400` (D), `#D9A400` (D) |
+| Banana | `#F2CF43` | `#FBD74E` | `#1C1C1E` | `#584E28` | `#1F45A8` | `#FFFFFF` | `#C8302B` (W), `#0E7C7C` (W), `#926B00` (W), `#926B00` (W) |
+
+Surface is the tone ladder's +3 step; muted is the `muted` token; accent text is what is drawn on an accent cap (`onAccentFace`:
+white while it reaches 3:1 on the cap's middle, else the readable `onAccent`). Keys are the A, B, X and Y caps' fills, the
+letter on each in brackets (W white, D the dark text `#1C1C1E`); a set without keys draws the usual caps.
 
 Every set keeps the presets' targets: text 4.5:1 and accent 3:1 on
 the background, `text2` 11:1, `meta` 6:1 and `muted` 4.6:1 on `sel`, `chip` 3:1, text on the focused
 row, the tray and `trayKey` 4.5:1, and `onAccent` 4.5:1 on the accent (`ColorSetsTest`). **A set also keeps a margin for the focused row's look**: the accent at 3.5:1 on the background (the grid ring) and on the pill (the row's
-ring), `onAccent` 4.7:1, and `strong`, `text`, `meta`, `muted` at their targets on the pill; the pill is at least 1.12:1 from the background.
-Three accents moved by lightness only (same hue and saturation): Super `#B22B26` → `#AA2924` (ring on pill 3.78 → 4.04, badge text
-4.50 → 4.82), Dot matrix `#306130` → `#2E5E2E` (3.82 → 3.98, 4.54 → 4.75), Ivory `#1792B0` → `#127087` (ring on pill 2.56 → 3.88, on the
-background 3.03 → 4.74; the bright teal was too faint as a ring on the tinted pill). The other seven sets already passed. **A set's previous accents still count** (`ColorSet.previousAccents`, `ColorSet.settled`, applied in the
-app's `toColorsAndLook`): stored settings whose accent is an old value of a set (Super `#B22B26`, Dot matrix `#306130`,
-Ivory `#1792B0`) with that set's background and text read as that set and draw its current accent; the stored value is not
-rewritten. Any other accent, near it or not, stays Custom. Add the old value to the list whenever a set's accent moves. Five values of four sets did not reach the targets, and only their HSL lightness moved: Pocket background `#C8C6BE` →
-`#CDCCC4` (`text2` 10.39 → 11), Dot matrix background `#9BBC0F` → `#B4DB11` (`text2` 8.12 → 11) and
-accent `#306230` → `#306130` (badge text 3.29 → 4.54), Super accent `#C8302B` → `#B22B26` (badge
-text 3.76 → 4.50), Ivory accent `#1795B3` → `#1792B0` (on the background 2.92 → 3.02; 3.03 on the warmer `#F3EAD0`; the keys are as on the AYN Thor: A red, B yellow, X blue, Y green). With the board's Dark text `#1C1C1E` (was `#17181A`, 2026-11-03) three backgrounds moved again, by lightness only: Pocket `#CDCCC4` → `#D2D1CA`, Dot matrix `#B4DB11` → `#B8E011`, Banana `#F2CD3C` → `#F2CF43` (`text2` back to 11); nine Background-palette cells moved to their nearest readable cell (`CustomPalette`). A set picked before keeps its old colours and reads as Custom. A glyph's
+ring), `onAccent` 4.7:1, and `strong`, `text`, `meta`, `muted` at their targets on the pill and the slab; the pill is at least 1.12:1 from the background, and so is the slab on a dark page and the slab's white rim on a light one (which keeps a light page below white).
+**A set's earlier values still count** (`ColorSet.previousAccents`, `previousBackgrounds` and `formerLooks`, `ColorSet.settled`, applied in the
+app's `toColorsAndLook`): stored settings holding an earlier accent or background of a set, or the whole look of a set that was taken out, with that set's text,
+read as that set and draw its current colours; the stored value is not rewritten, and a backup restores the same way. Sets taken out and where they went:
+Dot matrix → Pea green, Super → Ivory, Indigo → Spice cube, Charcoal → Cold grey, Cream → Red and gold, and the old
+default (Black with `#3E7BE0`, or an own-colour `#DA4655`) → Plumemu; a button set stored under a removed name gives its successor's keys (`ColorSet.named`).
+The first colour change made on such a look (page, text or accent) stores the successor's page and accent with it
+(`withSettledColors` in the app's `ColorWrite.kt`), so the old page never comes back. The Paper set is not mapped: its look is the Paper
+page with the Red accent, two presets anyone can still pick, and that pick stays as chosen.
+Any other colour, near one of these or not, stays Custom. Add the old value whenever a set's colour moves. A glyph's
 letter is white or the dark text colour, whichever contrasts more with its fill (all 3:1 or more,
 `KeyCapLookTest`).
 
-**Glyph colours drawn**. While Super, Charcoal, Ivory, Banana or Pocket is the current set (derived:
+**Glyph colours drawn**. While a set with keys is the current set (derived:
 `PlumTheme.buttons`), every `Hint` key cap that reads A, B, X or Y has that letter's
 colour as its flat face (Controls under Shapes and motion); there is no ring, and the cap keeps its size and shape (20.67 high, at
 least 20 wide), and the letter is the table's white or `#1C1C1E`, still 10 / 600. The colour is the
 printed letter's, not the role's: with "Confirm with B" the confirm hint reads B and is B's colour.
 START, SELECT, L1 R1 and every cap in the other sets or in Custom colours have the theme's `key` face and a `strong` letter. **A coloured cap needs no
 colour contrast with the background**: its edge and shadow under it make it stand off (`HintGlyphColorsTest` checks the pixel under B on Banana), and the letter on it is what is read, as on the
-handhelds these sets come from. Measured, letter on fill / fill on background: Super A 5.37 / 3.76,
-B 7.83 / 1.59, X 6.91 / 4.84, Y 4.28 / 3.00; Charcoal A 4.70 / 3.01, B 4.93 / 3.93, X and Y 7.83 /
-6.24; Ivory A 4.86 / 4.05, B 7.83 / 1.89, X 4.75 / 3.96, Y 4.93 / 3.00; Banana (red, teal and a darker yellow on the yellow `#F2CD3C`) A 5.37 / 3.47, B 5.01 / 3.24, X and Y 4.86 / 3.14; Pocket (all four the accent magenta, close to the grey DMG's A/B) 8.75 / 5.43. Every letter is 4.28:1 or
-more on its cap. Shots `home_glyphs_<size>_<set>[_confirm_b]`.
+handhelds these sets come from. Every letter is 4.54:1 or more on its cap. Shots `home_glyphs_<size>_<set>[_confirm_b]`.
 
 **Colors panel**. A on Colors opens the side panel (wide: 248 beside the options, as
 Background's; narrow: the further stop). Title "Colors", one help line, then a tile per set in cycle
@@ -759,19 +837,26 @@ down; a tile is at least 58 × the text size's height factor wide, so 3 per row 
 Small to Large and 2 from Larger, at most 5 in the narrow stop. A name too long takes a second line
 between words, never cut. The focused tile has the 2.5 dp accent ring; nothing applies while moving.
 Checked by `SettingsColorsPanelFit{768,576,Thor}Test` (every font, six sizes); shots
-`settings_colors_panel_<size>_<charcoal|super|custom>[_largest]`.
+`settings_colors_panel_<size>_<coldgrey|ivory|custom>[_largest]`.
 
 ## Shapes and motion
 
 - **Accent face** (V2): every accent surface at rest (switch track on, Primary button, slider fill, choice disc, A key, keyboard action key, empty-state badge) is one flat colour where it is not a seated part (seated parts draw the accent cap gradient, Seated parts below), `PlumComposeColors.accentFill`: the accent 12.5 % toward white, the mean of the board's accent-to-lighter gradient (default blue gives #568BE4); text on it stays `onAccent`. **Dark surfaces** (lips, caps, tray) mix toward the text moved toward blue (`CollarLook.surfaceInk`), as the board's are cooler than its warm ink; the disabled label is `collar.offText` (0.443 / 0.41 of the way to the text), the empty-state disc `collar.well`.
 - Row corners 8; setup choices 10; buttons and key caps are pills (fully round).
 - Switch 34×20, knob 16.
-- **Seated parts** (V2 kit board CSS, dp = px / 1.5; tokens `CollarLook.seat` = `SeatLook` in `core-ui/theme/SeatLook.kt`, drawn by `drawCssCap` / `drawLip` / `drawCssFace` in `components/CssDraw.kt`). Buttons, switch, slider, segmented control, swatch, choice, text field, hint keys and keyboard keys are LIP + WELL + CAP, with the board's gradients; this replaces the flat faces of decision 0011 for these parts (the bullet below stays for anything not listed). Every box-shadow is one layer of one cached bitmap per size and recipe (blur B px is a Gaussian of sigma B/2 px, spread grows the shape, an outer shadow is cut out of the box, insets are inside over the fill, the first listed is on top); steps stay under 2 of 255; never `BlurMaskFilter`.
+- **Seated parts** (V2 kit board CSS, dp = px / 1.5; tokens `CollarLook.seat` = `SeatLook` in `core-ui/theme/SeatLook.kt`, drawn by `drawCssCap` / `drawLip` / `drawCssFace` in `components/CssDraw.kt`). Slider, segmented control, swatch, choice, text field, hint keys and keyboard keys are LIP + WELL + CAP, with the board's gradients (buttons and the switch are flat parts, below); this replaces the flat faces of decision 0011 for these parts (the bullet below stays for anything not listed). Every box-shadow is one layer of one cached bitmap per size and recipe (blur B px is a Gaussian of sigma B/2 px, spread grows the shape, an outer shadow is cut out of the box, insets are inside over the fill, the first listed is on top); steps stay under 2 of 255; never `BlurMaskFilter`.
+  - (Parts of this list below that name a button or the switch describe the recipe the slider, segments and keys still use for their caps.)
   - LIP: radial gradient (ellipse 120 % x 100 % at the top centre, Paper 90 % high) of lip stops at 0, 45, 100 %; six layers on dark (inset 0 1.33/0.67 white .16, inset 0 -2/2.67 black .40, inset spread 0.67 white .03, 0 -0.67/2 white .03, 0 2/2.67 .45, 0 6.67/14.67 .45), five on Paper (brown shades, white rim). WELL: the well colour with inset 0 0.67/1.33 at .6 (Paper .25). Dark themes derive from the background toward `CollarLook.surfaceInk`, Paper toward warm white and brown, so Navy and a custom purple keep their hue.
   - CAP: gradient cap top to bottom, inset 0 0.67 white .16, a solid 0 2 thickness in `side`, drop 0 2.67/3.33 at .45 (Paper .20); pressed: the down gradient with inset 0 1.33/2 .22, moved 2 dp, cross-faded by the press. ACCENT CAP: accentLight (each channel 30 % toward 255) to accent, inset white .40, thickness accentDark (channel x 0.62), drop .35. OFF: `capOff` with inset 0 0.67/1.33 .18.
   - Hint key: thickness 1.33, drop 0 2/2.67 .40 (Paper .18), press 1.33. Keyboard letter key: no drop, top light .14; word keys 4 % lighter; the action key is the accent cap. Swatch: its colour with inset white .35, thickness black .30, drop .35. Choice: an accent dot with an accentDark thickness, no drop; unselected is the well. Field: the field well with inset 0 2/4 at .55 (Paper .248); in error tinted toward `danger`.
   - Focus: the lip glows with the part glow (blur 14.67 dp), the groove fills with the accent and swaps its shade for the lit inset (0 0.67/1.33 .35) with its own 8 dp glow; the switch adds a 1.33 dp accent ring, the slider knob a 1.33 ring with a 9.33 glow and its fill a 6.67 glow.
-  - Labels on an accent cap (primary button, keyboard action key, confirm hint key, a selected choice's check) are white, as on the boards: the one named exception to the 4.5:1 floor (`onAccentFace`; white on the default #3E7BE0 is 4.11:1). White holds while it reaches 3:1 on the cap's middle (the accent 15 % toward white); a paler accent falls back to `onAccent`. Every other text keeps the floor. Pinned by `SeatLookTest` (every layer and colour within 2 of the board), `SeatPixelTest` (a rendered seat at 1.5 px per dp) and `OnAccentFaceTest`.
+  - Labels on an accent cap (primary button, keyboard action key, confirm hint key, a selected choice's check) are white, as on the boards: the one named exception to the 4.5:1 floor (`onAccentFace`; white on the default #3A7CEB is 3.99:1). White holds while it reaches 3:1 on the cap's middle (the accent 15 % toward white); a paler accent falls back to `onAccent`. Every other text keeps the floor. Pinned by `SeatLookTest` (every layer and colour within 2 of the board), `SeatPixelTest` (a rendered seat at 1.5 px per dp) and `OnAccentFaceTest`.
+- **Flat parts** (buttons and the switch; tokens `CollarLook.flat` = `FlatPartLook` in `core-ui/theme/FlatPartLook.kt`, drawn by `drawFlatButton` / `drawFlatSwitch` in `components/FlatPartDraw.kt`). A solid fill from the tone ladder; no gradient, no inner highlight, no thickness band, no lip, no groove well, no accent glow. Every colour derives from the page, the text and the accent, so each colour set gets its own.
+  - BUTTON: Secondary and Danger cap = `ToneLadder.TOP` (+8 L*) with a hairline (`ToneLadder.line`: 0.5 dp, one pixel at least) inside its edge; Primary = the accent with a hairline of the accent 28 % toward black. On a light page a 1 dp drop shadow under the cap (the board's brown at 22 %), on a dark page none. Pressed: the fill only, nothing moves: a Secondary cap goes `PRESS_DELTA` (6) L* toward the page's contrast side (lighter on a dark page; on a light page 6 L* below the page, which is also at least 6 L* below the rest fill); a Primary cap goes 6.5 L* darker, so the white label keeps its contrast. Off: the ladder's `SURFACE` tone, no edge, no shadow, muted text. The footprint is unchanged (the collar's room stays, so `PartSizesBoardTest` holds).
+  - SWITCH: the track is solid accent (hairline: the accent 28 % toward black) when on; when off the ladder's sunken tone (-4 L*) with a 1.5 dp outline drawn inside the track's bounds (size and layout unchanged) in the page's tone stepped from `ToneLadder.LINE` toward the text until it is 3:1 against the page, so an off switch shows on every set (pinned for every colour set and preset by `FlatPartLookTest`). The on thumb is a solid light tone (the page 90 % toward white on dark, 96 % on light) of 18.67 dp; the off thumb is filled with the outline's colour, 3 dp smaller; both have a crisp 1 dp shadow and no glow; a locked switch has the disabled tone. Track 40 x 22.67 dp, as before.
+  - FOCUS (button and switch): the same rim as a cover's (one rim: `FocusLift.rimWidth` 2 dp on the part's own edge, no gap, `RIM_ALPHA` 0.96, near-white on a dark page and the text ink on a light one, `drawRimStroke`), but no scale: `drawGluedRim` in `components/FocusRing.kt` adds a tight glow (sigma `FocusLift.glowSigma` 2.25 dp) and a small depth shadow that is the parts' own (`FlatPartDimens.shadowDrop` 2 dp, `shadowBlur` 4 dp, alphas `GLOW_ALPHA_*`, `SHADOW_ALPHA_*`: parts are small and sit close together, so both are shorter and weaker than a cover's). The accent is not used. A panel leaves `focusRimRoom` (12 dp) above and below its buttons (`ringRoomAboveAndBelow`) so nothing is cut by the scroll clip.
+  - SWITCH STATE (WCAG 1.4.11): the off state is told by the outlined track (`FlatPartDimens.switchOffOutline` 1.5 dp, inside the track's bounds) and a thumb of the outline's colour (3 dp smaller than the on thumb), the outline being the page's tone stepped toward the text until it is 3:1 against the page; the on state by the accent track at 3:1 and by the knob side (`FlatPartLookTest`).
+  - COST: at rest a flat part is plain shapes (a rounded rect, a stroke, on light pages one offset rounded rect): no cached image, no layer, no clip. A focus adds one cached image (the glow and the depth shadow, two layers of one `drawCssShadows`) and one stroke, faded by the focus progress. Pinned by `PlumButtonFlatTest`, `PlumSwitchLookTest`, `FocusPartGlowTest`.
 - **Controls (decision 0011, points 2 and 3).** Keys have a flat face that stands off the background: one solid colour (no gradient, dome or texture), a 2 dp edge under it, a 1 dp hairline of light on its top edge and a soft 3 dp shadow, drawn by `drawFlatFace` in one draw block inside the item's bounds except the edge and shadow, which hang below (footprint and text do not move). Shapes are pills and circles. Applies to the hint keys (A B X Y START SELECT L1 R1; an A/B/X/Y cap in a button set keeps its printed colour as its face), dialog buttons (`SetupButton`: the main one in the accent, the others in the `key` face), the switch knob and the colour slider thumb. Face colours are tokens (`FlatFace`): `key` is the background moved 17 % (dark theme) or 11 % (light) toward the text; the edge is 85 % (dark) or 23 % (light) toward black; the knob is a pale face on both themes. Pressed: the hint cap sinks into its collar in its darker pressed tone, the letter kept. Focus stays the ring plus halo. Tracks and fields are sunken (`drawSunken`): the switch track, the slider track, text fields (`sunkenField`, a `sel2` pill reaching 10 / 5 dp past the text's box so the row does not grow) and the progress bar get a 1 dp inset shadow on the top edge (black, 55 % on a dark theme, 28 % on a light one). Checked by `FlatFaceScreenshotTest` (shots `flat_face_*`).
 - **Collar (`drawCollar` / `Modifier.collar` in `core-ui/components/Collar.kt`).** Every touchable part sits in a lip (a soft rim of the surface's own colour: a crest (about 1.3 dp, the board's 2 px at 1.5x) of lighter tone along the top edge, the body, a darker band under, a three-layer drop shadow below), then a fine groove, then the part itself; the collar is added outside the part, which keeps its size. Sizes (dp, lip + groove; the bottom is larger): control (button, switch, slider, segment, swatch, field) 5.33 + 1.33, bottom 6 + 2; small key (hint, keyboard) 2.5 + 1, bottom 3 + 1.5; box cover 2.5 + 1.5, bottom 3 + 1.5. The outer corner is the part's radius + groove + lip. Colours derive from the background and text (`CollarLook.of`: lip top/body/bottom and groove as shares of the way to the text, white, black or (Paper's groove and ring) the brown shade, matching the board on Graphite and Paper). Soft shadows are cached Gaussian images of the rounded shape (the slab's in `SoftImages.drops`), so no step shows (`SoftShadowStepTest`). A Paper cap's own shadow is the board's brown at 5.8 % (`FlatFace.LIGHT_CAP_SHADOW`): it tints the groove ring beside the cap to the board's #C4BBAF at rest. `groove` is the sunken track tone (slider track, off switch: Paper #D7D0C3); `ring` is the groove ring between lip and part (Paper #CCC4B8, a step darker; the same as `groove` on a dark theme). A Paper text field's fill is `FieldDimens.well` (#E0DBD0), its ring the collar's. Hint bar labels use `hintLabel` (Graphite #9699A0, Paper = `body` #4C4942). States: focus lights the groove in the accent and draws the focus halo (none on light themes) outside the lip, animated 0..1; pressed sinks the part (`drawFlatFace` press); off is a flat sunken part (`keyOff`, no edge or shadow) with `muted` text, never an opacity; error draws the groove in `danger`. The dark shadow reaches 3 dp at the sides and 6 dp under the lip; the light themes' (`CollarLook.softShadow`) is the board's `0 10px 22px` in brown at 10 %, a Gaussian of sigma 7.33 dp 6.67 dp lower in 16 stacked layers (`CollarDimens.softShadow*`, `drawCollarShadow`): about 9 dp at the sides, 2.7 above, 16 under. The focus glow reaches 14 dp around it, so leave that unclipped and keep collared parts at least 6 dp apart (10 dp where a lit halo must not be covered by the sibling drawn later). Focused and in error: the groove stays the danger colour and an accent ring is drawn just outside the lip.
 - **Collar sizes (V2 board, 1.5 px per dp; `CollarSize`, pinned by `PartSizesBoardTest`).** Control: lip 5.33 and groove 1.33 (6 and 2 under). Key (swatch, choice mark): lip 2.67, groove 1.33 (3.33 and 2 under): swatch 34.7 x 36, choice 24 x 25.3. Hint (hint keys): lip 2.67, groove 0.67 (3.33 and 1.33 under): single key 29.3 x 28.7 around a 22.67 x 20.67 cap; a wide key (START, L1 R1) pads its label `HintKeyDimens.capPadding` 8.67 each side (board `0 13px`), a button 20 (board 30 px): our type is bigger (16 sp against 14.7), so they are wider by their text only, never by padding. Segment: lip 4, groove 1.33 (4.67 and 2 under) plus the tray's 2 dp: 45.3 high around a 29.33 pill. Field: lip 4, groove 1.33 (4.67 and 2 under) around a well of 37.3 dp times the text size: 49.3 high. Slider: lip 5.33 above and below a 7.33 track (18 high), the fill and hue band 1 dp inside the track (5.3). The drop shadow reaches 8 dp (4 dp below the part's top edge): 4 dp each side, none above.
@@ -779,7 +864,28 @@ Checked by `SettingsColorsPanelFit{768,576,Thor}Test` (every font, six sizes); s
 - **Press and hover of a key** (decision 0011). Pressed (a finger, the confirm button on a focused button, the held button on its hint key): the face moves down by the edge (2 dp) into it, the edge disappears and the shadow fades away, the content on the face moves with it, and the face takes its darker pressed tone with an inner top shade (hint key and button alike, never a fill in the text colour). Down over `PRESS_IN_MS` (60 ms), up over `KEY_PRESS_OUT_MS` (140 ms; rows and cells keep `PRESS_OUT_MS`, 100 ms), ease-out; a press shorter than 100 ms still shows the whole dip. A focused button, or one under a mouse or stylus (Compose hover; hover never moves the focus), is raised: the face 1 dp higher, the edge 3 dp, a little more shadow, the face a touch lighter (`RAISE_MS`, 100 ms), on top of the ring and halo; the others rest. A tap anywhere on a Settings switch row widens its knob too. A switch's knob slides between its ends and grows a quarter wider while pressed (`on` knob is `onAccent`); the colour slider's thumb goes down while a finger holds or drags it. With animations off (the app setting or the animator scale 0) every change is instant, and a press still shows at once (face down plus colour flash). A cancelled press (finger dragged off, focus lost, the screen closed) returns to rest. One `KeyState` per key (`rememberKeyState`, `keyDrive`, `flatKey` in `components/KeyState.kt`), read only in draw and layer blocks: a press redraws that key and recomposes nothing; layout never changes. Checked by `KeyPressFramesTest` (face offset at rest, pressed, back; cancel; animations off; no recomposition), `HintPressedTest`, `HintPressRecompositionTest`.
 - **Fields look the same on either keyboard, and in every row (PartsDark `Fields`, SPEC section 16)**: one core-ui frame, `FieldRowFrame` (`FieldRow` is its Android-keyboard text field; the own-keyboard lines `CaretLine` in sign-in, Fix name, Report a problem fill it). A row is an optional label column (on the row-text line), the board gap `FieldDimens.gap` (16 px = 10.67 dp), then the field: collar (lip + groove) and sunken well drawn INSIDE one box (`Modifier.fieldCollar`, `fieldContentPadding`), at least `FieldDimens.wellHeight` (56 px) plus the collar high (49.33 dp; the well grows a quarter of the text growth, `WELL_GROWTH`). Rows are `FieldDimens.gap` apart. No pill: the row has no focus fill, the cursor on it (or the input focus) lights the groove in the accent with its halo, so focus shows once. A field in error draws its groove in `danger` and tints its well 16 % toward it (`FieldDimens.errorWell`). Search keeps its own board's flat field (`sunkenField`, `searchFieldInset*`, CONFLICT F). Tests `FieldRowsBoundsTest` (box inside row, label gap, row gap, no button strip), `FieldRowFocusOnceTest`, `PartSizesBoardTest`.
 - **Slider (`PlumSlider`)**: a sunken track in a lip, the accent fill up to a cap-face knob. The hue slider's track is the board's softened spectrum (coral, amber, green, teal, blue, violet, coral at matched lightness), never a raw HSV rainbow. Locked: the empty sunken track, no fill, the knob an off cap.
-- Strip slide about 180 ms, ease-out; off when animations are off. A move within the column the
+- **One curve.** Everything that moves or appears (glides, slides, swaps, screens, fades, the focus growing)
+  runs on `PlumMotion.Decelerate` (ease-out cubic: most of the way early, a soft landing), so two things
+  moving together never part ways; CSS ease-out is left to presses and raises (a key's own dip). No springs
+  and no overshoot: a list must never look as if it ran past the game it stopped on, and every motion ends
+  on a known frame. The tokens are time, curve, distance and scale only, never a colour or a shape.
+- **Screens arrive with depth** (`SCREEN_MS` 240 ms, `SCREEN_DEPTH` 4 %): the incoming screen settles to its
+  size while it fades in, from 4 % smaller going in (Settings opening) and from 4 % larger coming back (the
+  home when Settings closes, and when a game or app started from it gives the screen back). Only the
+  incoming screen moves; the one it replaces is already gone (the home is not composed under Settings). A
+  screen that shows without being asked for (the screen waking, the first start) is there at once.
+- **Steps sideways follow their direction** (`SWAP_SHIFT_DP` 16 dp over `GLIDE_MS`): another system's
+  games on L2/R2 while the games have the focus slide in from below (next) or above (previous) while they
+  fade in; each step of a held key starts again in its direction. A setup step slides in from the right
+  going forward and from the left going back.
+- **The launch**: on Play (or an app's open) the press shows on the first frame, the home moves into the
+  focused cover or row (it grows `LAUNCH_DEPTH` 8 % about the item's centre) and dims to `LAUNCH_DIM`
+  over `SCREEN_MS`; the game's window is asked for `LAUNCH_LEAD_MS` (60 ms) in, once ours is visibly under
+  way, so Android's own opening animation takes over from ours (the lead is time added to every start), and the home never fades to black (a black frame on launch is a
+  defect). Where Android honours it the window also grows from the item (`makeScaleUpAnimation`;
+  Android 16 ignores it for another app's task). A window that has not come 2.5 s later gives the home
+  back. With motion off: no animation, no lead.
+- Strip slide about 180 ms on `Decelerate`; off when animations are off. A move within the column the
   strip is already sliding to lets the slide run on (it does not start over).
 - System names follow the strip, not the focus: their alpha goes from 1 at the systems stop to 0
   at the games stop with the strip's actual position, so they fade out as it slides to the peek.
@@ -812,8 +918,7 @@ Checked by `SettingsColorsPanelFit{768,576,Thor}Test` (every font, six sizes); s
   be cut during a glide; it stands whole at rest and once the glide ends (`HeldScrollFramesTest.gridHeld`). The ring does not follow the
   covers while they glide: it travels in the same time, so it stays in step (it stays put when its move and the scroll
   are the same row: the cover under it changes).
-- **Fade-ins**, 110 ms ease-out, alpha only: another system's list or grid on L2/R2 while the
-  games have the focus, a game panel sub-screen (Play with, Info, Choose an emulator, Fix name),
+- **Fade-ins**, 110 ms on `Decelerate`, alpha only: a game panel sub-screen (Play with, Info, Choose an emulator, Fix name),
   search opening and closing. A move in the system column swaps the preview at once (a held key
   would strobe it). A change while a fade runs lets it run on; the first content never fades.
 - **Scanning indicator**: while a library scan runs, a small accent dot (8 dp,

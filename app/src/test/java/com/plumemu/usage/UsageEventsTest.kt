@@ -2,12 +2,10 @@ package com.plumemu.usage
 
 import com.plumemu.coredata.backup.BackupKind
 import com.plumemu.coredata.settings.ColorSetting
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.GridSizeSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coredata.settings.LeftEdgeSetting
-import com.plumemu.coredata.settings.TextWeightSetting
 import com.plumemu.coreinput.Column
 import com.plumemu.graph.BackupState
 import com.plumemu.graph.RestoreResult
@@ -18,6 +16,7 @@ import com.plumemu.launcher.FileProblem
 import com.plumemu.launcher.LaunchOutcome
 import com.plumemu.launcher.choice.ChoiceSource
 import com.plumemu.settings.screen.SettingsSection
+import com.plumemu.settings.screen.OLD_DEFAULT_LOOK
 import com.plumemu.telemetry.ControllerKind
 import com.plumemu.telemetry.LaunchResult
 import com.plumemu.telemetry.ScreenId
@@ -31,11 +30,12 @@ import org.junit.Test
 class UsageEventsTest {
     @Test
     fun aColourOfThePersonsOwnIsSentAsCustomNeverItsValue() {
-        val before = PlumSettings()
-        val after = before.copy(appearance = before.appearance.copy(background = ColorSetting.Custom(0x123456), font = FontSetting.Mono))
+        // From the preset Black an install before the Plumemu default stored (a fresh install's background is already an own colour).
+        val before = PlumSettings(appearance = OLD_DEFAULT_LOOK)
+        val after = before.copy(appearance = before.appearance.copy(background = ColorSetting.Custom(0x123456)))
         val events = settingChanges(before, after)
         assertEquals(
-            setOf(mapOf("key" to "background", "value" to "custom"), mapOf("key" to "font", "value" to "mono"), mapOf("key" to "colors", "value" to "custom")),
+            setOf(mapOf("key" to "background", "value" to "custom"), mapOf("key" to "colors", "value" to "custom")),
             events.map { it.wireFields() }.toSet(),
         )
         assertNoFreeText(events)
@@ -85,14 +85,6 @@ class UsageEventsTest {
                 library = before.library.copy(scanOnStartup = false),
             )
         assertEquals(emptyList<Any>(), settingChanges(before, after))
-    }
-
-    @Test
-    fun textWeightNotPickedCountsAsMedium() {
-        val before = PlumSettings().let { it.copy(appearance = it.appearance.copy(textWeight = null)) }
-        assertEquals(emptyList<Any>(), settingChanges(before, before.copy(appearance = before.appearance.copy(textWeight = TextWeightSetting.Medium))))
-        val fields = settingChanges(before, before.copy(appearance = before.appearance.copy(textWeight = TextWeightSetting.Bold))).map { it.wireFields() }
-        assertEquals(listOf(mapOf("key" to "text_weight", "value" to "bold")), fields)
     }
 
     @Test

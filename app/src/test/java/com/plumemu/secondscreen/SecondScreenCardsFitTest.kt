@@ -36,7 +36,7 @@ import org.robolectric.annotation.GraphicsMode
 
 private const val STAR = FAVORITE_STAR
 
-/** Measured, not looked at: where the App and Apps blocks sit, what the game card's title does at every text size, and that a change of card is drawn at once. */
+/** Measured, not looked at: where the App and Apps blocks sit, what the game card's title does at every text size, and how a change of card is drawn. */
 abstract class SecondScreenCardsFitBase(
     private val size: SecondSize,
 ) {
@@ -104,9 +104,9 @@ abstract class SecondScreenCardsFitBase(
 
     @Test
     fun theStarIsNeverCutAndTheTitleStaysOnItsLineBesideTheSystemAtEveryTextSizeAndFont() {
-        for (font in PlumFont.entries) {
+        for (font in listOf(PlumFont.Jost)) {
             for (textSize in TextSize.entries) {
-                show(PlumThemeSettings.Default.copy(textSize = textSize, font = font), GAME_LONG_TITLE)
+                show(PlumThemeSettings.Default.copy(textSize = textSize), GAME_LONG_TITLE)
                 val label = "$size $font $textSize"
                 val node = compose.onNodeWithTag(GameCardTags.TITLE).fetchSemanticsNode()
                 val text = node.config[SemanticsProperties.Text].joinToString("")
@@ -142,22 +142,25 @@ abstract class SecondScreenCardsFitBase(
         return best
     }
 
-    /** No fade on the second screen: a change costs one frame, with animations on or off. */
+    /**
+     * The first card after the empty page is whole at once; another card fades in like the top screen's and is whole
+     * within a glide; with animations off every change is whole on its first frame.
+     */
     @Test
-    fun aChangeOfContentShowsTheNewBlockAtOnce() {
+    fun aFirstCardShowsAtOnceAndAChangeIsWholeWithinAGlide() {
         compose.mainClock.autoAdvance = false
         show(PlumThemeSettings.Default, GAME_NEVER_PLAYED)
         compose.mainClock.advanceTimeByFrame()
         val full = brightest()
         assertTrue("the first content is drawn at once ($full)", full > 0.5f)
         show(PlumThemeSettings.Default, GAME_WITH_STAR)
-        compose.mainClock.advanceTimeByFrame()
-        assertEquals("the new block at full brightness on its first frame", full, brightest(), 0.05f)
-        compose.mainClock.advanceTimeBy(PlumMotion.FADE_IN_MS * 2L)
+        compose.mainClock.advanceTimeBy(PlumMotion.GLIDE_MS + 32L)
+        assertEquals("the new block whole within a glide", full, brightest(), 0.05f)
+        compose.mainClock.advanceTimeBy(PlumMotion.SCREEN_MS.toLong())
         assertEquals("and nothing changes afterwards", full, brightest(), 0.05f)
         show(PlumThemeSettings.Default.copy(animationsOn = false), GAME_NEVER_PLAYED)
         compose.mainClock.advanceTimeByFrame()
-        assertEquals("the same with animations off", full, brightest(), 0.05f)
+        assertEquals("with animations off, whole on its first frame", full, brightest(), 0.05f)
     }
 
     @Test

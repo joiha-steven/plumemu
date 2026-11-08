@@ -21,7 +21,6 @@ import com.plumemu.MainScreen
 import com.plumemu.R
 import com.plumemu.content.HomeState
 import com.plumemu.coredata.settings.ColorSetting
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.ConfirmButtonSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SetupFlags
@@ -38,6 +37,7 @@ import com.plumemu.home.HomeTags
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -60,7 +60,7 @@ class SettingsScreenTest {
     val rules = rulesAround(compose)
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
-    private val settings = mutableStateOf(PlumSettings(flags = SetupFlags(setupCompleted = true, homeRoleAsked = true)))
+    private val settings = mutableStateOf(PlumSettings(appearance = OLD_DEFAULT_LOOK, flags = SetupFlags(setupCompleted = true, homeRoleAsked = true)))
     private var resetsLibrary = 0
     private lateinit var router: InputRouter
 
@@ -202,10 +202,11 @@ class SettingsScreenTest {
         send(Action.Menu)
         down()
         send(Action.Enter)
-        down(SettingsSection.Appearance.options.indexOf(SettingsOption.Font))
-        send(Action.Move(Direction.Right)) // Font › Sans
-        assertEquals(FontSetting.Sans, settings.value.appearance.font)
-        compose.onNode(androidx.compose.ui.test.hasText(context.getString(R.string.settings_font_sans)) and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag(SettingsTags.value(SettingsOption.Font))), useUnmergedTree = true).assertIsDisplayed()
+        down(SettingsSection.Appearance.options.indexOf(SettingsOption.TextSize))
+        send(Action.Move(Direction.Right)) // Text size › the next size
+        val picked = settings.value.appearance.textSize
+        assertNotNull("the pick is stored", picked)
+        compose.onNode(androidx.compose.ui.test.hasText(context.getString(choiceName(SettingsOption.TextSize, picked!!.ordinal))) and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag(SettingsTags.value(SettingsOption.TextSize))), useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
@@ -260,11 +261,11 @@ class SettingsScreenTest {
         compose.waitForIdle()
         compose.onNodeWithTag(SettingsTags.section(SettingsSection.Appearance)).performScrollTo().performClick()
         compose.waitForIdle()
-        // At the default size Font is below Appearance's window until the cursor is near it: put the cursor on the row after it, so Font is shown and not focused.
-        down(SettingsSection.Appearance.options.indexOf(SettingsOption.TextSize))
-        compose.onNodeWithTag(SettingsTags.value(SettingsOption.Font)).performClick()
+        // At the default size Text size may be below Appearance's window until the cursor is near it: put the cursor on the row before it, so it is shown and not focused.
+        down(SettingsSection.Appearance.options.indexOf(SettingsOption.TextSize) - 1)
+        compose.onNodeWithTag(SettingsTags.value(SettingsOption.TextSize)).performClick()
         compose.waitForIdle()
-        assertEquals("a tap on the chevrons goes to the next value", "Sans", settings.value.appearance.font.name)
+        assertNotNull("a tap on the chevrons goes to the next value", settings.value.appearance.textSize)
 
         compose.onNodeWithTag(SettingsTags.value(SettingsOption.Colors)).performClick() // Colors' panel, then its Background row: the first tap focuses it, the second opens its page
         compose.waitForIdle()
@@ -272,7 +273,7 @@ class SettingsScreenTest {
             compose.onNodeWithTag(SettingsTags.panelItem(COLORS_BACKGROUND_ITEM)).performScrollTo().performClick()
             compose.waitForIdle()
         }
-        compose.onNodeWithTag(SettingsTags.panelItem(0)).performClick() // Graphite (the default is Black), in the panel beside
+        compose.onNodeWithTag(SettingsTags.panelItem(0)).performClick() // Graphite (the start is Black), in the panel beside
         compose.waitForIdle()
         assertEquals(ColorSetting.Preset("Graphite"), settings.value.appearance.background)
     }

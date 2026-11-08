@@ -49,6 +49,7 @@ import com.plumemu.coreui.theme.FocusSlab
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.LeftColumnDimens
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.PlumFonts
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.SlabDimens
@@ -216,7 +217,7 @@ private fun yearStyle(
         else -> type.rowYear.copy(color = colors.muted)
     }
 
-/** A region or system code in [look]: tracked caps 600, resting `muted`, current accent, on the focused slab brighter and as heavy (dark) or one face heavier (light; the board's 600 / 700). */
+/** A region or system code in [look]: Mono 11, resting `muted`, current accent, on the focused slab brighter and as heavy (dark) or one face heavier (light; the board's 600 / 700). */
 private fun codeStyle(
     look: GameRowLook,
     colors: PlumComposeColors,
@@ -230,12 +231,15 @@ private fun codeStyle(
     }
 }
 
-/** The board's resting weights of the year and the region, from which the focused ones step. */
+/** The board's resting weights of the year and the region, from which the focused ones step (the mono tag rests at 500, a step under its 600, so its focused weights sit a step under the board's). */
 private const val BOARD_YEAR_WEIGHT = 400
 private const val BOARD_REGION_WEIGHT = 600
+private const val MONO_MAX_FOCUS_WEIGHT = 500
 
 /** This style's weight [by] heavier (whole faces, capped at the heaviest, 800). */
-private fun TextStyle.heavierBy(by: Int): FontWeight = FontWeight(((fontWeight?.weight ?: BOARD_YEAR_WEIGHT) + by).coerceAtMost(800))
+private fun TextStyle.heavierBy(by: Int): FontWeight =
+    // Mono never goes above its 500 face (a 600 would draw the bold 700 face): focus is said by the brighter ink there.
+    FontWeight(((fontWeight?.weight ?: BOARD_YEAR_WEIGHT) + by).coerceAtMost(if (fontFamily == PlumFonts.Mono) MONO_MAX_FOCUS_WEIGHT else 800))
 
 private val DefaultRowEndPadding: () -> Dp = { PlumDimens.gameRowEndPadding }
 
@@ -565,12 +569,12 @@ private fun SystemCount(
             SystemRowLook.Current -> { { colors.accent } }
         }
     Spacer(Modifier.width(PlumDimens.rowTrailingGap))
-    BasicText(text = count, modifier = (if (fade) Modifier.fadedBy(nameAlpha) else Modifier).hiddenWhile(hidden).testTag(SystemRowTags.COUNT), style = PlumTheme.type.meta, color = color, maxLines = 1)
+    BasicText(text = count, modifier = (if (fade) Modifier.fadedBy(nameAlpha) else Modifier).hiddenWhile(hidden).testTag(SystemRowTags.COUNT), style = PlumTheme.type.systemRowCount, color = color, maxLines = 1)
 }
 
 /** Draws at [alpha], read while drawing; no offscreen buffer per row while the names fade (dot and name do not overlap). */
 private fun Modifier.fadedBy(alpha: () -> Float): Modifier =
-    graphicsLayer {
+    plainLayer {
         this.alpha = alpha()
         compositingStrategy = CompositingStrategy.ModulateAlpha
     }

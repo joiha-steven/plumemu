@@ -4,9 +4,9 @@ import android.text.format.Formatter
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
@@ -19,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import com.plumemu.R
 import com.plumemu.account.AccountStatus
 import com.plumemu.coredata.backup.BackupKind
+import com.plumemu.coreui.theme.FlatPartDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.graph.BackupFailure
@@ -159,7 +160,7 @@ internal fun BackupPanel(
                     isPrimary = item == BackupPanelItem.Everything,
                     isFocused = isFocused,
                     maxLines = 2,
-                    modifier = Modifier.fillMaxWidth().bringIntoViewWhen(isFocused, ring = PlumDimens.focusRingOutset).tapTarget { touch.onPanelItem(index) }.testTag(SettingsTags.panelItem(index)),
+                    modifier = Modifier.fillMaxWidth().bringIntoViewWhen(isFocused, ring = FlatPartDimens.focusRimRoom).tapTarget { touch.onPanelItem(index) }.testTag(SettingsTags.panelItem(index)),
                 )
             }
         }

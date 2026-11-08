@@ -44,7 +44,7 @@ class InfoGeometryMotionTest {
 
     private fun check(size: TextSize) {
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = PlumFont.Serif, animationsOn = isMotionOn)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, animationsOn = isMotionOn)) {
                 HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = panel)
             }
         }

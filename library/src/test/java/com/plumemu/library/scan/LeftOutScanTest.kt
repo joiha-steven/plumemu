@@ -132,6 +132,25 @@ class LeftOutScanTest {
     }
 
     @Test
+    fun aDirectoryMadeAgainAtTheSamePathIsRecordedSoALaterAdditionIsFound() = runTest {
+        library()
+        fixture.scan()
+        File(fixture.roms, "psx").deleteRecursively()
+        file("psx/Game (USA).chd")
+        fixture.tree.recreatedDirectories["psx"] = "new:psx"
+        fixture.roms.walkTopDown().filter { it.isDirectory }.forEach { it.setLastModified(ScanFixture.BASE_TIME) }
+        fixture.touch("", step = 2)
+        fixture.scan()
+        val psx = fixture.db.scanDao().directories(fixture.folderId).filter { it.relativePath == "psx" }
+        assertEquals("the new psx/ is recorded by its new id", listOf("new:psx"), psx.map { it.documentId })
+        // Something added to it later changes only its own time: the rescan must ask it.
+        file("psx/Other (USA).chd")
+        fixture.touch("psx", step = 3)
+        fixture.scan()
+        assertTrue("the later addition is found: ${fixture.games().map { it.fileName }}", fixture.games().any { it.fileName == "Other (USA).chd" })
+    }
+
+    @Test
     fun anUpgradedLibraryListsEachDirectoryOnceAndKeepsItsGames() = runTest {
         library()
         fixture.scan()

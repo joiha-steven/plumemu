@@ -4,8 +4,8 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.TypedKey
 import com.plumemu.coreui.components.keyboard.KeyboardEvent
+import com.plumemu.coredata.settings.LeftEdgeSetting
 import com.plumemu.coredata.settings.ColorSetting
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.sound.Outcome
 import com.plumemu.sound.Reported
 import org.junit.Assert.assertEquals
@@ -25,7 +25,7 @@ internal class SettingsSoundsTest : SettingsModelHarness() {
 
     @Test
     fun aWrongHexCodeTriedWithPlumemusDoneConfirmsAsUseThisColourDoes() {
-        startOnRedSans() // the "+" is six Rights past the Red-first accent presets
+        startOnRed() // the "+" is six Rights past the Red-first accent presets
         openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.Accent)
         press(Action.Enter)
@@ -94,7 +94,7 @@ internal class SettingsSoundsTest : SettingsModelHarness() {
     @Test
     fun aTapThatOnlyFocusesOrStepsBackMovesAndNeverConfirms() {
         tapped { model.onTapSection(SettingsSection.Appearance) }
-        val textColor = SettingsSection.Appearance.options.indexOf(SettingsOption.TextWeight)
+        val textColor = SettingsSection.Appearance.options.indexOf(SettingsOption.TextSize)
         assertEquals("first tap on a choice row from the sections", listOf(Outcome.Moved), tapped { model.onTapOption(textColor, actions.settings, wide) })
         assertEquals("a tap on a section from the options steps back", listOf(Outcome.Moved), tapped { model.onTapSection(SettingsSection.Appearance) })
     }
@@ -143,12 +143,11 @@ internal class SettingsSoundsTest : SettingsModelHarness() {
 
     @Test
     fun aChoiceAtItsEndSaysNothingAndWrapsWithAConfirm() {
-        openSection(SettingsSection.Appearance)
-        focusOption(SettingsOption.Font)
-        actions.settings = actions.settings.copy(appearance = appearance.copy(font = FontSetting.Jost))
+        openSection(SettingsSection.HomeScreen)
+        focusOption(SettingsOption.LeftEdge)
+        actions.settings = actions.settings.copy(appearance = appearance.copy(leftEdge = LeftEdgeSetting.Counts))
         reported.drain()
         assertEquals("first value, Left", emptyList<Outcome>(), heard(Direction.Left))
-        assertEquals(listOf(Outcome.Moved), heard(Direction.Right))
         assertEquals(listOf(Outcome.Moved), heard(Direction.Right))
         assertEquals(listOf(Outcome.Moved), heard(Direction.Right))
         assertEquals("last value, Right", emptyList<Outcome>(), heard(Direction.Right))

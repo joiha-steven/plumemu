@@ -44,7 +44,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Settings › Statistics' page at every text size, the way `TextSizeScreensTest` checks the other Settings sections (kept
- * apart: that file is at the length limit): at the six sizes in Plum Sans and at Large and Largest in Serif and Mono, no
+ * apart: that file is at the length limit): at the six sizes in Jost, no
  * text is ellipsized, clipped sideways, too short or on top of another (the page scrolls, so a line may be cut at its top
  * or bottom edge only), the focused game is whole and clear of the hint bar, and every tile's figure is whole.
  */
@@ -73,14 +73,11 @@ abstract class SettingsStatisticsFitBase(
         screen: @Composable () -> Unit,
     ) {
         var size by mutableStateOf(TextSize.Largest)
-        var font by mutableStateOf(PlumFont.Sans)
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { screen() } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { screen() } }
         val combinations =
-            TextSize.entries.map { PlumFont.Sans to it } +
-                listOf(PlumFont.Serif, PlumFont.Mono).flatMap { listOf(it to TextSize.Large, it to TextSize.Largest) }
+            TextSize.entries.map { PlumFont.Jost to it }
         val failures = mutableListOf<String>()
         for ((eachFont, each) in combinations) {
-            font = eachFont
             size = each
             compose.waitForIdle()
             val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
@@ -112,7 +109,7 @@ abstract class SettingsStatisticsFitBase(
             // A figure scrolled out of the window (the page follows the cursor) has nothing to check.
             if (figure.boundsInRoot.width <= 0f) continue
             // Up to Large in Plum Sans a figure is one line; at the larger sizes it may take its second line (maxLines = 2), whole and not ellipsized.
-            if (strict && font == PlumFont.Sans && textSize <= TextSize.Large) runCatching { assertNoTextCut(figure, "$label: ${tile.name} figure") }.exceptionOrNull()?.let { problems += it.message.orEmpty() }
+            if (strict && font == PlumFont.Jost && textSize <= TextSize.Large) runCatching { assertNoTextCut(figure, "$label: ${tile.name} figure") }.exceptionOrNull()?.let { problems += it.message.orEmpty() }
             if (figure.size.width > box.size.width) problems += "$label: the ${tile.name} figure is wider than its tile (${figure.size.width} > ${box.size.width} px)"
             seen++
         }
@@ -214,7 +211,7 @@ abstract class SettingsStatisticsFitBase(
             "statistics_unreadable_whole",
             extra = { root, label, size, font ->
                 val hint = findTagged(root, SettingsTags.HINT_BACK)
-                if (size == TextSize.Largest && (font != PlumFont.Sans || heightDp < 432)) return@check emptyList()
+                if (size == TextSize.Largest && (font != PlumFont.Jost || heightDp < 432)) return@check emptyList()
                 listOf(StatisticsTags.EXACT_PLAY_TIME, StatisticsTags.EXACT_PLAY_TIME_BODY, StatisticsTags.FOOTER).mapNotNull { tag ->
                     val node = findTagged(root, tag)
                     when {

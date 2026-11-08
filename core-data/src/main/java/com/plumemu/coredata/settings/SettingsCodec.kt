@@ -23,9 +23,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
                 background = color(p, Keys.background, d.appearance.background),
                 textColor = textColor(p, d.appearance.textColor),
                 accent = color(p, Keys.accent, d.appearance.accent, bySystem = true),
-                font = enum(p, Keys.font, d.appearance.font),
                 textSize = decodeTextSize(p),
-                textWeight = optionalEnum<TextWeightSetting>(p, Keys.textWeight),
                 leftEdge = optionalEnum<LeftEdgeSetting>(p, Keys.leftEdge),
                 edgeFade = p[Keys.edgeFade] ?: d.appearance.edgeFade,
                 gridSize = enum(p, Keys.gridSize, d.appearance.gridSize),
@@ -92,13 +90,14 @@ internal class SettingsCodec(private val log: SettingsLog) {
         p[Keys.background] = encodeColor(s.appearance.background)
         p[Keys.textColor] = s.appearance.textColor.stored
         p[Keys.accent] = encodeColor(s.appearance.accent)
-        p[Keys.font] = s.appearance.font.name
+        // The Font setting is gone (Jost only): drop a value an older build stored.
+        p.remove(Keys.font)
         // Not picked yet is a missing key, so a later screen change still moves the default.
         p[Keys.textSizePickMarked] = true
         val textSize = s.appearance.textSize
         if (textSize == null) p.remove(Keys.textSize) else p[Keys.textSize] = textSize.name
-        val textWeight = s.appearance.textWeight
-        if (textWeight == null) p.remove(Keys.textWeight) else p[Keys.textWeight] = textWeight.name
+        // The Text weight setting is gone (one weight scale): drop a value an older build stored.
+        p.remove(Keys.textWeight)
         val leftEdge = s.appearance.leftEdge
         if (leftEdge == null) p.remove(Keys.leftEdge) else p[Keys.leftEdge] = leftEdge.name
         p[Keys.edgeFade] = s.appearance.edgeFade
@@ -236,10 +235,12 @@ internal class SettingsCodec(private val log: SettingsLog) {
         val background = stringPreferencesKey("appearance.background")
         val textColor = stringPreferencesKey("appearance.text_color")
         val accent = stringPreferencesKey("appearance.accent")
+        /** Kept only so [encode] can remove what older builds stored. */
         val font = stringPreferencesKey("appearance.font")
         val textSize = stringPreferencesKey("appearance.text_size")
         /** Set by every save from the six-size build on: from then a stored text size is a pick. */
         val textSizePickMarked = booleanPreferencesKey("appearance.text_size_pick_marked")
+        /** Kept only so [encode] can remove what older builds stored. */
         val textWeight = stringPreferencesKey("appearance.text_weight")
         val leftEdge = stringPreferencesKey("appearance.left_edge")
         val edgeFade = booleanPreferencesKey("appearance.edge_fade")

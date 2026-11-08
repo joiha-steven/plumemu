@@ -46,7 +46,7 @@ abstract class GameMenuAchievementsFitBase(private val label: String) {
     ): List<String> {
         val panel = OpenPanel(game, PanelScreen.Menu(sampleFacts(title = game.title, canFixBoxArt = true, achievementCount = AchievementCount(12, 40))), focus = focus)
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest, font = font)) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = panel) }
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = panel) }
         }
         compose.waitForIdle()
         val root = compose.onNodeWithTag(GamePanelTags.PANEL, useUnmergedTree = true).fetchSemanticsNode()
@@ -62,22 +62,17 @@ abstract class GameMenuAchievementsFitBase(private val label: String) {
     private fun assertNone(failures: List<String>) = assertTrue(failures.size.toString() + " problems:\n" + failures.take(20).joinToString("\n"), failures.isEmpty())
 
     @Test
-    fun achievementsRowFocused() = assertNone(problemsAt(5, PlumFont.Sans))
+    fun achievementsRowFocused() = assertNone(problemsAt(5, PlumFont.Jost))
 
     @Test
-    fun infoRowFocused() = assertNone(problemsAt(6, PlumFont.Sans))
+    fun infoRowFocused() = assertNone(problemsAt(6, PlumFont.Jost))
 
     @Test
-    fun hideRowFocusedLast() = assertNone(problemsAt(7, PlumFont.Sans))
+    fun hideRowFocusedLast() = assertNone(problemsAt(7, PlumFont.Jost))
 
     @Test
-    fun boxArtRowFocused() = assertNone(problemsAt(4, PlumFont.Sans))
+    fun boxArtRowFocused() = assertNone(problemsAt(4, PlumFont.Jost))
 
-    @Test
-    fun achievementsRowFocusedInSerif() = assertNone(problemsAt(5, PlumFont.Serif))
-
-    @Test
-    fun achievementsRowFocusedInMono() = assertNone(problemsAt(5, PlumFont.Mono))
 }
 
 @RunWith(RobolectricTestRunner::class)

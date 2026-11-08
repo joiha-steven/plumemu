@@ -56,7 +56,7 @@ internal fun boxArtPanelEntries(content: SettingsContent): List<BoxArtPanelEntry
 
 /**
  * What can be done about box art with no usable account, by the source in force. A usable account and a
- * refused one on ScreenScraper keep all of it in ScreenScraper's panel. Box art only: Download missing,
+ * refused one on ScreenScraper keep all of it in ScreenScraper's panel. Default source: Download missing,
  * Re-download all and Choose systems… (with more than one system) with games in the library, Clear box art…, Resume while paused (a pause outlives the account, and nothing else
  * lifts it), Box art region (libretro picks by it too). Own covers, and ScreenScraper with nobody signed in:
  * no run can start, so only Clear box art…: saved pictures stay until then.
@@ -100,7 +100,7 @@ internal fun BoxArtSourcePanel(
 ) {
     val form = model.signIn.form
     if (form != null && form.kind == SignInKind.ScreenScraper && model.focus.page == PanelPage.ScraperSignIn) {
-        SignInPage(stringResource(R.string.settings_account_title), form, touch)
+        SignInPage(stringResource(R.string.settings_account_title), form, touch) { PanelBody(stringResource(R.string.settings_account_sign_up)) }
         return
     }
     val content = model.content

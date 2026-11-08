@@ -99,6 +99,7 @@ class SetupConfirmLookTest {
         press(model, Action.Enter)
         assertEquals(ColorSet.Plumemu, source.appliedLook?.first)
         assertNull("no suggestion: the text size is left alone", source.appliedLook?.second)
+        assertEquals("not OLED: the set's own ink page", false, source.appliedBlackPage)
         assertEquals(SetupStep.BoxArt, model.state.value.step)
     }
 
@@ -112,6 +113,7 @@ class SetupConfirmLookTest {
         press(model, Action.Enter)
         assertEquals(ColorSet.Plumemu, source.appliedLook?.first)
         assertNull("a 16:9 screen keeps the text size", source.appliedLook?.second)
+        assertEquals("OLED: true black under the default set's accent", true, source.appliedBlackPage)
     }
 
     @Test
@@ -152,8 +154,8 @@ class SetupConfirmLookTest {
         assertEquals(SetupStep.BoxArt, model.state.value.step)
         val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
         source.writeGate = gate
-        press(model, Action.TapItem(Column.Games, 0)) // Box art only (no ScreenScraper keys)
-        press(model, Action.TapItem(Column.Games, 1)) // Plumemu's own covers, too late
+        press(model, Action.TapItem(Column.Games, 1)) // Yes: libretro (no ScreenScraper keys)
+        press(model, Action.TapItem(Column.Games, 0)) // No, too late
         gate.complete(Unit)
         runCurrent()
         assertEquals(BoxArtSourceSetting.LibretroOnly, source.boxArtSource.value)
@@ -212,7 +214,7 @@ class SetupConfirmLookTest {
     @Test
     fun theLibraryStepHasOnlyTheStatisticsRowAndStartPlaying() = runTest {
         val model = modelWithAFolder()
-        press(model, Action.Enter, Action.Enter, Action.Enter)
+        press(model, Action.Enter, Action.Enter, Action.Move(Direction.Down), Action.Enter)
         source.endScan()
         runCurrent()
         assertEquals(SetupStep.Ready, model.state.value.step)

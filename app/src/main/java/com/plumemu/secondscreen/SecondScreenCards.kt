@@ -1,5 +1,6 @@
 package com.plumemu.secondscreen
 
+import com.plumemu.coreui.theme.fadingIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxScope
@@ -101,7 +102,11 @@ internal fun SecondScreenCard(
     BoxWithConstraints(modifier.fillMaxSize().background(colors.bg).then(if (hasBackdropGlow(content)) Modifier.backdropGlow() else Modifier).testTag(SecondScreenTags.CARD)) {
         val dimens = SecondScreenDimens.forShorterSide(minOf(maxWidth, maxHeight))
         ProvideSecondScreenText {
-            CompositionLocalProvider(LocalBatteryReading provides battery, LocalCardLine provides true) { PickingWindowCard(content, dimens, images) }
+            // The card comes in from the side the cursor went, or with depth for Settings; the page under it stays.
+            val swap = rememberCardSwap(content)
+            CompositionLocalProvider(LocalBatteryReading provides battery, LocalCardLine provides true) {
+                Box(Modifier.fillMaxSize().fadingIn(swap)) { PickingWindowCard(content, dimens, images) }
+            }
         }
     }
 }

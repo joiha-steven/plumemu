@@ -22,6 +22,8 @@ internal object SetupTags {
     const val USAGE_SWITCH = "setup_usage_switch"
     const val FOUND = "setup_found"
     const val DOT = "setup_dot"
+    const val POINT_DOT = "setup_point_dot"
+    const val POINT_TEXT = "setup_point_text"
     const val BOX_ART = "setup_box_art"
     const val LOOK_TILE = "setup_look_tile"
     const val BOX_ART_COMING = "setup_box_art_coming"

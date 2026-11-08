@@ -69,7 +69,7 @@ class PlumDimensTest {
     fun gridMatchesTheBoardMarkup() {
         // RP5-3 / RP5-4: gaps 22 / 20 (the board's were 14 / 12), padding 4, corners 8 / 6, cover padding 12 / 10, bar gap 16.
         assertEquals(listOf(22.dp, 20.dp), listOf(PlumDimens.gridGapLandscape, PlumDimens.gridGapPortrait))
-        assertEquals(listOf(8.dp, 6.dp), listOf(PlumDimens.cornerCoverLandscape, PlumDimens.cornerCoverPortrait))
+        assertEquals(listOf(6.dp, 6.dp), listOf(PlumDimens.cornerCoverLandscape, PlumDimens.cornerCoverPortrait))
         assertEquals(listOf(12.dp, 10.dp, 9.dp), listOf(PlumDimens.coverPaddingLandscape, PlumDimens.coverPaddingPortrait, PlumDimens.gridHintGap))
         // Focus ring 2.5 wide, 3 away: it reaches 5.5 past the cover; the focus halo reaches 10 more (at Depth.GLOW_REACH) in 7 bands.
         assertEquals(listOf(2.5.dp, 3.dp, 5.5.dp), listOf(PlumDimens.focusRingWidth, PlumDimens.focusRingGap, PlumDimens.focusRingOutset))

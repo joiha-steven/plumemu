@@ -10,7 +10,6 @@ import androidx.compose.ui.Modifier
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
-import com.plumemu.settings.ButtonLetters
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -34,7 +33,7 @@ class MainScreenMessagesScreenshotTest {
         ReferenceShots.capture("home_library_error") {
             val scope = rememberCoroutineScope()
             val router = remember { InputRouter(scope, onDebug = {}) }
-            OnBackground { LibraryError(router, ButtonLetters.Default, onRetry = {}, onSettings = {}) }
+            OnBackground { LibraryError(router, onRetry = {}, onSettings = {}) }
         }
 
     @Test

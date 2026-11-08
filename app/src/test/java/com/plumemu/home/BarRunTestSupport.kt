@@ -2,15 +2,17 @@ package com.plumemu.home
 
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.theme.PlumDimens
 
 /**
- * A column's node now runs from bar to bar (BarRun.kt); its slot is the strip the layout gave before: [PlumDimens.barGap] under the top
- * bar to [PlumDimens.footerGap] over the hint bar. What does not scroll stands in the slot; rows may run through the gaps, never into a bar.
+ * A column's node runs from the top bar to the hint bar's gap (BarRun.kt); its slot is the strip the layout gave before: [PlumDimens.barGap]
+ * under the top bar to [PlumDimens.footerGap] over the hint bar, where the node ends too. What does not scroll stands in the slot; rows may
+ * run through the top gap, never into a bar.
  */
 internal fun DpRect.slot(
     top: androidx.compose.ui.unit.Dp = PlumDimens.barGap,
-    bottom: androidx.compose.ui.unit.Dp = PlumDimens.footerGap,
+    bottom: androidx.compose.ui.unit.Dp = 0.dp,
 ): DpRect = DpRect(left, this.top + top, right, this.bottom - bottom)
 
 /** The bounds in root px of everything the two home bars draw themselves (their texts and keys), 4 dp round each: what a row under a bar may share a pixel with. */

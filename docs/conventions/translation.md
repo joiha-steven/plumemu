@@ -47,7 +47,7 @@ Do not translate or transliterate:
 - **Button letters and names** on key caps: A B X Y, L1 R1, L2 R2, START, SELECT. They are
   `translatable="false"`; a hint's label next to them is translated ("Select", "Back").
 - **Game titles** and **emulator names**: data, never in strings.
-- Font names Plum Sans, Plum Serif, Plum Mono; licence names (MIT, Apache 2.0, OFL).
+- Font names Jost, Plum Mono; licence names (MIT, Apache 2.0, OFL).
 - Units with numbers stay the language's usual abbreviations (`%1$s min`, `%1$s h`, `MB`, `GB`).
 
 ## Glossary
@@ -73,7 +73,6 @@ below, and keep to it.
 | restore | Put a backup's contents back. "Undo restore" returns to the state before. |
 | accent | The colour of the focus mark and highlights (Settings › Appearance › Accent color). |
 | text size | Settings › Appearance › Text size: Small, Medium, Large, Larger, Largest. |
-| text weight | Settings › Appearance › Text weight: Thin, Medium, Bold (how heavy the letters are drawn). |
 | left strip | Settings › Home screen › Left strip: Game counts, System codes, Letters (what the narrow strip on the left shows in a games list). |
 | second screen | The bottom screen of a two-screen device (AYN Thor). |
 | home screen | Android's home screen; "Plumemu as the home screen" means the home app. |
@@ -123,20 +122,20 @@ reference shots run in the gate; a translation that overflows is shortened, not 
 
 ## Fonts
 
-Checked with fontTools on `core-ui/src/main/res/font/` (Plum Sans 0.0.3, Serif and
-Mono 0.0.2, every weight):
+Text is drawn in Jost only (the Font setting is gone); Plum Mono draws standalone
+figures and codes, never words. Checked with fontTools on `core-ui/src/main/res/font/`, the five
+Jost faces (400 to 800, built by `tools/fonts/build_jost.py`):
 
 - **Vietnamese**: all 144 precomposed vowel letters with their tones (both cases) and &#272;/&#273;
-  are in all three fonts (146 of 146 checked). Missing are the combining circumflex (U+0302), breve
-  (U+0306) and horn (U+031B), so decomposed text would fall back letter by letter: hence NFC (the
-  guard). The tallest stacked capitals (&#7892;, &#7858;) rise above Plum Sans's ascender by 0.06 em (Serif
-  and Mono stay inside); rows and hint labels have room for it at every size (shot
-  `script_vietnamese_*`, all three fonts).
-- **Spanish**: every letter and the inverted marks are in all three fonts.
+  are in every Jost face, and so are the combining circumflex (U+0302), breve (U+0306) and horn
+  (U+031B); text is still stored in NFC (the guard), as the shots are drawn from it. The tallest
+  stacked capitals (&#7892;, &#7858;) stay just inside Jost's ascender (0.005 to 0.009 em below);
+  rows and hint labels have room for them at every size (shot `script_vietnamese_*`).
+- **Spanish**: every letter and the inverted marks are in every Jost face.
 - **French**: every accented letter (&#224; &#226; &#231; &#233; &#232; &#234; &#235; &#238; &#239; &#244; &#249; &#251; &#252; &#255;, &#339;, their capitals) and the
-  no-break space U+00A0 are in all three fonts. The narrow no-break space U+202F is in Plum Sans
-  only, so French uses U+00A0 before `: ; ? !`.
-- **Chinese, Korean, Japanese**: no Plum font has them. Compose builds each font family from
+  no-break space U+00A0 are in every Jost face. The narrow no-break space U+202F is not, so French
+  uses U+00A0 before `: ; ? !`.
+- **Chinese, Korean, Japanese**: neither Jost nor Plum Mono has them. Compose builds each font family from
   resource fonts, and Android's text engine falls back per character to the system's CJK font
   (Noto Sans CJK on Android 6 and later, the Thor's own on Android 13), so mixed text works with
   no change in `PlumFonts`. The Han forms (Chinese Simplified, Traditional or Japanese shapes of

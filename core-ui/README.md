@@ -20,7 +20,7 @@ sources where colour, dp and sp literals may appear.
 | `theme/Rgb.kt` | `Rgb`, an opaque `0xRRGGBB` colour; hex parsing and the board's rounding |
 | `theme/ColorMath.kt` | `mix`, `luminance`, `contrast`, `reach`, `fromHsl`, ported from the design board |
 | `theme/FocusHalo.kt` | The focus halo's colour (accent lightness clamped 0.50-0.66) and peak alpha (32 %, lower for bright accents); none on a light background |
-| `theme/PosterPalette.kt` | `PosterLook`, `POSTER_PALETTE` (23 looks for poster covers), `posterTitleKey`, `posterLookIndex`, and the poster cover's colour and size constants |
+| `theme/PosterPalette.kt` | `PosterLook` (an app game card's colours), the card's frame, shadow and floor constants, and the drawn box front's tint (`BOX_TINT_*`) |
 | `theme/ColorPresets.kt` | `TextMode` (Light/Dark), `BackgroundPreset` (8), `AccentPreset` (6, two colour sets) |
 | `theme/ColorChoices.kt` | `BackgroundChoice` and `AccentChoice`: a preset or the person's own colour |
 | `theme/ColorSets.kt` | `ColorSet`: the ten ready-made sets of Settings › Appearance › Colors, `matching` (the current set, derived from the three colours), A/B/X/Y glyph colours by letter (`ButtonColors`), drawn on the hint key caps through `PlumTheme.buttons` while the set is current (`keyCapLook` in `components/Bars.kt`); tests `ColorSetsTest`, `KeyCapLookTest` |

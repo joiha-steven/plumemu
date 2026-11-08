@@ -5,7 +5,6 @@ import com.plumemu.account.FakeScraperAccounts
 import com.plumemu.account.RaAccounts
 import com.plumemu.account.ScraperAccounts
 import com.plumemu.coredata.settings.AppearanceSettings
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.PlumSettings
@@ -18,6 +17,14 @@ import com.plumemu.coreui.theme.CustomPalette
 import org.junit.Assert.assertEquals
 
 /** A [SettingsModel] over fake, late-landing writes, and the presses its tests share. */
+/** What a person who installed before the Plumemu default stored: Black (a preset) and #3E7BE0. Tests of the preset pages start here, as a fresh install now stores own colours. */
+internal val OLD_DEFAULT_LOOK =
+    com.plumemu.coredata.settings.AppearanceSettings(
+        com.plumemu.coredata.settings.ColorSetting.Preset("Black"),
+        com.plumemu.coredata.settings.TextColorSetting.Light,
+        com.plumemu.coredata.settings.ColorSetting.Custom(0x3E7BE0),
+    )
+
 internal abstract class SettingsModelHarness {
     /**
      * Writes land later, like DataStore's: the model keeps seeing [shown] until something reads
@@ -25,8 +32,8 @@ internal abstract class SettingsModelHarness {
      */
     protected class FakeActions : SettingsActions {
         // Starts on Graphite, the first preset: the colour-page tests walk the presets from index 0
-        // (the app default is Black, which is index 1). Accent and font are the app's defaults (#3E7BE0, Jost);
-        // a test that walks the accent presets or the font steps from Red / Plum Sans calls [startOnRedSans].
+        // (an old install's Black is index 1). Accent and font are the app's defaults (#3A7CEB, Jost);
+        // a test that walks the accent presets or from Red calls [startOnRed].
         private var stored =
             PlumSettings(
                 appearance = AppearanceSettings(background = ColorSetting.Preset("Graphite")),
@@ -363,9 +370,9 @@ internal abstract class SettingsModelHarness {
 
     protected val actions = FakeActions()
     protected val model = SettingsModel(actions)
-    /** For the tests that walk the accent presets or the font steps from Red / Plum Sans. */
-    protected fun startOnRedSans() {
-        actions.settings = actions.settings.let { it.copy(appearance = it.appearance.copy(accent = ColorSetting.Preset("Red"), font = FontSetting.Sans)) }
+    /** For the tests that walk the accent presets from Red. */
+    protected fun startOnRed() {
+        actions.settings = actions.settings.let { it.copy(appearance = it.appearance.copy(accent = ColorSetting.Preset("Red"))) }
     }
 
     protected val wide = SettingsGeometry(isNarrow = false, presetColumns = 5, defaultTextSize = TextSizeSetting.Medium)

@@ -195,4 +195,54 @@ class ApkDownloadTest {
         downloader().clearLeftovers()
         assertEquals(emptyList<String>(), leftFiles())
     }
+    // Dex metadata: any failure is a null and one log line, never an update failure, and leaves no file.
+
+    private val dmEntry =
+        DexMetadataFile(31, null, UpdateFixtures.dmSUrl, UpdateFixtures.dmS.size.toLong(), UpdateFixtures.sha256(UpdateFixtures.dmS))
+    private val dmLogs = mutableListOf<String>()
+
+    private suspend fun downloadDm(entry: DexMetadataFile = dmEntry): File? = downloader().downloadDexMetadata(manifest, entry) { dmLogs += it }
+
+    @Test
+    fun aMatchingDexMetadataIsKeptBesideTheApkUnderItsBaseName() =
+        runTest {
+            http.files[UpdateFixtures.dmSUrl] = UpdateFixtures.dmS
+            val file = downloadDm()
+            assertArrayEquals(UpdateFixtures.dmS, file?.readBytes())
+            assertEquals(listOf("plumemu-41.dm"), leftFiles())
+            assertEquals(emptyList<String>(), dmLogs)
+        }
+
+    @Test
+    fun aDexMetadataThatFailsInAnyWayIsNullWithOneLogLineAndNoFile() =
+        runTest {
+            val notZip = "not a zip at all".toByteArray()
+            val noProfile = UpdateFixtures.dexMetadataZip("015", withProfile = false)
+            val cases: List<Pair<String, () -> DexMetadataFile>> =
+                listOf(
+                    "missing" to { http.files.remove(UpdateFixtures.dmSUrl); dmEntry },
+                    "wrong hash" to { http.files[UpdateFixtures.dmSUrl] = UpdateFixtures.dmS; dmEntry.copy(sha256 = "0".repeat(64)) },
+                    "longer than promised" to { http.files[UpdateFixtures.dmSUrl] = UpdateFixtures.dmS + ByteArray(10); dmEntry },
+                    "not a zip" to { http.files[UpdateFixtures.dmSUrl] = notZip; dmEntry.copy(size = notZip.size.toLong(), sha256 = UpdateFixtures.sha256(notZip)) },
+                    "no profile" to { http.files[UpdateFixtures.dmSUrl] = noProfile; dmEntry.copy(size = noProfile.size.toLong(), sha256 = UpdateFixtures.sha256(noProfile)) },
+                )
+            for ((case, setUp) in cases) {
+                dmLogs.clear()
+                val entry = setUp()
+                assertEquals(case, null, downloadDm(entry))
+                assertEquals(case, 1, dmLogs.size)
+                assertTrue(case + ": " + dmLogs, dmLogs.single().startsWith("Update dex metadata not used"))
+                assertEquals(case, emptyList<String>(), leftFiles())
+            }
+        }
+
+    @Test
+    fun aDexMetadataLostOnTheWayIsNullAndLeavesNothing() =
+        runTest {
+            http.files[UpdateFixtures.dmSUrl] = UpdateFixtures.dmS
+            http.failAfterBytes = 10
+            assertEquals(null, downloadDm())
+            assertTrue(dmLogs.single(), dmLogs.single().contains("Offline"))
+            assertEquals(emptyList<String>(), leftFiles())
+        }
 }

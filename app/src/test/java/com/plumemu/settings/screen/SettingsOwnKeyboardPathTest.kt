@@ -29,7 +29,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [28], qualifiers = "w768dp-h432dp-land-xhdpi")
 internal class SettingsOwnKeyboardPathTest : SettingsKeyboardPathHarness() {
     init {
-        startOnRedSans() // the accent palette's "+" is reached by walking the presets from Red
+        startOnRed() // the accent palette's "+" is reached by walking the presets from Red
     }
 
     private fun assertNoAndroidKeyboard(where: String) {

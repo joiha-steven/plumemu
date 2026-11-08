@@ -22,7 +22,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Settings › Emulators, a system's panel: at Largest the title, body and line above the list must
- * not take all the room. The list keeps at least its first row whole (the rest scrolls), in every font.
+ * not take all the room. The list keeps at least its first row whole (the rest scrolls), .
  */
 abstract class EmulatorsPanelLargestBase {
     private val compose = appComposeRule()
@@ -37,11 +37,9 @@ abstract class EmulatorsPanelLargestBase {
         val system = psx.copy(installed = listOf(duck, EmulatorEntry("retroarch-swanstation", "SwanStation", isLegalRisk = false), EmulatorEntry("retroarch-mednafen-psx", "Beetle PSX", isLegalRisk = false)))
         val content = ShotContent.library.copy(systems = listOf(system))
         val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Emulators, rememberedOption = mapOf(SettingsSection.Emulators to 0), page = PanelPage.Emulators, panelIndex = 0, systemId = "psx")
-        var font by mutableStateOf(PlumFont.Sans)
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest, font = font)) { SettingsAt(focus, content = content) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) { SettingsAt(focus, content = content) } }
         val failures = mutableListOf<String>()
-        for (each in PlumFont.entries) {
-            font = each
+        for (each in listOf(PlumFont.Jost)) {
             compose.waitForIdle()
             val list = compose.onNodeWithTag(SettingsTags.PANEL_LIST, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
             val row = compose.onNodeWithTag(SettingsTags.panelItem(0), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
@@ -62,13 +60,11 @@ abstract class EmulatorsPanelLargestBase {
                 Triple("Box art source", AccountShotContent.focusOn(account, SettingsOption.BoxArtSource, PanelPage.BoxArtSource), account),
             )
         var case by mutableStateOf(cases.first())
-        var font by mutableStateOf(PlumFont.Sans)
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest, font = font)) { SettingsAt(case.second, content = case.third) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) { SettingsAt(case.second, content = case.third) } }
         val failures = mutableListOf<String>()
         for (each in cases) {
             case = each
-            for (eachFont in PlumFont.entries) {
-                font = eachFont
+            for (eachFont in listOf(PlumFont.Jost)) {
                 compose.waitForIdle()
                 val list = compose.onNodeWithTag(SettingsTags.PANEL_LIST, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
                 val row = compose.onNodeWithTag(SettingsTags.panelItem(0), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot

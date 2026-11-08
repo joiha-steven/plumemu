@@ -71,7 +71,7 @@ fun PlumSlider(
     val motion = PlumTheme.motion
     val measurer = rememberTextMeasurer()
     val metaStyle = PlumTheme.type.meta
-    val focus = animateFloatAsState(if (focused && enabled) 1f else 0f, if (motion.isOn) tween(PlumMotion.FOCUS_GROW_MS, easing = PlumMotion.EaseOut) else snap(), label = "slider focus")
+    val focus = animateFloatAsState(if (focused && enabled) 1f else 0f, if (motion.isOn) tween(PlumMotion.FOCUS_GROW_MS, easing = PlumMotion.Decelerate) else snap(), label = "slider focus")
     val v = value.coerceIn(0f, 1f)
     val change by rememberUpdatedState(onValueChange)
     val finished by rememberUpdatedState(onValueChangeFinished)

@@ -12,7 +12,7 @@ data class PlumColors(
     val strong: Rgb,
     /** Focused row fill. */
     val sel: Rgb,
-    /** Small panels. */
+    /** Small panels: the tone ladder's surface step ([ToneLadder.SURFACE]). */
     val sel2: Rgb,
     /** Secondary text, 11:1 on [bg]. */
     val text2: Rgb,
@@ -37,11 +37,10 @@ data class PlumColors(
      */
     val onAccentFace: Rgb = onAccent,
     /**
-     * The on-screen keyboard's tray: the background moved 6 % towards the text, so it is lighter
-     * than a dark background and darker than a light one.
+     * The on-screen keyboard's tray: the tone ladder's surface step ([ToneLadder.SURFACE]), the page's own hue.
      */
     val tray: Rgb,
-    /** Keyboard keys with a word or an icon on them (and the focused key): 12 % towards the text. */
+    /** Keyboard keys with a word or an icon on them (and the focused key): the tone ladder's top step ([ToneLadder.TOP]). */
     val trayKey: Rgb,
     /** The tray's 1 dp top hairline: 14 % towards the text. */
     val trayEdge: Rgb,
@@ -100,7 +99,7 @@ data class PlumColors(
                 text = text,
                 strong = if (isDarkText) STRONG_DARK else Rgb(0xFFFFFF),
                 sel = sel,
-                sel2 = ColorMath.mix(background, text, 0.05),
+                sel2 = ToneLadder.level(background, ToneLadder.SURFACE),
                 text2 = ColorMath.reach(background, text, background, 11.0),
                 infoMeta = infoMeta(background, text, muted, isDarkText),
                 meta = meta,
@@ -109,8 +108,8 @@ data class PlumColors(
                 accent = accent,
                 onAccent = onAccent(background, text, accent),
                 onAccentFace = onAccentFace(accent, onAccent(background, text, accent)),
-                tray = ColorMath.mix(background, surface, if (isDarkText) TRAY else TRAY_DARK_THEME),
-                trayKey = ColorMath.mix(background, text, TRAY_KEY),
+                tray = ToneLadder.level(background, ToneLadder.SURFACE),
+                trayKey = ToneLadder.level(background, ToneLadder.TOP),
                 trayEdge = ColorMath.mix(background, surface, if (isDarkText) TRAY_EDGE else TRAY_EDGE_DARK_THEME),
                 trayShadowAlpha = if (isDarkText) TRAY_SHADOW_DARK_TEXT else TRAY_SHADOW_LIGHT_TEXT,
                 coverEdge = ColorMath.mix(background, text, COVER_EDGE),
@@ -179,12 +178,9 @@ data class PlumColors(
         private val STRONG_DARK = Rgb(0x0F0F10)
         private val WHITE = Rgb(0xFFFFFF)
 
-        private const val TRAY = 0.06
-        private const val TRAY_KEY = 0.12
         private const val TRAY_EDGE = 0.14
 
-        /** On a dark theme the board's tray is #18191C and its hairline #333436 over #111214. */
-        private const val TRAY_DARK_THEME = 0.033
+        /** On a dark theme the board's tray hairline is #333436 over #111214. */
         private const val TRAY_EDGE_DARK_THEME = 0.155
         private const val COVER_EDGE = 0.10
 

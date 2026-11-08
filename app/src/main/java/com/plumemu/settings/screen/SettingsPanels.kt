@@ -41,9 +41,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
 import com.plumemu.R
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextColorSetting
+import com.plumemu.coreui.theme.FlatPartDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
@@ -75,9 +75,7 @@ internal fun SettingsPanel(
     when (option) {
         SettingsOption.Colors -> ColorSetsPanel(settings, model, touch)
         SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent -> ColorPanel(option, settings, model, touch)
-        SettingsOption.Font -> FontPanel(settings)
         SettingsOption.TextSize -> ExplainPanel(model, option.label, R.string.settings_text_size_body)
-        SettingsOption.TextWeight -> ExplainPanel(model, option.label, R.string.settings_text_weight_body)
         SettingsOption.LeftEdge -> ExplainPanel(model, option.label, R.string.settings_left_edge_body)
         SettingsOption.GridSize -> ExplainPanel(model, option.label, R.string.settings_grid_size_body)
         SettingsOption.ConfirmBottom -> ExplainPanel(model, option.label, R.string.settings_confirm_bottom_body)
@@ -98,6 +96,7 @@ internal fun SettingsPanel(
         SettingsOption.Licenses -> LicensesPanel(model, touch)
         SettingsOption.RomFolders -> FoldersPanel(model, touch)
         SettingsOption.Rescan -> RescanPanel(model)
+        SettingsOption.UnreadableFolders -> UnreadableFoldersPanel(model, touch)
         SettingsOption.SortGames -> ExplainPanel(model, option.label, R.string.settings_sort_games_body)
         SettingsOption.Keyboard -> ExplainPanel(model, option.label, R.string.settings_keyboard_body)
         SettingsOption.SwitchSystemWith -> ExplainPanel(model, option.label, R.string.settings_switch_system_body)
@@ -166,11 +165,11 @@ private fun TextStyle.onBoard(scale: Float): TextStyle =
     }
 
 /**
- * Room for the focus rings of a panel's buttons above and below them. Not at the sides: the buttons
+ * Room for the focus rim of a panel's buttons above and below them ([FlatPartDimens.focusRimRoom]: the rim, its glow and its shadow, never cut by the scroll clip). Not at the sides: the buttons
  * start on the panel's edge like its rows, and a ring may reach past it (no parent clips there; a
  * vertical scroll clips only along its axis).
  */
-internal fun Modifier.ringRoomAboveAndBelow(): Modifier = padding(vertical = PlumDimens.focusRingOutset)
+internal fun Modifier.ringRoomAboveAndBelow(): Modifier = padding(vertical = FlatPartDimens.focusRimRoom)
 
 /**
  * The panel's title: `panelTitle` (16 / 600), on the row-text line. It may wrap to a second line
@@ -281,9 +280,6 @@ internal fun PanelBody(
 
 private const val BODY_LINE_FALLBACK = 1.5f
 
-/** A card this many rows tall holds a sample on two lines: the row's own height holds one, and the Current badge under a name. */
-private const val WRAPPED_ROWS = 1.2f
-
 /** Title and description: the board's 8 px apart in three columns, the list gap elsewhere. */
 @Composable
 internal fun PanelHeading(
@@ -326,7 +322,7 @@ internal fun ExplainPanel(
     body: Int,
     after: @Composable () -> Unit = {},
 ) {
-    // Each text starts at its top; beside the look preview the panel wraps its height, as Font's does.
+    // Each text starts at its top; beside the look preview the panel wraps its height, as the look preview does.
     key(title, body) {
         val scroll = rememberPressedScroll(title, model.licenseScroll, model)
         ReportTextScrolls(scroll, model)
@@ -345,71 +341,6 @@ private fun ReportTextScrolls(
 ) {
     LaunchedEffect(scroll, model) { snapshotFlow { scroll.canScrollForward || scroll.canScrollBackward }.collect { model.panelTextScrolls = it } }
     DisposableEffect(scroll, model) { onDispose { model.panelTextScrolls = false } }
-}
-
-/** Font: a sample line in each Plum font, the current one filled with its badge. */
-@Composable
-private fun FontPanel(settings: PlumSettings) {
-    val colors = PlumTheme.colors
-    val type = PlumTheme.type
-    val theme = settings.toThemeSettings()
-    PanelScrollColumn(PlumDimens.settingsPanelListGap, fillsHeight = false, endRoom = 0.dp) {
-        PanelHeading(stringResource(R.string.settings_font), stringResource(R.string.settings_font_body))
-        SameHeightCards(PlumDimens.settingsPanelListGap) {
-            for (font in FontSetting.entries) {
-                val isCurrent = settings.appearance.font == font
-                val sample = PlumTypography(PlumFont.entries[font.ordinal], type.textSize, theme.textMode)
-                val shape = RoundedCornerShape(PlumDimens.cornerRow)
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = PlumTheme.layout.rowHeight)
-                            .testTag(SettingsTags.FONT_CARD)
-                            .then(if (isCurrent) Modifier.background(colors.sel, shape) else Modifier.border(PlumDimens.settingsSwatchEdge, colors.sel, shape))
-                            .padding(horizontal = PlumDimens.settingsPanelRowPadding),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    BasicText(
-                        stringResource(R.string.settings_sample_game_2),
-                        style = sample.fontSample.copy(color = colors.text),
-                        // Two lines in the 205 dp right column: the sample is whole, never cut.
-                        maxLines = 2,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Spacer(Modifier.width(PlumDimens.settingsValueGap))
-                    Column(horizontalAlignment = Alignment.End) {
-                        BasicText(stringResource(fontName(font)), style = type.settingsPanelMeta.copy(color = colors.text), maxLines = 1)
-                        if (isCurrent) Badge(stringResource(R.string.settings_badge_current))
-                    }
-                }
-            }
-        }
-    }
-}
-
-/** Cards one under the other. Where a sample wraps they are all as tall as the tallest and keep a row's padding, so no card differs from the next or has its text on its edge. */
-@Composable
-private fun SameHeightCards(
-    gap: Dp,
-    cards: @Composable () -> Unit,
-) {
-    val rowHeight = PlumTheme.layout.rowHeight
-    Layout(cards) { each, constraints ->
-        val width = constraints.maxWidth
-        val natural = each.maxOf { it.maxIntrinsicHeight(width) }
-        val wraps = natural > (rowHeight * WRAPPED_ROWS).roundToPx()
-        val one = natural + 2 * PlumDimens.settingsTwoLineRowPadding.roundToPx()
-        val gapPx = gap.roundToPx()
-        val placed = each.map { it.measure(if (wraps) Constraints.fixed(width, one) else Constraints.fixedWidth(width)) }
-        layout(width, placed.sumOf { it.height } + gapPx * (each.size - 1)) {
-            var y = 0
-            placed.forEach {
-                it.place(0, y)
-                y += it.height + gapPx
-            }
-        }
-    }
 }
 
 /** "Current", "Default": accent fill, `onAccent` text, 10 bold (design/rules.md › Colour). */
@@ -472,7 +403,7 @@ private fun ConfirmWords(
                 isPrimary = false,
                 isFocused = focused == SettingsModel.CONFIRM_CANCEL,
                 modifier =
-                    Modifier.bringIntoViewWhen(focused == SettingsModel.CONFIRM_CANCEL, ring = PlumDimens.focusRingOutset)
+                    Modifier.bringIntoViewWhen(focused == SettingsModel.CONFIRM_CANCEL, ring = FlatPartDimens.focusRimRoom)
                         .tapTarget { touch.onPanelItem(SettingsModel.CONFIRM_CANCEL) }.testTag(SettingsTags.panelItem(SettingsModel.CONFIRM_CANCEL)),
             )
             SetupButton(
@@ -480,7 +411,7 @@ private fun ConfirmWords(
                 isPrimary = true,
                 isFocused = focused == SettingsModel.CONFIRM_RESET,
                 modifier =
-                    Modifier.bringIntoViewWhen(focused == SettingsModel.CONFIRM_RESET, ring = PlumDimens.focusRingOutset)
+                    Modifier.bringIntoViewWhen(focused == SettingsModel.CONFIRM_RESET, ring = FlatPartDimens.focusRimRoom)
                         .tapTarget { touch.onPanelItem(SettingsModel.CONFIRM_RESET) }.testTag(SettingsTags.panelItem(SettingsModel.CONFIRM_RESET)),
             )
         }
@@ -558,6 +489,7 @@ internal object SettingsPanelTags {
     /** ROM folders › a folder's page and its "Skip a sub-folder…" page. */
     const val FOLDER_PAGE = "settings_folder_page"
     const val SKIP_SUBFOLDER_PAGE = "settings_skip_subfolder_page"
+    const val UNREADABLE_FOLDERS = "settings_unreadable_folders"
     const val FILES_NOT_ADDED = "settings_files_not_added"
 
     /** Back up…'s warning that the file holds the ScreenScraper password. */
@@ -572,6 +504,7 @@ internal object SettingsPanelTags {
 
     /** The last check's answer under a step left standing in the Updates panel. */
     const val UPDATE_LAST_CHECK = "settings_update_last_check"
+    const val UPDATE_NOTICE = "settings_update_notice"
 
     /** The account facts block under the status line. */
     const val FACTS = "settings_account_facts"

@@ -15,8 +15,8 @@ internal object JunkFilter {
         "sfv", "md5", "sha1", "crc",
     )
 
-    /** Emulators' saves, save states and clock files. */
-    private val saveExtensions = setOf("srm", "sav", "sv", "state", "auto", "oops", "rtc")
+    /** Emulators' saves, save states and clock files (not `.sv`: a Watara Supervision ROM). */
+    private val saveExtensions = setOf("srm", "sav", "state", "auto", "oops", "rtc")
     private val saveStateExtension = Regex("""(state|st)\d+""")
 
     /** Documents that come with games or emulators, whatever the extension (`README.md` is not a Mega Drive game). */
@@ -54,7 +54,8 @@ internal object JunkFilter {
         if (lower == "thumbs.db" || lower == "desktop.ini") return LeftOutReason.JUNK
         val extension = lower.substringAfterLast('.', missingDelimiterValue = "")
         if (extension in saveExtensions || saveStateExtension.matches(extension)) return LeftOutReason.SAVE
-        if (extension in junkExtensions) return LeftOutReason.JUNK
+        // A PICO-8 cartridge is a PNG image named `.p8.png`.
+        if (extension in junkExtensions && !lower.endsWith(".p8.png")) return LeftOutReason.JUNK
         if (lower.substringBefore('.') in documentNames) return LeftOutReason.JUNK
         return if (isBios(lower)) LeftOutReason.BIOS else null
     }

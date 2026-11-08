@@ -7,7 +7,6 @@ import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.ConfirmButtonSetting
 import com.plumemu.coredata.settings.ControlsSettings
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.GridSizeSetting
 import com.plumemu.coredata.settings.HomeScreenSettings
 import com.plumemu.coredata.settings.InGameSetting
@@ -25,7 +24,6 @@ import com.plumemu.coredata.settings.SwitchSystemWithSetting
 import com.plumemu.coredata.settings.SystemOrderSetting
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coredata.settings.TextSizeSetting
-import com.plumemu.coredata.settings.TextWeightSetting
 import com.plumemu.coredata.settings.UpdateSettings
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -43,7 +41,7 @@ class SettingsJsonTest {
     /** Every field away from its default, so a field the JSON forgot cannot pass by being the default. */
     private val everyFieldChanged =
         PlumSettings(
-            appearance = AppearanceSettings(ColorSetting.Custom(0x123ABC), TextColorSetting.Dark, ColorSetting.Preset("Teal"), FontSetting.Mono, TextSizeSetting.Huge, GridSizeSetting.Large, gridSystems = setOf("snes", "psp", "My Hacks"), ownColors = OwnColors(ColorSetting.Custom(0x2B54B5), TextColorSetting.Light, ColorSetting.Preset("Blue"), buttonSet = "Charcoal"), buttonSet = "Ivory", textWeight = TextWeightSetting.Medium, leftEdge = LeftEdgeSetting.Letters, language = "vi", edgeFade = false),
+            appearance = AppearanceSettings(ColorSetting.Custom(0x123ABC), TextColorSetting.Dark, ColorSetting.Preset("Teal"), TextSizeSetting.Huge, GridSizeSetting.Large, gridSystems = setOf("snes", "psp", "My Hacks"), ownColors = OwnColors(ColorSetting.Custom(0x2B54B5), TextColorSetting.Light, ColorSetting.Preset("Blue"), buttonSet = "Charcoal"), buttonSet = "Ivory", leftEdge = LeftEdgeSetting.Letters, language = "vi", edgeFade = false),
             controls = ControlsSettings(ConfirmButtonSetting.Bottom, holdToScrollFaster = false, showButtonHints = false, keyboard = KeyboardSetting.Android, pushRightToPlay = true, switchSystemWith = SwitchSystemWithSetting.Bumpers),
             library =
                 LibrarySettings(
@@ -148,14 +146,13 @@ class SettingsJsonTest {
     }
 
     @Test
-    fun aBackupFromBeforeTextWeightReadsAsNotPickedAndTheDefaultsKeepItNull() {
+    fun aBackupWithTheRetiredTextWeightRestoresAndTheRestOfTheLookSurvives() {
         val json = SettingsJson.encode(everyFieldChanged)
-        json.getJSONObject("appearance").remove("textWeight")
+        assertEquals("the text weight is no longer written", false, json.getJSONObject("appearance").has("textWeight"))
+        json.getJSONObject("appearance").put("textWeight", "Bold")
         val decoded = SettingsJson.decode(json.toString())
-        assertEquals(null, decoded.settings.appearance.textWeight)
-        assertEquals("a missing key is not an unknown value", emptyList<String>(), decoded.unknownKeys)
-        assertEquals("Medium", SettingsJson.encode(everyFieldChanged).getJSONObject("appearance").getString("textWeight"))
-        assertTrue(SettingsJson.encode(PlumSettings.Defaults).getJSONObject("appearance").isNull("textWeight"))
+        assertEquals(everyFieldChanged.appearance, decoded.settings.appearance)
+        assertEquals("a retired key is not reported as damaged", emptyList<String>(), decoded.unknownKeys)
     }
 
     @Test
@@ -201,16 +198,37 @@ class SettingsJsonTest {
     }
 
     @Test
+    fun aBackupWrittenBeforeTheLabelChangedStillRestoresLibretroOnly() {
+        // The label of this source is "Default source" now; the stored name stays what older backups hold.
+        val json = SettingsJson.encode(everyFieldChanged.copy(library = everyFieldChanged.library.copy(boxArtSource = null)))
+        json.getJSONObject("library").put("boxArtSource", "LibretroOnly")
+        val decoded = SettingsJson.decode(json.toString())
+        assertEquals(BoxArtSourceSetting.LibretroOnly, decoded.settings.library.boxArtSource)
+        assertEquals(emptyList<String>(), decoded.unknownKeys)
+        assertEquals("LibretroOnly", BoxArtSourceSetting.LibretroOnly.name)
+    }
+
+    @Test
+    fun aBackupWithTheRetiredFontRestoresAndTheRestOfTheLookSurvives() {
+        val json = SettingsJson.encode(everyFieldChanged)
+        assertEquals("the font is no longer written", false, json.getJSONObject("appearance").has("font"))
+        json.getJSONObject("appearance").put("font", "Serif")
+        val decoded = SettingsJson.decode(json.toString())
+        assertEquals(everyFieldChanged.appearance, decoded.settings.appearance)
+        assertEquals("a retired key is not reported as damaged", emptyList<String>(), decoded.unknownKeys)
+    }
+
+    @Test
     fun aValueThisVersionDoesNotKnowReadsAsItsDefaultAndIsListed() {
         val json = SettingsJson.encode(everyFieldChanged)
-        json.getJSONObject("appearance").put("font", "Comic")
+        json.getJSONObject("appearance").put("leftEdge", "Comic")
         json.getJSONObject("library").put("boxArtRegion", "mars")
         json.getJSONObject("advanced").put("animations", "yes")
         val decoded = SettingsJson.decode(json.toString())
-        assertEquals(FontSetting.Jost, decoded.settings.appearance.font)
+        assertEquals(null, decoded.settings.appearance.leftEdge)
         assertEquals(BoxArtRegionSetting.Usa, decoded.settings.library.boxArtRegion)
         assertEquals(true, decoded.settings.advanced.animations)
-        assertEquals(listOf("appearance.font", "library.boxArtRegion", "advanced.animations").sorted(), decoded.unknownKeys.sorted())
+        assertEquals(listOf("appearance.leftEdge", "library.boxArtRegion", "advanced.animations").sorted(), decoded.unknownKeys.sorted())
         // The rest is kept.
         assertEquals(everyFieldChanged.library.hiddenSystems, decoded.settings.library.hiddenSystems)
     }

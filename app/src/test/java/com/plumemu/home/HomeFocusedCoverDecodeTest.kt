@@ -58,14 +58,12 @@ class HomeFocusedCoverDecodeTest {
 
     private lateinit var state: StripState
     private var background = Color.Unspecified
-    private var tile = Color.Unspecified
     private var accent = Color.Unspecified
 
     private fun show(source: HomeArtSource) {
         compose.setContent {
             PlumTheme(PlumThemeSettings.Default) {
                 background = PlumTheme.colors.bg
-                tile = PlumTheme.colors.sel
                 accent = PlumTheme.colors.accent
                 HomeWithArt(source, gridActions(FakeHomeContent.BOARD_SNES_INDEX, 0), gridIds = setOf("snes"), onState = { state = it })
             }
@@ -82,16 +80,16 @@ class HomeFocusedCoverDecodeTest {
     fun aCoverFocusedWhileItsPictureDecodesKeepsItsTileThenItsPicture() {
         val images = GatedImages()
         show(FakeArtSource(coverArtSource().results.value, images = images))
-        assertTrue("cover 1 shows its tile while it decodes, unfocused (${centre(1)})", centre(1).near(tile))
+        assertTrue("cover 1 shows its tile while it decodes, unfocused (${centre(1)})", hasTile(1))
 
         focus(1)
-        assertTrue("focused while decoding: its tile is drawn (${centre(1)})", centre(1).near(tile))
+        assertTrue("focused while decoding: its tile is drawn (${centre(1)})", hasTile(1))
 
         compose.runOnIdle { images.landAll() }
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(SETTLE_MS)
         val picture = centre(1)
-        assertTrue("its picture landed while focused and is drawn ($picture)", !picture.near(tile) && !picture.near(background))
+        assertTrue("its picture landed while focused and is drawn ($picture)", !hasTile(1) && !picture.near(background))
 
         focus(2)
         assertTrue("unfocused again: still its picture (${centre(1)})", centre(1).near(picture))
@@ -106,12 +104,12 @@ class HomeFocusedCoverDecodeTest {
         show(FakeArtSource(coverArtSource().results.value, images = images))
         compose.mainClock.advanceTimeBy(SETTLE_MS)
         val seen = centre(1)
-        assertTrue("another size's picture is drawn before the exact one lands ($seen)", !seen.near(tile) && !seen.near(background))
+        assertTrue("another size's picture is drawn before the exact one lands ($seen)", !hasTile(1) && !seen.near(background))
 
         compose.runOnIdle { images.landAll() }
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(SETTLE_MS)
-        assertTrue("the exact picture replaces it (${centre(1)})", !centre(1).near(tile))
+        assertTrue("the exact picture replaces it (${centre(1)})", !hasTile(1))
     }
 
     /**
@@ -133,10 +131,10 @@ class HomeFocusedCoverDecodeTest {
         // The focused cover is drawn larger about its collar's centre: read on the picture's top edge, lifted with it.
         val density = compose.density.density
         val centreY = (picture.top - CollarSize.Cover.topPadding.value * density + picture.bottom + CollarSize.Cover.bottomPadding.value * density) / 2f
-        for (y in listOf(centreY + (picture.top - centreY) * com.plumemu.coreui.theme.focusedCoverScale(maxOf(picture.width, picture.height) / compose.density.density))) {
+        for (y in listOf(centreY + (picture.top - centreY) * 1f)) {
             // The groove is about two pixels wide here and its edges are anti-aliased: one of the rows around the line is the plain accent.
             val seen = (-1..1).map { pixels[x, y.roundToInt() + it] }
-            assertTrue("at y=$y px the lit groove shows through ($seen)", seen.any { it.near(accent) })
+            assertTrue("at y=$y px the unlit groove shows through, not an accent ($seen)", seen.none { it.near(accent) })
         }
         assertTrue("the larger copy itself is drawn (${centre(1)})", centre(1).near(Color(PICTURE)))
     }
@@ -226,6 +224,12 @@ class HomeFocusedCoverDecodeTest {
         assertEquals("every kind is drawn when focused", emptyList<String>(), notDrawn)
         assertEquals("nothing failed to decode", emptyList<String>(), logs)
     }
+
+    /** The titled tile (its title is the tile's, whatever its field's colour) is composed in cover [index]. */
+    private fun hasTile(index: Int): Boolean =
+        listOf(HomeTags.PORTRAIT_TILE_TITLE, HomeTags.WIDE_TILE_TITLE).any { tag ->
+            compose.onAllNodes(hasTestTag(tag) and hasAnyAncestor(hasTestTag(HomeTags.cover(index))), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
 
     private fun centre(index: Int): Color {
         val cell = compose.onNodeWithTag(HomeTags.cover(index), useUnmergedTree = true).getUnclippedBoundsInRoot()

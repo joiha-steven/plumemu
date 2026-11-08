@@ -117,10 +117,10 @@ internal sealed interface BoxArtLine {
     /** No run, some games not asked yet (Download missing asks them). */
     data class Some(val withBoxFront: Int, val listed: Int) : BoxArtLine
 
-    /** "Box art only" asked for every game and none has a box front. */
+    /** "Default source" asked for every game and none has a box front. */
     data object NoneFound : BoxArtLine
 
-    /** "Box art only": the pictures could not be had, and [why] says so. */
+    /** "Default source": the pictures could not be had, and [why] says so. */
     data class Failed(val why: PictureFailure) : BoxArtLine
 
     /** The library has no games: nothing to download. */
@@ -169,7 +169,7 @@ internal fun boxArtLineOf(
     account: AccountStatus,
     status: ScrapeStatus,
 ): BoxArtLine? {
-    // A run's own state (not the account's) means "Box art only": it needs no account, so a signed-out or refused one says nothing.
+    // A run's own state (not the account's) means "Default source": it needs no account, so a signed-out or refused one says nothing.
     val hasRunState = status !is ScrapeStatus.NotInThisBuild && status !is ScrapeStatus.SignedOut && status !is ScrapeStatus.Refused
     when (account) {
         AccountStatus.NotInThisBuild -> if (!hasRunState) return BoxArtLine.NotInThisBuild

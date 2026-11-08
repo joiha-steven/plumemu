@@ -66,6 +66,41 @@ class RecentDaoTest {
         }
 
     @Test
+    fun restoreToRecentPutsARemovedGameBackWhereItsLastPlayStood() =
+        runTest {
+            val (a, b, c, d) = played(4)
+            val before = playFacts(listOf(a, b, c, d))
+            assertEquals(1, play.removeFromRecent(b))
+            assertEquals(listOf(d, c, a), recent())
+
+            assertEquals(1, play.restoreToRecent(b))
+            assertEquals("the same place as before the removal", listOf(d, c, b, a), recent())
+            assertEquals("play time and sessions untouched", before, playFacts(listOf(a, b, c, d)))
+        }
+
+    @Test
+    fun restoreToRecentAfterTheListChangedPutsTheRightGameBackByItsLastPlay() =
+        runTest {
+            val (a, b, c) = played(3)
+            play.removeFromRecent(b)
+            play.removeFromRecent(c)
+            play.addSession(a, endedAt = 9_000, seconds = 5) // another game was played meanwhile
+            assertEquals(listOf(a), recent())
+
+            play.restoreToRecent(b)
+            assertEquals(listOf(a, b), recent())
+        }
+
+    @Test
+    fun restoreToRecentIsHarmlessOnAGameNotRemovedOrNeverPlayed() =
+        runTest {
+            val (a, b) = played(2)
+            play.restoreToRecent(b)
+            assertEquals(listOf(b, a), recent())
+            assertEquals("never played: nothing changed", 0, play.restoreToRecent(a + 100))
+        }
+
+    @Test
     fun aRemovedGameComesBackEvenWhenTheClockWasSetBack() =
         runTest {
             val (a, b) = played(2)

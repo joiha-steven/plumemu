@@ -184,6 +184,13 @@ abstract class SecondScreenEntryCardsBase(
         assertEquals("0 games", textOf(EntryTags.COUNT))
         assertFalse(has(EntryTags.COVER))
         assertFalse(has(EntryTags.WEEK))
+        assertEquals("Games you play show up here", textOf(EntryTags.EMPTY))
+    }
+
+    @Test
+    fun aRecentNotReadYetShowsOnlyItsHeader() {
+        show(RECENT_EMPTY.copy(figures = null))
+        assertFalse(has(EntryTags.EMPTY))
     }
 
     // Favorites
@@ -213,6 +220,13 @@ abstract class SecondScreenEntryCardsBase(
         assertEquals("0 games", textOf(EntryTags.COUNT))
         assertFalse(has(EntryTags.COVER))
         assertFalse(has(EntryTags.STATUS))
+        assertEquals("Press Y on a game to add it to Favorites", textOf(EntryTags.EMPTY))
+    }
+
+    @Test
+    fun aFavoritesWithGamesHasNoEmptyLine() {
+        show(FAVORITES_FEW)
+        assertFalse(has(EntryTags.EMPTY))
     }
 
     // Apps still renders

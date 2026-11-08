@@ -38,9 +38,7 @@ internal class SettingsSectionRowsTest {
                     SettingsOption.Language,
                     SettingsOption.Colors,
                     SettingsOption.Accent,
-                    SettingsOption.Font,
                     SettingsOption.TextSize,
-                    SettingsOption.TextWeight,
                 ),
             SettingsSection.HomeScreen to
                 listOf(

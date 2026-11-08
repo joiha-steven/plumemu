@@ -128,6 +128,14 @@ abstract class PlayDao {
     abstract suspend fun removeFromRecent(gameId: Long): Int
 
     /**
+     * Remove from Recent's Undo: [gameId] is back in Recent. Only the `recent_removed` mark is
+     * cleared, so Recent's order (by last play) puts it where it stood. Returns the rows changed
+     * (0: never played). Running it twice, or on a game that was not removed, is harmless.
+     */
+    @Query("UPDATE play SET recent_removed = 0 WHERE game_id = :gameId")
+    abstract suspend fun restoreToRecent(gameId: Long): Int
+
+    /**
      * Settings' Clear Recent: every played game leaves Recent until it is played again;
      * play time, last plays and sessions stay. Returns the rows changed.
      */

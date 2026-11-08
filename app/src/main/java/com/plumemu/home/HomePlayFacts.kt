@@ -169,7 +169,7 @@ internal fun DetailsFacts(
                 Box(Modifier.padding(top = PlumDimens.factsRowGap)) {
                     // The held line stands only where no line can come; with a pace the line itself is there (a held line under it would be cut where room is short).
                     val pace = read?.play?.batteryPace
-                    if (pace == null) BasicText(text = HELD_LINE, style = style, maxLines = 1) else PickingBatteryLine(pace, style.copy(color = PlumTheme.colors.text2), maxLines = BATTERY_LINES)
+                    if (pace == null) BasicText(text = HELD_LINE, style = style, maxLines = 1) else PickingBatteryLine(pace, PlumTheme.type.factNumber.copy(color = PlumTheme.colors.text2), maxLines = BATTERY_LINES)
                 }
             }
         }

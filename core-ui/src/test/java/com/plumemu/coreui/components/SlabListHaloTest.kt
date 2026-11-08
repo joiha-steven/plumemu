@@ -31,8 +31,8 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The games list's focused slab on Graphite (page #111214, accent #3E7BE0): its glow and lift against the Gaussians they are, per channel over the page,
  * within [DEPTH_TOLERANCE]. Each layer is the slab's box moved down by its drop and blurred by its sigma: the glow ([SlabDimens.glowSigma], the accent
- * at [PlumComposeColors.slabGlow]'s alpha) and the white lift ([FocusSlab.NEAR_DROP_DP], [FocusSlab.FAR_DROP_DP], strength from the look). Above and
- * at the sides the glow and the faint lift show, below the lift lightens the page the whole way down, and the glow's last visible pixel (2 of 255 on blue)
+ * at [PlumComposeColors.slabGlow]'s alpha) and the black lift ([FocusSlab.NEAR_DROP_DP], [FocusSlab.FAR_DROP_DP], strength from the look). Above and
+ * at the sides the glow and the faint lift show, below the lift darkens the page the whole way down, and the glow's last visible pixel (2 of 255 on blue)
  * is where the model puts it, inside [SlabDimens.glowReach].
  */
 @RunWith(RobolectricTestRunner::class)
@@ -103,7 +103,7 @@ class SlabListHaloTest {
         sigma: Double,
     ) = (phi((boxW - x) / sigma) - phi(-x / sigma)) * (phi((boxH + drop - y) / sigma) - phi((drop - y) / sigma))
 
-    /** The page's delta at ([x], [y]) px from the box's top left, per channel: far lift, near lift, then glow, each composited over what is under it. */
+    /** The page's delta at ([x], [y]) px from the box's top left, per channel: glow, far shadow, then near shadow, each composited over what is under it. */
     private fun model(
         x: Double,
         y: Double,
@@ -121,9 +121,10 @@ class SlabListHaloTest {
         }
         val far = colors.slab.far!!
         val near = colors.slab.near!!
+        // The CSS box-shadow order the drops image follows: the glow lowest, the far shadow over it, the near shadow on top.
+        if (withGlow) put(glow, 0.0, SlabDimens.glowSigma.value * density.toDouble())
         put(far.color, far.drop.value * density.toDouble(), far.sigma.value * density.toDouble())
         put(near.color, near.drop.value * density.toDouble(), near.sigma.value * density.toDouble())
-        if (withGlow) put(glow, 0.0, SlabDimens.glowSigma.value * density.toDouble())
         return DoubleArray(3) { v[it] - pagePx[it] }
     }
 
@@ -166,12 +167,12 @@ class SlabListHaloTest {
     }
 
     @Test
-    fun belowTheSlabTheLiftLightensThePage() {
+    fun belowTheSlabTheLiftDarkensThePage() {
         val (_, line) = deltas().getValue("bottom")
         near("bottom", line)
-        // The lift alone lightens the page the whole way down its near stretch.
+        // The lift alone darkens the page the whole way down its near stretch.
         val (_, bare) = deltas(withGlow = false).getValue("bottom")
-        for (i in 1 until (12 * density * Depth.SHADOW_REACH).toInt()) assertTrue("lighter than the page ${i / density} dp below: ${bare[i].toList()}", bare[i][0] > 0)
+        for (i in 1 until (12 * density * Depth.SHADOW_REACH).toInt()) assertTrue("darker than the page ${i / density} dp below: ${bare[i].toList()}", bare[i][0] < 0)
     }
 
     @Test

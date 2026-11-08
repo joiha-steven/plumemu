@@ -58,4 +58,18 @@ class FileUpdateStoreTest {
         assertEquals(emptyList<NoteSection>(), found?.sections)
         assertEquals(emptyList<String>(), logs)
     }
+    @Test
+    fun dexMetadataSurvivesARestartAndAnEntryThisVersionCannotReadIsSkipped() {
+        val dm = listOf(DexMetadataFile(28, 30, UpdateFixtures.dmPUrl, 17764, "ab".repeat(32)), DexMetadataFile(31, null, UpdateFixtures.dmSUrl, 17549, "cd".repeat(32)))
+        val manifest = UpdateManifest(41, "0.0.3-alpha", UpdateFixtures.apkUrl, 1234, "ab".repeat(32), 23, "2026-10-23", listOf("One."), null, dexMetadata = dm)
+        store().write(UpdateRecord(found = manifest))
+        assertEquals(manifest, store().read().found)
+        file.writeText(
+            """{"found":{"versionCode":41,"versionName":"0.0.3-alpha","apkUrl":"https://plumemu-app.stevensdesk.com/update/a.apk","size":1234,""" +
+                """"sha256":"${"ab".repeat(32)}","minSdk":23,"released":"2026-10-23","notes":["One."],"notesUrl":null,""" +
+                """"dexMetadata":[{"minSdk":"x"},{"minSdk":31,"maxSdk":null,"url":"${UpdateFixtures.dmSUrl}","size":17549,"sha256":"${"cd".repeat(32)}"}]}}""",
+        )
+        assertEquals(listOf(dm[1]), store().read().found?.dexMetadata)
+        assertEquals(emptyList<String>(), logs)
+    }
 }

@@ -74,6 +74,8 @@
     <string name="home_hint_unfavorite">Quitar favorito</string>
     <!-- X: open search. -->
     <string name="home_hint_search">Buscar</string>
+    <string name="home_hint_undo">Deshacer</string>
+    <string name="home_notice_removed_from_recent">Quitado de Recientes</string>
     <string name="home_hint_sort">Ordenar</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
@@ -154,8 +156,8 @@
     <string name="setup_folder_desc">Elige la carpeta donde guardas tus ROMs. Las subcarpetas como snes o psx se asocian solas a su sistema.</string>
     <string name="setup_folder_point_opens">Se abre el selector de carpetas de Android. Ve a tu carpeta de juegos.</string>
     <!-- No button name: it differs by Android version. -->
-    <string name="setup_folder_point_use">Luego confirma esa carpeta allí.</string>
-    <string name="setup_folder_point_private">Plumemu solo ve las carpetas que elijas</string>
+    <string name="setup_folder_point_use">Luego confirma esa carpeta allí. En algunas consolas hace falta tocar la pantalla.</string>
+    <string name="setup_folder_point_private">Plumemu solo ve las carpetas que elijas.</string>
     <string name="setup_choose_folder">Elegir carpeta</string>
     <string name="setup_set_up_later">Configurar después</string>
     <string name="setup_folder_remove">Quitar esta carpeta</string>
@@ -554,6 +556,7 @@
     <string name="settings_hint_section">Sección</string>
     <!-- Hint bar label beside A in a list of choices: a verb, pick the focused one. -->
     <string name="settings_hint_choose">Elegir</string>
+    <string name="settings_hint_skip">Omitir</string>
     <string name="settings_hint_try_again">Reintentar</string>
     <!-- Narrow screens: opens the focused option's explanation as a further stop (the right button). -->
     <string name="settings_hint_more">Más</string>
@@ -583,6 +586,12 @@
     <string name="settings_folder_body">Los archivos se quedan en tu dispositivo. Elige una subcarpeta omitida para volver a leerla.</string>
     <string name="settings_folder_skip_one">Omitir una subcarpeta…</string>
     <string name="settings_folder_skipped">Omitida</string>
+    <string name="settings_unreadable_row">No se pudo leer una carpeta</string>
+    <string name="settings_unreadable_title_many">No se pudieron leer unas carpetas</string>
+    <string name="settings_unreadable_body">Plumemu no pudo leer esta carpeta en el último escaneo. Los juegos que quitaste de ella siguen en la biblioteca hasta que se pueda leer; el próximo escaneo lo intentará de nuevo.</string>
+    <string name="settings_unreadable_body_many">Plumemu no pudo leer estas carpetas en el último escaneo. Los juegos que quitaste de ellas siguen en la biblioteca hasta que se puedan leer; el próximo escaneo lo intentará de nuevo.</string>
+    <string name="settings_unreadable_scan_again">Escanear de nuevo</string>
+    <string name="settings_unreadable_skip">Omitir esta carpeta</string>
     <string name="settings_folder_remove">Quitar esta carpeta…</string>
     <string name="settings_folder_skip_failed">No se pudo guardar ese cambio. No se cambió nada.</string>
     <string name="settings_skip_subfolder_title">Omitir una subcarpeta</string>
@@ -924,21 +933,26 @@
     <!-- Ready-made colour sets (never a console's or a brand's name. -->
     <string name="settings_colors">Colores</string>
     <string name="settings_colors_panel_help">Elige un conjunto. Para crear el tuyo, cambia Fondo o Color del texto más abajo. Tus propios colores se guardan en Personalizado.</string>
-    <string name="settings_colors_paper">Papel</string>
+    <string name="settings_colors_daylight">Luz de día</string>
+    <string name="settings_colors_ultramarine">Ultramar</string>
+    <string name="settings_colors_magenta">Magenta</string>
+    <string name="settings_colors_peach">Melocotón</string>
+    <string name="settings_colors_matcha">Matcha</string>
+    <string name="settings_colors_mocha">Moca</string>
+    <string name="settings_colors_front_loader">Carga frontal</string>
+    <string name="settings_colors_spice_cube">Cubo especiado</string>
+    <string name="settings_colors_pea_green">Guisante</string>
     <string name="settings_colors_pocket">Pocket</string>
-    <string name="settings_colors_dot_matrix">Matriz de puntos</string>
-    <string name="settings_colors_super">Super</string>
-    <string name="settings_colors_indigo">Índigo</string>
-    <string name="settings_colors_charcoal">Carbón</string>
+    <string name="settings_colors_lavender">Lavanda</string>
+    <string name="settings_colors_red_and_gold">Rojo y oro</string>
     <string name="settings_colors_ivory">Marfil</string>
+    <string name="settings_colors_clear_grape">Uva translúcida</string>
+    <string name="settings_colors_cold_grey">Gris frío</string>
     <string name="settings_colors_banana">Banana</string>
-    <string name="settings_colors_cream">Crema</string>
     <string name="settings_background">Fondo</string>
     <string name="settings_text_color">Color del texto</string>
     <string name="settings_accent">Color de énfasis</string>
-    <string name="settings_font">Fuente</string>
     <string name="settings_text_size">Tamaño del texto</string>
-    <string name="settings_text_weight">Grosor del texto</string>
     <string name="settings_left_edge">Franja izquierda</string>
     <string name="settings_grid_size">Tamaño de cuadrícula</string>
     <string name="settings_bg_graphite">Grafito</string>
@@ -1004,9 +1018,6 @@
     <string name="settings_size_larger">Muy grande</string>
     <string name="settings_size_huge">Enorme</string>
     <string name="settings_size_largest">Máximo</string>
-    <string name="settings_weight_thin">Fino</string>
-    <string name="settings_weight_medium">Medio</string>
-    <string name="settings_weight_bold">Grueso</string>
     <string name="settings_left_edge_counts">Cantidad de juegos</string>
     <string name="settings_left_edge_codes">Códigos de sistema</string>
     <string name="settings_left_edge_letters">Letras</string>
@@ -1035,12 +1046,10 @@
     <string name="settings_color_adjusted_accent">Color de énfasis cambiado para que se vea bien</string>
     <string name="settings_color_adjusted_both">Colores del texto y de énfasis cambiados para que se lean bien</string>
     <string name="settings_accent_body">Marca el sistema actual, el punto de foco, los interruptores y los botones. Por sistema da a cada sistema su propio color.</string>
-    <string name="settings_font_body">La fuente de todo el texto de Plumemu.</string>
     <string name="settings_text_size_body">Cambia todo el texto de Plumemu. Además, se aplica el tamaño de fuente de Android.</string>
-    <string name="settings_text_weight_body">Cambia lo gruesas que se dibujan todas las letras de Plumemu.</string>
     <string name="settings_left_edge_body">Qué muestra la franja estrecha de la izquierda mientras estás en una lista de juegos: cuántos juegos tiene cada sistema, un código corto por sistema o las letras de la lista en la que estás.</string>
     <string name="settings_grid_size_body">El tamaño de las carátulas en la vista de cuadrícula, para todos los sistemas y para Recientes y Favoritos. Pequeño muestra más juegos a la vez; Grande, menos.</string>
-    <!-- Sample lines in the colour and font panels (the board's). -->
+    <!-- Sample lines in the colour panel (the board's). -->
 
     <!-- Advanced (includes the confirm-button option) -->
     <string name="settings_confirm_bottom">Confirmar con B</string>
@@ -1285,7 +1294,7 @@
     <string name="report_error_refused">El servidor no aceptó este informe. Revisa la dirección de correo. Tu texto se conserva, así que puedes volver a intentarlo.</string>
     <string name="report_error_unavailable">Esta versión no puede enviar informes. Usa Exportar registros y envía el archivo por tu cuenta.</string>
     <string name="report_error_not_saved">No se pudo guardar el informe en este dispositivo.</string>
-    <string name="settings_privacy_body">Tu biblioteca, tus ajustes y tu tiempo de juego se quedan en el almacenamiento propio de Plumemu en este dispositivo y nunca se envían. Solo si lo activas (Ajustes › Acerca de › Estadísticas de uso), Plumemu envía al desarrollador recuentos de uso anónimos e informes de fallos: país, modelo del dispositivo, versiones de Android y de la app, qué pantallas y ajustes usas y cuánto tiempo juegas por sistema. De un juego que Plumemu no logra identificar envía además, una vez por instalación, el sistema, cómo está guardado el archivo, su tamaño, su CRC-32 y el código de producto o número de serie del disco leído del propio juego. Nunca títulos de juegos, búsquedas ni tu cuenta de ScreenScraper. Los informes de fallos pueden incluir rutas de archivos. Al desactivarlo se envía un único recuento anónimo de “desactivado” y nada más. Los informes de problemas solo se envían cuando pulsas Enviar en Informar de un problema, y pueden incluir el registro que decidas adjuntar, con rutas de archivos. Lo que se envía se conserva sin límite de tiempo. Una vez al día, con Wi-Fi, Plumemu pregunta a plumemu-app.stevensdesk.com si hay una versión más reciente; Cloudflare, que aloja ese servidor, ve tu dirección IP. Puedes desactivarlo en Ajustes › Acerca de › Actualizaciones. Esa misma comprobación diaria también descarga datos de plataformas actualizados (la lista de sistemas y emuladores) del mismo servidor; no se envía nada más. Con una cuenta de ScreenScraper, Plumemu envía a ScreenScraper el nombre, el tamaño y las sumas de comprobación del archivo de cada juego, y su título cuando con eso no encuentra nada, para buscar carátulas. Con la opción Solo carátulas, Plumemu descarga las carátulas del servidor público de libretro, thumbnails.libretro.com, con Wi-Fi, y pone el nombre del juego en la dirección; ese servidor ve tu dirección IP. Con una cuenta de RetroAchievements, Plumemu envía a retroachievements.org tu nombre de usuario, tu clave y el número de RetroAchievements de cada juego, al abrir la información de un juego, después de jugar y una vez al día con Wi-Fi; las imágenes de las insignias vienen de media.retroachievements.org. La clave se guarda cifrada en este dispositivo, nunca en una copia de seguridad ni en un registro. Al cerrar sesión, deja de enviarse. El tiempo de juego exacto, si lo activas en Ajustes \u203A Estadísticas, pide al acceso de uso de Android los eventos de la franja de tiempo de la partida y conserva solo los del juego o app que iniciaste desde Plumemu y los de la pantalla; no se guarda nada más que la duración de la partida y nunca se envía.</string>
+    <string name="settings_privacy_body">Tu biblioteca, tus ajustes y tu tiempo de juego se quedan en el almacenamiento propio de Plumemu en este dispositivo y nunca se envían. Solo si lo activas (Ajustes › Acerca de › Estadísticas de uso), Plumemu envía al desarrollador recuentos de uso anónimos e informes de fallos: país, modelo del dispositivo, versiones de Android y de la app, qué pantallas y ajustes usas y cuánto tiempo juegas por sistema. De un juego que Plumemu no logra identificar envía además, una vez por instalación, el sistema, cómo está guardado el archivo, su tamaño, su CRC-32 y el código de producto o número de serie del disco leído del propio juego. Nunca títulos de juegos, búsquedas ni tu cuenta de ScreenScraper. Los informes de fallos pueden incluir rutas de archivos. Al desactivarlo se envía un único recuento anónimo de “desactivado” y nada más. Los informes de problemas solo se envían cuando pulsas Enviar en Informar de un problema, y pueden incluir el registro que decidas adjuntar, con rutas de archivos. Lo que se envía se conserva sin límite de tiempo. Una vez al día, con Wi-Fi, Plumemu pregunta a plumemu-app.stevensdesk.com si hay una versión más reciente; Cloudflare, que aloja ese servidor, ve tu dirección IP. Puedes desactivarlo en Ajustes › Acerca de › Actualizaciones. Esa misma comprobación diaria también descarga datos de plataformas actualizados (la lista de sistemas y emuladores) del mismo servidor; no se envía nada más. Con una cuenta de ScreenScraper, Plumemu envía a ScreenScraper el nombre, el tamaño y las sumas de comprobación del archivo de cada juego, y su título cuando con eso no encuentra nada, para buscar carátulas. Con la fuente predeterminada, Plumemu descarga las carátulas del servidor público de libretro, thumbnails.libretro.com, con Wi-Fi, y pone el nombre del juego en la dirección; ese servidor ve tu dirección IP. Con una cuenta de RetroAchievements, Plumemu envía a retroachievements.org tu nombre de usuario, tu clave y el número de RetroAchievements de cada juego, al abrir la información de un juego, después de jugar y una vez al día con Wi-Fi; las imágenes de las insignias vienen de media.retroachievements.org. La clave se guarda cifrada en este dispositivo, nunca en una copia de seguridad ni en un registro. Al cerrar sesión, deja de enviarse. El tiempo de juego exacto, si lo activas en Ajustes \u203A Estadísticas, pide al acceso de uso de Android los eventos de la franja de tiempo de la partida y conserva solo los del juego o app que iniciaste desde Plumemu y los de la pantalla; no se guarda nada más que la duración de la partida y nunca se envía.</string>
     <!-- Updates -->
     <string name="settings_update_value_downloading">Descargando…</string>
     <string name="settings_update_value_installing">Instalando…</string>
@@ -1333,6 +1342,18 @@
     <string name="settings_update_confirm">Confirma la actualización en la pantalla de Android. Si no se instaló, elige Actualizar para volver a intentarlo.</string>
     <string name="settings_update_cancelled">Actualización cancelada.</string>
     <string name="settings_update_aborted">La actualización no se instaló.</string>
+    <!-- Updates panel, after Update was pressed on Android 13 or newer: why Android is about to ask to allow notifications. -->
+    <string name="settings_update_notice_reason">Android te pedirá permiso para mostrar notificaciones. Plumemu solo muestra una después de una actualización, para que la toques y abras Plumemu.</string>
+    <!-- Updates panel, notifications off: Plumemu cannot always reopen itself after the update. -->
+    <string name="settings_update_notice_off">Las notificaciones están desactivadas, así que puede que Plumemu no se abra solo tras la actualización. Pulsa el botón de inicio para volver.</string>
+    <!-- Updates panel, notifications off and Plumemu not the home app: the Home button would not bring it back. -->
+    <string name="settings_update_notice_off_not_home">Las notificaciones están desactivadas, así que puede que Plumemu no se abra solo tras la actualización. Ábrelo de nuevo desde tus aplicaciones.</string>
+    <!-- Updates panel, notifications off: opens Android's notification settings for Plumemu. -->
+    <string name="settings_update_notifications_button">Activar notificaciones</string>
+    <!-- The one notification, shown after an update when Plumemu could not reopen itself. Channel name, title, text. -->
+    <string name="update_notice_channel">Actualizaciones</string>
+    <string name="update_notice_title">Plumemu se ha actualizado</string>
+    <string name="update_notice_text">Toca para abrir.</string>
     <string name="settings_update_failed_offline">Descarga detenida: no hay conexión con el servidor de actualizaciones.</string>
     <string name="settings_update_failed_timeout">Descarga detenida: el servidor de actualizaciones no respondió a tiempo.</string>
     <string name="settings_update_failed_http">La descarga falló: el servidor de actualizaciones tuvo un problema.</string>
@@ -1347,8 +1368,21 @@
 
     <!-- ScreenScraper account: setup's box art step and Settings › Library. -->
     <string name="setup_box_art_title">Carátulas de ScreenScraper</string>
-    <string name="setup_box_art_desc">Las carátulas y la información de los juegos vienen de ScreenScraper, con tu propia cuenta gratuita de screenscraper.fr. También puedes iniciar sesión más tarde en Ajustes › Carátulas, cuentas › Carátulas.</string>
-    <string name="setup_box_art_skip">Omitir</string>
+    <string name="setup_box_art_desc">Las carátulas y la información de los juegos vienen de ScreenScraper, con tu propia cuenta gratuita de screenscraper.fr. También puedes iniciar sesión más tarde en Ajustes › Carátulas, cuentas.</string>
+    <string name="setup_box_art_ask_title">¿Descargar carátulas?</string>
+    <string name="setup_box_art_ask_desc">Imágenes de la caja de cada juego. Puedes cambiarlo en Ajustes › Carátulas, cuentas.</string>
+    <string name="setup_box_art_no">No</string>
+    <string name="setup_box_art_no_line">Sin red. Plumemu dibuja las portadas.</string>
+    <string name="setup_box_art_yes">Sí</string>
+    <string name="setup_box_art_yes_line">Frentes de caja por Wi-Fi. Luego, la fuente.</string>
+    <string name="setup_box_art_yes_line_libretro">Frentes de caja de libretro por Wi-Fi. Sin cuenta, sin detalles de los juegos.</string>
+    <string name="setup_box_art_source_title">Elige una fuente</string>
+    <string name="setup_box_art_source_desc">Ambas descargan solo por Wi-Fi. Puedes cambiarlo en Ajustes › Carátulas, cuentas.</string>
+    <string name="setup_box_art_default">Fuente predeterminada</string>
+    <string name="setup_box_art_default_line">Frentes de caja de libretro. Sin cuenta, sin detalles de los juegos.</string>
+    <string name="setup_box_art_account">Cuenta de ScreenScraper</string>
+    <string name="setup_box_art_account_line">Carátula, año, valoración, género, editor y descripción. Requiere una cuenta gratuita de screenscraper.fr.</string>
+    <string name="setup_box_art_skip">Ahora no</string>
     <!-- The question before the sign-in form. -->
     <string name="setup_confirm_title">¿Qué botón confirma?</string>
     <string name="setup_confirm_desc">A confirma y B vuelve atrás. ¿Prefieres al revés? Elige Usar B.</string>
@@ -1359,8 +1393,6 @@
     <string name="setup_confirm_again_desc">Elige con la cruceta el botón que usas. Elegir el que ya está en uso continúa.</string>
     <string name="setup_look_title">Elige un aspecto</string>
     <string name="setup_look_desc">Elige tus colores. Puedes cambiarlos cuando quieras en Ajustes › Apariencia.</string>
-    <string name="setup_box_art_question_title">Carátulas</string>
-    <string name="setup_box_art_question_desc">De dónde saca Plumemu las carátulas de tus juegos. Puedes cambiarlo en Ajustes › Carátulas, cuentas › Carátulas.</string>
     <string name="setup_ready_box_art">Carátulas: descargando en segundo plano</string>
     <string name="setup_ready_box_art_offline">Carátulas: se descargarán cuando tengas conexión</string>
     <string name="setup_ready_box_art_sign_in">Carátulas: vuelve a iniciar sesión en Ajustes › Carátulas, cuentas</string>
@@ -1391,6 +1423,7 @@
     <string name="settings_account_value_sign_in">Iniciar sesión</string>
     <string name="settings_account_value_signed_in">Sesión iniciada</string>
     <string name="settings_account_body">Las carátulas y la información de los juegos vienen de ScreenScraper, con tu propia cuenta gratuita de screenscraper.fr. Tu contraseña se guarda cifrada en este dispositivo.</string>
+    <string name="settings_account_sign_up">¿Aún no tienes cuenta? Crea una gratis en screenscraper.fr.</string>
     <string name="settings_account_sign_out">Cerrar sesión</string>
     <string name="settings_account_sign_in_again">Volver a iniciar sesión</string>
     <string name="settings_account_sign_out_failed">Plumemu no pudo cerrar la sesión. Inténtalo de nuevo.</string>
@@ -1611,7 +1644,7 @@
     <string name="settings_box_art_source_body">De dónde obtiene Plumemu las carátulas. Pulsa A para elegir.</string>
     <string name="settings_box_art_source_screenscraper">Carátulas e info de los juegos</string>
     <string name="settings_box_art_source_screenscraper_line">Carátula, año, valoración, género, editor y descripción. Requiere una cuenta gratuita de ScreenScraper.</string>
-    <string name="settings_box_art_source_libretro">Solo carátulas</string>
+    <string name="settings_box_art_source_libretro">Fuente predeterminada</string>
     <string name="settings_box_art_source_libretro_line">Frentes de caja de libretro por Wi-Fi. Sin detalles. Sin cuenta.</string>
     <string name="settings_box_art_source_own">Portadas propias de Plumemu</string>
     <string name="settings_box_art_source_own_line">Sin red. Plumemu dibuja una portada para cada juego.</string>

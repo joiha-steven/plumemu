@@ -8,6 +8,8 @@ import com.plumemu.usage.EXTRA_OPENED_AFTER_UPDATE
 import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import com.plumemu.PlumApplication
@@ -39,11 +41,17 @@ interface UpdateInstaller {
     /** Opens Android's Install unknown apps screen for Plumemu; false when the device has none. */
     fun openInstallPermission(): Boolean
 
-    /** Copies [file] into an install session and commits it. Throws [IOException] when the session cannot be written. */
+    /**
+     * Copies [file], with [dexMetadata] when there is one, into an install session and commits it.
+     * True when the committed session carries the dex metadata; false when it holds the APK alone
+     * (none given, or writing it failed and the APK went alone in a new session). Throws
+     * [IOException] when the APK's session cannot be written.
+     */
     fun commit(
         file: File,
         versionCode: Long,
-    )
+        dexMetadata: File?,
+    ): Boolean
 
     /** Plumemu will not open itself after this install ([ReopenMarker]): the person left it, or Android's screen never opened. */
     fun forgetReopen()
@@ -75,37 +83,137 @@ class SessionUpdateInstaller(
     override fun commit(
         file: File,
         versionCode: Long,
-    ) {
-        val installer = context.packageManager.packageInstaller
+        dexMetadata: File?,
+    ): Boolean =
+        SessionCommitter(
+            sessions = PackageInstallerSessions(context),
+            writeMarker = { ReopenMarker.write(context, it) },
+            clearMarker = { ReopenMarker.clear(context) },
+            log = { Log.w("PlumUpdate", it) },
+        ).commit(file, versionCode, dexMetadata)
+}
+
+/** The `PackageInstaller` session calls an update makes; [SessionCommitter]'s tests give a fake. */
+internal interface InstallSessions {
+    fun create(totalBytes: Long): Int
+
+    /** Copies [file] into the session as [name]. */
+    fun write(
+        sessionId: Int,
+        name: String,
+        file: File,
+    )
+
+    fun commit(sessionId: Int)
+
+    fun abandon(sessionId: Int)
+}
+
+private class PackageInstallerSessions(
+    private val context: Context,
+) : InstallSessions {
+    private val installer get() = context.packageManager.packageInstaller
+
+    override fun create(totalBytes: Long): Int {
         val params =
             PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
                 setAppPackageName(context.packageName)
-                setSize(file.length())
+                setSize(totalBytes)
                 if (Build.VERSION.SDK_INT >= 31) setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
             }
-        val sessionId = installer.createSession(params)
-        try {
-            ReopenMarker.write(context, versionCode)
-            installer.openSession(sessionId).use { session ->
-                file.inputStream().use { input ->
-                    session.openWrite("plumemu-$versionCode.apk", 0, file.length()).use { out ->
-                        input.copyTo(out)
-                        session.fsync(out)
-                    }
+        return installer.createSession(params)
+    }
+
+    override fun write(
+        sessionId: Int,
+        name: String,
+        file: File,
+    ) {
+        installer.openSession(sessionId).use { session ->
+            file.inputStream().use { input ->
+                session.openWrite(name, 0, file.length()).use { out ->
+                    input.copyTo(out)
+                    session.fsync(out)
                 }
-                session.commit(UpdateInstallReceiver.statusSender(context, sessionId))
             }
+        }
+    }
+
+    override fun commit(sessionId: Int) {
+        installer.openSession(sessionId).use { it.commit(UpdateInstallReceiver.statusSender(context, sessionId)) }
+    }
+
+    override fun abandon(sessionId: Int) = installer.abandonSession(sessionId)
+}
+
+/**
+ * Writes and commits an update's session: the APK first, then its dex metadata under the APK's base
+ * name (`plumemu-<versionCode>.apk` + `plumemu-<versionCode>.dm`; Android links a `.dm` to the APK
+ * of the same name and refuses one it cannot link). The `.dm` only makes the first runs faster:
+ * when writing it fails, that session is abandoned and the APK goes alone in a new one.
+ * [writeMarker] runs before each session is written ([ReopenMarker]); [clearMarker] when the APK's
+ * own session fails.
+ */
+internal class SessionCommitter(
+    private val sessions: InstallSessions,
+    private val writeMarker: (Long) -> Unit,
+    private val clearMarker: () -> Unit,
+    private val log: (String) -> Unit,
+) {
+    /** True when the committed session carries [dexMetadata]. */
+    fun commit(
+        apk: File,
+        versionCode: Long,
+        dexMetadata: File?,
+    ): Boolean {
+        if (dexMetadata != null) {
+            try {
+                session(apk, versionCode, dexMetadata)
+                return true
+            } catch (e: DexMetadataNotWritten) {
+                log("Update install: dex metadata not written (${e.cause?.javaClass?.simpleName}); installing the APK alone")
+            }
+        }
+        session(apk, versionCode, null)
+        return false
+    }
+
+    private fun session(
+        apk: File,
+        versionCode: Long,
+        dexMetadata: File?,
+    ) {
+        val sessionId = sessions.create(apk.length() + (dexMetadata?.length() ?: 0))
+        try {
+            writeMarker(versionCode)
+            sessions.write(sessionId, "plumemu-$versionCode.apk", apk)
+            if (dexMetadata != null) {
+                try {
+                    sessions.write(sessionId, "plumemu-$versionCode.dm", dexMetadata)
+                } catch (e: SecurityException) {
+                    throw e
+                } catch (e: Exception) {
+                    throw DexMetadataNotWritten(e)
+                }
+            }
+            sessions.commit(sessionId)
+        } catch (e: DexMetadataNotWritten) {
+            // The marker stays: the APK's own session writes it again at once.
+            sessions.abandon(sessionId)
+            throw e
         } catch (e: IOException) {
-            installer.abandonSession(sessionId)
-            ReopenMarker.clear(context)
+            sessions.abandon(sessionId)
+            clearMarker()
             throw e
         } catch (e: SecurityException) {
-            ReopenMarker.clear(context)
+            clearMarker()
             // The permission was taken back between the check and the commit.
-            installer.abandonSession(sessionId)
+            sessions.abandon(sessionId)
             throw IOException("install session refused", e)
         }
     }
+
+    private class DexMetadataNotWritten(cause: Exception) : RuntimeException(cause)
 }
 
 /**
@@ -155,7 +263,8 @@ internal object ReopenMarker {
 /**
  * `MY_PACKAGE_REPLACED` (not exported; Android sends it to the replaced app even though it was
  * stopped): after Plumemu's own update ([ReopenMarker]), the main screen opens again. From Android
- * 10 Android may refuse a start from the background; a home app is restarted by Android anyway.
+ * 10 (below it nothing is waited for or posted) Android refuses a start from the background without an exception, even for the home app: two
+ * seconds after the attempt, if [MainActivity] has not resumed, [ReopenNotice] posts "tap to open".
  */
 class UpdateRestartReceiver : BroadcastReceiver() {
     override fun onReceive(
@@ -173,12 +282,35 @@ class UpdateRestartReceiver : BroadcastReceiver() {
         if (!ReopenMarker.take(context, installed)) return
         Log.i("PlumUpdate", "Updated to $installed; opening Plumemu again")
         val launch = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return
-        try {
-            // Marked, so the open is counted as one after an update (app_open.from, usage/UsageOpen.kt).
-            context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra(EXTRA_OPENED_AFTER_UPDATE, true))
-        } catch (e: RuntimeException) {
-            Log.w("PlumUpdate", "Could not reopen after the update (${e.javaClass.simpleName})")
+        val app = context.applicationContext
+        val resumesBefore = ReopenNotice.resumeCount()
+        val refused =
+            try {
+                // Marked, so the open is counted as one after an update (app_open.from, usage/UsageOpen.kt).
+                context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra(EXTRA_OPENED_AFTER_UPDATE, true))
+                false
+            } catch (e: RuntimeException) {
+                Log.w("PlumUpdate", "Could not reopen after the update (${e.javaClass.simpleName})")
+                true
+            }
+        // Below Android 10 a background start is not refused: nothing to wait for, no notice.
+        if (Build.VERSION.SDK_INT < 29) return
+        if (refused) {
+            ReopenNotice.postUnlessFront(app, resumesBefore)
+            return
         }
+        // Android 10+ refuses a background start without throwing: ask whether the main screen resumed.
+        val pending = goAsync()
+        Handler(Looper.getMainLooper()).postDelayed(
+            {
+                try {
+                    ReopenNotice.postUnlessFront(app, resumesBefore)
+                } finally {
+                    pending?.finish()
+                }
+            },
+            ReopenNotice.WAIT_MS,
+        )
     }
 }
 

@@ -46,6 +46,14 @@ class ZipDirectoryTest {
     }
 
     @Test
+    fun documentsAndPicturesBesideASmallRomAreNotTheRom() {
+        val rom = ZipEntryInfo("game.nes", 1, 40_000, 40_000, false)
+        for (other in listOf("manual.pdf", "Thumbs.db", "box.bmp", "art.webp", "readme.doc", "notes.docx", "info.rtf", "icon.ico", "theme.mp3", "settings.ini", "game.cfg", "list.xml", "cover.jpeg")) {
+            assertEquals(other, "game.nes", pickRomEntry(listOf(rom, ZipEntryInfo(other, 2, 900_000, 900_000, false)))?.name)
+        }
+    }
+
+    @Test
     fun findsTheEndRecordBehindALongComment() {
         val rom = FakeRoms.filler(1000)
         val zip = FakeRoms.zip("a.nes" to rom, comment = "c".repeat(65_000))

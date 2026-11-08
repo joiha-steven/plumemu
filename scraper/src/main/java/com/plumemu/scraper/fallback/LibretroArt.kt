@@ -59,7 +59,7 @@ internal class LibretroArt(
     private val oneAtATime = Mutex()
     private val lastFailure = MutableStateFlow<PictureFailure?>(null)
 
-    /** Why this source last failed, null after its next answer; the status line of "Box art only" reads it. */
+    /** Why this source last failed, null after its next answer; the status line of "Default source" reads it. */
     val failure: StateFlow<PictureFailure?> = lastFailure.asStateFlow()
 
     private fun failed(why: PictureFailure) {

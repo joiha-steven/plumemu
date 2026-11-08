@@ -52,8 +52,10 @@ abstract class SetupSlabShadowRoomBase {
 
     private val steps =
         listOf(
-            "box art" to SetupFakes.boxArtQuestion.copy(focus = SetupControl.BoxArtOwnCovers),
-            "box art first" to SetupFakes.boxArtQuestion.copy(focus = SetupControl.UseBoxArt),
+            "box art last" to SetupFakes.boxArtQuestion.copy(focus = SetupControl.BoxArtYes),
+            "box art first" to SetupFakes.boxArtQuestion,
+            "box art sources" to SetupFakes.boxArtSources,
+            "box art sources last" to SetupFakes.boxArtSources.copy(focus = SetupControl.UseBoxArt),
         )
 
     @Test

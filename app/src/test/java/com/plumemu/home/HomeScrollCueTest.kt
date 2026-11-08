@@ -97,7 +97,7 @@ abstract class HomeScrollCueBase {
 
     private fun Rect.overlaps(other: Rect) = other.hasArea() && top < other.bottom - 0.5f && bottom > other.top + 0.5f
 
-    /** The screen's two bands: one each, tight on the bars, as wide as the screen, [PlumDimens.listFadeBand] tall. */
+    /** The screen's two bands: one each, tight under the top bar and on the footer gap, as wide as the screen, [PlumDimens.listFadeBand] tall. */
     private fun assertOneFadeAcrossTheWidth(label: String) {
         val root = compose.onRoot().getUnclippedBoundsInRoot()
         for (tag in listOf(BAR_FADE_TOP, BAR_FADE_BOTTOM)) {
@@ -115,7 +115,7 @@ abstract class HomeScrollCueBase {
         val top = compose.onNodeWithTag(BAR_FADE_TOP, useUnmergedTree = true).getUnclippedBoundsInRoot()
         val bottom = compose.onNodeWithTag(BAR_FADE_BOTTOM, useUnmergedTree = true).getUnclippedBoundsInRoot()
         if (kotlin.math.abs(top.top.value - topBar.bottom.value) > 0.6f) problems += "$label: the top band starts at ${top.top.value} dp, the top bar ends at ${topBar.bottom.value}"
-        if (kotlin.math.abs(bottom.bottom.value - hintBar.top.value) > 0.6f) problems += "$label: the bottom band ends at ${bottom.bottom.value} dp, the hint bar starts at ${hintBar.top.value}"
+        if (kotlin.math.abs(bottom.bottom.value - (hintBar.top - PlumDimens.footerGap).value) > 0.6f) problems += "$label: the bottom band ends at ${bottom.bottom.value} dp, not the footer gap above the hint bar at ${hintBar.top.value}"
     }
 
     /** Whether the top band changes a pixel now: the root with the setting on against the same settled frame with it off (the setting acts on the bands alone), each taken the same time after its toggle. */

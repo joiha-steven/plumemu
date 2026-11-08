@@ -81,7 +81,7 @@ abstract class HomeDetailsFullBlockBase {
         val withPace = if (pace) play.copy(batteryPace = BATTERY_LINE_SAMPLES[1].pace) else play
         compose.mainClock.autoAdvance = false
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Small, font = font)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Small)) {
                 CompositionLocalProvider(LocalHomePlayFacts provides Plays(withPace)) { HomeWithArt(source, LibraryLikeContent.gamesFocused(metroid), base) }
             }
         }
@@ -90,12 +90,12 @@ abstract class HomeDetailsFullBlockBase {
         fun node(tag: String) = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().first()
         val facts = node(HomeTags.DETAILS_FACTS)
         val all = texts(facts).filter { it.boundsInRoot.width > 0f }
-        val labels = setOf("GENRE", "RATING", "PLAYED", "LAST PLAYED", "EMULATOR", "BATTERY")
+        val labels = setOf("Genre", "Rating", "Played", "Last played", "Emulator", "Battery")
         val cells = mutableMapOf<String, Cell>()
         println("FACTS box ${facts.boundsInRoot} " + all.joinToString { "'${textOf(it)}' ${it.boundsInRoot}" })
         // The rating cell is spoken as one "Rating, 8.5/10" (its texts are hidden from the tree), so it is found by that description.
         fun rating(n: SemanticsNode): SemanticsNode? = n.takeIf { SemanticsProperties.ContentDescription in it.config && it.config[SemanticsProperties.ContentDescription].joinToString().startsWith("Rating") } ?: n.children.firstNotNullOfOrNull(::rating)
-        rating(facts)?.let { cells["RATING"] = Cell("RATING", it.config[SemanticsProperties.ContentDescription].joinToString(), it.boundsInRoot, it.boundsInRoot, false) }
+        rating(facts)?.let { cells["Rating"] = Cell("Rating", it.config[SemanticsProperties.ContentDescription].joinToString(), it.boundsInRoot, it.boundsInRoot, false) }
         all.forEach { label ->
             val l = textOf(label)
             if (l in labels) {
@@ -125,16 +125,16 @@ abstract class HomeDetailsFullBlockBase {
     @Test
     fun everyFactShowsInsideTheBox() {
         val shown = settle(GamePlay(2, 252, EmulatorToStart("RetroArch: Snes9x", isInstalled = true)))
-        assertEquals(setOf("GENRE", "RATING", "PLAYED", "LAST PLAYED", "EMULATOR", "BATTERY"), shown.cells.keys)
+        assertEquals(setOf("Genre", "Rating", "Played", "Last played", "Emulator", "Battery"), shown.cells.keys)
         assertInside(shown)
         assertTrue("a cover remains: ${shown.cover}", shown.cover.height > 0f)
     }
 
     private fun emulatorCase(name: String) {
         val shown = settle(GamePlay(2, 252, EmulatorToStart(name, isInstalled = true)))
-        val cell = shown.cells.getValue("EMULATOR")
+        val cell = shown.cells.getValue("Emulator")
         assertTrue("'$name' is not ellipsised: '${cell.value}'", !cell.ellipsized)
-        assertTrue("the battery cell is there too: ${shown.cells.keys}", "BATTERY" in shown.cells)
+        assertTrue("the battery cell is there too: ${shown.cells.keys}", "Battery" in shown.cells)
         assertInside(shown)
     }
 
@@ -150,7 +150,7 @@ abstract class HomeDetailsFullBlockBase {
     private fun twoLineTitle(emulator: String, genre: String = "Action") {
         val shown = settle(GamePlay(2, 252, EmulatorToStart(emulator, isInstalled = true)), genre = genre, title = LONG_TITLE)
         assertEquals("the title takes its two lines", 2, shown.titleLines)
-        assertEquals(setOf("GENRE", "RATING", "PLAYED", "LAST PLAYED", "EMULATOR", "BATTERY"), shown.cells.keys)
+        assertEquals(setOf("Genre", "Rating", "Played", "Last played", "Emulator", "Battery"), shown.cells.keys)
         assertInside(shown)
         assertTrue("a cover remains: ${shown.cover}", shown.cover.height > 0f)
     }
@@ -166,9 +166,9 @@ abstract class HomeDetailsFullBlockBase {
     fun cellsWithNothingToSayLeaveNoHole() {
         val shown = settle(GamePlay(2, 252, null), genre = "", rating = false, pace = false)
         // The emulator always has a value ("Asked on Play" with none installed); it goes under the two, on the second row.
-        assertEquals(setOf("PLAYED", "LAST PLAYED", "EMULATOR"), shown.cells.keys)
-        val played = shown.cells.getValue("PLAYED")
-        val last = shown.cells.getValue("LAST PLAYED")
+        assertEquals(setOf("Played", "Last played", "Emulator"), shown.cells.keys)
+        val played = shown.cells.getValue("Played")
+        val last = shown.cells.getValue("Last played")
         assertEquals("PLAYED starts the first row", shown.box.left, played.labelBox.left, 1f)
         assertTrue("PLAYED is on the first row: ${played.labelBox} in ${shown.box}", played.labelBox.top - shown.box.top < played.labelBox.height * 2)
         assertEquals("LAST PLAYED shares the first row", played.labelBox.top, last.labelBox.top, 1f)

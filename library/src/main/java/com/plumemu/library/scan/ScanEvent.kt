@@ -86,6 +86,11 @@ data class ScanStats(
      * "new this week" counts). Filled from [ScanEvent.AddedListed]; empty until then and when the scan stamped nothing.
      */
     val listedAddedBySystem: Map<String, Int> = emptyMap(),
+    /**
+     * Relative paths (below the picked folder) of the directories that failed to list, A to Z. Not empty means this scan
+     * deleted nothing and wrote no directory records, so games removed from the folder stay until a scan reads them all.
+     */
+    val unreadableDirectories: List<String> = emptyList(),
 ) {
     fun withListed(event: ScanEvent.AddedListed) = copy(listedAddedBySystem = event.bySystem)
 }

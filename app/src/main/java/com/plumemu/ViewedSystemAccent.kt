@@ -3,6 +3,7 @@ package com.plumemu
 import com.plumemu.graph.AppGraph
 import com.plumemu.settings.ViewedSystem
 import com.plumemu.settings.systemColors
+import com.plumemu.settings.systemTints
 
 private val sharedLock = Any()
 private var shared: Pair<AppGraph, ViewedSystem>? = null
@@ -16,5 +17,5 @@ private var shared: Pair<AppGraph, ViewedSystem>? = null
 internal fun AppGraph.viewedSystemAccent(): ViewedSystem =
     synchronized(sharedLock) {
         shared?.takeIf { it.first === this }?.second
-            ?: ViewedSystem(viewedSystem) { catalog()?.systemColors() }.also { shared = this to it }
+            ?: ViewedSystem(viewedSystem) { catalog()?.systemColors() }.also { it.loadTints = { catalog()?.systemTints() }; shared = this to it }
     }

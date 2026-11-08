@@ -92,7 +92,8 @@ enum class InGameDimens(
         return TextStyle(
             fontFamily = PlumFonts.familyOf(font),
             fontSize = size,
-            fontWeight = FontWeight(role.weight),
+            // One face step under the scale: the card stays lit for a whole game and keeps the weights its burn-in budget was measured at.
+            fontWeight = FontWeight(role.weight - IN_GAME_LIGHTER_BY),
             fontFeatureSettings = "tnum",
             lineHeight = size * font.lineHeightEm,
             lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
@@ -227,3 +228,6 @@ object InGameColors {
     /** The line ahead ends at this share of its colour's alpha. */
     const val AHEAD_FADE_TO = 0.3f
 }
+
+/** The battery part draws one face step under the type scale ([TypeRole.weight]): the weights its burn-in budget was measured at. */
+private const val IN_GAME_LIGHTER_BY = 100

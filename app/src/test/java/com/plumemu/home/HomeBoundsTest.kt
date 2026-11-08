@@ -78,9 +78,9 @@ class HomeBoundsTest {
         assertDp("top bar y = margin 14", 14.dp, top.top)
         assertDp("top bar height: the place name's line", TableText.TopBarHeight, top.bottom - top.top)
         val strip = bounds(HomeTags.STRIP)
-        // The strip runs from bar to bar (rows go under both); its slot, where what does not scroll stands, keeps the gaps.
+        // The strip runs from the top bar to the footer gap (rows go under the top bar and fade out above the hint keys); its slot keeps the top gap.
         assertDp("the strip starts at the top bar's foot: 14 + the bar", 14.dp + TableText.TopBarHeight, strip.top)
-        assertDp("the strip ends at the hint bar's head", height - PlumDimens.footerBelow - 22.dp, strip.bottom)
+        assertDp("the strip ends the footer gap above the hint bar", height - PlumDimens.footerBelow - 22.dp - PlumDimens.footerGap, strip.bottom)
         assertDp("content starts at 14 + the bar + 10", 14.dp + TableText.TopBarHeight + 10.dp, strip.slot().top)
         assertDp("content ends the footer gap above the hint bar", height - PlumDimens.footerBelow - 22.dp - PlumDimens.footerGap, strip.slot().bottom)
         val hints = bounds(HomeTags.HINT_BAR)

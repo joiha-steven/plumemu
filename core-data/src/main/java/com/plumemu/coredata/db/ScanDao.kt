@@ -34,6 +34,10 @@ abstract class ScanDao(
     @Query("UPDATE rom_folder SET last_scan_finished_at = :finishedAt WHERE id = :folderId")
     abstract suspend fun markScanFinished(folderId: Long, finishedAt: Long)
 
+    /** The directories the folder's last scan could not list, newline-joined; null when it read them all. */
+    @Query("UPDATE rom_folder SET unreadable_paths = :paths WHERE id = :folderId")
+    abstract suspend fun setUnreadablePaths(folderId: Long, paths: String?)
+
     @Query("SELECT * FROM scanned_directory WHERE folder_id = :folderId")
     abstract suspend fun directories(folderId: Long): List<ScannedDirectoryEntity>
 

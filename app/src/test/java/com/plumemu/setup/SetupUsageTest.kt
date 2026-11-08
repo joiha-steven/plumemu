@@ -2,6 +2,7 @@ package com.plumemu.setup
 
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
+import com.plumemu.coreinput.Direction
 import com.plumemu.secondscreen.ScreenKind
 import com.plumemu.usage.RecordingSink
 import com.plumemu.usage.assertNoFreeText
@@ -33,10 +34,10 @@ class SetupUsageTest {
         runCurrent()
     }
 
-    /** The look step's tile (no event: the look step is not one of the statistics' steps), then the box art step's first choice. */
+    /** The look step's tile (no event: the look step is not one of the statistics' steps), then the box art step's Yes (this model has no ScreenScraper keys: libretro, no second page). */
     private fun TestScope.passLookAndBoxArt(model: SetupModel) {
-        repeat(2) {
-            model.onAction(Action.Enter)
+        for (action in listOf(Action.Enter, Action.Move(Direction.Down), Action.Enter)) {
+            model.onAction(action)
             runCurrent()
         }
     }

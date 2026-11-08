@@ -43,7 +43,7 @@ JVM test `ConverterTest` runs the converter and compares with the committed asse
    (`genesis` to `megadrive`, `3ds` to `n3ds`, ...); a Daijishō platform with no ES-DE
    counterpart becomes a system of its own.
 2. **Folders.** The system id, ES-DE names folded in, Daijishō `uniqueId` and `shortname`,
-   then `EXTRA_FOLDERS` (the tested systems; `psvita`: `ps vita`, `playstationvita`, `playstation vita`; the
+   then `EXTRA_FOLDERS` (names other frontends use: `vb`, `32x`, `a2600`, `dc` ...; the tested systems; `psvita`: `ps vita`, `playstationvita`, `playstation vita`; the
    MinUI/Onion tags and stock firmware names `sms`, `gg`, `pce`, `ps`). Daijishō has no folder field, so its two ids are
    the folder names it implies. The converter fails if a folder belongs to two systems.
 3. **Extensions.** Union of ES-DE `<extension>` and the "Supported extensions" of Daijishō
@@ -177,3 +177,5 @@ Fetch the two repositories again (sparse checkout of `platforms/` and
 `SOURCE.md` (keep the non-ASCII to XML character references note in `esde/SOURCE.md`), run the
 converter, read the summary, run `./gradlew :platforms:testDebugUnitTest`, and fix the hand-written
 expectations in `ExpectedLaunches.kt` for anything that changed on purpose.
+
+`WRONG_EMULATORS` removes a source's emulator from one system it cannot play (`speccy` from `samcoupe`); a system left with no emulator is dropped, so `samcoupe` is not shipped until a source lists SimCoupe's RetroArch core.

@@ -175,4 +175,91 @@ class UpdateManifestTest {
         assertEquals(emptyList<NoteSection>(), sectionsOf(JSONArray().put(section("new", "x".repeat(301)))))
         assertEquals(emptyList<NoteSection>(), sectionsOf(JSONArray().put(section("new", " "))))
     }
+    /**
+     * Apps already installed read `latest.json` with a parser that knows no `dexMetadata`: any shape of it,
+     * and any other field this version does not know, must leave the release offered and unchanged.
+     */
+    @Test
+    fun fieldsThisVersionDoesNotKnowNeverStopAnUpdate() {
+        val plain = (read(manifestJson()) as ManifestVerdict.Newer).manifest
+        val shapes: List<Any> =
+            listOf(
+                JSONArray().put(
+                    JSONObject().put("minSdk", 28).put("maxSdk", 30).put("file", "plumemu-0.0.3-alpha-41.api28-30.dm")
+                        .put("size", 17764).put("sha256", "ab".repeat(32)),
+                ),
+                "not a list",
+                42,
+                JSONObject().put("nested", JSONArray(listOf(1, 2))),
+            )
+        for (shape in shapes) {
+            val verdict = read(manifestJson { put("dexMetadata", shape); put("someLaterField", JSONObject().put("x", 1)) })
+            assertTrue("$shape: $verdict", verdict is ManifestVerdict.Newer)
+            assertEquals(plain, (verdict as ManifestVerdict.Newer).manifest.copy(dexMetadata = emptyList()))
+        }
+    }
+    private fun dexMetadataOf(value: Any?): List<DexMetadataFile> {
+        val verdict = read(manifestJson { put("dexMetadata", value) })
+        assertTrue("a dexMetadata problem never refuses the manifest: $verdict", verdict is ManifestVerdict.Newer)
+        return (verdict as ManifestVerdict.Newer).manifest.dexMetadata
+    }
+
+    @Test
+    fun dexMetadataIsReadWithItsRangesAndResolvedAgainstTheManifest() {
+        val entries = dexMetadataOf(UpdateFixtures.dexMetadataJson())
+        assertEquals(
+            listOf(
+                DexMetadataFile(28, 30, UpdateFixtures.dmPUrl, UpdateFixtures.dmP.size.toLong(), UpdateFixtures.sha256(UpdateFixtures.dmP)),
+                DexMetadataFile(31, null, UpdateFixtures.dmSUrl, UpdateFixtures.dmS.size.toLong(), UpdateFixtures.sha256(UpdateFixtures.dmS)),
+            ),
+            entries,
+        )
+    }
+
+    @Test
+    fun noDexMetadataFieldMeansNone() {
+        assertEquals(emptyList<DexMetadataFile>(), (read(manifestJson()) as ManifestVerdict.Newer).manifest.dexMetadata)
+        assertEquals(emptyList<DexMetadataFile>(), dexMetadataOf(JSONObject.NULL))
+    }
+
+    @Test
+    fun aBadDexMetadataEntryIsDroppedAloneAndTheManifestStillOffered() {
+        val good = UpdateFixtures.dexMetadataEntry(31, null, "plumemu-0.0.3-alpha-41.api31-up.dm", UpdateFixtures.dmS)
+        val bad: List<JSONObject.() -> Unit> =
+            listOf(
+                { put("file", "https://elsewhere.example/update/x.dm") },
+                { put("file", "//elsewhere.example/update/x.dm") },
+                { put("file", "http://plumemu-app.stevensdesk.com/update/x.dm") },
+                { put("file", "x.apk") },
+                { remove("file") },
+                { put("minSdk", 27) },
+                { put("minSdk", "28") },
+                { remove("minSdk") },
+                { put("maxSdk", 27) },
+                { put("maxSdk", 29.5) },
+                { put("size", 0) },
+                { put("size", DexMetadata.MAX_BYTES + 1) },
+                { put("sha256", "abc") },
+                { remove("sha256") },
+            )
+        for (edit in bad) {
+            val broken = JSONObject(UpdateFixtures.dexMetadataEntry(28, 30, "plumemu-0.0.3-alpha-41.api28-30.dm", UpdateFixtures.dmP).toString()).apply(edit)
+            val entries = dexMetadataOf(JSONArray().put(broken).put(good))
+            assertEquals("$broken", listOf(31), entries.map { it.minSdk })
+        }
+        assertEquals(listOf(31), dexMetadataOf(JSONArray().put("x").put(good)).map { it.minSdk })
+    }
+
+    @Test
+    fun aDexMetadataFieldOfTheWrongShapeOrWithOverlappingRangesIsDroppedWhole() {
+        assertEquals(emptyList<DexMetadataFile>(), dexMetadataOf("plumemu.dm"))
+        assertEquals(emptyList<DexMetadataFile>(), dexMetadataOf(JSONObject().put("minSdk", 28)))
+        val overlapping =
+            JSONArray()
+                .put(UpdateFixtures.dexMetadataEntry(28, 31, "a.dm", UpdateFixtures.dmP))
+                .put(UpdateFixtures.dexMetadataEntry(31, null, "b.dm", UpdateFixtures.dmS))
+        assertEquals(emptyList<DexMetadataFile>(), dexMetadataOf(overlapping))
+        val tooMany = JSONArray().apply { repeat(DexMetadata.MAX_ENTRIES + 1) { put(UpdateFixtures.dexMetadataEntry(28 + it, 28 + it, "d$it.dm", UpdateFixtures.dmP)) } }
+        assertEquals(emptyList<DexMetadataFile>(), dexMetadataOf(tooMany))
+    }
 }

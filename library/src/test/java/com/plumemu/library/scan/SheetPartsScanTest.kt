@@ -125,6 +125,26 @@ class SheetPartsScanTest {
     }
 
     @Test
+    fun aSheetThatCouldNotBeReadIsReadAgainByTheNextScan() = runTest {
+        write("psx/Game.cue", "FILE \"Track 01.bin\" BINARY\n")
+        write("psx/Track 01.bin")
+        write("psx/Other (USA).chd")
+        fx.tree.beforeQuery = { if (it.endsWith("Game.cue")) throw SecurityException("provider says no") }
+        scan()
+        fx.tree.beforeQuery = {}
+        scan()
+        assertEquals("the stray track row goes once the sheet reads", listOf("Game.cue", "Other (USA).chd"), rows())
+    }
+
+    @Test
+    fun aPlaylistNamingItsDiscsWithADotSlashClaimsThem() = runTest {
+        write("psx/Final Fantasy VII.m3u", "./FF7 (Disc 1).chd\n.\\FF7 (Disc 2).chd\n")
+        for (n in 1..2) write("psx/FF7 (Disc $n).chd")
+        scan()
+        assertEquals(listOf("Final Fantasy VII.m3u"), rows())
+    }
+
+    @Test
     fun aRescanOnlyVisitsChangedFoldersWhenNoSheetIsAround() = runTest {
         write("psx/Game.cue", "FILE \"Track 01.bin\" BINARY\n")
         write("psx/Track 01.bin")

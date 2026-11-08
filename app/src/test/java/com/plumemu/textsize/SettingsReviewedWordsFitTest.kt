@@ -41,7 +41,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The words that came out longest in Settings, at Largest in every font and language: Back up and restore's row and panel, the Updates
+ * The words that came out longest in Settings, at Largest and language: Back up and restore's row and panel, the Updates
  * row's "0.1.3 available", Clear Recent's two buttons, an emulator list with none installed and the push-right row. None ellipsized,
  * cut sideways or on top of another text. Other texts of these screens are not this test's subject.
  */
@@ -76,17 +76,15 @@ abstract class SettingsReviewedWordsFitBase {
     fun theyAreWholeAtLargest() {
         var focus by mutableStateOf(SettingsFocus(section = SettingsSection.Library))
         var content by mutableStateOf(SettingsContent())
-        var font by mutableStateOf(PlumFont.Default)
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest, font = font)) { SettingsAt(focus, content = content) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) { SettingsAt(focus, content = content) } }
         val allow = FitAllowance(scrollTags = setOf(SettingsTags.OPTION_LIST, SettingsTags.SECTIONS, SettingsTags.PANEL, SettingsTags.PANEL_LIST))
         val failures = mutableListOf<String>()
         val context = ApplicationProvider.getApplicationContext<Context>()
         val names =
             listOf(R.string.settings_backup_and_restore, R.string.settings_clear_recent_confirm, R.string.settings_emulator_automatic_none, R.string.settings_push_right).map(context::getString) +
                 context.getString(R.string.settings_update_value_available, release.versionName)
-        for (eachFont in PlumFont.entries) {
+        for (eachFont in listOf(PlumFont.Jost)) {
             for ((stop, shown) in stops) {
-                font = eachFont
                 focus = stop
                 content = shown
                 compose.waitForIdle()

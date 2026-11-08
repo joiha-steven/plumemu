@@ -52,6 +52,21 @@ class MainActivityInputTest {
     }
 
     @Test
+    fun everyKeyStickAndTouchKeepsTheGpuWarm() {
+        val before = activity.gpuWarmth.inputs
+        activity.dispatchKeyEvent(key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN))
+        activity.dispatchKeyEvent(key(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_DOWN))
+        val touch = MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_DOWN, 10f, 10f, 0)
+        activity.dispatchTouchEvent(touch)
+        touch.recycle()
+        val stick = MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_MOVE, 0f, 0f, 0).apply { source = InputDevice.SOURCE_JOYSTICK }
+        activity.dispatchGenericMotionEvent(stick)
+        stick.recycle()
+        idle()
+        assertEquals("two keys, a touch and a stick move", before + 4, activity.gpuWarmth.inputs)
+    }
+
+    @Test
     fun volumeKeysAreLeftToAndroid() {
         activity.dispatchKeyEvent(key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_VOLUME_UP))
         activity.dispatchKeyEvent(key(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_VOLUME_UP))

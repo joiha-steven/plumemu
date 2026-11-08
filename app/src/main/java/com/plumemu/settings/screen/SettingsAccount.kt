@@ -146,7 +146,7 @@ internal fun ScraperAccountPanel(
     val form = model.signIn.form
     val page = model.focus.page
     if (form != null && form.kind == SignInKind.ScreenScraper && page == PanelPage.ScraperSignIn) {
-        SignInPage(stringResource(R.string.settings_account_title), form, touch)
+        SignInPage(stringResource(R.string.settings_account_title), form, touch) { PanelBody(stringResource(R.string.settings_account_sign_up)) }
         return
     }
     if (page == PanelPage.ScraperSystems) return BoxArtSystemsPage(model, touch)

@@ -34,7 +34,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The sign-in form typing with Plumemu's keyboard in setup and in Settings, in
- * Plum Sans at the six sizes and in Serif and Mono at Largest: the tray along the screen's bottom with
+ * Jost at the six sizes: the tray along the screen's bottom with
  * the typing hints on it; the focused field (the username, the password) whole, under the top bar and
  * above the tray's top edge; the first line of what follows it (the password row, Sign in, or the
  * refusal's message) whole between the field and the tray; the field's text and the hints whole. As
@@ -68,12 +68,10 @@ abstract class SignInKeyboardFitBase(
         screen: @Composable () -> Unit,
     ) {
         var size by mutableStateOf(TextSize.Largest)
-        var font by mutableStateOf(PlumFont.Sans)
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) { screen() } }
-        val combinations = TextSize.entries.map { PlumFont.Sans to it } + listOf(PlumFont.Serif to TextSize.Largest, PlumFont.Mono to TextSize.Largest)
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { screen() } }
+        val combinations = TextSize.entries.map { PlumFont.Jost to it }
         val failures = mutableListOf<String>()
         for ((eachFont, each) in combinations) {
-            font = eachFont
             size = each
             compose.waitForIdle()
             val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()

@@ -147,10 +147,10 @@ class EndToEndTest {
         check(device.wait(Until.hasObject(By.textContains(" games · ")), SetupDriver.SCAN_TIMEOUT)) { "folder not counted" }
         device.findObject(By.text(context.getString(R.string.setup_continue))).click()
         // Setup asks for a look, then where box art comes from; this test takes the suggested look and
-        // the covers that need no network. When a question never shows, the loop just waits for the ready screen.
+        // "No" to box art download. When a question never shows, the loop just waits for the ready screen.
         val readyBy = By.text(context.getString(R.string.setup_ready_title))
         val lookBy = By.text(context.getString(R.string.setup_look_title))
-        val boxArtBy = By.text(context.getString(R.string.setup_box_art_question_title))
+        val boxArtBy = By.text(context.getString(R.string.setup_box_art_ask_title))
         val deadline = SystemClock.elapsedRealtime() + SetupDriver.SCAN_TIMEOUT
         while (!device.hasObject(readyBy) && SystemClock.elapsedRealtime() < deadline) {
             if (device.hasObject(lookBy)) {
@@ -158,9 +158,9 @@ class EndToEndTest {
                 check(device.wait(Until.gone(lookBy), TIMEOUT)) { "look step still shown after confirming" }
             }
             if (device.hasObject(boxArtBy)) {
-                checkNotNull(device.findObject(By.text(context.getString(R.string.settings_box_art_source_own)))) { "own covers choice not found" }.click()
+                checkNotNull(device.findObject(By.text(context.getString(R.string.setup_box_art_no)))) { "No choice not found" }.click()
                 // One tap only: wait for the question to go, so a second tap cannot land on the next screen.
-                check(device.wait(Until.gone(boxArtBy), TIMEOUT)) { "box-art question still shown after choosing" }
+                check(device.wait(Until.gone(boxArtBy), TIMEOUT)) { "box-art question still shown after answering" }
             }
             SystemClock.sleep(POLL_MS)
         }

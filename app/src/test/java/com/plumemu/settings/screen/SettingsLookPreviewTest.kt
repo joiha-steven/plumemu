@@ -64,7 +64,7 @@ class SettingsLookPreviewTest {
 
     @Test
     fun theOptionsThatChangeTheLookGetTheTileAndNoOtherDoes() {
-        val with = listOf(SettingsOption.Colors, SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent, SettingsOption.Font, SettingsOption.TextSize, SettingsOption.TextWeight)
+        val with = listOf(SettingsOption.Colors, SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent, SettingsOption.TextSize)
         assertEquals(with.toSet(), SettingsOption.entries.filter { previewKindOf(it) != null }.toSet())
         show(SettingsOption.TextSize)
         assertTrue(hasPreview())
@@ -82,19 +82,6 @@ class SettingsLookPreviewTest {
         println("PREVIEW $option shown=${hasPreview()}")
         return hasPreview()
     }
-
-    /** Font lists four sample rows of its own, so at 768 x 432 the card does not fit above them and the rows win. */
-    @Test fun fontGivesWayToItsSampleRowsAtMedium() = assertFalse(shownAtMedium(SettingsOption.Font))
-
-    /** Where the four rows and the card fit together (832 x 468, Small text) the card shows, the description giving way. */
-    @Test
-    @Config(qualifiers = "w832dp-h468dp-land-xhdpi")
-    fun fontShowsTheTileWhereItFitsWithItsRows() {
-        show(SettingsOption.Font, TextSize.Small)
-        assertTrue(hasPreview())
-    }
-
-    @Test fun textWeightTile() = assertTrue(shownAtMedium(SettingsOption.TextWeight))
 
     @Test fun textColorGivesWayToItsSwatchesAtMedium() = assertFalse(shownAtMedium(SettingsOption.TextColor))
 
@@ -277,7 +264,7 @@ class SettingsLookPreviewTest {
         }
         assertEquals(listOf(0f, 0.45f, 1f), SettingsPreviewLook.TILE_STOPS)
         assertEquals(listOf(0f, 0.42f, 1f), SettingsPreviewLook.BALL_STOPS)
-        show(SettingsOption.TextWeight)
+        show(SettingsOption.TextSize)
         val centre = pixel(SettingsTags.LOOK_PREVIEW, 149f, 23f)
         val middle = pixel(SettingsTags.LOOK_PREVIEW, 162f, 40f)
         val corner = pixel(SettingsTags.LOOK_PREVIEW, 189f, 58f)
@@ -287,7 +274,7 @@ class SettingsLookPreviewTest {
     /** The tile's drop shadow (`0 8px 18px` black .5) darkens the well under its bottom edge; far from it the well is plain. */
     @Test
     fun theCoverTileCastsItsDropShadow() {
-        show(SettingsOption.TextWeight)
+        show(SettingsOption.TextSize)
         // 68, not closer to the edge: at 65 the difference sits on the threshold and one colour step of
         // Linux rendering failed it in CI.
         val under = pixel(SettingsTags.LOOK_PREVIEW, 163f, 68f)
@@ -298,7 +285,7 @@ class SettingsLookPreviewTest {
     /** The card's `0 1px 0` white line sits just outside its bottom edge (outside the clip), and the card's inset shadow darkens its top edge inside. */
     @Test
     fun theCardHasItsBottomLineOutsideAndItsInsetShadowInside() {
-        show(SettingsOption.TextWeight)
+        show(SettingsOption.TextSize)
         val line = pixel(SettingsTags.LOOK_PREVIEW, 100f, 114.9f)
         val page = pixel(SettingsTags.LOOK_PREVIEW, 100f, 118f)
         assertTrue("the white line is lighter than the page under it: $line against $page", lum(line) > lum(page) + 0.04f)
@@ -314,7 +301,7 @@ class SettingsLookPreviewTest {
     fun theTileFollowsALiveColourPreview() {
         val preview = ColorPreview()
         val stored = PlumSettings(flags = SetupFlags(setupCompleted = true))
-        compose.setContent { SettingsTheme(stored, null, preview) { SettingsAt(optionsAt(SettingsOption.TextWeight), stored) } }
+        compose.setContent { SettingsTheme(stored, null, preview) { SettingsAt(optionsAt(SettingsOption.TextSize), stored) } }
         compose.waitForIdle()
         val before = pixel(SettingsTags.LOOK_PREVIEW, 149f, 23f)
         compose.runOnIdle { preview.show(stored.appearance.copy(accent = ColorSetting.Custom(0x2E9E5B), background = ColorSetting.Custom(0x203040)), fingerDown = true) }
@@ -329,7 +316,7 @@ class SettingsLookPreviewTest {
     @Test
     fun theTileFollowsAStoredChange() {
         var stored by mutableStateOf(PlumSettings(flags = SetupFlags(setupCompleted = true)))
-        compose.setContent { SettingsTheme(stored) { SettingsAt(optionsAt(SettingsOption.TextWeight), stored) } }
+        compose.setContent { SettingsTheme(stored) { SettingsAt(optionsAt(SettingsOption.TextSize), stored) } }
         compose.waitForIdle()
         compose.runOnIdle { stored = stored.copy(appearance = stored.appearance.copy(accent = ColorSetting.Custom(0xD0502A))) }
         compose.waitForIdle()
@@ -350,7 +337,7 @@ class SettingsLookPreviewTest {
         return false
     }
 
-    /** Colors' A opens its tiles, so at rest it ends in the one right chevron like every row that opens a page; Font, which only steps, shows none. */
+    /** Colors' A opens its tiles, so at rest it ends in the one right chevron like every row that opens a page. */
     @Test
     fun colorsEndsInARightChevronAtRestAndAStepOnlyRowDoesNot() {
         show(SettingsOption.TextSize)
@@ -359,6 +346,5 @@ class SettingsLookPreviewTest {
         assertTrue("Colors: right chevron at rest", chevronDrawn(right(SettingsOption.Colors)))
         assertFalse("Colors: no left chevron at rest", chevronDrawn(left(SettingsOption.Colors)))
         assertTrue("Language opens a page: right chevron", chevronDrawn(right(SettingsOption.Language)))
-        assertFalse("Font only steps: no chevron at rest", chevronDrawn(right(SettingsOption.Font)))
     }
 }

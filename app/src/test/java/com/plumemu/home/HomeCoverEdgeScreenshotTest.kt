@@ -132,7 +132,7 @@ class HomeCoverEdgeScreenshotTest {
         // The focused cover is drawn larger over its neighbours with its ring and halo: a cell within that reach is partly covered, so it is left out too.
         val focusedBounds = compose.onNodeWithTag(HomeTags.cover(FOCUSED_CELL), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val d = compose.density.density
-        val lifted = focusedBounds.inflate(max(focusedBounds.width, focusedBounds.height) * (PlumDimens.FOCUSED_COVER_SCALE - 1f) / 2f + (PlumDimens.focusRingOutset.value + PlumDimens.focusRingKeyline.value + PlumDimens.focusHaloReach.value) * d)
+        val lifted = focusedBounds.inflate(max(focusedBounds.width, focusedBounds.height) * (1f - 1f) / 2f + (PlumDimens.focusRingOutset.value + PlumDimens.focusRingKeyline.value + PlumDimens.focusHaloReach.value) * d)
         val cells = (0 until FIRST_CELLS).filter { it != FOCUSED_CELL }.map { compose.onNodeWithTag(HomeTags.cover(it), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot }.filter { it.width > 0f && it.bottom <= pixels.height && !it.overlaps(lifted) } // a row off the screen has no pixels to read
         var checked = 0
         var shorter = 0

@@ -44,7 +44,7 @@ internal class FitAllowance(
     val barTags: Set<String> = emptySet(),
 )
 
-/** Game titles the home list cuts at Largest in Serif and Mono: the list's room is about 3 dp short of the whole title there, with the year alone and nothing left to give up. */
+/** Game titles the home list cuts at Largest: the list's room is about 3 dp short of the whole title there, with the year alone and nothing left to give up. */
 // Rows now show under both bars, so more of the fixture is on screen: its Zelda and its filler titles.
 internal val LONG_TITLES = setOf("Donkey Kong Country 2", "Zelda: A Link to the Past") + (9..99).map { "Super Nintendo title $it" }
 

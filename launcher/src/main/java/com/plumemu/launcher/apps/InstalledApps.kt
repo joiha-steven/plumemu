@@ -86,7 +86,7 @@ class InstalledApps internal constructor(
     ) : this(
         context.packageManager,
         context.packageName,
-        ActivityStarter { intent -> context.applicationContext.startActivity(intent) }.observedBy(startObserver)::start,
+        ActivityStarter { intent -> com.plumemu.launcher.LaunchAnimation.start(context.applicationContext, intent) }.observedBy(startObserver)::start,
         AndroidLauncherLog,
         Dispatchers.IO,
         battery,

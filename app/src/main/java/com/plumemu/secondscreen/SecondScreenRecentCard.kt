@@ -41,6 +41,9 @@ internal fun BoxScope.RecentCard(
     val figures = content.figures
     EntryColumn(Modifier.align(Alignment.TopStart).entryCardPlace()) {
         EntryPartBox(EntryPart(priority = 0)) { EntryHeader(content.name, content.gameCount, styles) }
+        if (figures != null && figures.games.isEmpty()) {
+            EntryPartBox(EntryPart(priority = 1, gapAbove = EntryCardDimens.headerBottom)) { EntryEmptyLine(stringResource(R.string.home_recent_empty), styles) }
+        }
         if (figures != null && figures.games.isNotEmpty()) {
             EntryPartBox(EntryPart(priority = 1, gapAbove = EntryCardDimens.headerBottom)) {
                 // A slot of the row before this one may be recomposed once with the new list: no game at its index.

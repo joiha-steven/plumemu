@@ -51,6 +51,7 @@ data class UpdateView(
     val found: UpdateManifest? = null,
     val isChecking: Boolean = false,
     val step: UpdateStep = UpdateStep.Idle,
+    val notice: NoticeLine = NoticeLine.None,
 ) {
     /** An update is downloading, being checked or handed to Android: no check runs meanwhile. */
     val isUpdateRunning: Boolean
@@ -92,6 +93,7 @@ class Updates(
      * or "manual". It never changes the update's record, view or gate, and must not throw.
      */
     private val dataCheck: suspend (label: String) -> Unit = {},
+    notificationsAllowed: () -> Boolean = { true },
     private val info: (String) -> Unit,
     private val log: (String) -> Unit,
 ) {
@@ -119,6 +121,13 @@ class Updates(
     /** Told by [onFront] / [onStop] (StartupWork reports the front only while Plumemu is in it). Until then nothing is installed. */
     private var isInFront = false
     private var readyFile: File? = null
+    internal val noticeAsk = NoticeAsk(deviceSdk, notificationsAllowed, log) { line -> mutableView.update { if (it.notice == line) it else it.copy(notice = line) } }
+    private var readyDexMetadata: File? = null
+
+    /** The APK of a committed session that carried dex metadata, kept until Android answers: a failure may be the `.dm`'s. */
+    private var apkOnlyRetry: ApkOnlyRetry? = null
+
+    private class ApkOnlyRetry(val file: File, val versionCode: Long)
 
     /** Android's confirm screen that came while Plumemu was not in front; shown at the next [onFront]. */
     private var pendingConfirm: (() -> Boolean)? = null
@@ -154,6 +163,7 @@ class Updates(
         return scope.launch {
             loaded()
             val view = mutableView.value
+            noticeAsk.onFront()
             when {
                 view.isWaitingForPermission -> if (installer.canRequestInstalls()) resumeAfterPermission()
                 view.step == UpdateStep.ReadyToInstall -> installReady()
@@ -451,28 +461,58 @@ class Updates(
             return failed(refusal.first, refusal.second)
         }
         info("Update ${manifest.versionName}: size, SHA-256, package, version and certificate checked")
-        val inFront = synchronized(lock) { isInFront.also { if (!it) readyFile = file } }
-        if (inFront) install(file, manifest.versionCode) else setStep(UpdateStep.ReadyToInstall)
+        val dexMetadata = dexMetadataFor(manifest)
+        noticeAsk.awaitAnswer()
+        val inFront = synchronized(lock) { isInFront.also { if (!it) readyFile = file.also { readyDexMetadata = dexMetadata } } }
+        if (inFront) install(file, dexMetadata, manifest.versionCode) else setStep(UpdateStep.ReadyToInstall)
+    }
+
+    /**
+     * The checked dex metadata for this device's API level, or null: none published for it, or its
+     * download failed (logged; the APK installs alone, the person is never told).
+     */
+    private suspend fun dexMetadataFor(manifest: UpdateManifest): File? {
+        val entry = DexMetadata.forSdk(manifest.dexMetadata, deviceSdk)
+        if (entry == null) {
+            if (manifest.dexMetadata.isNotEmpty()) info("Update ${manifest.versionName}: no dex metadata for API $deviceSdk; the APK installs alone")
+            return null
+        }
+        return try {
+            downloader.downloadDexMetadata(manifest, entry, log)?.also { info("Update ${manifest.versionName}: dex metadata for API $deviceSdk checked") }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: RuntimeException) {
+            log("Update dex metadata not used: ${e.javaClass.simpleName}")
+            null
+        }
     }
 
     private suspend fun installReady() {
         // onFront launched this; Plumemu may have left again before it ran.
+        var dexMetadata: File? = null
         val file =
             synchronized(lock) {
                 if (!isInFront) return
+                dexMetadata = readyDexMetadata
+                readyDexMetadata = null
                 readyFile.also { readyFile = null }
             } ?: return setStep(UpdateStep.Idle)
         val manifest = synchronized(lock) { record?.found } ?: return setStep(UpdateStep.Idle)
-        install(file, manifest.versionCode)
+        install(file, dexMetadata, manifest.versionCode)
     }
 
     private suspend fun install(
         file: File,
+        dexMetadata: File?,
         versionCode: Long,
     ) {
         setStep(UpdateStep.Installing())
+        // Set before the commit: Android may answer (onInstallStatus) before the call returns.
+        val retry = dexMetadata?.let { ApkOnlyRetry(file, versionCode) }?.also { synchronized(lock) { apkOnlyRetry = it } }
+        var keepApk = false
         try {
-            withContext(io) { installer.commit(file, versionCode) }
+            // Kept until Android answers, for one try with the APK alone, when the session carries the .dm.
+            keepApk = withContext(io) { installer.commit(file, versionCode, dexMetadata) }
             // Left while the session was written: onStop ran before the marker existed.
             if (!synchronized(lock) { isInFront }) forgetReopen("Plumemu left the front while the install was handed over")
         } catch (e: IOException) {
@@ -480,13 +520,25 @@ class Updates(
         } catch (e: SecurityException) {
             failed(UpdateFailure.InstallFailed, "install session refused")
         } finally {
-            // The session holds its own copy once committed; ours is deleted either way.
-            withContext(io) { file.delete() }
+            // The session holds its own copy once committed; ours is deleted either way (the APK after Android's answer when kept).
+            // The APK went alone or the commit threw: nothing to retry (only this install's own retry is dropped).
+            if (!keepApk && retry != null) synchronized(lock) { if (apkOnlyRetry === retry) apkOnlyRetry = null }
+            withContext(io) {
+                dexMetadata?.delete()
+                if (!keepApk) file.delete()
+            }
         }
     }
 
     /** What Android said about the session ([UpdateInstallReceiver]). */
     fun onInstallStatus(status: InstallStatus) {
+        val retry = if (status is InstallStatus.NeedsConfirm) null else synchronized(lock) { apkOnlyRetry.also { apkOnlyRetry = null } }
+        if (status is InstallStatus.Failed && retry != null && DexMetadata.mayComeFromDexMetadata(status.code, status.message)) {
+            // Once only: the retry carries no dex metadata, so its own failure is the person's to see.
+            log("Update install with dex metadata failed (installer status ${status.code}: ${status.message}); installing the APK alone")
+            scope.launch { install(retry.file, null, retry.versionCode) }
+            return
+        }
         when (status) {
             is InstallStatus.NeedsConfirm -> {
                 val now = synchronized(lock) { isInFront.also { if (!it) pendingConfirm = status.show } }
@@ -525,7 +577,12 @@ class Updates(
                 setStep(UpdateStep.Cancelled)
             }
             mutableView.value.step in setOf(UpdateStep.AskMetered, UpdateStep.NeedsPermission, UpdateStep.NoPermissionScreen, UpdateStep.ReadyToInstall) -> {
-                synchronized(lock) { readyFile?.delete(); readyFile = null }
+                synchronized(lock) {
+                    readyFile?.delete()
+                    readyFile = null
+                    readyDexMetadata?.delete()
+                    readyDexMetadata = null
+                }
                 setStep(UpdateStep.Cancelled)
             }
         }

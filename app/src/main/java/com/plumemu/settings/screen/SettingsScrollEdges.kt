@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import kotlin.math.abs
 import com.plumemu.coreui.components.ListEdgeFade
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumMotionState
@@ -95,10 +96,15 @@ internal fun Density.roomForRow(row: Int): Int = if (row <= 0) 0 else row + 2 * 
  * The text blocks and focus stops of a [PanelScrollColumn] (titles and bodies place themselves here, [panelBlock]; stops through [bringIntoViewWhen]). A key never leaves a block half
  * gone at the top: the scroll goes on the way it went, to the block's top or to where only its tail shows under the fade, keeping the focused stop on screen, so Up always moves.
  * On the first stop the text above it comes back as far as the stop stays on screen. A finger rests where it lifts. The column grows at its foot to reach a rest, and only for it.
+ * Buttons ([placeButton], from `SetupButton`) are kept by the rest too, in a focused panel after the person's key move from one stop to another: that rest never leaves one cut past the fade band,
+ * whole or a peek ([keepButtonsWhole]). A panel just opened, or only previewed, rests as it did: its title shows, a button may be cut.
  */
 internal class PanelBlocks : BringStops {
     private val nodes = ArrayList<LayoutCoordinates>()
     private val stops = ArrayList<BringStop>()
+    private val buttons = ArrayList<LayoutCoordinates>()
+    private var movedByPerson = false
+    private var isPressPending = false
     private var window: LayoutCoordinates? = null
     private val held = ArrayList<BringStop>()
     private var isByFinger = false
@@ -115,6 +121,19 @@ internal class PanelBlocks : BringStops {
     /** The presses of a panel with no stops: with animations off a press's whole scroll passes inside one snapshot, unseen by [ScrollState.isScrollInProgress]. */
     var keyMoves by mutableIntStateOf(0)
         private set
+
+    /** The presses that moved inside a focused panel so far ([SettingsModel.panelPresses]); a new one marks the focus change that follows it as the person's move. */
+    var presses = -1
+        set(value) {
+            // The first read is the count the panel was made at (presses in earlier panels), not a press.
+            if (field >= 0 && value != field) isPressPending = true
+            field = value
+        }
+
+    /** The recomposition of a press has placed its focus: later focus changes (new content) are not that press. */
+    fun pressHandled() {
+        isPressPending = false
+    }
 
     /** Room added under the content to reach a rest. */
     var extra by mutableIntStateOf(0)
@@ -135,14 +154,21 @@ internal class PanelBlocks : BringStops {
         if (stop !in stops) stops += stop
     }
 
+    override fun placeButton(button: LayoutCoordinates) {
+        if (button !in buttons) buttons += button
+    }
+
     override fun focusedOn(stop: BringStop) {
         held += stop
+        // Only a focus that follows a key move inside the panel is the person's: entering it, or a focus re-placed by new content, is not.
+        if (isPressPending) movedByPerson = true
         focused = stop
         keyTookOver()
     }
 
     override fun focusLeft(stop: BringStop) {
         held -= stop
+        if (held.isEmpty()) movedByPerson = false
         if (focused === stop) focused = held.lastOrNull()
     }
 
@@ -166,14 +192,17 @@ internal class PanelBlocks : BringStops {
         gapPx: Int,
         tailPx: Int,
         roomPx: Int,
+        bandPx: Int,
         motion: PlumMotionState,
     ) {
         val box = window?.takeIf { it.isAttached } ?: return
         nodes.removeAll { !it.isAttached }
         stops.removeAll { it.coordinates?.isAttached != true }
+        buttons.removeAll { !it.isAttached }
         if (!isByFinger) {
             val now = scroll.value
-            val target = restFor(box, now, gapPx, tailPx, roomPx)
+            val wanted = restFor(box, now, gapPx, tailPx, roomPx)
+            val target = if (movedByPerson && held.isNotEmpty()) keepButtonsWhole(box, now, wanted, gapPx, tailPx, roomPx, bandPx, scroll.maxValue) else wanted
             if (target > scroll.maxValue) {
                 extra += target - scroll.maxValue
                 withFrameNanos {}
@@ -189,6 +218,61 @@ internal class PanelBlocks : BringStops {
         restedAt = scroll.value
         val needed = (scroll.value - (scroll.maxValue - extra)).coerceAtLeast(0)
         if (needed < extra) extra = needed
+    }
+
+    /**
+     * [rest], or the nearest scroll position to it where no button is cut by an edge past [bandPx] (the fade covers a peek of that, nothing more) and no text block is half gone,
+     * keeping the focused stop on screen: a button is whole or a peek, never cut through its label. [rest] itself when none is found.
+     */
+    private fun keepButtonsWhole(
+        box: LayoutCoordinates,
+        now: Int,
+        rest: Int,
+        gapPx: Int,
+        tailPx: Int,
+        roomPx: Int,
+        bandPx: Int,
+        max: Int,
+    ): Int {
+        // A form above the keyboard tray keeps every px and passes no bring room: it has no fade to peek under.
+        if (buttons.isEmpty() || roomPx == 0) return rest
+        val height = box.size.height
+        val tops = IntArray(buttons.size) { box.localPositionOf(buttons[it], Offset.Zero).y.toInt() + now }
+        val ends = IntArray(buttons.size) { tops[it] + buttons[it].size.height }
+        val blockTops = IntArray(nodes.size) { box.localPositionOf(nodes[it], Offset.Zero).y.toInt() + now }
+        val blockEnds = IntArray(nodes.size) { blockTops[it] + nodes[it].size.height }
+        val lowest = held.filter { it.coordinates?.isAttached == true }.maxByOrNull { stop -> stop.coordinates?.let { box.localPositionOf(it, Offset.Zero).y } ?: 0f }
+        val stop = lowest?.coordinates
+        val stopTop = stop?.let { box.localPositionOf(it, Offset.Zero).y.toInt() + now } ?: 0
+        val stopEnd = stopTop + (stop?.size?.height ?: 0) + (lowest?.belowPx ?: 0)
+        // [rest] may lie past [max] (the column grows at its foot to reach it); only the other candidates are bound by it.
+        fun fits(at: Int): Boolean {
+            if (at < 0 || (at > max && at != rest)) return false
+            if (stop != null && !(stopEnd - at + roomPx <= height && stopTop - at >= 0)) return false
+            for (i in tops.indices) {
+                val shown = minOf(ends[i], at + height) - maxOf(tops[i], at)
+                if (shown > bandPx && shown < ends[i] - tops[i]) return false
+            }
+            for (i in blockTops.indices) {
+                val top = blockTops[i] - at
+                val end = blockEnds[i] - at
+                if (top < 0 && end > 0 && end - top <= height && end + gapPx > tailPx) return false
+            }
+            return true
+        }
+        if (fits(rest)) return rest
+        val candidates = ArrayList<Int>()
+        for (i in tops.indices) {
+            candidates += ends[i] - height
+            candidates += tops[i] + bandPx - height
+            candidates += tops[i]
+            candidates += ends[i] - bandPx
+        }
+        for (i in blockTops.indices) {
+            candidates += blockEnds[i] + gapPx - tailPx
+            candidates += blockTops[i]
+        }
+        return candidates.filter { it != rest && fits(it) }.minByOrNull { abs(it - rest) } ?: rest
     }
 
     /** On the first stop, as much of the text above it as the stop leaves room for: from [shown], a block cut there goes only if text stays between it and the stop. */
@@ -270,6 +354,9 @@ internal class PanelBlocks : BringStops {
     }
 }
 
+/** [SettingsModel.panelPresses] for the panels beneath: a key move made inside a focused panel. */
+internal val LocalPanelPresses = compositionLocalOf { 0 }
+
 internal val LocalPanelBlocks = compositionLocalOf<PanelBlocks?> { null }
 
 /** On a text block of a panel: inside a [PanelScrollColumn] it is never left half gone. */
@@ -286,6 +373,8 @@ internal fun Modifier.panelBlock(): Modifier {
  * preview) passes [fillsHeight] false; a form above the keyboard tray keeps every px and passes no [bringRoom] or [endRoom], as a panel with nothing focusable no [endRoom].
  * [tail] is how much of a block a rest may leave under the top fade, [fades] false for a panel that draws its own. A panel that scrolls by key with no focus stop counts its presses
  * in [keyMoves]. Content over the window by no more than [PanelFootGive] does not scroll: the end room gives that much up, so no block is cut for a few px.
+ * In a focused panel, after a key move from one stop to another, a button inside is whole at rest or shows no more than [PlumDimens.listFadeBand] of itself under the fade, never cut
+ * through its label (it registers through `buttonStop()`); on open, on entering from the list, in a preview and when the content changes the title stays at the top and a button may be cut.
  */
 @Composable
 internal fun PanelScrollColumn(
@@ -304,21 +393,24 @@ internal fun PanelScrollColumn(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val blocks = remember { PanelBlocks() }
+    blocks.presses = LocalPanelPresses.current
     val motion = PlumTheme.motion
     val gapPx = with(LocalDensity.current) { gap.roundToPx() }
     val tailPx = with(LocalDensity.current) { tail.roundToPx() }
     val roomPx = with(LocalDensity.current) { bringRoom.roundToPx() }
-    LaunchedEffect(scroll, blocks, gapPx, tailPx, roomPx) {
+    val bandPx = with(LocalDensity.current) { PlumDimens.listFadeBand.roundToPx() }
+    LaunchedEffect(scroll, blocks, gapPx, tailPx, roomPx, bandPx) {
         snapshotFlow { Triple(scroll.isScrollInProgress, blocks.focused, blocks.keyMoves) }.collect { (isScrolling) ->
             if (!isScrolling) {
                 // A new focus or press asks for its scroll in this frame: that scroll's end comes here again.
                 withFrameNanos {}
-                if (!scroll.isScrollInProgress) blocks.settle(scroll, gapPx, tailPx, roomPx, motion)
+                if (!scroll.isScrollInProgress) blocks.settle(scroll, gapPx, tailPx, roomPx, bandPx, motion)
             }
         }
     }
     LaunchedEffect(scroll, blocks) { scroll.interactionSource.interactions.collect { if (it is DragInteraction.Start) blocks.fingerMoved() } }
     LaunchedEffect(blocks, keyMoves) { blocks.keyMoved(keyMoves) }
+    LaunchedEffect(blocks, blocks.presses) { blocks.pressHandled() }
     val height = if (fillsHeight) Modifier.fillMaxHeight() else Modifier
     val footGivePx = with(LocalDensity.current) { minOf(endRoom, PanelFootGive).roundToPx() }
     Box(modifier.then(height).onPlaced { blocks.placeWindow(it) }) {

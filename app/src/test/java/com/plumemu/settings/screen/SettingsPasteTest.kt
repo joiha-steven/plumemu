@@ -36,7 +36,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [28], qualifiers = "w768dp-h432dp-land-xhdpi")
 internal class SettingsPasteTest : SettingsKeyboardPathHarness() {
     init {
-        startOnRedSans() // the accent palette's "+" is reached by walking the presets from Red
+        startOnRed() // the accent palette's "+" is reached by walking the presets from Red
     }
 
     override val content: SettingsContent get() = SettingsContent(account = AccountStatus.SignedOut, chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper)

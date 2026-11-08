@@ -90,6 +90,9 @@ internal class FolderScan(
     /** Reads the sheets (`.cue`, `.gdi`, `.m3u`) of each directory it walks; their files are parts of the sheet's game. */
     private val sheetReader = SheetReader(tree)
 
+    /** The directory [addGames] catalogued last had a sheet that could not be read. */
+    private var sheetUnread = false
+
     private val directoryRecords = ArrayList<ScannedDirectoryEntity>()
 
     /** What the listed directories left out, from the catalogue's own answer (no second walk); written with [directoryRecords]. */
@@ -102,7 +105,9 @@ internal class FolderScan(
     private val visitedPaths = HashSet<String>()
     private val walkedDirectoryIds = HashSet<String>()
 
-    private var failedDirectories = 0
+    /** Relative paths of the directories that failed to list (never the picked folder: that is [FolderUnavailable]). */
+    private val unreadablePaths = ArrayList<String>()
+    private val failedDirectories get() = unreadablePaths.size
     private var listed = 0
     private var unchanged = 0
     private var filesSeen = 0
@@ -180,6 +185,7 @@ internal class FolderScan(
                 listed, unchanged, filesSeen, added, updated, removed, junk, unmatched, stillWriting, addedBySystem, removedBySystem,
                 newUnknownFolders.map { UnknownFolder(it.relativePath, it.files) },
                 stampedAddedAt = stampAddedAt,
+                unreadableDirectories = unreadablePaths.distinct().sorted(),
             ),
         )
     }
@@ -202,7 +208,7 @@ internal class FolderScan(
                         // Not "deleted": a deleted directory is found missing from its parent's list.
                         val reason = reasonFor(result, "directory ${record.documentId}")
                         if (reason == UnavailableReason.PERMISSION_REVOKED) throw FolderUnavailable(reason)
-                        failedDirectories++
+                        unreadablePaths += record.relativePath
                         continue
                     }
                 }
@@ -222,7 +228,7 @@ internal class FolderScan(
             else -> {
                 val reason = reasonFor(result, "directory ${directory.documentId}")
                 if (path.isEmpty() || reason == UnavailableReason.PERMISSION_REVOKED) throw FolderUnavailable(reason)
-                failedDirectories++
+                unreadablePaths += path
                 return
             }
         }
@@ -235,8 +241,9 @@ internal class FolderScan(
         // would otherwise have the directory read again after every game, and stored as 0 again.
         val writing = children.count { !it.isDirectory && isRecent(it.lastModified) && !JunkFilter.isJunkFile(it.name) }
         stillWriting += writing
-        val recordedTime = if (writing > 0) 0 else trustedTime(directory.lastModified)
         val unknownFiles = addGames(directory.documentId, path, children)
+        // A sheet that could not be read (stored as 0 too) is read again by the next scan.
+        val recordedTime = if (writing > 0 || sheetUnread) 0 else trustedTime(directory.lastModified)
         directoryRecords += ScannedDirectoryEntity(folder.id, directory.documentId, path, recordedTime, unknownFiles)
 
         val subdirectories = children.filter { it.isDirectory && !JunkFilter.isSkippedDirectory(it.name) && !isSkippedByPerson(childPath(path, it.name)) }
@@ -270,6 +277,7 @@ internal class FolderScan(
         val files = children.filter { !it.isDirectory }
         filesSeen += files.size
         val sheetParts = sheetReader.read(parentDocumentId, children)
+        sheetUnread = sheetParts.someUnread
         // A folder the person chose a system for is a system's folder, never one game's folder.
         val directoryName = if (path.isEmpty() || path in chosenSystems) null else path.substringAfterLast('/')
         val match = matcher.matchPath(folder.displayName, path, chosenSystems)
@@ -405,9 +413,10 @@ internal class FolderScan(
                     folds = folds,
                     removedGameIds = removedIds,
                     removedDirectoryPaths = removedPaths.toList(),
-                    directories = directoryRecords.filter { !isRemoved(it.relativePath) },
                     // A directory replaced by a new one at the same path (another document id) is both
-                    // removed and listed: its old rows go with the subtree, the new listing's are kept.
+                    // removed and listed: its old rows go with the subtree, the new listing's are kept,
+                    // its record too (else no rescan asks it again).
+                    directories = directoryRecords.filter { !isRemoved(it.relativePath) || it.relativePath in visitedPaths },
                     leftOut = leftOut.write(replacesAll = knownDirectories.isEmpty(), listedPaths = visitedPaths.toList()) { isRemoved(it) && it !in visitedPaths },
                 ),
             )

@@ -10,11 +10,9 @@ import com.plumemu.coreui.R
  * built from `plum-fonts/dist` (Sans 0.0.4, Serif 0.0.3, Mono 0.0.3). Jost, Sans and Serif ship 400, 500, 600, 700
  * and 800; Mono 400, 500, 700 and 800. Jost is the default; per-font tuning is [PlumFont].
  *
- * Every weight a text role can ask for ([TextWeight] moves the design's 400 to 600 up to 800) has a face of
- * its own, so Compose never falls back by itself (the CSS matching it follows would draw a missing weight with
- * the wrong face and may synthesise bold). The one weight with no face is Mono 600, declared on the 700 face.
- * Sans and Serif have no 700 face of their own, so an asked-for 700 draws the 600 face; [TextWeight.Thin] still
- * asks 600 where it used to ask 700. `PlumFontsTest` pins this table.
+ * Every weight a text role can ask for (500 to 800, [TypeRole.weight]) has a face of its own, so Compose never falls back by itself
+ * (the CSS matching it follows would draw a missing weight with the wrong face and may synthesise bold). The one weight with no face
+ * is Mono 600, declared on the 700 face. `PlumFontsTest` pins this table.
  */
 object PlumFonts {
     val Jost: FontFamily =

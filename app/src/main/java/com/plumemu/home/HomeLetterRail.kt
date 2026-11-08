@@ -19,7 +19,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
@@ -27,6 +26,7 @@ import com.plumemu.coreinput.Column as StripColumn
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreui.theme.PlumTheme
 import kotlin.math.abs
+import com.plumemu.coreui.components.plainLayer
 
 /**
  * The system peek's A to Z rail while the focus is in a games list: the
@@ -71,7 +71,7 @@ internal fun LetterRail(
     // Only while a games list is focused does the rail take touches; with the systems focused (the rail is fading
     // out) the peek's touches go to the system rows as before.
     val touchable by remember(state) { derivedStateOf { state.focus.column != StripColumn.Systems } }
-    BoxWithConstraints(modifier = modifier.testTag(HomeTags.RAIL).clipToBounds().graphicsLayer { alpha = 1f - state.systemNamesAlpha }) {
+    BoxWithConstraints(modifier = modifier.testTag(HomeTags.RAIL).clipToBounds().plainLayer { alpha = 1f - state.systemNamesAlpha }) {
         val capacity = railCapacity(maxHeight, PlumTheme.layout.railLetterMinHeight)
         val shown by remember(letters, capacity) { derivedStateOf { railWindow(letters, focusedLetter.value, capacity) } }
         val shownNow by rememberUpdatedState(shown)

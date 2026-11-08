@@ -334,7 +334,7 @@ internal class ZipDirectory(private val directoryLimit: Int = DEFAULT_DIRECTORY_
 
 /**
  * The entry that is the game in a console ROM zip: directories, macOS resource forks and
- * text, image, link and checksum files are skipped, then the largest remaining entry wins (the
+ * text, document, image, sound, settings, link and checksum files are skipped, then the largest remaining entry wins (the
  * first one listed on a tie). Null when nothing is left.
  */
 internal fun pickRomEntry(entries: List<ZipEntryInfo>): ZipEntryInfo? =
@@ -360,4 +360,6 @@ internal fun extensionOf(fileName: String): String {
 
 private val JUNK_EXTENSIONS = setOf(
     "txt", "nfo", "diz", "jpg", "jpeg", "png", "gif", "url", "htm", "html", "sfv", "md5", "sha1",
+    // A manual or a cover is often larger than a cartridge ROM beside it.
+    "pdf", "doc", "docx", "rtf", "bmp", "webp", "ico", "mp3", "ini", "cfg", "xml", "json", "log", "db",
 )

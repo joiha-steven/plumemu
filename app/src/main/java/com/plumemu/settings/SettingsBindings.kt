@@ -17,6 +17,8 @@ import com.plumemu.coreui.theme.ProvidePlumType
 import com.plumemu.coreui.theme.Rgb
 import com.plumemu.coreui.theme.SystemAccents
 import com.plumemu.coreui.theme.accentFor
+import com.plumemu.coreui.theme.toComposeColor
+import com.plumemu.home.LocalSystemTints
 import com.plumemu.settings.screen.ColorPreview
 import com.plumemu.settings.screen.LocalColorPreview
 import kotlinx.coroutines.flow.Flow
@@ -42,6 +44,16 @@ internal class ViewedSystem(
     val system: StateFlow<String?>,
     private val loadColors: suspend () -> Map<String, Rgb>?,
 ) {
+    /** Reads the tints; set once by the graph's instance (a test with none shows the accent on a drawn box front). */
+    var loadTints: suspend () -> Map<String, Rgb>? = { null }
+
+    /** Each system's colour by its short code in capitals, for the drawn box front ([LocalSystemTints]); same loading rules as [loadedColors]. */
+    @Volatile
+    var loadedTints: Map<String, Rgb>? = null
+        private set
+
+    suspend fun tints(): Map<String, Rgb> = loadedTints ?: loadTints()?.also { loadedTints = it }.orEmpty()
+
     /** The colours once [colors] has run, so a theme made later (the second screen's window) starts with them. */
     @Volatile
     var loadedColors: Map<String, Rgb>? = null
@@ -91,7 +103,11 @@ internal fun SettingsTheme(
             val stored = rememberUpdatedState(settings)
             remember(preview) { derivedStateOf { preview.appearance?.let { preview.over(stored.value).toThemeSettings() } } }
         }
-    CompositionLocalProvider(LocalColorPreview provides (preview ?: ColorPreview.None)) {
+    val tints = remember(viewed) { mutableStateOf(viewed?.loadedTints.orEmpty().mapValues { it.value.toComposeColor() }) }
+    LaunchedEffect(viewed) {
+        if (viewed != null) tints.value = viewed.tints().mapValues { it.value.toComposeColor() }
+    }
+    CompositionLocalProvider(LocalColorPreview provides (preview ?: ColorPreview.None), LocalSystemTints provides tints) {
         PlumTheme(theme, if (isBySystem) rememberSystemAccent(theme, viewed, previewTheme) else null, previewTheme, content)
     }
 }

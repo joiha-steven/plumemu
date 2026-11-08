@@ -38,12 +38,15 @@ sealed interface FileMatch {
  * differently (4: disc markers, one game's folder, `.gdi` tracks, lone playlists; 5: Switch base, update and DLC by title id; 6: `windows` no longer claims `.steam`,
  * so such files listed as Windows games become Steam games; 7, schema 9: each directory's unknown
  * files are counted when it is listed, so every directory is listed once to find unknown folders; 8, audit items 18 and 19: a sheet's
- * parts in its own folder are not games, and sibling game folders of one game become copies; 9, `cube` names GameCube, so a `Cube` folder listed as unknown by 8 is listed again). The
+ * parts in its own folder are not games, and sibling game folders of one game become copies; 9, `cube` names GameCube, so a `Cube` folder listed as unknown by 8 is listed again;
+ * 10: folder names other frontends use (`vb`, `32x`, `a2600`, `dc` ...) match their systems, a playlist naming its discs as `./Disc 1.chd` claims them, two files of one disc show the same
+ * one whatever the listing order, `.nkit.iso`/`.gba.zip` titles lose the inner extension, `.sv` and
+ * `.p8.png` files are games). The
  * app compares it with the value stored after its last scan and, when lower, lists every folder
  * again once (unchanged folders are otherwise skipped, so games dropped by the old matching would
  * never come back, and old grouping would stay).
  */
-const val FOLDER_MATCH_VERSION = 9
+const val FOLDER_MATCH_VERSION = 10
 
 /** Folder-to-system matching by folder name first, then by extension. Pure and thread-safe. */
 class SystemMatcher(rules: List<SystemRule>) {
@@ -264,7 +267,7 @@ class SystemMatcher(rules: List<SystemRule>) {
          * `.prx`: PSP, not PSP Minis). The id test keeps out systems that only share an emulator
          * (Amstrad CPC tapes are not GX4000 games, a `.bat` is not a DOS game); the last keeps out
          * pairs with the same extensions (`.ngc`: NGP or NGP Color). Archives (`.zip`, `.7z`,
-         * `.rar`) and anything else (`.bin`, `.iso`, `.chd`, `.32x`) stay unmatched rather than guessed.
+         * `.rar`) and anything else (`.bin`, `.iso`, `.chd`) stay unmatched rather than guessed; `.32x` is Sega 32X by its folder alias.
          */
         private fun soleClaimant(extension: String, claimants: List<SystemRule>): SystemRule? {
             if (extension in CONTAINERS) return null

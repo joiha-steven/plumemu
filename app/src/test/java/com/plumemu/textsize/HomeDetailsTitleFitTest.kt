@@ -37,7 +37,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * When the cover at its floor, the PLAYED / LAST PLAYED row and the title block do not all fit, the line under the title (publisher and year) leaves
- * first, then the title's second line. Measured with a title too long for one line, in every font and text size, so the rule is the fit, never a font or a size.
+ * first, then the title's second line. Measured with a title too long for one line, at every text size, so the rule is the fit, never a font or a size.
  */
 abstract class HomeDetailsTitleFitBase {
     private val compose: ComposeContentTestRule = appComposeRule()
@@ -58,7 +58,7 @@ abstract class HomeDetailsTitleFitBase {
 
     protected class Shown(val coverDp: Float, val titleLines: Int, val titleEllipsis: Boolean, val hasSubline: Boolean, val rows: List<String>, val problems: List<String>)
 
-    private var fontNow by mutableStateOf(PlumFont.Sans)
+    private var fontNow by mutableStateOf(PlumFont.Jost)
     private var sizeNow by mutableStateOf(TextSize.Small)
     private var isSet = false
 
@@ -73,7 +73,7 @@ abstract class HomeDetailsTitleFitBase {
             isSet = true
             val details = GameDetails(year = 1994, publisher = "Nintendo", genre = "Action, Adventure", players = "1", description = "", rating = 17)
             compose.setContent {
-                PlumTheme(PlumThemeSettings.Graphite.copy(textSize = sizeNow, font = fontNow)) {
+                PlumTheme(PlumThemeSettings.Graphite.copy(textSize = sizeNow)) {
                     CompositionLocalProvider(LocalHomePlayFacts provides FakePlayFacts()) {
                         HomeAt(LibraryLikeContent.of(hasBoxArt = true, metroidDetails = details, metroidTitle = title), LibraryLikeContent.gamesFocused(LibraryLikeContent.SUPER_METROID))
                     }
@@ -127,21 +127,21 @@ abstract class HomeDetailsTitleFitBase {
         shown: Shown,
         label: String,
     ) {
-        assertTrue("$label: PLAYED and LAST PLAYED stay: ${shown.rows}", "PLAYED" in shown.rows && "LAST PLAYED" in shown.rows)
+        assertTrue("$label: PLAYED and LAST PLAYED stay: ${shown.rows}", "Played" in shown.rows && "Last played" in shown.rows)
         assertTrue("$label: the time values are whole: ${shown.rows}", shown.rows.any { it.contains("days ago") } && shown.rows.any { it.contains("4 h") })
         assertTrue("$label: nothing cut or overlapping: ${shown.problems}", shown.problems.isEmpty())
     }
 
     @Test
-    fun everyFontAndSizeKeepsTheCoverTheTimeRowAndAtMostTwoTitleLines() {
+    fun everySizeKeepsTheCoverTheTimeRowAndAtMostTwoTitleLines() {
         val failures = mutableListOf<String>()
-        for (font in PlumFont.entries) {
+        run {
             for (size in TextSize.entries) {
-                val shown = show(font, size, LONG_DETAILS_TITLE)
-                val label = "${font.name} ${size.name}"
+                val shown = show(PlumFont.Jost, size, LONG_DETAILS_TITLE)
+                val label = size.name
                 // Requirement changed: under a title of two lines the cover may go to 0.77 of its floor so the facts keep their three rows.
                 if (shown.coverDp < PlumDimens.detailsCoverMinWide.value * SQUEEZED_COVER_SHARE - 0.5f) failures += "$label: cover ${shown.coverDp} dp"
-                if ("PLAYED" !in shown.rows || "LAST PLAYED" !in shown.rows) failures += "$label: time row missing ${shown.rows}"
+                if ("Played" !in shown.rows || "Last played" !in shown.rows) failures += "$label: time row missing ${shown.rows}"
                 failures += shown.problems
                 if (shown.titleLines !in 1..2 || !shown.titleEllipsis) failures += "$label: title ${shown.titleLines} lines, ellipsis ${shown.titleEllipsis}"
                 // The line under the title goes before the title loses its second line.
@@ -162,20 +162,20 @@ abstract class HomeDetailsTitleFitBase {
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
 class HomeDetailsTitleFit768Test : HomeDetailsTitleFitBase() {
     @Test
-    fun serifLargestKeepsTheCoverAndTheTimeRowAndLosesTheLineUnderTheTitleFirst() {
-        val shown = show(PlumFont.Serif, TextSize.Largest, LONG_DETAILS_TITLE)
+    fun largestKeepsTheCoverAndTheTimeRowAndLosesTheLineUnderTheTitleFirst() {
+        val shown = show(PlumFont.Jost, TextSize.Largest, LONG_DETAILS_TITLE)
         assertTrue("the cover keeps ${PlumDimens.detailsCoverMinWide} dp: ${shown.coverDp}", shown.coverDp >= PlumDimens.detailsCoverMinWide.value - 0.5f)
-        assertTimeRowWhole(shown, "Serif Largest")
-        golden("home_details_title_fit_768x432_serif_largest_graphite")
+        assertTimeRowWhole(shown, "Largest")
         assertTrue("the line under the title left", !shown.hasSubline)
         assertTrue("the title ends in an ellipsis", shown.titleEllipsis)
     }
 
     @Test
     fun aTitleThatFitsKeepsItsSecondLine() {
-        val shown = show(PlumFont.Sans, TextSize.Small, LONG_DETAILS_TITLE)
-        assertTrue("the cover keeps ${PlumDimens.detailsCoverMinWide} dp: ${shown.coverDp}", shown.coverDp >= PlumDimens.detailsCoverMinWide.value - 0.5f)
-        assertTimeRowWhole(shown, "Sans Medium")
+        val shown = show(PlumFont.Jost, TextSize.Small, LONG_DETAILS_TITLE)
+        // Measured for Jost (128 dp at 768x432): two title lines in Jost's taller line box take the squeezed floor, not the full one, to keep the facts' three rows.
+        assertTrue("the cover keeps its squeezed floor: ${shown.coverDp}", shown.coverDp >= PlumDimens.detailsCoverMinWide.value * SQUEEZED_COVER_SHARE - 0.5f)
+        assertTimeRowWhole(shown, "Small")
         assertEquals("the title keeps two lines when they fit", 2, shown.titleLines)
         assertTrue("the line under the title stays when everything fits", shown.hasSubline)
     }

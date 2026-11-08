@@ -69,6 +69,8 @@
     <string name="home_hint_unfavorite">즐겨찾기 해제</string>
     <!-- X: open search. -->
     <string name="home_hint_search">검색</string>
+    <string name="home_hint_undo">실행 취소</string>
+    <string name="home_notice_removed_from_recent">최근 플레이에서 제거됨</string>
     <string name="home_hint_sort">정렬</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
@@ -148,8 +150,8 @@
     <string name="setup_folder_desc">ROM이 들어 있는 폴더를 선택하세요. snes, psx 같은 하위 폴더는 알아서 기종별로 분류돼요.</string>
     <string name="setup_folder_point_opens">Android 폴더 선택 화면이 열려요. 게임 폴더로 이동하세요.</string>
     <!-- No button name: it differs by Android version. -->
-    <string name="setup_folder_point_use">그런 다음 그 화면에서 해당 폴더를 확인하세요.</string>
-    <string name="setup_folder_point_private">Plumemu는 선택한 폴더만 볼 수 있어요</string>
+    <string name="setup_folder_point_use">그런 다음 그 화면에서 해당 폴더를 확인하세요. 기기에 따라 화면을 터치해야 해요.</string>
+    <string name="setup_folder_point_private">Plumemu는 선택한 폴더만 볼 수 있어요.</string>
     <string name="setup_choose_folder">폴더 선택</string>
     <string name="setup_set_up_later">나중에 설정</string>
     <string name="setup_folder_remove">이 폴더 제거</string>
@@ -546,6 +548,7 @@
     <string name="settings_hint_section">섹션 이동</string>
     <!-- Hint bar label beside A in a list of choices: a verb, pick the focused one. -->
     <string name="settings_hint_choose">선택</string>
+    <string name="settings_hint_skip">건너뛰기</string>
     <string name="settings_hint_try_again">다시 시도</string>
     <!-- Narrow screens: opens the focused option's explanation as a further stop (the right button). -->
     <string name="settings_hint_more">설명</string>
@@ -574,6 +577,12 @@
     <string name="settings_folder_body">파일은 기기에 남습니다. 건너뛴 하위 폴더를 고르면 다시 읽습니다.</string>
     <string name="settings_folder_skip_one">하위 폴더 건너뛰기…</string>
     <string name="settings_folder_skipped">건너뜀</string>
+    <string name="settings_unreadable_row">폴더를 읽지 못했어요</string>
+    <string name="settings_unreadable_title_many">폴더를 읽지 못했어요</string>
+    <string name="settings_unreadable_body">지난 스캔에서 Plumemu가 이 폴더를 읽지 못했어요. 폴더를 읽을 수 있을 때까지 여기서 지운 게임도 라이브러리에 남아 있어요. 다음 스캔에서 다시 시도해요.</string>
+    <string name="settings_unreadable_body_many">지난 스캔에서 Plumemu가 이 폴더들을 읽지 못했어요. 폴더를 읽을 수 있을 때까지 여기서 지운 게임도 라이브러리에 남아 있어요. 다음 스캔에서 다시 시도해요.</string>
+    <string name="settings_unreadable_scan_again">다시 스캔</string>
+    <string name="settings_unreadable_skip">이 폴더 건너뛰기</string>
     <string name="settings_folder_remove">이 폴더 삭제…</string>
     <string name="settings_folder_skip_failed">그 변경을 저장하지 못했습니다. 아무것도 바뀌지 않았습니다.</string>
     <string name="settings_skip_subfolder_title">하위 폴더 건너뛰기</string>
@@ -898,21 +907,26 @@
     <!-- Ready-made colour sets (never a console's or a brand's name. -->
     <string name="settings_colors">색상 테마</string>
     <string name="settings_colors_panel_help">테마를 고르세요. 직접 만들려면 아래의 ‘배경’이나 ‘글자 색상’을 바꾸세요. 직접 만든 색상은 ‘사용자 지정’에 남아 있어요.</string>
-    <string name="settings_colors_paper">종이</string>
+    <string name="settings_colors_daylight">데이라이트</string>
+    <string name="settings_colors_ultramarine">울트라마린</string>
+    <string name="settings_colors_magenta">마젠타</string>
+    <string name="settings_colors_peach">피치</string>
+    <string name="settings_colors_matcha">말차</string>
+    <string name="settings_colors_mocha">모카</string>
+    <string name="settings_colors_front_loader">프런트 로더</string>
+    <string name="settings_colors_spice_cube">스파이스 큐브</string>
+    <string name="settings_colors_pea_green">완두콩</string>
     <string name="settings_colors_pocket">포켓</string>
-    <string name="settings_colors_dot_matrix">도트 매트릭스</string>
-    <string name="settings_colors_super">슈퍼</string>
-    <string name="settings_colors_indigo">인디고</string>
-    <string name="settings_colors_charcoal">차콜</string>
+    <string name="settings_colors_lavender">라벤더</string>
+    <string name="settings_colors_red_and_gold">레드 앤 골드</string>
     <string name="settings_colors_ivory">아이보리</string>
+    <string name="settings_colors_clear_grape">클리어 그레이프</string>
+    <string name="settings_colors_cold_grey">콜드 그레이</string>
     <string name="settings_colors_banana">바나나</string>
-    <string name="settings_colors_cream">크림</string>
     <string name="settings_background">배경</string>
     <string name="settings_text_color">글자 색상</string>
     <string name="settings_accent">강조 색상</string>
-    <string name="settings_font">글꼴</string>
     <string name="settings_text_size">글자 크기</string>
-    <string name="settings_text_weight">글자 굵기</string>
     <string name="settings_left_edge">왼쪽 띠</string>
     <string name="settings_grid_size">그리드 크기</string>
     <string name="settings_bg_graphite">그래파이트</string>
@@ -978,9 +992,6 @@
     <string name="settings_size_larger">더 크게</string>
     <string name="settings_size_huge">아주 크게</string>
     <string name="settings_size_largest">최대</string>
-    <string name="settings_weight_thin">가늘게</string>
-    <string name="settings_weight_medium">보통</string>
-    <string name="settings_weight_bold">굵게</string>
     <string name="settings_left_edge_counts">게임 수</string>
     <string name="settings_left_edge_codes">기종 코드</string>
     <string name="settings_left_edge_letters">알파벳</string>
@@ -1009,12 +1020,10 @@
     <string name="settings_color_adjusted_accent">잘 보이도록 강조 색상을 바꿨어요</string>
     <string name="settings_color_adjusted_both">잘 읽히도록 글자 색상과 강조 색상을 바꿨어요</string>
     <string name="settings_accent_body">현재 기종, 포커스 점, 스위치, 버튼에 쓰여요. ‘기종별’을 고르면 기종마다 다른 색상을 써요.</string>
-    <string name="settings_font_body">Plumemu의 모든 글자에 쓰는 글꼴이에요.</string>
     <string name="settings_text_size_body">Plumemu의 모든 글자 크기를 바꿔요. Android의 글꼴 크기 설정도 함께 적용돼요.</string>
-    <string name="settings_text_weight_body">Plumemu의 모든 글자 굵기를 바꿔요.</string>
     <string name="settings_left_edge_body">게임 목록을 보고 있을 때 왼쪽의 좁은 띠에 표시할 내용: 기종별 게임 수, 기종별 짧은 코드, 또는 현재 목록의 글자.</string>
     <string name="settings_grid_size_body">그리드 보기에서 커버의 크기예요. 모든 기종과 최근 플레이, 즐겨찾기에 적용돼요. ‘작게’는 한 번에 가장 많은 게임을, ‘크게’는 가장 적은 게임을 보여 줘요.</string>
-    <!-- Sample lines in the colour and font panels (the board's). -->
+    <!-- Sample lines in the colour panel (the board's). -->
 
     <!-- Advanced (includes the confirm-button option) -->
     <string name="settings_confirm_bottom">B 버튼으로 확인</string>
@@ -1252,7 +1261,7 @@
     <string name="report_error_refused">서버에서 이 신고를 받지 않았어요. 이메일 주소를 확인하세요. 입력한 내용은 남아 있으니 다시 시도할 수 있어요.</string>
     <string name="report_error_unavailable">이 빌드에서는 신고를 보낼 수 없어요. ‘로그 내보내기’로 파일을 직접 보내 주세요.</string>
     <string name="report_error_not_saved">이 기기에 신고를 저장하지 못했어요.</string>
-    <string name="settings_privacy_body">라이브러리, 설정, 플레이 시간은 이 기기의 Plumemu 전용 저장공간에만 있고, 밖으로 보내지 않아요. 직접 켠 경우에만(설정 › 정보 › 사용 통계 보내기) Plumemu는 개발자에게 익명 사용 집계와 오류 보고를 보내요. 국가, 기기 모델, Android 버전과 앱 버전, 사용하는 화면과 설정, 기종별 플레이 시간이 포함돼요. Plumemu가 이름을 알아내지 못한 게임은 기종, 파일 저장 방식, 크기, CRC-32, 게임에서 읽은 제품 코드나 디스크 시리얼도 설치당 한 번 보내요. 게임 제목, 검색어, ScreenScraper 계정은 보내지 않아요. 오류 보고에는 파일 경로가 들어 있을 수 있어요. 끄면 익명으로 “꺼짐” 집계를 한 번 보내고, 그 뒤로는 아무것도 보내지 않아요. 문제 신고는 ‘문제 신고’에서 ‘보내기’를 눌렀을 때만 보내며, 첨부하기로 고른 로그와 그 안의 파일 경로가 포함될 수 있어요. 보낸 정보는 기한 없이 보관해요. Plumemu는 하루에 한 번 Wi-Fi에서 plumemu-app.stevensdesk.com에 새 버전이 있는지 확인해요. 이 서버를 호스팅하는 Cloudflare는 IP 주소를 볼 수 있어요. 설정 › 정보 › 업데이트에서 끌 수 있어요. 같은 매일 확인에서 같은 서버로부터 최신 플랫폼 데이터(기종과 에뮬레이터 목록)도 내려받아요. 그 밖에는 아무것도 보내지 않아요. ScreenScraper 계정을 쓰면 박스 아트를 찾기 위해 Plumemu가 ScreenScraper에 게임마다 파일 이름, 크기, 체크섬을 보내고, 이것으로 찾지 못하면 제목도 보내요. 박스 아트만 쓰면 Plumemu는 Wi-Fi에서 libretro의 공개 서버(thumbnails.libretro.com)에서 박스 앞면을 내려받아요. 주소에 게임 이름이 들어가고, 이 서버는 IP 주소를 볼 수 있어요. RetroAchievements 계정을 쓰면 Plumemu가 retroachievements.org에 사용자 이름, 키, 게임마다 RetroAchievements 번호를 보내요. 게임 정보를 열 때, 플레이한 뒤, 그리고 Wi-Fi에서 하루에 한 번이에요. 배지 그림은 media.retroachievements.org에서 받아요. 키는 이 기기에 암호화해 저장하고 백업이나 로그에는 절대 넣지 않아요. 로그아웃하면 보내지 않아요. 설정 \u203A 통계에서 정확한 플레이 시간을 켜면, Plumemu는 Android의 사용 기록 접근에서 플레이 시간대의 이벤트를 받아 Plumemu에서 시작한 게임이나 앱과 화면에 관한 것만 남깁니다. 플레이 시간의 길이 외에는 저장하지 않으며 전송하지 않습니다.</string>
+    <string name="settings_privacy_body">라이브러리, 설정, 플레이 시간은 이 기기의 Plumemu 전용 저장공간에만 있고, 밖으로 보내지 않아요. 직접 켠 경우에만(설정 › 정보 › 사용 통계 보내기) Plumemu는 개발자에게 익명 사용 집계와 오류 보고를 보내요. 국가, 기기 모델, Android 버전과 앱 버전, 사용하는 화면과 설정, 기종별 플레이 시간이 포함돼요. Plumemu가 이름을 알아내지 못한 게임은 기종, 파일 저장 방식, 크기, CRC-32, 게임에서 읽은 제품 코드나 디스크 시리얼도 설치당 한 번 보내요. 게임 제목, 검색어, ScreenScraper 계정은 보내지 않아요. 오류 보고에는 파일 경로가 들어 있을 수 있어요. 끄면 익명으로 “꺼짐” 집계를 한 번 보내고, 그 뒤로는 아무것도 보내지 않아요. 문제 신고는 ‘문제 신고’에서 ‘보내기’를 눌렀을 때만 보내며, 첨부하기로 고른 로그와 그 안의 파일 경로가 포함될 수 있어요. 보낸 정보는 기한 없이 보관해요. Plumemu는 하루에 한 번 Wi-Fi에서 plumemu-app.stevensdesk.com에 새 버전이 있는지 확인해요. 이 서버를 호스팅하는 Cloudflare는 IP 주소를 볼 수 있어요. 설정 › 정보 › 업데이트에서 끌 수 있어요. 같은 매일 확인에서 같은 서버로부터 최신 플랫폼 데이터(기종과 에뮬레이터 목록)도 내려받아요. 그 밖에는 아무것도 보내지 않아요. ScreenScraper 계정을 쓰면 박스 아트를 찾기 위해 Plumemu가 ScreenScraper에 게임마다 파일 이름, 크기, 체크섬을 보내고, 이것으로 찾지 못하면 제목도 보내요. 기본 소스를 쓰면 Plumemu는 Wi-Fi에서 libretro의 공개 서버(thumbnails.libretro.com)에서 박스 앞면을 내려받아요. 주소에 게임 이름이 들어가고, 이 서버는 IP 주소를 볼 수 있어요. RetroAchievements 계정을 쓰면 Plumemu가 retroachievements.org에 사용자 이름, 키, 게임마다 RetroAchievements 번호를 보내요. 게임 정보를 열 때, 플레이한 뒤, 그리고 Wi-Fi에서 하루에 한 번이에요. 배지 그림은 media.retroachievements.org에서 받아요. 키는 이 기기에 암호화해 저장하고 백업이나 로그에는 절대 넣지 않아요. 로그아웃하면 보내지 않아요. 설정 \u203A 통계에서 정확한 플레이 시간을 켜면, Plumemu는 Android의 사용 기록 접근에서 플레이 시간대의 이벤트를 받아 Plumemu에서 시작한 게임이나 앱과 화면에 관한 것만 남깁니다. 플레이 시간의 길이 외에는 저장하지 않으며 전송하지 않습니다.</string>
     <!-- Updates -->
     <string name="settings_update_value_downloading">다운로드 중…</string>
     <string name="settings_update_value_installing">설치 중…</string>
@@ -1300,6 +1309,18 @@
     <string name="settings_update_confirm">Android 화면에서 업데이트를 확인하세요. 설치되지 않았다면 ‘업데이트’를 선택해 다시 시도하세요.</string>
     <string name="settings_update_cancelled">업데이트를 취소했어요.</string>
     <string name="settings_update_aborted">업데이트가 설치되지 않았어요.</string>
+    <!-- Updates panel, after Update was pressed on Android 13 or newer: why Android is about to ask to allow notifications. -->
+    <string name="settings_update_notice_reason">Android가 알림 허용 여부를 물어봅니다. Plumemu는 업데이트 후에만 알림을 하나 표시하며, 눌러서 Plumemu를 열 수 있습니다.</string>
+    <!-- Updates panel, notifications off: Plumemu cannot always reopen itself after the update. -->
+    <string name="settings_update_notice_off">알림이 꺼져 있어 업데이트 후 Plumemu가 저절로 열리지 않을 수 있습니다. 홈 버튼을 눌러 돌아오세요.</string>
+    <!-- Updates panel, notifications off and Plumemu not the home app: the Home button would not bring it back. -->
+    <string name="settings_update_notice_off_not_home">알림이 꺼져 있어 업데이트 후 Plumemu가 저절로 열리지 않을 수 있습니다. 앱 목록에서 다시 여세요.</string>
+    <!-- Updates panel, notifications off: opens Android's notification settings for Plumemu. -->
+    <string name="settings_update_notifications_button">알림 켜기</string>
+    <!-- The one notification, shown after an update when Plumemu could not reopen itself. Channel name, title, text. -->
+    <string name="update_notice_channel">업데이트</string>
+    <string name="update_notice_title">Plumemu가 업데이트되었습니다</string>
+    <string name="update_notice_text">눌러서 열기</string>
     <string name="settings_update_failed_offline">다운로드가 중단됐어요. 업데이트 서버에 연결되지 않아요.</string>
     <string name="settings_update_failed_timeout">다운로드가 중단됐어요. 업데이트 서버가 제때 응답하지 않았어요.</string>
     <string name="settings_update_failed_http">다운로드하지 못했어요. 업데이트 서버에 문제가 있어요.</string>
@@ -1314,8 +1335,21 @@
 
     <!-- ScreenScraper account: setup's box art step and Settings › Library. -->
     <string name="setup_box_art_title">ScreenScraper 박스 아트</string>
-    <string name="setup_box_art_desc">박스 아트와 게임 정보는 ScreenScraper에서 가져오며, screenscraper.fr의 무료 개인 계정이 필요해요. 나중에 설정 › 박스 아트 및 계정 › 박스 아트에서 로그인해도 돼요.</string>
-    <string name="setup_box_art_skip">건너뛰기</string>
+    <string name="setup_box_art_desc">박스 아트와 게임 정보는 ScreenScraper에서 가져오며, screenscraper.fr의 무료 개인 계정이 필요해요. 나중에 설정 › 박스 아트 및 계정에서 로그인해도 돼요.</string>
+    <string name="setup_box_art_ask_title">박스 아트를 내려받을까요?</string>
+    <string name="setup_box_art_ask_desc">게임마다 박스 사진을 가져옵니다. 설정 › 박스 아트 및 계정에서 언제든 바꿀 수 있어요.</string>
+    <string name="setup_box_art_no">아니요</string>
+    <string name="setup_box_art_no_line">네트워크 없이 Plumemu가 커버를 그려요.</string>
+    <string name="setup_box_art_yes">예</string>
+    <string name="setup_box_art_yes_line">박스 앞면을 Wi-Fi로 받아요. 다음에 소스를 골라요.</string>
+    <string name="setup_box_art_yes_line_libretro">libretro의 박스 앞면을 Wi-Fi로 가져옵니다. 계정 필요 없음. 게임 상세 정보 없음.</string>
+    <string name="setup_box_art_source_title">가져올 곳 선택</string>
+    <string name="setup_box_art_source_desc">둘 다 Wi-Fi에서만 내려받아요. 설정 › 박스 아트 및 계정에서 언제든 바꿀 수 있어요.</string>
+    <string name="setup_box_art_default">기본 소스</string>
+    <string name="setup_box_art_default_line">libretro의 박스 앞면. 계정 필요 없음. 게임 상세 정보 없음.</string>
+    <string name="setup_box_art_account">ScreenScraper 계정</string>
+    <string name="setup_box_art_account_line">박스 아트에 더해 출시 연도, 평점, 장르, 배급사, 설명이 붙습니다. screenscraper.fr의 무료 계정이 필요해요.</string>
+    <string name="setup_box_art_skip">나중에</string>
     <!-- The question before the sign-in form. -->
     <string name="setup_confirm_title">어떤 버튼으로 선택하나요?</string>
     <string name="setup_confirm_desc">A는 확인, B는 뒤로 가기예요. 반대로 쓰고 싶다면 ‘B 사용’을 고르세요.</string>
@@ -1326,8 +1360,6 @@
     <string name="setup_confirm_again_desc">방향 패드로 사용할 버튼을 고르세요. 이미 사용 중인 버튼을 고르면 다음으로 넘어갑니다.</string>
     <string name="setup_look_title">스타일 고르기</string>
     <string name="setup_look_desc">색상을 고르세요. 설정 › 화면 스타일에서 언제든 바꿀 수 있어요.</string>
-    <string name="setup_box_art_question_title">박스 아트</string>
-    <string name="setup_box_art_question_desc">게임의 박스 아트를 가져올 곳입니다. 설정 › 박스 아트 및 계정 › 박스 아트에서 언제든 바꿀 수 있어요.</string>
     <string name="setup_ready_box_art">박스 아트: 백그라운드에서 다운로드 중</string>
     <string name="setup_ready_box_art_offline">박스 아트: 온라인이 되면 시작돼요</string>
     <string name="setup_ready_box_art_sign_in">박스 아트: 설정 › 박스 아트 및 계정에서 다시 로그인하세요</string>
@@ -1358,6 +1390,7 @@
     <string name="settings_account_value_sign_in">로그인</string>
     <string name="settings_account_value_signed_in">로그인됨</string>
     <string name="settings_account_body">박스 아트와 게임 정보는 ScreenScraper에서 가져오며, screenscraper.fr의 무료 개인 계정이 필요해요. 비밀번호는 이 기기에 암호화되어 저장돼요.</string>
+    <string name="settings_account_sign_up">계정이 아직 없나요? screenscraper.fr에서 무료로 만들 수 있어요.</string>
     <string name="settings_account_sign_out">로그아웃</string>
     <string name="settings_account_sign_in_again">다시 로그인</string>
     <string name="settings_account_sign_out_failed">로그아웃하지 못했어요. 다시 시도하세요.</string>
@@ -1421,7 +1454,7 @@
     <string name="settings_box_art_clear_title">박스 아트를 지울까요?</string>
     <string name="settings_box_art_clear_body">‘없는 박스 아트 받기’로 다시 받을 때까지 박스 아트가 보이지 않아요. 직접 고른 박스 아트는 그대로 남고, ScreenScraper에는 로그인된 상태로 있어요.</string>
     <string name="settings_box_art_clear_body_libretro">‘없는 박스 아트 받기’로 다시 받을 때까지 박스 아트가 보이지 않아요. 직접 고른 박스 아트는 그대로 남아요.</string>
-    <string name="settings_box_art_clear_body_own">저장된 박스 아트를 지우고 Plumemu 기본 커버를 대신 보여 줘요. 직접 고른 박스 아트는 그대로 남아요.</string>
+    <string name="settings_box_art_clear_body_own">저장된 박스 아트를 지우고 Plumemu 자체 커버를 대신 보여 줘요. 직접 고른 박스 아트는 그대로 남아요.</string>
     <string name="settings_box_art_clear_confirm">박스 아트 지우기</string>
     <string name="settings_box_art_clear_failed">박스 아트를 지우지 못했어요. 다시 시도하세요.</string>
     <string name="settings_box_art_clear_in_use">백업이나 복원이 사용 중이라 박스 아트를 지울 수 없어요. 끝난 뒤에 다시 시도하세요.</string>
@@ -1566,9 +1599,9 @@
     <string name="settings_box_art_source_body">Plumemu가 박스 아트를 가져올 곳입니다. A를 눌러 고르세요.</string>
     <string name="settings_box_art_source_screenscraper">박스 아트와 게임 정보</string>
     <string name="settings_box_art_source_screenscraper_line">박스 아트에 더해 출시 연도, 평점, 장르, 배급사, 설명이 붙습니다. 무료 ScreenScraper 계정이 필요합니다.</string>
-    <string name="settings_box_art_source_libretro">박스 아트만</string>
+    <string name="settings_box_art_source_libretro">기본 소스</string>
     <string name="settings_box_art_source_libretro_line">libretro의 박스 앞면을 Wi-Fi로 가져옵니다. 상세 정보 없음. 계정 필요 없음.</string>
-    <string name="settings_box_art_source_own">Plumemu 기본 커버</string>
+    <string name="settings_box_art_source_own">Plumemu 자체 커버</string>
     <string name="settings_box_art_source_own_line">네트워크를 쓰지 않습니다. Plumemu가 게임마다 포스터 커버를 그립니다.</string>
     <string name="settings_box_art_source_failed">Plumemu가 저장하지 못했습니다. 다시 시도해 주세요.</string>
 </resources>

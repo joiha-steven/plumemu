@@ -23,7 +23,8 @@ import java.io.IOException
  *    ([BackupManifest.mediaRoot]): `scraped_game.pictures` (decoded and encoded again with
  *    [ScrapedPictures], so the layout `BoxFrontShapes` reads in SQL stays) and `media.path` are
  *    rewritten to this device's folder.
- * 3. It is left one file in rollback-journal mode, with no `-wal` or `-shm` that could be separated
+ * 3. `rom_folder.unreadable_paths` is cleared: what the backing-up device's last scan could not read says nothing here.
+ * 4. It is left one file in rollback-journal mode, with no `-wal` or `-shm` that could be separated
  *    from it by the swap; Room turns the WAL on again when the app opens it.
  *
  * Never on the main thread. Throws when the file cannot be prepared; the caller then refuses it.
@@ -58,6 +59,8 @@ object RestoredDatabase {
                 var mediaRows = 0
                 db.beginTransaction()
                 try {
+                    // Scan state of the backing-up device: this device's next scan of each folder says what it cannot read.
+                    db.execSQL("UPDATE rom_folder SET unreadable_paths = NULL WHERE unreadable_paths IS NOT NULL")
                     if (fromRoot != null && fromRoot.trimEnd('/') != toRoot.trimEnd('/')) {
                         val from = fromRoot.trimEnd('/') + "/"
                         val to = toRoot.trimEnd('/') + "/"

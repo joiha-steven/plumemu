@@ -31,7 +31,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The pin confirm screen at every text size, as `SettingsStatisticsFitTest` checks
- * Statistics: at the six sizes in Plum Sans and at Large and Largest in Serif and Mono, no text is
+ * Statistics: at the six sizes in Jost, no text is
  * ellipsized, clipped or on top of another (the panel may scroll), and the focused button is fully
  * on screen: a long game name with Cancel focused, and the widget refusal.
  */
@@ -50,18 +50,15 @@ abstract class PinConfirmFitBase(
         focus: Int,
     ) {
         var size by mutableStateOf(TextSize.Largest)
-        var font by mutableStateOf(PlumFont.Sans)
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 Box(Modifier.fillMaxSize().background(PlumTheme.colors.bg)) { PinConfirmLayout(screen, focus, ButtonLetters.Default, onAction = {}) }
             }
         }
         val combinations =
-            TextSize.entries.map { PlumFont.Sans to it } +
-                listOf(PlumFont.Serif, PlumFont.Mono).flatMap { listOf(it to TextSize.Large, it to TextSize.Largest) }
+            TextSize.entries.map { PlumFont.Jost to it }
         val failures = mutableListOf<String>()
         for ((eachFont, each) in combinations) {
-            font = eachFont
             size = each
             compose.waitForIdle()
             val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()

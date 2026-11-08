@@ -86,6 +86,9 @@ import com.plumemu.settings.toThemeSettings
 import com.plumemu.settings.withGridView
 import com.plumemu.setup.HomeRoleActions
 import com.plumemu.setup.HomeRoleLauncher
+import com.plumemu.update.NoticePermissionLauncher
+import com.plumemu.update.NoticeSettings
+import com.plumemu.update.ReopenNotice
 import com.plumemu.sound.UiSounds
 import com.plumemu.setup.OpenRomsFolder
 import com.plumemu.setup.PickResult
@@ -106,6 +109,9 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
      * Held directions repeat on the display's frames: the scope carries the Choreographer's frame
      * clock, and runs on the plain main dispatcher so each frame hands the main thread back.
      */
+    /** Keeps the GPU powered briefly after each input ([GpuWarmth]). */
+    internal val gpuWarmth = GpuWarmth()
+
     internal val input: InputRouter by lazy {
         InputRouter(
             CoroutineScope(lifecycleScope.coroutineContext + Dispatchers.Main + AndroidUiFrameClock(Choreographer.getInstance())),
@@ -234,6 +240,9 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
     /** Android's own home-app screens (the question's Yes, Settings' row), with what came of them. */
     private val homeRoles = HomeRoleLauncher(this)
 
+    /** Android 13+'s notification question, asked at Settings' Update press. */
+    internal val noticePermission = NoticePermissionLauncher(this) { graph.updates.noticeAsk.answered() }
+
     private val homeRoleActions =
         object : HomeRoleActions {
             override fun isHomeApp(): Boolean = isPlumemuHomeApp(this@MainActivity)
@@ -270,6 +279,10 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
             override fun isUsageAccessGranted(): Boolean = UsageAccess.isGranted(this@MainActivity)
             override fun openUsageAccess(): Boolean = UsageAccess.open(this@MainActivity)
             override fun openHomeSettings(onNotHome: () -> Unit): Boolean = homeRoles.openSettings(onNotHome)
+
+            override fun askNotifications(onAnswered: () -> Unit): Boolean = noticePermission.ask(onAnswered)
+
+            override fun openNotificationSettings(): Boolean = NoticeSettings.open(this@MainActivity)
         }
 
     /** Settings › …; benchmark builds have none (their START only logs). */
@@ -344,6 +357,7 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
                 viewedSystem = graph.viewedSystemAccent(),
                 waitingAppearance = cached,
                 )
+                GpuWarmthTicker(gpuWarmth)
             }
         }
     }
@@ -465,12 +479,17 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
 
     override fun onResume() {
         super.onResume()
+        // Counted and flagged for UpdateRestartReceiver: did the reopen after an update reach the screen?
+        ReopenNotice.onResumed()
         secondScreenPresence.onResume()
         usage?.onResume()
         strayFocus.onResume()
         if (isBenchmarkBuild) return
         // Adds the time of a game started from here, once the person is back.
         graph.afterReturn()
+        // The "Plumemu updated" notice is of no use now; off the main thread (a binder call).
+        val app = applicationContext
+        graph.appScope.launch(Dispatchers.IO) { ReopenNotice.cancel(app) }
     }
 
     override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
@@ -480,6 +499,7 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
 
     override fun onPause() {
         super.onPause()
+        ReopenNotice.onPaused()
         strayFocus.onPause()
     }
 
@@ -493,16 +513,19 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         usage?.onGamepadInput()
+        gpuWarmth.poke()
         return input.onKeyEvent(event) || super.dispatchKeyEvent(event)
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
         usage?.onGamepadInput()
+        gpuWarmth.poke()
         return input.onGenericMotionEvent(event) || super.dispatchGenericMotionEvent(event)
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         usage?.onTouchInput()
+        gpuWarmth.poke()
         return super.dispatchTouchEvent(event)
     }
 

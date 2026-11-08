@@ -156,6 +156,35 @@ class TitleCleanerTest {
 
     /** Marks that say nothing about the game do not split copies; translations and hacks still do. */
     @Test
+    fun aPlusEndingTheTitleIsKept() {
+        assertEquals("Zzgame Quest+", TitleCleaner.clean("Zzgame Quest+ (USA)").title)
+        assertEquals("Zzgame Quest+", TitleCleaner.clean("Zzgame Quest+").title)
+        assertEquals("Zzlearn C++", TitleCleaner.clean("Zzlearn C++ (USA)").title)
+    }
+
+    @Test
+    fun everyRegionOfThePacksIsARegionGroupNotAVariant() {
+        // The packs know 32 regions; the shown codes only 21. The others still say "a region".
+        for (group in listOf("Latin America", "USA, Mexico", "Spain, Portugal", "Greece", "Poland", "Denmark", "Norway", "Finland", "Belgium", "India", "New Zealand")) {
+            assertEquals(group, "", TitleCleaner.clean("Zzgame ($group)").variantKey)
+        }
+        assertEquals(listOf(Region.USA), TitleCleaner.clean("Zzgame (USA, Mexico)").regions)
+        for (name in PackMasks.REGIONS) assertTrue(name, Region.parseNamed(name) != null)
+    }
+
+    @Test
+    fun shortUpperCaseGroupsThatAreNotGoodToolsCodesAreNotRegions() {
+        for (group in listOf("AGA", "ECS", "GBC", "SGB", "CGA")) {
+            val cleaned = TitleCleaner.clean("Zzgame ($group)")
+            assertEquals(group, emptyList<Region>(), cleaned.regions)
+            assertEquals(group, "(${group.lowercase()})", cleaned.variantKey)
+        }
+        assertEquals(listOf(Region.JAPAN, Region.USA, Region.EUROPE), TitleCleaner.clean("Zzgame (JUE)").regions)
+        assertEquals(listOf(Region.USA, Region.EUROPE), TitleCleaner.clean("Zzgame (UE)").regions)
+        assertEquals(listOf(Region.GERMANY), TitleCleaner.clean("Zzgame (G)").regions)
+    }
+
+    @Test
     fun siteMarksVersionAndUpdateCodesAreNotVariants() {
         val sameGame = listOf(
             "Zork Quest (USA) [www.CoolROM.com]", "Zork Quest (USA) (cdromance)", "Zork Quest (USA) {www.loveroms.com}",

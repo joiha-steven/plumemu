@@ -12,7 +12,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Setup's "Box art from ScreenScraper" step (built from setup's parts and
- * tokens): the question first, then every state of its sign-in: empty, checking,
+ * tokens): the question and the sources first, then every state of its sign-in: empty, checking,
  * each failure, signed in.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -28,6 +28,8 @@ class SetupBoxArtScreenshotTest {
     ) = ReferenceShots.capture(name, sizes = ReferenceShots.Size.Original + ReferenceShots.Size.FourThree) { SetupAt(SetupFakes.boxArt(AccountShots.form(state))) }
 
     @Test fun question() = ReferenceShots.capture("setup_box_art_question") { SetupAt(SetupFakes.boxArtQuestion) }
+
+    @Test fun source() = ReferenceShots.capture("setup_box_art_source") { SetupAt(SetupFakes.boxArtSources) }
 
     @Test fun empty() = shot("setup_box_art_empty", AccountShots.State.Empty)
 

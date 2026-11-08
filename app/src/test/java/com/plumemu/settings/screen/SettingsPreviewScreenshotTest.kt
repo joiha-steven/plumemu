@@ -29,8 +29,6 @@ class SettingsPreviewScreenshotTest {
 
     @Test fun textSizeLargest() = shots("settings_preview_text_size", SettingsOption.TextSize, TextSize.Largest)
 
-    @Test fun textWeight() = shots("settings_preview_text_weight", SettingsOption.TextWeight, TextSize.Small)
-
     @Test fun textColor() = shots("settings_preview_text_color", SettingsOption.TextColor, TextSize.Small)
 
     @Test fun accent() = shots("settings_preview_accent", SettingsOption.Accent, TextSize.Small)
@@ -40,6 +38,4 @@ class SettingsPreviewScreenshotTest {
     @Test fun background() = shots("settings_preview_background", SettingsOption.Background, TextSize.Small)
 
     @Test fun backgroundLargest() = shots("settings_preview_background", SettingsOption.Background, TextSize.Largest)
-
-    @Test fun font() = shots("settings_preview_font", SettingsOption.Font, TextSize.Small)
 }

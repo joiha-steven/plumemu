@@ -9,10 +9,12 @@ import com.plumemu.report.ReportDraft
 import com.plumemu.coredata.backup.BackupKind
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.graph.LibraryResetState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.withContext
 
 /** What Settings shows of work it started: the last Reset library, a failed write, the last folder picked. */
 @Immutable
@@ -153,6 +155,15 @@ internal interface SettingsActivityActions {
     /** Android's open picker for a backup file (Advanced › Restore…); false when the device has none. */
     fun openRestorePicker(): Boolean
 
+    /**
+     * Android 13+: Android's notification question, for the Update press ([ReopenNotice]); [onAnswered] when it closes, whatever the
+     * answer (Android answers at once, showing nothing, after two refusals). False when nothing is asked (below Android 13).
+     */
+    fun askNotifications(onAnswered: () -> Unit): Boolean = false
+
+    /** Android's notification settings for Plumemu (Updates › Turn on notifications); false when the device has none. */
+    fun openNotificationSettings(): Boolean = false
+
     /** Advanced › Export logs: the log file to Android's share sheet; [onDone] on the main thread. */
     fun exportLogs(onDone: (Boolean) -> Unit) = onDone(false)
 
@@ -217,6 +228,22 @@ internal class SettingsHost(
 ) {
     /** What a finger on the colour sliders shows before it is written; the main screen lays it over the stored settings. */
     val colorPreview = ColorPreview()
+
+    private val readFacts = MutableStateFlow<SettingsDeviceFacts?>(null)
+
+    /** Whether Plumemu is the home app and has Usage access, as last read by [readDeviceFacts]; null before the first read. */
+    val deviceFacts: StateFlow<SettingsDeviceFacts?> = readFacts
+
+    /**
+     * Asks [activity] both questions off the main thread: binder calls of a few ms each, so they are asked whenever the main
+     * screen or Settings comes to the front, and Settings' opening frame reads the answers instead of asking.
+     */
+    suspend fun readDeviceFacts() {
+        readFacts.value = withContext(Dispatchers.IO) { readDeviceFactsNow() }
+    }
+
+    /** The same questions on the calling thread: only when Settings opens before the first [readDeviceFacts] has answered. */
+    fun readDeviceFactsNow(): SettingsDeviceFacts = SettingsDeviceFacts(isHomeApp = activity.isHomeApp(), hasUsageAccess = activity.isUsageAccessGranted())
 
     fun actions(close: () -> Unit): SettingsActions =
         object : SettingsActions {
@@ -365,3 +392,9 @@ internal class SettingsHost(
         }
     }
 }
+
+/** What Settings shows about the device that only Android can answer (Home app, Exact play time's Usage access). */
+internal data class SettingsDeviceFacts(
+    val isHomeApp: Boolean,
+    val hasUsageAccess: Boolean,
+)

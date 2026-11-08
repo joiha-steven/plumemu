@@ -1,7 +1,7 @@
 package com.plumemu.identify.name
 
-/** A file name without its folders and extensions. */
-internal object FileBaseName {
+/** A file name without its folders and extensions; the scan and the identifier read titles from it alike. */
+object FileBaseName {
     /**
      * [fileName] without folders and its extension: a short one of letters and digits with at least
      * one letter ("Tool v1.0" has none: the ".0" is part of the name), and a second one of a game
@@ -16,6 +16,16 @@ internal object FileBaseName {
         return if (inner > 0 && once.substring(inner + 1).lowercase() in INNER_EXTENSIONS) once.substring(0, inner) else once
     }
 
+    /**
+     * A listed file's name without its last extension, whatever it is (`.scummvm`, vic20's `.20`:
+     * a scan already knows it is the extension), and an inner one ([INNER_EXTENSIONS]: `.nkit.iso`).
+     */
+    fun ofListed(fileName: String): String {
+        val once = fileName.substringAfterLast('/').substringAfterLast('\\').substringBeforeLast('.')
+        val inner = once.lastIndexOf('.')
+        return if (inner > 0 && once.substring(inner + 1).lowercase() in INNER_EXTENSIONS) once.substring(0, inner) else once
+    }
+
     private fun isExtension(text: String): Boolean =
         text.length in 1..5 && text.all { it.isLetterOrDigit() } && text.any { it.isLetter() }
 
@@ -23,6 +33,6 @@ internal object FileBaseName {
     private val INNER_EXTENSIONS = setOf(
         "nkit", "iso", "bin", "img", "cue", "chd", "rvz", "wbfs", "gcm", "gcz", "3ds", "cia", "nsp", "xci", "nes", "sfc", "smc",
         "gb", "gbc", "gba", "nds", "n64", "z64", "v64", "md", "gen", "sms", "gg", "pce", "a26", "a78", "lnx", "ws", "wsc",
-        "ngp", "ngc", "col", "sg", "rom", "tar",
+        "ngp", "ngc", "col", "sg", "rom", "tar", "p8",
     )
 }

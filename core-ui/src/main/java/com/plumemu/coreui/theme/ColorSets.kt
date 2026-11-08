@@ -2,7 +2,7 @@ package com.plumemu.coreui.theme
 
 /**
  * Settings › Appearance › Colors: ready-made choices of the three colour settings,
- * inspired by classic handhelds and never named after one. A set is only a background, a text mode
+ * curated tones and colours of classic consoles and handhelds, never named after one. A set is only a background, a text mode
  * and an accent (plus, for some, the colours of the A/B/X/Y hint glyphs, which `PlumTheme`
  * provides while the set is current); picking one moves the Background, Text color and Accent
  * color rows to its values.
@@ -29,15 +29,64 @@ enum class ColorSet(
      * presets are names, so a moved text colour needs no entry). Add the old value here whenever a set's background changes.
      */
     val previousBackgrounds: List<Rgb> = emptyList(),
+    /**
+     * Whole looks (background and accent) of sets that were taken out and now read as this one: settings holding exactly one, with this
+     * set's text, are drawn as this set ([settled]); a removed set's name stored for its buttons resolves here too ([named]).
+     */
+    val formerLooks: List<FormerLook> = emptyList(),
+    /** Other pages this set may stand on and still be this set (with its text and accent): drawn as stored, never moved. */
+    val pageVariants: List<Rgb> = emptyList(),
 ) {
-    /** The default look exactly (`PlumThemeSettings.Default`), so a fresh install shows it. Its accent was the Red preset's light-text colour before. */
+    /** The default look exactly (`PlumThemeSettings.Default`), so a fresh install shows it: a deep blue-black ink, not pure black. */
     Plumemu(
-        BackgroundChoice.Preset(BackgroundPreset.Black),
+        BackgroundChoice.Custom(Rgb(0x161A24)),
         TextMode.Light,
-        AccentChoice.Custom(Rgb(0x3E7BE0)),
-        previousAccents = listOf(Rgb(0xDA4655)),
+        AccentChoice.Custom(Rgb(0x3A7CEB)),
+        // The default on Black until the deep ink, and its own-colour red before the blue (a Red preset on Black stays as it is).
+        formerLooks = listOf(FormerLook(Rgb(0x000000), Rgb(0x3E7BE0)), FormerLook(Rgb(0x000000), Rgb(0xDA4655), ownAccentOnly = true)),
+        // True black: what setup gives an OLED handheld under this set's accent and tones.
+        pageVariants = listOf(BackgroundPreset.Black.color),
     ),
-    Paper(BackgroundChoice.Preset(BackgroundPreset.Paper), TextMode.Dark, AccentChoice.Preset(AccentPreset.Red)),
+
+    /** The light default: a clean grey-white, held below white so the focus slab's white rim still shows. */
+    Daylight(
+        BackgroundChoice.Custom(Rgb(0xECEBE5)),
+        TextMode.Dark,
+        AccentChoice.Custom(Rgb(0x2A64D8)),
+        // The Paper set is not taken over: it was two presets (Paper, Red) anyone can pick by hand, and both stay.
+    ),
+    Ultramarine(BackgroundChoice.Custom(Rgb(0x0F2142)), TextMode.Light, AccentChoice.Custom(Rgb(0xF4B740))),
+    Magenta(BackgroundChoice.Custom(Rgb(0x240F1C)), TextMode.Light, AccentChoice.Custom(Rgb(0xF0649D))),
+    Peach(BackgroundChoice.Custom(Rgb(0xFDE3D3)), TextMode.Dark, AccentChoice.Custom(Rgb(0x00706B))),
+    Matcha(BackgroundChoice.Custom(Rgb(0xE4ECD1)), TextMode.Dark, AccentChoice.Custom(Rgb(0x3D6E1C))),
+    Mocha(BackgroundChoice.Custom(Rgb(0xF1E6DA)), TextMode.Dark, AccentChoice.Custom(Rgb(0xA4492A))),
+
+    /** The grey 8-bit home console: its dark band and red letters. */
+    FrontLoader(
+        BackgroundChoice.Custom(Rgb(0x26272B)),
+        TextMode.Light,
+        AccentChoice.Custom(Rgb(0xF2545D)),
+        ButtonColors(a = ButtonColor(Rgb(0xD22A35)), b = ButtonColor(Rgb(0xD22A35)), x = ButtonColor(Rgb(0x3A3B40)), y = ButtonColor(Rgb(0x3A3B40))),
+    ),
+
+    /** The indigo cube console: A green, B red, X and Y silver. */
+    SpiceCube(
+        BackgroundChoice.Custom(Rgb(0x231C50)),
+        TextMode.Light,
+        AccentChoice.Custom(Rgb(0xFF9F43)),
+        ButtonColors(a = ButtonColor(Rgb(0x2EA557)), b = ButtonColor(Rgb(0xD93A3E)), x = ButtonColor(Rgb(0xBDBCC8)), y = ButtonColor(Rgb(0xBDBCC8))),
+        formerLooks = listOf(FormerLook(Rgb(0x262158), Rgb(0xA79CF5))), // the Indigo set
+    ),
+
+    /** The first pocket handheld's screen: pea green with its darkest green. */
+    PeaGreen(
+        BackgroundChoice.Custom(Rgb(0xC6D88F)),
+        TextMode.Dark,
+        AccentChoice.Custom(Rgb(0x2F5F2F)),
+        // The Dot matrix set, with the values it had before the theme balance and the darker text.
+        formerLooks =
+            listOf(Rgb(0xB8E011), Rgb(0xB4DB11)).flatMap { bg -> listOf(Rgb(0x2E5E2E), Rgb(0x306130)).map { FormerLook(bg, it) } },
+    ),
 
     /** Background lightened from #C8C6BE so secondary text reaches 11:1 (the dark text is #1C1C1E). */
     Pocket(
@@ -48,36 +97,26 @@ enum class ColorSet(
         previousBackgrounds = listOf(Rgb(0xCDCCC4)), // before the dark text became #1C1C1E
     ),
 
-    /** Background lightened from #9BBC0F (secondary text 11:1); accent darkened from #306230 to #2E5E2E (badge text 4.75:1, ring on the pill 3.98:1). */
-    DotMatrix(
-        BackgroundChoice.Custom(Rgb(0xB8E011)),
+    /** The 16-bit console's purple and lavender buttons. */
+    Lavender(
+        BackgroundChoice.Custom(Rgb(0xDEDCE6)),
         TextMode.Dark,
-        AccentChoice.Custom(Rgb(0x2E5E2E)),
-        previousAccents = listOf(Rgb(0x306130)), // earlier value, before the theme balance: ring on the pill and badge text
-        previousBackgrounds = listOf(Rgb(0xB4DB11)), // before the dark text became #1C1C1E
+        AccentChoice.Custom(Rgb(0x5B3EA1)),
+        ButtonColors(a = ButtonColor(Rgb(0x4E3591)), b = ButtonColor(Rgb(0x4E3591)), x = ButtonColor(Rgb(0xB2A5DB)), y = ButtonColor(Rgb(0xB2A5DB))),
     ),
 
-    /** Accent darkened from #C8302B to #AA2924 (badge text 4.82:1, ring on the pill 4.04:1); the A glyph keeps #C8302B. */
-    Super(
-        BackgroundChoice.Custom(Rgb(0xD9D8D3)),
+    /** The Japanese 8-bit console: cream, deep red and gold. */
+    RedAndGold(
+        BackgroundChoice.Custom(Rgb(0xF3EBD8)),
         TextMode.Dark,
-        AccentChoice.Custom(Rgb(0xAA2924)),
-        ButtonColors(a = ButtonColor(Rgb(0xC8302B)), b = ButtonColor(Rgb(0xD9A400)), x = ButtonColor(Rgb(0x2B54B5)), y = ButtonColor(Rgb(0x2E8B4A))),
-        previousAccents = listOf(Rgb(0xB22B26)), // earlier value, before the theme balance
-    ),
-    Indigo(BackgroundChoice.Custom(Rgb(0x262158)), TextMode.Light, AccentChoice.Custom(Rgb(0xA79CF5))),
-
-    /** The accent #5FD38D is the Green preset's light-text colour, so it is stored as that preset. */
-    Charcoal(
-        BackgroundChoice.Custom(Rgb(0x2A2B2E)),
-        TextMode.Light,
-        AccentChoice.Preset(AccentPreset.Green),
-        ButtonColors(a = ButtonColor(Rgb(0x3E6FD8)), b = ButtonColor(Rgb(0x2E9A47)), x = ButtonColor(Rgb(0xD9A400)), y = ButtonColor(Rgb(0xD9A400))),
+        AccentChoice.Custom(Rgb(0x9A1B2F)),
+        ButtonColors(a = ButtonColor(Rgb(0x9A1B2F)), b = ButtonColor(Rgb(0x9A1B2F)), x = ButtonColor(Rgb(0xC69A1E)), y = ButtonColor(Rgb(0xC69A1E))),
+        formerLooks = listOf(FormerLook(Rgb(0xE9DFC8), Rgb(0x9A1F2B))), // the Cream set
     ),
 
     /**
      * Accent darkened from #1795B3 to #127087 (on the background 4.74:1, ring on the pill 3.88:1, badge text 4.74:1). Background warmed from #ECEAE4
-     * and keys laid out as on the AYN Thor (A red, B yellow, X blue, Y green).
+     * and keys laid out as on a dual-screen handheld (A red, B yellow, X blue, Y green).
      */
     Ivory(
         BackgroundChoice.Custom(Rgb(0xF3EAD0)),
@@ -85,6 +124,19 @@ enum class ColorSet(
         AccentChoice.Custom(Rgb(0x127087)),
         ButtonColors(a = ButtonColor(Rgb(0xCF3A3A)), b = ButtonColor(Rgb(0xD9A400)), x = ButtonColor(Rgb(0x2F6FDB)), y = ButtonColor(Rgb(0x2E9A47))),
         previousAccents = listOf(Rgb(0x1792B0)), // earlier value: its ring was 2.56:1 on the pill
+        formerLooks = listOf(FormerLook(Rgb(0xD9D8D3), Rgb(0xAA2924)), FormerLook(Rgb(0xD9D8D3), Rgb(0xB22B26))), // the Super set
+    ),
+
+    /** Clear purple shells. */
+    ClearGrape(BackgroundChoice.Custom(Rgb(0x221838)), TextMode.Light, AccentChoice.Custom(Rgb(0xBE98FF))),
+
+    /** The cold grey of a larger Android handheld, with ice blue. */
+    ColdGrey(
+        BackgroundChoice.Custom(Rgb(0x272B32)),
+        TextMode.Light,
+        AccentChoice.Custom(Rgb(0x8EC3FF)),
+        ButtonColors(a = ButtonColor(Rgb(0x3E6FD8)), b = ButtonColor(Rgb(0x2E9A47)), x = ButtonColor(Rgb(0xD9A400)), y = ButtonColor(Rgb(0xD9A400))),
+        formerLooks = listOf(FormerLook(Rgb(0x2A2B2E), AccentPreset.Green.colorFor(TextMode.Light))), // the Charcoal set
     ),
 
     /** A red, B teal, X and Y a darker yellow than the background; every letter white. */
@@ -95,19 +147,33 @@ enum class ColorSet(
         ButtonColors(a = ButtonColor(Rgb(0xC8302B)), b = ButtonColor(Rgb(0x0E7C7C)), x = ButtonColor(Rgb(0x926B00)), y = ButtonColor(Rgb(0x926B00))),
         previousBackgrounds = listOf(Rgb(0xF2CD3C)), // before the dark text became #1C1C1E
     ),
-    Cream(BackgroundChoice.Custom(Rgb(0xE9DFC8)), TextMode.Dark, AccentChoice.Custom(Rgb(0x9A1F2B))),
     ;
 
     val backgroundColor: Rgb get() = background.color
 
     val accentColor: Rgb get() = accent.resolve(textMode)
 
-    /** True when [settings] draws exactly this set's three colours (font, size and the rest do not count). */
+    /** True when [settings] draws exactly this set's three colours, its page or one of its [pageVariants] (font, size and the rest do not count). */
     fun isIn(settings: PlumThemeSettings): Boolean =
         // By system changes with the system in view, so it is no set's accent: the row reads Custom.
-        settings.accent !is AccentChoice.BySystem && settings.backgroundColor == backgroundColor && settings.textColor == textMode.color && settings.accentColor == accentColor
+        settings.accent !is AccentChoice.BySystem &&
+            (settings.backgroundColor == backgroundColor || settings.backgroundColor in pageVariants) &&
+            settings.textColor == textMode.color && settings.accentColor == accentColor
 
     companion object {
+        /** The sets taken out, by their stored names, and the set each now reads as. */
+        private val REMOVED =
+            mapOf(
+                "DotMatrix" to PeaGreen,
+                "Super" to Ivory,
+                "Indigo" to SpiceCube,
+                "Charcoal" to ColdGrey,
+                "Cream" to RedAndGold,
+            )
+
+        /** The set stored as [name] (a button set's name in settings or a backup), a removed set's name giving the set that replaced it; null for anything else. */
+        fun named(name: String): ColorSet? = entries.firstOrNull { it.name == name } ?: REMOVED[name]
+
         /** The set [settings] draws, or null ("Custom") when its colours match none. */
         fun matching(settings: PlumThemeSettings): ColorSet? = entries.firstOrNull { it.isIn(settings) }
 
@@ -119,6 +185,9 @@ enum class ColorSet(
             if (settings.accent is AccentChoice.BySystem) return settings
             for (set in entries) {
                 if (settings.text != set.textMode.color) continue
+                if (set.formerLooks.any { it.matches(settings, set.textMode) }) {
+                    return settings.copy(background = set.background, accent = set.accent)
+                }
                 val oldBackground = settings.background is BackgroundChoice.Custom && settings.backgroundColor in set.previousBackgrounds
                 val oldAccent = (settings.accent as? AccentChoice.Custom)?.color in set.previousAccents
                 if (!oldBackground && !oldAccent) continue
@@ -170,4 +239,19 @@ data class ButtonColor(
     private companion object {
         val WHITE = Rgb(0xFFFFFF)
     }
+}
+
+/** A removed set's background and accent, exactly as they were drawn; [ownAccentOnly]: only an own-colour accent of that value, not a preset's. */
+data class FormerLook(
+    val background: Rgb,
+    val accent: Rgb,
+    val ownAccentOnly: Boolean = false,
+) {
+    fun matches(
+        settings: PlumThemeSettings,
+        textMode: TextMode,
+    ): Boolean =
+        settings.backgroundColor == background &&
+            settings.accent.resolve(textMode) == accent &&
+            (!ownAccentOnly || settings.accent is AccentChoice.Custom)
 }

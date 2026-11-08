@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -236,6 +237,73 @@ class LibraryScannerTest {
         scan()
         assertTrue(tree.listed.contains("fs:psx"))
         assertTrue(games().any { it.systemId == "psx" })
+    }
+
+    private suspend fun storedUnreadable(): String? = db.scanDao().folders().single { it.id == folderId }.unreadablePaths
+
+    private fun unreadableOf(events: List<ScanEvent>) = (outcome(events) as FolderOutcome.Scanned).stats.unreadableDirectories
+
+    @Test
+    fun unreadableSubdirectoryIsReportedAndStoredUntilAScanReadsIt() = runTest {
+        tree.failing += "fs:psx"
+        assertEquals(listOf("psx"), unreadableOf(scan()))
+        assertEquals("psx", storedUnreadable())
+        tree.failing.clear()
+        assertEquals(emptyList<String>(), unreadableOf(scan()))
+        assertNull("a scan that read everything clears the stored paths", storedUnreadable())
+    }
+
+    @Test
+    fun aRescanWhoseKnownSubdirectoryFailsReportsItAndDeletesNothing() = runTest {
+        scan()
+        val before = games()
+        assertNull(storedUnreadable())
+        val deleted = File(roms, "snes").listFiles()!!.filter { it.isFile }.map { it.name }
+        deleted.forEach { File(roms, "snes/$it").delete() }
+        assertTrue(before.any { it.fileName in deleted })
+        touch(File(roms, "snes"))
+        tree.failing += "fs:psx"
+        tree.failing += "fs:snes"
+        assertEquals(listOf("psx", "snes"), unreadableOf(scan()))
+        assertEquals("psx\nsnes", storedUnreadable())
+        assertTrue("nothing deleted while a directory fails", games().map { it.id }.containsAll(before.map { it.id }))
+        tree.failing.clear()
+        assertEquals(emptyList<String>(), unreadableOf(scan()))
+        assertNull(storedUnreadable())
+        assertTrue("the removed snes games go once every directory reads", games().none { it.fileName in deleted })
+    }
+
+    @Test
+    fun aPathWithANewlineIsReportedButNotStored() = runTest {
+        val odd = File(roms, "odd\nname")
+        assertTrue(odd.mkdir())
+        File(odd, "Game (USA).sfc").writeText("x")
+        tree.failing += "fs:psx"
+        tree.failing += "fs:odd\nname"
+        assertEquals(listOf("odd\nname", "psx"), unreadableOf(scan()))
+        assertEquals("stored without the path that would split into two", "psx", storedUnreadable())
+        tree.failing -= "fs:psx"
+        unreadableOf(scan())
+        assertNull("only the newline path failed: nothing a person could skip is stored", storedUnreadable())
+    }
+
+    @Test
+    fun anUnavailableFolderKeepsTheStoredPaths() = runTest {
+        tree.failing += "fs:psx"
+        scan()
+        tree.isPermissionRevoked = true
+        assertEquals(FolderOutcome.Unavailable(UnavailableReason.PERMISSION_REVOKED), outcome(scan()))
+        assertEquals("psx", storedUnreadable())
+    }
+
+    @Test
+    fun aSkippedUnreadableSubdirectoryIsNoLongerReported() = runTest {
+        tree.failing += "fs:psx"
+        scan()
+        assertEquals("psx", storedUnreadable())
+        assertTrue(scanner().skipSubfolder(folderId, "psx", skip = true))
+        assertEquals(emptyList<String>(), unreadableOf(scan()))
+        assertNull(storedUnreadable())
     }
 
     @Test

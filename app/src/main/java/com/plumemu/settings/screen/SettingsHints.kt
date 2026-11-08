@@ -53,6 +53,9 @@ internal fun confirmHint(model: SettingsModel): Int? {
         focus.column == SettingsColumn.Options -> model.focusedOption.let { if (it == null) R.string.settings_hint_change else if (model.canTryBoxArtAgain(it)) R.string.settings_hint_try_again else rowConfirmHint(it) }
         focus.page == PanelPage.LicenseText || focus.page == PanelPage.ReadOnly -> null
         focus.page == PanelPage.Update && updatesPanelItems(model.content.update).getOrNull(focus.panelIndex) == UpdatePanelItem.CheckDaily -> R.string.settings_hint_change
+        // Folder could not be read: A on a folder skips it at once.
+        focus.page == PanelPage.UnreadableFolders && unreadablePanelItems(model.content).getOrNull(focus.panelIndex) is UnreadablePanelItem.Skip ->
+            R.string.settings_hint_skip
         // Files not added: only an unknown folder's line opens something.
         focus.page == PanelPage.FilesNotAdded ->
             R.string.settings_hint_choose.takeIf { model.content.notAdded.getOrNull(focus.panelIndex) is NotAddedItem.Folder }

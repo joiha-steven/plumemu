@@ -12,6 +12,8 @@ import com.plumemu.secondscreen.ScreenKind
 import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.coredata.settings.ConfirmButtonSetting
 import com.plumemu.coredata.settings.TextSizeSetting
+import com.plumemu.coredata.settings.ColorSetting
+import com.plumemu.coreui.theme.BackgroundPreset
 import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.settings.colorSet
 import com.plumemu.settings.withColors
@@ -142,9 +144,10 @@ internal class GraphSetupSource(
     override suspend fun applyLook(
         set: ColorSet,
         textSize: TextSizeSetting?,
+        blackPage: Boolean,
     ) {
         graph.settingsStore.update {
-            val colored = it.appearance.withColors(set)
+            val colored = it.appearance.withColors(set).let { a -> if (blackPage) a.copy(background = ColorSetting.Preset(BackgroundPreset.Black.name)) else a }
             it.copy(appearance = if (textSize != null && colored.textSize == null) colored.copy(textSize = textSize) else colored)
         }
     }

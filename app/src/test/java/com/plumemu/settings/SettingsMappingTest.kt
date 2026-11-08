@@ -5,12 +5,10 @@ import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.ConfirmButtonSetting
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.ControlsSettings
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coredata.settings.TextSizeSetting
-import com.plumemu.coredata.settings.TextWeightSetting
 import com.plumemu.coreinput.ButtonLayout
 import com.plumemu.keyboard.KeyboardChoice
 import com.plumemu.coreinput.InputRouter
@@ -24,7 +22,6 @@ import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.Rgb
 import com.plumemu.coreui.theme.TextMode
 import com.plumemu.coreui.theme.TextSize
-import com.plumemu.coreui.theme.TextWeight
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
@@ -64,7 +61,6 @@ class SettingsMappingTest {
                 background = ColorSetting.Custom(0x203040),
                 textColor = TextColorSetting.Dark,
                 accent = ColorSetting.Custom(0xFF8800),
-                font = FontSetting.Serif,
                 textSize = TextSizeSetting.Small,
             ),
             advanced = AdvancedSettings(animations = false),
@@ -75,14 +71,12 @@ class SettingsMappingTest {
                 background = BackgroundChoice.Custom(Rgb(0x203040)),
                 text = TextMode.Dark.color,
                 accent = AccentChoice.Custom(Rgb(0xFF8800)),
-                font = PlumFont.Serif,
                 textSize = TextSize.Small,
                 animationsOn = false,
             ),
             stored.toThemeSettings(),
         )
-        assertEquals(PlumThemeSettings.Paper, PlumSettings(appearance = AppearanceSettings(ColorSetting.Preset("Paper"), TextColorSetting.Dark)).toThemeSettings())
-        assertEquals(PlumFont.Mono, AppearanceSettings(font = FontSetting.Mono).toThemeSettings(true).font)
+        assertEquals(PlumThemeSettings.Paper, PlumSettings(appearance = AppearanceSettings(ColorSetting.Preset("Paper"), TextColorSetting.Dark, ColorSetting.Custom(0x3A7CEB))).toThemeSettings())
         assertEquals(TextSize.Large, AppearanceSettings(textSize = TextSizeSetting.Large).toThemeSettings(true).textSize)
     }
 
@@ -92,14 +86,6 @@ class SettingsMappingTest {
             mapOf("Small" to 1.0f, "Medium" to 1.1f, "Large" to 1.2f, "Larger" to 1.3f, "Huge" to 1.4f, "Largest" to 1.5f),
             TextSizeSetting.entries.associate { it.name to AppearanceSettings(textSize = it).toThemeSettings(true).textSize!!.factor },
         )
-    }
-
-    @Test
-    fun theStoredTextWeightReachesTheThemeAndNotPickedIsMedium() {
-        assertEquals(TextWeight.Medium, AppearanceSettings().toThemeSettings(true).textWeight)
-        for (setting in TextWeightSetting.entries) {
-            assertEquals(setting.name, AppearanceSettings(textWeight = setting).toThemeSettings(true).textWeight.name)
-        }
     }
 
     @Test

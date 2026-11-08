@@ -2,9 +2,6 @@ package com.plumemu.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.layout.PrefetchRequest
-import androidx.compose.foundation.lazy.layout.PrefetchRequestScope
-import androidx.compose.foundation.lazy.layout.PrefetchScheduler
 import androidx.compose.runtime.Composer
 import androidx.compose.runtime.CompositionTracer
 import androidx.compose.runtime.InternalComposeTracingApi
@@ -46,15 +43,7 @@ class SystemStepFramesTest {
     private val built = mutableListOf<Pair<String, Long>>()
     private var inIdle = false
 
-    private class ManualScheduler : PrefetchScheduler {
-        val requests = ArrayDeque<PrefetchRequest>()
-
-        override fun schedulePrefetch(prefetchRequest: PrefetchRequest) {
-            requests += prefetchRequest
-        }
-    }
-
-    private val scheduler = ManualScheduler()
+    private val scheduler = ManualPagesPrefetch()
 
     @Before
     fun trace() {
@@ -88,31 +77,15 @@ class SystemStepFramesTest {
     private fun gamesProbe(): GamesPagesProbe =
         checkNotNull(compose.onNodeWithTag(HomeTags.GAMES, useUnmergedTree = true).fetchSemanticsNode().config.getOrNull(GamesPagesInfo))
 
-    /** Gives the pages' lazy row [scheduler] for its prefetching (a foundation internal, set by reflection: no public way). */
-    private fun useManualScheduler(list: LazyListState) {
-        val prefetchState = LazyListState::class.java.getMethod("getPrefetchState\$foundation").invoke(list)
-        prefetchState.javaClass.getMethod("setPrefetchScheduler\$foundation", PrefetchScheduler::class.java).invoke(prefetchState, scheduler)
-    }
+    private fun useManualScheduler(list: LazyListState) = scheduler.install(list)
 
-    /** Idle time: runs queued prefetch requests, each [slices] times at most with [timeNanos] to spend, or to the end with null. */
+    /** Idle time: runs queued prefetch requests, each [slices] times at most, or to the end with null. */
     private fun idle(slices: Int? = null) {
         compose.runOnUiThread {
             inIdle = true
-            var left = slices ?: Int.MAX_VALUE
-            while (left > 0 && scheduler.requests.isNotEmpty()) {
-                val request = scheduler.requests.first()
-                val more = with(request) { Scope(if (slices == null) Long.MAX_VALUE / 4 else 1L).execute() }
-                if (!more) scheduler.requests.removeFirst()
-                left--
-            }
+            scheduler.runIdle(slices)
             inIdle = false
         }
-    }
-
-    private class Scope(
-        val nanos: Long,
-    ) : PrefetchRequestScope {
-        override fun availableTimeNanos(): Long = nanos
     }
 
     /** Frames of [count] after the step; the compositions each ran in, by frame time. */

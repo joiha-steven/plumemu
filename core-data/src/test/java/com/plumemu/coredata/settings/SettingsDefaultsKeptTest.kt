@@ -5,22 +5,29 @@ import androidx.datastore.preferences.core.mutablePreferencesOf
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Moving a default (Jost, accent #3E7BE0) never rewrites what a person stored. */
+/** Moving a default (Jost, the page and accent of Plumemu) never rewrites what a person stored. */
 class SettingsDefaultsKeptTest {
     private val codec = SettingsCodec(SettingsLog { })
 
     @Test
-    fun aStoredFontAndAccentAreKept() {
-        val stored = mutablePreferencesOf(SettingsCodec.Keys.font to "Sans", SettingsCodec.Keys.accent to "Red")
+    fun aStoredAccentIsKept() {
+        val stored = mutablePreferencesOf(SettingsCodec.Keys.accent to "Red")
         val read = codec.decode(stored).appearance
-        assertEquals(FontSetting.Sans, read.font)
         assertEquals(ColorSetting.Preset("Red"), read.accent)
     }
 
     @Test
     fun nothingStoredReadsTheNewDefaults() {
         val read = codec.decode(emptyPreferences()).appearance
-        assertEquals(FontSetting.Jost, read.font)
+        assertEquals(ColorSetting.Custom(0x3A7CEB), read.accent)
+        assertEquals(ColorSetting.Custom(0x161A24), read.background)
+    }
+
+    @Test
+    fun aStoredOldDefaultIsNeverRewritten() {
+        val stored = mutablePreferencesOf(SettingsCodec.Keys.background to "Black", SettingsCodec.Keys.accent to "#3E7BE0")
+        val read = codec.decode(stored).appearance
+        assertEquals(ColorSetting.Preset("Black"), read.background)
         assertEquals(ColorSetting.Custom(0x3E7BE0), read.accent)
     }
 }

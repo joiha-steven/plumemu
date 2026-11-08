@@ -19,7 +19,7 @@
   assertions. `verify.sh --ci` passes `-Pplumemu.timingBudgets=false` (shared runners are several times slower);
   everywhere else the budget is checked. A laptop-only measurement stays opt-in (`-Pidentify.measure=true`).
 - **Screenshot tests** (Roborazzi, on the JVM): every screen at 768×432 and 576×432 dp (the 4:3 640×480 and 640×432 on the screens in design/rules.md › Reference sizes, `sizes = ReferenceShots.Size.entries`), dark and
-  light, with Jost (the default font, plain file names); key screens also with Plum Sans, Serif and Mono (`_sans`, `_serif`, `_mono`). Reference images are committed; a
+  light, with Jost, the only text face (plain file names). Reference images are committed; a
   difference fails the gate until a person accepts it.
   Re-record only after `python3 scripts/golden-triage.py` passes; look by eye at every pair over its limit first (never bulk re-record).
 - **Benchmarks** (Macrobenchmark, on a device): cold start, scrolling 10,000 games in list and

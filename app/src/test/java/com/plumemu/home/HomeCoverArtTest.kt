@@ -103,14 +103,23 @@ class HomeCoverArtTest {
     fun wideGridCoversStandOnShelves() {
         show { CoverGridBoard(rememberSource { coverArtSource() }) }
         assertShelf("768x432 Super Nintendo", MEGA_MAN_X)
-        // The focused cover is drawn larger (the lift, never layout): a pixel just left of its resting box is its own picture, not the collar's groove.
+        // The focus lifts the cover (it grows about a pivot, so at least one side moves out): on some side a pixel just past the laid-out box is its picture, not the collar's groove.
         val density = compose.density.density
         val resting = pictures().first { (cell, _) -> abs(cell.left - bounds(HomeTags.cover(MEGA_MAN_X)).left.value) < EPSILON && abs(cell.top - bounds(HomeTags.cover(MEGA_MAN_X)).top.value) < EPSILON }.second
         val pixels = compose.onRoot().captureToImage().toPixelMap()
-        val beside = pixels[(resting.left * density - 1f).toInt(), (resting.center.y * density).toInt()]
-        val inside = pixels[(resting.left * density + 2f).toInt(), (resting.center.y * density).toInt()]
-        val alike = abs(beside.red - inside.red) < 0.1f && abs(beside.green - inside.green) < 0.1f && abs(beside.blue - inside.blue) < 0.1f
-        assertTrue("the focused cover is drawn larger than its place ($beside beside its edge, $inside inside)", alike)
+        fun alike(
+            out: androidx.compose.ui.geometry.Offset,
+            edge: androidx.compose.ui.geometry.Offset,
+        ): Boolean {
+            val beside = pixels[(edge.x + out.x).toInt(), (edge.y + out.y).toInt()]
+            val inside = pixels[(edge.x - out.x * 2f).toInt(), (edge.y - out.y * 2f).toInt()]
+            return abs(beside.red - inside.red) < 0.1f && abs(beside.green - inside.green) < 0.1f && abs(beside.blue - inside.blue) < 0.1f
+        }
+        val grown =
+            alike(androidx.compose.ui.geometry.Offset(-1f, 0f), androidx.compose.ui.geometry.Offset(resting.left * density, resting.center.y * density)) ||
+                alike(androidx.compose.ui.geometry.Offset(1f, 0f), androidx.compose.ui.geometry.Offset(resting.right * density, resting.center.y * density)) ||
+                alike(androidx.compose.ui.geometry.Offset(0f, -1f), androidx.compose.ui.geometry.Offset(resting.center.x * density, resting.top * density))
+        assertTrue("the focused cover is not drawn larger: on no side does its picture lie past its laid-out edge", grown)
     }
 
     @Test

@@ -60,7 +60,7 @@ import kotlinx.coroutines.withContext
  *
  * - What runs depends on the box art source ([source]): ScreenScraper needs a usable account: signed
  *   in, not refused, a build with developer credentials ([GraphScraperAccounts.scraper] is null
- *   otherwise); "Box art only" runs with [libretroScraper] and no account, and never calls
+ *   otherwise); "Default source" runs with [libretroScraper] and no account, and never calls
  *   ScreenScraper; Plumemu's own covers make no request. Not chosen yet: ScreenScraper when an
  *   account is usable, else Plumemu's own covers.
  * - A run that meets a refused password marks the account ([GraphScraperAccounts.markRefused]),
@@ -100,7 +100,7 @@ internal class GraphScrapes(
     private val chosenSource: suspend () -> BoxArtSourceSetting? = { null },
     /** Stores the person's box art source; throws when it could not be written. */
     private val writeSource: suspend (BoxArtSourceSetting) -> Unit = {},
-    /** The scraper of "Box art only"; made at the first run that needs it, one for the process (it remembers failures). */
+    /** The scraper of "Default source"; made at the first run that needs it, one for the process (it remembers failures). */
     makeLibretroScraper: () -> Scraper = { error("no libretro scraper in this graph") },
     /** The stored box art source (null: not chosen), as it changes: the status follows the source in force. */
     private val sourceChanges: Flow<BoxArtSourceSetting?> = flowOf(null),
@@ -193,8 +193,8 @@ internal class GraphScrapes(
     /**
      * Settings' choice of where box art comes from: stored, then the run follows it. A run going is
      * stopped (nothing more is asked of the old source); ScreenScraper marks the games without a box
-     * front to be asked again (a no-match under "Box art only" was not asked of ScreenScraper) and
-     * starts a run, "Box art only" starts one, Plumemu's own covers leave it stopped. Pictures
+     * front to be asked again (a no-match under "Default source" was not asked of ScreenScraper) and
+     * starts a run, "Default source" starts one, Plumemu's own covers leave it stopped. Pictures
      * already saved stay (Clear box art removes them). [onDone] gets, on the main thread, whether it was stored.
      */
     fun setSource(
@@ -219,7 +219,7 @@ internal class GraphScrapes(
         }
 
     /**
-     * Setup's box art choice: stores the source and, for "Box art only", asks for a run. Setup's scan
+     * Setup's box art choice: stores the source and, for "Default source", asks for a run. Setup's scan
      * starts before its questions, so it can end before this choice; its end then found no source and
      * asked for none. ScreenScraper's run starts at its sign-in, own covers need none. A failed
      * store throws to setup, which says so; an earlier run still waiting is kept by [requestRun].
@@ -233,7 +233,7 @@ internal class GraphScrapes(
     fun cancelRuns() = cancel()
 
     /**
-     * Signed out: the ScreenScraper run stops. "Box art only" needs no account, so its run goes on
+     * Signed out: the ScreenScraper run stops. "Default source" needs no account, so its run goes on
      * (an effective change to own covers is stopped by [stopWhenOwnCovers]).
      */
     fun signedOut(): Job =
@@ -393,7 +393,7 @@ internal class GraphScrapes(
         account: AccountStatus.SignedIn,
     ) {
         if (scraper.accountLimits.value != null) return
-        // "Box art only" and own covers never ask ScreenScraper, not even for the limits.
+        // "Default source" and own covers never ask ScreenScraper, not even for the limits.
         if (source() != BoxArtSourceSetting.ScreenScraper) return
         // Pause means no request, not even this one.
         if (isPaused()) return

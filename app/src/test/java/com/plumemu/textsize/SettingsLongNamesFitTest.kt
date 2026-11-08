@@ -52,7 +52,7 @@ abstract class SettingsLongNamesFitBase {
             ShotContent.library.withSecondScreen(SecondScreen(2, "Overlay #1", ScreenKind.BuiltIn), SecondScreenSettings(enabled = true))
         var size by mutableStateOf(TextSize.Medium)
         var focus by mutableStateOf(SettingsFocus(section = SettingsSection.Library))
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = PlumFont.Default)) { SettingsAt(focus, content = content) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { SettingsAt(focus, content = content) } }
         val stops = mutableListOf(panelAt(SettingsOption.RomFolders, PanelPage.Folders, 0))
         for (section in SettingsSection.shownIn(content)) {
             stops += SettingsFocus(column = SettingsColumn.Sections, section = section)

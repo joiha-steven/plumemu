@@ -94,6 +94,10 @@
     <string name="home_hint_unfavorite">Unfavorite</string>
     <!-- X: open search. -->
     <string name="home_hint_search">Search</string>
+    <!-- X for 4 seconds after Remove from Recent (in place of Search), and the last word of the top bar's line "Removed from Recent · Undo". A verb, one short word: it must stay whole in the hint bar at 576 wide. -->
+    <string name="home_hint_undo">Undo</string>
+    <!-- The top bar's line for 4 seconds after Remove from Recent, followed by " · " and Undo. Past tense, short: both parts stay whole before the clock at the Largest text size on 576 wide (measured: 19 characters in English, 9 in Japanese fit). -->
+    <string name="home_notice_removed_from_recent">Removed from Recent</string>
     <string name="home_hint_sort">Sort</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
@@ -176,8 +180,8 @@
     <string name="setup_folder_desc">Pick the folder that holds your ROMs. Subfolders like snes or psx are matched to systems on their own.</string>
     <string name="setup_folder_point_opens">Android\'s folder picker opens. Go to your games folder.</string>
     <!-- No button name: it differs by Android version. -->
-    <string name="setup_folder_point_use">Then confirm that folder there.</string>
-    <string name="setup_folder_point_private">Plumemu sees only the folders you choose</string>
+    <string name="setup_folder_point_use">Then confirm that folder there. On some handhelds this needs a touch of the screen.</string>
+    <string name="setup_folder_point_private">Plumemu sees only the folders you choose.</string>
     <string name="setup_choose_folder">Choose folder</string>
     <string name="setup_set_up_later">Set up later</string>
     <string name="setup_folder_remove">Remove this folder</string>
@@ -589,6 +593,7 @@
     <string name="settings_hint_section">Section</string>
     <!-- Hint bar label beside A in a list of choices: a verb, pick the focused one. -->
     <string name="settings_hint_choose">Choose</string>
+    <string name="settings_hint_skip">Skip</string>
     <string name="settings_hint_try_again">Try again</string>
     <!-- Narrow screens: opens the focused option's explanation as a further stop (the right button). -->
     <string name="settings_hint_more">More</string>
@@ -619,6 +624,12 @@
     <string name="settings_folder_body">The files stay on your device. Choose a skipped sub-folder to read it again.</string>
     <string name="settings_folder_skip_one">Skip a sub-folder…</string>
     <string name="settings_folder_skipped">Skipped</string>
+    <string name="settings_unreadable_row">Folder could not be read</string>
+    <string name="settings_unreadable_title_many">Folders could not be read</string>
+    <string name="settings_unreadable_body">Plumemu could not read this folder in the last scan. Games removed from it stay in the library until it can be read; the next scan tries again.</string>
+    <string name="settings_unreadable_body_many">Plumemu could not read these folders in the last scan. Games removed from them stay in the library until they can be read; the next scan tries again.</string>
+    <string name="settings_unreadable_scan_again">Scan again</string>
+    <string name="settings_unreadable_skip">Skip this folder</string>
     <string name="settings_folder_remove">Remove this folder…</string>
     <string name="settings_folder_skip_failed">That change could not be saved. Nothing was changed.</string>
     <string name="settings_skip_subfolder_title">Skip a sub-folder</string>
@@ -976,21 +987,26 @@
     <string name="settings_colors">Colors</string>
     <string name="settings_colors_panel_help">Pick a set. To make your own, change Background or Text color below. Your own colors stay under Custom.</string>
     <string name="settings_colors_plumemu" translatable="false">Plumemu</string>
-    <string name="settings_colors_paper">Paper</string>
+    <string name="settings_colors_daylight">Daylight</string>
+    <string name="settings_colors_ultramarine">Ultramarine</string>
+    <string name="settings_colors_magenta">Magenta</string>
+    <string name="settings_colors_peach">Peach</string>
+    <string name="settings_colors_matcha">Matcha</string>
+    <string name="settings_colors_mocha">Mocha</string>
+    <string name="settings_colors_front_loader">Front loader</string>
+    <string name="settings_colors_spice_cube">Spice cube</string>
+    <string name="settings_colors_pea_green">Pea green</string>
     <string name="settings_colors_pocket">Pocket</string>
-    <string name="settings_colors_dot_matrix">Dot matrix</string>
-    <string name="settings_colors_super">Super</string>
-    <string name="settings_colors_indigo">Indigo</string>
-    <string name="settings_colors_charcoal">Charcoal</string>
+    <string name="settings_colors_lavender">Lavender</string>
+    <string name="settings_colors_red_and_gold">Red and gold</string>
     <string name="settings_colors_ivory">Ivory</string>
+    <string name="settings_colors_clear_grape">Clear grape</string>
+    <string name="settings_colors_cold_grey">Cold grey</string>
     <string name="settings_colors_banana">Banana</string>
-    <string name="settings_colors_cream">Cream</string>
     <string name="settings_background">Background</string>
     <string name="settings_text_color">Text color</string>
     <string name="settings_accent">Accent color</string>
-    <string name="settings_font">Font</string>
     <string name="settings_text_size">Text size</string>
-    <string name="settings_text_weight">Text weight</string>
     <string name="settings_left_edge">Left strip</string>
     <string name="settings_grid_size">Grid size</string>
     <string name="settings_bg_graphite">Graphite</string>
@@ -1051,10 +1067,6 @@
     <string name="settings_text_violet">Violet</string>
     <!-- Text color preset: dark text (for light backgrounds). -->
     <string name="settings_text_dark">Dark</string>
-    <string name="settings_font_jost" translatable="false">Jost</string>
-    <string name="settings_font_sans" translatable="false">Plum Sans</string>
-    <string name="settings_font_serif" translatable="false">Plum Serif</string>
-    <string name="settings_font_mono" translatable="false">Plum Mono</string>
     <!-- The six text sizes, smallest to largest: Small, Medium, Large, Larger, Huge, Largest. Six different words in this order, each short. -->
     <string name="settings_size_small">Small</string>
     <string name="settings_size_medium">Medium</string>
@@ -1062,9 +1074,6 @@
     <string name="settings_size_larger">Larger</string>
     <string name="settings_size_huge">Huge</string>
     <string name="settings_size_largest">Largest</string>
-    <string name="settings_weight_thin">Thin</string>
-    <string name="settings_weight_medium">Medium</string>
-    <string name="settings_weight_bold">Bold</string>
     <string name="settings_left_edge_counts">Game counts</string>
     <string name="settings_left_edge_codes">System codes</string>
     <string name="settings_left_edge_letters">Letters</string>
@@ -1093,14 +1102,13 @@
     <string name="settings_color_adjusted_accent">Accent color changed to stay readable</string>
     <string name="settings_color_adjusted_both">Text and accent colors changed to stay readable</string>
     <string name="settings_accent_body">Marks the current system, the focus dot, switches and buttons. By system gives each system its own color.</string>
-    <string name="settings_font_body">The typeface for all text in Plumemu.</string>
     <string name="settings_text_size_body">Changes all text in Plumemu. Android\'s own font size applies on top.</string>
-    <string name="settings_text_weight_body">Changes how heavy all text in Plumemu is drawn.</string>
     <string name="settings_left_edge_body">What the narrow strip on the left shows while you are in a games list: how many games each system has, a short code for each system, or the letters of the list you are in.</string>
     <string name="settings_grid_size_body">How big covers are in the grid view, for every system and for Recent and Favorites. Small shows the most games at once, Large the fewest.</string>
-    <!-- Sample lines in the colour and font panels (the board's). -->
+    <!-- Sample lines in the colour panel (the board's). -->
     <string name="settings_sample_game_1" translatable="false">Mega Man X</string>
     <string name="settings_sample_game_2" translatable="false">Super Metroid</string>
+    <string name="settings_sample_game_2_short" translatable="false">Metroid</string>
     <string name="settings_sample_game_3" translatable="false">Yoshi\'s Island</string>
     <string name="settings_sample_year_1" translatable="false">1993</string>
     <string name="settings_sample_year_2" translatable="false">1994</string>
@@ -1351,7 +1359,7 @@
     <string name="report_error_refused">The server did not accept this report. Check the email address. Your words are kept, so you can try again.</string>
     <string name="report_error_unavailable">This build cannot send reports. Use Export logs and send the file yourself.</string>
     <string name="report_error_not_saved">The report could not be saved on this device.</string>
-    <string name="settings_privacy_body">Your library, settings and play time stay in Plumemu\'s own storage on this device, and are never sent. Only if you switch it on (Settings \u203A About \u203A Send usage statistics), Plumemu sends anonymous usage counts and crash reports to the developer: country, device model, Android and app versions, which screens and settings you use, how long you play by system. For a game Plumemu cannot name, it also sends, once per install, the system, how the file is stored, its size, its CRC-32 and the product code or disc serial read from the game. Never game titles, search words or your ScreenScraper account. Crash reports may contain file paths. Switching it off sends one anonymous \u201Cswitched off\u201D count, then nothing. Problem reports are sent only when you press Send in Report a problem, and may contain the log you choose to attach, with file paths. What is sent is kept with no time limit. Once a day on Wi-Fi Plumemu asks plumemu-app.stevensdesk.com whether there is a newer version; Cloudflare, which hosts it, sees your IP address. Switch it off in Settings › About › Updates. The same daily check also downloads updated platform data (the list of systems and emulators) from the same host; nothing extra is sent. With a ScreenScraper account, Plumemu sends ScreenScraper each game\'s file name, size and checksums, and its title when those find nothing, to find box art. With Box art only, Plumemu downloads box fronts from libretro\'s public server, thumbnails.libretro.com, on Wi-Fi, with the game\'s name in the address; that server sees your IP address. With a RetroAchievements account, Plumemu sends retroachievements.org your user name, your key and each game\'s RetroAchievements number, when you open a game\'s Info, after you play, and once a day on Wi-Fi; badge pictures come from media.retroachievements.org. The key is stored encrypted on this device, never in a backup or a log. Signing out stops it. Exact play time, if you switch it on in Settings \u203A Statistics, asks Android\'s Usage access for the events of the play\'s time window and keeps only those of the game or app you started from Plumemu and of the screen; nothing is stored beyond the play\'s length, and nothing is sent.</string>
+    <string name="settings_privacy_body">Your library, settings and play time stay in Plumemu\'s own storage on this device, and are never sent. Only if you switch it on (Settings \u203A About \u203A Send usage statistics), Plumemu sends anonymous usage counts and crash reports to the developer: country, device model, Android and app versions, which screens and settings you use, how long you play by system. For a game Plumemu cannot name, it also sends, once per install, the system, how the file is stored, its size, its CRC-32 and the product code or disc serial read from the game. Never game titles, search words or your ScreenScraper account. Crash reports may contain file paths. Switching it off sends one anonymous \u201Cswitched off\u201D count, then nothing. Problem reports are sent only when you press Send in Report a problem, and may contain the log you choose to attach, with file paths. What is sent is kept with no time limit. Once a day on Wi-Fi Plumemu asks plumemu-app.stevensdesk.com whether there is a newer version; Cloudflare, which hosts it, sees your IP address. Switch it off in Settings › About › Updates. The same daily check also downloads updated platform data (the list of systems and emulators) from the same host; nothing extra is sent. With a ScreenScraper account, Plumemu sends ScreenScraper each game\'s file name, size and checksums, and its title when those find nothing, to find box art. With the default source, Plumemu downloads box fronts from libretro\'s public server, thumbnails.libretro.com, on Wi-Fi, with the game\'s name in the address; that server sees your IP address. With a RetroAchievements account, Plumemu sends retroachievements.org your user name, your key and each game\'s RetroAchievements number, when you open a game\'s Info, after you play, and once a day on Wi-Fi; badge pictures come from media.retroachievements.org. The key is stored encrypted on this device, never in a backup or a log. Signing out stops it. Exact play time, if you switch it on in Settings \u203A Statistics, asks Android\'s Usage access for the events of the play\'s time window and keeps only those of the game or app you started from Plumemu and of the screen; nothing is stored beyond the play\'s length, and nothing is sent.</string>
     <!-- Updates -->
     <string name="settings_update_value_downloading">Downloading…</string>
     <string name="settings_update_value_installing">Installing…</string>
@@ -1400,6 +1408,18 @@
     <string name="settings_update_confirm">Confirm the update on Android\'s screen. If it did not install, choose Update to try again.</string>
     <string name="settings_update_cancelled">Update canceled.</string>
     <string name="settings_update_aborted">The update was not installed.</string>
+    <!-- Updates panel, after Update was pressed on Android 13 or newer: why Android is about to ask to allow notifications. -->
+    <string name="settings_update_notice_reason">Android will ask to allow notifications. Plumemu shows one only after an update, so you can tap it to open Plumemu.</string>
+    <!-- Updates panel, notifications off: Plumemu cannot always reopen itself after the update. -->
+    <string name="settings_update_notice_off">Notifications are off, so Plumemu may not open by itself after the update. Press Home to come back.</string>
+    <!-- Updates panel, notifications off and Plumemu not the home app: the Home button would not bring it back. -->
+    <string name="settings_update_notice_off_not_home">Notifications are off, so Plumemu may not open by itself after the update. Open it again from your apps.</string>
+    <!-- Updates panel, notifications off: opens Android's notification settings for Plumemu. -->
+    <string name="settings_update_notifications_button">Turn on notifications</string>
+    <!-- The one notification, shown after an update when Plumemu could not reopen itself. Channel name, title, text. -->
+    <string name="update_notice_channel">Updates</string>
+    <string name="update_notice_title">Plumemu updated</string>
+    <string name="update_notice_text">Tap to open.</string>
     <string name="settings_update_failed_offline">Download stopped: no connection to the update server.</string>
     <string name="settings_update_failed_timeout">Download stopped: the update server did not answer in time.</string>
     <string name="settings_update_failed_http">Download failed: the update server had a problem.</string>
@@ -1440,8 +1460,21 @@
 
     <!-- ScreenScraper account: setup's box art step and Settings › Library. -->
     <string name="setup_box_art_title">Box art from ScreenScraper</string>
-    <string name="setup_box_art_desc">Box art and game info come from ScreenScraper, with your own free account from screenscraper.fr. You can also sign in later in Settings › Box art &amp; accounts › Box art.</string>
-    <string name="setup_box_art_skip">Skip</string>
+    <string name="setup_box_art_desc">Box art and game info come from ScreenScraper, with your own free account from screenscraper.fr. You can also sign in later in Settings › Box art &amp; accounts.</string>
+    <string name="setup_box_art_ask_title">Download box art?</string>
+    <string name="setup_box_art_ask_desc">Pictures of each game\'s box. You can change this any time in Settings › Box art &amp; accounts.</string>
+    <string name="setup_box_art_no">No</string>
+    <string name="setup_box_art_no_line">No network. Plumemu draws the covers.</string>
+    <string name="setup_box_art_yes">Yes</string>
+    <string name="setup_box_art_yes_line">Box fronts over Wi-Fi. Pick a source next.</string>
+    <string name="setup_box_art_yes_line_libretro">Box fronts from libretro over Wi-Fi. No account, no game details.</string>
+    <string name="setup_box_art_source_title">Choose a source</string>
+    <string name="setup_box_art_source_desc">Both download on Wi-Fi only. You can change this any time in Settings › Box art &amp; accounts.</string>
+    <string name="setup_box_art_default">Default source</string>
+    <string name="setup_box_art_default_line">Box fronts from libretro. No account, no game details.</string>
+    <string name="setup_box_art_account">ScreenScraper account</string>
+    <string name="setup_box_art_account_line">Box art plus year, rating, genre, publisher and description. Needs a free account from screenscraper.fr.</string>
+    <string name="setup_box_art_skip">Not now</string>
     <!-- The question before the sign-in form. -->
     <string name="setup_confirm_title">Which button confirms?</string>
     <string name="setup_confirm_desc">A confirms and B goes back. Prefer the other way round? Choose Use B.</string>
@@ -1452,8 +1485,6 @@
     <string name="setup_confirm_again_desc">Pick the button you use with the D-pad. Choosing the one already in use goes on.</string>
     <string name="setup_look_title">Pick a look</string>
     <string name="setup_look_desc">Choose your colors. You can change them any time in Settings › Appearance.</string>
-    <string name="setup_box_art_question_title">Box art</string>
-    <string name="setup_box_art_question_desc">Where Plumemu gets box art for your games. You can change this any time in Settings › Box art &amp; accounts › Box art.</string>
     <string name="setup_ready_box_art">Box art: downloading in the background</string>
     <string name="setup_ready_box_art_offline">Box art: starts when you are online</string>
     <string name="setup_ready_box_art_sign_in">Box art: sign in again in Settings › Box art &amp; accounts</string>
@@ -1484,6 +1515,7 @@
     <string name="settings_account_value_sign_in">Sign in</string>
     <string name="settings_account_value_signed_in">Signed in</string>
     <string name="settings_account_body">Box art and game info come from ScreenScraper, with your own free account from screenscraper.fr. Your password is stored encrypted on this device.</string>
+    <string name="settings_account_sign_up">No account yet? Make a free one at screenscraper.fr.</string>
     <string name="settings_account_sign_out">Sign out</string>
     <string name="settings_account_sign_in_again">Sign in again</string>
     <string name="settings_account_sign_out_failed">Plumemu could not sign out. Try again.</string>
@@ -1707,7 +1739,7 @@
     <string name="settings_box_art_source_body">Where Plumemu gets box art. Press A to choose.</string>
     <string name="settings_box_art_source_screenscraper">Box art and game info</string>
     <string name="settings_box_art_source_screenscraper_line">Box art plus year, rating, genre, publisher and description. Needs a free ScreenScraper account.</string>
-    <string name="settings_box_art_source_libretro">Box art only</string>
+    <string name="settings_box_art_source_libretro">Default source</string>
     <string name="settings_box_art_source_libretro_line">Box fronts from libretro over Wi-Fi. No details. No account.</string>
     <string name="settings_box_art_source_own">Plumemu\'s own covers</string>
     <string name="settings_box_art_source_own_line">No network. Plumemu draws a poster cover for each game.</string>

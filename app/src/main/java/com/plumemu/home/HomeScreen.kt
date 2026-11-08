@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import com.plumemu.settings.LocalShoulderKeys
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
@@ -49,13 +50,12 @@ import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.fadingIn
 import com.plumemu.coreui.theme.rememberContentFade
 import com.plumemu.game.AppActions
+import com.plumemu.game.rememberPanelSlide
 import com.plumemu.game.SortActions
 import com.plumemu.game.GameActions
 import com.plumemu.game.TypingScreen
 import com.plumemu.game.isTrayUp
 import com.plumemu.game.GameMenuController
-import com.plumemu.game.GamePanelOverlay
-import com.plumemu.game.PanelKeyboardTray
 import com.plumemu.coreui.components.keyboard.KeyboardEvent
 import com.plumemu.keyboard.KeyboardChoice
 import com.plumemu.game.GameRef
@@ -125,6 +125,8 @@ internal data class HomeCallbacks(
     val onGridView: (systemId: String, isGrid: Boolean, onFailed: () -> Unit) -> Unit = { _, _, _ -> },
     /** Search closed after a search: the query's length, the results and whether one was opened; never the words (`search_used`). */
     val onSearchUsed: (queryLength: Int, results: Int, openedResult: Boolean) -> Unit = { _, _, _ -> },
+    /** True while the screen stays composed but hidden under Settings coming in: it takes no action then (read per action). */
+    val isLeaving: () -> Boolean = { false },
 )
 
 /**
@@ -221,11 +223,13 @@ internal fun HomeScreen(
     ShowClosedAtOnce(callbacks.notices, menu)
     ShowCoreQuestion(callbacks.notices, menu)
     val currentOnIdle by rememberUpdatedState(onIdle)
+    LaunchedEffect(menu) { snapshotFlow { menu.isOpen }.collect { if (it) menu.undo.end() } }
     LaunchedEffect(menu, search) { snapshotFlow { !menu.isOpen && !search.isOpen }.collect { currentOnIdle(it) } }
     DisposableEffect(menu) { onDispose { currentOnIdle(false) } }
     TrackHomeScreen(state, search, menu) { currentContent }
     SideEffect { search.onSearchUsed = currentCallbacks.onSearchUsed }
-    CompositionLocalProvider(LocalBatteryReading provides (batteryReading ?: NoBatteryReading)) {
+    val undoOffered = remember(menu) { { menu.undo.game != null } }
+    CompositionLocalProvider(LocalBatteryReading provides (batteryReading ?: NoBatteryReading), LocalRecentUndoOffered provides undoOffered) {
         HomeLayout(
             content = shown,
             state = state,
@@ -236,7 +240,7 @@ internal fun HomeScreen(
             charging = { charging?.value == true },
             modifier = modifier,
             gridIds = gridViews.ids,
-            panel = menu.panel,
+            panel = { menu.panel },
             showHints = bars.showHints, pushRightToPlay = bars.pushRightToPlay, showSystemInfo = bars.showSystemInfo,
             search = search,
             positions = positions,
@@ -463,7 +467,11 @@ internal fun HomeLayout(
     /** Whether the charging bolt stands before the battery percentage; read only by the bolt. */
     charging: () -> Boolean = { false },
     gridIds: Set<String> = emptySet(),
-    panel: OpenPanel? = null,
+    /**
+     * The open game panel, read only by what shows it (the overlay, its keyboard tray, the hints, the focused row): opening
+     * or closing it recomposes those, not the whole screen.
+     */
+    panel: () -> OpenPanel? = { null },
     showHints: Boolean = true,
     pushRightToPlay: Boolean = false,
     showSystemInfo: Boolean = true,
@@ -476,6 +484,9 @@ internal fun HomeLayout(
     val searching = search?.isOpen == true
     // Opening or closing search fades the new bar and content in (the panel overlay keeps its slide).
     val searchFade = rememberContentFade(searching)
+    // The card's slide: the overlay animates it, the details column fades with it (read while drawing).
+    val panelSlide = rememberPanelSlide(Snapshot.withoutReadObservation { panel() } != null)
+    val isPanelOpen = remember(panel) { { panel() != null } }
     Column(
         modifier =
             modifier
@@ -485,7 +496,7 @@ internal fun HomeLayout(
     ) {
         // Over the fade and the rows that run under it.
         Box(Modifier.zIndex(1f).fadingIn(searchFade)) {
-            if (searching && search != null) SearchTopBar(search, clock, battery, wifi, charging) else HomeTopBar(content, state, clock, battery, wifi, charging, onSettings = { onAction(Action.OpenSettings) }, typing = { (panel?.screen as? TypingScreen)?.typing?.isTrayUp == true })
+            if (searching && search != null) SearchTopBar(search, clock, battery, wifi, charging) else HomeTopBar(content, state, clock, battery, wifi, charging, onSettings = { onAction(Action.OpenSettings) }, typing = { (panel()?.screen as? TypingScreen)?.typing?.isTrayUp == true })
         }
         Spacer(Modifier.height(PlumDimens.barGap))
         Box(Modifier.fillMaxWidth().weight(1f)) {
@@ -493,8 +504,10 @@ internal fun HomeLayout(
             val barRoom =
                 BarRoom(
                     top = PlumDimens.barGap,
-                    bottom = if (showHints) PlumDimens.footerGap else PlumDimens.stripMarginBottom,
-                    height = layout.height - PlumDimens.stripMarginTop - layout.topBarHeight - if (showHints) layout.footerZone - PlumDimens.footerGap else 0.dp,
+                    // With hint keys the rows stop footerGap above the bar, where the fade has finished: the keys then stand as far below
+                    // the faded rows as above the screen's edge. Without them the rows run to the edge.
+                    bottom = if (showHints) 0.dp else PlumDimens.stripMarginBottom,
+                    height = layout.height - PlumDimens.stripMarginTop - layout.topBarHeight - if (showHints) layout.footerZone else 0.dp,
                     taller = if (showHints) 0.dp else layout.footerZone - PlumDimens.stripMarginBottom,
                 )
             val barRunners = remember { BarRunners() }
@@ -506,7 +519,7 @@ internal fun HomeLayout(
             CompositionLocalProvider(LocalBarRoom provides barRoom, LocalBarRunners provides barRunners) {
                 Box(Modifier.fillMaxSize().fadingIn(searchFade).runsToBars(barRoom)) {
                     if (searching && search != null) {
-                        SearchResults(search, onAction, isPanelOpen = panel != null, Modifier.fillMaxHeight())
+                        SearchResults(search, onAction, isPanelOpen = panel() != null, Modifier.fillMaxHeight())
                     } else {
                         HomeStrip(
                             content,
@@ -514,7 +527,8 @@ internal fun HomeLayout(
                             gridIds,
                             onAction,
                             Modifier.fillMaxSize(),
-                            isPanelOpen = panel != null,
+                            isPanelOpen = isPanelOpen,
+                            panelSlide = { panelSlide.value },
                             positions = positions,
                             showSystemInfo = showSystemInfo,
                         )
@@ -527,13 +541,11 @@ internal fun HomeLayout(
             if (searching && search != null && search.usesOwnKeyboard) {
                 SearchKeyboardTray(search, belowContent = below)
             }
-            GamePanelOverlay(panel, onAction, keyboardCovers = PlumTheme.layout.keyboardTrayHeight - below)
-            // A panel's field typed with Plumemu's keyboard: its tray over the panel, the same place as Search's.
-            PanelKeyboardTray(panel, onKeyboardEvent, belowContent = below)
+            PanelOverlayAndTray(panel, onAction, onKeyboardEvent, below, panelSlide)
         }
         if (showHints) {
             Spacer(Modifier.height(PlumDimens.footerGap))
-            HomeHints(content, state, gridIds, onAction, panel, search, onCycleGridSize, pushRightToPlay)
+            HintsOf(panel) { HomeHints(content, state, gridIds, onAction, it, search, onCycleGridSize, pushRightToPlay) }
         }
     }
 }

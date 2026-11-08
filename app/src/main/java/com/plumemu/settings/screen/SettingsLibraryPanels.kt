@@ -19,7 +19,6 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.plumemu.coreui.components.StripeAnchor
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -30,7 +29,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.plumemu.R
 import com.plumemu.coreui.components.ScanPulseLine
+import com.plumemu.coreui.components.StripeAnchor
 import com.plumemu.coreui.components.focusPill
+import com.plumemu.coreui.theme.FlatPartDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumFonts
 import com.plumemu.coreui.theme.PlumTheme
@@ -183,7 +184,7 @@ private fun RemoveFolderPage(
                 isPrimary = false,
                 isFocused = focused == SettingsModel.CONFIRM_CANCEL,
                 modifier =
-                    Modifier.bringIntoViewWhen(focused == SettingsModel.CONFIRM_CANCEL, ring = PlumDimens.focusRingOutset)
+                    Modifier.bringIntoViewWhen(focused == SettingsModel.CONFIRM_CANCEL, ring = FlatPartDimens.focusRimRoom)
                         .tapTarget { touch.onPanelItem(SettingsModel.CONFIRM_CANCEL) }.testTag(SettingsTags.panelItem(SettingsModel.CONFIRM_CANCEL)),
             )
             SetupButton(
@@ -191,7 +192,7 @@ private fun RemoveFolderPage(
                 isPrimary = true,
                 isFocused = focused == SettingsModel.CONFIRM_RESET,
                 modifier =
-                    Modifier.bringIntoViewWhen(focused == SettingsModel.CONFIRM_RESET, ring = PlumDimens.focusRingOutset)
+                    Modifier.bringIntoViewWhen(focused == SettingsModel.CONFIRM_RESET, ring = FlatPartDimens.focusRimRoom)
                         .tapTarget { touch.onPanelItem(SettingsModel.CONFIRM_RESET) }.testTag(SettingsTags.panelItem(SettingsModel.CONFIRM_RESET)),
             )
         }

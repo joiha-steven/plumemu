@@ -122,27 +122,30 @@ internal class SettingsSystemsTest : SettingsModelHarness() {
     }
 
     @Test
-    fun pickingUpUnderAToZSwitchesToManualFromTheOrderOnScreenAndSaysSo() {
+    fun movingUnderAToZSwitchesToManualFromTheOrderOnScreenAndSaysSoOnDrop() {
         openSystems()
         assertEquals(listOf("gba", "megadrive", "psx", "snes"), shownIds())
         move(Direction.Down)
         move(Direction.Down) // psx
         press(Action.Enter)
-        assertEquals(SystemOrderSetting.Manual, stored.library.systemOrder)
-        assertEquals("starts from what was on screen", listOf("gba", "megadrive", "psx", "snes"), stored.library.manualSystemOrder)
-        assertEquals(SettingsOption.Systems to SettingsNotice.SystemOrderNowManual, model.work.notice)
+        assertEquals("picking up stores nothing", SystemOrderSetting.Name, stored.library.systemOrder)
+        assertEquals(emptyList<String>(), stored.library.manualSystemOrder)
+        assertNull(model.work.notice)
         press(Action.PreviousSystem)
         press(Action.Enter)
+        assertEquals(SystemOrderSetting.Manual, stored.library.systemOrder)
         assertEquals(listOf("psx", "gba", "megadrive", "snes"), stored.library.manualSystemOrder)
         assertEquals("the line stays while the panel is open", SettingsNotice.SystemOrderNowManual, model.work.notice?.second)
     }
 
     @Test
-    fun pickingUpUnderMakerAndYearStartsFromThatOrder() {
+    fun movingUnderMakerAndYearStartsFromThatOrder() {
         actions.settings = stored.copy(library = stored.library.copy(systemOrder = SystemOrderSetting.Maker))
         openSystems()
         press(Action.Enter)
-        assertEquals(listOf("snes", "gba", "megadrive", "psx"), stored.library.manualSystemOrder)
+        press(Action.NextSystem)
+        press(Action.Enter)
+        assertEquals(listOf("gba", "megadrive", "psx", "snes"), stored.library.manualSystemOrder)
         assertEquals(SystemOrderSetting.Manual, stored.library.systemOrder)
     }
 
@@ -297,7 +300,7 @@ internal class SettingsSystemsTest : SettingsModelHarness() {
         move(Direction.Down)
         model.onTapSection(SettingsSection.Appearance)
         assertFalse(model.systems.isCarrying)
-        assertEquals(SystemOrderSetting.Manual, stored.library.systemOrder)
-        assertEquals("the switch to Manual kept the order on screen", listOf("gba", "megadrive", "psx", "snes"), stored.library.manualSystemOrder)
+        assertEquals(SystemOrderSetting.Name, stored.library.systemOrder)
+        assertEquals(emptyList<String>(), stored.library.manualSystemOrder)
     }
 }

@@ -50,6 +50,13 @@ class JunkFilterTest {
     }
 
     @Test
+    fun cartridgeFormatsThatLookLikeSavesOrImagesAreNotJunk() {
+        // A Watara Supervision ROM is `.sv`; a PICO-8 cartridge is a PNG named `.p8.png`.
+        listOf("Space Duel (World).sv", "celeste.p8.png", "Jelpi.P8.PNG").forEach { assertFalse(it, JunkFilter.isJunkFile(it)) }
+        listOf("cover.png", "Game.p8.jpg").forEach { assertTrue(it, JunkFilter.isJunkFile(it)) }
+    }
+
+    @Test
     fun gamesWithBiosLikeWordsAreNotJunk() {
         listOf("Bios Fear.bin", "BioShock.iso", "Openbios Quest.bin", "scph.bin", "Kickboxer.rom", "SCPH Adventure.bin")
             .forEach { assertFalse(it, JunkFilter.isJunkFile(it)) }

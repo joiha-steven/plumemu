@@ -11,7 +11,6 @@ import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
-import com.plumemu.coreui.theme.TextWeight
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
@@ -35,7 +34,7 @@ class SpecPairShotsTest {
     @get:Rule
     val rules = rulesAround(compose)
 
-    private fun boardLook(settings: PlumThemeSettings) = settings.copy(textSize = TextSize.Small, textWeight = TextWeight.Thin)
+    private fun boardLook(settings: PlumThemeSettings) = settings.copy(textSize = TextSize.Small)
 
     private fun grid(
         size: String,

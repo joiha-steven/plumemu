@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 
 /**
- * The hint key caps as drawn: in Super, Charcoal, Ivory, Banana and Pocket the A, B, X and Y caps have
+ * The hint key caps as drawn: in Front loader, Cold grey, Ivory, Banana and Pocket the A, B, X and Y caps have
  * their printed letter's colour as their flat face, also with "Confirm with B"; START and L1 R1, and every
  * cap in the other sets or in Custom colours, have the usual `key` face. Read from the drawn pixels: inside
  * each cap, left of the letter.
@@ -125,7 +125,7 @@ class HintGlyphColorsTest {
     @Test
     fun theSetsWithGlyphColoursFillABXAndYByLetterAndLeaveTheOthers() {
         show()
-        for (set in listOf(ColorSet.Super, ColorSet.Charcoal, ColorSet.Ivory, ColorSet.Banana, ColorSet.Pocket)) {
+        for (set in listOf(ColorSet.FrontLoader, ColorSet.ColdGrey, ColorSet.Ivory, ColorSet.Banana, ColorSet.Pocket)) {
             theme = themeOf(set)
             val buttons = set.buttons!!
             val composeColors = PlumComposeColors.from(PlumColors.derive(set.backgroundColor, set.textMode, set.accentColor))
@@ -148,10 +148,10 @@ class HintGlyphColorsTest {
     @Test
     fun withConfirmOnBTheColoursFollowTheLetters() {
         confirm = ConfirmButtonSetting.Bottom
-        theme = themeOf(ColorSet.Super)
+        theme = themeOf(ColorSet.Ivory)
         show()
-        val buttons = ColorSet.Super.buttons!!
-        val colors = PlumColors.derive(ColorSet.Super.backgroundColor, ColorSet.Super.textMode, ColorSet.Super.accentColor)
+        val buttons = ColorSet.Ivory.buttons!!
+        val colors = PlumColors.derive(ColorSet.Ivory.backgroundColor, ColorSet.Ivory.textMode, ColorSet.Ivory.accentColor)
         val drawn = caps()
         assertNear("confirm (B) filled", setFace(colors, buttons.b.fill.toComposeColor()), drawn[0].inside())
         assertNear("back (A)", setFace(colors, buttons.a.fill.toComposeColor()), drawn[1].inside())
@@ -160,7 +160,7 @@ class HintGlyphColorsTest {
     @Test
     fun otherSetsAndCustomColoursKeepTheUsualKeyFace() {
         show()
-        val custom = themeOf(ColorSet.Super).copy(text = TextMode.Light.color, buttonSet = null)
+        val custom = themeOf(ColorSet.Ivory).copy(text = TextMode.Light.color, buttonSet = null)
         for (look in ColorSet.entries.filter { it.buttons == null }.map(::themeOf) + custom) {
             theme = look
             val colors = PlumColors.derive(look.backgroundColor, look.textMode, look.accentColor)

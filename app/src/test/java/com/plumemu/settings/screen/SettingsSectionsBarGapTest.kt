@@ -36,7 +36,7 @@ import org.robolectric.annotation.Config
  * section (About) the list has scrolled to its end, and its last row must not touch the bar. At Medium every row fits, so
  * each one is checked. The drawn edge counts, not the row's bounds: the focused slab is drawn [slabOverhang] past its row, and
  * that edge too stays clear of the hint keys' top. Every text size runs in Jost (three columns up to Large on wide screens,
- * two above) and in Mono (two columns at every size), so both layouts are measured.
+ * two above), so both layouts are measured.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
@@ -61,7 +61,6 @@ class SettingsSectionsBarGapTest {
         cursor: SectionsCursor = SectionsCursor.Last,
     ) {
         var size by mutableStateOf(TextSize.Small)
-        var font by mutableStateOf(PlumFont.Jost)
         // With a second screen the list has one more section.
         val content = if (secondScreen) SettingsContent().withSecondScreen(SecondScreen(4, "Screen-2", ScreenKind.BuiltIn), SecondScreenSettings()) else SettingsContent()
         val sections = SettingsSection.shownIn(content)
@@ -69,7 +68,7 @@ class SettingsSectionsBarGapTest {
         val lastOption = SettingsSection.Appearance.options.last()
         var density = Density(1f)
         compose.setContent {
-            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size, font = font)) {
+            PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 density = LocalDensity.current
                 SettingsAt(
                     when {
@@ -83,9 +82,8 @@ class SettingsSectionsBarGapTest {
             }
         }
         val problems = mutableListOf<String>()
-        for (eachFont in listOf(PlumFont.Jost, PlumFont.Mono)) for (each in TextSize.entries) {
+        for (eachFont in listOf(PlumFont.Jost)) for (each in TextSize.entries) {
             size = each
-            font = eachFont
             compose.waitForIdle()
             val at = "$eachFont $each"
             // What the bar draws highest: the top of the hint keys' collars (lip and groove above the resting cap), not the bar's own bounds.

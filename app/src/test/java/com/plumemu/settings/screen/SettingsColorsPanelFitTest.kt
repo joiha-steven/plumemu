@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.DpRect
 import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.ColorSetting
-import com.plumemu.coredata.settings.FontSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SetupFlags
 import com.plumemu.coredata.settings.TextSizeSetting
@@ -39,7 +38,7 @@ import kotlin.math.abs
 
 /**
  * Settings › Colors' panel measured, on own colours so Custom has its tile too (11),
- * in every font at all six text sizes:
+ * at all six text sizes:
  * - every tile name fits its tile: at most two lines, broken only between words, never cut;
  * - the tiles start on the panel's row-text line (the title's left), the last column ends on the
  *   right one, they are 12 apart across and down, every picture has the same size;
@@ -74,12 +73,10 @@ abstract class SettingsColorsPanelFitBase {
             }
         }
         val problems = mutableListOf<String>()
-        for (font in FontSetting.entries) {
-            for (size in TextSizeSetting.entries) {
-                settings = own.copy(appearance = own.appearance.copy(font = font, textSize = size))
-                compose.waitForIdle()
-                problems += check("$label $font $size", entries.size)
-            }
+        for (size in TextSizeSetting.entries) {
+            settings = own.copy(appearance = own.appearance.copy(textSize = size))
+            compose.waitForIdle()
+            problems += check("$label $size", entries.size)
         }
         assertTrue(problems.joinToString("\n"), problems.isEmpty())
     }
