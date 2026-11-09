@@ -10,7 +10,7 @@ handhelds.</p>
 </p>
 
 <p align="center">
-  <a href="https://plumemu.stevensdesk.com/assets/media/demo-v013.mp4"><img src="media/demo.jpg" width="100%" alt="Play the one-minute demo: Plumemu on a 4:3 handheld screen driven by its buttons, here the Super Nintendo games as a grid of covers"></a>
+  <a href="https://plumemu.stevensdesk.com/assets/media/demo-v015.mp4"><img src="media/demo.jpg" width="100%" alt="Play the one-minute demo: Plumemu on a 4:3 handheld screen driven by its buttons, here the Super Nintendo games as a grid of covers"></a>
   <br><sub>One minute with the buttons, on a 4:3 screen. The only sound is Plumemu's own clicks.</sub>
 </p>
 
