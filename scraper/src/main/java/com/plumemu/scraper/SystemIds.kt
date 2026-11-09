@@ -112,7 +112,6 @@ internal object SystemIds {
         "pokemini" to 211,
         "ps3" to 59,
         "psvita" to 62,
-        "samcoupe" to 213,
         "satellaview" to 107,
         "scummvm" to 123,
         "sg-1000" to 109,

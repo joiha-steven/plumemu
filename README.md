@@ -15,7 +15,7 @@ handhelds.</p>
 </p>
 
 <p align="center">
-  <b>0.1.4</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket Classic ·
+  <b>0.1.5</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket Classic ·
   <a href="../../releases">Download</a> · <a href="https://plumemu.stevensdesk.com">Website</a>
 </p>
 

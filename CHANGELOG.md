@@ -3,6 +3,21 @@
 What changed in each version of Plumemu, newest first. Downloads are under
 [Releases](../../releases).
 
+## 0.1.5 (9 November 2026)
+
+A fix for your own colours.
+
+### Fixed
+
+- Your own colours stay under Custom when you leave Plumemu on true Black for another colour set; 0.1.4 could replace them.
+
+### Known issues
+
+- Wii games in RVZ or WIA are not checked for achievements, and 3DS, MS-DOS and Arduboy games show none yet.
+- The second screen is tested on the AYN Thor only, and most translations other than French have not been read by a native speaker.
+- Android's own folder picker cannot be finished with a gamepad on some handhelds: use touch for that step.
+- After an update, if notifications are off and Plumemu does not come back, press Home (twice on some handhelds).
+
 ## 0.1.4 (9 November 2026)
 
 New colour sets, one typeface, a clearer focus, a simpler setup, and menus and lists that move faster and more smoothly.

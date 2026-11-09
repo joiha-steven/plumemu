@@ -31,8 +31,9 @@ class SystemIdsTest {
         assertNull(SystemIds.screenScraperId("SNES"))
     }
 
-    @Test fun `132 systems are mapped, 35 checked plus 96 added on 2026-10-22 and steam on 2026-10-23`() {
-        assertEquals(132, SystemIds.knownSystems.size)
+    @Test fun `131 systems are mapped, 35 checked plus 96 added on 2026-10-22 and steam on 2026-10-23, less samcoupe no longer shipped`() {
+        assertEquals(131, SystemIds.knownSystems.size)
+        assertNull("SAM Coupe is not a Plumemu system", SystemIds.screenScraperId("samcoupe"))
         assertEquals(138, SystemIds.screenScraperId("steam"))
         assertTrue(SystemIds.isNameOnly("steam"))
         assertFalse(SystemIds.isNameOnly("windows"))

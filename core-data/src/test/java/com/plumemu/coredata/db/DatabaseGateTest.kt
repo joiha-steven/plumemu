@@ -127,6 +127,8 @@ class DatabaseGateTest {
     /**
      * A writer that had the database before the shut and queued behind the close's own lock: the
      * close waits for its transaction to end before Room closes, so nothing writes while files move.
+     * No timing: the writer holds its transaction until the close's last transaction has queued
+     * behind it, or Room was closed under it (the close did not wait), and says which it saw.
      */
     @Test
     fun aWriterQueuedBehindTheCloseEndsBeforeRoomCloses() {
@@ -134,42 +136,57 @@ class DatabaseGateTest {
         val database = PlumDatabase.open(context, TestDetailsRating, gate).also { db = it }
         assertEquals(0, count(database))
         val w = database.openHelper.writableDatabase
+        val closer = Thread.currentThread()
         val go = java.util.concurrent.CountDownLatch(1)
-        val ended = java.util.concurrent.atomic.AtomicBoolean(false)
-        val woke = java.util.concurrent.CountDownLatch(1)
+        val openAtItsEnd = java.util.concurrent.atomic.AtomicReference<Boolean>()
+        val failure = java.util.concurrent.atomic.AtomicReference<Throwable>()
         val writer =
             kotlin.concurrent.thread {
-                go.await()
-                woke.countDown()
-                w.beginTransaction()
                 try {
-                    w.execSQL("INSERT INTO system (id, name) VALUES ('snes', 'Super Nintendo')")
-                    Thread.sleep(300)
-                    w.setTransactionSuccessful()
-                } finally {
-                    w.endTransaction()
-                    ended.set(true)
+                    go.await()
+                    w.beginTransaction()
+                    try {
+                        w.execSQL("INSERT INTO system (id, name) VALUES ('snes', 'Super Nintendo')")
+                        awaitUntil("the close queued behind the write, or Room closed") { closer.queuedForTheConnection() || !database.isOpen }
+                        openAtItsEnd.set(database.isOpen)
+                        w.setTransactionSuccessful()
+                    } finally {
+                        w.endTransaction()
+                    }
+                } catch (e: Throwable) {
+                    failure.set(e)
                 }
             }
         val closed =
             gate.closeWhenQuiet(database, 5_000) {
-                // The close holds the write lock: let the writer queue behind it, and wait until it does.
+                // The close holds the write lock: let the writer queue behind it, and wait until it has.
                 go.countDown()
-                // Waiting on `go` also reads as not RUNNABLE; on a slow machine the loop below
-                // passed before the writer had even woken, so the close ran ahead of it.
-                woke.await(5, java.util.concurrent.TimeUnit.SECONDS)
-                val deadline = System.currentTimeMillis() + 5_000
-                // Inside beginTransaction, not just not RUNNABLE: under load a class load or a safepoint
-                // also reads as not RUNNABLE, and the close then ran ahead of the writer in CI.
-                while (writer.state == Thread.State.RUNNABLE || writer.state == Thread.State.NEW ||
-                    writer.stackTrace.none { it.methodName == "beginTransaction" }
-                ) {
-                    if (System.currentTimeMillis() > deadline) throw AssertionError("the writer never queued: ${writer.stackTrace.take(12)}")
-                    Thread.sleep(5)
-                }
+                awaitUntil("the writer queued behind the close") { writer.queuedForTheConnection() }
             }
-        assertTrue(closed)
-        assertTrue("the queued write ended before Room closed", ended.get())
         writer.join(5_000)
+        failure.get()?.let { throw it }
+        assertTrue(closed)
+        assertEquals("Room was still open when the queued write ended", true, openAtItsEnd.get())
+    }
+
+    /**
+     * Parked in the connection pool's wait: the pool puts a thread in its queue before it parks, and hands
+     * the connection on to the queue in order, so a thread seen parked there is queued.
+     */
+    private fun Thread.queuedForTheConnection(): Boolean {
+        val frames = stackTrace
+        val wait = frames.indexOfFirst { it.methodName == "waitForConnection" && it.className.endsWith("SQLiteConnectionPool") }
+        return wait > 0 && frames.take(wait).any { it.className == "java.util.concurrent.locks.LockSupport" && it.methodName.startsWith("park") }
+    }
+
+    private fun awaitUntil(
+        what: String,
+        condition: () -> Boolean,
+    ) {
+        val deadline = System.nanoTime() + 5_000_000_000L
+        while (!condition()) {
+            if (System.nanoTime() > deadline) throw AssertionError("never: $what")
+            Thread.yield()
+        }
     }
 }

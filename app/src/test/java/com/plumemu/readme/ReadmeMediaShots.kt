@@ -284,7 +284,7 @@ class ReadmeMediaShots {
 
     @Test
     fun colors() =
-        shoot("colors", stored(ColorSet.RedAndGold)) { s -> SettingsAt(panelAt(SettingsOption.Colors, PanelPage.ColorSets, ColorSet.RedAndGold.ordinal), s) }
+        shoot("colors", stored(ColorSet.Ultramarine)) { s -> SettingsAt(panelAt(SettingsOption.Colors, PanelPage.ColorSets, ColorSet.Ultramarine.ordinal), s) }
 
     @Test
     fun buttonColors() = shoot("button-colors", stored(ColorSet.Banana)) { HomeOf(gridActions(systemIndex("snes"), readmeIndexOf("snes", "Zelda: A Link to the Past"))) }
@@ -301,18 +301,18 @@ class ReadmeMediaShots {
         val release =
             UpdateManifest(
                 versionCode = 901,
-                versionName = "0.1.3",
+                versionName = "0.1.4",
                 apkUrl = "https://example.invalid/plumemu.apk",
                 size = 8_100_000,
                 sha256 = "ab".repeat(32),
                 minSdk = 23,
-                released = "2026-11-07",
-                notes = listOf("Lists, menus and panels run under the bars and fade there.", "Covers sit in a glass frame, a little further apart.", "Settings falls from 53 rows to about 40."),
+                released = "2026-11-09",
+                notes = listOf("Seventeen colour sets, with true black on OLED screens.", "A game without box art gets a card in its system's colour.", "Settings and the game menu open faster."),
                 notesUrl = null,
             )
-        val content = SettingsContent(update = UpdateView(lastCheck = LastCheck(1_793_784_600_000L, CheckOutcome.Found), found = release))
+        val content = SettingsContent(update = UpdateView(lastCheck = LastCheck(1_794_216_600_000L, CheckOutcome.Found), found = release))
         val row = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1))
-        shoot("update", stored(ColorSet.Daylight)) { s -> SettingsAt(row.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0), s, content, version = "0.1.2") }
+        shoot("update", stored(ColorSet.Daylight)) { s -> SettingsAt(row.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0), s, content, version = "0.1.3") }
     }
 
     @Test

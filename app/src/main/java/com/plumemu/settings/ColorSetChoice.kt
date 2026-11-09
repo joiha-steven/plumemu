@@ -86,7 +86,8 @@ internal fun AppearanceSettings.colorsCycle(): List<ColorSet?> {
  * own colours first, so Custom (null) brings them back exactly. Picking what is already current
  * changes nothing; Custom without own colours kept changes nothing either. A set worn on one of its
  * other pages ([ColorSet.pageVariants]: Plumemu on true Black, as setup gives an OLED screen) is kept
- * the same way when left, and picking that set again brings that page back.
+ * the same way when left, and picking that set again brings that page back, unless own colours are
+ * kept: they stay, and the set comes back on its first page.
  */
 internal fun AppearanceSettings.withColors(entry: ColorSet?): AppearanceSettings {
     val current = colorSet()
@@ -96,7 +97,13 @@ internal fun AppearanceSettings.withColors(entry: ColorSet?): AppearanceSettings
     }
     // The own colours keep the buttons in use with them, so Custom brings back the same look.
     val onVariant = current != null && toColorsAndLook(animationsOn = true).backgroundColor in current.pageVariants
-    val own = if (current == null || onVariant) OwnColors(background, textColor, accent, effectiveButtonSet().buttonSetName()) else ownColors
+    // A set's other page is kept only while no own colours are: Custom still stands for those, and one slot holds one look.
+    val own =
+        if (current == null || (onVariant && customColors() == null)) {
+            OwnColors(background, textColor, accent, effectiveButtonSet().buttonSetName())
+        } else {
+            ownColors
+        }
     if (entry == null) return own?.let { withColorsOf(it).copy(ownColors = it, buttonSet = it.buttonSet ?: AppearanceSettings.BUTTONS_NONE) } ?: this
     if (own != null && withColorsOf(own).colorSet() == entry) {
         return withColorsOf(own).copy(buttonSet = entry.buttonSetName(), ownColors = own)

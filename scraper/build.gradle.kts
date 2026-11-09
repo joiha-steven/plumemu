@@ -51,7 +51,14 @@ android {
             isIncludeAndroidResources = true
             // The opt-in smoke test against the real ScreenScraper (live/ScreenScraperLiveSmokeTest):
             // skipped unless asked for with -Pscreenscraper.live=true, so CI and verify.sh never run it.
-            all { it.systemProperty("screenscraper.live", providers.gradleProperty("screenscraper.live").getOrElse("false")) }
+            all {
+                it.systemProperty("screenscraper.live", providers.gradleProperty("screenscraper.live").getOrElse("false"))
+                // SystemIdsTest reads the platforms module's system list from disk: an input, so a changed list reruns the tests
+                // instead of serving a cached pass.
+                it.inputs.file(rootProject.file("platforms/src/main/assets/platforms.json"))
+                    .withPropertyName("platformsJson")
+                    .withPathSensitivity(PathSensitivity.RELATIVE)
+            }
         }
     }
 

@@ -55,7 +55,7 @@ class SecondScreenMeterTrackTest {
 
     /**
      * The rows the code must draw: the boards' shade layers kept, laid over the tone ladder's sunken well instead of the boards' own well.
-     * Each board row is `shade over old well` (the shade colour [shade] at a per-row strength) with the lit foot line on the last row; the
+     * Each board row is `shade over old well` (the shade colour [shade] at a per-row strength) with the lit foot line under it on the last row; the
      * strength is read back from the board row and the old well, then applied to the new well, so only the well moved. Tolerance 2 per channel.
      */
     private fun assertOverTheSunkenWell(
@@ -72,13 +72,13 @@ class SecondScreenMeterTrackTest {
         for ((row, pair) in board.zip(ours).withIndex()) {
             for (shift in listOf(16, 8, 0)) {
                 val shadeColour = if (dark) 0.0 else ((WARM_SHADOW.value shr shift) and 0xFF).toDouble()
-                val wellOld = ((oldWell.value shr shift) and 0xFF).toDouble()
-                val wellNew = ((newWell.value shr shift) and 0xFF).toDouble()
-                var v = ((pair.first shr shift) and 0xFF).toDouble()
-                val last = row == board.lastIndex
-                if (last) v = (v - 255 * foot) / (1 - foot)
-                var want = shadeColour + (v - shadeColour) * (wellNew - shadeColour) / (wellOld - shadeColour)
-                if (last) want = want * (1 - foot) + 255 * foot
+                // The shade lies over the lit line (CSS draws a list's first shadow on top), so on the last row the shade's strength is
+                // read against the well with the line on it, not the line against the shaded well.
+                val lit = { well: Double -> if (row == board.lastIndex) well * (1 - foot) + 255 * foot else well }
+                val wellOld = lit(((oldWell.value shr shift) and 0xFF).toDouble())
+                val wellNew = lit(((newWell.value shr shift) and 0xFF).toDouble())
+                val v = ((pair.first shr shift) and 0xFF).toDouble()
+                val want = shadeColour + (v - shadeColour) * (wellNew - shadeColour) / (wellOld - shadeColour)
                 val o = (pair.second shr shift) and 0xFF
                 assertTrue(
                     "$what: row $row channel ${shift / 8}: wanted ${"%.1f".format(want)} (board shade over the sunken well #%06X), got $o".format(newWell.value),
