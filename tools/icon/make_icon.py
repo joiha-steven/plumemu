@@ -23,7 +23,7 @@ SEAM = "#A8323F"
 LEAF = "#EDEDED"
 
 # Geometry in units of the plum's radius, origin at the plum's centre, y down. Taken from the
-# owner's ChatGPT sketch (Drive Projects/Plumemu/image), with the leaf a little smaller.
+# owner's ChatGPT sketch (Drive Projects/plumemu/image), with the leaf a little smaller.
 STEM_BOTTOM = (0.0, -0.97)  # flat end, hidden just inside the plum
 STEM_LENGTH = 0.42
 STEM_LEAN = math.radians(15)  # to the right
