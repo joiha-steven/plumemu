@@ -156,9 +156,9 @@ none. Settings › Box art & accounts › RetroAchievements › Sign out removes
 ## Lists and keeping things tidy
 
 - **Recent, Favorites and Apps** sit at the top of the system column. Y adds or removes a favorite.
-- **Recent** keeps 10, 20 or 50 games (Settings › Library › Recent size; 20 to begin with). In a
+- **Recent** keeps the last 50 games. In a
   game's menu, "Remove from Recent" takes one out (Undo brings it back for four seconds);
-  Settings › Library › Clear Recent… empties it.
+  Settings › Advanced › Reset… › Clear Recent… empties it.
   Play time and statistics stay either way.
 - **Search**: X.
 - **Hide a game**: game menu › Hide; or Not a game for a file that is not one. Both come back in
@@ -184,7 +184,7 @@ field. Settings › Controls › Keyboard switches to Android's keyboard.
 Settings › Appearance: seventeen ready-made [color sets](COLORS.md) or your own colors, text size,
 Fade list edges and Language. Every screen uses Jost in one weight. The focused cover or app lifts a
 little inside its own space with a thin light rim; buttons and switches are flat, and a switch that
-is off is outlined. Settings › Home screen: grid size and the left edge strip.
+is off is outlined. Settings › Home screen: Use as home screen and Show Android apps. The hints, clock and battery always show.
 Settings › Controls: Confirm with B, sounds and vibration. List or grid is SELECT on the main
 screen.
 
@@ -193,9 +193,9 @@ screen.
 - Settings › Advanced › Back up saves your settings, or everything (library, box art, play time),
   to a file; Restore puts it back.
 - When a new version is out, the top bar shows "Update" and the version; START opens it. You can
-  also use Settings › About › Update. It installs the new version, keeping your library and
+  also use Settings › About › Version. It installs the new version, keeping your library and
   settings. Afterwards Plumemu opens itself again, or shows a notification to tap if Android keeps it
-  from coming to the front (Settings › About › Updates can turn notifications on), and a card shows
+  from coming to the front (Settings › About › Version can turn notifications on), and a card shows
   what is new, once. Only the official build has this; if you built Plumemu from the source, install new
   versions yourself.
 

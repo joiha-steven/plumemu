@@ -46,7 +46,7 @@ to RetroAchievements.
 
 Once a day, on Wi-Fi or Ethernet that is not metered, when Plumemu comes to the front, it asks
 `plumemu-app.stevensdesk.com` whether there is a newer version. It also asks when you press
-Check for updates in Settings › About › Updates.
+Check for updates in Settings › About › Version.
 
 - **What is sent**: a plain HTTPS request for one file, `update/latest.json`. No identifier, no
   account, nothing about your library, your device or the version you have.
@@ -62,7 +62,7 @@ Check for updates in Settings › About › Updates.
   second yes), from the same server.
 - **What stays on the device**: when it last checked and what it found, in storage that is never
   backed up.
-- **Turn it off** with Settings › About › Updates. Check for updates then runs only
+- **Turn it off** with Settings › About › Version. Check for updates then runs only
   when you press it.
 
 ## Box art (only if you choose it)
@@ -116,14 +116,27 @@ contact RetroAchievements at all.
 
 ## Battery use
 
-On a handheld with two screens, while you play with the lower screen's clock and Show battery on,
+On a handheld with two screens, while you play with the lower screen's clock showing,
 Plumemu reads the battery level and current to say how long the charge lasts. For each play it
 keeps how long it measured, the charge at the start and the end, and the average draw, so it can
 tell a game's usual pace.
 
 - **Recorded on the device only, never sent** to Plumemu or anyone else.
 - It is read only while that clock shows and the screen is on.
-- **Turn it off** with Show battery off, or the lower screen set to black while you play.
+- **Turn it off** by setting the lower screen to Black while you play (Settings › Second screen).
+
+## Usage access (only if you allow it)
+
+After your first game of a minute or more, Plumemu offers once to count only the time a game is on
+screen. It needs Android's Usage access, which Plumemu never has unless you allow it. It is off by
+default, and it can be switched on or off in Settings › Statistics › Exact play time.
+
+- **What is read**: from Android, which app was in front during the play, to count only the time
+  your game or app was on screen. Nothing else about other apps is kept.
+- **Recorded on the device only, never sent** to Plumemu or anyone else. Only the play's length is
+  stored.
+- **Turn it off** with Exact play time off, or take the access away in Android's Usage access
+  screen.
 
 ## Backups
 
@@ -143,6 +156,7 @@ sends a backup anywhere; where the file goes is up to you.
   kept as games.
 - **When and how long you play**, to show play time under Settings › Statistics.
 - **The battery**, while you play on two screens, as above.
+- **Which app is in front**, only if you allow Usage access, as above.
 
 All of it stays on the device, in Plumemu's own storage, and is removed when Plumemu is
 uninstalled.

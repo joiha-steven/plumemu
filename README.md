@@ -15,7 +15,7 @@ handhelds.</p>
 </p>
 
 <p align="center">
-  <b>0.1.6</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket Classic ·
+  <b>0.1.6</b> · Android 6.0 or later · tested on the AYN Thor (earlier versions also on the Retroid Pocket 6, Nova and Classic) ·
   <a href="../../releases">Download</a> · <a href="https://plumemu.stevensdesk.com">Website</a>
 </p>
 
@@ -108,7 +108,7 @@ game file.
   of your library, with the reason, and Unidentified games suggests the closest official titles. Folders the last scan could not read are listed
   there too, with Scan again and a way to skip each one.
 - **Recent that you control.** Take one game out of Recent from its menu (Undo brings it back for four seconds), or clear it
-  (Settings › Library › Clear Recent…). Recent keeps the last 50 games. Your play time and statistics stay.
+  (Settings › Advanced › Reset… › Clear Recent…). Recent keeps the last 50 games. Your play time and statistics stay.
 - **Skip a sub-folder.** Settings › Library › Game folders can leave out a sub-folder (a folder of
   demos, say) so its games never show up. Nothing on disk is touched.
 
@@ -142,15 +142,13 @@ game file.
   and on a handheld with an OLED screen setup offers true black. Or make your own background, text and accent colors with
   sliders that show the whole screen in the new color as you drag.
 - **Lists or covers.** Show any system, Recent or Favorites as a list or as a grid of covers in
-  three sizes (L1 / R1, or the Size hint; Settings › Home screen › Grid size
-  while button hints are off). Covers sit in a glass frame with rounded corners; the focused cover or app lifts a little inside its
+  three sizes (L1 / R1, or the Size hint). Covers sit in a glass frame with rounded corners; the focused cover or app lifts a little inside its
   own space, with a thin light rim, so nothing overlaps. Apps can be a grid of larger icons too.
 - **One sliding view.** Systems, games and details move as one strip, laid out for 16:9 and 4:3
   screens. On 4:3 and narrow screens the game's details peek in beside the list. Beside the games,
-  a narrow strip shows game counts, a code per system or a letter rail you can tap or drag
-  (Settings › Home screen › Left strip).
+  a narrow strip shows a short code for each system, in your order, that you can tap.
 - **About each system.** Above a system's games, a short band with its badge, the years it was
-  made and a few lines about it. Settings › Home screen › System info turns it off.
+  made and a few lines about it.  It follows the screens your handheld has.
 - **Text you can read.** Text size starts at Large. Every screen uses Jost in one weight, and the clock,
   battery and years use a monospaced face so their figures line up.
   Lists, menus and panels run under the top and bottom bars and fade there.
@@ -169,7 +167,7 @@ game file.
 - **Back up and restore.** Save your settings, or everything (library, box art, play time), into
   one file, checked after writing, and put it back on this device or a new one.
 - **Updates from inside the app** (official builds). Once a day on Wi-Fi Plumemu looks for a new
-  version; the top bar then shows "Update" and the version, and START or Settings › About › Updates
+  version; the top bar then shows "Update" and the version, and START or Settings › About › Version
   installs it. After an update Plumemu opens itself again, or shows a notification to tap if Android keeps
   it from coming to the front, and a card tells you what is new, once.
 - **Anonymous usage statistics and crash reports, only if you want them** (official builds). They
@@ -198,7 +196,7 @@ game file.
     <td align="center">In three sizes, light or dark</td>
   </tr>
   <tr>
-    <td colspan="2"><img src="media/apps-grid.png" alt="Apps in Cold grey as a grid of larger icons with one-line names, Gallery lifted inside a thin light rim; the left strip counts each system"></td>
+    <td colspan="2"><img src="media/apps-grid.png" alt="Apps in Cold grey as a grid of larger icons with one-line names, Gallery lifted inside a thin light rim; the left strip shows a code for each system"></td>
   </tr>
   <tr>
     <td colspan="2" align="center">Apps as a grid of larger icons</td>
@@ -217,7 +215,7 @@ game file.
   </tr>
   <tr>
     <td align="center">4:3 screens, like the Retroid Pocket Nova</td>
-    <td align="center">Counts, system codes or a letter rail at the edge</td>
+    <td align="center">A code for each system at the edge</td>
   </tr>
   <tr>
     <td width="50%"><img src="media/colors.png" alt="Settings › Appearance › Colors in Ultramarine: a short help text and small previews of the first color sets, Ultramarine selected"></td>
@@ -228,7 +226,7 @@ game file.
     <td align="center">A, B, X and Y in their classic colors</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/settings.png" alt="Settings › Library in Pea green, a green screen: Game folders, Rescan library, Sort games, Files not added and Clear Recent…; the Game folders panel on the right lists Internal storage and SD card with their game counts"></td>
+    <td width="50%"><img src="media/settings.png" alt="Settings › Library in Pea green, a green screen: Game folders, Rescan library and Files not added; the Game folders panel on the right lists Internal storage and SD card with their game counts"></td>
     <td width="50%"><img src="media/update.png" alt="Settings › About in Daylight with the update panel: Plumemu 0.1.3 → 0.1.4, a short list of release notes and an Update button (an example screen)"></td>
   </tr>
   <tr>
@@ -292,9 +290,9 @@ optional: on the Thor it shows details, a clock and your battery, and nothing ne
 
 **Updating.** Install the new version the same way, over the old one; your library and settings
 stay. The official build also finds new versions itself: START Settings shows a dot, and
-Settings › About › Updates downloads it, checks that it really is Plumemu, and installs it. On
+Settings › About › Version downloads it, checks that it really is Plumemu, and installs it. On
 Android 8 and later, Android asks once to let Plumemu install apps. Nothing installs while you
-play. Settings › About › Updates has a switch that turns the daily check off.
+play. Settings › About › Version has a switch that turns the daily check off.
 
 ## Controls
 
@@ -337,12 +335,12 @@ official build can send, and to whom:
 |---|---|---|---|
 | Usage statistics and crash reports: device model, Android and Plumemu versions, a random install number, which screens and settings are used, play time by system. For a game Plumemu could not name, once: its system, size, checksum and any code read from the game. Never game titles, file names or search words. | The developer (`plumemu.stevensdesk.com`) | Only after you switch it on | Settings › About › Send usage statistics |
 | A problem report: what you wrote, an e-mail if you give one, the log unless you untick it | The developer | Only when you press Send | Do not press Send |
-| An update check: a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | Once a day on Wi-Fi, or when you press Check for updates | Settings › About › Updates |
+| An update check: a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | Once a day on Wi-Fi, or when you press Check for updates | Settings › About › Version |
 | Box art lookups: your ScreenScraper account, and each game's file name, size, checksum and title | [ScreenScraper](https://www.screenscraper.fr) | Only while you are signed in, on Wi-Fi | Settings › Box art & accounts › ScreenScraper: Sign out or Pause |
 | Box art ScreenScraper lacks: a Steam game's title, or a game's file name | Steam (Valve) and the libretro thumbnail server | Only while you are signed in to ScreenScraper, on Wi-Fi | The same |
 | Box art with no account: a game's name, in the picture's address | The libretro thumbnail server | Only if you choose the default source, on Wi-Fi | Settings › Box art & accounts › Box art: Plumemu's own covers |
 | Achievements: your RetroAchievements user name, your Web API key and the RetroAchievements number of a game, found from a hash of the game file that Plumemu computes on the handheld (no file leaves it). Badge pictures are plain downloads with no account data | [RetroAchievements](https://retroachievements.org) (`retroachievements.org`, badges from `media.retroachievements.org`) | Only while you are signed in: when a game's Info opens, after you play, and once a day on Wi-Fi | Settings › Box art & accounts › RetroAchievements: Sign out deletes your name, key and progress |
-| Platform data (the list of systems and emulators): a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | In the same daily update check | Settings › About › Updates |
+| Platform data (the list of systems and emulators): a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | In the same daily update check | Settings › About › Version |
 
 A build you make yourself from the source sends no statistics and checks no updates, and has no
 ScreenScraper or RetroAchievements account built in (see [Source](#source)). Your IP address reaches each server with
