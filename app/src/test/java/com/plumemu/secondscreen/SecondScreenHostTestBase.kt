@@ -1,6 +1,7 @@
 package com.plumemu.secondscreen
 
-import android.app.Dialog
+import android.app.ActivityOptions
+import android.content.Intent
 import android.content.ComponentName
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -40,9 +41,10 @@ import org.robolectric.shadows.ShadowDisplayManager
 import java.time.Duration
 
 /**
- * What the second screen's window tests share: a started Activity, a Robolectric display at the
- * Thor's bottom screen, the host's inputs as flows, a window recomposer on each test's own
- * Choreographer, and one teardown that leaves the JVM clean.
+ * What the second screen's card tests share: a started Activity, a Robolectric display at the
+ * Thor's bottom screen, the host's inputs as flows, the card activities the host starts (built on
+ * that display, as Android would), a window recomposer on each test's own Choreographer, and one
+ * teardown that leaves the JVM clean.
  */
 abstract class SecondScreenHostTestBase {
     internal lateinit var controller: ActivityController<ComponentActivity>
@@ -57,6 +59,27 @@ abstract class SecondScreenHostTestBase {
     internal var now = 1_792_705_620_000L
     internal val logs = mutableListOf<String>()
     internal var host: SecondScreenHost? = null
+
+    /** Every card activity a test made, in order; all are destroyed in [tearDown]. */
+    internal val cards = mutableListOf<ActivityController<SecondScreenCardActivity>>()
+
+    /** What the host asked to start: the display ids. */
+    internal val starts = mutableListOf<Int>()
+
+    /** Makes the card on [id] as Android would after `startActivity` with `setLaunchDisplayId`. */
+    internal fun buildCard(id: Int = displayId): SecondScreenCardActivity {
+        val app = RuntimeEnvironment.getApplication()
+        val options = ActivityOptions.makeBasic().setLaunchDisplayId(id).toBundle()
+        val made = Robolectric.buildActivity(SecondScreenCardActivity::class.java, Intent(app, SecondScreenCardActivity::class.java), options)
+        cards += made
+        return made.setup().get()
+    }
+
+    /** The host's start: recorded, then the card made on the next main-loop turn (Android starts it a moment later). */
+    internal val makeCard: (Int) -> Unit = { id ->
+        starts += id
+        android.os.Handler(Looper.getMainLooper()).post { buildCard(id) }
+    }
 
     /**
      * Compose's window recomposer runs on `AndroidUiDispatcher.Main`, made once per JVM on the first
@@ -99,6 +122,17 @@ abstract class SecondScreenHostTestBase {
     fun tearDown() {
         host?.stop()
         others.forEach { it.stop() }
+        SecondScreenHost.cardHolder.value = null
+        CardInstances.finishLive()
+        cards.forEach { card ->
+            if (card.get().isDestroyed) return@forEach
+            val state = card.get().lifecycle.currentState
+            if (state.isAtLeast(Lifecycle.State.RESUMED)) card.pause()
+            if (state.isAtLeast(Lifecycle.State.STARTED)) card.stop()
+            card.destroy()
+        }
+        CardInstances.onGone = null
+        TopScreen.attach(null)
         // Some tests have already stopped it: only the steps it still needs.
         if (activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) controller.pause()
         if (activity.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) controller.stop()
@@ -110,10 +144,10 @@ abstract class SecondScreenHostTestBase {
     internal fun startHost(
         kind: ScreenKind = ScreenKind.BuiltIn,
         forcedOn: Boolean = false,
-        showWindow: (Dialog) -> Unit = Dialog::show,
+        startCard: (Int) -> Unit = makeCard,
+        home: SecondScreenHome? = null,
         battery: BatteryReads = BatteryReads.None,
         onDriftNoteShown: () -> Unit = {},
-        onStrayFocus: () -> Unit = {},
     ): SecondScreenHost {
         screens.value = SecondScreen(displayId, "Overlay #1", kind)
         val made =
@@ -126,11 +160,11 @@ abstract class SecondScreenHostTestBase {
                 presence = presence,
                 backgroundArgb = 0xFF000000.toInt(),
                 forcedOn = forcedOn,
-                showWindow = showWindow,
+                startCard = startCard,
+                home = home,
                 clock = { now },
                 battery = battery,
                 onDriftNoteShown = onDriftNoteShown,
-                onStrayFocus = onStrayFocus,
                 info = { logs += it },
                 warn = { logs += "W: $it" },
             )
@@ -150,14 +184,27 @@ abstract class SecondScreenHostTestBase {
         repeat(IDLE_STEPS) {
             Snapshot.sendApplyNotifications()
             looper.idleFor(Duration.ofMillis(ms / IDLE_STEPS + 1))
+            destroyFinishedCards()
+        }
+    }
+
+    /** Android destroys a finished activity a moment later; Robolectric leaves that to the test. */
+    private fun destroyFinishedCards() {
+        cards.forEach { card ->
+            val made = card.get()
+            if (!made.isFinishing || made.isDestroyed) return@forEach
+            val state = made.lifecycle.currentState
+            if (state.isAtLeast(Lifecycle.State.RESUMED)) card.pause()
+            if (state.isAtLeast(Lifecycle.State.STARTED)) card.stop()
+            card.destroy()
         }
     }
 
     internal fun on(enabled: Boolean?) = PlumSettings(secondScreen = SecondScreenSettings(enabled = enabled))
 
-    /** The brightest red channel (0 to 1) the window draws: the card's text on the Black background. */
-    internal fun brightest(window: Dialog): Float {
-        val view = window.window!!.decorView
+    /** The brightest red channel (0 to 1) the card draws: its text on the Black background. */
+    internal fun brightest(window: SecondScreenCardActivity): Float {
+        val view = window.window.decorView
         val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
         view.draw(Canvas(bitmap))
         var best = 0
@@ -165,16 +212,16 @@ abstract class SecondScreenHostTestBase {
         return best / 255f
     }
 
-    internal fun pixelsOf(window: Dialog): IntArray {
-        val view = window.window!!.decorView
+    internal fun pixelsOf(window: SecondScreenCardActivity): IntArray {
+        val view = window.window.decorView
         val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
         view.draw(Canvas(bitmap))
         return IntArray(bitmap.width * bitmap.height).also { bitmap.getPixels(it, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height) }
     }
 
-    internal fun lifecycleOf(window: Dialog): Lifecycle.State? = window.window?.decorView?.findViewTreeLifecycleOwner()?.lifecycle?.currentState
+    internal fun lifecycleOf(window: SecondScreenCardActivity): Lifecycle.State? = window.window.decorView.findViewTreeLifecycleOwner()?.lifecycle?.currentState
 
-    internal fun composeViewOf(window: Dialog): ComposeView = findView(window.window!!.decorView) { it is ComposeView } as ComposeView
+    internal fun composeViewOf(window: SecondScreenCardActivity): ComposeView = findView(window.window.decorView) { it is ComposeView } as ComposeView
 
     internal fun findView(
         view: View,
@@ -185,7 +232,7 @@ abstract class SecondScreenHostTestBase {
         return null
     }
 
-    internal fun nodesOf(window: Dialog): List<SemanticsNode> {
+    internal fun nodesOf(window: SecondScreenCardActivity): List<SemanticsNode> {
         val root = (composeViewOf(window).getChildAt(0) as ViewRootForTest).semanticsOwner.unmergedRootSemanticsNode
         val all = mutableListOf<SemanticsNode>()
         fun walk(node: SemanticsNode) {
@@ -196,7 +243,7 @@ abstract class SecondScreenHostTestBase {
         return all
     }
 
-    internal fun textsOf(window: Dialog): List<String> = nodesOf(window).flatMap { node -> node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } }
+    internal fun textsOf(window: SecondScreenCardActivity): List<String> = nodesOf(window).flatMap { node -> node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } }
 
     companion object {
         /** The Thor's Screen-2: 1240x1080 px at 369 dpi. */

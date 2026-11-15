@@ -1,7 +1,6 @@
 package com.plumemu.settings.screen
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,6 +53,7 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreinput.TextEntry
 import com.plumemu.coreinput.hint
+import com.plumemu.coreui.components.pageBackground
 import com.plumemu.coreui.components.EdgeFade
 import com.plumemu.coreui.components.InsetFocusPillShape
 import com.plumemu.coreui.components.SystemRowLook
@@ -94,7 +94,7 @@ internal fun SettingsScreen(
     content: SettingsContent = SettingsContent(),
     /** Told each new state of Statistics' figures (the second screen's card); no second read. */
     onStatistics: (StatisticsState) -> Unit = {},
-    /** Opens on About › Updates' panel (the main screen's pill or START while an update waits), once, when that row exists. */
+    /** Opens on About › Version's panel (the main screen's pill or START while an update waits), once, when that row exists. */
     opensOnUpdate: Boolean = false,
     /** Opens on Library › Files not added (the home's empty state), once, when the library's content has arrived. */
     opensOnFilesNotAdded: Boolean = false,
@@ -102,7 +102,7 @@ internal fun SettingsScreen(
     showOnHome: (systemId: String, gameId: Long) -> Unit = { _, _ -> },
 ) {
     // Made with its content (as the SideEffect below sets it): the first composition draws the real rows, not empty ones.
-    val model = remember(actions) { SettingsModel(actions).also { it.content = content.copy(hasNoButtonHints = !settings.controls.showButtonHints) } }
+    val model = remember(actions) { SettingsModel(actions).also { it.content = content } }
     SideEffect { model.showOnHome = showOnHome }
     val sounds = LocalUiSounds.current
     HearFeel(model.feel)
@@ -110,7 +110,7 @@ internal fun SettingsScreen(
     DisposableEffect(model) { onDispose { model.onDispose() } }
     // Statistics' figures are read once per opening, after the first frame; content given with them (tests) keeps its own.
     val statistics = rememberStatistics(actions.statistics, content.isScanning, status.libraryReset)
-    SideEffect { model.content = (if (content.statistics == StatisticsState.NotRead) content.copy(statistics = statistics) else content).copy(hasNoButtonHints = !settings.controls.showButtonHints) }
+    SideEffect { model.content = (if (content.statistics == StatisticsState.NotRead) content.copy(statistics = statistics) else content) }
     val shownStatistics = if (content.statistics == StatisticsState.NotRead) statistics else content.statistics
     val currentOnStatistics by rememberUpdatedState(onStatistics)
     LaunchedEffect(shownStatistics) { currentOnStatistics(shownStatistics) }
@@ -160,16 +160,14 @@ internal fun SettingsScreen(
                 onSliderEnd = model::onTouchSliderEnd,
             )
         }
-    // Clock and Show battery hide them here too, so the switch shows its effect at once; nothing
-    // ticks or listens while one is off.
-    val clock = if (settings.homeScreen.showClock) rememberClockText() else null
-    val batteryReading = if (settings.homeScreen.showBattery) rememberBatteryReading() else null
-    val battery = batteryReading?.let { rememberBatteryText(it) }
-    val charging = batteryReading?.let { rememberBatteryCharging(it) }
-    val wifi = if (settings.homeScreen.showBattery) rememberWifiConnected() else null
+    val clock = rememberClockText()
+    val batteryReading = rememberBatteryReading()
+    val battery = rememberBatteryText(batteryReading)
+    val charging = rememberBatteryCharging(batteryReading)
+    val wifi = rememberWifiConnected()
     SettingsLayout(
-        settings, model, touch, versionName, { clock?.value }, { battery?.value }, modifier, status, { wifi?.value == true },
-        charging = { charging?.value == true },
+        settings, model, touch, versionName, { clock.value }, { battery.value }, modifier, status, { wifi.value },
+        charging = { charging.value },
     )
 }
 
@@ -265,12 +263,11 @@ internal fun SettingsLayout(
     /** Whether the charging bolt stands before the battery percentage; read only by the bolt. */
     charging: () -> Boolean = { false },
 ) = CompositionLocalProvider(LocalSettingsStatus provides status) {
-    val colors = PlumTheme.colors
     Column(
         modifier =
             modifier
                 .fillMaxSize()
-                .drawBehind { drawRect(colors.bg) }
+                .pageBackground()
                 // No tap passes through Settings (the main screen leaves the composition while it shows).
                 .pointerInput(Unit) {}
                 .padding(top = PlumDimens.stripMarginTop, bottom = PlumDimens.footerBelow)
@@ -572,7 +569,7 @@ private fun OptionRowAt(
         look = look,
         modifier = place.tapTarget { touch.onOption(index) },
         // A read-only row's value is no button (TalkBack would announce one that does nothing): a tap on it reaches the row's own target, which focuses.
-        valueModifier = if (option.kind == OptionKind.Info) Modifier else Modifier.tapTarget { touch.onValue(index) },
+        valueModifier = if (option.kind == OptionKind.Info || (option == SettingsOption.Version && !model.content.hasUpdates)) Modifier else Modifier.tapTarget { touch.onValue(index) },
         label = label,
         tag = if (isSystem) SettingsTags.system(index) else SettingsTags.option(option),
         valueTag = if (isSystem) SettingsTags.systemValue(index) else SettingsTags.value(option),

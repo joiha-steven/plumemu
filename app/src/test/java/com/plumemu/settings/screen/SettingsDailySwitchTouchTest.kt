@@ -1,5 +1,6 @@
 package com.plumemu.settings.screen
 
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
@@ -52,9 +53,26 @@ class SettingsDailySwitchTouchTest {
         return actions
     }
 
+    /** A backup holding "check daily off" restores, and the switch in Version's panel shows off. */
     @Test
-    fun oneTapInTheOpenPanel() = assertEquals(1, tapDaily(panelAt(SettingsOption.Updates, PanelPage.Update, 0)).writes)
+    fun aRestoredBackupWithTheDailyCheckOffShowsTheSwitchOff() {
+        val stored = PlumSettings.Defaults.copy(updates = PlumSettings.Defaults.updates.copy(checkDaily = false))
+        val restored = com.plumemu.coredata.backup.SettingsJson.decode(com.plumemu.coredata.backup.SettingsJson.encode(stored).toString()).settings
+        assertEquals(false, restored.updates.checkDaily)
+        val model = SettingsModel(Writes(), panelAt(SettingsOption.Version, PanelPage.Update, 0))
+        model.content = SettingsContent()
+        val daily = updatesPanelItems(model.content.update).indexOf(UpdatePanelItem.CheckDaily)
+        compose.setContent { SettingsLayout(restored, model, NoTouch, TEST_VERSION, clock = { "21:40" }, battery = { "82%" }) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(SettingsTags.panelItem(daily), useUnmergedTree = true).performScrollTo()
+        // The panel row is drawn from the restored settings: its value is the switch's stored state, off.
+        assertEquals(OptionValue.Switch(false), OptionValue.Switch(SettingsOption.CheckUpdatesDaily.switchValue(restored)))
+        compose.onNodeWithTag(SettingsTags.panelItem(daily), useUnmergedTree = true).assertIsDisplayed()
+    }
 
     @Test
-    fun oneTapInThePanelBesideTheRow() = assertEquals(1, tapDaily(optionsAt(SettingsOption.Updates)).writes)
+    fun oneTapInTheOpenPanel() = assertEquals(1, tapDaily(panelAt(SettingsOption.Version, PanelPage.Update, 0)).writes)
+
+    @Test
+    fun oneTapInThePanelBesideTheRow() = assertEquals(1, tapDaily(optionsAt(SettingsOption.Version)).writes)
 }

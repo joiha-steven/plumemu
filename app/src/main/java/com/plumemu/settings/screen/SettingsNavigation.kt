@@ -76,11 +76,13 @@ internal abstract class SettingsNavigation(
             when (focus.page) {
                 PanelPage.BackgroundPresets, PanelPage.BackgroundCustom -> SettingsOption.Background
                 PanelPage.TextPresets, PanelPage.TextCustom -> SettingsOption.TextColor
+                PanelPage.AccentPresets, PanelPage.AccentCustom -> SettingsOption.Accent
                 PanelPage.Backup -> SettingsOption.Backup
                 PanelPage.Restore -> SettingsOption.Restore
                 PanelPage.UndoRestore -> SettingsOption.UndoRestore
                 PanelPage.ResetAllConfirm -> SettingsOption.ResetAll
                 PanelPage.ResetLibraryConfirm -> SettingsOption.ResetLibrary
+                PanelPage.ResetRecentConfirm -> SettingsOption.ClearRecent
                 else -> focusedOption
             }
 
@@ -386,10 +388,10 @@ internal abstract class SettingsNavigation(
 
     internal companion object {
         /** Pages one step deeper because Colors' panel opened them. */
-        private val PAGES_UNDER_COLORS = setOf(PanelPage.BackgroundPresets, PanelPage.TextPresets, PanelPage.BackgroundCustom, PanelPage.TextCustom)
+        private val PAGES_UNDER_COLORS = setOf(PanelPage.BackgroundPresets, PanelPage.TextPresets, PanelPage.AccentPresets, PanelPage.BackgroundCustom, PanelPage.TextCustom, PanelPage.AccentCustom)
 
         /** Pages one step deeper because the list of Back up and restore's or Reset…'s panel opened them; they keep the column, unlike [DEEP_PAGES]. */
-        private val PAGES_UNDER_LISTS = setOf(PanelPage.Backup, PanelPage.Restore, PanelPage.UndoRestore, PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm)
+        private val PAGES_UNDER_LISTS = setOf(PanelPage.Backup, PanelPage.Restore, PanelPage.UndoRestore, PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm, PanelPage.ResetRecentConfirm)
 
         /** Pages one step deeper than their column (a colour's custom page, a licence text, a confirm, Fix name…). */
         val DEEP_PAGES = setOf(PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom, PanelPage.LicenseText, PanelPage.Folder, PanelPage.SkipSubfolder, PanelPage.RemoveFolder, PanelPage.FixName, PanelPage.ScraperSignIn, PanelPage.ProblemReport, PanelPage.ScraperSystems, PanelPage.ScraperConfirm, PanelPage.ScraperSignOutConfirm, PanelPage.RaSignOutConfirm, PanelPage.ScraperClearConfirm, PanelPage.UnknownFolder)

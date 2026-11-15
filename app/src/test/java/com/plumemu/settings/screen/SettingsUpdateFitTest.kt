@@ -47,7 +47,7 @@ class SettingsUpdateFitTest {
             41, "0.0.3-alpha", "https://plumemu-app.stevensdesk.com/update/p.apk", 9_800_000, "ab".repeat(32), 23, "2026-10-23", emptyList(), null,
             listOf(NoteSection(SectionKind.New, listOf(item, item)), NoteSection(SectionKind.Fixed, listOf(item, item))),
         )
-    private val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1), page = PanelPage.Update, panelIndex = 1)
+    private val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 0), page = PanelPage.Update, panelIndex = 1)
 
     @Test
     fun everyButtonStaysInsideThePanelAtTheBigSizes() {

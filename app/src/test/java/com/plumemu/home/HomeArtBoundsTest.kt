@@ -94,14 +94,31 @@ class HomeArtBoundsTest {
         val details = bounds(HomeTags.DETAILS)
         assertDp("details 24 after the list peek", 80.dp, details.left)
         assertDp("details width − 104 = 472", 472.dp, details.right - details.left)
-        val cover = bounds(HomeTags.DETAILS_COVER)
-        assertDp("cover at the column's right edge", 552.dp, cover.right)
-        assertDp("cover at the strip's top", TableText.StripTop, cover.top)
-        assertDp("cover 228 wide", 228.dp, cover.right - cover.left)
-        assertDp("cover 164 high", 164.dp, cover.bottom - cover.top)
+        // The cover wears the glass frame: the frame (the box and the collar's padding round it) is the 228 x 164 slot.
+        val box = bounds(HomeTags.DETAILS_COVER)
+        val side = CollarSize.Cover.sidePadding
+        val coverLeft = box.left - side
+        val coverRight = box.right + side
+        val coverTop = box.top - CollarSize.Cover.topPadding
+        val coverBottom = box.bottom + CollarSize.Cover.bottomPadding
+        assertDp("cover at the column's right edge", 552.dp, coverRight)
+        assertDp("cover at the strip's top", TableText.StripTop, coverTop)
+        // The frame hugs the box, so the slot is the box plus the collar's padding on every side.
+        val slot = bounds(HomeTags.DETAILS_COVER_SLOT)
+        assertDp("slot 164 high", 164.dp, slot.bottom - slot.top)
+        assertDp("the box fills the height inside the frame", 164.dp - CollarSize.Cover.topPadding - CollarSize.Cover.bottomPadding, box.bottom - box.top)
+        // The frame hugs the box: it is the slot, on all four sides.
+        assertDp("frame left is the slot's", slot.left, coverLeft)
+        assertDp("frame ends at the slot's right edge", slot.right, coverRight)
+        assertDp("frame starts at the slot's top", slot.top, coverTop)
+        assertDp("frame ends at the slot's bottom", slot.bottom, coverBottom)
+        assertDp("cover 164 high", 164.dp, coverBottom - coverTop)
+        // The picture keeps its own shape (the board's box is 1.4 wide for one high) and the frame stays within the stop's 228.
+        assertEquals("the box at its own shape", 1.4f, (box.right - box.left).value / (box.bottom - box.top).value, 0.01f)
+        assertTrue("the frame no wider than the 228 slot", (coverRight - coverLeft).value <= 228f + TOLERANCE)
         val title = bounds(HomeTags.DETAILS_TITLE)
         assertDp("title at the column's left, text first", 80.dp, title.left)
-        assertTrue("20 between the text and the cover", title.right <= cover.left - 20.dp + TOLERANCE.dp)
+        assertTrue("20 between the text and the cover", title.right <= coverLeft - 20.dp + TOLERANCE.dp)
         assertDp("title level with the cover", TableText.StripTop, title.top)
     }
 

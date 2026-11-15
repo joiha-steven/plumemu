@@ -56,7 +56,7 @@ internal object PlatformDataFixtures {
 
     fun published(
         dataVersion: Int = 6,
-        formatVersion: Int = 2,
+        formatVersion: Int = 3,
         minVersionCode: Long = 900,
         json: ByteArray = this.json.toByteArray(Charsets.UTF_8),
         gz: ByteArray = gzip(json),

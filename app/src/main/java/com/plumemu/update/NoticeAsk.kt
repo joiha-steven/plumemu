@@ -3,7 +3,7 @@ package com.plumemu.update
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 
-/** What the Updates panel says about the "Plumemu updated" notice ([ReopenNotice]) after the person pressed Update. */
+/** What Version's panel says about the "Plumemu updated" notice ([ReopenNotice]) after the person pressed Update. */
 enum class NoticeLine {
     None,
 

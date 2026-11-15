@@ -14,7 +14,6 @@ import org.junit.Test
  */
 internal class SettingsBuildFeaturesTest {
     private val statisticsRows = listOf(SettingsOption.UsageStatistics, SettingsOption.ReportProblem)
-    private val updateRows = listOf(SettingsOption.Updates)
 
     private fun allRows(content: SettingsContent): List<SettingsOption> = SettingsSection.entries.flatMap { it.rowsIn(content) }
 
@@ -22,21 +21,20 @@ internal class SettingsBuildFeaturesTest {
     fun aBuildWithBothAddressesListsEveryRow() {
         val rows = allRows(SettingsContent(hasStatistics = true, hasUpdates = true))
         assertTrue(rows.containsAll(statisticsRows))
-        assertTrue(rows.containsAll(updateRows))
     }
 
     @Test
     fun noStatisticsServerHidesTheStatisticsAndReportRowsOnly() {
         val rows = allRows(SettingsContent(hasStatistics = false, hasUpdates = true))
         statisticsRows.forEach { assertFalse("$it must be hidden", it in rows) }
-        assertTrue(SettingsOption.Updates in rows)
+        assertTrue(SettingsOption.Version in rows)
         assertTrue(SettingsOption.Licenses in rows)
     }
 
     @Test
-    fun noManifestHidesEveryUpdateRowEvenWhenAnUpdateWasRecorded() {
+    fun noManifestKeepsVersionAsTheOnlyUpdateRowEvenWhenAnUpdateWasRecorded() {
         val rows = allRows(SettingsContent(hasStatistics = true, hasUpdates = false, update = UpdateView(found = UpdateManifest(41, "0.0.3-alpha", "https://example.com/p.apk", 1, "ab".repeat(32), 23, "2026-10-23", emptyList(), null))))
-        updateRows.forEach { assertFalse("$it must be hidden", it in rows) }
+        assertTrue("Version stays, read only", SettingsOption.Version in rows)
         assertTrue(SettingsOption.UsageStatistics in rows)
     }
 

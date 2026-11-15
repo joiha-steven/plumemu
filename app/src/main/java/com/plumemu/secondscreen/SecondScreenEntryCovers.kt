@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -59,7 +61,7 @@ internal fun entryCoverAspect(
 /**
  * One cover: the whole box front in a thin collar, at [height] inside the collar and its own shape, never cropped; the poster in
  * the system's shape where there is no picture (box art off, none for the game, or its file cannot be read). The picture is decoded at the
- * size drawn by the home screen's loader, off the main thread; the poster is drawn on the fly.
+ * size drawn by the home screen's loader, off the main thread; the poster is drawn on the fly. [width] fixes the box's width (a justified row).
  */
 @Composable
 internal fun EntryCover(
@@ -69,12 +71,13 @@ internal fun EntryCover(
     height: Dp,
     images: CoverImages,
     modifier: Modifier = Modifier,
+    width: Dp? = null,
 ) {
     val look = systems[game.systemId]
     var unreadable by remember(game.art) { mutableStateOf(false) }
     val picture = game.art?.takeIf { !unreadable }
     val aspect = if (picture != null) picture.aspect else look?.aspect ?: fallbackAspect
-    val size = DpSize(height * aspect, height)
+    val size = DpSize(width ?: (height * aspect), height)
     val corner = CollarDimens.coverBoxCorner
     Box(modifier.collar(CollarSize.Cover, corner, halo = false) { 0f }.testTag(EntryTags.COVER).semantics { contentDescription = game.title }) {
         Box(Modifier.size(size).coverBoxShadow(corner).clip(RoundedCornerShape(corner))) {
@@ -99,7 +102,10 @@ internal fun EntryCover(
     }
 }
 
-/** A cover with the time it was played under it and, on Recent, its system: the cell is as wide as the widest of them. */
+/**
+ * A cover with the time it was played under it and, on Recent, its system. It emits two nodes for [CoverRow]: the cover, then the
+ * captions; the row spaces the covers by their boxes and lets a caption run on under the gap, cut where the next one begins.
+ */
 @Composable
 internal fun CoverWithCaption(
     game: EntryGame,
@@ -112,8 +118,8 @@ internal fun CoverWithCaption(
     showsSystem: Boolean,
     styles: EntryStyles,
 ) {
+    EntryCover(game, systems, fallbackAspect, height, images)
     Column {
-        EntryCover(game, systems, fallbackAspect, height, images)
         Spacer(Modifier.height(EntryCardDimens.captionGap))
         game.playedAt?.let { at ->
             BasicText(
@@ -121,6 +127,7 @@ internal fun CoverWithCaption(
                 style = styles.captionWhen,
                 maxLines = 1,
                 softWrap = false,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = EntryCardDimens.captionInset).boardLine(styles.captionWhen, styles).testTag(EntryTags.WHEN),
             )
         }
@@ -132,7 +139,7 @@ internal fun CoverWithCaption(
                     style = styles.captionSystem,
                     maxLines = 1,
                     softWrap = false,
-                    overflow = TextOverflow.Clip,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(start = EntryCardDimens.captionInset).boardLine(styles.captionSystem, styles).testTag(EntryTags.CAPTION_SYSTEM),
                 )
             }
@@ -141,7 +148,10 @@ internal fun CoverWithCaption(
 }
 
 /**
- * Cells left to right with [gap] between, as many as fit the width: one that does not fit is left out whole, with the ones after it. Every cell is placed on the top edge.
+ * Covers left to right with [gap] between their boxes (never between their captions), as many as fit the width: one whose box does not
+ * fit is left out whole, with the ones after it. Each cell is a cover and its captions ([CoverWithCaption]); a caption may be wider than
+ * its box and run on under the gap, and is cut with an ellipsis where it would come within [gap] of the next caption, or at the width's end for the
+ * last cell shown. Every cell is placed on the top edge.
  */
 @Composable
 internal fun CoverRow(
@@ -153,21 +163,32 @@ internal fun CoverRow(
     SubcomposeLayout(modifier.testTag(EntryTags.COVERS)) { constraints ->
         val gapPx = gap.roundToPx()
         var x = 0
-        var tallest = 0
-        val placed = mutableListOf<Pair<androidx.compose.ui.layout.Placeable, Int>>()
+        val covers = mutableListOf<Placeable>()
+        val captions = mutableListOf<Measurable?>()
+        val starts = mutableListOf<Int>()
         for (at in 0 until count) {
-            val measured = subcompose(at) { cell(at) }.map { it.measure(Constraints()) }
-            val width = measured.maxOfOrNull { it.width } ?: 0
-            val start = if (at == 0) 0 else x + gapPx
-            if (at > 0 && start + width > constraints.maxWidth) {
-                // Left out whole, with the ones after it: nothing is composed for them (this one goes at the next pass).
-                break
-            }
-            measured.forEach { placed += it to start }
-            x = start + width
-            tallest = maxOf(tallest, measured.maxOfOrNull { it.height } ?: 0)
+            val parts = subcompose(at) { cell(at) }
+            val cover = parts.firstOrNull()?.measure(Constraints()) ?: continue
+            val start = if (covers.isEmpty()) 0 else x + gapPx
+            // Left out whole, with the ones after it: nothing is composed for them (this one goes at the next pass).
+            if (covers.isNotEmpty() && start + cover.width > constraints.maxWidth) break
+            covers += cover
+            captions += parts.getOrNull(1)
+            starts += start
+            x = start + cover.width
         }
-        layout(x.coerceAtMost(constraints.maxWidth), tallest) { placed.forEach { (placeable, left) -> placeable.placeRelative(left, 0) } }
+        var tallest = 0
+        val placed = mutableListOf<Triple<Placeable, Int, Int>>()
+        covers.forEachIndexed { index, cover ->
+            val room = constraints.maxWidth - starts[index]
+            // The next caption's text starts an inset after its box: a gap clear of it ends this one an inset past its own box. Nothing follows the last.
+            val limit = if (index == covers.lastIndex) room else minOf(room, cover.width + EntryCardDimens.captionInset.roundToPx())
+            val text = captions[index]?.measure(Constraints(maxWidth = limit.coerceAtLeast(0)))
+            placed += Triple(cover, starts[index], 0)
+            if (text != null) placed += Triple(text, starts[index], cover.height)
+            tallest = maxOf(tallest, cover.height + (text?.height ?: 0))
+        }
+        layout(x.coerceAtMost(constraints.maxWidth), tallest) { placed.forEach { (placeable, left, top) -> placeable.placeRelative(left, top) } }
     }
 }
 
@@ -198,4 +219,29 @@ internal fun packRows(
         }
     }
     return rows
+}
+
+/** One Favorites row: its cover indices and, for a justified row, the box height and each box width in px (else the usual height). */
+internal class FavoritesRow(
+    val indices: List<Int>,
+    val boxHeight: Int?,
+    val boxWidths: List<Int>?,
+)
+
+/**
+ * Justifies a packed row to [maxWidth]: its boxes (each of the usual height times its aspect, plus [collarSides] px of collar either
+ * side) are scaled together, gaps unchanged, so the row ends exactly at the width. Rounding is taken up by the last box.
+ */
+internal fun justifiedRow(
+    indices: List<Int>,
+    aspects: List<Float>,
+    gap: Int,
+    collarSides: Int,
+    maxWidth: Int,
+): FavoritesRow {
+    val available = maxWidth - (indices.size - 1) * gap - indices.size * collarSides
+    val boxHeight = available / indices.sumOf { aspects[it].toDouble() }
+    val widths = indices.map { Math.round(boxHeight * aspects[it]).toInt() }.toMutableList()
+    widths[widths.lastIndex] += available - widths.sum()
+    return FavoritesRow(indices, Math.round(boxHeight).toInt(), widths)
 }

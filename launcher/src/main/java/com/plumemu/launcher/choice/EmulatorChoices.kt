@@ -54,6 +54,30 @@ class EmulatorChoices internal constructor(
     }
 
     /**
+     * Whether [gameId]'s own choice changes what a launch starts: the emulator [resolve] picks differs from the one it would pick with the game's
+     * choice left out (the system's choice; with none, Play asks, so any usable game choice counts). False with no game choice, with one the game's file cannot use (a launch
+     * passes it over), or with the one the system starts anyway. Reads only: it stores nothing. The details column names the emulator only when true.
+     */
+    suspend fun hasOwnChoice(gameId: Long, system: GameSystem, fileName: String? = null): Boolean {
+        val gameChoice = dao.gameChoice(gameId)?.emulatorId ?: return false
+        val personSystemChoice = dao.systemChoice(system.id)?.takeIf { it.isPersonChoice }?.emulatorId
+        return withContext(io) {
+            val with = EmulatorResolver.resolve(catalog, system, gameChoice, personSystemChoice, isLaunchable, fileName)
+            val without = EmulatorResolver.resolve(catalog, system, null, personSystemChoice, isLaunchable, fileName)
+            startedIdOf(with) != startedIdOf(without)
+        }
+    }
+
+    private fun startedIdOf(pick: EmulatorPick): String? =
+        when (pick) {
+            is EmulatorPick.Ready -> pick.emulator.id
+            is EmulatorPick.ChosenMissing -> pick.emulatorId
+            // Nothing starts by itself: Play would ask. A game choice that starts something is therefore the game's own, the recommendation included.
+            is EmulatorPick.NotChosen -> null
+            is EmulatorPick.NoneInstalled -> null
+        }
+
+    /**
      * Recomputes the automatic default of each of [systemIds] after a detection; a person's choice
      * stays. Returns the emulator id in force per system (null when none is installed).
      */

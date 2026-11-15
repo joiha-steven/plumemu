@@ -24,6 +24,14 @@ internal data class PendingSession(
     val packageName: String? = null,
 )
 
+/**
+ * The screen-off time of a pending play, kept apart from [PendingSession] so the note itself (compared
+ * by equality when a start is taken back) never changes after it is written.
+ * [totalMs]: the stretches that ended since the play started, on the awake clock; [openSinceMs]: the
+ * [PlayClock.uptimeMs] at which the screen went off and has not come on since, null while it is on.
+ */
+internal data class ScreenOffNote(val totalMs: Long, val openSinceMs: Long?)
+
 /** Keeps the pending session on disk, so the time is still counted if Android kills Plumemu meanwhile. */
 internal interface PendingSessionStore {
     fun read(): PendingSession?
@@ -32,6 +40,12 @@ internal interface PendingSessionStore {
     fun write(session: PendingSession): Boolean
 
     fun clear(): Boolean
+
+    /** The screen-off time stored with the pending note; null when none (no note, or one written by an older version). */
+    fun readScreenOff(): ScreenOffNote? = null
+
+    /** Stores [note] with the pending note; writes nothing, and returns false, when no note is pending. */
+    fun writeScreenOff(note: ScreenOffNote): Boolean = false
 }
 
 /**
@@ -72,6 +86,23 @@ internal class SharedPreferencesSessionStore(context: Context) : PendingSessionS
 
     override fun clear(): Boolean = preferences.edit().clear().commit()
 
+    override fun readScreenOff(): ScreenOffNote? {
+        if (!preferences.contains(KEY_GAME) || !preferences.contains(KEY_SCREEN_OFF_MS)) return null
+        return ScreenOffNote(
+            preferences.getLong(KEY_SCREEN_OFF_MS, 0),
+            if (preferences.contains(KEY_SCREEN_OFF_SINCE)) preferences.getLong(KEY_SCREEN_OFF_SINCE, 0) else null,
+        )
+    }
+
+    // Only next to a pending note: a change after the clear must not bring a note back.
+    override fun writeScreenOff(note: ScreenOffNote): Boolean {
+        if (!preferences.contains(KEY_GAME)) return false
+        val editor = preferences.edit().putLong(KEY_SCREEN_OFF_MS, note.totalMs)
+        val since = note.openSinceMs
+        if (since != null) editor.putLong(KEY_SCREEN_OFF_SINCE, since) else editor.remove(KEY_SCREEN_OFF_SINCE)
+        return editor.commit()
+    }
+
     private fun coreOf(packageName: String?, core: String?): CoreToConfirm? =
         if (packageName != null && core != null) CoreToConfirm(packageName, core) else null
 
@@ -83,6 +114,8 @@ internal class SharedPreferencesSessionStore(context: Context) : PendingSessionS
         const val KEY_BOOT = "boot_count"
         const val KEY_UPTIME = "started_uptime_ms"
         const val KEY_PACKAGE = "started_package"
+        const val KEY_SCREEN_OFF_MS = "screen_off_ms"
+        const val KEY_SCREEN_OFF_SINCE = "screen_off_since_ms"
         const val KEY_EMULATOR = "emulator_id"
         const val KEY_CORE_PACKAGE = "core_package"
         const val KEY_CORE = "core_to_confirm"

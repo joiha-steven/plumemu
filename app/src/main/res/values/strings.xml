@@ -67,6 +67,9 @@
     <string name="home_update_pill">Update %1$s</string>
     <!-- Title of the card shown once after Plumemu updated itself; %1$s is the version. -->
     <string name="home_whatsnew_title">What\'s new in %1$s</string>
+    <string name="home_usage_offer_title">Count only real play</string>
+    <string name="home_usage_offer_body">Emulator menus and other apps count as play now. Allow Android\'s Usage access to count only the game. Nothing leaves the handheld.</string>
+    <string name="home_usage_offer_allow">Allow</string>
     <!-- Hint bar label: a verb, start the game. -->
     <string name="home_hint_play">Play</string>
     <!-- Hint bar label: a verb, open the focused entry or app. -->
@@ -494,9 +497,9 @@
     <string name="game_error_title_id_title">This PS Vita game has no title ID</string>
     <string name="game_error_title_id_empty_body">%1$s is empty. Write the game\'s title ID in it, such as PCSE00000, and nothing else. The game must be installed in the emulator.</string>
     <string name="game_error_title_id_invalid_body">%1$s must hold only the game\'s title ID: nine capital letters or digits, such as PCSE00000.</string>
-    <string name="game_error_steam_app_id_title">This .steam file has no Steam app ID</string>
-    <string name="game_error_steam_app_id_empty_body">%1$s is empty. Write the game\'s Steam app ID in it, such as 274190, and nothing else. The game must be in the Steam app.</string>
-    <string name="game_error_steam_app_id_invalid_body">%1$s must hold only the game\'s Steam app ID: digits, such as 274190.</string>
+    <string name="game_error_steam_app_id_title">This file has no game ID</string>
+    <string name="game_error_steam_app_id_empty_body">%1$s is empty. Write the game\'s ID in it, such as 274190, and nothing else. The game must be in the app this file came from.</string>
+    <string name="game_error_steam_app_id_invalid_body">%1$s must hold only the game\'s ID: digits, such as 274190.</string>
     <string name="game_error_needs_path_title">%1$s needs a file path</string>
     <string name="game_error_needs_path_body">This emulator opens games only from internal storage or the SD card, and this folder is elsewhere.</string>
     <string name="game_error_not_in_library_title">This game is no longer in the library</string>
@@ -567,6 +570,7 @@
     <string name="app_error_refused_body">Android refused to open it.</string>
     <string name="app_error_not_listed_body">The list of apps changed since it was shown. It is being read again; try once more in a moment.</string>
     <string name="app_error_unavailable_body">Plumemu could not get ready to open apps. Try again in a moment.</string>
+    <string name="app_error_bottom_screen_body">This app could not open on the bottom screen, so it opened here.</string>
     <!-- Play on an installed app listed as a game (Android games, Ports) whose app is gone; the title is app_error_missing_title. -->
     <string name="game_error_app_game_missing_body">It was uninstalled or turned off. Install it or turn it on again to play it from here.</string>
     <!-- Settings. The top bar: "Settings › Appearance › Background". -->
@@ -676,14 +680,12 @@
     <string name="settings_rescan_a_folder">A folder</string>
     <string name="settings_rescan_failed">Could not read your games. Try again.</string>
     <string name="settings_rescan_busy">Already reading your games.</string>
-    <string name="settings_sort_games">Sort games</string>
     <string name="settings_sort_by_name">Name</string>
     <string name="settings_sort_by_last_played">Last played</string>
     <string name="settings_sort_by_most_played">Most played</string>
     <string name="settings_sort_by_recently_added">Recently added</string>
     <string name="settings_sort_by_year">Year</string>
     <string name="settings_sort_by_rating">Rating</string>
-    <string name="settings_sort_games_body">How every system\'s list and Favorites are ordered. Games with nothing to sort by (never played, no year, no rating) come after the others, by name. Year and Rating are listed once a game has one from ScreenScraper. Recent always shows the last game played first.</string>
     <string name="settings_clear_recent">Clear Recent…</string>
     <string name="settings_clear_recent_body">Recent is emptied. A game comes back to it when you play it again. Play time and statistics stay.</string>
     <string name="settings_clear_recent_confirm">Clear</string>
@@ -765,8 +767,6 @@
     <!-- Controls -->
     <string name="settings_push_right">Push right twice to play</string>
     <string name="settings_push_right_body">Play with one hand: in a list of games, push right twice to start the selected game. The first push marks it, the second (within two seconds) starts it; any other button cancels. A still works. On narrow screens the details column is then reached by touch. Turn it off here any time.</string>
-    <string name="settings_show_hints">Show button hints</string>
-    <string name="settings_show_hints_body">The buttons and what they do, at the bottom of the main screen. Settings and first-run setup always show theirs, so you can find your way back. To open Settings by touch, long-press the system column.</string>
     <string name="settings_switch_system_with">Switch system with</string>
     <string name="settings_switch_system_triggers" translatable="false">L2 / R2</string>
     <string name="settings_switch_system_bumpers" translatable="false">L1 / R1</string>
@@ -782,9 +782,6 @@
     <string name="settings_home_unavailable">This device has no screen for choosing the home app. Choose Plumemu in Android\'s Settings › Apps › Default apps.</string>
     <string name="settings_show_apps">Show Android apps</string>
     <string name="settings_show_apps_body">Every Android app on the device is listed under “Apps”, right below Favorites. Off: the Apps entry is not shown.</string>
-    <string name="settings_clock_battery">Clock and battery</string>
-    <string name="settings_clock_battery_body">The time and battery level at the top right of the screen.</string>
-    <string name="settings_clock_battery_body_two_screens">The time and battery level at the top right of the screen. The battery also shows on the second screen\'s clock.</string>
     <!-- The band over a system's games list ("Nintendo · Home console · 1990–2003". -->
     <string name="system_kind_console">Home console</string>
     <string name="system_kind_handheld">Handheld</string>
@@ -859,8 +856,6 @@
     <string name="system_about_mame">Preserving gaming history is its aim; playing the games is \"a nice side effect\". It documents over 32,000 systems.</string>
     <!-- https://github.com/finalburnneo/FBNeo (README; Wikipedia has no page) -->
     <string name="system_about_fbneo">Based on FinalBurn and old versions of MAME. It emulates Capcom CPS-1, CPS-2, CPS-3, Neo Geo and Sega System 16 boards.</string>
-    <string name="settings_system_info">System info</string>
-    <string name="settings_system_info_body">A badge, one line about the system (maker, kind, years) and a few words on what it was, at the top of its games list.</string>
     <!-- Second screen, picking cards. Top line: "Super Nintendo · USA"; the separator is also used in the facts line (quoted: Android trims the spaces of an unquoted string). -->
     <string name="second_screen_separator" translatable="false">" · "</string>
     <string name="second_screen_android_app">Android app</string>
@@ -981,6 +976,10 @@
     <string name="settings_second_screen_in_game_body">What the second screen shows while a game runs. Emulators that use two screens take it by themselves. The card moves a little every minute to protect the screen.</string>
     <string name="settings_second_screen_clock">Clock and battery</string>
     <string name="settings_second_screen_black">Black</string>
+    <string name="settings_second_screen_apps_on">Open apps on</string>
+    <string name="settings_second_screen_apps_on_body">Which screen an app opens on when you start it from the Apps list. Games are not affected.</string>
+    <string name="settings_second_screen_apps_top">Top screen</string>
+    <string name="settings_second_screen_apps_bottom">Bottom screen</string>
 
     <!-- Appearance -->
     <!-- Ready-made colour sets (never a console's or a brand's name. -->
@@ -1006,9 +1005,8 @@
     <string name="settings_background">Background</string>
     <string name="settings_text_color">Text color</string>
     <string name="settings_accent">Accent color</string>
+    <string name="settings_page_grain">Grain on the background</string>
     <string name="settings_text_size">Text size</string>
-    <string name="settings_left_edge">Left strip</string>
-    <string name="settings_grid_size">Grid size</string>
     <string name="settings_bg_graphite">Graphite</string>
     <string name="settings_bg_black">Black</string>
     <string name="settings_bg_midnight">Midnight</string>
@@ -1074,9 +1072,9 @@
     <string name="settings_size_larger">Larger</string>
     <string name="settings_size_huge">Huge</string>
     <string name="settings_size_largest">Largest</string>
-    <string name="settings_left_edge_counts">Game counts</string>
-    <string name="settings_left_edge_codes">System codes</string>
-    <string name="settings_left_edge_letters">Letters</string>
+    <string name="settings_page_grain_off">Off</string>
+    <string name="settings_page_grain_light">Light</string>
+    <string name="settings_page_grain_strong">Strong</string>
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
     <string name="settings_badge_current">Current</string>
     <string name="settings_background_body">Pick a color, or + to make your own.</string>
@@ -1103,8 +1101,7 @@
     <string name="settings_color_adjusted_both">Text and accent colors changed to stay readable</string>
     <string name="settings_accent_body">Marks the current system, the focus dot, switches and buttons. By system gives each system its own color.</string>
     <string name="settings_text_size_body">Changes all text in Plumemu. Android\'s own font size applies on top.</string>
-    <string name="settings_left_edge_body">What the narrow strip on the left shows while you are in a games list: how many games each system has, a short code for each system, or the letters of the list you are in.</string>
-    <string name="settings_grid_size_body">How big covers are in the grid view, for every system and for Recent and Favorites. Small shows the most games at once, Large the fewest.</string>
+    <string name="settings_page_grain_body">A fine grain over the page colour, like paper. Off keeps the page flat, Light is barely there, Strong shows on every screen.</string>
     <!-- Sample lines in the colour panel (the board's). -->
     <string name="settings_sample_game_1" translatable="false">Mega Man X</string>
     <string name="settings_sample_game_2" translatable="false">Super Metroid</string>
@@ -1359,12 +1356,11 @@
     <string name="report_error_refused">The server did not accept this report. Check the email address. Your words are kept, so you can try again.</string>
     <string name="report_error_unavailable">This build cannot send reports. Use Export logs and send the file yourself.</string>
     <string name="report_error_not_saved">The report could not be saved on this device.</string>
-    <string name="settings_privacy_body">Your library, settings and play time stay in Plumemu\'s own storage on this device, and are never sent. Only if you switch it on (Settings \u203A About \u203A Send usage statistics), Plumemu sends anonymous usage counts and crash reports to the developer: country, device model, Android and app versions, which screens and settings you use, how long you play by system. For a game Plumemu cannot name, it also sends, once per install, the system, how the file is stored, its size, its CRC-32 and the product code or disc serial read from the game. Never game titles, search words or your ScreenScraper account. Crash reports may contain file paths. Switching it off sends one anonymous \u201Cswitched off\u201D count, then nothing. Problem reports are sent only when you press Send in Report a problem, and may contain the log you choose to attach, with file paths. What is sent is kept with no time limit. Once a day on Wi-Fi Plumemu asks plumemu-app.stevensdesk.com whether there is a newer version; Cloudflare, which hosts it, sees your IP address. Switch it off in Settings › About › Updates. The same daily check also downloads updated platform data (the list of systems and emulators) from the same host; nothing extra is sent. With a ScreenScraper account, Plumemu sends ScreenScraper each game\'s file name, size and checksums, and its title when those find nothing, to find box art. With the default source, Plumemu downloads box fronts from libretro\'s public server, thumbnails.libretro.com, on Wi-Fi, with the game\'s name in the address; that server sees your IP address. With a RetroAchievements account, Plumemu sends retroachievements.org your user name, your key and each game\'s RetroAchievements number, when you open a game\'s Info, after you play, and once a day on Wi-Fi; badge pictures come from media.retroachievements.org. The key is stored encrypted on this device, never in a backup or a log. Signing out stops it. Exact play time, if you switch it on in Settings \u203A Statistics, asks Android\'s Usage access for the events of the play\'s time window and keeps only those of the game or app you started from Plumemu and of the screen; nothing is stored beyond the play\'s length, and nothing is sent.</string>
+    <string name="settings_privacy_body">Your library, settings and play time stay in Plumemu\'s own storage on this device, and are never sent. Only if you switch it on (Settings \u203A About \u203A Send usage statistics), Plumemu sends anonymous usage counts and crash reports to the developer: country, device model, Android and app versions, which screens and settings you use, how long you play by system. For a game Plumemu cannot name, it also sends, once per install, the system, how the file is stored, its size, its CRC-32 and the product code or disc serial read from the game. Never game titles, search words or your ScreenScraper account. Crash reports may contain file paths. Switching it off sends one anonymous \u201Cswitched off\u201D count, then nothing. Problem reports are sent only when you press Send in Report a problem, and may contain the log you choose to attach, with file paths. What is sent is kept with no time limit. Once a day on Wi-Fi Plumemu asks plumemu-app.stevensdesk.com whether there is a newer version; Cloudflare, which hosts it, sees your IP address. Switch it off in Settings › About › Version. The same daily check also downloads updated platform data (the list of systems and emulators) from the same host; nothing extra is sent. With a ScreenScraper account, Plumemu sends ScreenScraper each game\'s file name, size and checksums, and its title when those find nothing, to find box art. With the default source, Plumemu downloads box fronts from libretro\'s public server, thumbnails.libretro.com, on Wi-Fi, with the game\'s name in the address; that server sees your IP address. With a RetroAchievements account, Plumemu sends retroachievements.org your user name, your key and each game\'s RetroAchievements number, when you open a game\'s Info, after you play, and once a day on Wi-Fi; badge pictures come from media.retroachievements.org. The key is stored encrypted on this device, never in a backup or a log. Signing out stops it. Exact play time, if you switch it on in Settings \u203A Statistics, asks Android\'s Usage access for the events of the play\'s time window and keeps only those of the game or app you started from Plumemu and of the screen; nothing is stored beyond the play\'s length, and nothing is sent.</string>
     <!-- Updates -->
     <string name="settings_update_value_downloading">Downloading…</string>
     <string name="settings_update_value_installing">Installing…</string>
     <string name="settings_update_value_available">%1$s available</string>
-    <string name="settings_updates">Updates</string>
     <string name="settings_updates_check_now">Check now</string>
     <string name="settings_check_updates_body">Asks Plumemu\'s update server now whether there is a newer Plumemu. On mobile data Plumemu asks before downloading an update.</string>
     <string name="settings_check_updates_daily">Check for updates daily</string>
@@ -1375,7 +1371,6 @@
     <string name="settings_check_updates_value_found">Update available</string>
     <string name="settings_check_updates_value_needs_android">Needs newer Android</string>
     <string name="settings_check_updates_value_failed">Check failed</string>
-    <string name="settings_check_updates_value_busy">Update downloading</string>
     <string name="settings_check_updates_busy">An update is downloading. Check again when it is done.</string>
     <string name="settings_check_updates_unexpected">The update check failed. Try again later.</string>
     <string name="settings_update_checking">Checking for updates…</string>
@@ -1617,8 +1612,12 @@
     <!-- App menu in Apps -->
     <string name="app_menu_info">App info</string>
     <string name="app_menu_uninstall">Uninstall</string>
+    <string name="app_menu_open_bottom">Open on the bottom screen</string>
+    <string name="app_menu_open_top">Open on the top screen</string>
     <string name="app_menu_show_as_game">Show as game</string>
     <string name="app_menu_show_as_port">Show as port</string>
+    <string name="app_menu_hint_gamenative">Turn on \"Frontend Sync\", folder in ROMs</string>
+    <string name="app_menu_hint_droiddeck">Set \"Sync all game files to folder\" in ROMs</string>
     <string name="app_tool_error_body">Android could not open that screen. Try again in a moment.</string>
 
     <!-- Library › Files not added › an unknown folder (a folder whose name matches no system): its line, side panel and the home notice. %1$s is the folder's name or a number. -->

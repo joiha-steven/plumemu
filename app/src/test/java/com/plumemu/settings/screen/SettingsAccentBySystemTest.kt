@@ -68,7 +68,8 @@ internal class SettingsAccentBySystemTest : SettingsModelHarness() {
         walkTo(bySystemIndex)
         assertEquals(ColorSetting.BySystem(ColorSetting.Preset("Blue")), appearance.accent)
         press(Action.Enter)
-        assertNull("the panel closed", model.focus.page)
+        assertEquals("back on the Accent color row of Colors' panel", PanelPage.ColorSets, model.focus.page)
+        assertEquals(COLORS_ACCENT_ITEM, model.focus.panelIndex)
         assertEquals(ColorSetting.BySystem(ColorSetting.Preset("Blue")), appearance.accent)
         assertEquals("what shows with no system in view is the fallback", AccentPreset.Blue.colorFor(actions.settings.toThemeSettings().textMode), actions.settings.toThemeSettings().accentColor)
     }
@@ -91,14 +92,13 @@ internal class SettingsAccentBySystemTest : SettingsModelHarness() {
         useAccent(ColorSetting.Preset("Green"))
         model.onTapSection(SettingsSection.Appearance)
         model.onTapSection(SettingsSection.Appearance)
-        val row = SettingsSection.Appearance.options.indexOf(SettingsOption.Accent)
-        model.onTapValue(row, actions.shown, wide)
+        tapIntoColorPage(SettingsOption.Accent)
         assertEquals(PanelPage.AccentPresets, model.focus.page)
         model.onTapPanelItem(bySystemIndex, actions.shown, wide)
         assertEquals(bySystemIndex, model.focus.panelIndex)
         assertEquals(ColorSetting.BySystem(ColorSetting.Preset("Green")), appearance.accent)
         model.onTapPanelItem(bySystemIndex, actions.shown, wide)
-        assertNull("the second tap enters it and the panel closes", model.focus.page)
+        assertEquals("the second tap enters it and the page returns to its row", PanelPage.ColorSets, model.focus.page)
         assertEquals(ColorSetting.BySystem(ColorSetting.Preset("Green")), appearance.accent)
     }
 

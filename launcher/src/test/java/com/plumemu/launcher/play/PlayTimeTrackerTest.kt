@@ -243,13 +243,14 @@ class PlayTimeTrackerTest {
     }
 
     @Test
-    fun aSessionLongerThanTheLimitCountsTheLimit() = runTest {
+    fun aSessionLongerThanTheLimitCountsTheUsualPlay() = runTest {
         val tracker = newProcessTracker()
         tracker.onGameLaunched(gameId)
         clock.advance(10 * 3_600_000) // the emulator left open overnight, screen kept on
-        val limit = PlayTimeTracker.MAX_SESSION_SECONDS
-        assertEquals(PlaySessionOutcome.Recorded(gameId, limit), tracker.onResume())
-        assertEquals(clock.wall - limit * 1_000, db.playDao().sessions(gameId).single().startedAt)
+        // No earlier plays: the fallback (the full rule is in PlayTimeTrackerUsualPlayTest).
+        val usual = PlayTimeTracker.USUAL_PLAY_FALLBACK_SECONDS
+        assertEquals(PlaySessionOutcome.Recorded(gameId, usual), tracker.onResume())
+        assertEquals(clock.wall - usual * 1_000, db.playDao().sessions(gameId).single().startedAt)
     }
 
     @Test

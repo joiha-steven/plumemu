@@ -19,9 +19,9 @@ class PlumDimensTest {
 
     @Test
     fun rowsMatchTheBoardMarkup() {
-        // Game rows: designed 34 (so the default Large, 37.4, is drawn at the 38 minimum: 40 per row with the gap, the board's 60 px pitch), gap 2, padding 0 23.33 (the board's text start, 35 px in from the slab's left edge). System rows: height 34, padding 0 10, 4 after Apps.
+        // Game rows: designed 34 (so the default Large, 37.4, is drawn at the 38 minimum: 40 per row with the gap, the board's 60 px pitch), gap 2, padding 0 23.33 (the board's text start, 35 px in from the slab's left edge). System rows: padding 0 10, drawn at the game rows' height and stride, no gap after Apps (each count stays on its game row's baseline).
         assertEquals(listOf(40.dp, 34.dp, 38.dp, 2.dp, 23.33.dp), listOf(PlumDimens.rowHeight, PlumDimens.gameRowHeight, PlumDimens.gameRowMinHeight, PlumDimens.listRowGap, PlumDimens.gameRowPadding))
-        assertEquals(listOf(34.dp, 10.dp, 4.dp), listOf(PlumDimens.systemRowHeight, PlumDimens.systemRowPadding, PlumDimens.systemGroupGap))
+        assertEquals(10.dp, PlumDimens.systemRowPadding)
         // Focus dot 6, then 10 to the text; row corners 8.
         assertEquals(listOf(6.dp, 10.dp, 8.dp), listOf(PlumDimens.focusDot, PlumDimens.focusDotGap, PlumDimens.cornerRow))
     }

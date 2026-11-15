@@ -138,6 +138,8 @@ internal object SystemIds {
         "wasm4" to 262,
         "wiiu" to 18,
         "windows" to 138,
+        // Epic games are filed under PC Windows too.
+        "epic" to 138,
         // ScreenScraper has no Steam system; most Steam games are filed under PC Windows.
         "steam" to 138,
         "x1" to 220,
@@ -150,13 +152,14 @@ internal object SystemIds {
     )
 
     /**
-     * Systems whose files hold only a launch id (a `.steam` file holds a Steam app id): no hash or
-     * file name of theirs means anything to ScreenScraper, so their games are looked up by name only.
+     * Systems whose files are small launcher files (a Steam app id, GameNative's store ids,
+     * WinNative's `.desktop` shortcuts): no hash of theirs means anything to ScreenScraper, so
+     * their games are looked up by name only. Same systems as identify's `LaunchFileSystems`.
      *
-     * core-data mirrors this set in SQL (`PinnedShortcutDao.NOT_SKIPPED_BY_BOX_ART`: pinned
-     * shortcuts of these systems are scraped); `SystemIdsTest` fails when it changes.
+     * Pinned shortcuts are a narrower list in SQL (`PinnedShortcutDao.NOT_SKIPPED_BY_BOX_ART`:
+     * `steam` only); `ShortcutScrapeTest` pins it.
      */
-    val NAME_ONLY: Set<String> = setOf("steam")
+    val NAME_ONLY: Set<String> = setOf("steam", "epic", "windows")
 
     fun isNameOnly(plumemuSystemId: String): Boolean = plumemuSystemId in NAME_ONLY
 

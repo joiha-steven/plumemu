@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.shape.CircleShape
 import com.plumemu.home.CoverImages
 import com.plumemu.home.LocalBatteryReading
-import com.plumemu.home.NoBatteryReading
 import com.plumemu.home.firstThatFits
 import com.plumemu.home.rememberBatteryReading
 import androidx.compose.foundation.text.BasicText
@@ -93,12 +92,10 @@ internal fun SecondScreenCard(
     modifier: Modifier = Modifier,
     /** Decodes the box art a [SecondScreenContent.Game] carries; none by default (the card without art). */
     images: CoverImages = CoverImages.None,
-    /** Settings › Show battery: off, no battery line and no battery receiver (as the top screen's bar and the in-game card). */
-    showBattery: Boolean = true,
 ) {
     val colors = PlumTheme.colors
     // One battery receiver for the picking window, kept across moves: the picking line reads it, never its own.
-    val battery = if (showBattery) rememberBatteryReading() else NoBatteryReading
+    val battery = rememberBatteryReading()
     BoxWithConstraints(modifier.fillMaxSize().background(colors.bg).then(if (hasBackdropGlow(content)) Modifier.backdropGlow() else Modifier).testTag(SecondScreenTags.CARD)) {
         val dimens = SecondScreenDimens.forShorterSide(minOf(maxWidth, maxHeight))
         ProvideSecondScreenText {

@@ -216,16 +216,81 @@ class SteamLaunchTest {
         assertEquals(LaunchOutcome.Started(id, "gamenative", "app.gamenative", ChoiceSource.PersonForSystem, null), launcher.launch(id))
     }
 
+    /** An id file of GameNative's frontend export in [systemId]'s folder; [content] is what it holds. */
+    private fun idFileGame(systemId: String, fileName: String, content: String): Pair<Long, String> {
+        val documentId = "primary:ROMs/$systemId/${++games}/$fileName"
+        val id = kotlinx.coroutines.runBlocking { db.addGame(systemId, documentId) }
+        val uri = DocumentsContract.buildDocumentUriUsingTree(Uri.parse(INTERNAL_TREE), documentId).toString()
+        documents[uri] = DocumentState.Present(null)
+        files[uri] = SmallFileRead.Read(content.toByteArray(Charsets.UTF_8), true)
+        return id to uri
+    }
+
     @Test
-    fun anEpicFileStillGoesToWinNative() = runTest {
-        installed += "com.winnative.cmod"
-        val documentId = "primary:ROMs/epic/Fortnite.epic"
-        val id = db.addGame("epic", documentId)
-        documents[DocumentsContract.buildDocumentUriUsingTree(Uri.parse(INTERNAL_TREE), documentId).toString()] = DocumentState.Present(null)
+    fun anEpicFileGoesToGameNativeNotWinNativeWithItsStore() = runTest {
+        installed += setOf("app.gamenative", "com.winnative.cmod")
+        val (id, _) = idFileGame("epic", "Fortnite.epic", "1234\n")
         val question = launcher.launch(id) as LaunchOutcome.EmulatorNotChosen
-        assertEquals("winnative", question.recommendedId)
-        db.emulatorChoiceDao().setPersonSystemChoice("epic", "winnative")
-        assertEquals(LaunchOutcome.Started(id, "winnative", "com.winnative.cmod", ChoiceSource.PersonForSystem, null), launcher.launch(id))
+        assertEquals("gamenative", question.recommendedId)
+        assertEquals(listOf("gamenative"), idsOf(question))
+        db.emulatorChoiceDao().setPersonSystemChoice("epic", "gamenative")
+        assertEquals(LaunchOutcome.Started(id, "gamenative", "app.gamenative", ChoiceSource.PersonForSystem, null), launcher.launch(id))
+        val intent = started.single()
+        assertEquals("app.gamenative.LAUNCH_GAME", intent.action)
+        assertEquals(setOf("app_id", "game_source"), intent.extras?.keySet())
+        @Suppress("DEPRECATION") // Bundle.get(String) has no typed getter that tells Int from String.
+        assertEquals(1234, intent.extras?.get("app_id"))
+        assertEquals("EPIC", intent.getStringExtra("game_source"))
+        assertNull(intent.data)
+    }
+
+    @Test
+    fun everyIdFileStartsWithItsOwnStoreInGameNative() = runTest {
+        installed += "app.gamenative"
+        db.emulatorChoiceDao().setPersonSystemChoice("windows", "gamenative")
+        val wanted = listOf("Witcher.gog" to "GOG", "Game.AMAZON" to "AMAZON", "My Game.pcgame" to "CUSTOM_GAME", "Fortnite.Epic" to "EPIC")
+        for ((fileName, source) in wanted) {
+            val (id, _) = idFileGame("windows", fileName, "42")
+            assertTrue(fileName, launcher.launch(id) is LaunchOutcome.Started)
+            assertEquals(fileName, source, started.last().getStringExtra("game_source"))
+        }
+    }
+
+    @Test
+    fun anEpicFileWithGameNativeMissingNamesTheAppsThatCanOpenIt() = runTest {
+        installed += "com.winnative.cmod"
+        val (id, _) = idFileGame("epic", "Fortnite.epic", "1234")
+        assertEquals(LaunchOutcome.NoEmulatorForSystem(id, "epic", listOf(offerOf("gamenative", "GameNative"))), launcher.launch(id))
+        db.emulatorChoiceDao().setPersonSystemChoice("epic", "gamenative")
+        assertEquals(
+            LaunchOutcome.EmulatorMissing(id, offerOf("gamenative", "GameNative"), ChoiceSource.PersonForSystem),
+            launcher.launch(id),
+        )
+        assertTrue(started.isEmpty())
+    }
+
+    @Test
+    fun aGogFileIsNeverOfferedToWinNativeOrWinlator() = runTest {
+        installed += setOf("com.winnative.cmod", "com.winlator.cmod", "com.winlator", "com.cmodded.winlator", "com.micewine.emu")
+        val (id, _) = idFileGame("windows", "Witcher.gog", "1234")
+        assertEquals(LaunchOutcome.NoEmulatorForSystem(id, "windows", listOf(offerOf("gamenative", "GameNative"))), launcher.launch(id))
+        // Their own .desktop files still start there.
+        val documentId = "primary:ROMs/windows/Witcher.desktop"
+        val desktop = db.addGame("windows", documentId)
+        documents[DocumentsContract.buildDocumentUriUsingTree(Uri.parse(INTERNAL_TREE), documentId).toString()] = DocumentState.Present(null)
+        installed += "app.gamenative"
+        assertEquals(listOf("winlator-cmod", "winlator-glibc", "winlator-proot", "winnative", "com-micewine-emu"), idsOf(launcher.launch(desktop)))
+    }
+
+    @Test
+    fun aBadEpicFileIsRefusedLikeABadSteamFile() = runTest {
+        installed += "app.gamenative"
+        db.emulatorChoiceDao().setPersonSystemChoice("epic", "gamenative")
+        val (id, _) = idFileGame("epic", "Fortnite.epic", "Fortnite")
+        assertEquals(LaunchOutcome.BadSteamAppIdFile(id, "Fortnite.epic", SteamAppIdProblem.NotAnAppId), launcher.launch(id))
+        val (empty, _) = idFileGame("epic", "Empty.epic", "")
+        assertEquals(LaunchOutcome.BadSteamAppIdFile(empty, "Empty.epic", SteamAppIdProblem.Empty), launcher.launch(empty))
+        assertTrue(started.isEmpty())
     }
 
     @Test
@@ -293,8 +358,8 @@ class SteamLaunchTest {
         }
         assertTrue(started.isEmpty())
         assertEquals(PlaySessionOutcome.NothingPending, playTime.onResume())
-        assertTrue(log.lines.toString(), log.lines.any { it == "W launch: game 1: the file holds no Steam app id (Empty)" })
-        assertTrue(log.lines.toString(), log.lines.any { it == "W launch: game 1: the .steam file holds no Steam app id (Empty, 0 bytes)" })
+        assertTrue(log.lines.toString(), log.lines.any { it == "W launch: game 1: the file holds no game id (Empty)" })
+        assertTrue(log.lines.toString(), log.lines.any { it == "W launch: game 1: the id file holds no game id (Empty, 0 bytes)" })
     }
 
     @Test
@@ -308,7 +373,7 @@ class SteamLaunchTest {
         // More bytes than an id file has (a game image renamed): refused even if it starts with digits.
         val (big, _) = steamGame("274190", complete = false)
         assertEquals(LaunchOutcome.BadSteamAppIdFile(big, "Broforce.steam", SteamAppIdProblem.NotAnAppId), launcher.launch(big))
-        assertTrue(log.lines.toString(), log.lines.any { it.endsWith("holds no Steam app id (NotAnAppId, over ${SteamAppId.MAX_FILE_BYTES} bytes)") })
+        assertTrue(log.lines.toString(), log.lines.any { it.endsWith("holds no game id (NotAnAppId, over ${SteamAppId.MAX_FILE_BYTES} bytes)") })
         assertTrue(started.isEmpty())
         assertTrue(reads.all { it.second == SteamAppId.MAX_FILE_BYTES })
     }

@@ -17,7 +17,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -67,7 +66,7 @@ class SecondScreenInGameTest : SecondScreenHostTestBase() {
         shadow.setNetworkCapabilities(network, caps)
     }
 
-    private fun glyphsIn(window: android.app.Dialog) = nodesOf(window).count { it.config.getOrNull(SemanticsProperties.TestTag) == InGameTags.WIFI }
+    private fun glyphsIn(window: SecondScreenCardActivity) = nodesOf(window).count { it.config.getOrNull(SemanticsProperties.TestTag) == InGameTags.WIFI }
 
     /** A game started from Plumemu: the Activity stops with the flag set. */
     private fun startAGame() {
@@ -88,7 +87,7 @@ class SecondScreenInGameTest : SecondScreenHostTestBase() {
         assertTrue("the time: $texts", formatClock(activity, now) in texts)
         assertTrue("the battery: $texts", "82%" in texts)
         assertFalse("the feed stops following in game", feed.isFollowing.value)
-        assertEquals("Second screen window: in game, clock and battery on display $displayId", logs.last())
+        assertEquals("Second screen card: in game, clock and battery on display $displayId", logs.last())
         assertEquals("one minute tick listener", 1, receiversFor(Intent.ACTION_TIME_TICK))
         assertEquals("one battery listener", 1, receiversFor(Intent.ACTION_BATTERY_CHANGED))
         assertTrue("dim: nothing brighter than #646464, ${brightest(window)}", brightest(window) <= 0x64 / 255f + 0.001f)
@@ -117,9 +116,9 @@ class SecondScreenInGameTest : SecondScreenHostTestBase() {
         settings.value = settings.value!!.let { it.copy(homeScreen = it.homeScreen.copy(showBattery = on)) }
     }
 
-    /** Show battery off: the time alone, no battery line, no Wi-Fi glyph, no battery or Wi-Fi listener. */
+    /** A stored Show battery off (older version, restored backup) is no longer read: the battery line, the glyph and both listeners are there. */
     @Test
-    fun withShowBatteryOffTheClockCardIsTheTimeAloneAndListensToNeitherBatteryNorWifi() {
+    fun aStoredShowBatteryOffStillShowsTheBatteryAndWifiAndListens() {
         batteryAt(82)
         wifiUp()
         showBattery(false)
@@ -128,42 +127,11 @@ class SecondScreenInGameTest : SecondScreenHostTestBase() {
         assertEquals(WindowMode.InGameClock, host.shownMode)
         val window = host.shownWindow!!
         pixelsOf(window)
-        val texts = textsOf(window)
-        assertTrue("the time stays: $texts", formatClock(activity, now) in texts)
-        assertTrue("no battery line: $texts", texts.none { "%" in it })
-        assertEquals("no glyph", 0, glyphsIn(window))
-        assertEquals("no Wi-Fi listener", 0, wifiCallbacks())
-        assertEquals("no battery listener", 0, receiversFor(Intent.ACTION_BATTERY_CHANGED))
-        assertEquals("the minute tick still runs", 1, receiversFor(Intent.ACTION_TIME_TICK))
-    }
-
-    /** The setting changes while the card shows: it follows at once, without reopening the window. */
-    @Test
-    fun showBatteryChangedWhileTheCardShowsUpdatesTheSameWindow() {
-        batteryAt(82)
-        wifiUp()
-        val host = startHost()
-        startAGame()
-        val window = host.shownWindow!!
-        pixelsOf(window)
         assertTrue("battery shown: ${textsOf(window)}", "82%" in textsOf(window))
         assertEquals(1, glyphsIn(window))
         assertEquals(1, wifiCallbacks())
-        showBattery(false)
-        idle()
-        pixelsOf(window)
-        assertTrue("battery gone: ${textsOf(window)}", textsOf(window).none { "%" in it })
-        assertEquals(0, glyphsIn(window))
-        assertEquals("Wi-Fi listener dropped", 0, wifiCallbacks())
-        assertEquals("battery listener dropped", 0, receiversFor(Intent.ACTION_BATTERY_CHANGED))
-        assertSame("the same window", window, host.shownWindow)
-        showBattery(true)
-        idle()
-        pixelsOf(window)
-        assertTrue("battery back: ${textsOf(window)}", "82%" in textsOf(window))
-        assertEquals(1, glyphsIn(window))
-        assertEquals(1, wifiCallbacks())
         assertEquals(1, receiversFor(Intent.ACTION_BATTERY_CHANGED))
+        assertEquals("the minute tick runs", 1, receiversFor(Intent.ACTION_TIME_TICK))
     }
 
     @Test
@@ -188,7 +156,7 @@ class SecondScreenInGameTest : SecondScreenHostTestBase() {
         assertEquals("all black", 0f, brightest(window))
         assertEquals("no listener at all", 0, receiversFor(Intent.ACTION_TIME_TICK) + receiversFor(Intent.ACTION_BATTERY_CHANGED))
         assertEquals("no Wi-Fi listener in Black", 0, wifiCallbacks())
-        assertEquals("Second screen window: in game, black on display $displayId", logs.last())
+        assertEquals("Second screen card: in game, black on display $displayId", logs.last())
     }
 
     @Test
@@ -199,15 +167,15 @@ class SecondScreenInGameTest : SecondScreenHostTestBase() {
         controller.pause().stop()
         idle()
         assertNull("not on someone else's screen", host.shownDisplayId)
-        assertFalse(window.isShowing)
-        assertEquals("Second screen window: dismissed from display $displayId (Plumemu left)", logs.last())
+        assertTrue("closed (Plumemu is not the home here)", window.isFinishing)
+        assertEquals("Second screen card: closed on display $displayId (Plumemu left)", logs.last())
         controller.restart().resume()
         presence.value = Presence.InPlumemu
         idle()
         assertEquals(displayId, host.shownDisplayId)
         assertEquals(WindowMode.Picking, host.shownMode)
         assertTrue("the feed follows again", feed.isFollowing.value)
-        assertEquals("Second screen window: shown on display $displayId (switched on)", logs.last())
+        assertEquals("Second screen card: started on display $displayId (switched on)", logs.last())
     }
 
     @Test
@@ -222,7 +190,7 @@ class SecondScreenInGameTest : SecondScreenHostTestBase() {
         idle()
         assertEquals(WindowMode.Picking, host.shownMode)
         assertTrue(feed.isFollowing.value)
-        assertEquals("Second screen window: picking on display $displayId", logs.last())
+        assertEquals("Second screen card: picking on display $displayId", logs.last())
         assertEquals("no listener left from the clock card", 0, receiversFor(Intent.ACTION_TIME_TICK))
         // The home screen offers its focus again once following; the card comes after the settle.
         feed.offer(SecondScreenContent.Game("Super Metroid", "Super Nintendo"))

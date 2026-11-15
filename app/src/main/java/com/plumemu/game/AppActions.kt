@@ -2,6 +2,7 @@ package com.plumemu.game
 
 import android.util.Log
 import com.plumemu.coredata.db.AppKind
+import com.plumemu.coredata.settings.AppsScreen
 
 /**
  * What A (or a second tap) on a row of the Apps entry asks of the launcher: a seam so the screen's
@@ -9,8 +10,20 @@ import com.plumemu.coredata.db.AppKind
  * `LibraryHomeContent.appRowId`). Production: [GraphAppActions][com.plumemu.graph.GraphAppActions].
  */
 internal interface AppActions {
-    /** Starts the app of the row [rowId]; never throws. The failures have been logged (ids only). */
-    suspend fun open(rowId: String): AppOpenOutcome
+    /**
+     * Starts the app of the row [rowId]; never throws. The failures have been logged (ids only).
+     * [otherScreen]: a one-off to the screen the setting does not name (top for bottom, bottom for top).
+     */
+    suspend fun open(rowId: String, otherScreen: Boolean = false): AppOpenOutcome
+
+    /**
+     * The screen the app menu's "Open on …" row opens on: the one the setting does not name; null when no
+     * second screen is found and switched on (the row is not offered).
+     */
+    fun otherScreen(): AppsScreen? = null
+
+    /** The muted line the app menu carries for [rowId] (a PC store app whose games are not listed); null for any other app. Memory only. */
+    fun storeHint(rowId: String): StoreHint? = null
 
     /** Whether the app menu offers Uninstall for [rowId]: false for Plumemu, a system app Android cannot remove, or a row that is gone. */
     suspend fun canUninstall(rowId: String): Boolean
@@ -33,7 +46,7 @@ internal interface AppActions {
 
     /** Benchmark and preview builds: nothing is started (one log line, the message says it could not be opened). */
     object None : AppActions {
-        override suspend fun open(rowId: String): AppOpenOutcome {
+        override suspend fun open(rowId: String, otherScreen: Boolean): AppOpenOutcome {
             Log.i(TAG, "apps: $rowId not opened, apps are off in this build")
             return AppOpenOutcome.Unavailable
         }
@@ -75,6 +88,9 @@ internal enum class AppToolResult {
 /** How opening an app ended; every case but [Started] has its message (`appOpenMessage`). */
 internal enum class AppOpenOutcome {
     Started,
+
+    /** It could not open on the bottom screen and opened on this one; `appOpenMessage` says so. */
+    StartedOnTop,
 
     /** Uninstalled or disabled since the list was read; the list is read again. */
     Missing,

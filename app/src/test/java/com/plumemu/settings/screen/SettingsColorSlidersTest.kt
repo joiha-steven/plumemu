@@ -570,7 +570,7 @@ internal class SettingsColorSlidersTest : SettingsModelHarness() {
         model.onTouchSlider(hue, 0.3f, actions.shown, wide)
         press(Action.Back)
         press(Action.Back)
-        assertEquals(SettingsColumn.Options, model.focus.column)
+        assertEquals("back on Accent color's row in Colors' panel", PanelPage.ColorSets, model.focus.page)
         press(Action.Enter)
         openPlus()
         assertEquals(PanelPage.AccentCustom, model.focus.page)

@@ -37,7 +37,7 @@ internal abstract class SettingsColorModel(
         custom.startEditingHex(focus.page ?: return, keyboardChoice)
     }
 
-    /** Colors' panel: the tiles' grid, then Background and Text color under it. Right opens a row, Left leaves for the Colors row. */
+    /** Colors' panel: the tiles' grid, then Background, Text color and Accent color under it. Right opens a row, Left leaves for the Colors row. */
     protected fun moveInColorSets(
         direction: Direction,
         settings: PlumSettings,
@@ -85,10 +85,10 @@ internal abstract class SettingsColorModel(
         if (now != null && now != page && now != PanelPage.ColorSets && focus.column == SettingsColumn.Panel) onPanelBack(now)
     }
 
-    /** A colour page is done: Background's and Text color's go back to their row in Colors' panel, Accent color's to its row in the list. */
+    /** A colour page is done: it goes back to its row in Colors' panel. */
     protected fun closeColourPage(page: PanelPage) {
-        val item = ColorPages.kindOf(page)?.let(::colorsRowItemOf)
-        if (item == null) closePanel() else moveTo(focus.copy(page = PanelPage.ColorSets, panelIndex = item))
+        val item = ColorPages.kindOf(page)?.let(::colorsRowItemOf) ?: return closePanel()
+        moveTo(focus.copy(page = PanelPage.ColorSets, panelIndex = item))
     }
 
     /**

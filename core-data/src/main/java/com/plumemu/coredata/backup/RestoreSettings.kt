@@ -14,6 +14,8 @@ import com.plumemu.coredata.settings.PlumSettings
  * - `homeRoleAsked`, `rescanAfterReset` and `inGameDriftNoteShown` stay this device's: the home-app
  *   question and the second screen's note are about this device, and a reset's pending scan is about
  *   the library this device has.
+ * - `usageAccessOffered` is true when either side says so: the home's one-time Usage access card was
+ *   shown on this device or on the one the file came from, and an older file must not bring it back.
  * - `folderMatchVersion`, `namingRulesVersion` and `scrapeRulesVersion` come with the database
  *   they describe, so only from an Everything file (a file without `namingRulesVersion` or
  *   `scrapeRulesVersion`, written before it existed, gives 0: its rows are named again, or its
@@ -37,6 +39,7 @@ object RestoreSettings {
             } else {
                 device
             }
-        return fromFile.copy(flags = flags)
+        val advanced = fromFile.advanced.copy(usageAccessOffered = fromFile.advanced.usageAccessOffered || onDevice.advanced.usageAccessOffered)
+        return fromFile.copy(flags = flags, advanced = advanced)
     }
 }

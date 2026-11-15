@@ -6,8 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -91,11 +91,26 @@ class HomeFavoriteSearchTest {
 
     private fun openFavorites() = send(Action.Move(Direction.Down), Action.Enter)
 
-    /** The count beside Favorites in the system column (the row's last text). */
-    private fun favoritesCountShown(): String =
-        compose.onNodeWithTag(HomeTags.system(1), useUnmergedTree = true).fetchSemanticsNode().children
-            .mapNotNull { child -> child.config.getOrElseNullable(SemanticsProperties.Text) { null }?.joinToString { it.text } }
-            .last()
+    /** The count drawn beside Favorites in the opened system column (Back opens it, Enter goes back to the list). Not for a held row: Back drops the hold. */
+    private fun favoritesCountShown(): String {
+        send(Action.Back)
+        val shown =
+            compose.onNodeWithTag(HomeTags.system(1), useUnmergedTree = true).fetchSemanticsNode().children
+                .mapNotNull { child -> child.config.getOrElseNullable(SemanticsProperties.Text) { null }?.joinToString { it.text } }
+                .last()
+        send(Action.Enter)
+        return shown
+    }
+
+    /** The game count drawn in the top bar while the Favorites list is focused ("Favorites · 3 games"). */
+    private fun favoritesCountInTopBar(): String {
+        val texts =
+            compose.onNodeWithTag(HomeTags.TOP_BAR, useUnmergedTree = true).fetchSemanticsNode().let { bar ->
+                generateSequence(listOf(bar)) { level -> level.flatMap { it.children }.takeIf { it.isNotEmpty() } }.flatten()
+                    .mapNotNull { it.config.getOrElseNullable(SemanticsProperties.Text) { null }?.joinToString { t -> t.text } }.toList()
+            }
+        return texts.firstNotNullOf { Regex("(\\d+) games?").find(it)?.groupValues?.get(1) }
+    }
 
     @Test
     fun yAddsTheFocusedGameAndTheStarHintAndCountFollow() {
@@ -180,7 +195,7 @@ class HomeFavoriteSearchTest {
         assertEquals(listOf("snes-2" to false), games.favorites)
         assertEquals("the library dropped it", 3, content.entries[1].rows.size)
         assertTrue("its row stays where it was", exists(HomeTags.game(3)))
-        assertEquals("the count says three", "3", favoritesCountShown())
+        assertEquals("the count says three", "3", favoritesCountInTopBar())
         send(Action.Play)
         assertEquals("the cursor did not jump", listOf("snes-2"), games.launched)
         send(Action.ToggleFavorite) // and back

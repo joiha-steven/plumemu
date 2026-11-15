@@ -2,6 +2,7 @@ package com.plumemu.coredata.backup
 
 import com.plumemu.coredata.settings.AdvancedSettings
 import com.plumemu.coredata.settings.AppearanceSettings
+import com.plumemu.coredata.settings.AppsScreen
 import com.plumemu.coredata.settings.BoxArtRegionSetting
 import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.coredata.settings.ColorSetting
@@ -14,6 +15,7 @@ import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.LeftEdgeSetting
 import com.plumemu.coredata.settings.LibrarySettings
 import com.plumemu.coredata.settings.OwnColors
+import com.plumemu.coredata.settings.PageGrainSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.RecentSizeSetting
 import com.plumemu.coredata.settings.SecondScreenSettings
@@ -41,7 +43,7 @@ class SettingsJsonTest {
     /** Every field away from its default, so a field the JSON forgot cannot pass by being the default. */
     private val everyFieldChanged =
         PlumSettings(
-            appearance = AppearanceSettings(ColorSetting.Custom(0x123ABC), TextColorSetting.Dark, ColorSetting.Preset("Teal"), TextSizeSetting.Huge, GridSizeSetting.Large, gridSystems = setOf("snes", "psp", "My Hacks"), ownColors = OwnColors(ColorSetting.Custom(0x2B54B5), TextColorSetting.Light, ColorSetting.Preset("Blue"), buttonSet = "Charcoal"), buttonSet = "Ivory", leftEdge = LeftEdgeSetting.Letters, language = "vi", edgeFade = false),
+            appearance = AppearanceSettings(ColorSetting.Custom(0x123ABC), TextColorSetting.Dark, ColorSetting.Preset("Teal"), TextSizeSetting.Huge, GridSizeSetting.Large, gridSystems = setOf("snes", "psp", "My Hacks"), ownColors = OwnColors(ColorSetting.Custom(0x2B54B5), TextColorSetting.Light, ColorSetting.Preset("Blue"), buttonSet = "Charcoal"), buttonSet = "Ivory", leftEdge = LeftEdgeSetting.Letters, language = "vi", edgeFade = false, pageGrain = PageGrainSetting.Strong),
             controls = ControlsSettings(ConfirmButtonSetting.Bottom, holdToScrollFaster = false, showButtonHints = false, keyboard = KeyboardSetting.Android, pushRightToPlay = true, switchSystemWith = SwitchSystemWithSetting.Bumpers),
             library =
                 LibrarySettings(
@@ -56,8 +58,8 @@ class SettingsJsonTest {
                     recentSize = RecentSizeSetting.Ten,
                 ),
             homeScreen = HomeScreenSettings(showApps = false, showClock = false, showBattery = false, showSystemInfo = false),
-            secondScreen = SecondScreenSettings(enabled = false, inGame = InGameSetting.Black),
-            advanced = AdvancedSettings(animations = false, sounds = SoundLevel.Quiet, usageStatistics = false, vibration = false, exactPlayTime = true),
+            secondScreen = SecondScreenSettings(enabled = false, inGame = InGameSetting.Black, appsOn = AppsScreen.Bottom),
+            advanced = AdvancedSettings(animations = false, sounds = SoundLevel.Quiet, usageStatistics = false, vibration = false, exactPlayTime = true, usageAccessOffered = true),
             updates = UpdateSettings(checkDaily = false),
             flags = SetupFlags(
                 setupCompleted = true, homeRoleAsked = true, rescanAfterReset = true, folderMatchVersion = 3, namingRulesVersion = 4, scrapeRulesVersion = 5,
@@ -73,6 +75,16 @@ class SettingsJsonTest {
         val old = SettingsJson.decode(json.toString())
         assertEquals(false, old.settings.flags.setupQuestionsSkipped)
         assertEquals("a missing key is not an unknown value", false, old.unknownKeys.any { it.contains("setupQuestionsSkipped") })
+    }
+
+    @Test
+    fun aFileFromBeforeUsageAccessOfferedReadsFalseAndTheFlagRoundTrips() {
+        val json = SettingsJson.encode(everyFieldChanged)
+        assertEquals(true, roundTrip(everyFieldChanged).settings.advanced.usageAccessOffered)
+        json.getJSONObject("advanced").remove("usageAccessOffered")
+        val old = SettingsJson.decode(json.toString())
+        assertEquals(false, old.settings.advanced.usageAccessOffered)
+        assertEquals("a missing key is not an unknown value", false, old.unknownKeys.any { it.contains("usageAccessOffered") })
     }
 
     private fun roundTrip(settings: PlumSettings): SettingsJson.Decoded = SettingsJson.decode(SettingsJson.encode(settings).toString())
@@ -125,6 +137,17 @@ class SettingsJsonTest {
     }
 
     @Test
+    fun aRetiredLeftEdgeLettersChoiceEncodesDecodesAndRestores() {
+        // The app no longer reads leftEdge, but a backup still carries it and restoring must not lose or reject it.
+        val settings = PlumSettings.Defaults.copy(appearance = AppearanceSettings(leftEdge = LeftEdgeSetting.Letters))
+        val json = SettingsJson.encode(settings)
+        assertEquals("Letters", json.getJSONObject("appearance").getString("leftEdge"))
+        val decoded = SettingsJson.decode(json.toString())
+        assertEquals(LeftEdgeSetting.Letters, decoded.settings.appearance.leftEdge)
+        assertEquals(emptyList<String>(), decoded.unknownKeys)
+    }
+
+    @Test
     fun aBackupFromBeforeLeftEdgeReadsAsNotPickedAndTheDefaultsKeepItNull() {
         val json = SettingsJson.encode(everyFieldChanged)
         json.getJSONObject("appearance").remove("leftEdge")
@@ -133,6 +156,25 @@ class SettingsJsonTest {
         assertEquals("a missing key is not an unknown value", emptyList<String>(), decoded.unknownKeys)
         assertEquals("Letters", SettingsJson.encode(everyFieldChanged).getJSONObject("appearance").getString("leftEdge"))
         assertTrue(SettingsJson.encode(PlumSettings.Defaults).getJSONObject("appearance").isNull("leftEdge"))
+    }
+
+    @Test
+    fun aBackupWithoutAppsOnRestoresTopAndTheRestOfTheSecondScreenSurvives() {
+        val json = SettingsJson.encode(everyFieldChanged)
+        json.getJSONObject("secondScreen").remove("appsOn")
+        val decoded = SettingsJson.decode(json.toString())
+        assertEquals(AppsScreen.Top, decoded.settings.secondScreen.appsOn)
+        assertEquals(InGameSetting.Black, decoded.settings.secondScreen.inGame)
+        assertEquals("a missing key is not an unknown value", emptyList<String>(), decoded.unknownKeys)
+    }
+
+    @Test
+    fun aBackupWithAnUnknownAppsOnValueRestoresTop() {
+        val json = SettingsJson.encode(everyFieldChanged)
+        json.getJSONObject("secondScreen").put("appsOn", "middle")
+        val decoded = SettingsJson.decode(json.toString())
+        assertEquals(AppsScreen.Top, decoded.settings.secondScreen.appsOn)
+        assertEquals(InGameSetting.Black, decoded.settings.secondScreen.inGame)
     }
 
     @Test
@@ -153,6 +195,25 @@ class SettingsJsonTest {
         val decoded = SettingsJson.decode(json.toString())
         assertEquals(everyFieldChanged.appearance, decoded.settings.appearance)
         assertEquals("a retired key is not reported as damaged", emptyList<String>(), decoded.unknownKeys)
+    }
+
+    @Test
+    fun aBackupHoldingTheRemovedSortGamesRowRestoresItsValue() {
+        // Settings has no Sort games row any more; the stored sort is still the one sort (START > Sort by...).
+        val settings = PlumSettings.Defaults.copy(library = PlumSettings.Defaults.library.copy(sortGames = SortGamesSetting.LastPlayed))
+        val decoded = roundTrip(settings)
+        assertEquals(SortGamesSetting.LastPlayed, decoded.settings.library.sortGames)
+        assertEquals(emptyList<String>(), decoded.unknownKeys)
+    }
+
+    @Test
+    fun aBackupHoldingClockAndBatteryOffRestoresBothOff() {
+        // Settings has no Clock and battery row any more and the app ignores the stored values; the file keeps them.
+        val home = PlumSettings.Defaults.homeScreen.copy(showClock = false, showBattery = false)
+        val decoded = roundTrip(PlumSettings.Defaults.copy(homeScreen = home))
+        assertFalse(decoded.settings.homeScreen.showClock)
+        assertFalse(decoded.settings.homeScreen.showBattery)
+        assertEquals(emptyList<String>(), decoded.unknownKeys)
     }
 
     @Test
@@ -179,6 +240,7 @@ class SettingsJsonTest {
         assertEquals("jp", json.getJSONObject("library").getString("boxArtRegion"))
         assertEquals("manual", json.getJSONObject("library").getString("systemOrder"))
         assertEquals("black", json.getJSONObject("secondScreen").getString("inGame"))
+        assertEquals("bottom", json.getJSONObject("secondScreen").getString("appsOn"))
         assertEquals("Android", json.getJSONObject("controls").getString("keyboard"))
         assertEquals(listOf("snes", "nes", "My Hacks"), json.getJSONObject("library").getJSONArray("manualSystemOrder").let { a -> List(a.length()) { a.getString(it) } })
     }
@@ -392,6 +454,24 @@ class SettingsJsonTest {
         assertEquals(emptyList<String>(), decoded.unknownKeys)
     }
 
+    /** Grain on the background goes through a backup; a backup without it, or with a name this version does not know, restores Off. */
+    @Test
+    fun thePageGrainSurvivesABackupAndABackupWithoutItOrWithAnUnknownNameRestoresOff() {
+        assertEquals(PageGrainSetting.Strong, roundTrip(everyFieldChanged).settings.appearance.pageGrain)
+        assertEquals("Strong", SettingsJson.encode(everyFieldChanged).getJSONObject("appearance").getString("pageGrain"))
+        assertEquals("Off", SettingsJson.encode(PlumSettings()).getJSONObject("appearance").getString("pageGrain"))
+        val older = SettingsJson.encode(everyFieldChanged)
+        older.getJSONObject("appearance").remove("pageGrain")
+        val decoded = SettingsJson.decode(older.toString())
+        assertEquals(PageGrainSetting.Off, decoded.settings.appearance.pageGrain)
+        assertEquals(emptyList<String>(), decoded.unknownKeys)
+        val odd = SettingsJson.encode(everyFieldChanged)
+        odd.getJSONObject("appearance").put("pageGrain", "Heavy")
+        val oddDecoded = SettingsJson.decode(odd.toString())
+        assertEquals(PageGrainSetting.Off, oddDecoded.settings.appearance.pageGrain)
+        assertEquals(listOf("appearance.pageGrain"), oddDecoded.unknownKeys)
+    }
+
     /** The buttons in use and the ones kept with the own colours go through a backup; an older backup reads undecided. */
     @Test
     fun theButtonSetSurvivesABackupAndABackupFromBeforeItReadsUndecided() {
@@ -451,5 +531,22 @@ class SettingsJsonTest {
             assertEquals("explicit $value", value, roundTrip(settings).settings.homeScreen.showSystemInfo)
         }
         assertEquals(null, roundTrip(PlumSettings.Defaults).settings.homeScreen.showSystemInfo)
+    }
+
+    /** Show button hints and System info are no rows now, but their stored values stay in the file: an old backup restores them as written. */
+    @Test
+    fun aBackupHoldingHintsOffAndSystemInfoOffRestoresBothValues() {
+        val old =
+            PlumSettings.Defaults.copy(
+                controls = PlumSettings.Defaults.controls.copy(showButtonHints = false),
+                homeScreen = HomeScreenSettings(showSystemInfo = false),
+            )
+        val json = SettingsJson.encode(old)
+        assertEquals(false, json.getJSONObject("controls").getBoolean("showButtonHints"))
+        assertEquals(false, json.getJSONObject("homeScreen").getBoolean("showSystemInfo"))
+        val back = SettingsJson.decode(json.toString()).settings
+        assertEquals(false, back.controls.showButtonHints)
+        assertEquals(false, back.homeScreen.showSystemInfo)
+        assertEquals(old, back)
     }
 }

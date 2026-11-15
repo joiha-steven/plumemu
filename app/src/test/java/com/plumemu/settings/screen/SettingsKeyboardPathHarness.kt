@@ -178,11 +178,14 @@ internal abstract class SettingsKeyboardPathHarness : SettingsModelHarness() {
 
     protected fun textEntry(): TextEntry = compose.runOnIdle { router.textEntry }
 
-    /** Appearance › Accent › "+": the accent palette, the cursor on its hex row (the stored accent is a preset). */
+    /** Appearance › Colors › Accent color › "+": the accent palette, the cursor on its hex row (the stored accent is a preset). */
     protected fun openAccentHexRow() {
         repeat(SettingsSection.Appearance.shownIndex) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
-        repeat(SettingsSection.Appearance.rowsIn(content).indexOf(SettingsOption.Accent)) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.Appearance.rowsIn(content).indexOf(SettingsOption.Colors)) { send(Action.Move(Direction.Down)) }
+        send(Action.Enter)
+        // Colors' panel: down through the tiles to its last row, Accent color.
+        repeat(40) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
         // The "+" tile is the last one of the presets: down to the last row, then right to its end (the columns depend on the width).
         repeat(12) { send(Action.Move(Direction.Down)) }

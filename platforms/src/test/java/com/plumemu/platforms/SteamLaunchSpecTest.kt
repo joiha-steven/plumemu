@@ -23,11 +23,16 @@ class SteamLaunchSpecTest {
         assertEquals(listOf("gamenative", "gamehub-lite", "droiddeck"), catalog.emulatorsFor(steam, "Broforce.steam").map { it.id })
         assertEquals(listOf("gamenative", "gamehub-lite", "droiddeck"), catalog.defaultCandidatesFor("steam", "Broforce.STEAM").map { it.id })
         assertEquals(listOf("winnative"), catalog.emulatorsFor(steam, "Broforce.desktop").map { it.id })
-        assertEquals(setOf("steam"), catalog.emulator("gamenative")!!.accepts)
-        // WinNative: every extension of its systems but .steam (Epic, GOG, Amazon files stay its own).
-        assertEquals(setOf("amazon", "app", "desktop", "epic", "gog", "pcgame"), catalog.emulator("winnative")!!.accepts)
-        assertEquals(listOf("winnative"), catalog.emulatorsFor(catalog.system("epic")!!, "Fortnite.epic").map { it.id })
-        assertTrue(catalog.emulatorsFor(catalog.system("windows")!!, "Witcher.gog").any { it.id == "winnative" })
+        assertEquals(setOf("steam", "epic", "gog", "amazon", "pcgame"), catalog.emulator("gamenative")!!.accepts)
+        // WinNative and the Winlator family open path files only: .desktop (WinNative also .app), never an id file.
+        assertEquals(setOf("app", "desktop"), catalog.emulator("winnative")!!.accepts)
+        for (id in listOf("winlator-cmod", "winlator-glibc", "winlator-proot", "com-micewine-emu")) {
+            assertEquals(id, setOf("desktop"), catalog.emulator(id)!!.accepts)
+        }
+        assertEquals(listOf("gamenative"), catalog.emulatorsFor(catalog.system("epic")!!, "Fortnite.epic").map { it.id })
+        assertEquals(listOf("gamenative"), catalog.emulatorsFor(catalog.system("windows")!!, "Witcher.gog").map { it.id })
+        assertEquals(listOf("gamenative"), catalog.emulatorsFor(catalog.system("windows")!!, "Game.AMAZON").map { it.id })
+        assertTrue("winnative" in catalog.emulatorsFor(catalog.system("epic")!!, "Game.desktop").map { it.id })
         // Without `accepts` an emulator takes every file of its systems, as before.
         val snes = catalog.system("snes")!!
         assertEquals(catalog.emulatorsOf(snes), catalog.emulatorsFor(snes, "Zork.sfc"))
@@ -51,12 +56,33 @@ class SteamLaunchSpecTest {
 
     @Test
     fun gameNativeGetsTheIdAsAnIntExtraWithItsStore() {
-        val built = LaunchSpecs.build(catalog.emulator("gamenative")!!, location, steamAppId = broforce)
+        val built = LaunchSpecs.build(catalog.emulator("gamenative")!!, location, steamAppId = broforce, fileName = "Broforce.steam")
         val expected = LaunchSpec(
             "app.gamenative", "app.gamenative.MainActivity", "app.gamenative.LAUNCH_GAME", null, null, null,
             mapOf("game_source" to ExtraValue.Text("STEAM"), "app_id" to ExtraValue.Number(274190)), emptySet(),
         )
         assertEquals(LaunchResult.Built(expected), built)
+        // Without a file name only the id goes (the store comes from the file's extension).
+        val bare = LaunchSpecs.build(catalog.emulator("gamenative")!!, location, steamAppId = broforce) as LaunchResult.Built
+        assertEquals(setOf("app_id"), bare.spec.extras.keys)
+    }
+
+    @Test
+    fun gameNativeTakesItsStoreFromTheFileExtensionInAnyCase() {
+        val gamenative = catalog.emulator("gamenative")!!
+        val wanted = mapOf(
+            "Broforce.steam" to "STEAM", "Fortnite.epic" to "EPIC", "Witcher.gog" to "GOG",
+            "Game.amazon" to "AMAZON", "My Game.pcgame" to "CUSTOM_GAME", "Fortnite.EPIC" to "EPIC", "Witcher.Gog" to "GOG",
+        )
+        for ((fileName, source) in wanted) {
+            val built = LaunchSpecs.build(gamenative, location, steamAppId = broforce, fileName = fileName) as LaunchResult.Built
+            assertEquals(fileName, ExtraValue.Text(source), built.spec.extras["game_source"])
+            assertEquals(fileName, ExtraValue.Number(274190), built.spec.extras["app_id"])
+            assertEquals(fileName, setOf("game_source", "app_id"), built.spec.extras.keys)
+        }
+        // An extension with no entry (or none) adds nothing: the Intent has only the id.
+        val other = LaunchSpecs.build(gamenative, location, steamAppId = broforce, fileName = "noextension") as LaunchResult.Built
+        assertEquals(setOf("app_id"), other.spec.extras.keys)
     }
 
     @Test

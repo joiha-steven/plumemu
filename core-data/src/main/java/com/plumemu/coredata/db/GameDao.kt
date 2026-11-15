@@ -36,7 +36,7 @@ abstract class GameDao {
             SortGamesSetting.Rating -> systemGamesByRating(systemId)
         }.distinctUntilChanged()
 
-    /** Favorites in [sort] order (Settings › Library › Sort games), hidden games left out. */
+    /** Favorites in [sort] order (the stored sort), hidden games left out. */
     fun observeFavorites(sort: SortGamesSetting = SortGamesSetting.Name): Flow<List<GameListRow>> =
         when (sort) {
             SortGamesSetting.Name -> favorites()

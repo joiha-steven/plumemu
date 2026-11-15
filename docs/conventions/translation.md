@@ -71,7 +71,7 @@ below, and keep to it.
 | hide / hidden | Take a game or system out of the lists without deleting anything. |
 | backup / back up | A file holding Plumemu's settings, library and box art. Noun "backup", verb "back up". |
 | restore | Put a backup's contents back. "Undo restore" returns to the state before. |
-| accent | The colour of the focus mark and highlights (Settings › Appearance › Accent color). |
+| accent | The colour of the focus mark and highlights (Settings › Appearance › Colors › Accent color). |
 | text size | Settings › Appearance › Text size: Small, Medium, Large, Larger, Largest. |
 | left strip | Settings › Home screen › Left strip: Game counts, System codes, Letters (what the narrow strip on the left shows in a games list). |
 | second screen | The bottom screen of a two-screen device (AYN Thor). |

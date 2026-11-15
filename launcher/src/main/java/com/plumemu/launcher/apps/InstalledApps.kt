@@ -39,6 +39,9 @@ sealed interface AppLaunchOutcome {
     /** The app was uninstalled or disabled since the list was read. */
     data object Missing : AppLaunchOutcome
 
+    /** Opening on the second screen was refused; the app was started on this screen instead. */
+    data object StartedOnTop : AppLaunchOutcome
+
     /** Android refused the start, or `startActivity` threw anything else; nothing was started. */
     data class Failed(val error: Throwable) : AppLaunchOutcome
 }
@@ -78,6 +81,8 @@ class InstalledApps internal constructor(
     private val battery: PlayBattery = PlayBattery.None,
     /** Starts App info and Uninstall: Android's own screens, not an app opened from Plumemu, so no start observer. */
     private val plainStarter: (Intent) -> Unit = {},
+    /** Starts an app on another display (the second screen): not a play, so no observer and no battery. */
+    private val displayStarter: (Intent, Int) -> Unit = { _, _ -> },
 ) {
     constructor(
         context: Context,
@@ -91,6 +96,7 @@ class InstalledApps internal constructor(
         Dispatchers.IO,
         battery,
         { intent -> context.applicationContext.startActivity(intent) },
+        { intent, displayId -> com.plumemu.launcher.LaunchAnimation.start(context.applicationContext, intent, displayId) },
     )
 
     /** Reads the list off the main thread; labels are loaded here, icons are not. */
@@ -108,7 +114,20 @@ class InstalledApps internal constructor(
             )
     }
 
-    fun launch(app: LaunchableApp): AppLaunchOutcome = start(app, tellBattery = true)
+    /**
+     * Starts [app]. With [onDisplay] (the second screen) it opens there and Plumemu stays in front; a
+     * start Android refuses there (`SecurityException` or another `RuntimeException`) is tried again on this
+     * screen: [AppLaunchOutcome.StartedOnTop] if that worked. An app that is gone ([AppLaunchOutcome.Missing])
+     * is not tried again.
+     */
+    fun launch(app: LaunchableApp, onDisplay: Int? = null): AppLaunchOutcome {
+        if (onDisplay == null) return start(app, tellBattery = true)
+        val there = start(app, tellBattery = false, displayId = onDisplay)
+        if (there !is AppLaunchOutcome.Failed) return there
+        log.warn("apps: ${app.packageName} not opened on the second screen, opening it here")
+        val here = start(app, tellBattery = true)
+        return if (here == AppLaunchOutcome.Started) AppLaunchOutcome.StartedOnTop else here
+    }
 
     /**
      * Starts the installed app [packageName] listed as a game (Android games, Ports apps),
@@ -139,12 +158,12 @@ class InstalledApps internal constructor(
             true // Android no longer knows the package.
         }
 
-    private fun start(app: LaunchableApp, tellBattery: Boolean): AppLaunchOutcome = try {
+    private fun start(app: LaunchableApp, tellBattery: Boolean, displayId: Int? = null): AppLaunchOutcome = try {
         // Before the start, as a game's (PlayTimeTracker.onGameLaunched): the second screen's
         // in-game card may read as soon as the app is in front. Quick and never throws.
         if (tellBattery) battery.onPlayStarting(usualDrawMicroamps = null)
-        starter(intentFor(app))
-        log.info("apps: started ${app.packageName}")
+        if (displayId != null) displayStarter(intentFor(app), displayId) else starter(intentFor(app))
+        log.info("apps: started ${app.packageName}${if (displayId != null) " on the second screen" else ""}")
         AppLaunchOutcome.Started
     } catch (e: ActivityNotFoundException) {
         log.warn("apps: ${app.packageName} is no longer installed (${e.kind()})")

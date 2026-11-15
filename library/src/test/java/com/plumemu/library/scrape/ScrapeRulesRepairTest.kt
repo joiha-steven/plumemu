@@ -64,6 +64,25 @@ class ScrapeRulesRepairTest {
     }
 
     @Test
+    fun version5MakesLauncherNoMatchesDueOnceAndKeepsOtherSystemsWaiting() = runTest {
+        val source = lib.source()
+        lib.add(
+            lib.game("old.gog", system = "windows"),
+            lib.game("old.epic", system = "epic"),
+            lib.game("mine.gog", system = "windows"),
+            lib.game("miss.sfc"),
+        )
+        source.pending(100).forEach { source.deliver(it, ScrapeResult.NoMatch, emptyList()) }
+        lib.sql("UPDATE scraped_game SET is_person_choice = 1 WHERE scrape_key = (SELECT fix_keys FROM game WHERE document_id = 'mine.gog')")
+        assertEquals("all stored, nothing due", emptyList<Any>(), source.pending(100))
+
+        assertEquals("the two launcher no-matches", 2, scanner().askAgainForNewScrapeRules(4))
+
+        assertEquals(listOf("old.epic", "old.gog"), source.pending(100).map { it.rom.fileName }.sorted())
+        assertEquals("a current version marks nothing", 0, scanner().askAgainForNewScrapeRules(SCRAPE_RULES_VERSION))
+    }
+
+    @Test
     fun serialOnlyMatchesAreAskedAgainOnceAndNotFresh() = runTest {
         val source = lib.source()
         lib.add(

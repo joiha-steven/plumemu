@@ -1,17 +1,19 @@
 package com.plumemu.home
 
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.plumemu.R
+import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 
@@ -33,23 +35,20 @@ internal fun TextDetails(
     val system = rememberSystemName(content, entry, game)
     val play = rememberShownPlay(game, content)
     val poster = entry.posterOf(game)
+    // A tall poster (the system's shape) has the title and the system line beside it, as a tall box front does.
+    val aspect = entry.shapeOf(game).widthOverHeight
+    val sideTitle = aspect < TALL_BELOW && titleFitsBeside(game.title, aspect, PlumDimens.detailsColumnWidth, PlumTheme.type.meta, 1, PlumDimens.titleLineGap)
     WideDetailsLayout(
         cover = {
-            if (!textHidden || detailsCoverFitsWithSystemsOpen(PlumTheme.layout, content.hasBoxArt)) DetailsCover(
-                ArtSlot.Absent,
-                DpSize(PlumDimens.detailsColumnWidth, PlumDimens.detailsCoverHeightWide),
-                Alignment.BottomStart,
-                isBoxFitted = false,
-                shrinksToFit = true,
-                poster = poster,
-                posterAspect = entry.shapeOf(game).widthOverHeight,
-                appPackage = game.appPackage,
-            )
+            // The same glass frame and slot as a real cover's: poster and box front read as one shelf.
+            if (!textHidden || detailsCoverFitsWithSystemsOpen(PlumTheme.layout, content.hasBoxArt)) {
+                if (sideTitle) SidePosterCover(poster, aspect, game) else CollaredDetailsCover(ArtSlot.Absent, DpSize(PlumDimens.detailsColumnWidth, PlumDimens.detailsCoverHeightWide), poster, aspect, game.appPackage)
+            }
         },
         titleBlock = {
             if (!textHidden) {
                 TitleBlock(PlumDimens.titleLineGap) {
-                    DetailsTitle(game.title)
+                    DetailsTitle(game.title, maxLines = if (sideTitle) 3 else 2)
                     SystemLine(system?.let { systemAndRegion(it, game.region) })
                 }
             }
@@ -57,7 +56,21 @@ internal fun TextDetails(
         rest = { if (!textHidden) DetailsFacts(play, PlumTheme.type.smallFact) },
         modifier = modifier,
         minCover = PlumDimens.posterMinHeight,
+        sideTitle = sideTitle,
     )
+}
+
+/** [SideTitleCover] for a poster: as wide as its shape needs at the band's height. */
+@Composable
+private fun SidePosterCover(
+    poster: PosterSpec,
+    aspect: Float,
+    game: GameRowModel,
+) {
+    BoxWithConstraints(Modifier.fillMaxHeight()) {
+        val boxH = maxHeight - CollarSize.Cover.topPadding - CollarSize.Cover.bottomPadding
+        CollaredDetailsCover(ArtSlot.Absent, DpSize(boxH * aspect + CollarSize.Cover.sidePadding * 2, maxHeight), poster, aspect, game.appPackage)
+    }
 }
 
 /**

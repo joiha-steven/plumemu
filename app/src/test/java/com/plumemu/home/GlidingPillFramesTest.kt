@@ -135,7 +135,7 @@ abstract class GlidingPillFramesBase {
     private fun ringColour(rowTag: String): Color {
         val list = listBounds()
         // A game row's box holds its tap gap under the row; the slab is as tall as the row.
-        val gap = if (rowTag.startsWith("home_game")) PlumDimens.listRowGap else 0.dp
+        val gap = if (rowTag.startsWith("home_game") || rowTag.startsWith("home_system")) PlumDimens.listRowGap else 0.dp
         overhang = compose.slabOverhangPx(rowTag, gap)
         rowPx = compose.rowHeightPx(rowTag, gap)
         // A system info band above the first game row ends in a hairline of its own: the search for the pill starts at the first row, under it.
@@ -204,7 +204,8 @@ abstract class GlidingPillFramesBase {
         val ring = ringColour(rowTag(first))
         val newTop = rowTop(rowTag(first + 1))
         listBounds().let { list ->
-            val gap = if (rowTag(first).startsWith("home_game")) PlumDimens.listRowGap else 0.dp
+            // A system row is the games' stride too: its pill is the drawn row, the gap below it empty.
+            val gap = if (rowTag(first).startsWith("home_game") || rowTag(first).startsWith("home_system")) PlumDimens.listRowGap else 0.dp
             compose.assertSlabRestsOn(rowTag(first), compose.barColumns(list.left), scanTop.toInt() - overhang.toInt() - 1, list.bottom.toInt(), gap)
         }
         compose.mainClock.autoAdvance = false
@@ -243,7 +244,7 @@ abstract class GlidingPillFramesBase {
         assertGlide("systems", oneDown(true, Column.Systems, HomeTags.SYSTEMS, HomeTags::system, 0, 0))
     }
 
-    /** The step over the gap above the first system: the real distance is a row and the gap, and the first frame must not jump the gap. */
+    /** The step from the last entry of the top group to the first system: one ordinary stride (no group gap), no jump in the first frame. */
     @Test
     fun theSystemsPillGlidesFromTheLastEntryOfTheTopGroupToTheFirstSystem() {
         val content = FakeHomeContent.board()

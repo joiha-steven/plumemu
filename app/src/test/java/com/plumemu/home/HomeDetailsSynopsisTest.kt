@@ -76,7 +76,7 @@ abstract class HomeDetailsSynopsisBase(
             @Suppress("DEPRECATION")
             RuntimeEnvironment.getApplication().sendStickyBroadcast(Intent(Intent.ACTION_BATTERY_CHANGED).putExtra(BatteryManager.EXTRA_LEVEL, BATTERY_LINE_SAMPLES[1].level).putExtra(BatteryManager.EXTRA_SCALE, 100))
         }
-        val play = GamePlay(2, 252, EmulatorToStart("RetroArch: Snes9x", isInstalled = true).takeIf { !twoRows }, batteryPace = BATTERY_LINE_SAMPLES[1].pace.takeIf { !twoRows })
+        val play = GamePlay(2, 252, EmulatorToStart("RetroArch: Snes9x", isInstalled = true).takeIf { !twoRows }, batteryPace = BATTERY_LINE_SAMPLES[1].pace.takeIf { !twoRows }, hasOwnEmulator = true)
         val actions = LibraryLikeContent.gamesFocused(metroid) + if (narrow) listOf(Action.Move(Direction.Right)) else emptyList()
         compose.mainClock.autoAdvance = false
         compose.setContent {

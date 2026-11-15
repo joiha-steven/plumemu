@@ -59,9 +59,11 @@ class PlayWithFileTypeTest {
     }
 
     @Test
-    fun anEpicFileListsWinNative() {
-        val listing = emulatorListingOf(catalog, catalog.system("epic")!!, "Fortnite.epic", setOf("winnative"), systemChoiceId = null, gameChoiceId = null)
-        assertEquals(listOf("winnative"), listing.installed.map { it.id })
+    fun anEpicFileListsGameNativeNotWinNative() {
+        val listing = emulatorListingOf(catalog, catalog.system("epic")!!, "Fortnite.epic", both, systemChoiceId = null, gameChoiceId = null)
+        assertEquals(listOf("gamenative"), listing.installed.map { it.id })
+        val desktop = emulatorListingOf(catalog, catalog.system("epic")!!, "Fortnite.desktop", both, systemChoiceId = null, gameChoiceId = null)
+        assertEquals(listOf("winnative"), desktop.installed.map { it.id })
     }
 
     @Test

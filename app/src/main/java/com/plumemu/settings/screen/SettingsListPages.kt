@@ -131,20 +131,6 @@ internal object SettingsListPages {
         return if (now == at) null else focus.copy(rememberedOption = focus.rememberedOption + (accounts to now))
     }
 
-    /** Grid size, Home screen's last row, left because the button hints came back: the cursor lands on the row above it. */
-    fun homeScreenFocusKept(
-        focus: SettingsFocus,
-        before: SettingsContent,
-        after: SettingsContent,
-    ): SettingsFocus? {
-        val home = SettingsSection.HomeScreen
-        if (focus.section != home) return null
-        val rowsAfter = home.rowsIn(after)
-        val wasOnIt = home.rowsIn(before).getOrNull(focus.rememberedOption[home] ?: 0) == SettingsOption.GridSize
-        if (!wasOnIt || SettingsOption.GridSize in rowsAfter) return null
-        return focus.leavingPanel(focus.rememberedOption + (home to rowsAfter.lastIndex))
-    }
-
     /** The row under an open panel left: [remembered] is the row the cursor lands on, in the options column if a panel was open. */
     private fun SettingsFocus.leavingPanel(remembered: Map<SettingsSection, Int>): SettingsFocus =
         if (column == SettingsColumn.Panel) copy(column = SettingsColumn.Options, page = null, panelIndex = 0, rememberedOption = remembered) else copy(rememberedOption = remembered)

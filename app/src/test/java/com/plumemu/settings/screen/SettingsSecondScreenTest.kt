@@ -1,5 +1,6 @@
 package com.plumemu.settings.screen
 
+import com.plumemu.coredata.settings.AppsScreen
 import com.plumemu.coredata.settings.InGameSetting
 import com.plumemu.coredata.settings.SecondScreenSettings
 import com.plumemu.coreinput.Action
@@ -44,13 +45,13 @@ internal class SettingsSecondScreenTest : SettingsModelHarness() {
     @Test
     fun theRowsAreListedOnlyWhileThereIsASecondScreenAndInGameOnlyWhileItIsOn() {
         val undecided = SecondScreenSettings()
-        val both = listOf(SettingsOption.SecondScreen, SettingsOption.SecondScreenInGame)
+        val both = listOf(SettingsOption.SecondScreen, SettingsOption.SecondScreenInGame, SettingsOption.SecondScreenAppsOn)
         assertEquals(emptyList<SettingsOption>(), section.rowsIn(SettingsContent().withSecondScreen(null, undecided)))
         assertFalse("no section without a screen", section in SettingsSection.shownIn(SettingsContent().withSecondScreen(null, undecided)))
         assertTrue(section in SettingsSection.shownIn(SettingsContent().withSecondScreen(unsure, undecided)))
         assertEquals("built in, undecided: on", both, section.rowsIn(SettingsContent().withSecondScreen(builtIn, undecided)))
         assertEquals(
-            "unsure, undecided: off, so no In game",
+            "unsure, undecided: off, so no In game and no Open apps on",
             listOf(SettingsOption.SecondScreen),
             section.rowsIn(SettingsContent().withSecondScreen(unsure, undecided)),
         )
@@ -150,6 +151,46 @@ internal class SettingsSecondScreenTest : SettingsModelHarness() {
         focusSecondScreenRow(SettingsOption.SecondScreenInGame)
         model.onTapValue(1, actions.settings, wide)
         assertEquals(InGameSetting.Black, actions.settings.secondScreen.inGame)
+    }
+
+    @Test
+    fun openAppsOnCyclesByAAndStepsByLeftAndRight() {
+        withScreen(builtIn)
+        focusSecondScreenRow(SettingsOption.SecondScreenAppsOn)
+        assertEquals("default is the top screen", AppsScreen.Top, actions.settings.secondScreen.appsOn)
+        press(Action.Enter)
+        assertEquals(AppsScreen.Bottom, actions.settings.secondScreen.appsOn)
+        press(Action.Enter)
+        assertEquals("wraps", AppsScreen.Top, actions.settings.secondScreen.appsOn)
+        move(Direction.Right)
+        assertEquals(AppsScreen.Bottom, actions.settings.secondScreen.appsOn)
+        move(Direction.Right)
+        assertEquals("stops at the end", AppsScreen.Bottom, actions.settings.secondScreen.appsOn)
+        move(Direction.Left)
+        assertEquals(AppsScreen.Top, actions.settings.secondScreen.appsOn)
+        move(Direction.Left)
+        assertEquals("Left does not wrap", AppsScreen.Top, actions.settings.secondScreen.appsOn)
+        assertEquals("During a game is not touched", InGameSetting.Clock, actions.settings.secondScreen.inGame)
+    }
+
+    @Test
+    fun aTapOnOpenAppsOnsValueStepsIt() {
+        withScreen(builtIn)
+        focusSecondScreenRow(SettingsOption.SecondScreenAppsOn)
+        model.onTapValue(2, actions.settings, wide)
+        assertEquals(AppsScreen.Bottom, actions.settings.secondScreen.appsOn)
+    }
+
+    @Test
+    fun openAppsOnFollowsDuringAGameAndGoesWithTheSwitch() {
+        withScreen(builtIn)
+        focusSecondScreenRow(SettingsOption.SecondScreenInGame)
+        move(Direction.Down)
+        assertEquals(SettingsOption.SecondScreenAppsOn, model.focusedOption)
+        withScreen(unsure)
+        assertFalse("off: gone", SettingsOption.SecondScreenAppsOn in section.rowsIn(model.content))
+        withScreen(null)
+        assertFalse("no screen: gone", SettingsOption.SecondScreenAppsOn in section.rowsIn(model.content))
     }
 
     @Test

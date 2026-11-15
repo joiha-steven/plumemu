@@ -1,11 +1,13 @@
 package com.plumemu.usage
 
 import com.plumemu.coredata.backup.BackupKind
+import com.plumemu.coredata.settings.AppsScreen
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.GridSizeSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coredata.settings.LeftEdgeSetting
+import com.plumemu.coredata.settings.PageGrainSetting
 import com.plumemu.coreinput.Column
 import com.plumemu.graph.BackupState
 import com.plumemu.graph.RestoreResult
@@ -47,25 +49,34 @@ class UsageEventsTest {
         val after =
             before.copy(
                 appearance = before.appearance.copy(background = ColorSetting.Preset("Paper"), textSize = null),
-                homeScreen = before.homeScreen.copy(showClock = false, showBattery = false),
+                homeScreen = before.homeScreen.copy(showApps = false),
             )
         val fields = settingChanges(before, after).map { it.wireFields() }
         assertEquals(true, mapOf("key" to "background", "value" to "paper") in fields)
         assertEquals(true, mapOf("key" to "text_size", "value" to "large") in fields)
-        assertEquals(true, mapOf("key" to "clock_and_battery", "value" to "off") in fields)
+        assertEquals(true, mapOf("key" to "show_apps", "value" to "off") in fields)
     }
 
     @Test
-    fun clockAndBatterySendsOneEventOnlyWhenTheRowsValueChanges() {
-        fun home(clock: Boolean, battery: Boolean) = PlumSettings().let { it.copy(homeScreen = it.homeScreen.copy(showClock = clock, showBattery = battery)) }
+    fun aStoredClockAndBatteryChangeSendsNothingNow() {
+        val before = PlumSettings()
+        val after = before.copy(homeScreen = before.homeScreen.copy(showClock = false, showBattery = false))
+        assertEquals(emptyList<Any>(), settingChanges(before, after).map { it.wireFields() })
+    }
+
+    @Test
+    fun openAppsOnSendsItsChoiceOnlyWhenItChanges() {
+        fun apps(on: AppsScreen) = PlumSettings().let { it.copy(secondScreen = it.secondScreen.copy(appsOn = on)) }
         fun fields(before: PlumSettings, after: PlumSettings) = settingChanges(before, after).map { it.wireFields() }
-        val on = listOf(mapOf("key" to "clock_and_battery", "value" to "on"))
-        val off = listOf(mapOf("key" to "clock_and_battery", "value" to "off"))
-        assertEquals(off, fields(home(true, true), home(false, false)))
-        assertEquals(off, fields(home(true, false), home(false, false)))
-        assertEquals(off, fields(home(false, true), home(false, false)))
-        assertEquals(on, fields(home(false, false), home(true, true)))
-        assertEquals("a restore that moves one key leaves the row on", emptyList<Any>(), fields(home(true, true), home(false, true)))
+        assertEquals(
+            listOf(mapOf("key" to "second_screen_apps_on", "value" to "bottom")),
+            fields(apps(AppsScreen.Top), apps(AppsScreen.Bottom)),
+        )
+        assertEquals(
+            listOf(mapOf("key" to "second_screen_apps_on", "value" to "top")),
+            fields(apps(AppsScreen.Bottom), apps(AppsScreen.Top)),
+        )
+        assertEquals(emptyList<Any>(), fields(apps(AppsScreen.Top), apps(AppsScreen.Top)))
     }
 
     @Test
@@ -73,6 +84,14 @@ class UsageEventsTest {
         val before = PlumSettings()
         val after = before.copy(appearance = before.appearance.copy(gridSize = GridSizeSetting.Large))
         assertEquals(listOf(mapOf("key" to "grid_size", "value" to "large")), settingChanges(before, after).map { it.wireFields() })
+    }
+
+    @Test
+    fun aPageGrainChangeSendsItsKeyAndNothingMoreWhenUnchanged() {
+        val before = PlumSettings()
+        val after = before.copy(appearance = before.appearance.copy(pageGrain = PageGrainSetting.Strong))
+        assertEquals(listOf(mapOf("key" to "page_grain", "value" to "strong")), settingChanges(before, after).map { it.wireFields() })
+        assertEquals(emptyList<Any>(), settingChanges(after, after))
     }
 
     @Test
@@ -97,11 +116,9 @@ class UsageEventsTest {
     }
 
     @Test
-    fun leftEdgeNotPickedCountsAsGameCounts() {
+    fun theRetiredLeftEdgeChoiceIsNotReported() {
         val before = PlumSettings().let { it.copy(appearance = it.appearance.copy(leftEdge = null)) }
-        assertEquals(emptyList<Any>(), settingChanges(before, before.copy(appearance = before.appearance.copy(leftEdge = LeftEdgeSetting.Counts))))
-        val fields = settingChanges(before, before.copy(appearance = before.appearance.copy(leftEdge = LeftEdgeSetting.Codes))).map { it.wireFields() }
-        assertEquals(listOf(mapOf("key" to "left_edge", "value" to "codes")), fields)
+        assertEquals(emptyList<Any>(), settingChanges(before, before.copy(appearance = before.appearance.copy(leftEdge = LeftEdgeSetting.Codes))))
     }
 
     @Test

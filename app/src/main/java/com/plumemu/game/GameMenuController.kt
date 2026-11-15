@@ -109,11 +109,10 @@ internal class GameMenuController(
     ): Boolean = starts.play(game, { actions.launch(game.key, from) }) { readOrNull("emulators", game) { actions.emulators(game.key) } }
 
     /**
-     * Opens [app], a row of the Apps entry ([GameRef.key] is its row id; [GameStarts.openApp]). Like
-     * Play, a second press while a start runs is ignored with "Opening …" shown; one after it starts
-     * the app again (Android brings its task forward).
+     * Opens [app], a row of the Apps entry ([GameRef.key] is its row id; [GameStarts.openApp]), on the other screen when [otherScreen].
+     * Like Play, a second press while a start runs is ignored ("Opening …" shows); one after it starts the app again.
      */
-    fun openApp(app: GameRef): Boolean = starts.openApp(app) { apps.open(app.key) }
+    fun openApp(app: GameRef, otherScreen: Boolean = false): Boolean = starts.openApp(app) { apps.open(app.key, otherScreen) }
 
     /** START or a long press on an app: its menu (App info, and Uninstall when Android can remove it), unless a panel is open or opening. */
     fun openAppMenu(app: GameRef): Boolean = (!isOpen && opening?.isActive != true).also { if (it) opening = appMenus.read(app) { menu -> showIfStill(null, menu) } }
@@ -390,6 +389,7 @@ internal class GameMenuController(
                 }
             PanelCommand.Close -> close()
             is PanelCommand.AnswerCore -> work = answerCore(actions, scope, open, command, log) { next -> showIfStill(open, next) }
+            PanelCommand.OpenAppOnOtherScreen -> { close(); openApp(game, otherScreen = true) }
             PanelCommand.AppInfo, PanelCommand.AppUninstall -> appMenus.run(open, command) { next -> if (panel === open) panel = next }
             is PanelCommand.SetAppKind, PanelCommand.AskAppNotAGame -> work = answerAppKind(open, command, actions, apps)
             PanelCommand.OpenFixBoxArt -> openFixBoxArt(open)

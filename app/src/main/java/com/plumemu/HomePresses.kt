@@ -26,8 +26,8 @@ internal class HomePresses {
  * activity (it pauses first), and a return from a game is STARTED too on Android 10+. What differs
  * is the window: when Home is pressed over Plumemu its window still has focus, and the intent
  * carries no `FLAG_ACTIVITY_BROUGHT_TO_FRONT`; coming back from a game or another app the window
- * has no focus yet and Android brought the task to the front. The second screen's window is
- * `FLAG_NOT_FOCUSABLE` (`SecondScreenHost`), so it never takes the focus.
+ * has no focus yet and Android brought the task to the front. The second screen's card gives the
+ * focus back to this screen at once while Plumemu is in front (`ControllerHandBack`).
  */
 internal fun isHomePressInFront(
     intent: Intent?,

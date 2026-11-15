@@ -64,6 +64,8 @@ class SettingsRowWordsTest {
     }
 
     /** The label and the value text [option] shows with [content]. */
+    private var value: OptionValue? = null
+
     private fun rowOf(
         option: SettingsOption,
         content: SettingsContent = SettingsContent(),
@@ -83,7 +85,7 @@ class SettingsRowWordsTest {
     /** The kinds of value are told apart by their mark: "‹ X ›" cycles, "X »" opens a panel, a read-only row has none. */
     @Test
     fun cyclingValuesAndPanelValuesCarryDifferentMarks() {
-        val cycling = listOf(SettingsOption.TextSize, SettingsOption.SortGames, SettingsOption.Keyboard, SettingsOption.SwitchSystemWith)
+        val cycling = listOf(SettingsOption.TextSize, SettingsOption.SystemOrder, SettingsOption.Keyboard, SettingsOption.SwitchSystemWith)
         for ((option, value) in valuesOf(cycling)) {
             assertEquals(option.name + ": " + value, true, value is OptionValue.Choice)
         }
@@ -94,7 +96,7 @@ class SettingsRowWordsTest {
         val opening =
             listOf(
                 SettingsOption.RomFolders, SettingsOption.Systems, SettingsOption.BackupAndRestore, SettingsOption.Reset,
-                SettingsOption.Updates, SettingsOption.Licenses, SettingsOption.ReportProblem, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount,
+                SettingsOption.Version, SettingsOption.Licenses, SettingsOption.ReportProblem, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount,
             )
         for ((option, value) in valuesOf(opening)) {
             assertEquals(option.name + ": " + value, true, value is OptionValue.Opens)
@@ -103,7 +105,7 @@ class SettingsRowWordsTest {
 
     @Test
     fun readOnlyRowsHaveNoMark() {
-        for ((option, value) in valuesOf(listOf(SettingsOption.Version, SettingsOption.Privacy, SettingsOption.ScraperStatus))) {
+        for ((option, value) in valuesOf(listOf(SettingsOption.Privacy, SettingsOption.ScraperStatus))) {
             assertEquals(option.name + ": " + value, true, value is OptionValue.Text)
         }
     }
@@ -155,19 +157,25 @@ class SettingsRowWordsTest {
 
     @Test
     fun aFailedUpdateCheckSaysCheckFailedAndWhen() {
-        // Oct 22, 2026, noon UTC: a day before today, so a date rather than a time.
         val at = 1_792_670_400_000L
         val content = SettingsContent(update = UpdateView(lastCheck = LastCheck(at, CheckOutcome.Failed(CheckFailure.Offline))))
-        val date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(at))
-        assertEquals("Updates" to "Check failed · $date", rowOf(SettingsOption.Updates, content))
+        assertEquals("Version" to "0.0.3-beta · Check failed", rowOf(SettingsOption.Version, content))
     }
 
     @Test
     fun aCheckThatFoundAReleaseSaysUpdateAvailableLikeTheRowUnderVersion() {
         val at = 1_792_670_400_000L
         val content = SettingsContent(update = UpdateView(lastCheck = LastCheck(at, CheckOutcome.Found)))
-        val date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(at))
-        assertEquals("Updates" to "Update available · $date", rowOf(SettingsOption.Updates, content))
+        assertEquals("Version" to "0.0.3-beta · Update available", rowOf(SettingsOption.Version, content))
+    }
+
+    @Test
+    fun withNoManifestVersionIsPlainEvenWhenAnUpdateWasRecorded() {
+        val found = com.plumemu.update.UpdateManifest(41, "0.0.3", "https://example.com/p.apk", 1, "ab".repeat(32), 23, "2026-10-23", listOf("One."), null)
+        val content = SettingsContent(hasUpdates = false, update = UpdateView(found = found))
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { value = optionValue(SettingsOption.Version, settings, "0.0.3-beta", content) } }
+        compose.waitForIdle()
+        assertEquals(OptionValue.Text("0.0.3-beta"), value)
     }
 
     @Test
@@ -177,37 +185,37 @@ class SettingsRowWordsTest {
 
     @Test
     fun theRenamedSwitchesSayWhatTheyDo() {
-        val renamed = listOf(SettingsOption.ClockAndBattery, SettingsOption.UsageStatistics)
+        val renamed = listOf(SettingsOption.UsageStatistics)
         var labels = emptyList<String>()
         compose.setContent { labels = renamed.map { optionLabel(it, SettingsContent(), 0) } }
         compose.waitForIdle()
-        assertEquals(listOf("Clock and battery", "Send usage statistics"), labels)
+        assertEquals(listOf("Send usage statistics"), labels)
     }
 
     @Test
-    fun versionsPanelNamesThePlatformDataOnceItIsKnown() {
-        var content by mutableStateOf(SettingsContent())
+    fun versionsPanelWithAManifestNamesThePlatformDataAndExplainsIt() {
+        var content by mutableStateOf(SettingsContent(hasUpdates = true))
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { SettingsAt(optionsAt(SettingsOption.Version), content = content) } }
         compose.waitForIdle()
         compose.onNodeWithTag(SettingsPanelTags.PLATFORM_DATA).assertDoesNotExist()
-        content = SettingsContent(platformData = PlatformDataVersion(6, "0".repeat(64), "2026-11-01"))
+        content = SettingsContent(hasUpdates = true, platformData = PlatformDataVersion(6, "0".repeat(64), "2026-11-01"))
         compose.waitForIdle()
         compose.onNodeWithTag(SettingsPanelTags.PLATFORM_DATA).assertExists()
-        compose.onNodeWithText("Platform data · Version 6", substring = true).assertExists()
+        compose.onNodeWithText("A light launcher for retro handhelds.", substring = true).assertExists()
         compose.onNodeWithText("The list of systems and emulators Plumemu knows.", substring = true).assertExists()
     }
 
     @Test
-    fun clockAndBatterysPanelMentionsTheSecondScreensClockOnlyWithASecondScreen() {
-        val alsoThere = "The battery also shows on the second screen's clock."
-        var content by mutableStateOf(SettingsContent())
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { SettingsAt(optionsAt(SettingsOption.ClockAndBattery), content = content) } }
+    fun versionsPanelNamesThePlatformDataOnceItIsKnown() {
+        var content by mutableStateOf(SettingsContent(hasUpdates = false))
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { SettingsAt(optionsAt(SettingsOption.Version), content = content) } }
         compose.waitForIdle()
-        compose.onNodeWithText("The time and battery level at the top right of the screen.").assertExists()
-        compose.onNodeWithText(alsoThere, substring = true).assertDoesNotExist()
-        content = SettingsContent(secondScreen = SecondScreen(2, "Screen-2", ScreenKind.BuiltIn))
+        compose.onNodeWithTag(SettingsPanelTags.PLATFORM_DATA).assertDoesNotExist()
+        content = SettingsContent(hasUpdates = false, platformData = PlatformDataVersion(6, "0".repeat(64), "2026-11-01"))
         compose.waitForIdle()
-        compose.onNodeWithText("The time and battery level at the top right of the screen. $alsoThere").assertExists()
+        compose.onNodeWithTag(SettingsPanelTags.PLATFORM_DATA).assertExists()
+        compose.onNodeWithText("Platform data · Version 6", substring = true).assertExists()
+        compose.onNodeWithText("The list of systems and emulators Plumemu knows.", substring = true).assertExists()
     }
 
     private fun valueOf(
@@ -290,7 +298,7 @@ class SettingsRowWordsTest {
                 SettingsOption.Backup to SettingsContent(backup = BackupState.Running(BackupKind.Everything)),
                 SettingsOption.Restore to SettingsContent(restore = RestoreState.Reading()),
                 SettingsOption.UndoRestore to SettingsContent(restore = RestoreState.Replacing(isUndo = true, withLibrary = false)),
-                SettingsOption.Updates to SettingsContent(update = UpdateView(found = com.plumemu.update.UpdateManifest(41, "0.0.3", "https://example.com/p.apk", 1, "ab".repeat(32), 23, "2026-10-23", listOf("One."), null), step = UpdateStep.Downloading(1, 2))),
+                SettingsOption.Version to SettingsContent(update = UpdateView(found = com.plumemu.update.UpdateManifest(41, "0.0.3", "https://example.com/p.apk", 1, "ab".repeat(32), 23, "2026-10-23", listOf("One."), null), step = UpdateStep.Downloading(1, 2))),
                 SettingsOption.BackupAndRestore to SettingsContent(backup = BackupState.Running(BackupKind.Settings)),
             )
         var values = emptyMap<SettingsOption, OptionValue>()

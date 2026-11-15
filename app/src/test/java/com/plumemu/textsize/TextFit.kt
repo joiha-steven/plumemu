@@ -5,7 +5,6 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.text.TextLayoutResult
-import com.plumemu.coreui.components.SystemRowTags
 import com.plumemu.home.HomeTags
 
 /** What a screen's check may let through; everything else is a problem. */
@@ -120,13 +119,10 @@ internal fun textProblems(
             val y = drawn(texts[b].second)
             val overlapW = minOf(x.right, y.right) - maxOf(x.left, y.left)
             val overlapH = minOf(x.bottom, y.bottom) - maxOf(x.top, y.top)
-            // A system count under the letter rail is faded out (games focused): the rail takes its place in the peek.
-            val countUnderRail = (texts[a].second.hasAncestorTagged(SystemRowTags.COUNT) && texts[b].second.hasAncestorTagged(HomeTags.RAIL)) ||
-                (texts[b].second.hasAncestorTagged(SystemRowTags.COUNT) && texts[a].second.hasAncestorTagged(HomeTags.RAIL))
             val nodeA = texts[a].second
             val nodeB = texts[b].second
             val rowUnderBar = (nodeA.isUnder(allow.scrollTags) && nodeB.isUnder(allow.barTags)) || (nodeB.isUnder(allow.scrollTags) && nodeA.isUnder(allow.barTags))
-            if (overlapW > 1f && overlapH > 1f && !countUnderRail && !rowUnderBar) problems += "'${texts[a].first}' overlaps '${texts[b].first}' ($overlapW x $overlapH px)"
+            if (overlapW > 1f && overlapH > 1f && !rowUnderBar) problems += "'${texts[a].first}' overlaps '${texts[b].first}' ($overlapW x $overlapH px)"
         }
     }
     return problems

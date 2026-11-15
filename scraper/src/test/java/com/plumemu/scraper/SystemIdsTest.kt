@@ -13,9 +13,10 @@ import java.io.File
 
 class SystemIdsTest {
     @Test
-    fun theNameOnlySystemsAreTheOnesCoreDataScrapesPinnedShortcutsOf() {
-        // Change PinnedShortcutDao.NOT_SKIPPED_BY_BOX_ART in core-data with this set.
-        assertEquals(setOf("steam"), SystemIds.NAME_ONLY)
+    fun theNameOnlySystemsAreTheLauncherFileSystems() {
+        // Pinned shortcuts are narrower: PinnedShortcutDao.NOT_SKIPPED_BY_BOX_ART lists steam only (ShortcutScrapeTest).
+        assertEquals(setOf("steam", "epic", "windows"), SystemIds.NAME_ONLY)
+        listOf("windows3x", "windows9x", "dos", "pc").forEach { assertFalse(it, SystemIds.isNameOnly(it)) }
     }
 
     @Test fun `the 13 tested systems have their ScreenScraper ids`() {
@@ -31,12 +32,15 @@ class SystemIdsTest {
         assertNull(SystemIds.screenScraperId("SNES"))
     }
 
-    @Test fun `131 systems are mapped, 35 checked plus 96 added on 2026-10-22 and steam on 2026-10-23, less samcoupe no longer shipped`() {
-        assertEquals(131, SystemIds.knownSystems.size)
+    @Test fun `132 systems are mapped, 35 checked plus 96 added on 2026-10-22, steam on 2026-10-23 and epic on 2026-11-14, less samcoupe no longer shipped`() {
+        assertEquals(132, SystemIds.knownSystems.size)
         assertNull("SAM Coupe is not a Plumemu system", SystemIds.screenScraperId("samcoupe"))
         assertEquals(138, SystemIds.screenScraperId("steam"))
         assertTrue(SystemIds.isNameOnly("steam"))
-        assertFalse(SystemIds.isNameOnly("windows"))
+        assertTrue(SystemIds.isNameOnly("windows"))
+        assertTrue(SystemIds.isNameOnly("epic"))
+        assertEquals(138, SystemIds.screenScraperId("epic"))
+        assertEquals(138, SystemIds.screenScraperId("windows"))
         assertEquals(29, SystemIds.screenScraperId("3do"))
         assertEquals(301, SystemIds.screenScraperId("genesismsu"))
         assertEquals(76, SystemIds.screenScraperId("zxspectrum"))

@@ -252,7 +252,8 @@ data class PlumLayout(
     // Medium so a line never clips (design/rules.md › Type). Below Medium they stay (the text fits).
     val rowHeight: Dp = PlumDimens.rowHeight * textScale
     val gameRowHeight: Dp = maxOf(PlumDimens.gameRowHeight * textScale, PlumDimens.gameRowMinHeight)
-    val systemRowHeight: Dp = maxOf(PlumDimens.systemRowHeight * textScale, PlumDimens.systemRowMinHeight)
+    // The systems column keeps the games list's stride (row + gap), so each count stays on its game row's baseline.
+    val systemRowHeight: Dp = gameRowHeight + PlumDimens.listRowGap
 
     /** The letter rail's least room per letter, growing with the text like the rows. */
     val railLetterMinHeight: Dp = PlumDimens.railLetterMinHeight * textScale

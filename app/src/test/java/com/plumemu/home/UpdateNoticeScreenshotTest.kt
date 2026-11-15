@@ -50,4 +50,22 @@ class UpdateNoticeScreenshotTest {
 
     @Test
     fun cardAtTheLargestText() = ReferenceShots.capture("whats_new_groups_largest", textSize = TextSize.Largest, content = card(WhatsNewFixtures.grouped))
+
+    @Test
+    fun usageAccessOffer() =
+        ReferenceShots.capture("usage_access_offer") {
+            Box {
+                HomeAt(FakeHomeContent.board(), BoardSystemsFocused)
+                UsageAccessOfferLayout(UsageAccessOfferState.ALLOW, ButtonLetters.Default) {}
+            }
+        }
+
+    @Test
+    fun usageAccessOfferAtTheLargestText() =
+        ReferenceShots.capture("usage_access_offer_largest", textSize = TextSize.Largest) {
+            Box {
+                HomeAt(FakeHomeContent.board(), BoardSystemsFocused)
+                UsageAccessOfferLayout(UsageAccessOfferState.NOT_NOW, ButtonLetters.Default) {}
+            }
+        }
 }

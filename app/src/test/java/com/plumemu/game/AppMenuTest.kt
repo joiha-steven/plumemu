@@ -1,8 +1,10 @@
 package com.plumemu.game
 
 import com.plumemu.R
+import com.plumemu.coredata.settings.AppsScreen
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
+import com.plumemu.coreinput.Direction
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
@@ -37,6 +39,56 @@ class AppMenuTest {
             assertEquals(listOf("Info", "Uninstall"), menu.rows().map { it.key })
             // The labels a screen reader and the eye get are the same words.
             assertEquals(listOf(R.string.app_menu_info, R.string.app_menu_uninstall), menu.rows().map { (it.label as UiText.Res).id })
+        }
+
+    @Test
+    fun openOnTheBottomScreenIsOfferedAfterAppInfoWhileASecondScreenIsOn() =
+        runMenu {
+            val apps = FakeAppActions().apply { uninstallable = setOf(app.key); other = AppsScreen.Bottom }
+            val menu = controller(apps)
+            menu.openAppMenu(app)
+            assertEquals(listOf("Info", "OpenOtherScreen", "Uninstall"), menu.rows().map { it.key })
+            assertEquals(R.string.app_menu_open_bottom, (menu.rows()[1].label as UiText.Res).id)
+        }
+
+    @Test
+    fun theRowSaysTopWhenTheSettingIsBottom() =
+        runMenu {
+            val menu = controller(FakeAppActions().apply { other = AppsScreen.Top })
+            menu.openAppMenu(app)
+            assertEquals(R.string.app_menu_open_top, (menu.rows()[1].label as UiText.Res).id)
+        }
+
+    @Test
+    fun noRowWithoutASecondScreenOrWhileItIsOff() =
+        runMenu {
+            val menu = controller(FakeAppActions().apply { other = null })
+            menu.openAppMenu(app)
+            assertEquals(listOf("Info"), menu.rows().map { it.key })
+        }
+
+    @Test
+    fun aOnTheRowOpensTheAppOnTheOtherScreenOnceAndClosesTheMenu() =
+        runMenu {
+            val apps = FakeAppActions().apply { other = AppsScreen.Bottom }
+            val menu = controller(apps)
+            menu.openAppMenu(app)
+            menu.onAction(Action.Move(Direction.Down))
+            menu.onAction(Action.Play)
+            assertEquals(listOf(app.key), apps.opened)
+            assertEquals(listOf(true), apps.openedOther)
+            assertNull(menu.panel)
+        }
+
+    @Test
+    fun aFailureShowsTheOpenMessageNotASilentClose() =
+        runMenu {
+            val apps = FakeAppActions { AppOpenOutcome.Refused }.apply { other = AppsScreen.Bottom }
+            val menu = controller(apps)
+            menu.openAppMenu(app)
+            menu.onAction(Action.Move(Direction.Down))
+            menu.onAction(Action.Play)
+            assertTrue(checkNotNull(menu.panel).screen is PanelScreen.Message)
         }
 
     @Test

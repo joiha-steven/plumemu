@@ -109,6 +109,9 @@ object PlumDimens {
     val detailsDividerGapTight = 3.dp
     val detailsSubtitleGap = 2.67.dp
 
+    /** The least width the value of a facts cell drawn on one line (label, then value) keeps; the label gives way to an ellipsis first. */
+    val factsInlineValueMin = 48.dp
+
     /** The rating's five dots (6 px = 4 dp, 3 px apart) and the gap from the number (8 px). */
     val ratingDotSize = 4.dp
     val ratingDotGap = 2.dp
@@ -133,11 +136,6 @@ object PlumDimens {
     /** Right inset of a panel's running text (title, body): it has no slab to clear, so it keeps the 14 dp it had before the text start moved to [gameRowPadding]. */
     val panelTextEnd = 14.dp
 
-    /** System column entries as the board draws them (34 high); drawn at least [systemRowMinHeight]. */
-    val systemRowHeight = 34.dp
-
-    /** The least a system row is drawn: the 40 dp touch minimum. Above Medium the scaled height is taller. */
-    val systemRowMinHeight = 40.dp
 
     /**
      * The least room one letter of the peek's letter rail gets at Medium text (a 13 sp capital with a gap
@@ -147,9 +145,6 @@ object PlumDimens {
 
     /** Inside a system row, left and right. */
     val systemRowPadding = 10.dp
-
-    /** Between Apps and the first system. */
-    val systemGroupGap = 4.dp
 
     /**
      * Between a row's title and its trailing text (year, region, count). Not on the board, whose

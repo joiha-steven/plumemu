@@ -5,6 +5,7 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.sound.Reported
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -42,7 +43,31 @@ internal class SettingsInfoRowsTest : SettingsModelHarness() {
     }
 
     @Test
-    fun aAndATapDoNothingOnVersionAtEveryWidth() {
+    fun withNoManifestTheUpdateEntryDoesNotMoveTheFocusEvenWhenAnUpdateWasRecorded() {
+        val found = com.plumemu.update.UpdateManifest(41, "0.0.3", "https://example.com/p.apk", 1, "ab".repeat(32), 23, "2026-10-23", listOf("One."), null)
+        model.content = model.content.copy(hasUpdates = false, update = com.plumemu.update.UpdateView(found = found))
+        val before = model.focus
+        assertFalse(model.openUpdate(actions.shown, wide))
+        assertEquals(before, model.focus)
+    }
+
+    @Test
+    fun aOnVersionOpensItsPanelAndSoDoesATapOnItsValue() {
+        openSection(SettingsSection.About)
+        focusOption(SettingsOption.Version)
+        press(Action.Enter, wide)
+        assertEquals(PanelPage.Update, model.focus.page)
+        press(Action.Back, wide)
+        assertNull(model.focus.page)
+        val at = model.optionIndex
+        model.onTapValue(at, actions.shown, wide)
+        model.onTapValue(at, actions.shown, wide)
+        assertEquals(PanelPage.Update, model.focus.page)
+    }
+
+    @Test
+    fun aAndATapDoNothingOnVersionAtEveryWidthInABuildWithNoUpdateManifest() {
+        model.content = model.content.copy(hasUpdates = false)
         openSection(SettingsSection.About)
         focusOption(SettingsOption.Version)
         val at = model.optionIndex

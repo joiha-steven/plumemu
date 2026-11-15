@@ -98,7 +98,7 @@ class LaunchMotionFramesTest {
     /** The item's left edge on its middle row. */
     private fun PixelMap.itemLeft(): Int = (0 until width).first { this[it, 240].let { p -> p.red > 0.3f && p.green < 0.2f } }
 
-    private fun play() = compose.runOnUiThread { assertNotNull("the home is the host", LaunchAnimation.host); LaunchAnimation.host!!(game) }
+    private fun play() = compose.runOnUiThread { assertNotNull("the home is the host", LaunchAnimation.host); LaunchAnimation.host!!(game, null) }
 
     @Test
     fun theHomeMovesIntoTheItemAndDimsButNeverToBlack() {
@@ -135,6 +135,22 @@ class LaunchMotionFramesTest {
         assertEquals(before.page(), frame().page(), 0.01f)
         assertEquals(before.itemLeft(), frame().itemLeft())
     }
+
+    @Test
+    fun anAppOnTheSecondScreenStartsAtOnceWithItsDisplayAndTheHomeStaysStill() {
+        show(animationsOn = true)
+        val before = frame()
+        compose.runOnUiThread { LaunchAnimation.host!!(game, 5) }
+        assertEquals(game.component, shadowOf(app).peekNextStartedActivity()?.component)
+        assertEquals("asked for the display", 5, startedOptions().getInt("android.activity.launchDisplayId", -1))
+        repeat(PlumMotion.SCREEN_MS / 16) {
+            compose.mainClock.advanceTimeByFrame()
+            assertEquals(before.page(), frame().page(), 0.01f)
+            assertEquals(before.itemLeft(), frame().itemLeft())
+        }
+    }
+
+    private fun startedOptions(): android.os.Bundle = checkNotNull(shadowOf(app).nextStartedActivityForResult.options) { "no options" }
 
     private companion object {
         const val ROOT = "root"

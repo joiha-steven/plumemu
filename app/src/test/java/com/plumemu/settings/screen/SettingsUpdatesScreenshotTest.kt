@@ -57,8 +57,8 @@ class SettingsUpdatesScreenshotTest {
     private fun foundWith(manifest: UpdateManifest, step: UpdateStep = UpdateStep.Idle) = SettingsContent(update = found.copy(found = manifest, step = step))
     private val withUpdate = SettingsContent(update = found)
 
-    /** About › Updates, the second row. */
-    private val onUpdateRow = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1))
+    /** About › Version, the first row. */
+    private val onUpdateRow = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 0))
     private val inPanel = onUpdateRow.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0)
 
     private fun shot(
@@ -105,7 +105,7 @@ class SettingsUpdatesScreenshotTest {
     fun checkRowAfterAFailure() =
         shot(
             "settings_update_check_failed",
-            optionsAt(SettingsOption.Updates),
+            optionsAt(SettingsOption.Version),
             SettingsContent(update = UpdateView(lastCheck = LastCheck(checkedAt, CheckOutcome.Failed(CheckFailure.Offline)))),
         )
 

@@ -29,31 +29,25 @@ internal class SettingsSectionRowsTest {
                 listOf(
                     SettingsOption.RomFolders,
                     SettingsOption.Rescan,
-                    SettingsOption.SortGames,
                     SettingsOption.FilesNotAdded,
-                    SettingsOption.ClearRecent,
                 ),
             SettingsSection.Appearance to
                 listOf(
                     SettingsOption.Language,
                     SettingsOption.Colors,
-                    SettingsOption.Accent,
+                    SettingsOption.PageGrain,
                     SettingsOption.TextSize,
                 ),
             SettingsSection.HomeScreen to
                 listOf(
                     SettingsOption.UseAsHome,
                     SettingsOption.ShowApps,
-                    SettingsOption.ClockAndBattery,
-                    SettingsOption.SystemInfo,
-                    SettingsOption.LeftEdge,
                 ),
             SettingsSection.Controls to
                 listOf(
                     SettingsOption.ConfirmBottom,
                     SettingsOption.SwitchSystemWith,
                     SettingsOption.PushRightToPlay,
-                    SettingsOption.ShowButtonHints,
                     SettingsOption.Keyboard,
                     SettingsOption.Sounds,
                     SettingsOption.Vibration,
@@ -69,7 +63,6 @@ internal class SettingsSectionRowsTest {
             SettingsSection.About to
                 listOf(
                     SettingsOption.Version,
-                    SettingsOption.Updates,
                     SettingsOption.UsageStatistics,
                     SettingsOption.Licenses,
                     SettingsOption.Privacy,
@@ -90,7 +83,7 @@ internal class SettingsSectionRowsTest {
         val expected =
             withoutSecondScreen.entries.flatMap { (section, rows) ->
                 listOf(section to rows) +
-                    if (section == SettingsSection.HomeScreen) listOf(SettingsSection.SecondScreen to listOf(SettingsOption.SecondScreen, SettingsOption.SecondScreenInGame)) else emptyList()
+                    if (section == SettingsSection.HomeScreen) listOf(SettingsSection.SecondScreen to listOf(SettingsOption.SecondScreen, SettingsOption.SecondScreenInGame, SettingsOption.SecondScreenAppsOn)) else emptyList()
             }
         assertEquals(expected.map { it.first }, shown.keys.toList())
         expected.forEach { (section, rows) -> assertEquals("$section", rows, shown[section]) }

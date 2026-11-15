@@ -7,7 +7,6 @@ import androidx.compose.runtime.InternalComposeTracingApi
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
-import com.plumemu.coredata.settings.LeftEdgeSetting
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.Direction
@@ -78,23 +77,16 @@ class HomeRecompositionTest {
     /** The games list's item body ([GamesListItem]): it reads the row's look, so it runs when that changes. */
     private fun listItems(): Int = calls.count { it.startsWith("com.plumemu.home.GamesListItem ") }
 
-    /** The letter rail recomposes at most the two letters whose look changed, never the whole rail. */
-    private fun assertRailLettersAtMostTwo() = assertTrue("rail letters recomposed: ${calls.filter { "RailLetter" in it }}", railLetterRuns() <= 2)
-
-    private fun railLetterRuns(): Int = calls.count { it.startsWith("com.plumemu.home.RailLetter ") }
-
     /**
      * Screen composables (`com.plumemu.home`) and shared components (TopBar, Hint, ...) that ran, except the rows, the list items that draw them and the look followers. Theme getters called by a recomposed row are not counted. Nor are the two scroll keepers, which emit nothing: they decide
      * the scroll while composing the move, so it lands in the same frame. Nor is the details column ([detailsParts]):
      * it shows the focused game, so a move re-runs it (poster: [detailsPoster], once; [enteredCovers] may add one each).
      */
     private fun othersThatRan(detailsPoster: Boolean = false, enteredCovers: Int = 0): List<String> {
-        assertRailLettersAtMostTwo()
         val posterRuns = calls.filter { info -> POSTER_FILES.any { "($it:" in info } }.groupingBy { it }.eachCount().filterValues { it > (if (detailsPoster) 1 else 0) + enteredCovers }
         assertEquals("posters run only in the details column, once per function: $posterRuns", emptyMap<String, Int>(), posterRuns)
         val rowParts = listOf("GameRow", "SystemRow").map { "com.plumemu.coreui.components.$it " }
-        // RailLetter: a move to another letter changes the look of the two letters involved (`assertRailLettersAtMostTwo`).
-        val ours = listOf("KeepFocusedVisible", "KeepFocusedCellVisible", "GamesListItem", "FollowRowForms", "RailLetter").map { "com.plumemu.home.$it " }
+        val ours = listOf("KeepFocusedVisible", "KeepFocusedCellVisible", "GamesListItem", "FollowRowForms").map { "com.plumemu.home.$it " }
         // A row's press look (`pressFeel` and its driver) runs with the row and for nobody else: the two game
         // rows of a move may each run it once, any more is an "other".
         val pressAllowance = mutableMapOf<String, Int>().withDefault { 2 }
@@ -135,8 +127,7 @@ class HomeRecompositionTest {
 
     private fun showAt(
         actions: List<Action>,
-        // Letters: the rail is the part of the peek whose recomposition these tests bound (Left edge, default Counts, has none).
-        content: HomeContent = FakeHomeContent.board().withLeftEdge(LeftEdgeSetting.Letters),
+        content: HomeContent = FakeHomeContent.board(),
         settings: PlumThemeSettings = PlumThemeSettings.Default,
     ): StripState {
         lateinit var state: StripState
@@ -167,19 +158,6 @@ class HomeRecompositionTest {
         compose.waitForIdle()
     }
 
-    private fun assertNoRailWhenAGameMoves(edge: LeftEdgeSetting) {
-        val state = showAt(listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX), Action.Enter), FakeHomeContent.board().withLeftEdge(edge))
-        moveDownAndCount(state)
-        assertEquals("$edge: no rail letters: ${calls.filter { "RailLetter" in it }}", 0, railLetterRuns())
-        assertEquals("$edge: system rows are not recomposed by a game move", 0, count("SystemRow"))
-    }
-
-    @Test
-    fun withCountsAGameMoveComposesNoRailAtAll() = assertNoRailWhenAGameMoves(LeftEdgeSetting.Counts)
-
-    @Test
-    fun withCodesAGameMoveComposesNoRailAtAll() = assertNoRailWhenAGameMoves(LeftEdgeSetting.Codes)
-
     @Test
     fun gameMoveRecomposesOnlyTheTwoGameRows() {
         val state = showAt(listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX), Action.Enter))
@@ -190,10 +168,8 @@ class HomeRecompositionTest {
         assertEquals("game rows recomposed: ${calls.filter { "GameRow" in it }}", 2, count("GameRow"))
         assertEquals("system rows recomposed", 0, count("SystemRow"))
         assertEquals("nothing else of ours (bars, columns, hints) recomposes", emptyList<String>(), othersThatRan(detailsPoster = true))
-        // The move (Super Metroid to Yoshi's Island) crosses from the letter S to Y: exactly those two letters change look.
-        assertEquals("rail letters recomposed: ${calls.filter { "RailLetter" in it }}", 2, railLetterRuns())
         assertDetailsRanOnce("no art, 768")
-        assertEquals("the column redraws its one poster cover, once: ${detailsParts()}", 1, detailsParts().count { it == "com.plumemu.home.DetailsCover" })
+        assertEquals("the column redraws its one poster cover (the collared cover, as a box front's since the poster wears the same frame), once: ${detailsParts()}", 1, detailsParts().count { it == "com.plumemu.home.CollaredDetailsCover" })
         assertEquals(1, state.focus.row)
     }
 
@@ -265,7 +241,7 @@ class HomeRecompositionTest {
             object : HomePlayFactsSource {
                 override suspend fun read(gameId: Long): GamePlay {
                     reads += gameId
-                    return GamePlay(2, 252, com.plumemu.game.EmulatorToStart("Snes9x", isInstalled = true))
+                    return GamePlay(2, 252, com.plumemu.game.EmulatorToStart("Snes9x", isInstalled = true), hasOwnEmulator = true)
                 }
             }
         val content = numberedSnes()
@@ -301,7 +277,7 @@ class HomeRecompositionTest {
         val source =
             object : HomePlayFactsSource {
                 override suspend fun read(gameId: Long): GamePlay =
-                    GamePlay(2, 252, com.plumemu.game.EmulatorToStart("Snes9x", isInstalled = true), batteryPace = com.plumemu.battery.BatteryPace(minutesOnCharge = 120.0, percentPerHour = 30.0))
+                    GamePlay(2, 252, com.plumemu.game.EmulatorToStart("Snes9x", isInstalled = true), batteryPace = com.plumemu.battery.BatteryPace(minutesOnCharge = 120.0, percentPerHour = 30.0), hasOwnEmulator = true)
             }
         val content = numberedSnes()
         lateinit var state: StripState

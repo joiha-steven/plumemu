@@ -91,12 +91,10 @@ class SettingsStatusTest {
     }
 
     @Test
-    fun versionAndPrivacyShowNoChangeHintOnWideScreens() {
+    fun privacyShowsNoChangeHintAndVersionOpensItsPanelOnWideScreens() {
         show(optionsAt(SettingsOption.Version))
-        compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertDoesNotExist()
+        compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed() // Version: A opens its panel
         compose.onNodeWithTag(SettingsTags.HINT_BACK).assertIsDisplayed()
-        press(Action.Move(Direction.Down)) // Updates: A opens its panel
-        compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed()
         press(Action.Move(Direction.Down)) // Send usage statistics: A flips it
         compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed()
         press(Action.Move(Direction.Down)) // Open-source licenses: A opens the list

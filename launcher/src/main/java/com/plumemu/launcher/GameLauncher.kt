@@ -105,7 +105,7 @@ class GameLauncher internal constructor(
         val early = if (readsId != null) checkFile(target, documentUri, readsId) else null
         if (early is FileCheck.Stop) return early.outcome
         val ready = early as? FileCheck.Ready
-        val built = LaunchSpecs.build(pick.emulator, location, pick.packageName, ready?.vitaTitleId, ready?.steamAppId)
+        val built = LaunchSpecs.build(pick.emulator, location, pick.packageName, ready?.vitaTitleId, ready?.steamAppId, target.fileName)
         val spec = when (built) {
             is LaunchResult.Built -> built.spec
             is LaunchResult.NeedsFilePath -> return LaunchOutcome.NeedsFilePath(gameId, offerOf(pick.emulator))
@@ -175,7 +175,7 @@ class GameLauncher internal constructor(
         // Sizes only, never the content or the name: enough to tell an empty file, text
         // that is not digits and a large file (a game image renamed) apart.
         val size = if (read.complete) "${read.bytes.size} bytes" else "over $maxBytes bytes"
-        log.warn("launch: game ${target.id}: the .steam file holds no Steam app id ($problem, $size)")
+        log.warn("launch: game ${target.id}: the id file holds no game id ($problem, $size)")
         return FileCheck.Stop(LaunchOutcome.BadSteamAppIdFile(target.id, target.fileName, problem))
     }
 
@@ -239,7 +239,7 @@ class GameLauncher internal constructor(
             )
             is LaunchOutcome.FileMissing -> log.warn("$game: file not reachable (${outcome.problem})")
             is LaunchOutcome.BadTitleIdFile -> log.warn("$game: the file holds no PS Vita title ID (${outcome.problem})")
-            is LaunchOutcome.BadSteamAppIdFile -> log.warn("$game: the file holds no Steam app id (${outcome.problem})")
+            is LaunchOutcome.BadSteamAppIdFile -> log.warn("$game: the file holds no game id (${outcome.problem})")
             is LaunchOutcome.NeedsFilePath -> log.warn(
                 "$game: ${outcome.emulator.emulatorId} needs a file path and the folder has none",
             )

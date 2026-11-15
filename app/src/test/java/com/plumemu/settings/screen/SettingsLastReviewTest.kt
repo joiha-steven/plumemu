@@ -218,7 +218,7 @@ class SettingsLastReviewTest {
 
     private fun stackedButtonsAreOneWidth() {
         run {
-            open(panelRow(SettingsOption.ClearRecent).copy(column = SettingsColumn.Panel, page = PanelPage.Confirm, panelIndex = 0), size = TextSize.Largest)
+            open(panelAt(SettingsOption.ClearRecent, PanelPage.ResetRecentConfirm, 0), size = TextSize.Largest)
             val cancel = bounds(SettingsTags.panelItem(SettingsModel.CONFIRM_CANCEL))
             val clear = bounds(SettingsTags.panelItem(SettingsModel.CONFIRM_RESET))
             if (cancel.top != clear.top) assertEquals("stacked $cancel and $clear", cancel.width, clear.width, 1f)
@@ -234,7 +234,7 @@ class SettingsLastReviewTest {
 
     @Test
     fun titlesAndCrumbsHaveNoDots() {
-        open(panelRow(SettingsOption.ClearRecent).copy(column = SettingsColumn.Panel, page = PanelPage.Confirm, panelIndex = 0))
+        open(panelAt(SettingsOption.ClearRecent, PanelPage.ResetRecentConfirm, 0))
         val shown = compose.onAllNodes(hasAnyAncestor(hasTestTag(SettingsTags.PANEL)) or hasAnyAncestor(hasTestTag(SettingsTags.TOP_BAR)) or hasTestTag(SettingsTags.TOP_BAR), useUnmergedTree = true)
             .fetchSemanticsNodes().flatMap { it.config.getOrNull(SemanticsProperties.Text).orEmpty() }.map { it.text }
         val name = string(R.string.settings_clear_recent)

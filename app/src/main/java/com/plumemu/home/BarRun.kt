@@ -31,8 +31,6 @@ internal data class BarRoom(
     val top: Dp,
     val bottom: Dp,
     val height: Dp,
-    /** How much taller the strip stands than [com.plumemu.coreui.theme.PlumLayout.stripHeight], which counts the hint bar: what its absence adds. */
-    val taller: Dp = 0.dp,
 )
 
 internal val LocalBarRoom = staticCompositionLocalOf { BarRoom(PlumDimens.barGap, PlumDimens.footerGap, 0.dp) }

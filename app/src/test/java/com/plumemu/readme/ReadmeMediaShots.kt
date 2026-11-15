@@ -5,7 +5,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.ColorSetting
-import com.plumemu.coredata.settings.LeftEdgeSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SetupFlags
 import com.plumemu.coredata.settings.TextColorSetting
@@ -159,7 +158,7 @@ class ReadmeMediaShots {
             val content = limitedTo(library, "snes", 12)
             ProvideGridSize(GridSize.Medium) {
                 ProvideHomeArt(rememberSource { posterCoverSource(library) }, content.hasBoxArt) {
-                    HomeAt(content, gridActions(systemIndex("snes"), 5), gridIds = setOf("snes"), showHints = false)
+                    HomeAt(content, gridActions(systemIndex("snes"), 5), gridIds = setOf("snes"))
                 }
             }
         }
@@ -280,7 +279,7 @@ class ReadmeMediaShots {
 
     @Test
     fun systemCodes() =
-        shoot("system-codes", stored(ColorSet.Plumemu)) { HomeOf(metroidFocused, library.withLeftEdge(LeftEdgeSetting.Codes)) }
+        shoot("system-codes", stored(ColorSet.Plumemu)) { HomeOf(metroidFocused, library) }
 
     @Test
     fun colors() =
@@ -311,7 +310,7 @@ class ReadmeMediaShots {
                 notesUrl = null,
             )
         val content = SettingsContent(update = UpdateView(lastCheck = LastCheck(1_794_216_600_000L, CheckOutcome.Found), found = release))
-        val row = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1))
+        val row = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 0))
         shoot("update", stored(ColorSet.Daylight)) { s -> SettingsAt(row.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0), s, content, version = "0.1.3") }
     }
 

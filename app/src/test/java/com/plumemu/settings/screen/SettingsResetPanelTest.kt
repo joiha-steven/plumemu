@@ -10,7 +10,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Advanced › Reset…: two resets in a list, each asking first with the cursor on Cancel, by keys and by touch. */
+/** Advanced › Reset…: three items in a list (two resets and Clear Recent…), each asking first with the cursor on Cancel, by keys and by touch. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 internal class SettingsResetPanelTest : SettingsModelHarness() {
@@ -45,8 +45,21 @@ internal class SettingsResetPanelTest : SettingsModelHarness() {
         press(Action.Back)
         assertEquals(PanelPage.Reset, model.focus.page)
         assertEquals(ResetPanelItem.Library.ordinal, model.focus.panelIndex)
+        move(Direction.Down)
+        press(Action.Enter)
+        assertAsks(PanelPage.ResetRecentConfirm)
+        assertEquals(SettingsOption.ClearRecent, model.panelOption)
+        press(Action.Enter)
+        assertEquals(PanelPage.Reset, model.focus.page)
+        assertEquals(ResetPanelItem.Recent.ordinal, model.focus.panelIndex)
         assertEquals(0, actions.resetsAll)
         assertEquals(0, actions.resetsLibrary)
+        assertEquals(0, actions.recentClears)
+    }
+
+    @Test
+    fun theListHoldsThreeItemsInOrder() {
+        assertEquals(listOf(SettingsOption.ResetAll, SettingsOption.ResetLibrary, SettingsOption.ClearRecent), ResetPanelItem.entries.map { it.option })
     }
 
     @Test
@@ -100,13 +113,10 @@ internal class SettingsResetPanelTest : SettingsModelHarness() {
 
     @Test
     fun downAndUpWalkAConfirmsTwoButtonsBecauseTheyMayStack() {
-        openSection(SettingsSection.Library)
-        repeat(SettingsSection.Library.rowsIn(model.content).size) {
-            if (model.focusedOption != SettingsOption.ClearRecent) move(Direction.Down)
-        }
+        openList()
+        repeat(2) { move(Direction.Down) }
         press(Action.Enter)
-        assertEquals(PanelPage.Confirm, model.focus.page)
-        assertEquals(SettingsModel.CONFIRM_CANCEL, model.focus.panelIndex)
+        assertAsks(PanelPage.ResetRecentConfirm)
         move(Direction.Down)
         assertEquals(SettingsModel.CONFIRM_CANCEL + 1, model.focus.panelIndex)
         move(Direction.Up)

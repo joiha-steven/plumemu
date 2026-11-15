@@ -72,8 +72,8 @@ class SettingsLookPreviewTest {
 
     @Test
     fun anOptionOutsideTheLookHasTheTextPanelOnly() {
-        for (option in listOf(SettingsOption.Language, SettingsOption.ClockAndBattery, SettingsOption.Animations)) assertEquals(null, previewKindOf(option))
-        show(SettingsOption.ClockAndBattery)
+        for (option in listOf(SettingsOption.Language, SettingsOption.ShowApps, SettingsOption.Animations)) assertEquals(null, previewKindOf(option))
+        show(SettingsOption.ShowApps)
         assertFalse(hasPreview())
     }
 

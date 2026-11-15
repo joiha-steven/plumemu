@@ -115,7 +115,7 @@ class SettingsSectionsStatusTest {
 
     @Test
     fun otherSectionsDoNotCarryTheLine() {
-        show(optionsAt(SettingsOption.ShowButtonHints), SettingsContent(loadFailed = true))
+        show(optionsAt(SettingsOption.Keyboard), SettingsContent(loadFailed = true))
         compose.onNodeWithTag(SettingsTags.LOAD_FAILED).assertDoesNotExist()
     }
 

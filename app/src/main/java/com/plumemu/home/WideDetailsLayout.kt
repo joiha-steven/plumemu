@@ -7,8 +7,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.theme.PlumDimens
 
 /**
@@ -36,6 +38,11 @@ internal fun WideDetailsLayout(
     minCover: Dp? = null,
     /** What follows [rest] in the height left, cut or left out before the cover gives anything (the battery line, the synopsis). */
     tail: @Composable ColumnScope.() -> Unit = {},
+    /**
+     * A tall box ([TALL_BELOW]): [titleBlock] stands beside [cover] (which has the width it needs), top-aligned with the box, not under it,
+     * and does not count in the cover's room. The cover is the band's whole height. If no cover is left (the text-first floor) the title goes under, as always.
+     */
+    sideTitle: Boolean = false,
 ) {
     // Kept as the same object while [rest] is: a new lambda would compose its slot again.
     val restContent: @Composable () -> Unit =
@@ -59,35 +66,26 @@ internal fun WideDetailsLayout(
             } else {
                 Constraints.Infinity
             }
-        val title = titleParts.map { it.measure(loose.copy(maxHeight = titleBudget)) }
-        val titleHeight = title.sumOf { it.height }
+        // Beside the cover the title is measured after it (it needs the cover's width); until then it takes no room.
+        val titleStacked = if (sideTitle) emptyList() else titleParts.map { it.measure(loose.copy(maxHeight = titleBudget)) }
+        val titleHeightForCover = titleStacked.sumOf { it.height }
         // Text first: the whole rest is measured before the cover is sized.
         val wholeRest = if (minCover != null) restParts.map { it.measure(loose.copy(maxHeight = if (bounded) constraints.maxHeight else Constraints.Infinity)) } else null
         val wholeRestHeight = wholeRest?.sumOf { it.height } ?: 0
-        val coverPx =
-            if (minCover != null) {
-                val room = if (bounded) constraints.maxHeight - gap - titleHeight - (if (wholeRestHeight > 0) gap + wholeRestHeight else 0) else full
-                minOf(full, room).let { if (it < minCover.roundToPx()) 0 else it }
-            } else if (bounded) {
-                // The cover comes first: it keeps [PlumDimens.detailsCoverMinWide] and the facts give way (their cells leave whole, HomeDetailsBlock).
-                // But the title is known in the first frame: when the cover need only go as far as [SQUEEZED_COVER] of its floor for the facts to keep all their
-                // rows (a title of two lines), it does, and nothing leaves.
-                val factsGap = PlumDimens.detailsDividerGapTight.roundToPx().coerceAtMost(gap)
-                val roomFull = constraints.maxHeight - gap - titleHeight - (if (factsHeight > 0) gap + factsHeight else 0)
-                // The gap under the title may shrink to the facts' own tight gap (restGap below), so that is the least the facts need.
-                val roomTight = constraints.maxHeight - gap - titleHeight - (if (factsHeight > 0) factsGap + factsHeight else 0)
-                val floor = minOf(full, PlumDimens.detailsCoverMinWide.roundToPx(), (constraints.maxHeight - gap - titleHeight).coerceAtLeast(0))
-                when {
-                    roomFull >= floor -> minOf(full, roomFull)
-                    roomTight >= (floor * SQUEEZED_COVER).toInt() -> minOf(floor, roomTight)
-                    else -> floor
-                }
-            } else {
-                full
-            }
+        val coverPx = coverHeight(constraints, minCover, gap, full, titleHeightForCover, factsHeight, wholeRestHeight)
         val cover = coverParts.map { it.measure(loose.copy(minHeight = coverPx, maxHeight = coverPx)) }
-        // No cover: the title starts at the top, without the gap that would stand above it.
-        val coverBlock = if (coverPx == 0) 0 else coverPx + gap
+        val besideTitle = sideTitle && coverPx > 0
+        val coverWidth = cover.maxOfOrNull { it.width } ?: 0
+        val topPad = CollarSize.Cover.topPadding.roundToPx()
+        val title =
+            when {
+                besideTitle -> titleParts.map { it.measure(loose.copy(maxWidth = (constraints.maxWidth - coverWidth - gap).coerceAtLeast(0), maxHeight = (coverPx - topPad).coerceAtLeast(0))) }
+                sideTitle -> titleParts.map { it.measure(loose.copy(maxHeight = titleBudget)) }
+                else -> titleStacked
+            }
+        val titleHeight = if (besideTitle) 0 else title.sumOf { it.height }
+        // No cover: the title starts at the top, without the gap that would stand above it. Beside the cover, the band is the cover's height.
+        val coverBlock = if (coverPx == 0) 0 else if (besideTitle) coverPx else coverPx + gap
         val used = coverBlock + titleHeight
         // With no cover left to give up (at its floor, or none), the gap under the title gives next (down to the facts' own tight gap), before the facts do.
         val restGap =
@@ -102,14 +100,20 @@ internal fun WideDetailsLayout(
         val tailPlaced = tailParts.map { it.measure(loose.copy(maxHeight = if (bounded) tailMax else Constraints.Infinity)) }
         val restHeight = rest.sumOf { it.height } + tailPlaced.sumOf { it.height }.let { if (it > 0 && rest.sumOf { r -> r.height } > 0) it + gap else it }
         // Without a title block (the systems focused) the column is the cover alone, as before.
-        val height = if (titleHeight == 0) coverPx else used + if (restHeight > 0) restGap + restHeight else 0
+        val height = if (titleHeight == 0 && !besideTitle) coverPx else used + if (restHeight > 0) restGap + restHeight else 0
         val width = (cover + title + rest).maxOfOrNull { it.width } ?: 0
         layout(width.coerceIn(constraints.minWidth, constraints.maxWidth), height.coerceIn(constraints.minHeight, constraints.maxHeight)) {
             cover.forEach { it.place(0, 0) }
             var y = coverBlock
-            title.forEach {
-                it.place(0, y)
-                y += it.height
+            if (besideTitle) {
+                title.forEach {
+                    it.place(coverWidth + gap, topPad)
+                }
+            } else {
+                title.forEach {
+                    it.place(0, y)
+                    y += it.height
+                }
             }
             y += restGap
             rest.forEach {
@@ -122,6 +126,42 @@ internal fun WideDetailsLayout(
                 y += it.height
             }
         }
+    }
+}
+
+/**
+ * The cover's height in px: with [minCover] what the text leaves (left out under it); otherwise the full height unless the title and the facts need room, never under
+ * the cover's floor (the facts give way) except by [SQUEEZED_COVER] of it when that keeps all their rows. [titleHeightForCover] is the title's stacked height, 0 when it stands beside the cover.
+ */
+private fun MeasureScope.coverHeight(
+    constraints: Constraints,
+    minCover: Dp?,
+    gap: Int,
+    full: Int,
+    titleHeightForCover: Int,
+    factsHeight: Int,
+    wholeRestHeight: Int,
+): Int {
+    val bounded = constraints.hasBoundedHeight
+    return if (minCover != null) {
+        val room = if (bounded) constraints.maxHeight - gap - titleHeightForCover - (if (wholeRestHeight > 0) gap + wholeRestHeight else 0) else full
+        minOf(full, room).let { if (it < minCover.roundToPx()) 0 else it }
+    } else if (bounded) {
+        // The cover comes first: it keeps [PlumDimens.detailsCoverMinWide] and the facts give way (their cells leave whole, HomeDetailsBlock).
+        // But the title is known in the first frame: when the cover need only go as far as [SQUEEZED_COVER] of its floor for the facts to keep all their
+        // rows (a title of two lines), it does, and nothing leaves.
+        val factsGap = PlumDimens.detailsDividerGapTight.roundToPx().coerceAtMost(gap)
+        val roomFull = constraints.maxHeight - gap - titleHeightForCover - (if (factsHeight > 0) gap + factsHeight else 0)
+        // The gap under the title may shrink to the facts' own tight gap (restGap below), so that is the least the facts need.
+        val roomTight = constraints.maxHeight - gap - titleHeightForCover - (if (factsHeight > 0) factsGap + factsHeight else 0)
+        val floor = minOf(full, PlumDimens.detailsCoverMinWide.roundToPx(), (constraints.maxHeight - gap - titleHeightForCover).coerceAtLeast(0))
+        when {
+            roomFull >= floor -> minOf(full, roomFull)
+            roomTight >= (floor * SQUEEZED_COVER).toInt() -> minOf(floor, roomTight)
+            else -> floor
+        }
+    } else {
+        full
     }
 }
 
@@ -151,6 +191,9 @@ internal fun TitleBlock(
         }
     }
 }
+
+/** A box narrower than this (width over height) is Tall: the wide column puts the title beside it. */
+internal const val TALL_BELOW = 0.85f
 
 /** The least share of [PlumDimens.detailsCoverMinWide] the cover keeps when the title and the facts need the room. */
 private const val SQUEEZED_COVER = 0.77f

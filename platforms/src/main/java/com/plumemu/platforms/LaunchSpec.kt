@@ -48,7 +48,9 @@ object LaunchSpecs {
     /**
      * [installedPackage] picks one of the emulator's packages; null uses the preferred one.
      * [vitaTitleId] is the content of the game's `.psvita` file, needed only by [PassMode.VitaTitleId] emulators;
-     * [steamAppId] the content of its `.steam` file, needed only by [PassMode.SteamAppId] ones.
+     * [steamAppId] the content of its id file (`.steam`, `.epic`, ...), needed only by [PassMode.SteamAppId] ones.
+     * [fileName] is the game file's name: its extension picks [Emulator.extrasByExtension] (any case); without
+     * a name, or for an extension with none, only [Emulator.extras] apply.
      */
     fun build(
         emulator: Emulator,
@@ -56,6 +58,7 @@ object LaunchSpecs {
         installedPackage: String? = null,
         vitaTitleId: VitaTitleId? = null,
         steamAppId: SteamAppId? = null,
+        fileName: String? = null,
     ): LaunchResult {
         val variant = if (installedPackage == null) emulator.primary else
             emulator.allPackages.firstOrNull { it.packageName == installedPackage }
@@ -69,6 +72,8 @@ object LaunchSpecs {
         }
         val extras = LinkedHashMap<String, ExtraValue>()
         for ((key, value) in emulator.extras) extras[key] = fill(value, variant.packageName, emulator.core)
+        val extension = fileName?.substringAfterLast('.', "")?.lowercase(java.util.Locale.ROOT).orEmpty()
+        emulator.extrasByExtension[extension]?.forEach { (key, value) -> extras[key] = fill(value, variant.packageName, emulator.core) }
         var data: String? = null
         when (emulator.game.target) {
             // A template (DroidDeck's droiddeck://game/{id}) takes the id; otherwise the data is the game.

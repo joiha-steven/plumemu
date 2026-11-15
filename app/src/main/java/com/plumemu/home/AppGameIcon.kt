@@ -38,7 +38,7 @@ internal fun AppGameIcon(
     Box(modifier.size(size).semantics { contentDescription = title }, contentAlignment = Alignment.Center) {
         val iconModifier = Modifier.size(icon)
         when (shown) {
-            is TileIcon.Picture -> Image(shown.image, contentDescription = null, modifier = iconModifier.testTag(HomeTags.APP_GAME_ICON))
+            is TileIcon.Picture -> Image(shown.image, contentDescription = null, modifier = iconModifier.gridTag(HomeTags.APP_GAME_ICON))
             TileIcon.Missing -> AppIconStandIn(title, iconModifier, letterSize = if (maxIcon > AppsGridDimens.appGameDetailsIcon) icon.value * STAND_IN_LETTER_SHARE else null)
             TileIcon.Loading -> Unit
         }

@@ -8,23 +8,34 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Settings › Library › Clear Recent…: it asks first with Cancel focused, says play time and statistics stay, then reports the count or the failure.
+ * Settings › Advanced › Reset… › Clear Recent…: it asks first with Cancel focused, says play time and statistics stay, then reports the count or the failure on its item.
  */
 internal class SettingsRecentTest : SettingsModelHarness() {
     private val library = SettingsSection.Library.rowsIn(SettingsContent())
 
-    private fun openConfirm(again: Boolean = false) {
-        if (!again) openSection(SettingsSection.Library)
-        focusOption(SettingsOption.ClearRecent)
+    private fun openList() {
+        model.content = SettingsContent()
+        openSection(SettingsSection.Advanced)
+        focusOption(SettingsOption.Reset)
         press(Action.Enter)
-        assertEquals(PanelPage.Confirm, model.focus.page)
+        assertEquals(PanelPage.Reset, model.focus.page)
+    }
+
+    private fun openConfirm(again: Boolean = false) {
+        if (!again) openList()
+        // Clear Recent… is the list's third item; after a confirm the cursor is already on it.
+        while (model.focus.panelIndex != ResetPanelItem.Recent.ordinal) move(Direction.Down)
+        press(Action.Enter)
+        assertEquals(PanelPage.ResetRecentConfirm, model.focus.page)
+        assertEquals(SettingsOption.ClearRecent, model.panelOption)
     }
 
     @Test
-    fun clearRecentIsLast() {
-        assertEquals(SettingsOption.ClearRecent, library.last())
+    fun libraryNoLongerListsClearRecent() {
+        assertTrue(SettingsOption.ClearRecent !in SettingsSection.Library.rowsIn(SettingsContent()))
         val everyRow = SettingsContent(hiddenGames = listOf(SettingsGame(1, "x", "y")), unidentifiedGames = listOf(SettingsGame(2, "x", "y")))
-        assertEquals(listOf(SettingsOption.HiddenGames, SettingsOption.ClearRecent), SettingsSection.Library.rowsIn(everyRow).takeLast(2))
+        assertEquals(SettingsOption.HiddenGames, SettingsSection.Library.rowsIn(everyRow).last())
+        assertEquals(ResetPanelItem.Recent.option, SettingsOption.ClearRecent)
     }
 
     @Test
@@ -38,9 +49,11 @@ internal class SettingsRecentTest : SettingsModelHarness() {
     fun cancelAndBackDoNothing() {
         openConfirm()
         press(Action.Enter)
-        assertNull(model.focus.page)
+        assertEquals("Cancel goes back on its item", PanelPage.Reset, model.focus.page)
+        assertEquals(ResetPanelItem.Recent.ordinal, model.focus.panelIndex)
         openConfirm(again = true)
         press(Action.Back)
+        assertEquals(PanelPage.Reset, model.focus.page)
         assertEquals(0, actions.recentClears)
         assertNull(model.work.notice)
     }
@@ -53,6 +66,8 @@ internal class SettingsRecentTest : SettingsModelHarness() {
         assertEquals(1, actions.recentClears)
         assertEquals(SettingsOption.ClearRecent to SettingsNotice.RecentCleared, model.work.notice)
         assertEquals(3, model.work.noticeCount)
+        assertEquals("the result shows on its item", PanelPage.Reset, model.focus.page)
+        assertEquals(SettingsOption.ClearRecent, model.doneOption)
     }
 
     @Test
@@ -84,15 +99,24 @@ internal class SettingsRecentTest : SettingsModelHarness() {
     }
 
     @Test
-    fun clearByTouchNeedsTheSecondTapOnTheButton() {
-        openSection(SettingsSection.Library)
-        val row = library.indexOf(SettingsOption.ClearRecent)
-        model.onTapOption(row, actions.settings, wide)
-        model.onTapOption(row, actions.settings, wide)
-        assertEquals(PanelPage.Confirm, model.focus.page)
+    fun clearByTouchNeedsTheSecondTapOnTheItemAndOnTheButton() {
+        openSection(SettingsSection.Advanced)
+        focusOption(SettingsOption.Reset)
+        model.onTapPanelItem(ResetPanelItem.Recent.ordinal, actions.settings, wide)
+        assertEquals(PanelPage.Reset, model.focus.page)
+        model.onTapPanelItem(ResetPanelItem.Recent.ordinal, actions.settings, wide)
+        assertEquals(PanelPage.ResetRecentConfirm, model.focus.page)
         model.onTapPanelItem(SettingsModel.CONFIRM_RESET, actions.settings, wide)
         assertEquals("the first tap only focuses Clear", 0, actions.recentClears)
         model.onTapPanelItem(SettingsModel.CONFIRM_RESET, actions.settings, wide)
         assertEquals(1, actions.recentClears)
+    }
+
+    @Test
+    fun threeQuickAsOnTheItemClearNothing() {
+        openList()
+        repeat(2) { move(Direction.Down) }
+        repeat(3) { press(Action.Enter) }
+        assertEquals(0, actions.recentClears)
     }
 }

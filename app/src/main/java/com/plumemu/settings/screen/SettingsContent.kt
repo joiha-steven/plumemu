@@ -23,7 +23,6 @@ import com.plumemu.secondscreen.SecondScreen
 import com.plumemu.secondscreen.isSecondScreenOn
 import com.plumemu.setup.SetupFolder
 import com.plumemu.game.RenameBoxArtNotice
-import com.plumemu.game.SortChoices
 
 /*
  * What Settings shows besides the stored settings: the picked folders, the scan, the
@@ -54,16 +53,10 @@ internal data class SettingsContent(
     val hasUsageAccess: Boolean = false,
     /** The device can vibrate (`withVibrator`): Controls lists Vibration only then; the last row, so a late "no" moves nothing. */
     val hasVibrator: Boolean = true,
-    /** Show button hints is off: the grid's tappable Size hint is gone, so Home screen lists Grid size for touch. */
-    val hasNoButtonHints: Boolean = false,
     /** Folders whose removal runs in the process (it may have been asked for in an earlier Settings). */
     val removingFolderIds: Set<Long> = emptySet(),
     /** Folders and emulators could not be read; Settings says so (opening it again reads anew). */
     val loadFailed: Boolean = false,
-    /** Some listed game has a year from ScreenScraper: Sort games lists Year only then (or while it is the sort in use). */
-    val hasYear: Boolean = false,
-    /** Some listed game has a rating from ScreenScraper: Sort games lists Rating only then (or while it is the sort in use). */
-    val hasRating: Boolean = false,
     /** Library › Hidden games, by sort name (the row shows only when there are some). */
     val hiddenGames: List<SettingsGame> = emptyList(),
     /** Library › Unidentified games: named only from the file, by sort name. */
@@ -94,7 +87,7 @@ internal data class SettingsContent(
      * "Report a problem" rows are not listed. Default from this build, so the first content, before anything is read, already lists the right rows.
      */
     val hasStatistics: Boolean = BuildFeatures.hasStatistics,
-    /** An update manifest is named (`BuildFeatures.hasUpdates`): without one the About update rows are not listed. */
+    /** An update manifest is named (`BuildFeatures.hasUpdates`): without one About › Version is read only. */
     val hasUpdates: Boolean = BuildFeatures.hasUpdates,
     /** About's updates (`AppGraph.updates`): the last check, what it found, and an update under way. */
     val update: UpdateView = UpdateView(),
@@ -127,14 +120,10 @@ internal data class SettingsContent(
     /** Statistics' figures, read once when Settings opens ([rememberStatistics]); no rows until they arrive. */
     val statistics: StatisticsState = StatisticsState.NotRead,
 ) {
-    /** Which of Year and Rating Sort games lists now ([hasYear], [hasRating]). */
-    val sortValues: SortChoices.Values get() = SortChoices.Values(hasYear, hasRating)
-
     /** False for a row that needs a statistics server or an update manifest this build does not have (Export logs: one that a statistics server replaces). */
     fun isInThisBuild(option: SettingsOption): Boolean =
         when (option) {
             SettingsOption.UsageStatistics, SettingsOption.ReportProblem -> hasStatistics
-            SettingsOption.Updates -> hasUpdates
             // Report a problem's Share log does it where there is a form.
             SettingsOption.ExportLogs -> !hasStatistics
             else -> true
@@ -274,7 +263,7 @@ internal enum class SettingsNotice(
     BoxArtClearInUse(R.string.settings_box_art_clear_in_use),
     BoxArtClearRunGoing(R.string.settings_box_art_clear_run_going),
 
-    /** Library › Clear Recent…: how many games left Recent, that it was already empty, or that it could not be written. */
+    /** Advanced › Reset… › Clear Recent…: how many games left Recent, that it was already empty, or that it could not be written. */
     RecentCleared(plural = R.plurals.settings_clear_recent_done),
     RecentAlreadyEmpty(R.string.settings_clear_recent_empty),
     RecentClearFailed(R.string.settings_clear_recent_failed),

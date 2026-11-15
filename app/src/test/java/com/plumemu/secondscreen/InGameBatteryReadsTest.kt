@@ -93,21 +93,13 @@ class InGameBatteryReadsTest : SecondScreenHostTestBase() {
     }
 
     @Test
-    fun showBatteryOffReadsNothingAndTurningItOnStartsTheReads() {
+    fun aStoredShowBatteryOffIsNoLongerReadAndTheMeterIsRead() {
         showBattery(false)
         val host = startHost(battery = reads)
         startAGame()
         assertEquals(WindowMode.InGameClock, host.shownMode)
-        idle(30_000)
-        assertEquals("the card is the time alone: nothing read", 0, counting.reads)
-        showBattery(true)
         idle(11_000)
-        assertTrue("on again: reads ${counting.reads}", counting.reads >= 2)
-        showBattery(false)
-        idle()
-        val atOff = counting.reads
-        idle(30_000)
-        assertEquals("off again: the reads stop", atOff, counting.reads)
+        assertTrue("reads ${counting.reads}", counting.reads >= 2)
     }
 
     @Test

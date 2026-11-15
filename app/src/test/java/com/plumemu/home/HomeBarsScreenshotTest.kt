@@ -10,21 +10,13 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The main screen with Settings' switches off: Show button hints (the strip takes the
- * bar's place), Clock and Show battery (the top bar keeps its place line), Show Android apps (no
- * Apps entry; the systems move up).
+ * The main screen with the hint bar's variants and Settings' switches off: Push right to play's hints, Show Android
+ * apps (no Apps entry; the systems move up).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class HomeBarsScreenshotTest {
-    @Test
-    fun hintsOff() = ReferenceShots.capture("home_hints_off") { HomeAt(FakeHomeContent.board(), BoardSystemsFocused, showHints = false) }
-
-    @Test
-    fun clockAndBatteryOff() =
-        ReferenceShots.capture("home_clock_battery_off") { HomeAt(FakeHomeContent.board(), BoardSystemsFocused, clock = { null }, battery = { null }) }
-
     /** Push right to play on: the hint bar adds "→ Twice to play" beside "A Play" (a list). */
     @Test
     fun pushRightToPlayHint() =

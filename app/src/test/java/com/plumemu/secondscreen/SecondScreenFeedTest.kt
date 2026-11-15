@@ -29,7 +29,7 @@ class SecondScreenFeedTest {
     private val warnings = mutableListOf<String>()
 
     private fun TestScope.feed(facts: (suspend (SecondScreenContent) -> SecondScreenContent?)? = null) =
-        SecondScreenFeed(backgroundScope, facts, io = StandardTestDispatcher(testScheduler), warn = { warnings += it })
+        SecondScreenFeed(backgroundScope, facts, io = StandardTestDispatcher(testScheduler), warn = { warnings += it }, nextFrame = {})
 
     /** Runs the clock to [ms] after now and everything due then. */
     private fun TestScope.after(ms: Long) {
@@ -486,5 +486,49 @@ class SecondScreenFeedTest {
             assertEquals("game 1 never shown", SecondScreenContent.Calm, feed.content.value)
             after(1)
             assertEquals(played(2), feed.content.value)
+        }
+
+    @Test
+    fun aSettledCardArrivesOneFrameLaterAndNoFrameIsSkippedOrDoubled() =
+        runTest {
+            val frames = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.UNLIMITED)
+            var asked = 0
+            val feed = SecondScreenFeed(backgroundScope, null, io = StandardTestDispatcher(testScheduler), warn = { warnings += it }, nextFrame = {
+                asked++
+                frames.receive()
+            })
+            feed.offer(game(1))
+            after(SETTLE_MS)
+            assertEquals("settled, but the frame has not come", SecondScreenContent.Calm, feed.content.value)
+            assertEquals("one frame asked for", 1, asked)
+            frames.trySend(Unit)
+            runCurrent()
+            assertEquals("one frame later", game(1), feed.content.value)
+            after(SETTLE_MS * 3)
+            assertEquals("no second frame asked for", 1, asked)
+            feed.offer(game(2))
+            after(SETTLE_MS)
+            assertEquals("the old card stays until the frame", game(1), feed.content.value)
+            frames.trySend(Unit)
+            runCurrent()
+            assertEquals(game(2), feed.content.value)
+            assertEquals("one frame per card", 2, asked)
+        }
+
+    @Test
+    fun aMoveInTheWaitedFrameDropsTheCard() =
+        runTest {
+            val frames = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.UNLIMITED)
+            val feed = SecondScreenFeed(backgroundScope, null, io = StandardTestDispatcher(testScheduler), warn = { warnings += it }, nextFrame = { frames.receive() })
+            feed.offer(game(1))
+            after(SETTLE_MS)
+            feed.offer(game(2))
+            frames.trySend(Unit)
+            runCurrent()
+            assertEquals("the dropped card never shows", SecondScreenContent.Calm, feed.content.value)
+            after(SETTLE_MS)
+            frames.trySend(Unit)
+            runCurrent()
+            assertEquals(game(2), feed.content.value)
         }
 }

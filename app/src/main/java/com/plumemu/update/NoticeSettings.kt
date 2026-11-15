@@ -10,7 +10,7 @@ import android.provider.Settings
 import android.util.Log
 
 /**
- * Android's notification settings for Plumemu, for the Updates panel's "Turn on notifications" button: Android's permission
+ * Android's notification settings for Plumemu, for Version's panel's "Turn on notifications" button: Android's permission
  * question shows no gamepad focus and an A press can land on "Don't allow", so the person can allow it here instead.
  */
 internal object NoticeSettings {

@@ -52,15 +52,15 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
     private val found = UpdateView(lastCheck = LastCheck(1, CheckOutcome.Found), found = release)
 
     @Test
-    fun aboutHasOneUpdatesRowWhetherOrNotAnUpdateIsFound() {
-        val rows = listOf(SettingsOption.Version, SettingsOption.Updates, SettingsOption.UsageStatistics, SettingsOption.Licenses, SettingsOption.Privacy, SettingsOption.ReportProblem)
+    fun aboutHasOneVersionRowWhetherOrNotAnUpdateIsFound() {
+        val rows = listOf(SettingsOption.Version, SettingsOption.UsageStatistics, SettingsOption.Licenses, SettingsOption.Privacy, SettingsOption.ReportProblem)
         assertEquals(rows, SettingsSection.About.rowsIn(SettingsContent(hasStatistics = true, hasUpdates = true)))
         assertEquals(rows, SettingsSection.About.rowsIn(SettingsContent(hasStatistics = true, hasUpdates = true, update = found)))
     }
 
     private fun openPanel() {
         openAbout()
-        focusHere(SettingsOption.Updates)
+        focusHere(SettingsOption.Version)
         pressHere(Action.Enter)
         assertEquals(PanelPage.Update, about.focus.page)
     }
@@ -246,7 +246,7 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
     fun oneTapChangesTheDailySwitchBesideItsRowAndBesideAnUpdate() {
         about.content = about.content.copy(update = found)
         openAbout()
-        focusHere(SettingsOption.Updates)
+        focusHere(SettingsOption.Version)
         assertEquals(SettingsColumn.Options, about.focus.column)
         val before = actions.settings
         about.onTapPanelItem(dailyIndex, actions.shown, wide)

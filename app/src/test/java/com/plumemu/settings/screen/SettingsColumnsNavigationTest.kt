@@ -110,8 +110,8 @@ class SettingsColumnsNavigationTest {
         open()
         tag(SettingsTags.section(SettingsSection.Appearance)).performClick()
         tag(SettingsTags.section(SettingsSection.Appearance)).performClick()
-        tag(SettingsTags.option(SettingsOption.Accent)).performClick() // its options, on Accent color
-        send(Action.Move(Direction.Right)) // into Accent color's panel
+        tag(SettingsTags.option(SettingsOption.Colors)).performClick() // its options, on Colors
+        send(Action.Move(Direction.Right)) // into Colors' panel
         assertSectionsVisible(SettingsSection.Appearance)
         send(Action.Back)
         assertSectionsVisible(SettingsSection.Appearance)
@@ -122,7 +122,7 @@ class SettingsColumnsNavigationTest {
         open()
         tag(SettingsTags.section(SettingsSection.Appearance)).performClick()
         tag(SettingsTags.section(SettingsSection.Appearance)).performClick() // the second tap enters its options
-        tag(SettingsTags.option(SettingsOption.Accent)).performClick() // an option is focused
+        tag(SettingsTags.option(SettingsOption.Colors)).performClick() // an option is focused
         assertSectionsVisible(SettingsSection.Appearance)
         tag(SettingsTags.section(SettingsSection.Advanced)).performScrollTo().performClick() // the sections scroll at the default size
         compose.waitForIdle()

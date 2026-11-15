@@ -20,6 +20,8 @@ internal class GridEdgeFades(
     private val ringPx: Float = 0f,
     /** Room the fade has finished in below the run's end (home's footer gap): a bottom row is judged by [minShown] of it counting this room, or one a hair short vanishes. */
     private val bottomGapPx: Float = 0f,
+    /** Whether this grid is the one on screen, read while drawing: a grid kept built beside it takes no part in the screen's fades ([BarRunners]). */
+    private val isShown: () -> Boolean = { true },
     private val focused: () -> Int,
 ) : EdgeFades, BarRunner {
     override val canScroll: Boolean
@@ -36,13 +38,13 @@ internal class GridEdgeFades(
     ): Float = 0f
 
     override val runsUnderTop: Boolean
-        get() = grid.canScrollBackward
+        get() = isShown() && grid.canScrollBackward
 
-    override fun focusUnderTop(bandPx: Float): Boolean = grid.layoutInfo.visibleItemsInfo.any { it.index == focused() && it.offset.y + topRoom + glide.offset < bandPx }
+    override fun focusUnderTop(bandPx: Float): Boolean = isShown() && grid.layoutInfo.visibleItemsInfo.any { it.index == focused() && it.offset.y + topRoom + glide.offset < bandPx }
 
     override val roomUnderFocus: Float
         get() {
-            if (liftShare < 0f) return Float.POSITIVE_INFINITY
+            if (liftShare < 0f || !isShown()) return Float.POSITIVE_INFINITY
             val info = grid.layoutInfo
             val item = info.visibleItemsInfo.firstOrNull { it.index == focused() } ?: return Float.POSITIVE_INFINITY
             val run = info.viewportSize.height - 2 * (info.beforeContentPadding - topRoom)

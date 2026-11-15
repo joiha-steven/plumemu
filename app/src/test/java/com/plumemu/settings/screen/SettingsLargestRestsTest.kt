@@ -115,8 +115,10 @@ class SettingsLargestRestsTest {
     @Test
     fun clearRecentShowsItsTextAndBothButtonsWhole() =
         inBothThemes {
-            onRow(SettingsOption.ClearRecent)
-            val steps = listOf<Action?>(null, Action.Enter, Action.Move(Direction.Right))
+            onRow(SettingsOption.Reset)
+            // Reset…'s list, then its third item: Clear Recent…'s confirm.
+            listOf(Action.Enter, Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Enter).forEach(::press)
+            val steps = listOf<Action?>(null, Action.Move(Direction.Right))
             for (step in steps) {
                 step?.let(::press)
                 assertWholeInPanel(SettingsTags.panelItem(SettingsModel.CONFIRM_CANCEL))
@@ -182,7 +184,7 @@ class SettingsLargestRestsTest {
             onRow(SettingsOption.RetroAchievementsAccount)
             press(Action.Enter)
             assertNoLineStartsWithTheDot(compose.onNodeWithTag(SettingsPanelTags.STATUS, useUnmergedTree = true).fetchSemanticsNode())
-            onRow(SettingsOption.Updates)
+            onRow(SettingsOption.Version)
             press(Action.Enter)
             assertNoLineStartsWithTheDot(compose.onNode(hasText("Released", substring = true), useUnmergedTree = true).fetchSemanticsNode())
         }

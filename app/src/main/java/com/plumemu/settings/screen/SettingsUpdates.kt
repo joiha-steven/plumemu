@@ -55,8 +55,8 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 /*
- * Settings › About › Updates: the row (the update found, or the last check) and its panel: the status
- * line; while an update is found its notes, size, Update and the steps after it; Check now; and the
+ * Settings › About › Version: the row (the installed version and the update found, or the last check) and its panel: the
+ * version and the platform data; the status line; while an update is found its notes, size, Update and the steps after it; Check now; and the
  * daily switch with what it sends. The work is the graph's (`Updates`); this file only shows it.
  */
 
@@ -90,7 +90,7 @@ internal interface SettingsUpdateActions {
     }
 }
 
-/** What the Updates panel can focus, top to bottom: the update's own buttons, Check now, the daily switch. */
+/** What Version's panel can focus, top to bottom: the update's own buttons, Check now, the daily switch. */
 internal enum class UpdatePanelItem { Update, DownloadAnyway, AllowInstalls, Cancel, TurnOnNotifications, CheckNow, CheckDaily }
 
 /**
@@ -130,10 +130,16 @@ internal fun updateStepItems(view: UpdateView): List<UpdatePanelItem> =
 /** Everything the panel can focus: Check now stays through an update, whose status then says why it does nothing. */
 internal fun updatesPanelItems(view: UpdateView): List<UpdatePanelItem> = updateStepItems(view) + UpdatePanelItem.CheckNow + UpdatePanelItem.CheckDaily
 
-/** The row's value: the update found, else the last check; "»" unless an update runs. */
+/**
+ * Version's value: the update found ("0.1.6 available", or a word while it runs), else the installed version with the last check's
+ * answer ("0.1.5 · Up to date"; the time is in the panel), or the version alone before the first check. "»" unless an update runs.
+ */
 @Composable
-internal fun updatesRowValue(view: UpdateView): OptionValue =
-    if (view.found != null) opensUnlessBusy(updateRowValue(view), view.isUpdateRunning) else OptionValue.Opens(checkRowValue(view))
+internal fun versionRowValue(
+    installed: String,
+    view: UpdateView,
+): OptionValue =
+    if (view.found != null) opensUnlessBusy(updateRowValue(view), view.isUpdateRunning) else OptionValue.Opens(withCheck(installed, view))
 
 /** The value while an update is found: "0.1.3 available" (never the bare number, which reads as the installed one), or a word while an update runs. */
 @Composable
@@ -147,20 +153,24 @@ internal fun updateRowValue(view: UpdateView): String {
     }
 }
 
-/** The value with no update found: "Checking…", or the last result and when ("Up to date · 10:15 AM"), or nothing before the first check. */
+/** [installed] and the check in words: "Checking…", or the last result ("Up to date"); the bare version before the first check. */
 @Composable
-internal fun checkRowValue(view: UpdateView): String {
-    if (view.isUpdateRunning) return stringResource(R.string.settings_check_updates_value_busy)
-    if (view.isChecking) return stringResource(R.string.settings_check_updates_checking)
-    val last = view.lastCheck ?: return ""
+private fun withCheck(
+    installed: String,
+    view: UpdateView,
+): String {
     val word =
-        when (last.outcome) {
-            CheckOutcome.UpToDate -> R.string.settings_check_updates_value_up_to_date
-            CheckOutcome.Found -> R.string.settings_check_updates_value_found
-            CheckOutcome.NeedsNewerAndroid -> R.string.settings_check_updates_value_needs_android
-            is CheckOutcome.Failed -> R.string.settings_check_updates_value_failed
+        when {
+            view.isChecking -> R.string.settings_check_updates_checking
+            else ->
+                when (view.lastCheck?.outcome ?: return installed) {
+                    CheckOutcome.UpToDate -> R.string.settings_check_updates_value_up_to_date
+                    CheckOutcome.Found -> R.string.settings_check_updates_value_found
+                    CheckOutcome.NeedsNewerAndroid -> R.string.settings_check_updates_value_needs_android
+                    is CheckOutcome.Failed -> R.string.settings_check_updates_value_failed
+                }
         }
-    return stringResource(R.string.settings_check_updates_value, stringResource(word), checkTime(last.at))
+    return stringResource(R.string.settings_check_updates_value, installed, stringResource(word))
 }
 
 /** A time today ("10:15 AM"), else a date ("Oct 22, 2026"), in the device's formats. */
@@ -289,6 +299,7 @@ internal fun UpdatePanel(
                         val (from, to) = titleVersions(installedLine, found)
                         PanelTitleOr(stringResource(R.string.settings_update_title, from, to), stringResource(R.string.settings_update_title_short, from, to))
                         PanelFacts(stringResource(R.string.settings_update_facts, releaseDateText(found.released), Formatter.formatShortFileSize(LocalContext.current, found.size)))
+                        model.content.platformData?.let { PlatformDataLine(it) }
                     },
                     notes = { UpdateNotes(found, model, Modifier) },
                     bottom = {
@@ -300,11 +311,16 @@ internal fun UpdatePanel(
                 LastCheckUnderUpdate(view)
                 buttons { it == UpdatePanelItem.CheckNow }
             } else {
-                PanelTitle(stringResource(R.string.settings_updates))
+                PanelTitle(stringResource(R.string.settings_version))
+                BasicText(stringResource(R.string.settings_version_line, installedLine), style = PlumTheme.type.meta.copy(color = PlumTheme.colors.meta), maxLines = 1, modifier = Modifier.onPanelTextLine())
+                model.content.platformData?.let { PlatformDataLine(it) }
                 PanelBody(stringResource(R.string.settings_check_updates_body))
                 UpdateStatus(view, isOnCheckNow = false)
                 buttons { true }
             }
+            // What Plumemu is and what the platform data is, under the buttons: the update stays on the first screen.
+            PanelBody(stringResource(R.string.settings_about_body))
+            if (model.content.platformData != null) PanelBody(stringResource(R.string.settings_platform_data_body))
             DailySwitch(settings, isFocused = focused == UpdatePanelItem.CheckDaily, items.indexOf(UpdatePanelItem.CheckDaily), touch)
         }
         if (scroll.canScrollBackward) ListEdgeFade(atBottom = false, Modifier.align(Alignment.TopCenter))

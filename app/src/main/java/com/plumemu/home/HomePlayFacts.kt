@@ -37,7 +37,16 @@ internal data class GamePlay(
     val emulator: EmulatorToStart?,
     /** The game's usual battery pace; null: never measured, or not read (no battery line). */
     val batteryPace: BatteryPace? = null,
+    /**
+     * The game's own emulator or core choice ("Play with") changes what Play starts: only then the details show an Emulator cell
+     * (otherwise it is the system's, in Info and Settings).
+     */
+    val hasOwnEmulator: Boolean,
 )
+
+/** The Emulator cell's text: the game's own choice in the Info panel's words, else "" (no cell). */
+@Composable
+internal fun GamePlay.emulatorText(): String = if (hasOwnEmulator) emulatorLabel(emulator) else ""
 
 /**
  * Where the details column reads the focused game's play facts. The library's is `content/LibraryPlayFacts` (`AppGraph.homePlayFacts()`,
@@ -163,7 +172,7 @@ internal fun DetailsFacts(
                         repeat(FACT_ROWS) { BasicText(text = HELD_LINE, style = style, maxLines = 1) }
                     }
                 } else {
-                    Facts(PlayFacts(read.play.lastPlayedDaysAgo, read.play.playTimeMinutes, emulatorLabel(read.play.emulator)), style)
+                    Facts(PlayFacts(read.play.lastPlayedDaysAgo, read.play.playTimeMinutes, read.play.emulatorText()), style)
                 }
                 // Under the table, in its value colour, up to [BATTERY_LINES] lines (it drops "on this charge", then is left out, rather than be cut). One line of its room is held.
                 Box(Modifier.padding(top = PlumDimens.factsRowGap)) {
@@ -180,5 +189,5 @@ internal fun DetailsFacts(
 private const val BATTERY_LINES = 3
 
 /** Last played, play time, emulator. */
-private const val FACT_ROWS = 3
+internal const val FACT_ROWS = 3
 

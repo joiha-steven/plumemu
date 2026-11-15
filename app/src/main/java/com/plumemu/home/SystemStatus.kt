@@ -116,11 +116,11 @@ internal data class BatteryReading(
  * second screen's picking window: `SecondScreenCard`): the picking line reads its level and
  * charging from here rather than following the broadcast itself, so a move to a measured game registers
  * nothing and the line comes in the same frame as the played facts. Null outside a screen that gives it,
- * and with Show battery off (the screen gives [NoBatteryReading] and registers nothing).
+ * (a screen without a receiver, such as Search or setup, gives [NoBatteryReading]).
  */
 internal val LocalBatteryReading = staticCompositionLocalOf<State<BatteryReading?>> { NoBatteryReading }
 
-/** No battery reading: what a screen gives [LocalBatteryReading] with Show battery off. */
+/** No battery reading: what a screen without a battery receiver gives [LocalBatteryReading]. */
 internal val NoBatteryReading: State<BatteryReading?> =
     object : State<BatteryReading?> {
         override val value: BatteryReading? get() = null

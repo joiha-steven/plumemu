@@ -92,4 +92,23 @@ class NeighbourPagesPrefetchTest {
         show("zz")
         assertEquals(emptyList<Int>(), scheduled)
     }
+
+    @Test
+    fun cancellingThePendingKeepsABuiltPageAndCancelsTheRequestNotFinished() {
+        show("f")
+        show("g")
+        // "f" was left and is built (no request); "h" is asked for and not finished.
+        pages.cancelPending { it == "h" }
+        assertEquals("only the unfinished request is cancelled", listOf(4, 7), cancelled)
+        assertEquals(setOf("f"), pages.ahead)
+    }
+
+    @Test
+    fun aRequestThatFinishedIsNotCancelledWhateverThePredicateSaysAboutItsPage() {
+        show("f")
+        // "e" and "g" have requests; the person's code knows "e" finished and does not call it pending.
+        pages.cancelPending { it == "g" }
+        assertEquals(listOf(6), cancelled)
+        assertEquals(setOf("e"), pages.ahead)
+    }
 }

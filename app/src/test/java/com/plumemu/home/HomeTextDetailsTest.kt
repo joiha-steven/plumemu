@@ -350,13 +350,15 @@ class HomeTextDetailsTest {
 internal class FakePlayFacts(
     private val fails: Boolean = false,
     private val pace: com.plumemu.battery.BatteryPace? = null,
+    private val ownEmulator: Boolean = true,
+    private val emulatorName: String = "RetroArch: Snes9x",
 ) : HomePlayFactsSource {
     val asked = mutableListOf<Long>()
 
     override suspend fun read(gameId: Long): GamePlay {
         asked += gameId
         if (fails) throw IllegalStateException("closed")
-        return GamePlay(lastPlayedDaysAgo = 2, playTimeMinutes = 252, emulator = EmulatorToStart("RetroArch: Snes9x", isInstalled = true), batteryPace = pace)
+        return GamePlay(lastPlayedDaysAgo = 2, playTimeMinutes = 252, emulator = EmulatorToStart(emulatorName, isInstalled = true), hasOwnEmulator = ownEmulator, batteryPace = pace)
     }
 }
 

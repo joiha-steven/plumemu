@@ -145,6 +145,10 @@ abstract class PlayDao {
     @Query("SELECT * FROM play_session WHERE game_id = :gameId ORDER BY ended_at, id")
     abstract suspend fun sessions(gameId: Long): List<PlaySessionEntity>
 
+    /** The seconds of every stored session of [gameId] (the launcher takes the usual play of a left-open emulator from them). */
+    @Query("SELECT seconds FROM play_session WHERE game_id = :gameId")
+    abstract suspend fun sessionSeconds(gameId: Long): List<Long>
+
     @Query("SELECT * FROM play WHERE game_id = :gameId")
     abstract suspend fun play(gameId: Long): PlayEntity?
 

@@ -50,7 +50,7 @@ abstract class HomeDetailsBatteryRestBase {
         // The pace now follows the level: 14 h 15 min on a full charge, 1 h 1 min at 40 %.
         val reader = BatteryPaceNow { BatteryPace(if (reading.value?.percent == 100) 855.0 else 61.0, 7.0, 1_000L) }
         val details = GameDetails(year = 1994, publisher = "Nintendo", genre = "Role-Playing Game / Action RPG", players = "1", description = "", rating = 17)
-        val play = ShownPlay.Read(GamePlay(2, 2057 * 60, EmulatorToStart("RetroArch: Beetle PSX HW", isInstalled = false), BatteryPace(855.0, 7.0, 1_000L)))
+        val play = ShownPlay.Read(GamePlay(2, 2057 * 60, EmulatorToStart("RetroArch: Beetle PSX HW", isInstalled = false), BatteryPace(855.0, 7.0, 1_000L), hasOwnEmulator = true))
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Small)) {
                 CompositionLocalProvider(LocalBatteryReading provides remember { reading }, LocalBatteryPaceNow provides reader) {

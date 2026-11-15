@@ -1,7 +1,6 @@
 package com.plumemu.home
 
 import android.util.Log
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -43,6 +42,7 @@ import com.plumemu.coreinput.TextEntry
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreinput.strip.rememberStripState
 import com.plumemu.coreui.theme.GridSize
+import com.plumemu.coreui.components.pageBackground
 import com.plumemu.coreui.components.BarFades
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.SlabDimens
@@ -111,6 +111,12 @@ internal data class HomeCallbacks(
     val whatsNew: StateFlow<UpdateManifest?> = MutableStateFlow(null),
     /** The card for this versionCode was shown: it is never shown again. */
     val onWhatsNewShown: (Long) -> Unit = {},
+    /** True while the one-time Usage access offer is due; `MainScreen` shows its card over an idle main screen, after any "What's new" card. */
+    val usageAccessOfferDue: StateFlow<Boolean> = MutableStateFlow(false),
+    /** The offer's card is on the screen: it is never offered again. */
+    val onUsageAccessOfferShown: () -> Unit = {},
+    /** Allow on the offer's card: opens Android's Usage access screen (and remembers to check the answer when Plumemu comes back). */
+    val onUsageAccessAllow: () -> Unit = {},
     /** A on "No game folder yet" (or a tap on it): opens the folder picker, as Settings › Library › Add folder does. */
     val onAddFolder: () -> Unit = {},
     /** The empty state's "Files not added" (A or a tap): opens Settings on Library › Files not added. */
@@ -130,15 +136,12 @@ internal data class HomeCallbacks(
 )
 
 /**
- * What the person switched off around the strip (Settings › Controls › Show button hints, Home
- * screen › Show clock and Show battery). Settings and setup keep their own hints whatever this says, so
- * the way back is always shown there.
+ * What the person switched off around the strip (Settings › Controls › Push right to play, Home
+ * screen › System info). The clock, battery and Wi-Fi mark are always shown; a stored
+ * showClock / showBattery from an older version is no longer read.
  */
 @Immutable
 internal data class HomeBars(
-    val showHints: Boolean = true,
-    val showClock: Boolean = true,
-    val showBattery: Boolean = true,
     /** Settings › Controls › Push right to play: a fresh Right on a game in a list plays it, and the hint bar says so. */
     val pushRightToPlay: Boolean = false,
     /** Settings › Home screen › System info: the band over a system's games list. Only the top screen's band: the second screen's card keeps its facts. */
@@ -211,14 +214,12 @@ internal fun HomeScreen(
     // Read in its own effect only: the top screen never recomposes for the bottom one.
     if (secondScreen != null) FollowHomeOnSecondScreen(secondScreen, shown, state, search, menu)
     val onAction = remember(router) { { action: Action -> router.send(action) } }
-    // Switched off: nothing ticks or listens for it.
-    val clock = if (bars.showClock) rememberClockText() else null
-    // One battery receiver for the screen, the broadcast only: the top bar's level and the picking line under the details
-    // and in Info. Both follow Show battery: off, no reading and no line.
-    val batteryReading = if (bars.showBattery) rememberBatteryReading() else null
-    val battery = batteryReading?.let { rememberBatteryText(it) }
-    val charging = batteryReading?.let { rememberBatteryCharging(it) }
-    val wifi = if (bars.showBattery) rememberWifiConnected() else null
+    val clock = rememberClockText()
+    // One battery receiver for the screen, the broadcast only: the top bar's level and the picking line under the details and in Info.
+    val batteryReading = rememberBatteryReading()
+    val battery = rememberBatteryText(batteryReading)
+    val charging = rememberBatteryCharging(batteryReading)
+    val wifi = rememberWifiConnected()
     FollowShownSystem(shown, state, callbacks.onSystemShown)
     ShowClosedAtOnce(callbacks.notices, menu)
     ShowCoreQuestion(callbacks.notices, menu)
@@ -229,7 +230,7 @@ internal fun HomeScreen(
     TrackHomeScreen(state, search, menu) { currentContent }
     SideEffect { search.onSearchUsed = currentCallbacks.onSearchUsed }
     val undoOffered = remember(menu) { { menu.undo.game != null } }
-    CompositionLocalProvider(LocalBatteryReading provides (batteryReading ?: NoBatteryReading), LocalRecentUndoOffered provides undoOffered) {
+    CompositionLocalProvider(LocalBatteryReading provides batteryReading, LocalRecentUndoOffered provides undoOffered) {
         HomeLayout(
             content = shown,
             state = state,
@@ -241,7 +242,7 @@ internal fun HomeScreen(
             modifier = modifier,
             gridIds = gridViews.ids,
             panel = { menu.panel },
-            showHints = bars.showHints, pushRightToPlay = bars.pushRightToPlay, showSystemInfo = bars.showSystemInfo,
+            pushRightToPlay = bars.pushRightToPlay, showSystemInfo = bars.showSystemInfo,
             search = search,
             positions = positions,
             onCycleGridSize = { gridSizeKeys.cycle(feel) },
@@ -451,8 +452,7 @@ internal fun HomeContent.entry(id: String): HomeEntry? =
 /**
  * The screen's layout for a given [state]: top bar, strip, hint bar, inside the strip margins
  * (14 top, 12 bottom, 10 between), and the game [panel] over the strip when one is open. [clock]
- * and [battery] are read only by their texts (null: not shown); without [showHints] the strip takes
- * the hint bar's place. Tests and
+ * and [battery] are read only by their texts (null: not shown). Tests and
  * screenshots drive it with their own state.
  */
 @Composable
@@ -472,7 +472,6 @@ internal fun HomeLayout(
      * or closing it recomposes those, not the whole screen.
      */
     panel: () -> OpenPanel? = { null },
-    showHints: Boolean = true,
     pushRightToPlay: Boolean = false,
     showSystemInfo: Boolean = true,
     search: SearchState? = null,
@@ -491,8 +490,8 @@ internal fun HomeLayout(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(PlumTheme.colors.bg)
-                .padding(top = PlumDimens.stripMarginTop, bottom = if (showHints) PlumDimens.footerBelow else PlumDimens.stripMarginBottom),
+                .pageBackground()
+                .padding(top = PlumDimens.stripMarginTop, bottom = PlumDimens.footerBelow),
     ) {
         // Over the fade and the rows that run under it.
         Box(Modifier.zIndex(1f).fadingIn(searchFade)) {
@@ -504,11 +503,10 @@ internal fun HomeLayout(
             val barRoom =
                 BarRoom(
                     top = PlumDimens.barGap,
-                    // With hint keys the rows stop footerGap above the bar, where the fade has finished: the keys then stand as far below
-                    // the faded rows as above the screen's edge. Without them the rows run to the edge.
-                    bottom = if (showHints) 0.dp else PlumDimens.stripMarginBottom,
-                    height = layout.height - PlumDimens.stripMarginTop - layout.topBarHeight - if (showHints) layout.footerZone else 0.dp,
-                    taller = if (showHints) 0.dp else layout.footerZone - PlumDimens.stripMarginBottom,
+                    // The rows stop footerGap above the hint bar, where the fade has finished: the keys then stand as far below
+                    // the faded rows as above the screen's edge.
+                    bottom = 0.dp,
+                    height = layout.height - PlumDimens.stripMarginTop - layout.topBarHeight - layout.footerZone,
                 )
             val barRunners = remember { BarRunners() }
             // A focused row's slab or a focused cover's ring reaches past it: the top fade stays off it.
@@ -537,16 +535,14 @@ internal fun HomeLayout(
             }
             BarFades(barRoom.top, barRoom.bottom, topFadeShows, bottomFadeReach)
             // Plumemu's keyboard over the results' lower part, down to the screen's bottom; the hint bar is drawn on it.
-            val below = if (showHints) PlumTheme.layout.footerZone else PlumDimens.stripMarginBottom
+            val below = PlumTheme.layout.footerZone
             if (searching && search != null && search.usesOwnKeyboard) {
                 SearchKeyboardTray(search, belowContent = below)
             }
             PanelOverlayAndTray(panel, onAction, onKeyboardEvent, below, panelSlide)
         }
-        if (showHints) {
-            Spacer(Modifier.height(PlumDimens.footerGap))
-            HintsOf(panel) { HomeHints(content, state, gridIds, onAction, it, search, onCycleGridSize, pushRightToPlay) }
-        }
+        Spacer(Modifier.height(PlumDimens.footerGap))
+        HintsOf(panel) { HomeHints(content, state, gridIds, onAction, it, search, onCycleGridSize, pushRightToPlay) }
     }
 }
 

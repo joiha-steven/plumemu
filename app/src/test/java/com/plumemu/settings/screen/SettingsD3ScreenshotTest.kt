@@ -2,7 +2,6 @@ package com.plumemu.settings.screen
 
 import androidx.compose.runtime.Composable
 import com.plumemu.coredata.settings.PlumSettings
-import com.plumemu.coredata.settings.SortGamesSetting
 import com.plumemu.coreui.testing.ReferenceShots
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,10 +25,7 @@ class SettingsD3ScreenshotTest {
         )
 
     private val settings: PlumSettings
-        @Composable get() = settingsForShot().let { it.copy(library = it.library.copy(sortGames = SortGamesSetting.LastPlayed)) }
-
-    @Test
-    fun librarySort() = ReferenceShots.capture("settings_library_sort") { SettingsAt(optionsAt(SettingsOption.SortGames), settings, content) }
+        @Composable get() = settingsForShot()
 
     @Test
     fun hiddenGames() =

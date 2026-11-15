@@ -74,7 +74,7 @@ abstract class HomeSystemsAlignBase {
             val inset = LeftColumnDimens.systemPillStart.value
             val labelBox = unclipped(inside(SystemRowTags.LABEL))
             expect("pill starts at the systems pill start (16 from the screen edge)", near(pill.left.value, inset), "pill left ${pill.left.value}, inset $inset")
-            expect("pill spans the row box", near(pill.top.value, rowBox.top.value) && near(pill.bottom.value, rowBox.bottom.value) && near(pill.right.value, rowBox.right.value), "pill $pill, row $rowBox")
+            expect("pill spans the row box less the gap under the drawn row", near(pill.top.value, rowBox.top.value) && near(pill.bottom.value, rowBox.bottom.value - PlumDimens.listRowGap.value) && near(pill.right.value, rowBox.right.value), "pill $pill, row $rowBox")
             expect("label is the label inset from the pill left", near(labelLeft - pill.left.value, LeftColumnDimens.systemLabelInset.value), "${labelLeft - pill.left.value}")
             expect("label centred on the pill (baseline as unfocused)", near((labelBox.top.value + labelBox.bottom.value) / 2, (pill.top.value + pill.bottom.value) / 2), "label ${labelBox.top.value}..${labelBox.bottom.value}, pill ${pill.top.value}..${pill.bottom.value}")
         }

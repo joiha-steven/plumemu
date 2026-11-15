@@ -118,6 +118,11 @@ data class Emulator(
      * shortcut to WinNative: neither is offered, recommended or used for the other's files.
      */
     val accepts: Set<String>? = null,
+    /**
+     * Extras added for a game of one extension (lowercase, no dot) on top of [extras], same placeholders:
+     * GameNative's `game_source` per store file. Every key is in [accepts].
+     */
+    val extrasByExtension: Map<String, Map<String, ExtraValue>> = emptyMap(),
     /** The project's own download page, always http or https; null when the data holds none. */
     val page: String? = null,
 ) {

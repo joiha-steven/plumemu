@@ -1,6 +1,5 @@
 package com.plumemu.setup
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,6 +40,7 @@ import com.plumemu.coreinput.hint
 import com.plumemu.coreinput.tapItem
 import com.plumemu.coreui.components.Hint
 import com.plumemu.coreui.components.HintBar
+import com.plumemu.coreui.components.pageBackground
 import com.plumemu.coreui.components.PanelTitleWithDot
 import com.plumemu.coreui.components.raisedCard
 import com.plumemu.coreui.theme.PlumDimens
@@ -214,7 +214,7 @@ internal fun HomeRolePromptLayout(
     Column(
         Modifier
             .fillMaxSize()
-            .background(colors.bg.copy(alpha = SCRIM_ALPHA))
+            .pageBackground(alpha = SCRIM_ALPHA)
             // Taps outside the panel land here, not on the main screen underneath.
             .pointerInput(Unit) { detectTapGestures { } }
             .padding(top = PlumDimens.stripMarginTop + PlumTheme.layout.topBarHeight + PlumDimens.barGap, bottom = PlumDimens.footerBelow)
@@ -259,7 +259,7 @@ internal fun HomeRolePromptLayout(
         }
         Spacer(Modifier.height(PlumDimens.footerGap))
         // Opaque: the main screen's own hints sit at the same place and would show through.
-        HintBar(Modifier.background(colors.bg)) {
+        HintBar(Modifier.pageBackground()) {
             Hint(
                 keyCap = stringResource(letters.confirm),
                 label = stringResource(if (showsUnavailable) R.string.home_role_ok else R.string.home_role_hint_select),

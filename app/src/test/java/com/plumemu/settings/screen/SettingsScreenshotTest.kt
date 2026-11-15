@@ -39,10 +39,6 @@ class SettingsScreenshotTest {
             SettingsAt(colorPageAt(SettingsOption.Background, settings), settings)
         }
 
-    /** Left edge focused, showing the default ‹ Game counts ›, with its explanation beside (wide). */
-    @Test
-    fun appearanceLeftEdge() = ReferenceShots.capture("settings_appearance_left_edge") { SettingsAt(optionsAt(SettingsOption.LeftEdge), settingsForShot()) }
-
     @Test
     fun customColour() =
         ReferenceShots.capture("settings_custom_colour") {

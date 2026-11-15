@@ -78,7 +78,7 @@ class SettingsPanelListsShownTest {
     }
 
     private fun updatesAt(index: Int, view: UpdateView) =
-        show(optionsAt(SettingsOption.Updates).copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = index), SettingsContent(update = view, hasUpdates = true))
+        show(optionsAt(SettingsOption.Version).copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = index), SettingsContent(update = view, hasUpdates = true))
 
     private fun inUpdates(text: String) = compose.onNode(hasText(text, substring = true) and hasAnyAncestor(hasTestTag(SettingsTags.UPDATE_PANEL)))
 
@@ -121,7 +121,7 @@ class SettingsPanelListsShownTest {
                 UpdateStep.Cancelled to R.string.settings_update_cancelled,
                 UpdateStep.InstallAborted to R.string.settings_update_aborted,
             )
-        val model = SettingsModel(NoActions, optionsAt(SettingsOption.Updates).copy(column = SettingsColumn.Panel, page = PanelPage.Update))
+        val model = SettingsModel(NoActions, optionsAt(SettingsOption.Version).copy(column = SettingsColumn.Panel, page = PanelPage.Update))
         model.content = SettingsContent(update = found, hasUpdates = true).withGamesListed()
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite) {
@@ -153,24 +153,26 @@ class SettingsPanelListsShownTest {
     }
 
     @Test
-    fun theRowsValueIsTheVersionTheLastResultOrAWordWhileItRuns() {
+    fun theRowsValueIsTheUpdateFoundOrTheVersionWithTheLastResultOrAWordWhileItRuns() {
         var values = emptyList<OptionValue>()
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite) {
                 values =
                     listOf(
-                        updatesRowValue(found),
-                        updatesRowValue(found.copy(step = UpdateStep.Downloading(1, 2))),
-                        updatesRowValue(UpdateView(isChecking = true)),
-                        updatesRowValue(UpdateView()),
+                        versionRowValue("0.0.2-alpha", found),
+                        versionRowValue("0.0.2-alpha", found.copy(step = UpdateStep.Downloading(1, 2))),
+                        versionRowValue("0.0.2-alpha", UpdateView(isChecking = true)),
+                        versionRowValue("0.0.2-alpha", UpdateView()),
+                        versionRowValue("0.0.2-alpha", UpdateView(lastCheck = LastCheck(1, CheckOutcome.UpToDate))),
                     )
             }
         }
         compose.waitForIdle()
         assertEquals(OptionValue.Opens(versionOf(found)), values[0])
         assertEquals(OptionValue.Text(context.getString(R.string.settings_update_value_downloading)), values[1])
-        assertEquals(OptionValue.Opens(context.getString(R.string.settings_check_updates_checking)), values[2])
-        assertEquals(OptionValue.Opens(""), values[3])
+        assertEquals(OptionValue.Opens("0.0.2-alpha · " + context.getString(R.string.settings_check_updates_checking)), values[2])
+        assertEquals(OptionValue.Opens("0.0.2-alpha"), values[3])
+        assertEquals(OptionValue.Opens("0.0.2-alpha · Up to date"), values[4])
     }
 
     private fun versionOf(view: UpdateView) = "${checkNotNull(view.found).versionName} available"

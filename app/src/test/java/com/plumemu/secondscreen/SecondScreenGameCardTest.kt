@@ -129,8 +129,9 @@ abstract class SecondScreenGameCardBase(
         show(BOARD_GAME_NO_RA.copy(lastPlayedDaysAgo = null, playTimeMinutes = null, weeks = PlayWeeks(List(8) { 0L }, 0, 0)))
         assertEquals("Not played yet", textOf(GameCardTags.PLAY_TOTAL))
         assertEquals(0, all(GameCardTags.SESSIONS).size)
-        assertEquals("", textOf(GameCardTags.ABOUT))
-        assertEquals(1, all(GameCardTags.BARS).size)
+        // Never played: the label and one line, no empty chart or about line.
+        assertEquals(0, all(GameCardTags.ABOUT).size)
+        assertEquals(0, all(GameCardTags.BARS).size)
     }
 
     @Test

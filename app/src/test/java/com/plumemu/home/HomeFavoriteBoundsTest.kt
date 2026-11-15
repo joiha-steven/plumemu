@@ -114,7 +114,7 @@ class HomeFavoriteBoundsTest {
     @Test
     @Config(qualifiers = NARROW)
     fun theGamesHintsFitAt576InEveryFont() {
-        val order = listOf(Action.Play, Action.Back, Action.ToggleFavorite, Action.Search, Action.Menu, Action.JumpLetterNext)
+        val order = listOf(Action.Play, Action.ToggleFavorite, Action.Search, Action.Menu, Action.JumpLetterNext)
         val report = StringBuilder()
         showGames()
         for (each in listOf(PlumFont.Jost)) {
@@ -135,12 +135,12 @@ class HomeFavoriteBoundsTest {
 
     @Test
     @Config(qualifiers = WIDE)
-    fun at768SelectShowsAndSwitchSystemGivesWay() {
+    fun at768SelectAndSwitchSystemShow() {
         showGames()
-        // SELECT shows without an account now; "L2 R2 Switch system" gives way first at 768 (HINT_DROP_ORDER); "R3 Sort" still fits.
-        val order = listOf(Action.Play, Action.Back, Action.ToggleFavorite, Action.Search, Action.Sort, Action.Menu, Action.ToggleView)
+        // B Back is hidden on the games list, so "L2 R2 Switch system" fits at 768 now (HINT_DROP_ORDER); "R3 Sort" too.
+        val order = listOf(Action.Play, Action.ToggleFavorite, Action.Search, Action.Sort, Action.Menu, Action.JumpLetterNext, Action.ToggleView)
         order.forEach { assertTrue("${it::class.simpleName} is shown", isShown(it)) }
-        assertTrue("Switch system gave way", !isShown(Action.JumpLetterNext))
+        assertTrue("B Back is not on the games list", !isShown(Action.Back))
         val hints = shownHints(order)
         // The seven do not fit with the board's 17.33 gap, so it shrinks (never under 9) just enough for them to: one gap between all of them.
         val gaps = hints.zipWithNext().map { (a, b) -> b.left.value - a.right.value }

@@ -22,11 +22,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -79,24 +79,34 @@ private fun Tile(
     )
 }
 
+/** A tile's last line, on the bottom of the tile row: both tiles end on one baseline, whichever is shorter takes the slack above it. */
+@Composable
+private fun ColumnScope.LastLine(line: @Composable () -> Unit) {
+    Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.BottomStart) { line() }
+}
+
 /** A label that does not fit its tile loses what follows its " · " ("PLAY TIME · LAST 8 WEEKS" becomes "PLAY TIME") instead of being cut mid-word. */
 @Composable
 private fun TileLabel(text: String) {
     val isJost = isJost()
     val style = gameStyle(TypeRole.SecondFactsRoomy, D.labelSize, weight = LABEL_WEIGHT).copy(color = PlumTheme.colors.meta, letterSpacing = D.labelSpacing).onBoardLine(EntryCardDimens.JOST_OWN_LINE, isJost)
     val full = text.uppercase()
-    // The full text's natural width is learned when it is laid out; the short one shows while it does not fit the room.
+    // The full text's natural width and the room are read from its one layout; the short text comes only when that layout says the full one overflows.
     var natural by remember(full, style) { mutableIntStateOf(0) }
     var room by remember(full, style) { mutableIntStateOf(Int.MAX_VALUE) }
-    val short = full.contains(LABEL_SEPARATOR) && natural > room
+    val short by remember(full, style) { derivedStateOf { full.contains(LABEL_SEPARATOR) && natural > room } }
     BasicText(
         if (short) full.substringBefore(LABEL_SEPARATOR) else full,
         style = style,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis,
-        onTextLayout = { if (!short) natural = ceil(it.multiParagraph.intrinsics.maxIntrinsicWidth).toInt() },
-        modifier = Modifier.fillMaxWidth().onSizeChanged { room = it.width }.boardLine(style, isJost),
+        onTextLayout = {
+            CardLayoutCount.note(CardLayoutCount.TILE_LABEL)
+            room = it.layoutInput.constraints.maxWidth
+            if (!short) natural = ceil(it.multiParagraph.intrinsics.maxIntrinsicWidth).toInt()
+        },
+        modifier = Modifier.fillMaxWidth().boardLine(style, isJost),
     )
 }
 
@@ -149,7 +159,7 @@ private fun AchievementsTile(
             Row(Modifier.padding(top = D.badgesTop), horizontalArrangement = Arrangement.spacedBy(D.badgeGap)) {
                 stored.recent.take(D.BADGES).forEach { GameBadge(it) }
             }
-            LatestLine(stored.recent.first(), content.raLatestDaysAgo)
+            LastLine { LatestLine(stored.recent.first(), content.raLatestDaysAgo) }
         }
     }
 }
@@ -237,18 +247,13 @@ private fun PlayTile(
     val weeks = content.weeks?.takeIf { content.isPlayKnown }
     val isJost = isJost()
     val big = gameStyle(TypeRole.SecondTitleRoomy, D.bigSize).copy(color = colors.strong).onBoardLine(EntryCardDimens.LINE_BIG, isJost)
-    val neverPlayed = content.lastPlayedDaysAgo == null
+    val neverPlayed = weeks != null && content.lastPlayedDaysAgo == null
     Tile(modifier.testTag(GameCardTags.PLAY)) {
         TileLabel(stringResource(R.string.second_game_play_label))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            // Until the play facts are read the figures are blank text of the same style: the tile keeps its height.
-            val total =
-                when {
-                    weeks == null -> ""
-                    neverPlayed -> stringResource(R.string.second_screen_not_played)
-                    else -> playTime((weeks.totalSeconds / SECONDS_PER_MINUTE).toInt())
-                }
-            BasicText(total, style = big, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).boardLine(big, isJost).alignByBaseline().testTag(GameCardTags.PLAY_TOTAL))
+            // Until the play facts are read, and for a game never played, the figures are blank text of the same style: the tile keeps the height of a played one.
+            val total = if (weeks == null || neverPlayed) "" else playTime((weeks.totalSeconds / SECONDS_PER_MINUTE).toInt())
+            BasicText(total, style = big, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).boardLine(big, isJost).alignByBaseline().then(if (neverPlayed) Modifier else Modifier.testTag(GameCardTags.PLAY_TOTAL)))
             if (weeks != null && weeks.sessions > 0) {
                 BasicText(
                     pluralStringResource(R.plurals.second_game_sessions, weeks.sessions, numbers.format(weeks.sessions)),
@@ -259,10 +264,18 @@ private fun PlayTile(
                 )
             }
         }
-        WeekBars(weeks?.weekSeconds ?: List(D.WEEKS_SHOWN) { 0L })
+        // No chart to draw until there is a play to show: blank, so nothing flashes and nothing jumps.
+        WeekBars(weeks?.weekSeconds ?: List(D.WEEKS_SHOWN) { 0L }, drawn = weeks != null && !neverPlayed)
         val about = weeks?.averageMinutes
-        // An empty line of the same style when there is nothing to say, so the tile is as tall as with it.
-        BasicText(if (about != null) stringResource(R.string.second_game_about_session, playTime(about)) else "", style = small(colors.meta), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.boardLine(small(colors.meta), isJost).testTag(GameCardTags.ABOUT))
+        // The last line is always there, blank when there is nothing to say, so the tile is as tall as with it.
+        LastLine {
+            if (neverPlayed) {
+                val line = small(colors.text2)
+                BasicText(stringResource(R.string.second_screen_not_played), style = line, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.boardLine(line, isJost).testTag(GameCardTags.PLAY_TOTAL))
+            } else {
+                BasicText(if (about != null) stringResource(R.string.second_game_about_session, playTime(about)) else "", style = small(colors.meta), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.boardLine(small(colors.meta), isJost).testTag(GameCardTags.ABOUT))
+            }
+        }
     }
 }
 
@@ -270,17 +283,21 @@ private const val SECONDS_PER_MINUTE = 60L
 
 /** The last eight weeks as columns against the busiest one, the current week in the accent and labelled under it. */
 @Composable
-private fun WeekBars(seconds: List<Long>) {
+private fun WeekBars(
+    seconds: List<Long>,
+    drawn: Boolean,
+) {
     val colors = PlumTheme.colors
     val isJost = isJost()
     val label = gameStyle(TypeRole.SecondFactsRoomy, D.barsLabelSize).onBoardLine(EntryCardDimens.JOST_OWN_LINE, isJost)
     val most = seconds.maxOrNull()?.coerceAtLeast(1L) ?: 1L
     val last = seconds.lastIndex
-    EvenColumns(D.barsGap, Modifier.testTag(GameCardTags.BARS)) {
+    EvenColumns(D.barsGap, if (drawn) Modifier.testTag(GameCardTags.BARS) else Modifier) {
         seconds.forEachIndexed { index, value ->
-            val isNow = index == last
+            val isNow = drawn && index == last
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(D.barsLabelGap)) {
                 Box(Modifier.fillMaxWidth().height(D.barsHeight), contentAlignment = Alignment.BottomCenter) {
+                    if (!drawn) return@Box
                     val barHeight = if (value <= 0) D.barEmpty else maxOf(D.barMin, D.barsHeight * (value.toFloat() / most))
                     val shape = RoundedCornerShape(D.barCornerTop, D.barCornerTop, D.barCornerBottom, D.barCornerBottom)
                     val bar = Modifier.fillMaxWidth(D.BAR_WIDTH_SHARE).height(barHeight)
@@ -292,10 +309,11 @@ private fun WeekBars(seconds: List<Long>) {
                 }
                 BasicText(
                     if (isNow) stringResource(R.string.second_game_this_week) else "",
-                    style = label.copy(color = if (isNow) colors.text else colors.meta),
+                    style = label.copy(color = colors.meta),
                     maxLines = 1,
                     softWrap = false,
-                    modifier = Modifier.wrapContentWidth(unbounded = true).boardLine(label, isJost),
+                    // Ends where the bars end, hanging to the left under the other columns, never past the tile's text edge.
+                    modifier = Modifier.wrapContentWidth(Alignment.End, unbounded = true).boardLine(label, isJost).then(if (isNow) Modifier.testTag(GameCardTags.THIS_WEEK) else Modifier),
                 )
             }
         }

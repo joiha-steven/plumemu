@@ -33,7 +33,7 @@ class GraphAppActionsTest {
         launch: suspend (LaunchableApp) -> AppLaunchOutcome? = { AppLaunchOutcome.Started },
     ) = GraphAppActions(
         listed = { listed },
-        launch = { app -> launched += app; launch(app) },
+        launch = { app, _ -> launched += app; launch(app) },
         refreshApps = { refreshes++; refreshFailure?.let { throw it } },
         scope = this,
         log = { logs += it },
@@ -47,7 +47,7 @@ class GraphAppActionsTest {
         store: suspend (String, AppKind) -> Boolean,
     ) = GraphAppActions(
         listed = { listed },
-        launch = { null },
+        launch = { _, _ -> null },
         refreshApps = { refreshes++ },
         scope = this,
         canChooseKindOf = { allowed },

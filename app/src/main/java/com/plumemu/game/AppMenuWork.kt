@@ -22,7 +22,7 @@ internal class AppMenuWork(
     fun read(
         app: GameRef,
         show: (OpenPanel) -> Unit,
-    ): Job = scope.launch { show(OpenPanel(app, PanelScreen.AppMenu(apps.canUninstall(app.key), apps.canChooseKind(app.key)))) }
+    ): Job = scope.launch { show(OpenPanel(app, PanelScreen.AppMenu(apps.canUninstall(app.key), apps.canChooseKind(app.key), apps.otherScreen(), apps.storeHint(app.key)))) }
 
     /**
      * Runs [open]'s App info or Uninstall ([command]); [done] gets what the screen shows next: null when Android's

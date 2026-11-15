@@ -111,7 +111,7 @@ internal class ScrapeTestLibrary(private val file: File, private val tree: Docum
         val SYSTEMS = listOf(
             SystemEntity("snes", "Super Nintendo"), SystemEntity("gba", "Game Boy Advance"), SystemEntity("psx", "PlayStation"),
             // Folders that hold another system's cartridges (scrape rules 3, `ScrapeRulesRepairTest`).
-            SystemEntity("sgb", "Super Game Boy"), SystemEntity("snesmsu1", "SNES MSU-1"), SystemEntity("genesismsu", "Genesis MSU"), SystemEntity("megadrive", "Mega Drive"),
+            SystemEntity("windows", "Windows"), SystemEntity("epic", "Epic Games"), SystemEntity("sgb", "Super Game Boy"), SystemEntity("snesmsu1", "SNES MSU-1"), SystemEntity("genesismsu", "Genesis MSU"), SystemEntity("megadrive", "Mega Drive"),
         )
 
         fun matched(title: String? = "Zork Quest", by: MatchedBy = MatchedBy.Hash, withSupport: Boolean = true) = ScrapeResult.Matched(

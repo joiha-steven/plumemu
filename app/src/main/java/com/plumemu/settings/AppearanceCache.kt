@@ -30,7 +30,20 @@ class AppearanceCache(context: Context) {
         prefs.edit().putInt(KEY_BACKGROUND, next.backgroundArgb).putBoolean(KEY_TEXT_DARK, next.isTextDark).apply()
     }
 
+    /**
+     * Whether the second screen was in use when it last changed: where the home band starts before the
+     * displays are listened to (after the first frame), so a cold start or a recreated Activity on a
+     * two-screen device does not draw the band and then drop it.
+     */
+    fun wasSecondScreenInUse(): Boolean = prefs.getBoolean(KEY_SECOND_SCREEN, false)
+
+    /** Called when the second screen goes in or out of use; writes only on a change. */
+    fun writeSecondScreenInUse(isInUse: Boolean) {
+        if (isInUse != wasSecondScreenInUse()) prefs.edit().putBoolean(KEY_SECOND_SCREEN, isInUse).apply()
+    }
+
     private companion object {
+        const val KEY_SECOND_SCREEN = "second_screen_in_use"
         const val FILE_NAME = "appearance_cache"
         const val KEY_BACKGROUND = "background_argb"
         const val KEY_TEXT_DARK = "text_dark"

@@ -53,6 +53,25 @@ class NameSearchTest {
         override fun open(): java.io.InputStream = error("a .steam file must never be opened")
     }
 
+    @Test fun `an Epic or Windows launcher file is looked up by name only, under PC Windows`() = runTest {
+        for ((system, name) in listOf("epic" to "Fortnite", "windows" to "Hades")) {
+            fx.server.enqueue(search(game("97000", "138", name)))
+            val file = object : RomSource {
+                override val key = "content://x/$name.gog"
+                override val fileName = "$name.gog"
+                override val sizeBytes = 7L
+                override val lastModifiedMillis = 1L
+                override fun open(): java.io.InputStream = error("a launcher file must never be opened")
+            }
+            val result = fx.scraper(fx.config()).scrape(fx.request(file, systemId = system, title = name))
+            assertEquals(system, GameMatch("97000", MatchedBy.Name), (result as ScrapeResult.Matched).match)
+            val url = fx.takeRequest().url
+            assertEquals(system, "/api2/jeuRecherche.php", url.encodedPath)
+            assertEquals(system, "138", url.queryParameter("systemeid"))
+            assertEquals(system, null, url.queryParameter("crc"))
+        }
+    }
+
     @Test fun `a Steam game is looked up by name only, under PC Windows`() = runTest {
         fx.server.enqueue(search(game("97000", "138", "Broforce")))
 

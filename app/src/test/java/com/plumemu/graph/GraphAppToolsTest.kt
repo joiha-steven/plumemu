@@ -26,7 +26,7 @@ class GraphAppToolsTest {
     private fun TestScope.actions(listed: List<LaunchableApp> = listOf(alpha), canUninstall: Boolean = true) =
         GraphAppActions(
             listed = { listed },
-            launch = { null },
+            launch = { _, _ -> null },
             refreshApps = { refreshes++ },
             scope = this,
             canUninstallPackage = { canUninstall },

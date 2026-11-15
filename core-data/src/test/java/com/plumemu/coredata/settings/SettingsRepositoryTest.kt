@@ -84,6 +84,7 @@ class SettingsRepositoryTest {
         assertEquals(HomeScreenSettings(showApps = true, showClock = true, showBattery = true), s.homeScreen)
         assertNull("the second screen is not decided until the person decides", s.secondScreen.enabled)
         assertEquals("clock and battery while a game runs", InGameSetting.Clock, s.secondScreen.inGame)
+        assertEquals("apps open on the top screen", AppsScreen.Top, s.secondScreen.appsOn)
         assertEquals(true, s.advanced.animations)
         assertEquals("sounds are Loud for new and existing installs (the keys are absent)", SoundLevel.Loud, s.advanced.sounds)
         assertEquals("vibration is on by default", true, s.advanced.vibration)
@@ -104,15 +105,15 @@ class SettingsRepositoryTest {
                 gridSystems = setOf("snes", "psp"),
                 ownColors = OwnColors(ColorSetting.Preset("Plum"), TextColorSetting.Light, ColorSetting.Custom(0xA79CF5), buttonSet = "Super"),
                 buttonSet = "Ivory",
-                language = "zh-TW", edgeFade = false,
+                language = "zh-TW", edgeFade = false, pageGrain = PageGrainSetting.Light,
             ),
             controls = ControlsSettings(ConfirmButtonSetting.Bottom, holdToScrollFaster = false, showButtonHints = false, keyboard = KeyboardSetting.Android, pushRightToPlay = true, switchSystemWith = SwitchSystemWithSetting.Bumpers),
             library = LibrarySettings(scanOnStartup = false, sortGames = SortGamesSetting.LastPlayed, boxArtRegion = BoxArtRegionSetting.Japan, boxArtSource = BoxArtSourceSetting.LibretroOnly, boxArtPaused = true,
                 systemOrder = SystemOrderSetting.Maker, manualSystemOrder = listOf("snes", "sg-1000", "gba"), hiddenSystems = setOf("psx", "tg-cd"), recentSize = RecentSizeSetting.Fifty,
             ),
             homeScreen = HomeScreenSettings(showApps = false, showClock = false, showBattery = false, showSystemInfo = false),
-            secondScreen = SecondScreenSettings(enabled = true, inGame = InGameSetting.Black),
-            advanced = AdvancedSettings(animations = false, sounds = SoundLevel.Quiet, usageStatistics = false, vibration = false, exactPlayTime = true),
+            secondScreen = SecondScreenSettings(enabled = true, inGame = InGameSetting.Black, appsOn = AppsScreen.Bottom),
+            advanced = AdvancedSettings(animations = false, sounds = SoundLevel.Quiet, usageStatistics = false, vibration = false, exactPlayTime = true, usageAccessOffered = true),
             updates = UpdateSettings(checkDaily = false),
             flags = SetupFlags(
                 setupCompleted = true, homeRoleAsked = true, rescanAfterReset = true, folderMatchVersion = 7, namingRulesVersion = 8, scrapeRulesVersion = 9,

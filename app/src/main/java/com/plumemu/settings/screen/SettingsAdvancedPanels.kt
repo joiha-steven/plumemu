@@ -98,6 +98,7 @@ internal enum class ResetPanelItem(
 ) {
     All(SettingsOption.ResetAll, R.string.settings_reset_all_body),
     Library(SettingsOption.ResetLibrary, R.string.settings_reset_library_body),
+    Recent(SettingsOption.ClearRecent, R.string.settings_clear_recent_body),
 }
 
 /** How the reset that ran went, until the focus leaves the row; null when none ran. */
@@ -117,7 +118,7 @@ private fun resetDoneText(model: SettingsModel): Int? {
     }
 }
 
-/** The two resets, each with what it does, and how the last one went. */
+/** The resets and Clear Recent…, each with what it does, and how the last one went. */
 @Composable
 internal fun ResetPanel(
     model: SettingsModel,
@@ -127,6 +128,8 @@ internal fun ResetPanel(
     val focused = if (inPanel) model.focus.panelIndex else -1
     PanelListColumn(Modifier.fillMaxHeight()) {
         PanelTitle(stringResource(R.string.settings_reset))
+        // Clear Recent… says how it ended with the row's notice (a count, "already empty" or the failure).
+        if (model.doneOption == SettingsOption.ClearRecent) PanelLine(model, SettingsOption.ClearRecent, null)
         resetDoneText(model)?.let { done ->
             BasicText(
                 stringResource(done),

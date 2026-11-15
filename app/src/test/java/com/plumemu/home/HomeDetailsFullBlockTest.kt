@@ -100,7 +100,9 @@ abstract class HomeDetailsFullBlockBase {
             val l = textOf(label)
             if (l in labels) {
                 // The value is the text right under the label, in its column.
-                val value = all.filter { textOf(it) !in labels && it.boundsInRoot.top >= label.boundsInRoot.bottom - 1f && it.boundsInRoot.left >= label.boundsInRoot.left - 1f && it.boundsInRoot.top - label.boundsInRoot.bottom < 20f }.minByOrNull { it.boundsInRoot.top * 10000f + (it.boundsInRoot.left - label.boundsInRoot.left) }
+                val under = all.filter { textOf(it) !in labels && it.boundsInRoot.top >= label.boundsInRoot.bottom - 1f && it.boundsInRoot.left >= label.boundsInRoot.left - 1f && it.boundsInRoot.top - label.boundsInRoot.bottom < 20f }.minByOrNull { it.boundsInRoot.top * 10000f + (it.boundsInRoot.left - label.boundsInRoot.left) }
+                // An Emulator alone in its row is one line (label, then value on its baseline): the value is the text right of the label.
+                val value = under ?: all.filter { textOf(it) !in labels && it.boundsInRoot.left >= label.boundsInRoot.right - 1f && kotlin.math.abs(it.boundsInRoot.bottom - label.boundsInRoot.bottom) < 12f }.minByOrNull { it.boundsInRoot.left }
                 cells[l] = Cell(l, value?.let(::textOf).orEmpty(), label.boundsInRoot, value?.boundsInRoot ?: Rect.Zero, value?.let(::ellipsized) ?: false)
             }
         }
@@ -124,14 +126,14 @@ abstract class HomeDetailsFullBlockBase {
 
     @Test
     fun everyFactShowsInsideTheBox() {
-        val shown = settle(GamePlay(2, 252, EmulatorToStart("RetroArch: Snes9x", isInstalled = true)))
+        val shown = settle(GamePlay(2, 252, EmulatorToStart("RetroArch: Snes9x", isInstalled = true), hasOwnEmulator = true))
         assertEquals(setOf("Genre", "Rating", "Played", "Last played", "Emulator", "Battery"), shown.cells.keys)
         assertInside(shown)
         assertTrue("a cover remains: ${shown.cover}", shown.cover.height > 0f)
     }
 
     private fun emulatorCase(name: String) {
-        val shown = settle(GamePlay(2, 252, EmulatorToStart(name, isInstalled = true)))
+        val shown = settle(GamePlay(2, 252, EmulatorToStart(name, isInstalled = true), hasOwnEmulator = true))
         val cell = shown.cells.getValue("Emulator")
         assertTrue("'$name' is not ellipsised: '${cell.value}'", !cell.ellipsized)
         assertTrue("the battery cell is there too: ${shown.cells.keys}", "Battery" in shown.cells)
@@ -148,7 +150,7 @@ abstract class HomeDetailsFullBlockBase {
     fun askedOnPlayIsNotCut() = emulatorCase("Asked on Play")
 
     private fun twoLineTitle(emulator: String, genre: String = "Action") {
-        val shown = settle(GamePlay(2, 252, EmulatorToStart(emulator, isInstalled = true)), genre = genre, title = LONG_TITLE)
+        val shown = settle(GamePlay(2, 252, EmulatorToStart(emulator, isInstalled = true), hasOwnEmulator = true), genre = genre, title = LONG_TITLE)
         assertEquals("the title takes its two lines", 2, shown.titleLines)
         assertEquals(setOf("Genre", "Rating", "Played", "Last played", "Emulator", "Battery"), shown.cells.keys)
         assertInside(shown)
@@ -164,7 +166,7 @@ abstract class HomeDetailsFullBlockBase {
 
     @Test
     fun cellsWithNothingToSayLeaveNoHole() {
-        val shown = settle(GamePlay(2, 252, null), genre = "", rating = false, pace = false)
+        val shown = settle(GamePlay(2, 252, null, hasOwnEmulator = true), genre = "", rating = false, pace = false)
         // The emulator always has a value ("Asked on Play" with none installed); it goes under the two, on the second row.
         assertEquals(setOf("Played", "Last played", "Emulator"), shown.cells.keys)
         val played = shown.cells.getValue("Played")

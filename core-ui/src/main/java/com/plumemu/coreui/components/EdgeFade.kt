@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
+import com.plumemu.coreui.theme.LocalPageGrain
 import com.plumemu.coreui.theme.MaskOpaque
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
@@ -68,6 +69,7 @@ fun ListEdgeFade(
     erases: Boolean = false,
 ) {
     val colors = PlumTheme.colors
+    val grain = LocalPageGrain.current
     Box(
         modifier =
             modifier
@@ -76,6 +78,11 @@ fun ListEdgeFade(
                 .drawBehind {
                     val band = size.height * reach().coerceIn(0f, 1f)
                     if (band <= 0f) return@drawBehind
+                    // Over the page, the page's own paint (its grain, if on) fades in; Off draws the same gradient as a flat page.
+                    if (!erases) {
+                        drawPageFade(colors.bg, grain, Offset(0f, if (atBottom) size.height - band else 0f), Size(size.width, band), atBottom)
+                        return@drawBehind
+                    }
                     val solid = if (erases) MaskOpaque else colors.bg
                     val clear = solid.copy(alpha = 0f)
                     val from = if (atBottom) size.height - band else 0f

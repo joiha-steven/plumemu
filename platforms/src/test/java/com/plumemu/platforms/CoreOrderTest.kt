@@ -26,7 +26,7 @@ class CoreOrderTest {
     }
 
     private fun twoCores(first: String, second: String) = """
-        {"formatVersion":2,
+        {"formatVersion":3,
          "systems":[{"id":"gba","name":"GBA","shortName":"GBA","displayName":"GBA","order":0,"folders":["gba"],"extensions":["gba"],
                      "cover":"landscape","tier":"tested","emulators":["$first","$second"]}],
          "emulators":[

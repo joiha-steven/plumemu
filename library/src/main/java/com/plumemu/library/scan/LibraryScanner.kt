@@ -16,6 +16,7 @@ import com.plumemu.library.naming.systemsNamedDifferentlySince
 import com.plumemu.library.scrape.CODE_DROPPED_REPAIR_SINCE_VERSION
 import com.plumemu.library.scrape.FileNameTitles
 import com.plumemu.library.scrape.NO_MATCH_RETRY_SINCE_VERSION
+import com.plumemu.library.scrape.LAUNCHER_NO_MATCH_SINCE_VERSION
 import com.plumemu.library.scrape.SCRAPE_RULES_VERSION
 import com.plumemu.library.scrape.SERIAL_ONLY_REPAIR_SINCE_VERSION
 import com.plumemu.library.scrape.WRONG_SYSTEM_REPAIR_SINCE_VERSION
@@ -250,8 +251,11 @@ class LibraryScanner(
                 val leftovers = if (storedVersion < CODE_DROPPED_REPAIR_SINCE_VERSION) FileNameTitles.showWhereMissing(database) else 0
                 // Version 2 (name search variants): earlier no-matches may match now, so ask them again.
                 val due = if (storedVersion < NO_MATCH_RETRY_SINCE_VERSION) dao.makeNoMatchesDueNow() else 0
-                Log.i(LOG_TAG, "Scrape rules $storedVersion -> $SCRAPE_RULES_VERSION: $forgotten serial-only matches and $wrongSystem other-system matches and $codeDropped code-dropped matches to ask again, $leftovers names reset to the file's, $due no-matches made due")
-                forgotten + wrongSystem + codeDropped + leftovers + due
+                // Version 5: launcher files were hashed before and now are looked up by name (every system's no-matches are due from below 2 already).
+                // The two systems that became name-only in version 5, fixed on purpose: a later launcher system needs its own version step.
+                val launcherDue = if (storedVersion in NO_MATCH_RETRY_SINCE_VERSION until LAUNCHER_NO_MATCH_SINCE_VERSION) dao.makeNoMatchesDueNowIn(listOf("windows", "epic")) else 0
+                Log.i(LOG_TAG, "Scrape rules $storedVersion -> $SCRAPE_RULES_VERSION: $forgotten serial-only matches and $wrongSystem other-system matches and $codeDropped code-dropped matches to ask again, $leftovers names reset to the file's, $due no-matches made due, $launcherDue launcher no-matches made due")
+                forgotten + wrongSystem + codeDropped + leftovers + due + launcherDue
             }
         }
     }

@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.components.collar
 import com.plumemu.coreui.components.coverBoxShadow
@@ -62,15 +63,12 @@ import com.plumemu.coreui.components.TouchPressScale
 import com.plumemu.coreui.components.rememberConfirmPressScale
 import com.plumemu.coreui.components.rememberTouchPressScale
 import com.plumemu.coreui.components.listEdgeFadeMask
-import com.plumemu.coreui.theme.ContentFade
 import com.plumemu.coreui.theme.CoverClass
 import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.coreui.theme.ListGlide
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
-import com.plumemu.coreui.theme.fadingIn
 import com.plumemu.coreui.theme.LocalLaunchOrigin
-import com.plumemu.coreui.theme.rememberSlidingSwap
 import com.plumemu.coreui.theme.rememberListGlide
 
 /**
@@ -85,21 +83,19 @@ import com.plumemu.coreui.theme.rememberListGlide
  */
 @Composable
 internal fun GamesGrid(
-    content: HomeContent,
+    entry: HomeEntry,
     state: StripState,
     onAction: (Action) -> Unit,
     modifier: Modifier,
-    isPanelOpen: Boolean = false,
-) {
-    val entryIndex by remember(state) { derivedStateOf { state.focus.systemIndex } }
     // The game panel has the focus: the cover drops its focus (one focus mark on screen).
-    val panelOpen = rememberUpdatedState(isPanelOpen)
-    val entry = content.entries.getOrNull(entryIndex) ?: return
+    panelOpen: State<Boolean>,
+) {
     // Apps' grid is of icons at one fixed size, without box art.
     if (entry.kind == EntryKind.Apps || entry.isAppGamesGrid) {
         AppsGrid(entry, state, onAction, panelOpen, modifier)
         return
     }
+    val pageShown = LocalGridPageShown.current
     val layout = PlumTheme.layout
     val shape = entry.coverShape
     val gap = layout.gridGap(shape)
@@ -114,16 +110,13 @@ internal fun GamesGrid(
     // The rows as packed: one height, each box as wide as its own shape. Read in lazy and draw scopes only, so a result
     // landing re-packs without recomposing the grid; the focus rules get the same table (setPackedRows below).
     val packed = rememberPackedGrid(entry, columns, targetHeight, gap, coversWidth, art)
-    // L1/R1 with the games focused: the next system's games fade in instead of popping. Moves in
-    // the system column swap the preview at once (a held key would strobe it).
-    val fade = rememberSlidingSwap(entry.id, { state.focus.systemIndex }, wrapsAt = content.entries.size) { fadesSystemSwap(state) }
     // A new grid size (or text size) or width re-packs but keeps the grid, its scroll state and the cells that stay in their row:
     // keyed on the system alone, the boxes change size by layout and the cells are not rebuilt (every rebuilt cell asks for its
     // picture in the same frame). The same game stays focused (the focus is its index) and [AlignOnRepack] shows its row whole.
     key(entry.id) {
         // Where each row stands in px, from the packing: rows differ in height, so no scroll rule counts rows of one height.
         val spans = remember(packed, rowGap, density) { derivedStateOf { RowSpans.of(packed.value, rowGap, density) } }
-        val stripHeight = layout.gridStripHeight + LocalBarRoom.current.taller
+        val stripHeight = layout.gridStripHeight
         val stripPx = with(density) { stripHeight.roundToPx() }
         // Read once without observing: the grid must not recompose on every move.
         val opening = Snapshot.withoutReadObservation { state.focus.rowOf(entry.id) }
@@ -131,6 +124,9 @@ internal fun GamesGrid(
         // Where the grid opens is read once, not observed: a picture landing re-packs the rows and must not recompose the grid.
         val gridState = rememberLazyGridState(initialFirstVisibleItemIndex = Snapshot.withoutReadObservation { spans.value.firstShowing(openingRow, stripPx) })
         val viewport = rememberGridViewportPx(gridState, stripHeight, PlumDimens.gridTopGap, LocalBarRoom.current.bottom + PlumDimens.gridBottomRoom)
+        // A grid kept built beside the shown one that was scrolled away from its focus opens at the focus again, as a new grid does.
+        ReportGridScroll(gridState)
+        ResetScrollWhenHidden(gridState) { spans.value.firstShowing(packed.value.rowOf(state.focus.rowOf(entry.id)), stripPx) }
         AlignOnRepack(gridState, spans, stripPx, columns, targetHeight, coversWidth) { packed.value.rowOf(state.focus.rowOf(entry.id)) }
         val glide = rememberListGlide(stride = targetHeight * ROW_SCALE_ROOM + rowGap, slabRoom = false)
         // The focus's rim, light and shadow are drawn here, round the grid, so the grid's clip does not cut them at the margins and bars.
@@ -156,9 +152,9 @@ internal fun GamesGrid(
         CompositionLocalProvider(LocalTileTitleFit provides fitter) {
         // Under the focus's rim: the focused cover is drawn over the mask, a row showing too little of itself at a bar is left out.
         val footerGapPx = with(density) { (PlumDimens.footerGap - LocalBarRoom.current.bottom).coerceAtLeast(0.dp).toPx() }
-        val fades = remember(gridState, glide, state, entry.id, packed, footerGapPx) { GridEdgeFades(gridState, glide, with(density) { PlumDimens.gridTopGap.roundToPx().toFloat() }, liftShare = FocusLift.GROWTH_SHARE, ringPx = with(density) { FocusLift.reach.toPx() }, bottomGapPx = footerGapPx) { packed.value.rowOf(state.focus.rowOf(entry.id)) } }
+        val fades = remember(gridState, glide, state, entry.id, packed, footerGapPx, pageShown) { GridEdgeFades(gridState, glide, with(density) { PlumDimens.gridTopGap.roundToPx().toFloat() }, liftShare = FocusLift.GROWTH_SHARE, ringPx = with(density) { FocusLift.reach.toPx() }, bottomGapPx = footerGapPx, isShown = pageShown) { packed.value.rowOf(state.focus.rowOf(entry.id)) } }
         FollowBarRunner(fades)
-        GridRows(modifier, entry, gridState, packed, spans, viewport, glide, rowGap, density, titleStyle, state, onAction, touch, outline, fade, halo, fades)
+        GridRows(modifier, entry, gridState, packed, spans, viewport, glide, rowGap, density, titleStyle, state, onAction, touch, outline, halo, fades)
         }
         KeepFocusedCellVisible(gridState, 1, spans, viewport, glide) { packed.value.rowOf(state.focus.rowOf(entry.id)) }
         FollowArt(entry.rows) { packed.value.rows.getOrNull(gridState.firstVisibleItemIndex)?.start ?: 0 }
@@ -186,7 +182,6 @@ private fun GridRows(
     onAction: (Action) -> Unit,
     touch: TouchPressScale,
     outline: FocusOutline,
-    fade: ContentFade,
     halo: Modifier,
     fades: GridEdgeFades,
 ) {
@@ -194,7 +189,7 @@ private fun GridRows(
         columns = GridCells.Fixed(1),
         state = gridState,
         flingBehavior = rememberRowSnapFling(gridState),
-        modifier = modifier.fadingIn(fade).then(halo).listEdgeFadeMask(fades, true).testTag(HomeTags.GRID).then(glide.modifier),
+        modifier = modifier.then(halo).listEdgeFadeMask(fades, true).gridTag(HomeTags.GRID).then(glide.modifier),
         contentPadding = PaddingValues(top = glide.extra + PlumDimens.gridTopGap, bottom = glide.extra + LocalBarRoom.current.bottom + PlumDimens.gridBottomRoom + rememberGridLeftover(spans, viewport)),
         verticalArrangement = Arrangement.spacedBy(rowGap),
     ) {
@@ -280,8 +275,18 @@ private fun rememberPackedGrid(
 ): State<PackedGrid> {
     // Keyed on the system alone: a new list of the same system is the same visit.
     val held = remember(entry.id) { HeldArtAspects(entry.rows) }
+    // A grid kept built beside the shown one has no new composition when it is shown again: leaving it ends the visit.
+    val shown = LocalGridPageShown.current
+    LaunchedEffect(held, shown) {
+        var was = shown()
+        snapshotFlow { shown() }.collect { now ->
+            if (was && !now) held.endVisit()
+            was = now
+        }
+    }
     return remember(entry, columns, rowHeight, coversWidth, gap, art) {
-        held.follow(entry.rows)
+        // Rows that change while the grid is hidden start the next visit; while it is shown they are held for this one.
+        held.follow(entry.rows, fresh = !Snapshot.withoutReadObservation { shown() })
         derivedStateOf(structuralEqualityPolicy()) {
             packRows(
                 entry.rows.map { coverAspect(entry, it, art, held) },
@@ -325,15 +330,21 @@ private fun GridCoverAt(
     val row = entry.rows[index]
     val art = LocalHomeArt.current
     LocalGridCellProbe.current?.let { probe -> remember { probe.onCreated(index).let { index } } }
-    val tap = remember(index, onAction) { Modifier.tapItem(Column.Games, index, onAction).testTag(HomeTags.cover(index)) }
+    val pageShown = LocalGridPageShown.current
+    val tap = remember(index, onAction, pageShown) { Modifier.tapItem(Column.Games, index, onAction).tagWhen(HomeTags.cover(index), pageShown) }
     // Read in the layer, not in composition: a move re-runs two covers' layers, nothing recomposes.
+    val drawProbe = LocalGridDrawProbe.current
     val focused =
-        remember(state, entry.id, index, touch, cell, edges, art) {
+        remember(state, entry.id, index, touch, cell, edges, art, outline) {
+            // This cover's own lift and dip: the draw is invalidated only when they change, not on every move of the focus.
+            val liftOfThis = outline.liftStateOf(index)
+            val dipOfThis = outline.dipStateOf(index, touch)
             touch.modifier(index).drawWithContent {
+                drawProbe?.onDraw(GridDrawProbe.COVER, index)
                 // The focused cover dips with the confirm button as well (a finger's dip is the grid's one) and is lifted by the focus
                 // about the pivot that keeps it inside the grid; its rim, light and shadow are the grid's layer ([focusLift]).
-                val dip = outline.dipOf(index, touch)
-                val lift = outline.liftOf(index)
+                val dip = dipOfThis.value
+                val lift = liftOfThis.value
                 val pivot = if (lift > 0f) pivotOf(coverFrameOf(entry, index, art, Rect(Offset.Zero, size), cell), edges) else center
                 drawLifted(dip, center, lift, pivot) { this@drawWithContent.drawContent() }
             }
@@ -459,7 +470,7 @@ private fun GridCover(
     // with no icon it is the poster, as a file game with no box art.
     val appIcon = if (row.appPackage == null) null else rememberAppGameIcon(row, if (ownShape) box else inner)
     val boxAlpha = if (dimmed) PlumDimens.UNFAVORITED_COVER_ALPHA else 1f
-    val boxModifier = (if (ownShape) Modifier.testTag(HomeTags.COVER_OWN_SHAPE) else Modifier).coverBoxShadow(corner)
+    val boxModifier = (if (ownShape) Modifier.gridTag(HomeTags.COVER_OWN_SHAPE) else Modifier).coverBoxShadow(corner)
     Box(modifier.size(cell).then(look), contentAlignment = Alignment.BottomCenter) {
         Box(Modifier.collar(CollarSize.Cover, corner, halo = false) { 0f }) {
             if (appIcon != null && appIcon != TileIcon.Missing) {
@@ -510,3 +521,19 @@ internal fun interface GridCellProbe {
 }
 
 internal val LocalGridCellProbe = androidx.compose.runtime.staticCompositionLocalOf<GridCellProbe?> { null }
+
+/** Test seam: told each time the draw block of a grid cell runs (null in the app); a focus move must redraw only the cells whose look changes. */
+internal fun interface GridDrawProbe {
+    fun onDraw(
+        kind: String,
+        index: Int,
+    )
+
+    companion object {
+        const val COVER = "cover"
+        const val TILE = "tile"
+        const val NAME = "name"
+    }
+}
+
+internal val LocalGridDrawProbe = androidx.compose.runtime.staticCompositionLocalOf<GridDrawProbe?> { null }

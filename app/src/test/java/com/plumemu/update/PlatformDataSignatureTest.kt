@@ -17,15 +17,15 @@ import java.security.KeyPairGenerator
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 class PlatformDataSignatureTest {
-    private val text = PlatformDataFixtures.signedText(6, 2, 900, "ab".repeat(32))
+    private val text = PlatformDataFixtures.signedText(6, 3, 900, "ab".repeat(32))
 
     private fun bytes(signatureBase64: String) = CertificateSignatureVerifier.decode(signatureBase64)!!
 
     @Test
     fun theSignedTextIsExactlyTheContractsLines() {
         val manifest = (PlatformDataManifests.read(PlatformDataFixtures.published().manifest, PlatformDataFixtures.MANIFEST_URL) as PlatformDataManifests.Result.Ok).manifest
-        assertEquals(PlatformDataFixtures.signedText(6, 2, 900, manifest.sha256), manifest.signedText)
-        assertEquals("plumemu-platforms-data\ndataVersion=6\nformatVersion=2\nminVersionCode=900\nsha256=${"ab".repeat(32)}\n", text)
+        assertEquals(PlatformDataFixtures.signedText(6, 3, 900, manifest.sha256), manifest.signedText)
+        assertEquals("plumemu-platforms-data\ndataVersion=6\nformatVersion=3\nminVersionCode=900\nsha256=${"ab".repeat(32)}\n", text)
     }
 
     @Test

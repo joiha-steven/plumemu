@@ -94,7 +94,8 @@ enum class TextSizeSetting {
 }
 
 /**
- * Settings › Home screen › Left edge: what the home screen's 48 dp peek shows while the focus is in a games list
+ * What the home screen's 48 dp peek once showed while the focus was in a games list. Retired: the app no longer
+ * offers or reads it (the peek always shows system codes); the key stays so any backup restores.
  * The names are what `appearance.left_edge` stores.
  */
 enum class LeftEdgeSetting {
@@ -113,6 +114,12 @@ enum class LeftEdgeSetting {
         val Default: LeftEdgeSetting = Counts
     }
 }
+
+/**
+ * Settings › Appearance › Colors › Grain on the background: fine noise over the page colour. [Off] is the default.
+ * The names are what `appearance.page_grain` stores.
+ */
+enum class PageGrainSetting { Off, Light, Strong }
 
 /** The home grid's size (L1 / R1 and the Size hint), smallest covers first. The names are what `appearance.grid_size` stores. */
 enum class GridSizeSetting { Small, Medium, Large }
@@ -178,6 +185,8 @@ data class AppearanceSettings(
      * languages ("en", "vi", "zh-CN"), or null to follow the system's language (the default).
      */
     val language: String? = null,
+    /** Grain on the background; a file or backup without it, or with a name this version does not know, is Off. */
+    val pageGrain: PageGrainSetting = PageGrainSetting.Off,
 ) {
     companion object {
         const val BUTTONS_NONE = "None"
@@ -204,6 +213,7 @@ data class ControlsSettings(
     val confirmButton: ConfirmButtonSetting = ConfirmButtonSetting.Right,
     /** No longer offered or followed (always on); kept so backups round-trip and older versions restore it. */
     val holdToScrollFaster: Boolean = true,
+    /** No longer offered or followed (the hint bar is always shown); kept so backups round-trip and older versions restore it. */
     val showButtonHints: Boolean = true,
     val keyboard: KeyboardSetting = KeyboardSetting.Plumemu,
     val switchSystemWith: SwitchSystemWithSetting = SwitchSystemWithSetting.Triggers,
@@ -303,14 +313,13 @@ data class HomeScreenSettings(
     val showClock: Boolean = true,
     val showBattery: Boolean = true,
     /**
-     * The band over a system's games list (badge and facts line); the second screen's card is not
-     * affected. Null until the person flips the switch or the app decides for a device with a second
-     * screen (which shows the same facts: it writes false once); read it through
-     * [isSystemInfoShown], which is on while null.
+     * No longer offered or followed (the band follows whether a second screen is in use); kept so
+     * backups round-trip and older versions restore it. Null: never stored; [isSystemInfoShown] is
+     * on while null.
      */
     val showSystemInfo: Boolean? = null,
 ) {
-    /** Whether the band shows: the stored value, on when none was ever stored. */
+    /** The stored value, on when none was ever stored; the app does not read it. */
     val isSystemInfoShown: Boolean get() = showSystemInfo ?: true
 }
 
@@ -318,15 +327,23 @@ data class HomeScreenSettings(
  * Settings › Second screen.
  * [enabled] is null until the person answers or flips the switch: the app then decides from the
  * kind of screen it finds (on for a built-in one, off when unsure). [inGame] is what the second
- * screen shows while a game runs.
+ * screen shows while a game runs. [appsOn] is where apps of the Apps entry open.
  */
 data class SecondScreenSettings(
     val enabled: Boolean? = null,
     val inGame: InGameSetting = InGameSetting.Clock,
+    val appsOn: AppsScreen = AppsScreen.Top,
 )
 
 /** What the second screen shows while a game runs: a dim clock and battery card, or nothing. */
 enum class InGameSetting { Clock, Black }
+
+/**
+ * Where apps of the Apps entry open on a dual-screen device.
+ * [Top] is the screen Plumemu is on; [Bottom] is the second screen, used only while one is found
+ * and switched on.
+ */
+enum class AppsScreen { Top, Bottom }
 
 /**
  * Stored as `advanced` (the file format); on screen Animations is in Settings › Advanced, Sounds and Vibration in Controls,
@@ -335,6 +352,7 @@ enum class InGameSetting { Clock, Black }
  * default). [usageStatistics] is off by default, the person switches it on; the
  * telemetry module follows it (app `graph/GraphTelemetry.kt`). [exactPlayTime] (Settings › Statistics, off by default) makes a play count
  * only the time its game was on the screen; it also needs Android's Usage access, which is not stored here.
+ * [usageAccessOffered] is set when the home's one-time offer of Usage access was shown, so it never comes again (a restored backup keeps it).
  */
 data class AdvancedSettings(
     val animations: Boolean = true,
@@ -342,6 +360,7 @@ data class AdvancedSettings(
     val usageStatistics: Boolean = false,
     val vibration: Boolean = true,
     val exactPlayTime: Boolean = false,
+    val usageAccessOffered: Boolean = false,
 )
 
 /**

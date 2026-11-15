@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
  * Reads the battery as often as [BatteryReads.read] asks (every second at first, then every 10 s)
  * while this is composed, its window is started and the screen is on, and not at all otherwise
  * The second screen composes it only beside the
- * in-game clock card with Show battery on. The wait is a delay on the window's own main-thread
+ * in-game clock card. The wait is a delay on the window's own main-thread
  * dispatcher: no thread, timer, alarm or wake lock of its own, and it does not run while the
  * device sleeps.
  *

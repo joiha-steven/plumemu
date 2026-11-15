@@ -72,9 +72,7 @@ import com.plumemu.coreui.theme.AppsGridDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumLayout
 import com.plumemu.coreui.theme.PlumTheme
-import com.plumemu.coreui.theme.fadingIn
 import com.plumemu.coreui.theme.LocalLaunchOrigin
-import com.plumemu.coreui.theme.rememberSlidingSwap
 import com.plumemu.coreui.theme.rememberListGlide
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -135,6 +133,7 @@ internal fun AppsGrid(
     panelOpen: State<Boolean>,
     modifier: Modifier,
 ) {
+    val pageShown = LocalGridPageShown.current
     val layout = PlumTheme.layout
     val colors = PlumTheme.colors
     val density = LocalDensity.current
@@ -150,13 +149,11 @@ internal fun AppsGrid(
     val gapPx = with(density) { rowGap.roundToPx() }
     // Whole rows only: the window is as high as the rows that fit whole in the strip (AppsGridWindow.kt).
     // Whole rows clear of the fade on the hint bar.
-    val stripPx = wholeRowsPx(with(density) { (layout.appsStripHeight + LocalBarRoom.current.taller + LocalBarRoom.current.bottom - PlumDimens.listFadeBand).roundToPx() }, rowPx, gapPx)
+    val stripPx = wholeRowsPx(with(density) { (layout.appsStripHeight + LocalBarRoom.current.bottom - PlumDimens.listFadeBand).roundToPx() }, rowPx, gapPx)
     val iconPx = with(density) { AppsGridDimens.appsGridTileIcon.roundToPx() }
     val icons = LocalHomeAppIcons.current
     // Raised after a package change: the tiles on screen ask for their icons again (read here, not per tile).
     val generation by icons.generation.collectAsState()
-    // L1/R1 with the games focused: the next entry fades in, as in every grid.
-    val fade = rememberSlidingSwap(entry.id, { state.focus.systemIndex }) { fadesSystemSwap(state) }
     // A text size with other columns opens the grid again at the focused app's row.
     key(entry.id, columns) {
         // Read once without observing: the grid must not recompose on every move.
@@ -166,6 +163,9 @@ internal fun AppsGrid(
         val belowWindow = (LocalBarRoom.current.height - PlumDimens.appsGridTopGap - with(density) { stripPx.toDp() }).coerceAtLeast(0.dp)
         // The window is stripPx by definition: measured back from the padding it could round a px short of its last row, and the grid would scroll onto a row that stands whole.
         val viewport = rememberUpdatedState(stripPx)
+        // A grid kept built beside the shown one that was scrolled away from its focus opens at the focus again, as a new grid does.
+        ReportGridScroll(gridState)
+        ResetScrollWhenHidden(gridState) { spans.value.firstShowing(state.focus.rowOf(entry.id) / columns, stripPx) * columns }
         val glide = rememberListGlide(stride = rowHeight + rowGap, slabRoom = false)
         val touch = rememberTouchPressScale()
         val spread = LocalAppsSpread.current
@@ -176,28 +176,37 @@ internal fun AppsGrid(
         val outline = rememberFocusOutline(openingFocus, confirmScale) { motionOn.value }
         val ring = appsFocusLift(state, entry, gridState, glide, outline, panelOpen, touch, spread, columns)
         // Under the focus's rim: the focused tile is drawn over the mask, a row showing too little of itself at a bar is left out.
-        val fades = remember(gridState, glide, state, entry.id) { GridEdgeFades(gridState, glide, with(density) { PlumDimens.appsGridTopGap.roundToPx().toFloat() }) { state.focus.rowOf(entry.id) } }
+        val fades = remember(gridState, glide, state, entry.id, pageShown) { GridEdgeFades(gridState, glide, with(density) { PlumDimens.appsGridTopGap.roundToPx().toFloat() }, isShown = pageShown) { state.focus.rowOf(entry.id) } }
         FollowBarRunner(fades)
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
             state = gridState,
             flingBehavior = rememberRowSnapFling(gridState),
-            modifier = modifier.fadingIn(fade).then(ring).listEdgeFadeMask(fades, true).testTag(HomeTags.GRID).then(glide.modifier),
+            modifier = modifier.then(ring).listEdgeFadeMask(fades, true).gridTag(HomeTags.GRID).then(glide.modifier),
             contentPadding = PaddingValues(top = glide.extra + PlumDimens.appsGridTopGap, bottom = glide.extra + belowWindow + rememberGridLeftover(spans, viewport)),
             horizontalArrangement = Arrangement.spacedBy(gap),
             verticalArrangement = Arrangement.spacedBy(rowGap),
         ) {
             itemsIndexed(entry.rows, key = { _, row -> row.id }) { index, row ->
-                val tap = remember(index, onAction) { Modifier.tapItem(Column.Games, index, onAction).testTag(HomeTags.cover(index)) }
+                val pageShown = LocalGridPageShown.current
+                val tap = remember(index, onAction, pageShown) { Modifier.tapItem(Column.Games, index, onAction).tagWhen(HomeTags.cover(index), pageShown) }
                 // Read in the layer, not in composition: the icon's dip (a finger's, and the confirm button's on the focused one) and its lift. No plate:
                 // the icon and the name stand straight on the background; the focus's rim and light are the grid's layer.
+                val drawProbe = LocalGridDrawProbe.current
                 val look =
-                    remember(state, entry.id, index, touch) {
-                        touch.modifier(index).drawWithContent { drawTileLifted(outline.dipOf(index, touch), outline.liftOf(index)) }
+                    remember(state, entry.id, index, touch, outline) {
+                        // This tile's own lift and dip: the draw is invalidated only when they change, not on every move of the focus.
+                        val liftOfThis = outline.liftStateOf(index)
+                        val dipOfThis = outline.dipStateOf(index, touch)
+                        touch.modifier(index).drawWithContent {
+                            drawProbe?.onDraw(GridDrawProbe.TILE, index)
+                            drawTileLifted(dipOfThis.value, liftOfThis.value)
+                        }
                     }
+                val focusedThis = remember(outline, index) { outline.focusedStateOf(index) }
                 // Beside the systems the preview's columns are drawn spread to the right margin: the cell's layer carries its touch target with it.
                 val spreadBy = remember(spread, index, columns) { if (spread == null) Modifier else Modifier.plainLayer { translationX = spread.shiftOf(index % columns) } }
-                AppTile(row, icons, generation, iconPx, rowHeight, nameStyle, { outline.index == index }, spreadBy.then(tap).then(look))
+                AppTile(row, icons, generation, iconPx, rowHeight, nameStyle, { drawProbe?.onDraw(GridDrawProbe.NAME, index); focusedThis.value }, spreadBy.then(tap).then(look))
             }
         }
         KeepFocusedCellVisible(gridState, columns, spans, viewport, glide) { state.focus.rowOf(entry.id) }
@@ -311,7 +320,7 @@ internal fun AppTile(
     ) {
         val iconModifier = Modifier.size(AppsGridDimens.appsGridTileIcon)
         when (val shown = icon) {
-            is TileIcon.Picture -> Image(shown.image, contentDescription = null, modifier = iconModifier.testTag(HomeTags.APP_ICON))
+            is TileIcon.Picture -> Image(shown.image, contentDescription = null, modifier = iconModifier.gridTag(HomeTags.APP_ICON))
             TileIcon.Missing -> AppIconStandIn(row.title, iconModifier)
             TileIcon.Loading -> Spacer(iconModifier)
         }
@@ -319,7 +328,7 @@ internal fun AppTile(
         // Two names in one place: the resting one and the focused one (strong colour, weight 500). Which one draws
         // is read while drawing (the focus line's item), so a move redraws and recomposes nothing; the other draws nothing.
         Box(Modifier.fillMaxWidth()) {
-            AppName(row.title, nameStyle.copy(textAlign = TextAlign.Center), { colors.text }, { !isFocused() }, Modifier.testTag(HomeTags.APP_NAME))
+            AppName(row.title, nameStyle.copy(textAlign = TextAlign.Center), { colors.text }, { !isFocused() }, Modifier.gridTag(HomeTags.APP_NAME))
             AppName(row.title, nameStyle.copy(textAlign = TextAlign.Center, fontWeight = FontWeight((nameStyle.fontWeight?.weight ?: FontWeight.Normal.weight) + FOCUSED_NAME_WEIGHT_STEP)), { colors.strong }, isFocused, Modifier.clearAndSetSemantics {})
         }
     }
@@ -359,7 +368,7 @@ internal fun AppIconStandIn(
 ) {
     val colors = PlumTheme.colors
     val shape = CircleShape
-    Box(modifier.background(colors.sel, shape).testTag(HomeTags.APP_ICON_STAND_IN), contentAlignment = Alignment.Center) {
+    Box(modifier.background(colors.sel, shape).gridTag(HomeTags.APP_ICON_STAND_IN), contentAlignment = Alignment.Center) {
         val base = PlumTheme.type.messageTitle.copy(color = colors.text2)
         BasicText(text = firstLetterOf(title), style = if (letterSize == null) base else base.copy(fontSize = letterSize.sp, lineHeight = letterSize.sp), maxLines = 1)
     }

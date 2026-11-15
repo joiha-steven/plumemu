@@ -184,7 +184,7 @@ abstract class HomeDetailsHoldCasesBase(
         }
     }
 
-    private val full = GamePlay(lastPlayedDaysAgo = 2, playTimeMinutes = 252, emulator = emulator)
+    private val full = GamePlay(lastPlayedDaysAgo = 2, playTimeMinutes = 252, emulator = emulator, hasOwnEmulator = true)
 
     @Test
     fun theUsualGame() {
@@ -194,7 +194,7 @@ abstract class HomeDetailsHoldCasesBase(
 
     @Test
     fun theLongestLastPlayedAndPlayTime() {
-        val frames = run(Slow(GamePlay(lastPlayedDaysAgo = 365, playTimeMinutes = 100 * 60 + 59, emulator = emulator), 100))
+        val frames = run(Slow(GamePlay(lastPlayedDaysAgo = 365, playTimeMinutes = 100 * 60 + 59, emulator = emulator, hasOwnEmulator = true), 100))
         assertTrue("the long values arrived", frames.last().texts.any { it.first.startsWith("365") } && frames.last().texts.any { it.first.startsWith("100") })
     }
 
@@ -209,7 +209,7 @@ abstract class HomeDetailsHoldCasesBase(
 
     @Test
     fun aLongEmulatorName() {
-        val frames = run(Slow(GamePlay(2, 252, EmulatorToStart("RetroArch: Genesis Plus GX Wide Super Long Core Name Edition", isInstalled = true)), 100))
+        val frames = run(Slow(GamePlay(2, 252, EmulatorToStart("RetroArch: Genesis Plus GX Wide Super Long Core Name Edition", isInstalled = true), hasOwnEmulator = true), 100))
         // At the largest text the box cannot hold every cell and the policy leaves the emulator out whole (it is in Info).
         if (size != TextSize.Largest) assertShownInBox(frames, "RetroArch: Genesis")
     }
@@ -226,7 +226,7 @@ abstract class HomeDetailsHoldCasesBase(
     ) {
         battery(level)
         // The battery level changes twice while the game rests: nothing moves, and the cell is on show with its time.
-        val frames = run(Slow(GamePlay(2, 252, emulator, batteryPace = pace), 100), each = { if (it == 20) battery(level / 2) else if (it == 50) battery(level / 3) })
+        val frames = run(Slow(GamePlay(2, 252, emulator, batteryPace = pace, hasOwnEmulator = true), 100), each = { if (it == 20) battery(level / 2) else if (it == 50) battery(level / 3) })
         val last = frames.last()
         val time = last.texts.filter { (t, _) -> t.replace('\u00A0', ' ').contains("an hour") }
         if (narrow) {

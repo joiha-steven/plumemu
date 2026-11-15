@@ -186,6 +186,12 @@ internal class CatalogBuilder(private val source: String, private val log: Platf
             if (list.toSet().size != list.size) badValue("accepts", raw.id, list.joinToString(","))
             list.toSet()
         }
+        val extrasByExtension = raw.extrasByExtension.entries.associate { (extension, more) ->
+            if (accepts == null || extension !in accepts) badValue("extrasByExtension", raw.id, extension)
+            if (more.isEmpty()) badValue("extrasByExtension.$extension", raw.id, "(empty)")
+            more.keys.firstOrNull { it in raw.extras }?.let { badValue("extrasByExtension.$extension", raw.id, "repeats extra $it") }
+            extension to more.mapValues { (key, value) -> extraValue(raw.id, "$extension.$key", value) }
+        }
         val idType = idTypeOf(raw, mode, target)
         val template = templateOf(raw, mode, target)
         val pathExtensions = raw.game.pathExtensions
@@ -208,7 +214,7 @@ internal class CatalogBuilder(private val source: String, private val log: Platf
         }
         return Emulator(
             raw.id, raw.name, primary, variants, core, raw.action, raw.category, raw.mimeType,
-            flags, GamePass(mode, target, raw.game.key, raw.game.prefix, idType, template, pathExtensions.toSet()), extras, raw.legalRisk, accepts, webPageOf(raw),
+            flags, GamePass(mode, target, raw.game.key, raw.game.prefix, idType, template, pathExtensions.toSet()), extras, raw.legalRisk, accepts, extrasByExtension, webPageOf(raw),
         )
     }
 

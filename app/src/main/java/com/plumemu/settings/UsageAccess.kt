@@ -13,6 +13,9 @@ import com.plumemu.launcher.play.hasUsageAccess
 internal object UsageAccess {
     fun isGranted(context: Context): Boolean = hasUsageAccess(context)
 
+    /** Whether the device has a Usage access screen to open. */
+    fun canOpen(context: Context): Boolean = intentFor(context) != null
+
     /** Opens the screen on Plumemu's own entry where the device supports it, else on the list; false when the device has none. */
     fun open(activity: Activity): Boolean {
         val intent = intentFor(activity) ?: return false

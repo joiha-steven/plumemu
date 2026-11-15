@@ -47,6 +47,9 @@
     <string name="home_hint_update">Mise à jour</string>
     <string name="home_update_pill">Mise à jour %1$s</string>
     <string name="home_whatsnew_title">Nouveautés de la version %1$s</string>
+    <string name="home_usage_offer_title">Compter le vrai jeu</string>
+    <string name="home_usage_offer_body">Menus d\'émulateur et autres applis comptent comme du jeu. Autorisez l\'accès Android pour ne compter que le jeu. Rien ne sort de la console.</string>
+    <string name="home_usage_offer_allow">Autoriser</string>
     <!-- Hint bar label: a verb, start the game. -->
     <string name="home_hint_play">Jouer</string>
     <!-- Hint bar label: a verb, open the focused entry or app. -->
@@ -470,9 +473,9 @@
     <string name="game_error_title_id_title">Ce jeu PS Vita n\'a pas de title ID</string>
     <string name="game_error_title_id_empty_body">%1$s est vide. Écrivez-y le title ID du jeu, par exemple PCSE00000, et rien d\'autre. Le jeu doit être installé dans l\'émulateur.</string>
     <string name="game_error_title_id_invalid_body">%1$s ne doit contenir que le title ID du jeu : neuf lettres majuscules ou chiffres, par exemple PCSE00000.</string>
-    <string name="game_error_steam_app_id_title">Ce fichier .steam n\'a pas d\'app ID Steam</string>
-    <string name="game_error_steam_app_id_empty_body">%1$s est vide. Écrivez-y l\'app ID Steam du jeu, par exemple 274190, et rien d\'autre. Le jeu doit être dans l\'appli Steam.</string>
-    <string name="game_error_steam_app_id_invalid_body">%1$s ne doit contenir que l\'app ID Steam du jeu : des chiffres, par exemple 274190.</string>
+    <string name="game_error_steam_app_id_title">Ce fichier n\'a pas d\'ID de jeu</string>
+    <string name="game_error_steam_app_id_empty_body">%1$s est vide. Écrivez-y l\'ID du jeu, par exemple 274190, et rien d\'autre. Le jeu doit être dans l\'appli d\'où vient ce fichier.</string>
+    <string name="game_error_steam_app_id_invalid_body">%1$s ne doit contenir que l\'ID du jeu : des chiffres, par exemple 274190.</string>
     <string name="game_error_needs_path_title">%1$s a besoin d\'un chemin de fichier</string>
     <string name="game_error_needs_path_body">Cet émulateur n\'ouvre que les jeux du stockage interne ou de la carte SD, et ce dossier est ailleurs.</string>
     <string name="game_error_not_in_library_title">Ce jeu n\'est plus dans la bibliothèque</string>
@@ -540,6 +543,7 @@
     <string name="app_error_refused_body">Android a refusé de l\'ouvrir.</string>
     <string name="app_error_not_listed_body">La liste des applis a changé entre-temps et se met à jour. Réessayez dans un instant.</string>
     <string name="app_error_unavailable_body">Plumemu n\'est pas prêt à ouvrir les applis. Réessayez dans un instant.</string>
+    <string name="app_error_bottom_screen_body">Cette appli n\'a pas pu s\'ouvrir sur l\'écran du bas ; elle s\'est donc ouverte ici.</string>
     <!-- Play on an installed app listed as a game (Android games, Ports) whose app is gone; the title is app_error_missing_title. -->
     <string name="game_error_app_game_missing_body">Il a été désinstallé ou désactivé. Installez-le ou réactivez-le pour y jouer d\'ici.</string>
     <!-- Settings. The top bar: "Settings › Appearance › Background". -->
@@ -647,14 +651,12 @@
     <string name="settings_rescan_a_folder">Un dossier</string>
     <string name="settings_rescan_failed">Impossible de lire vos jeux. Réessayez.</string>
     <string name="settings_rescan_busy">Lecture de vos jeux déjà en cours.</string>
-    <string name="settings_sort_games">Tri des jeux</string>
     <string name="settings_sort_by_name">Nom</string>
     <string name="settings_sort_by_last_played">Dernière partie</string>
     <string name="settings_sort_by_most_played">Les plus joués</string>
     <string name="settings_sort_by_recently_added">Ajoutés récemment</string>
     <string name="settings_sort_by_year">Année</string>
     <string name="settings_sort_by_rating">Note</string>
-    <string name="settings_sort_games_body">Ordre des listes de chaque système et des Favoris. Les jeux sans valeur pour le tri (jamais lancés, sans année, sans note) passent après, par nom. Année et Note apparaissent dès qu\'un jeu en a une venant de ScreenScraper. Récents affiche toujours le dernier jeu lancé en premier.</string>
     <string name="settings_clear_recent">Vider Récents…</string>
     <string name="settings_clear_recent_body">Récents est vidé. Un jeu y revient quand vous y rejouez. Le temps de jeu et les statistiques restent.</string>
     <string name="settings_clear_recent_confirm">Vider</string>
@@ -734,8 +736,6 @@
     <!-- Controls -->
     <string name="settings_push_right">Droite deux fois pour jouer</string>
     <string name="settings_push_right_body">Jouez d\'une main : dans une liste de jeux, appuyez deux fois sur droite pour lancer le jeu sélectionné. Le premier appui le marque, le second (dans les deux secondes) le lance ; tout autre bouton annule. A fonctionne toujours. Sur les écrans étroits, la colonne de détails s\'ouvre alors au toucher. Désactivable ici à tout moment.</string>
-    <string name="settings_show_hints">Afficher l\'aide des boutons</string>
-    <string name="settings_show_hints_body">Les boutons et leur rôle, en bas de l\'écran principal. Les Paramètres et la configuration initiale affichent toujours leur aide, pour que vous ne vous perdiez jamais. Pour ouvrir les Paramètres au toucher, appuyez longuement sur la colonne des systèmes.</string>
     <string name="settings_switch_system_with">Changer de système avec</string>
     <string name="settings_switch_system_body">La paire de gâchettes qui change de système sur l\'écran principal. L\'autre paire saute à une lettre dans une liste et change la taille dans une grille.</string>
     <string name="settings_keyboard">Clavier</string>
@@ -747,9 +747,6 @@
     <string name="settings_home_unavailable">Cet appareil n\'a pas d\'écran pour choisir l\'appli d\'accueil. Choisissez Plumemu dans les Paramètres d\'Android › Applications › Applications par défaut.</string>
     <string name="settings_show_apps">Afficher les applis Android</string>
     <string name="settings_show_apps_body">Toutes les applis Android de l\'appareil apparaissent dans \"Applis\", juste après Favoris. Désactivé : l\'entrée Applis n\'est pas affichée.</string>
-    <string name="settings_clock_battery">Horloge et batterie</string>
-    <string name="settings_clock_battery_body">L\'heure et le niveau de batterie en haut à droite de l\'écran.</string>
-    <string name="settings_clock_battery_body_two_screens">L\'heure et le niveau de batterie en haut à droite de l\'écran. La batterie s\'affiche aussi avec l\'horloge du second écran.</string>
     <!-- The band over a system's games list ("Nintendo · Home console · 1990–2003". -->
     <string name="system_kind_console">Console de salon</string>
     <string name="system_kind_handheld">Console portable</string>
@@ -823,8 +820,6 @@
     <string name="system_about_mame">Son but : préserver l\'histoire du jeu vidéo ; y jouer est \"un effet secondaire agréable\". Plus de 32 000 systèmes documentés.</string>
     <!-- https://github.com/finalburnneo/FBNeo (README; Wikipedia has no page) -->
     <string name="system_about_fbneo">Basé sur FinalBurn et d\'anciennes versions de MAME. Il émule les cartes Capcom CPS-1, CPS-2, CPS-3, Neo Geo et Sega System 16.</string>
-    <string name="settings_system_info">Infos système</string>
-    <string name="settings_system_info_body">Un badge, une ligne sur le système (fabricant, type, années) et quelques mots sur son histoire, en haut de sa liste de jeux.</string>
     <!-- Second screen, picking cards. Top line: "Super Nintendo · USA"; the separator is also used in the facts line (quoted: Android trims the spaces of an unquoted string). -->
     <string name="second_screen_android_app">Appli Android</string>
     <string name="second_screen_app_tag">APP</string>
@@ -939,6 +934,10 @@
     <string name="settings_second_screen_in_game_body">Ce que montre le second écran pendant une partie. Les émulateurs à deux écrans l\'utilisent d\'office. La carte bouge un peu chaque minute pour protéger l\'écran.</string>
     <string name="settings_second_screen_clock">Horloge et batterie</string>
     <string name="settings_second_screen_black">Noir</string>
+    <string name="settings_second_screen_apps_on">Ouvrir les applis sur</string>
+    <string name="settings_second_screen_apps_on_body">L\'écran sur lequel s\'ouvre une appli lancée depuis la liste des applis. Les jeux ne sont pas concernés.</string>
+    <string name="settings_second_screen_apps_top">Écran du haut</string>
+    <string name="settings_second_screen_apps_bottom">Écran du bas</string>
 
     <!-- Appearance -->
     <!-- Ready-made colour sets (never a console's or a brand's name. -->
@@ -963,9 +962,8 @@
     <string name="settings_background">Fond</string>
     <string name="settings_text_color">Couleur du texte</string>
     <string name="settings_accent">Couleur d\'accent</string>
+    <string name="settings_page_grain">Grain sur le fond</string>
     <string name="settings_text_size">Taille du texte</string>
-    <string name="settings_left_edge">Bande gauche</string>
-    <string name="settings_grid_size">Taille de la grille</string>
     <string name="settings_bg_graphite">Graphite</string>
     <string name="settings_bg_black">Noir</string>
     <string name="settings_bg_midnight">Minuit</string>
@@ -1029,9 +1027,9 @@
     <string name="settings_size_larger">Très grand</string>
     <string name="settings_size_huge">Énorme</string>
     <string name="settings_size_largest">Maximum</string>
-    <string name="settings_left_edge_counts">Nombre de jeux</string>
-    <string name="settings_left_edge_codes">Codes système</string>
-    <string name="settings_left_edge_letters">Lettres</string>
+    <string name="settings_page_grain_off">Désactivé</string>
+    <string name="settings_page_grain_light">Léger</string>
+    <string name="settings_page_grain_strong">Fort</string>
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
     <string name="settings_badge_current">Actuel</string>
     <string name="settings_background_body">Choisissez une couleur, ou + pour créer la vôtre.</string>
@@ -1058,8 +1056,7 @@
     <string name="settings_color_adjusted_both">Couleurs du texte et d\'accent modifiées pour rester lisibles</string>
     <string name="settings_accent_body">Marque le système actuel, le point de sélection, les interrupteurs et les boutons. Par système donne à chaque système sa propre couleur.</string>
     <string name="settings_text_size_body">Change tout le texte de Plumemu. La taille de police d\'Android s\'applique en plus.</string>
-    <string name="settings_left_edge_body">Ce que montre la fine bande de gauche dans une liste de jeux : le nombre de jeux de chaque système, un code court par système, ou les lettres de la liste où vous êtes.</string>
-    <string name="settings_grid_size_body">La taille des jaquettes en vue grille, pour chaque système ainsi que pour Récents et Favoris. Petit montre le plus de jeux à la fois, Grand le moins.</string>
+    <string name="settings_page_grain_body">Un grain fin posé sur la couleur du fond, comme du papier. Désactivé garde le fond uni, Léger se devine à peine, Fort se voit sur tous les écrans.</string>
 
     <!-- Advanced (includes the confirm-button option) -->
     <string name="settings_confirm_bottom">Valider avec B</string>
@@ -1305,12 +1302,11 @@
     <string name="report_error_refused">Le serveur n\'a pas accepté ce signalement. Vérifiez l\'adresse e-mail. Votre texte est conservé, vous pouvez réessayer.</string>
     <string name="report_error_unavailable">Cette version ne peut pas envoyer de signalements. Utilisez Exporter le journal et envoyez le fichier vous-même.</string>
     <string name="report_error_not_saved">Le signalement n\'a pas pu être enregistré sur cet appareil.</string>
-    <string name="settings_privacy_body">Votre bibliothèque, vos réglages et votre temps de jeu restent dans le stockage propre de Plumemu sur cet appareil, et ne sont jamais envoyés. Uniquement si vous l\'activez (Paramètres › À propos › Envoyer des statistiques d\'usage), Plumemu envoie au développeur des compteurs d\'usage anonymes et des rapports de plantage : pays, modèle d\'appareil, versions d\'Android et de l\'appli, écrans et réglages utilisés, temps de jeu par système. Pour un jeu que Plumemu ne sait pas nommer, il envoie aussi, une fois par installation, le système, la façon dont le fichier est stocké, sa taille, son CRC-32 et le code produit ou le numéro de série du disque lu dans le jeu. Jamais les titres de jeux, les mots cherchés ni votre compte ScreenScraper. Les rapports de plantage peuvent contenir des chemins de fichiers. Le désactiver envoie un unique compteur anonyme \"désactivé\", puis plus rien. Les signalements de problème ne sont envoyés que quand vous appuyez sur Envoyer dans Signaler un problème, et peuvent contenir le journal que vous choisissez de joindre, avec des chemins de fichiers. Ce qui est envoyé est conservé sans limite de durée. Une fois par jour en Wi-Fi, Plumemu demande à plumemu-app.stevensdesk.com s\'il existe une version plus récente ; Cloudflare, qui l\'héberge, voit votre adresse IP. Désactivez-le dans Paramètres › À propos › Mises à jour. Cette même vérification quotidienne télécharge aussi les données de plateformes à jour (la liste des systèmes et des émulateurs) depuis le même serveur ; rien d\'autre n\'est envoyé. Avec un compte ScreenScraper, Plumemu envoie à ScreenScraper le nom, la taille et les sommes de contrôle du fichier de chaque jeu, et son titre quand ils ne trouvent rien, pour trouver les jaquettes. Avec la source par défaut, Plumemu télécharge les faces de boîte depuis le serveur public de libretro, thumbnails.libretro.com, en Wi-Fi, avec le nom du jeu dans l\'adresse ; ce serveur voit votre adresse IP. Avec un compte RetroAchievements, Plumemu envoie à retroachievements.org votre nom d\'utilisateur, votre clé et le numéro RetroAchievements de chaque jeu, à l\'ouverture des infos d\'un jeu, après une partie et une fois par jour en Wi-Fi ; les images des badges viennent de media.retroachievements.org. La clé est stockée chiffrée sur cet appareil, jamais dans une sauvegarde ni dans un journal. Se déconnecter arrête tout envoi. Le temps de jeu exact, si vous l’activez dans Réglages \u203A Statistiques, demande à l’accès aux données d’utilisation d’Android les événements de la durée de la partie et ne garde que ceux du jeu ou de l’appli lancé depuis Plumemu et ceux de l’écran ; rien n’est conservé hormis la durée de la partie, et rien n’est jamais envoyé.</string>
+    <string name="settings_privacy_body">Votre bibliothèque, vos réglages et votre temps de jeu restent dans le stockage propre de Plumemu sur cet appareil, et ne sont jamais envoyés. Uniquement si vous l\'activez (Paramètres › À propos › Envoyer des statistiques d\'usage), Plumemu envoie au développeur des compteurs d\'usage anonymes et des rapports de plantage : pays, modèle d\'appareil, versions d\'Android et de l\'appli, écrans et réglages utilisés, temps de jeu par système. Pour un jeu que Plumemu ne sait pas nommer, il envoie aussi, une fois par installation, le système, la façon dont le fichier est stocké, sa taille, son CRC-32 et le code produit ou le numéro de série du disque lu dans le jeu. Jamais les titres de jeux, les mots cherchés ni votre compte ScreenScraper. Les rapports de plantage peuvent contenir des chemins de fichiers. Le désactiver envoie un unique compteur anonyme \"désactivé\", puis plus rien. Les signalements de problème ne sont envoyés que quand vous appuyez sur Envoyer dans Signaler un problème, et peuvent contenir le journal que vous choisissez de joindre, avec des chemins de fichiers. Ce qui est envoyé est conservé sans limite de durée. Une fois par jour en Wi-Fi, Plumemu demande à plumemu-app.stevensdesk.com s\'il existe une version plus récente ; Cloudflare, qui l\'héberge, voit votre adresse IP. Désactivez-le dans Paramètres › À propos › Version. Cette même vérification quotidienne télécharge aussi les données de plateformes à jour (la liste des systèmes et des émulateurs) depuis le même serveur ; rien d\'autre n\'est envoyé. Avec un compte ScreenScraper, Plumemu envoie à ScreenScraper le nom, la taille et les sommes de contrôle du fichier de chaque jeu, et son titre quand ils ne trouvent rien, pour trouver les jaquettes. Avec la source par défaut, Plumemu télécharge les faces de boîte depuis le serveur public de libretro, thumbnails.libretro.com, en Wi-Fi, avec le nom du jeu dans l\'adresse ; ce serveur voit votre adresse IP. Avec un compte RetroAchievements, Plumemu envoie à retroachievements.org votre nom d\'utilisateur, votre clé et le numéro RetroAchievements de chaque jeu, à l\'ouverture des infos d\'un jeu, après une partie et une fois par jour en Wi-Fi ; les images des badges viennent de media.retroachievements.org. La clé est stockée chiffrée sur cet appareil, jamais dans une sauvegarde ni dans un journal. Se déconnecter arrête tout envoi. Le temps de jeu exact, si vous l’activez dans Réglages \u203A Statistiques, demande à l’accès aux données d’utilisation d’Android les événements de la durée de la partie et ne garde que ceux du jeu ou de l’appli lancé depuis Plumemu et ceux de l’écran ; rien n’est conservé hormis la durée de la partie, et rien n’est jamais envoyé.</string>
     <!-- Updates -->
     <string name="settings_update_value_downloading">Téléchargement…</string>
     <string name="settings_update_value_installing">Installation…</string>
     <string name="settings_update_value_available">%1$s disponible</string>
-    <string name="settings_updates">Mises à jour</string>
     <string name="settings_updates_check_now">Chercher maintenant</string>
     <string name="settings_check_updates_body">Demande tout de suite au serveur de mises à jour de Plumemu s\'il existe une version plus récente. En données mobiles, Plumemu demande avant de télécharger une mise à jour.</string>
     <string name="settings_check_updates_daily">Chercher les mises à jour chaque jour</string>
@@ -1321,7 +1317,6 @@
     <string name="settings_check_updates_value_found">Mise à jour disponible</string>
     <string name="settings_check_updates_value_needs_android">Android trop ancien</string>
     <string name="settings_check_updates_value_failed">Échec de la vérification</string>
-    <string name="settings_check_updates_value_busy">Téléchargement en cours</string>
     <string name="settings_check_updates_busy">Une mise à jour est en cours de téléchargement. Vérifiez à nouveau une fois le téléchargement terminé.</string>
     <string name="settings_check_updates_unexpected">La vérification des mises à jour a échoué. Réessayez plus tard.</string>
     <string name="settings_update_checking">Recherche de mises à jour…</string>
@@ -1534,8 +1529,12 @@
     <!-- App menu in Apps -->
     <string name="app_menu_info">Infos sur l\'appli</string>
     <string name="app_menu_uninstall">Désinstaller</string>
+    <string name="app_menu_open_bottom">Ouvrir sur l\'écran du bas</string>
+    <string name="app_menu_open_top">Ouvrir sur l\'écran du haut</string>
     <string name="app_menu_show_as_game">Afficher comme jeu</string>
     <string name="app_menu_show_as_port">Afficher comme port</string>
+    <string name="app_menu_hint_gamenative">Activez \"Frontend Sync\", dossier dans ROM</string>
+    <string name="app_menu_hint_droiddeck">\"Sync all game files to folder\" dans ROM</string>
     <string name="app_tool_error_body">Android n\'a pas pu ouvrir cet écran. Réessayez dans un instant.</string>
 
     <!-- Library › an unknown folder (a folder whose name matches no system): its row, side panel and the home notice. %1$s is the folder's name or a number. -->

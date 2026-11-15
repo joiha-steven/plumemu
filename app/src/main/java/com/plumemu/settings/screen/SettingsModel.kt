@@ -514,6 +514,8 @@ internal class SettingsModel(
         geometry: SettingsGeometry,
     ) {
         if (canTryBoxArtAgain(option)) return tryBoxArtAgain()
+        // Version with no update manifest is read only: A and a tap do nothing (narrow: Right opens its explanation).
+        if (option == SettingsOption.Version && !content.hasUpdates) return
         if (option == SettingsOption.ExactPlayTime) return work.toggleExactPlayTime(settings.advanced.exactPlayTime, content.hasUsageAccess).also { feel.report(Outcome.Activated) }
         when (option.kind) {
             // Colors' A opens its preview panel; left / right still step.
@@ -561,11 +563,9 @@ internal class SettingsModel(
         val (page, index) =
             when (option) {
                 SettingsOption.Colors -> PanelPage.ColorSets to colorSetsPanelEntries(settings).indexOf(settings.appearance.colorSet()).coerceAtLeast(0)
-                SettingsOption.Accent -> ColorPages.openingFor(option, custom.withWritten(settings))
-                SettingsOption.ClearRecent -> PanelPage.Confirm to CONFIRM_CANCEL
                 SettingsOption.Reset -> PanelPage.Reset to 0
                 SettingsOption.BackupAndRestore -> PanelPage.BackupRestore to 0
-                SettingsOption.Updates -> PanelPage.Update to 0
+                SettingsOption.Version -> if (content.hasUpdates) PanelPage.Update to 0 else if (geometry.isNarrow || panelTextScrolls) PanelPage.ReadOnly to 0 else return false
                 SettingsOption.Licenses -> PanelPage.Licenses to 0
                 SettingsOption.Language -> PanelPage.Language to languagePanelIndex(settings.appearance.language)
                 SettingsOption.ReportProblem -> return openReport().let { true }
@@ -581,8 +581,6 @@ internal class SettingsModel(
                 else -> if (geometry.isNarrow || panelTextScrolls) PanelPage.ReadOnly to 0 else return false
             }
         doneOption = null
-        // A count from an earlier Clear must not read as the answer to this ask.
-        if (option == SettingsOption.ClearRecent && work.notice?.first == SettingsOption.ClearRecent) work.clearNotice()
         if (ColorPages.kindOf(page) != null) {
             openColourPage(page, index, settings)
         } else {

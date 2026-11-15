@@ -2,6 +2,7 @@ package com.plumemu.game
 
 import com.plumemu.R
 import com.plumemu.coredata.db.AppKind
+import com.plumemu.coredata.settings.AppsScreen
 
 /** Stable ids of the game menu's entries (row keys, tests). */
 internal enum class GameMenuEntryId { Play, PlayWith, OtherVersions, Favorite, SortBy, Name, FixBoxArt, Achievements, Info, RemoveFromRecent, Hide }
@@ -60,22 +61,31 @@ internal fun gameMenuEntries(facts: GameFacts): List<PanelRow> {
 }
 
 /** Stable ids of the app menu's entries (row keys, tests). */
-internal enum class AppMenuEntryId { Info, Uninstall }
+internal enum class AppMenuEntryId { Info, OpenOtherScreen, Uninstall }
 
 /**
  * The Apps entry's menu: the app's name, App info, Show as game and Show as port (not for Plumemu or
- * Android's Settings, [canChooseKind] false), and Uninstall only when it can be removed.
+ * Android's Settings, [canChooseKind] false), Open on the [otherScreen] while a second screen is on, and Uninstall only when it can be removed.
+ * [storeHint]: the muted line of GameNative or DroidDeck while their games are not in the library.
  */
 internal fun appMenuContent(
     app: GameRef,
     canUninstall: Boolean,
     canChooseKind: Boolean = false,
+    otherScreen: AppsScreen? = null,
+    storeHint: StoreHint? = null,
 ): PanelContent =
     PanelContent(
         title = UiText.Plain(app.title),
+        // A PC store app whose games are not listed yet: one muted line under the title, never a row.
+        body = listOfNotNull(storeHint?.let { UiText.Res(it.message) }),
         items =
             listOfNotNull(
                 PanelRow(AppMenuEntryId.Info.name, UiText.Res(R.string.app_menu_info), PanelCommand.AppInfo),
+                otherScreen?.let {
+                    val label = if (it == AppsScreen.Bottom) R.string.app_menu_open_bottom else R.string.app_menu_open_top
+                    PanelRow(AppMenuEntryId.OpenOtherScreen.name, UiText.Res(label), PanelCommand.OpenAppOnOtherScreen)
+                },
                 if (canChooseKind) PanelRow(AppKindEntryId.ShowAsGame.name, UiText.Res(R.string.app_menu_show_as_game), PanelCommand.SetAppKind(AppKind.GAME)) else null,
                 if (canChooseKind) PanelRow(AppKindEntryId.ShowAsPort.name, UiText.Res(R.string.app_menu_show_as_port), PanelCommand.SetAppKind(AppKind.PORT)) else null,
                 if (canUninstall) PanelRow(AppMenuEntryId.Uninstall.name, UiText.Res(R.string.app_menu_uninstall), PanelCommand.AppUninstall) else null,

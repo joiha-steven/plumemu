@@ -50,7 +50,7 @@ internal fun confirmHint(model: SettingsModel): Int? {
         model.isTextBlocked -> null
         focus.column == SettingsColumn.Sections -> R.string.settings_hint_select
         focus.column == SettingsColumn.Options && model.focusedStatisticGame != null -> R.string.settings_hint_go_to
-        focus.column == SettingsColumn.Options -> model.focusedOption.let { if (it == null) R.string.settings_hint_change else if (model.canTryBoxArtAgain(it)) R.string.settings_hint_try_again else rowConfirmHint(it) }
+        focus.column == SettingsColumn.Options -> model.focusedOption.let { if (it == null) R.string.settings_hint_change else if (model.canTryBoxArtAgain(it)) R.string.settings_hint_try_again else if (it == SettingsOption.Version && !model.content.hasUpdates) null else rowConfirmHint(it) }
         focus.page == PanelPage.LicenseText || focus.page == PanelPage.ReadOnly -> null
         focus.page == PanelPage.Update && updatesPanelItems(model.content.update).getOrNull(focus.panelIndex) == UpdatePanelItem.CheckDaily -> R.string.settings_hint_change
         // Folder could not be read: A on a folder skips it at once.
@@ -113,7 +113,7 @@ internal fun SettingsHints(
             val kind = model.focusedOption?.kind
             // A panel's text may run past the wide panel too: then Right is the way to scroll it, or Y on a choice, where Right steps the value.
             val hasMore = layout.widthClass == WidthClass.Narrow || model.panelTextScrolls
-            if (hasMore && model.focusedOption?.isOnStatisticsPage != true && (kind == OptionKind.Switch || kind == OptionKind.Info || kind == OptionKind.Action)) {
+            if (hasMore && model.focusedOption?.isOnStatisticsPage != true && (kind == OptionKind.Switch || kind == OptionKind.Info || kind == OptionKind.Action || (model.focusedOption == SettingsOption.Version && !model.content.hasUpdates))) {
                 Hint(
                     stringResource(R.string.settings_key_right),
                     stringResource(R.string.settings_hint_more),

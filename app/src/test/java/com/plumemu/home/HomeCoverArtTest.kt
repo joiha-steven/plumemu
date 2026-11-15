@@ -289,14 +289,18 @@ class HomeCoverArtTest {
         assertEquals("a portrait box fills the slot's height less its collar", slotHeight - collar.topPadding.value - collar.bottomPadding.value, portrait.height, EPSILON)
         assertEquals("at its own shape (PSP, 0.58 wide for one high)", 0.58f, portrait.width / portrait.height, ASPECT_SLACK)
         assertEquals("on the column's left edge, where the title starts", column.left.value + CollarSize.Cover.sidePadding.value, portrait.left, EPSILON)
-        val titleTop = bounds(HomeTags.DETAILS_TITLE).top
-        // The same game's box saved again much wider than the slot (1.6): shorter, the title stays.
+        // A tall box has the title beside it, at the box's top.
+        val tallTitle = bounds(HomeTags.DETAILS_TITLE)
+        assertTrue("the title is beside the tall box", tallTitle.left.value >= portrait.right - EPSILON)
+        assertEquals("at the box's top", portrait.top, tallTitle.top.value, EPSILON)
+        // The same game's box saved again much wider than the slot (1.6): shorter, the title goes under it.
         compose.runOnIdle { source.withLargeAspect("psp", PERSONA_3_PORTABLE, 1.6f) }
         compose.waitForIdle()
-        val wide = pictureIn(bounds(HomeTags.DETAILS_COVER))
+        val wideSlot = bounds(HomeTags.DETAILS_COVER)
+        val wide = pictureIn(wideSlot)
         assertEquals("the wide box at its shape", 1.6f, wide.width / wide.height, ASPECT_SLACK)
-        assertEquals("in its collar on the slot's bottom", slot.bottom.value - collar.bottomPadding.value, wide.bottom, EPSILON)
-        assertEquals("the title has not moved", titleTop, bounds(HomeTags.DETAILS_TITLE).top)
+        assertEquals("in its collar on the slot's bottom", wideSlot.bottom.value - collar.bottomPadding.value, wide.bottom, EPSILON)
+        assertTrue("the title is under the wide box", bounds(HomeTags.DETAILS_TITLE).top.value >= wideSlot.bottom.value - EPSILON)
     }
 
     // The box's shape is stored when the focus lands (the shapes pass has run): the slot is as wide as the box, so the freed width is the text's.
@@ -306,10 +310,16 @@ class HomeCoverArtTest {
         show { RealCoverDetails("psp", PERSONA_3_PORTABLE, storedAspect = 0.58f) }
         val box = bounds(HomeTags.DETAILS_COVER)
         val height = (box.bottom - box.top).value
-        assertEquals("the slot's full height", PlumDimens.detailsStopCoverHeight.value, height, EPSILON)
+        // The box stands in its glass frame: the frame is what fills the slot's height and hugs the column's edge.
+        val frameHeight = height + (CollarSize.Cover.topPadding + CollarSize.Cover.bottomPadding).value
+        val frameRight = box.right.value + CollarSize.Cover.sidePadding.value
+        assertEquals("the framed slot's full height", PlumDimens.detailsStopCoverHeight.value, frameHeight, EPSILON)
+        val slot = bounds(HomeTags.DETAILS_COVER_SLOT)
+        assertEquals("the frame's top is the slot's top", slot.top.value, box.top.value - CollarSize.Cover.topPadding.value, EPSILON)
+        assertEquals("the frame's left is the slot's left (it hugs the box)", slot.left.value, box.left.value - CollarSize.Cover.sidePadding.value, EPSILON)
         assertEquals("the box's own shape", 0.58f, (box.right - box.left).value / height, ASPECT_SLACK)
         assertTrue("narrower than the full slot", (box.right - box.left) < PlumDimens.detailsStopCoverWidth)
-        assertEquals("the box hugs the column's right edge and the freed width is the text's", bounds(HomeTags.DETAILS).right.value, box.right.value, EPSILON)
+        assertEquals("the frame hugs the column's right edge and the freed width is the text's", bounds(HomeTags.DETAILS).right.value, frameRight, EPSILON)
     }
 
     // Only the picture knows the shape: the slot has the system's shape from the first frame and the text keeps its width; the box fits inside the slot.
@@ -322,7 +332,7 @@ class HomeCoverArtTest {
         assertEquals("the slot hugs the column's right edge", bounds(HomeTags.DETAILS).right.value, slot.right.value, EPSILON)
         assertEquals("the box's own shape", 0.58f, (box.right - box.left).value / (box.bottom - box.top).value, ASPECT_SLACK)
         assertTrue("the box lies inside its slot", box.left >= slot.left - EPSILON.dp && box.right <= slot.right + EPSILON.dp && box.bottom <= slot.bottom + EPSILON.dp)
-        assertEquals("the box hugs the column's right edge as a stored one does", bounds(HomeTags.DETAILS).right.value, box.right.value, EPSILON)
+        assertEquals("the frame hugs the column's right edge as a stored one does", bounds(HomeTags.DETAILS).right.value, box.right.value + CollarSize.Cover.sidePadding.value, EPSILON)
     }
 
     @Test

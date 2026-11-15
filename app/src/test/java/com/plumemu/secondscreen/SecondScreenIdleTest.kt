@@ -1,6 +1,5 @@
 package com.plumemu.secondscreen
 
-import android.app.Dialog
 import android.view.ViewGroup
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composer
@@ -70,7 +69,7 @@ class SecondScreenIdleTest : SecondScreenHostTestBase() {
     }
 
     /** Settles [content] in the window, draws it once as a device would, then counts 2 s of rest. */
-    private fun measureRest(content: SecondScreenContent): Dialog {
+    private fun measureRest(content: SecondScreenContent): SecondScreenCardActivity {
         val host = startHost()
         feed.offer(content)
         idle(SETTLED_MS)
@@ -110,7 +109,7 @@ class SecondScreenIdleTest : SecondScreenHostTestBase() {
         val window = measureRest(SecondScreenContent.Game("Super Metroid", "Super Nintendo"))
         resetCounters()
         window.addContentView(
-            ComposeView(window.context).apply {
+            ComposeView(window).apply {
                 setContent {
                     var ticks by remember { mutableIntStateOf(0) }
                     // Bounded: on the paused looper an endless poll never lets a step end (frames run back to back).

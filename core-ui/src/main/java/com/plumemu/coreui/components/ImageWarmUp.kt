@@ -86,4 +86,5 @@ internal suspend fun onImageThread(part: () -> Unit): Boolean {
     return done
 }
 
-private const val WARM_DELAY_MS = 400L
+/** How long the screen rests before work built ahead for it starts (images here, the grids beside the shown system in the app). */
+const val WARM_DELAY_MS = 400L

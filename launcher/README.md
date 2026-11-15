@@ -51,6 +51,8 @@ Namespace: `com.plumemu.launcher`. Depends on `platforms` (data, `LaunchSpec`), 
 | `src/test/.../LaunchingTest.kt` | A choice made through the facade is the one its launcher uses |
 | `src/test/.../DocumentProbeTest.kt` | The probe against a provider that answers, is empty, says gone, refuses, lost its root (card removed) |
 | `src/test/.../apps/InstalledAppsTest.kt` | Sorting, Plumemu left out, launch, a vanished app, a refusal and any other start error (logged by package and class) |
+| `src/test/.../apps/InstalledAppsDisplayTest.kt` | An app on another display (the second screen): the display reaches its own starter, none for `startGameApp`, a refusal opens it on this screen (`StartedOnTop`), a vanished app is `Missing` with no retry |
+| `src/test/.../LaunchAnimationDisplayTest.kt` | The display goes to the host from API 26 and is dropped below; the options name it |
 | `src/test/.../apps/InstalledAppsGameTest.kt` | The game mark on API 23 and 34, `startGameApp`: the package's launcher activity, missing or uninstalled, a throwing start, no battery call |
 | `src/test/.../apps/InstalledAppsBatteryTest.kt` | An app after a game, and after another app, starts its own battery play: no usual pace, no old level points, nothing for its first minute |
 | `src/test/.../apps/AppIconsTest.kt` | Off the caller's thread, size, cache hit, `cached` (memory only), a remembered failure, the generation, invalidation, missing icon logged once, byte-bound eviction, the cap formula |

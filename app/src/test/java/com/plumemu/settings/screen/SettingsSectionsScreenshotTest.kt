@@ -108,7 +108,7 @@ class SettingsSectionsScreenshotTest {
         }
 
     @Test
-    fun controls() = ReferenceShots.capture("settings_controls") { SettingsAt(optionsAt(SettingsOption.ShowButtonHints), content = ShotContent.library) }
+    fun controls() = ReferenceShots.capture("settings_controls") { SettingsAt(optionsAt(SettingsOption.Keyboard), content = ShotContent.library) }
 
     /** Push right to play focused and on: its switch and the explanation beside it. */
     @Test

@@ -127,22 +127,16 @@ class SettingsScreenTest {
         compose.onAllNodes(hasText(part, substring = true) and hasAnyAncestor(hasTestTag(HomeTags.TOP_BAR)), useUnmergedTree = true).fetchSemanticsNodes().size
 
     @Test
-    fun showButtonHintsOffHidesTheMainScreensHintsButNotSettings() {
+    fun aStoredHintsOffStillShowsTheMainScreensHints() {
+        // The stored value stays (backups restore it) but nothing obeys it: the hint bar is always shown.
+        settings.value = settings.value.copy(controls = settings.value.controls.copy(showButtonHints = false))
         showMainScreen()
         compose.onNodeWithTag(HomeTags.HINT_BAR).assertExists()
         send(Action.Menu)
-        down(SettingsSection.Controls.shownIndex)
-        send(Action.Enter)
-        down(SettingsSection.Controls.options.indexOf(SettingsOption.ShowButtonHints))
-        send(Action.Enter) // Show button hints › off
-        assertFalse(settings.value.controls.showButtonHints)
         compose.onNodeWithTag(SettingsTags.HINT_BACK).assertIsDisplayed()
         send(Action.Back, Action.Back)
         compose.onNodeWithTag(SettingsTags.SCREEN).assertDoesNotExist()
-        compose.onNodeWithTag(HomeTags.HINT_BAR).assertDoesNotExist()
-        // START still opens Settings, whose hints show the way back.
-        send(Action.Menu)
-        compose.onNodeWithTag(SettingsTags.HINT_BACK).assertIsDisplayed()
+        compose.onNodeWithTag(HomeTags.HINT_BAR).assertExists()
     }
 
     @Test
@@ -173,15 +167,12 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun clockAndShowBatteryOffLeaveTheTopBar() {
-        settings.value = settings.value.copy(homeScreen = settings.value.homeScreen.copy(showClock = true))
+    fun aStoredClockAndBatteryOffStillShowsThemOnTheTopBar() {
+        // An older version (or a restored backup) stored both off: the row is gone and the values are no longer read.
+        settings.value = settings.value.copy(homeScreen = settings.value.homeScreen.copy(showClock = false, showBattery = false))
         showMainScreen()
         // The clock is the only text of the bar with a colon ("9:41 AM"); the place has none.
         assertEquals(1, topBarTexts(":"))
-        settings.value = settings.value.copy(homeScreen = settings.value.homeScreen.copy(showClock = false, showBattery = false))
-        compose.waitForIdle()
-        assertEquals(0, topBarTexts(":"))
-        assertEquals(0, topBarTexts("%"))
         compose.onNodeWithTag(HomeTags.TOP_BAR).assertIsDisplayed()
     }
 

@@ -117,7 +117,7 @@ internal interface SettingsActions {
     /** About › Report a problem: the unsent words, kept while the process lives; null keeps nothing. */
     val reportDraft: ReportDraft? get() = null
 
-    /** Library › Clear Recent…. */
+    /** Advanced › Reset… › Clear Recent…. */
     val recent: SettingsRecentActions get() = SettingsRecentActions.None
 
     /** Library's box art: ask again, pause and resume. */
@@ -132,7 +132,7 @@ internal interface SettingsActions {
     /** Back up and restore › Restore… and Undo restore: the open picker, Cancel, Restore, Undo, Forget the copy. */
     val restore: SettingsRestoreActions get() = SettingsRestoreActions.None
 
-    /** About › Updates: Check now, Update and its steps. */
+    /** About › Version: Check now, Update and its steps. */
     val updates: SettingsUpdateActions get() = SettingsUpdateActions.None
 }
 
@@ -233,7 +233,7 @@ internal data class PanelGrid(
                 PanelPage.BackgroundPresets, PanelPage.AccentPresets, PanelPage.TextPresets -> PanelGrid(ColorPages.presetCount(page, ColorPages.backgroundOf(settings)), geometry.presetColumns)
                 PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom ->
                     PanelGrid(paletteSize + ColorSlider.entries.size + 1, ColorPages.PALETTE_COLUMNS)
-                PanelPage.Confirm, PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm -> PanelGrid(2, 2)
+                PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm, PanelPage.ResetRecentConfirm -> PanelGrid(2, 2)
                 PanelPage.Reset -> PanelGrid(ResetPanelItem.entries.size, 1)
                 PanelPage.BackupRestore -> PanelGrid(backupRestoreItems(content).size, 1)
                 PanelPage.Backup -> PanelGrid(backupPanelItems(content.backup).size, 1)

@@ -18,6 +18,9 @@ import com.plumemu.launcher.rethrowIfCallerCancelled
 import kotlin.math.abs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
@@ -139,9 +142,51 @@ class PlayTimeTracker internal constructor(
     )
 
     private val mutex = Mutex()
+    private val scope = CoroutineScope(SupervisorJob() + io)
 
-    /** The note of the play in progress and [screenOff]'s total when it was written; this process only. */
-    @Volatile private var screenOffAtStart: Pair<PendingSession, Long>? = null
+    /**
+     * What this process knows of the screen for the pending note: the note and the amount to add to
+     * [screenOff]'s running total to get the screen-off time since that play started. For a note this
+     * process wrote it is minus the total at that moment. For a note an earlier process wrote it is that
+     * process's stored total plus its stretch still open at its death, which ends at [ScreenOffTime.startedAtMs]
+     * (carried on if the screen is still off, ended there if not; this process counts from then on).
+     * The one source for the play's screen-off time is therefore this pair; the stored copy ([ScreenOffNote]) is only
+     * what a next process starts from, rewritten at every screen change. Guarded by [mutex].
+     */
+    private var screenBase: Pair<PendingSession, Long>? = null
+
+    init {
+        screenOff.onChange = { scope.launch { persistScreenOff() } }
+    }
+
+    /** Copies the screen-off time into the pending note, when one is pending; never writes a note of its own. */
+    private suspend fun persistScreenOff() = mutex.withLock { withContext(io) { persistScreenOffLocked() } }
+
+    /** [persistScreenOff] with [mutex] held and on [io]. */
+    private fun persistScreenOffLocked() {
+        val session = store.read() ?: return
+        val base = baseOf(session)
+        val now = clock.uptimeMs()
+        // A stretch that began before the play started counts from the start only.
+        val open = screenOff.closed().openSinceMs?.let { maxOf(it, session.startedAtUptimeMs ?: it) }
+        val openPart = open?.let { (now - it).coerceAtLeast(0) } ?: 0
+        val closedMs = (base + screenOff.totalMs() - openPart).coerceAtLeast(0)
+        if (!store.writeScreenOff(ScreenOffNote(closedMs, open))) log.warn("play time: screen-off time of game ${session.gameId} not saved")
+    }
+
+    /** [screenBase]'s amount for [session], worked out once from the stored note when this process did not write it. */
+    private fun baseOf(session: PendingSession): Long {
+        screenBase?.takeIf { it.first == session }?.let { return it.second }
+        val stored = store.readScreenOff()
+        val base = if (stored == null) {
+            // Written before screen-off time was kept, or never changed: nothing to subtract but this process's own.
+            0L
+        } else {
+            stored.totalMs + (stored.openSinceMs?.let { (screenOff.startedAtMs - it).coerceAtLeast(0) } ?: 0)
+        }
+        screenBase = session to base
+        return base
+    }
 
     /**
      * Called right before the emulator starts; [GameLauncher] does it, the Activity need not. [emulatorId] is kept for the
@@ -170,8 +215,10 @@ class PlayTimeTracker internal constructor(
             val note = PendingSession(
                 gameId, clock.wallMs(), clock.realtimeMs(), clock.bootCount(), emulatorId, coreToConfirm, clock.uptimeMs(), packageName,
             )
-            screenOffAtStart = note to screenOff.totalMs()
+            screenBase = note to -screenOff.totalMs()
             if (!store.write(note)) log.warn("play time: could not save the start of game $gameId; its time may be lost")
+            // Only a screen already off needs a stored mark: a change later writes the note's screen part itself.
+            if (screenOff.closed().openSinceMs != null) persistScreenOffLocked()
             note
         }
     }
@@ -289,20 +336,22 @@ class PlayTimeTracker internal constructor(
     suspend fun onResume(): PlaySessionOutcome = mutex.withLock {
         withContext(io) {
             val session = store.read() ?: return@withContext PlaySessionOutcome.NothingPending
+            // Read before the clear takes the stored screen-off time with the note.
+            val screenBaseMs = baseOf(session)
             if (!store.clear()) log.warn("play time: could not clear the pending session of game ${session.gameId}")
             // Taken whatever the outcome, so a play that is not recorded leaves nothing for the next one.
-            record(session, battery.takeMeasured()).also { log.info("play time: ${describe(it)}") }
+            record(session, battery.takeMeasured(), screenBaseMs).also { log.info("play time: ${describe(it)}") }
         }
     }
 
-    private suspend fun record(session: PendingSession, measured: SessionBattery?): PlaySessionOutcome {
+    private suspend fun record(session: PendingSession, measured: SessionBattery?, screenBase: Long): PlaySessionOutcome {
         val nowWall = clock.wallMs()
         val elapsedMs = PlaySessions.elapsedMs(session, nowWall, clock.realtimeMs(), clock.uptimeMs(), clock.bootCount())
             ?: return PlaySessionOutcome.Unmeasurable(session.gameId)
-        // Known only when this process wrote the note; otherwise the awake clock alone leaves out deep sleep.
-        val screenOffMs = screenOffAtStart?.takeIf { it.first == session }?.let { screenOff.totalMs() - it.second } ?: 0
+        val screenOffMs = (screenBase + screenOff.totalMs()).coerceAtLeast(0)
         val awakeMs = (elapsedMs - screenOffMs).coerceAtLeast(0)
-        val cappedMs = awakeMs.coerceAtMost(MAX_SESSION_SECONDS * MILLIS_PER_SECOND)
+        val capMs = MAX_SESSION_SECONDS * MILLIS_PER_SECOND
+        val cappedMs = awakeMs.coerceAtMost(capMs)
         // Too short is decided on the awake count: the exact source only lowers what is recorded, it never says the start failed
         // (a game left at once for another app, a shortcut handing off to another package, still started).
         val core = session.coreToConfirm
@@ -310,11 +359,14 @@ class PlayTimeTracker internal constructor(
             return PlaySessionOutcome.TooShort(session.gameId, cappedMs / MILLIS_PER_SECOND, session.emulatorId, core)
         }
         val exactMs = session.packageName?.let { foregroundTime.inFrontMs(it, session.startedAtWallMs, nowWall) }
-        // The exact source only lowers; unknown (null) keeps the awake count.
-        val countedMs = if (exactMs != null && exactMs < cappedMs) exactMs.coerceAtLeast(0) else cappedMs
-        if (countedMs < cappedMs) log.info("play time: ${cappedMs / MILLIS_PER_SECOND} s awake counted as ${countedMs / MILLIS_PER_SECOND} s in front")
+        // Awake for the cap or more: the emulator was left open, so the play counts the game's usual play (never more than the cap).
+        val baseMs = if (awakeMs >= capMs) usualPlaySeconds(session.gameId).also { usual ->
+            log.info("play time: open ${awakeMs / MILLIS_PER_SECOND} s, past the cap; counted as the usual play $usual s")
+        } * MILLIS_PER_SECOND else cappedMs
+        // The exact source only lowers; unknown (null) keeps the awake (or usual) count.
+        val countedMs = if (exactMs != null && exactMs < baseMs) exactMs.coerceAtLeast(0) else baseMs
+        if (countedMs < baseMs) log.info("play time: ${baseMs / MILLIS_PER_SECOND} s awake counted as ${countedMs / MILLIS_PER_SECOND} s in front")
         if (screenOffMs > 0) log.info("play time: ${screenOffMs / MILLIS_PER_SECOND} s with the screen off not counted")
-        if (cappedMs < awakeMs) log.info("play time: ${awakeMs / MILLIS_PER_SECOND} s counted as $MAX_SESSION_SECONDS s")
         val seconds = countedMs / MILLIS_PER_SECOND
         return try {
             if (gameDao.game(session.gameId) == null) return PlaySessionOutcome.GameGone(session.gameId)
@@ -336,6 +388,33 @@ class PlayTimeTracker internal constructor(
         }
     }
 
+    /**
+     * The game's usual play: the median of its earlier sessions, those at the cap or over (left-open plays) left out;
+     * [USUAL_PLAY_FALLBACK_SECONDS] when fewer than [USUAL_PLAY_MIN_SESSIONS] remain or the read fails (logged).
+     */
+    private suspend fun usualPlaySeconds(gameId: Long): Long {
+        val earlier = try {
+            playDao.sessionSeconds(gameId).filter { it < MAX_SESSION_SECONDS }
+        } catch (e: CancellationException) {
+            e.rethrowIfCallerCancelled()
+            return fallbackUsualPlay(gameId, e)
+        } catch (e: SQLiteException) {
+            return fallbackUsualPlay(gameId, e)
+        } catch (e: IllegalStateException) {
+            return fallbackUsualPlay(gameId, e)
+        }
+        if (earlier.size < USUAL_PLAY_MIN_SESSIONS) return USUAL_PLAY_FALLBACK_SECONDS
+        val sorted = earlier.sorted()
+        val mid = sorted.size / 2
+        val median = if (sorted.size % 2 == 1) sorted[mid] else (sorted[mid - 1] + sorted[mid]) / 2
+        return median.coerceAtMost(MAX_SESSION_SECONDS)
+    }
+
+    private fun fallbackUsualPlay(gameId: Long, e: Exception): Long {
+        log.warn("play time: earlier plays of game $gameId not read (${e.kind()}); usual play taken as $USUAL_PLAY_FALLBACK_SECONDS s")
+        return USUAL_PLAY_FALLBACK_SECONDS
+    }
+
     /** Ids, seconds and an exception class only. */
     private fun describe(outcome: PlaySessionOutcome): String = when (outcome) {
         is PlaySessionOutcome.Failed -> "could not add the time of game ${outcome.gameId} (${outcome.error.kind()})"
@@ -345,6 +424,10 @@ class PlayTimeTracker internal constructor(
     companion object {
         /** A play counts at most this long: past it, the emulator was most likely left open (ARCHITECTURE > Launching). */
         const val MAX_SESSION_SECONDS = 4 * 3_600L
+
+        /** What a play past the cap counts when the game has fewer than [USUAL_PLAY_MIN_SESSIONS] earlier plays under the cap: half an hour. */
+        const val USUAL_PLAY_FALLBACK_SECONDS = 30 * 60L
+        private const val USUAL_PLAY_MIN_SESSIONS = 3
 
         /** Sessions shorter than this are not counted (ARCHITECTURE > Launching). */
         const val MIN_SESSION_SECONDS = 10L

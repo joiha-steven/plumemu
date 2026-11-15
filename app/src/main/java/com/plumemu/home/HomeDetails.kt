@@ -15,9 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.referentialEqualityPolicy
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
@@ -26,7 +26,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
@@ -35,6 +37,9 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreinput.tapItem
+import com.plumemu.coreui.components.CollarSize
+import com.plumemu.coreui.components.collar
+import com.plumemu.coreui.components.coverBoxShadow
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.WidthClass
@@ -119,15 +124,25 @@ private fun WideDetails(
     val revealKey = game.id to LocalHomePlayFacts.current
     val revealed = rememberRevealed(revealKey, play !== ShownPlay.Reading && extras !== PENDING_EXTRAS && slot !is ArtSlot.Unknown)
     // One layout whether the text shows or not, so the cover is not composed again when the systems take focus.
+    // A tall box (the picture's own shape, else the system's) has the title beside it.
+    val boxAspect = coverBoxAspect(slot, (slot as? ArtSlot.Found)?.art?.detailsPicture(), game.artAspect, posterAspect) ?: posterAspect
+    // Not tied to textHidden: the cover stays the same composable when the focus goes to the systems column.
+    val sideTitle = boxAspect < TALL_BELOW && titleFitsBeside(game.title, boxAspect, width)
     WideDetailsLayout(
         // With the systems focused the column is mostly off screen (its text is not composed): its cover shows only if the whole column fits.
-        cover = { if (!textHidden || detailsCoverFitsWithSystemsOpen(PlumTheme.layout, content.hasBoxArt)) CollaredDetailsCover(slot, DpSize(width, PlumDimens.detailsCoverHeightWide), poster, posterAspect, game.appPackage, game.artAspect) },
+        cover = {
+            if (!textHidden || detailsCoverFitsWithSystemsOpen(PlumTheme.layout, content.hasBoxArt)) {
+                if (sideTitle) SideTitleCover(slot, poster, boxAspect, game) else CollaredDetailsCover(slot, DpSize(width, PlumDimens.detailsCoverHeightWide), poster, posterAspect, game.appPackage, game.artAspect)
+            }
+        },
+        sideTitle = sideTitle,
         titleBlock = {
             if (!textHidden) {
+                // Beside a tall box the title takes up to 3 lines and the publisher and year may wrap to 2; under a wide one 2 and 1.
                 TitleBlock(PlumDimens.detailsSubtitleGap) {
-                    DetailsTitle(game.title)
+                    DetailsTitle(game.title, maxLines = if (sideTitle) SIDE_TITLE_LINES else TITLE_LINES)
                     // The line is held (empty until the result is read) so the cover below does not change height when it arrives.
-                    DetailsSubtitle(details?.let { publisherAndYear(it) }.orEmpty())
+                    DetailsSubtitle(details?.let { publisherAndYear(it) }.orEmpty(), maxLines = if (sideTitle) SIDE_SUBTITLE_LINES else 1)
                 }
             }
         },
@@ -184,10 +199,11 @@ private fun NarrowDetails(
             val full = DpSize(PlumDimens.detailsStopCoverWidth, PlumDimens.detailsStopCoverHeight)
             // Latched per game: a shape that arrives while the focus rests on it (the shapes pass) changes nothing beside the cover.
             val slotAspect = remember(game.id) { game.artAspect ?: posterAspect }
-            val slotSize = DpSize(fitInside(slotAspect, full).width, full.height)
+            // The glass frame hugs the box: the slot is the box fitted inside what the frame's padding leaves, plus that padding.
+            val slotSize = DpSize(fitInside(slotAspect, coverInner(full)).width + CollarSize.Cover.sidePadding * 2, full.height)
             // The box hugs the right edge, as a stored one does, when it is narrower than the slot (first seen).
             Box(Modifier.size(slotSize).testTag(HomeTags.DETAILS_COVER_SLOT), contentAlignment = Alignment.TopEnd) {
-                DetailsCover(slot, slotSize, Alignment.TopStart, isBoxFitted = true, poster = poster, posterAspect = posterAspect, appPackage = game.appPackage, storedAspect = game.artAspect)
+                DetailsCover(slot, slotSize, Alignment.TopStart, isBoxFitted = true, poster = poster, posterAspect = posterAspect, appPackage = game.appPackage, storedAspect = game.artAspect, isFramed = true)
             }
         }
         if (!textHidden && revealed) Synopsis(synopsis)
@@ -307,6 +323,8 @@ internal fun DetailsCover(
     posterAspect: Float? = null,
     appPackage: String? = null,
     storedAspect: Float? = null,
+    /** In the glass frame the wide column's cover wears ([CollarSize.Cover]), whole inside [size] (the narrow stop's). */
+    isFramed: Boolean = false,
 ) {
     if (appPackage != null) {
         // An installed app listed as a game: its Android icon centred in the slot, never a poster.
@@ -318,28 +336,39 @@ internal fun DetailsCover(
     // and for a picture whose file cannot be read; the plain tile shows meanwhile.
     val shownPoster = if (slot is ArtSlot.Unknown) null else poster
     val boxAspect = coverBoxAspect(slot, picture, storedAspect, posterAspect)
-    CoverArt(
-        title = null,
-        picture = picture,
-        size = if (boxAspect != null && isBoxFitted) fitInside(boxAspect, size) else size,
-        alignment = alignment,
-        corner = pictureCorner(boxAspect ?: posterAspect.takeIf { shownPoster != null } ?: (size.width / size.height)),
-        titlePadding = PlumDimens.coverPaddingDetails,
-        modifier = Modifier.testTag(HomeTags.DETAILS_COVER),
-        shrinksToFit = shrinksToFit,
-        poster = shownPoster,
-        posterAspect = posterAspect,
-        tileSystem = poster,
-    )
+    // Framed: the collar's chrome is taken out of [size], so the framed cover is never larger than the slot.
+    val room = if (isFramed) coverInner(size) else size
+    val boxSize = if (boxAspect != null && isBoxFitted) fitInside(boxAspect, room) else room
+    val corner = pictureCorner(boxAspect ?: posterAspect.takeIf { shownPoster != null } ?: (room.width / room.height))
+    val art =
+        @Composable {
+            CoverArt(
+                title = null,
+                picture = picture,
+                size = boxSize,
+                alignment = alignment,
+                corner = corner,
+                titlePadding = PlumDimens.coverPaddingDetails,
+                modifier = Modifier.testTag(HomeTags.DETAILS_COVER).then(if (isFramed) Modifier.coverBoxShadow(corner) else Modifier),
+                shrinksToFit = shrinksToFit,
+                poster = shownPoster,
+                posterAspect = posterAspect,
+                tileSystem = poster,
+            )
+        }
+    if (isFramed) Box(Modifier.collar(CollarSize.Cover, corner, halo = false) { 0f }) { art() } else art()
 }
 
 @Composable
-internal fun DetailsTitle(title: String) {
+internal fun DetailsTitle(
+    title: String,
+    maxLines: Int = TITLE_LINES,
+) {
     val layout = PlumTheme.layout
     BasicText(
         text = title,
-        style = PlumTheme.type.detailsTitle(layout.widthClass).copy(color = PlumTheme.colors.text),
-        maxLines = TITLE_LINES,
+        style = PlumTheme.type.detailsTitle(layout.widthClass).copy(color = PlumTheme.colors.text, lineBreak = LineBreak.Heading),
+        maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.testTag(HomeTags.DETAILS_TITLE),
     )
@@ -347,13 +376,13 @@ internal fun DetailsTitle(title: String) {
 
 /** The line under the wide details title ("1994 · Nintendo"): small and dim, as the board's "Nintendo, 1994". */
 @Composable
-private fun DetailsSubtitle(text: String) {
+private fun DetailsSubtitle(text: String, maxLines: Int = 1) {
     BasicText(
         // A no-break space holds the line's height while there is nothing to say (an empty text takes no height at all).
         text = text.ifEmpty { HELD_LINE },
         style = PlumTheme.type.detailsSubtitle.copy(color = PlumTheme.colors.muted),
-        // Exactly one line, so a long publisher cannot make the line grow when it arrives.
-        maxLines = 1,
+        // One line (two beside a tall box), so a long publisher cannot make the line grow when it arrives.
+        maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.testTag(HomeTags.DETAILS_SUBTITLE),
     )
@@ -396,23 +425,33 @@ internal fun Facts(
     style: TextStyle,
 ) {
     val colors = PlumTheme.colors
-    val labels =
-        listOf(
-            stringResource(R.string.home_details_last_played),
-            stringResource(R.string.home_details_play_time),
-            stringResource(R.string.home_details_emulator),
-        )
-    val values = listOf(lastPlayed(play.lastPlayedDaysAgo), playTime(play.playTimeMinutes), play.emulator)
+    val never = play.neverPlayed()
+    // Never played: one "Played / Not played yet" row instead of two. The emulator row is there only for a game's own choice. The table is
+    // as high as three rows whatever it holds (blank rows), so nothing under it moves.
+    class FactRow(val label: String, val value: String, val isNumber: Boolean)
+    val rows =
+        buildList {
+            if (never) {
+                add(FactRow(stringResource(R.string.home_details_play_time), stringResource(R.string.second_screen_not_played), true))
+            } else {
+                add(FactRow(stringResource(R.string.home_details_last_played), lastPlayed(play.lastPlayedDaysAgo), true))
+                add(FactRow(stringResource(R.string.home_details_play_time), playTime(play.playTimeMinutes), true))
+            }
+            if (play.emulator.isNotEmpty()) add(FactRow(stringResource(R.string.home_details_emulator), play.emulator, false))
+        }
+    val blanks = (FACT_ROWS - rows.size).coerceAtLeast(0)
     Row(modifier = Modifier.testTag(HomeTags.DETAILS_FACTS)) {
         Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.factsRowGap)) {
-            labels.forEach { BasicText(text = it, style = style.copy(color = colors.muted), maxLines = 1) }
+            rows.forEach { BasicText(text = it.label, style = style.copy(color = colors.muted), maxLines = 1) }
+            repeat(blanks) { BasicText(text = HELD_LINE, style = style, maxLines = 1, modifier = Modifier.clearAndSetSemantics { }) }
         }
         Spacer(Modifier.width(PlumDimens.factsColumnGap))
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PlumDimens.factsRowGap)) {
             // Last played and play time are phrases (Jost, tabular figures); the emulator's name is a word.
-            values.forEachIndexed { index, value ->
-                BasicText(text = value, style = (if (index < 2) PlumTheme.type.factNumber else style).copy(color = colors.text2), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag(HomeTags.DETAILS_FACT_VALUE))
+            rows.forEach {
+                BasicText(text = it.value, style = (if (it.isNumber) PlumTheme.type.factNumber else style).copy(color = colors.text2), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag(HomeTags.DETAILS_FACT_VALUE))
             }
+            repeat(blanks) { BasicText(text = HELD_LINE, style = style, maxLines = 1, modifier = Modifier.clearAndSetSemantics { }) }
         }
     }
 }

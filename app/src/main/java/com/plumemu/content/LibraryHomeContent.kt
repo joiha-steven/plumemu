@@ -4,7 +4,6 @@ import android.util.Log
 import com.plumemu.coredata.db.GameDao
 import com.plumemu.coredata.db.GameListRow
 import com.plumemu.coredata.db.SystemGameCount
-import com.plumemu.coredata.settings.LeftEdgeSetting
 import com.plumemu.coredata.settings.SortGamesSetting
 import com.plumemu.home.GameRowModel
 import com.plumemu.home.HomeContent
@@ -49,7 +48,7 @@ class LibraryHomeContent(
     private val showApps: Flow<Boolean>,
     private val mapping: CoroutineDispatcher = Dispatchers.Default,
     private val log: (String) -> Unit = { Log.e(TAG, it) },
-    /** Settings › Library › Sort games: every system's list and Favorites; Recent stays newest first. */
+    /** The stored sort (games list menu, R3): every system's list and Favorites; Recent stays newest first. */
     private val sort: Flow<SortGamesSetting> = flowOf(SortGamesSetting.Name),
     /**
      * Whether box art is set up (this build has developer credentials and an account is
@@ -77,8 +76,6 @@ class LibraryHomeContent(
      * Favorites and Search like every other.
      */
     private val extraAbbrs: Map<String, String> = emptyMap(),
-    /** Settings › Home screen › Left edge: what the home screen's peek shows; null (not picked) is Game counts. */
-    private val leftEdge: Flow<LeftEdgeSetting?> = flowOf(null),
     /**
      * Installed apps listed as games, package to system (`AppGraph.appGames.marked`): the Apps entry
      * leaves them out. Null (before the first sync) leaves nothing out.
@@ -96,8 +93,8 @@ class LibraryHomeContent(
                         recent(names),
                         favorites(names, order),
                         appRows(),
-                        combine(showApps.distinctUntilChanged(), hasBoxArt.distinctUntilChanged(), leftEdge.map { it ?: LeftEdgeSetting.Default }.distinctUntilChanged(), appPackages.distinctUntilChanged()) { show, art, edge, packages -> HomeFlags(show, art, edge, packages) },
-                    ) { (systems, hidden), recent, favorites, apps, flags -> assemble(systems, hidden, recent, favorites, apps, flags.showApps, flags.hasBoxArt, order, flags.edge, flags.packages) }
+                        combine(showApps.distinctUntilChanged(), hasBoxArt.distinctUntilChanged(), appPackages.distinctUntilChanged()) { show, art, packages -> HomeFlags(show, art, packages) },
+                    ) { (systems, hidden), recent, favorites, apps, flags -> assemble(systems, hidden, recent, favorites, apps, flags.showApps, flags.hasBoxArt, order, flags.packages) }
                 }
             }
             .flowOn(mapping)
@@ -127,7 +124,6 @@ class LibraryHomeContent(
         showApps: Boolean,
         hasBoxArt: Boolean,
         order: SortGamesSetting,
-        edge: LeftEdgeSetting,
         packages: Map<Long, String>,
     ): HomeContent =
         HomeContent.of(
@@ -139,7 +135,6 @@ class LibraryHomeContent(
             showApps = showApps,
             hiddenSystems = hiddenSystems,
             sortedByName = order == SortGamesSetting.Name,
-            leftEdge = edge,
         )
 
     /**
@@ -242,7 +237,7 @@ class LibraryHomeContent(
     }
 
     /** What the content flow reads besides the lists. */
-    private data class HomeFlags(val showApps: Boolean, val hasBoxArt: Boolean, val edge: LeftEdgeSetting, val packages: Map<Long, String>)
+    private data class HomeFlags(val showApps: Boolean, val hasBoxArt: Boolean, val packages: Map<Long, String>)
 
     /** The rows of app games carry their package, so the screens draw their icon; the rest are as they were. */
     private fun withPackages(rows: List<GameRowModel>, packages: Map<Long, String>): List<GameRowModel> =

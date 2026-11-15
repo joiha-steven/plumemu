@@ -130,7 +130,7 @@ class SettingsSingleScreensTest {
             List(6) { "Folders are checked again when you come back to Plumemu." }, null,
         )
 
-    private val updatesFocus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1), page = PanelPage.Update, panelIndex = 0)
+    private val updatesFocus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 0), page = PanelPage.Update, panelIndex = 0)
 
     private fun updates() = SettingsContent(update = UpdateView(LastCheck(1, CheckOutcome.Found), release))
 
@@ -175,7 +175,7 @@ class SettingsSingleScreensTest {
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
     fun clearRecentsFocusedButtonIsWholeAt768Largest() {
         val content = SettingsContent()
-        open(rowFocus(SettingsOption.ClearRecent, content).copy(column = SettingsColumn.Panel, page = PanelPage.Confirm, panelIndex = SettingsModel.CONFIRM_CANCEL), content, TextSize.Largest)
+        open(panelAt(SettingsOption.ClearRecent, PanelPage.ResetRecentConfirm, SettingsModel.CONFIRM_CANCEL), content, TextSize.Largest)
         val panel = bounds(SettingsTags.PANEL)
         for (index in listOf(SettingsModel.CONFIRM_RESET, SettingsModel.CONFIRM_CANCEL)) {
             press(Action.Move(if (index == SettingsModel.CONFIRM_RESET) Direction.Down else Direction.Up))
@@ -241,7 +241,7 @@ class SettingsSingleScreensTest {
     fun resetLastItemLeavesNoBandUnderTheTitle() {
         open(rowFocus(SettingsOption.Reset, SettingsContent()), SettingsContent(), TextSize.Large)
         press(Action.Enter)
-        press(Action.Move(Direction.Down))
+        repeat(ResetPanelItem.entries.size - 1) { press(Action.Move(Direction.Down)) }
         val title = textNodes("Reset").filter { it.boundsInRoot.left >= bounds(SettingsTags.PANEL).left }.first().boundsInRoot
         val first = bounds(SettingsTags.panelItem(0))
         assertEquals("the list starts the panel's gap under the title", px(PlumDimens.settingsPanelListGap.value), first.top - title.bottom, 2f)
@@ -351,7 +351,7 @@ class SettingsSingleScreensTest {
     @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
     fun noSliverOfAValuePastThePreviewEdge() {
         open(SettingsFocus(section = SettingsSection.About), updates(), TextSize.Largest)
-        val row = bounds(SettingsTags.option(SettingsOption.Updates))
+        val row = bounds(SettingsTags.option(SettingsOption.Version))
         val map = compose.onRoot().captureToImage().toPixelMap()
         val background = map[map.width - 1, 0]
         val marks = (map.width - px(9f).toInt() until map.width).sumOf { x -> (row.top.toInt() until row.bottom.toInt()).count { y -> map[x, y] != background } }

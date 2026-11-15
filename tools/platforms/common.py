@@ -119,7 +119,7 @@ def hand_launch(entry):
     """The launch part of a hand-kept emulator (tables.HAND_EMULATORS), checked; raises ConvertError."""
     where = f"HAND_EMULATORS {entry.get('id')!r}"
     known = {"id", "name", "systems", "package", "activity", "variants", "action", "category", "mimeType",
-             "flags", "game", "extras", "accepts"}
+             "flags", "game", "extras", "extrasByExtension", "accepts"}
     unknown = set(entry) - known
     if unknown:
         raise ConvertError(f"{where}: unknown fields {sorted(unknown)}")
@@ -137,6 +137,20 @@ def hand_launch(entry):
         # bool first: in Python True is an int too.
         if not (isinstance(value, bool) or isinstance(value, (int, str))):
             raise ConvertError(f"{where}: extra {name} has a value of type {type(value).__name__}")
+    by_extension = entry.get("extrasByExtension", {})
+    if not isinstance(by_extension, dict):
+        raise ConvertError(f"{where}: extrasByExtension must be an object")
+    accepts = entry.get("accepts") or []
+    for extension, more in by_extension.items():
+        if extension not in accepts:
+            raise ConvertError(f"{where}: extrasByExtension names {extension!r}, which is not in accepts")
+        if not isinstance(more, dict) or not more:
+            raise ConvertError(f"{where}: extrasByExtension {extension!r} must be a non-empty object")
+        for name, value in more.items():
+            if not (isinstance(value, bool) or isinstance(value, (int, str))):
+                raise ConvertError(f"{where}: extrasByExtension {extension!r} extra {name} has a value of type {type(value).__name__}")
+            if name in extras:
+                raise ConvertError(f"{where}: extrasByExtension {extension!r} repeats extra {name} of extras")
     return make_launch(entry.get("action"), entry.get("category"), entry.get("mimeType"), set(entry.get("flags", ())),
                        game["mode"], game["target"], game.get("key"), extras, game.get("prefix"),
                        game.get("type"), game.get("template"))

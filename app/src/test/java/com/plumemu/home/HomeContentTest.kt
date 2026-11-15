@@ -118,10 +118,10 @@ class HomeContentTest {
         assertEquals("the board's RP5-1 and SELECT, which switches the focused system's games view as in the list", listOf(R.string.home_hint_select, R.string.home_hint_search, R.string.home_hint_settings, R.string.home_hint_grid_view), systems)
         val games = hintsFor(board, Column.Games, snes).map { it.label }
         assertEquals(
-            "SELECT without box art too (the grid needs no account); Y Favorite and X Search (D3); R3 Sort (0.1.2); START opens the game menu",
+            // B Back is hidden on the games list
+            "SELECT without box art too (the grid needs no account); Y Favorite and X Search (D3); R3 Sort (0.1.2); START opens the game menu; no B Back",
             listOf(
                 R.string.home_hint_play,
-                R.string.home_hint_back,
                 R.string.home_hint_favorite,
                 R.string.home_hint_search,
                 R.string.home_hint_sort,
@@ -210,8 +210,9 @@ class HomeContentTest {
         assertEquals(listOf(R.string.home_hint_select, R.string.home_hint_settings, R.string.home_hint_grid_view), hintsFor(noGames, Column.Systems, apps).map { it.label })
         // Apps' grid of icons needs no box art: SELECT is offered on the Apps list too.
         assertEquals(
-            "no other list to switch to",
-            listOf(R.string.home_hint_open, R.string.home_hint_back, R.string.home_hint_menu, R.string.home_hint_grid_view),
+            // B Back is hidden on the games list
+            "no other list to switch to, no B Back",
+            listOf(R.string.home_hint_open, R.string.home_hint_menu, R.string.home_hint_grid_view),
             hintsFor(noGames, Column.Games, apps).map { it.label },
         )
         assertTrue(noGames.isLibraryEmpty)

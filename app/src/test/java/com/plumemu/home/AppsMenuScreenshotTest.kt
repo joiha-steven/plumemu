@@ -5,6 +5,7 @@ import com.plumemu.coreui.theme.TextSize
 import com.plumemu.game.GameRef
 import com.plumemu.game.OpenPanel
 import com.plumemu.game.PanelScreen
+import com.plumemu.game.StoreHint
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -21,8 +22,8 @@ import org.robolectric.annotation.GraphicsMode
 class AppsMenuScreenshotTest {
     private val app = GameRef(AppsGridApps[0].id, AppsGridApps[0].title)
 
-    private fun menu(name: String, canUninstall: Boolean, textSize: TextSize = TextSize.Small) {
-        val panel = OpenPanel(app, PanelScreen.AppMenu(canUninstall))
+    private fun menu(name: String, canUninstall: Boolean, textSize: TextSize = TextSize.Small, hint: StoreHint? = null) {
+        val panel = OpenPanel(app, PanelScreen.AppMenu(canUninstall, storeHint = hint))
         ReferenceShots.capture(name, textSize = textSize) { HomeAt(appsGridLibrary(), gridActions(APPS_ENTRY, 0), panel = panel) }
     }
 
@@ -31,6 +32,10 @@ class AppsMenuScreenshotTest {
 
     @Test
     fun appMenuWithoutUninstall() = menu("apps_menu_no_uninstall", canUninstall = false)
+
+    /** GameNative while Steam and Epic have no games: the muted line under the app's name. */
+    @Test
+    fun appMenuWithStoreHint() = menu("apps_menu_store_hint", canUninstall = true, hint = StoreHint.GameNative)
 
     @Test
     fun appMenuAtLargestText() = menu("apps_menu", canUninstall = true, textSize = TextSize.Largest)

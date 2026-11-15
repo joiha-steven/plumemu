@@ -48,7 +48,7 @@ class SettingsUpdateNotesAlignTest {
             41, "0.0.3-alpha", "https://plumemu-app.stevensdesk.com/update/p.apk", 9_800_000, "ab".repeat(32), 23, "2026-10-23", emptyList(), null,
             listOf(NoteSection(SectionKind.New, listOf(longItem, "Short.")), NoteSection(SectionKind.Fixed, listOf("Fixed."))),
         )
-    private val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1), page = PanelPage.Update, panelIndex = 0)
+    private val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 0), page = PanelPage.Update, panelIndex = 0)
 
     private fun show(step: UpdateStep) =
         compose.setContent {

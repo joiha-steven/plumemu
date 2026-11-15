@@ -42,6 +42,9 @@
     <string name="home_hint_update">Cập nhật</string>
     <string name="home_update_pill">Cập nhật %1$s</string>
     <string name="home_whatsnew_title">Có gì mới trong %1$s</string>
+    <string name="home_usage_offer_title">Chỉ tính lúc chơi thật</string>
+    <string name="home_usage_offer_body">Menu giả lập và ứng dụng khác đang bị tính là thời gian chơi. Cho phép quyền truy cập sử dụng của Android để chỉ tính game. Không có gì rời khỏi máy.</string>
+    <string name="home_usage_offer_allow">Cho phép</string>
     <!-- Hint bar label: a verb, start the game. -->
     <string name="home_hint_play">Chơi</string>
     <!-- Hint bar label: a verb, open the focused entry or app. -->
@@ -457,9 +460,9 @@
     <string name="game_error_title_id_title">Trò chơi PS Vita này chưa có title ID</string>
     <string name="game_error_title_id_empty_body">%1$s đang trống. Hãy ghi title ID của trò chơi vào đó, ví dụ PCSE00000, và không ghi gì khác. Trò chơi phải được cài trong trình giả lập.</string>
     <string name="game_error_title_id_invalid_body">%1$s chỉ được chứa title ID của trò chơi: chín chữ cái in hoa hoặc chữ số, ví dụ PCSE00000.</string>
-    <string name="game_error_steam_app_id_title">Tệp .steam này chưa có Steam app ID</string>
-    <string name="game_error_steam_app_id_empty_body">%1$s đang trống. Hãy ghi Steam app ID của trò chơi vào đó, ví dụ 274190, và không ghi gì khác. Trò chơi phải có trong ứng dụng Steam.</string>
-    <string name="game_error_steam_app_id_invalid_body">%1$s chỉ được chứa Steam app ID của trò chơi, gồm toàn chữ số, ví dụ 274190.</string>
+    <string name="game_error_steam_app_id_title">Tệp này chưa có ID trò chơi</string>
+    <string name="game_error_steam_app_id_empty_body">%1$s đang trống. Hãy ghi ID của trò chơi vào đó, ví dụ 274190, và không ghi gì khác. Trò chơi phải có trong ứng dụng đã xuất tệp này.</string>
+    <string name="game_error_steam_app_id_invalid_body">%1$s chỉ được chứa ID của trò chơi, gồm toàn chữ số, ví dụ 274190.</string>
     <string name="game_error_needs_path_title">%1$s cần đường dẫn tệp</string>
     <string name="game_error_needs_path_body">Trình giả lập này chỉ mở trò chơi từ bộ nhớ trong hoặc thẻ SD, còn thư mục này nằm ở nơi khác.</string>
     <string name="game_error_not_in_library_title">Trò chơi này không còn trong thư viện</string>
@@ -523,6 +526,7 @@
     <string name="app_error_refused_body">Android từ chối mở ứng dụng này.</string>
     <string name="app_error_not_listed_body">Danh sách ứng dụng vừa thay đổi. Plumemu đang tải lại danh sách, hãy thử lại sau giây lát.</string>
     <string name="app_error_unavailable_body">Plumemu chưa sẵn sàng để mở ứng dụng. Hãy thử lại sau giây lát.</string>
+    <string name="app_error_bottom_screen_body">Ứng dụng này không mở được trên màn hình dưới nên đã mở ở đây.</string>
     <string name="game_error_app_game_missing_body">Trò chơi này vừa bị gỡ hoặc bị tắt. Hãy cài lại hoặc bật lại để chơi từ đây.</string>
     <!-- Settings. The top bar: "Settings › Appearance › Background". -->
     <string name="settings_title">Cài đặt</string>
@@ -625,14 +629,12 @@
     <string name="settings_rescan_a_folder">Một thư mục</string>
     <string name="settings_rescan_failed">Không quét được trò chơi. Hãy thử lại.</string>
     <string name="settings_rescan_busy">Đang quét trò chơi.</string>
-    <string name="settings_sort_games">Sắp xếp trò chơi</string>
     <string name="settings_sort_by_name">Tên</string>
     <string name="settings_sort_by_last_played">Chơi gần nhất</string>
     <string name="settings_sort_by_most_played">Chơi nhiều nhất</string>
     <string name="settings_sort_by_recently_added">Mới thêm</string>
     <string name="settings_sort_by_year">Năm phát hành</string>
     <string name="settings_sort_by_rating">Điểm đánh giá</string>
-    <string name="settings_sort_games_body">Cách sắp xếp danh sách của từng hệ máy và mục Yêu thích. Trò chưa có dữ liệu để xếp (chưa chơi, không có năm, không có điểm) nằm sau, theo tên. Năm phát hành và Điểm đánh giá chỉ hiện khi có trò có dữ liệu đó từ ScreenScraper. Gần đây luôn đưa trò vừa chơi lên đầu.</string>
     <string name="settings_clear_recent">Xóa Gần đây…</string>
     <string name="settings_clear_recent_body">Gần đây sẽ được làm trống. Một trò chơi sẽ quay lại khi bạn chơi lại. Thời gian chơi và thống kê vẫn còn.</string>
     <string name="settings_clear_recent_confirm">Xóa</string>
@@ -707,8 +709,6 @@
     <!-- Controls -->
     <string name="settings_push_right">Nhấn phải 2 lần để chơi</string>
     <string name="settings_push_right_body">Chơi bằng một tay: trong danh sách trò chơi, nhấn sang phải hai lần để chạy trò chơi đang chọn. Lần đầu đánh dấu trò chơi, lần thứ hai (trong vòng hai giây) chạy trò chơi; nhấn nút khác bất kỳ để hủy. Nút A vẫn dùng được. Trên màn hình hẹp, cột chi tiết khi đó chỉ mở được bằng cách chạm. Có thể tắt ở đây bất cứ lúc nào.</string>
-    <string name="settings_show_hints">Hiện gợi ý nút</string>
-    <string name="settings_show_hints_body">Các nút và tác dụng của chúng, hiện ở cuối màn hình danh sách trò chơi. Cài đặt và phần thiết lập ban đầu luôn hiện gợi ý để bạn biết đường quay lại. Để mở Cài đặt bằng cảm ứng, hãy nhấn giữ cột hệ máy.</string>
     <string name="settings_switch_system_with">Chuyển hệ bằng</string>
     <string name="settings_switch_system_body">Chọn cặp nút vai dùng để chuyển hệ ở màn hình chính. Cặp còn lại nhảy tới chữ cái trong danh sách và đổi cỡ trong lưới.</string>
     <string name="settings_keyboard">Bàn phím</string>
@@ -720,9 +720,6 @@
     <string name="settings_home_unavailable">Thiết bị này không có màn hình để chọn ứng dụng màn hình chính. Hãy chọn Plumemu trong Cài đặt của Android › Ứng dụng › Ứng dụng mặc định.</string>
     <string name="settings_show_apps">Hiện ứng dụng Android</string>
     <string name="settings_show_apps_body">Mọi ứng dụng Android trên thiết bị sẽ hiện trong “Ứng dụng”, ngay dưới Yêu thích. Tắt: không hiện mục Ứng dụng.</string>
-    <string name="settings_clock_battery">Đồng hồ và pin</string>
-    <string name="settings_clock_battery_body">Giờ và mức pin ở góc trên bên phải màn hình.</string>
-    <string name="settings_clock_battery_body_two_screens">Giờ và mức pin ở góc trên bên phải màn hình. Mức pin còn hiện trên đồng hồ của màn hình phụ.</string>
     <!-- The band over a system's games list ("Nintendo · Home console · 1990–2003". -->
     <string name="system_kind_console">Máy console</string>
     <string name="system_kind_handheld">Máy cầm tay</string>
@@ -796,8 +793,6 @@
     <string name="system_about_mame">Mục tiêu là lưu giữ lịch sử trò chơi; chơi được chỉ là “một tác dụng phụ dễ chịu”. Dự án ghi nhận hơn 32.000 hệ máy.</string>
     <!-- https://github.com/finalburnneo/FBNeo (README; Wikipedia has no page) -->
     <string name="system_about_fbneo">Dựa trên FinalBurn và các phiên bản cũ của MAME. Giả lập các bo mạch Capcom CPS-1, CPS-2, CPS-3, Neo Geo và Sega System 16.</string>
-    <string name="settings_system_info">Thông tin hệ máy</string>
-    <string name="settings_system_info_body">Nhãn hệ máy, một dòng thông tin (hãng, loại máy, năm) và đôi lời về hệ máy đó, ở đầu danh sách trò chơi.</string>
     <!-- Second screen, picking cards. Top line: "Super Nintendo · USA"; the separator is also used in the facts line (quoted: Android trims the spaces of an unquoted string). -->
     <string name="second_screen_android_app">Ứng dụng Android</string>
     <string name="second_screen_app_tag">APP</string>
@@ -902,6 +897,10 @@
     <string name="settings_second_screen_in_game_body">Những gì màn hình phụ hiện trong lúc chơi. Trình giả lập dùng hai màn hình sẽ tự dùng màn hình phụ. Thẻ thông tin dịch chuyển nhẹ mỗi phút để bảo vệ màn hình.</string>
     <string name="settings_second_screen_clock">Đồng hồ và pin</string>
     <string name="settings_second_screen_black">Màn hình đen</string>
+    <string name="settings_second_screen_apps_on">Mở ứng dụng trên</string>
+    <string name="settings_second_screen_apps_on_body">Màn hình mà ứng dụng mở ra khi bạn khởi chạy từ danh sách ứng dụng. Không ảnh hưởng đến trò chơi.</string>
+    <string name="settings_second_screen_apps_top">Màn hình trên</string>
+    <string name="settings_second_screen_apps_bottom">Màn hình dưới</string>
 
     <!-- Appearance -->
     <!-- Ready-made colour sets (never a console's or a brand's name. -->
@@ -926,9 +925,8 @@
     <string name="settings_background">Màu nền</string>
     <string name="settings_text_color">Màu chữ</string>
     <string name="settings_accent">Màu nhấn</string>
+    <string name="settings_page_grain">Hạt nhiễu trên nền</string>
     <string name="settings_text_size">Cỡ chữ</string>
-    <string name="settings_left_edge">Dải bên trái</string>
-    <string name="settings_grid_size">Cỡ lưới</string>
     <string name="settings_bg_graphite">Than chì</string>
     <string name="settings_bg_black">Đen</string>
     <string name="settings_bg_midnight">Nửa đêm</string>
@@ -992,9 +990,9 @@
     <string name="settings_size_larger">Lớn hơn</string>
     <string name="settings_size_huge">Rất lớn</string>
     <string name="settings_size_largest">Lớn nhất</string>
-    <string name="settings_left_edge_counts">Số trò chơi</string>
-    <string name="settings_left_edge_codes">Mã hệ máy</string>
-    <string name="settings_left_edge_letters">Chữ cái</string>
+    <string name="settings_page_grain_off">Tắt</string>
+    <string name="settings_page_grain_light">Nhẹ</string>
+    <string name="settings_page_grain_strong">Mạnh</string>
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
     <string name="settings_badge_current">Đang dùng</string>
     <string name="settings_background_body">Chọn một màu, hoặc chọn + để tự tạo màu.</string>
@@ -1021,8 +1019,7 @@
     <string name="settings_color_adjusted_both">Đã đổi màu chữ và màu nhấn để vẫn dễ đọc</string>
     <string name="settings_accent_body">Tô màu hệ máy đang chọn, chấm đánh dấu, công tắc và nút bấm. Theo hệ máy: mỗi hệ máy một màu riêng.</string>
     <string name="settings_text_size_body">Đổi cỡ toàn bộ chữ trong Plumemu. Cỡ chữ của Android vẫn áp dụng thêm.</string>
-    <string name="settings_left_edge_body">Dải hẹp bên trái hiện gì khi bạn đang ở danh sách trò chơi: số trò chơi của mỗi hệ máy, mã ngắn của từng hệ máy, hoặc các chữ cái của danh sách đang xem.</string>
-    <string name="settings_grid_size_body">Cỡ ảnh bìa ở dạng lưới, áp dụng cho mọi hệ máy, Gần đây và Yêu thích. Nhỏ hiện nhiều trò chơi nhất cùng lúc, Lớn hiện ít nhất.</string>
+    <string name="settings_page_grain_body">Hạt nhiễu mịn phủ lên màu nền, như mặt giấy. Tắt giữ nền phẳng, Nhẹ chỉ thoáng thấy, Mạnh thấy rõ trên mọi màn hình.</string>
     <!-- Sample lines in the colour panel (the board's). -->
 
     <!-- Advanced (includes the confirm-button option) -->
@@ -1261,12 +1258,11 @@
     <string name="report_error_refused">Máy chủ không nhận báo cáo này. Hãy kiểm tra địa chỉ email. Nội dung bạn viết vẫn còn, có thể thử lại.</string>
     <string name="report_error_unavailable">Bản Plumemu này không gửi được báo cáo. Hãy dùng Xuất nhật ký rồi tự gửi tệp đó.</string>
     <string name="report_error_not_saved">Không lưu được báo cáo trên thiết bị này.</string>
-    <string name="settings_privacy_body">Thư viện, cài đặt và thời gian chơi của bạn nằm trong bộ nhớ riêng của Plumemu trên thiết bị này và không bao giờ được gửi đi. Chỉ khi bạn bật (Cài đặt › Giới thiệu › Gửi thống kê sử dụng), Plumemu gửi số liệu sử dụng ẩn danh và báo cáo sự cố cho nhà phát triển: quốc gia, mẫu thiết bị, phiên bản Android và ứng dụng, màn hình và cài đặt bạn dùng, thời gian chơi theo hệ máy. Với trò chơi mà Plumemu không nhận ra được tên, ứng dụng còn gửi, mỗi lần cài đặt một lần, hệ máy, cách lưu tệp, dung lượng, CRC-32 và mã sản phẩm hoặc số sê-ri đĩa đọc từ chính trò chơi. Không bao giờ gửi tên trò chơi, từ khóa tìm kiếm hay tài khoản ScreenScraper. Báo cáo sự cố có thể chứa đường dẫn tệp. Khi tắt, Plumemu gửi một lượt đếm ẩn danh “đã tắt”, rồi không gửi gì nữa. Báo cáo lỗi chỉ được gửi khi bạn nhấn Gửi trong mục Báo lỗi, và có thể chứa nhật ký bạn chọn đính kèm, với đường dẫn tệp. Dữ liệu đã gửi được lưu giữ không thời hạn. Mỗi ngày một lần khi có Wi-Fi, Plumemu hỏi plumemu-app.stevensdesk.com xem có phiên bản mới hơn không; Cloudflare, nơi lưu trữ máy chủ này, sẽ thấy địa chỉ IP của bạn. Có thể tắt việc này trong Cài đặt › Giới thiệu › Cập nhật. Lần kiểm tra hằng ngày đó cũng tải dữ liệu nền tảng mới (danh sách hệ máy và trình giả lập) từ cùng máy chủ; không gửi thêm gì khác. Nếu bạn có tài khoản ScreenScraper, Plumemu gửi cho ScreenScraper tên tệp, dung lượng và mã kiểm tra (checksum) của từng trò chơi, cùng tên trò chơi khi những thông tin đó không cho kết quả, để tìm ảnh bìa. Với nguồn mặc định, Plumemu tải ảnh mặt hộp từ máy chủ công khai của libretro, thumbnails.libretro.com, khi có Wi-Fi, với tên trò chơi nằm trong địa chỉ; máy chủ đó thấy địa chỉ IP của bạn. Nếu bạn có tài khoản RetroAchievements, Plumemu gửi cho retroachievements.org tên người dùng, khóa và số RetroAchievements của từng trò chơi, khi bạn mở thông tin trò chơi, sau khi chơi và mỗi ngày một lần khi có Wi-Fi; ảnh huy hiệu lấy từ media.retroachievements.org. Khóa được lưu mã hóa trên thiết bị này, không bao giờ nằm trong bản sao lưu hay nhật ký. Đăng xuất là dừng gửi. Thời gian chơi chính xác, nếu bạn bật trong Cài đặt \u203A Thống kê, xin quyền Truy cập dữ liệu sử dụng của Android các sự kiện trong khoảng thời gian của lượt chơi và chỉ giữ lại những sự kiện của game hoặc ứng dụng bạn mở từ Plumemu cùng sự kiện về màn hình; ngoài độ dài lượt chơi không lưu gì thêm và không bao giờ gửi đi.</string>
+    <string name="settings_privacy_body">Thư viện, cài đặt và thời gian chơi của bạn nằm trong bộ nhớ riêng của Plumemu trên thiết bị này và không bao giờ được gửi đi. Chỉ khi bạn bật (Cài đặt › Giới thiệu › Gửi thống kê sử dụng), Plumemu gửi số liệu sử dụng ẩn danh và báo cáo sự cố cho nhà phát triển: quốc gia, mẫu thiết bị, phiên bản Android và ứng dụng, màn hình và cài đặt bạn dùng, thời gian chơi theo hệ máy. Với trò chơi mà Plumemu không nhận ra được tên, ứng dụng còn gửi, mỗi lần cài đặt một lần, hệ máy, cách lưu tệp, dung lượng, CRC-32 và mã sản phẩm hoặc số sê-ri đĩa đọc từ chính trò chơi. Không bao giờ gửi tên trò chơi, từ khóa tìm kiếm hay tài khoản ScreenScraper. Báo cáo sự cố có thể chứa đường dẫn tệp. Khi tắt, Plumemu gửi một lượt đếm ẩn danh “đã tắt”, rồi không gửi gì nữa. Báo cáo lỗi chỉ được gửi khi bạn nhấn Gửi trong mục Báo lỗi, và có thể chứa nhật ký bạn chọn đính kèm, với đường dẫn tệp. Dữ liệu đã gửi được lưu giữ không thời hạn. Mỗi ngày một lần khi có Wi-Fi, Plumemu hỏi plumemu-app.stevensdesk.com xem có phiên bản mới hơn không; Cloudflare, nơi lưu trữ máy chủ này, sẽ thấy địa chỉ IP của bạn. Có thể tắt việc này trong Cài đặt › Giới thiệu › Phiên bản. Lần kiểm tra hằng ngày đó cũng tải dữ liệu nền tảng mới (danh sách hệ máy và trình giả lập) từ cùng máy chủ; không gửi thêm gì khác. Nếu bạn có tài khoản ScreenScraper, Plumemu gửi cho ScreenScraper tên tệp, dung lượng và mã kiểm tra (checksum) của từng trò chơi, cùng tên trò chơi khi những thông tin đó không cho kết quả, để tìm ảnh bìa. Với nguồn mặc định, Plumemu tải ảnh mặt hộp từ máy chủ công khai của libretro, thumbnails.libretro.com, khi có Wi-Fi, với tên trò chơi nằm trong địa chỉ; máy chủ đó thấy địa chỉ IP của bạn. Nếu bạn có tài khoản RetroAchievements, Plumemu gửi cho retroachievements.org tên người dùng, khóa và số RetroAchievements của từng trò chơi, khi bạn mở thông tin trò chơi, sau khi chơi và mỗi ngày một lần khi có Wi-Fi; ảnh huy hiệu lấy từ media.retroachievements.org. Khóa được lưu mã hóa trên thiết bị này, không bao giờ nằm trong bản sao lưu hay nhật ký. Đăng xuất là dừng gửi. Thời gian chơi chính xác, nếu bạn bật trong Cài đặt \u203A Thống kê, xin quyền Truy cập dữ liệu sử dụng của Android các sự kiện trong khoảng thời gian của lượt chơi và chỉ giữ lại những sự kiện của game hoặc ứng dụng bạn mở từ Plumemu cùng sự kiện về màn hình; ngoài độ dài lượt chơi không lưu gì thêm và không bao giờ gửi đi.</string>
     <!-- Updates -->
     <string name="settings_update_value_downloading">Đang tải…</string>
     <string name="settings_update_value_installing">Đang cài…</string>
     <string name="settings_update_value_available">Có bản %1$s</string>
-    <string name="settings_updates">Cập nhật</string>
     <string name="settings_updates_check_now">Kiểm tra ngay</string>
     <string name="settings_check_updates_body">Hỏi ngay máy chủ cập nhật của Plumemu xem có phiên bản mới hơn không. Khi dùng dữ liệu di động, Plumemu sẽ hỏi bạn trước khi tải bản cập nhật.</string>
     <string name="settings_check_updates_daily">Tự kiểm tra cập nhật</string>
@@ -1277,7 +1273,6 @@
     <string name="settings_check_updates_value_found">Có bản cập nhật</string>
     <string name="settings_check_updates_value_needs_android">Cần Android mới hơn</string>
     <string name="settings_check_updates_value_failed">Lỗi kiểm tra</string>
-    <string name="settings_check_updates_value_busy">Đang tải cập nhật</string>
     <string name="settings_check_updates_busy">Đang tải một bản cập nhật. Hãy kiểm tra lại khi tải xong.</string>
     <string name="settings_check_updates_unexpected">Không kiểm tra được bản cập nhật. Hãy thử lại sau.</string>
     <string name="settings_update_checking">Đang kiểm tra cập nhật…</string>
@@ -1485,8 +1480,12 @@
     <!-- App menu in Apps -->
     <string name="app_menu_info">Thông tin ứng dụng</string>
     <string name="app_menu_uninstall">Gỡ cài đặt</string>
+    <string name="app_menu_open_bottom">Mở trên màn hình dưới</string>
+    <string name="app_menu_open_top">Mở trên màn hình trên</string>
     <string name="app_menu_show_as_game">Hiển thị là trò chơi</string>
     <string name="app_menu_show_as_port">Hiển thị là port</string>
+    <string name="app_menu_hint_gamenative">Bật \"Frontend Sync\", thư mục trong ROM</string>
+    <string name="app_menu_hint_droiddeck">Bật \"Sync all game files to folder\" vào ROM</string>
     <string name="app_tool_error_body">Android không mở được màn hình đó. Hãy thử lại sau giây lát.</string>
 
     <!-- Library › an unknown folder (a folder whose name matches no system): its row, side panel and the home notice. %1$s is the folder's name or a number. -->

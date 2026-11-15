@@ -92,7 +92,7 @@ abstract class HomeDetailsHoldBase(private val narrow: Boolean = false) {
                 ratings = listOf(full, noFacts).associate { artKey(it.id) to SUPER_METROID_RATING },
                 content = numbered,
             )
-        val plays = MapPlayFacts(mapOf(full.id.toLong() to GamePlay(lastPlayedDaysAgo = 2, playTimeMinutes = 252, emulator = com.plumemu.game.EmulatorToStart("RetroArch: Snes9x", isInstalled = true))))
+        val plays = MapPlayFacts(mapOf(full.id.toLong() to GamePlay(lastPlayedDaysAgo = 2, playTimeMinutes = 252, emulator = com.plumemu.game.EmulatorToStart("RetroArch: Snes9x", isInstalled = true), hasOwnEmulator = true)))
         lateinit var state: StripState
         compose.mainClock.autoAdvance = false
         compose.setContent {

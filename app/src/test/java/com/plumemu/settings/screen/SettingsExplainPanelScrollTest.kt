@@ -118,9 +118,10 @@ class SettingsExplainPanelScrollTest {
     }
 
     @Test
+    @Config(qualifiers = "w768dp-h360dp-land-xhdpi")
     fun aChoiceKeepsRightForItsValueAndEntersByY() {
-        body = R.string.settings_sort_games_body
-        show(SettingsOption.SortGames)
+        body = R.string.settings_keyboard_body
+        show(SettingsOption.Keyboard)
         assertTrue("this case needs text past the panel", bodyEnd() > panelEnd())
         assertTrue("the hint offers More", exists(SettingsTags.HINT_MORE))
         press(Action.Move(Direction.Right))

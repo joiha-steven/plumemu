@@ -41,7 +41,7 @@ class SettingsUpdateNotesRoomTest {
     fun theNotesKeepTheirRoomAndWhatIsBelowFades() {
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite) {
-                val focus = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1))
+                val focus = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 0))
                 SettingsAt(focus, content = SettingsContent(update = UpdateView(LastCheck(1, CheckOutcome.Found), release)))
             }
         }

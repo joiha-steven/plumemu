@@ -57,16 +57,13 @@ import kotlinx.coroutines.delay
  * The second screen while a game runs, Clock and battery: the time and the battery on black, dim, moved along [PixelShift] once a
  * minute. Listens to the minute tick, the battery and Wi-Fi only while composed, which is only while
  * this card is shown. The Wi-Fi glyph rides on the battery line like the top bar's
- * rides with the battery: no battery line, no glyph. [showBattery] is Settings › Home screen › Show
- * battery, as the top bar reads it: off, the card is the time alone and neither the battery nor
- * Wi-Fi is listened to; a change shows without reopening the window. [clock] is the system clock;
+ * rides with the battery: no battery line, no glyph. The battery and Wi-Fi are always shown (a stored Show battery off is no longer read). [clock] is the system clock;
  * a test passes its own.
  */
 @Composable
 internal fun InGameClockCard(
     clock: () -> Long = System::currentTimeMillis,
-    showBattery: Boolean = true,
-    /** The play's battery meter: read while shown with Show battery on; its figures make the battery part. */
+    /** The play's battery meter: read while the card is shown; its figures make the battery part. */
     battery: BatteryReads = BatteryReads.None,
     /** The once-ever note about the drift has not been shown yet (`flags.in_game_drift_note_shown`). */
     driftNoteDue: Boolean = false,
@@ -75,14 +72,14 @@ internal fun InGameClockCard(
 ) {
     val context = LocalContext.current
     val millis by rememberClockMillis(clock)
-    // Called only while shown, so switching it off drops both listeners (the effects are disposed).
-    val reading = if (showBattery) rememberBatteryReading().value else null
-    val wifi = if (showBattery) rememberWifiConnected().value else false
+    // Called only while shown: both listeners are disposed with the card.
+    val reading = rememberBatteryReading().value
+    val wifi = rememberWifiConnected().value
     // Read on each tick: a 12 / 24 h change shows on the next minute at the latest, like the top bar.
     val time = formatClock(context, millis)
     val minute = PixelShift.epochMinuteOf(millis)
     // No meter (benchmark builds, tests without one): no battery part and no note, the card without those parts.
-    val feed = if (showBattery && battery !== BatteryReads.None) remember(battery) { InGameBatteryFeed(battery, clock) } else null
+    val feed = if (battery !== BatteryReads.None) remember(battery) { InGameBatteryFeed(battery, clock) } else null
     if (feed != null) {
         // The note is decided once, when the card first shows with the battery: storing it must not hide it.
         val noteDue = remember { driftNoteDue }

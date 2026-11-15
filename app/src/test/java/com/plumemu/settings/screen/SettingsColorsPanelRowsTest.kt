@@ -41,11 +41,11 @@ internal class SettingsColorsPanelRowsTest : SettingsModelHarness() {
     }
 
     @Test
-    fun appearanceListsNeitherRow() {
+    fun appearanceListsNoneOfTheThreeRows() {
         val rows = SettingsSection.Appearance.options
         assertFalse(SettingsOption.Background in rows)
         assertFalse(SettingsOption.TextColor in rows)
-        assertTrue(SettingsOption.Accent in rows)
+        assertFalse(SettingsOption.Accent in rows)
     }
 
     @Test
@@ -70,6 +70,10 @@ internal class SettingsColorsPanelRowsTest : SettingsModelHarness() {
         move(Direction.Down)
         assertOnRow(COLORS_TEXT_ITEM)
         move(Direction.Down)
+        assertOnRow(COLORS_ACCENT_ITEM)
+        move(Direction.Down)
+        assertOnRow(COLORS_ACCENT_ITEM)
+        move(Direction.Up)
         assertOnRow(COLORS_TEXT_ITEM)
         move(Direction.Up)
         assertOnRow(COLORS_BACKGROUND_ITEM)
@@ -79,8 +83,9 @@ internal class SettingsColorsPanelRowsTest : SettingsModelHarness() {
 
     @Test
     fun byKeyAColourChangesAndBackLandsOnTheSameRow() {
-        for ((option, item) in listOf(SettingsOption.Background to COLORS_BACKGROUND_ITEM, SettingsOption.TextColor to COLORS_TEXT_ITEM)) {
-            start()
+        for ((option, item) in listOf(SettingsOption.Background to COLORS_BACKGROUND_ITEM, SettingsOption.TextColor to COLORS_TEXT_ITEM, SettingsOption.Accent to COLORS_ACCENT_ITEM)) {
+            // A preset accent: an own colour opens the Accent page on its palette.
+            start(OLD_DEFAULT_LOOK.copy(accent = ColorSetting.Preset("Blue")))
             focusOption(option)
             val before = appearance
             press(Action.Enter)
@@ -134,8 +139,8 @@ internal class SettingsColorsPanelRowsTest : SettingsModelHarness() {
 
     @Test
     fun byTouchARowOpensItsPageAndBackLandsOnIt() {
-        for ((option, item) in listOf(SettingsOption.Background to COLORS_BACKGROUND_ITEM, SettingsOption.TextColor to COLORS_TEXT_ITEM)) {
-            start()
+        for ((option, item) in listOf(SettingsOption.Background to COLORS_BACKGROUND_ITEM, SettingsOption.TextColor to COLORS_TEXT_ITEM, SettingsOption.Accent to COLORS_ACCENT_ITEM)) {
+            start(OLD_DEFAULT_LOOK.copy(accent = ColorSetting.Preset("Blue")))
             tapIntoColorPage(option)
             assertEquals(option, model.panelOption)
             val other = (0..2).first { it != model.focus.panelIndex }
@@ -145,6 +150,19 @@ internal class SettingsColorsPanelRowsTest : SettingsModelHarness() {
             assertBackOnTheColorsRow()
             press(Action.Back)
         }
+    }
+
+    @Test
+    fun theAccentRowIsReachedByTheRowsAndByATapAndBByKeyLeavesItsPageForItsRow() {
+        start(OLD_DEFAULT_LOOK.copy(accent = ColorSetting.Preset("Blue")))
+        focusOption(SettingsOption.Colors)
+        model.onTapPanelItem(COLORS_ACCENT_ITEM, actions.settings, wide)
+        assertOnRow(COLORS_ACCENT_ITEM)
+        press(Action.Enter)
+        assertEquals(PanelPage.AccentPresets, model.focus.page)
+        assertEquals(SettingsOption.Accent, model.panelOption)
+        press(Action.Back)
+        assertOnRow(COLORS_ACCENT_ITEM)
     }
 
     @Test

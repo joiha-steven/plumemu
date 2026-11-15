@@ -296,11 +296,11 @@ abstract class TextSizeScreensBase(
 
     @Test
     fun settingsControls() =
-        check("settings_controls", Spec(scrollTags = settingsLists, focused = tagged(SettingsTags.option(SettingsOption.ShowButtonHints)))) { SettingsAt(optionsAt(SettingsOption.ShowButtonHints)) }
+        check("settings_controls", Spec(scrollTags = settingsLists, focused = tagged(SettingsTags.option(SettingsOption.Keyboard)))) { SettingsAt(optionsAt(SettingsOption.Keyboard)) }
 
     @Test
     fun settingsHomeScreen() =
-        check("settings_home_screen", Spec(scrollTags = settingsLists, focused = tagged(SettingsTags.option(SettingsOption.ClockAndBattery)))) { SettingsAt(optionsAt(SettingsOption.ClockAndBattery)) }
+        check("settings_home_screen", Spec(scrollTags = settingsLists, focused = tagged(SettingsTags.option(SettingsOption.ShowApps)))) { SettingsAt(optionsAt(SettingsOption.ShowApps)) }
 
     @Test
     fun settingsLibrary() =
@@ -346,9 +346,14 @@ abstract class TextSizeScreensBase(
     private fun systems(name: String, focused: Int, hidden: Set<String> = emptySet(), presses: ShotPresses.() -> Unit) =
         check(name, Spec(scrollTags = settingsLists + SettingsTags.SYSTEMS_LIST, focused = tagged(SettingsTags.panelItem(focused)), shoot = true)) { SystemsShot(SettingsOption.Systems, true, hidden = hidden, presses = presses) }
 
+    /** Version's panel with an update manifest: one scrolling column (version, platform data, status, Check now, the daily switch). */
+    @Test
+    fun settingsVersion() =
+        check("settings_version", Spec(scrollTags = settingsLists + SettingsTags.UPDATE_PANEL, focused = tagged(SettingsTags.option(SettingsOption.Version)))) { SettingsAt(optionsAt(SettingsOption.Version), content = SettingsContent(platformData = com.plumemu.platforms.PlatformDataVersion(6, "0".repeat(64), "2026-11-01"))) }
+
     @Test
     fun settingsAbout() =
-        check("settings_about", Spec(scrollTags = settingsLists + com.plumemu.settings.screen.SettingsPanelTags.ABOUT, focused = tagged(SettingsTags.option(SettingsOption.Version)))) { SettingsAt(optionsAt(SettingsOption.Version), content = SettingsContent(platformData = com.plumemu.platforms.PlatformDataVersion(6, "0".repeat(64), "2026-11-01"))) }
+        check("settings_about", Spec(scrollTags = settingsLists + com.plumemu.settings.screen.SettingsPanelTags.ABOUT, focused = tagged(SettingsTags.option(SettingsOption.Version)))) { SettingsAt(optionsAt(SettingsOption.Version), content = SettingsContent(hasUpdates = false, platformData = com.plumemu.platforms.PlatformDataVersion(6, "0".repeat(64), "2026-11-01"))) }
 
     @Test
     fun settingsSections() =

@@ -228,10 +228,10 @@ internal fun hintsFor(
                 play,
                 // With a details stop Right goes there first, so the hint waits for the stop.
                 pushRight.takeIf { !hasDetailsStop },
-                back,
+                // No "B Back" here: the key still goes back, the games list's bar leaves it out.
                 favorite,
                 search,
-                // "R3 Sort" on a list the sort orders (a system's, Favorites); it gives way after Switch system and before B Back.
+                // "R3 Sort" on a list the sort orders (a system's, Favorites); it gives way after Switch system.
                 if (hasItems && entry?.kind?.followsSort == true) HintSpec(R.string.home_key_r3, R.string.home_hint_sort, Action.Sort) else null,
                 HintSpec(R.string.home_key_start, R.string.home_hint_menu, Action.Menu),
                 switchSystem(content, shoulders),
@@ -512,11 +512,6 @@ internal object HomeTags {
     const val SYSTEMS = "home_systems"
     const val GAMES = "home_games"
 
-    /** The letter rail in the system peek, and one of its letters (a slot of equal height, for touch later). */
-    const val RAIL = "home_letter_rail"
-
-    fun railLetter(letter: Char) = "home_rail_letter_$letter"
-
     /** The band over a system's games list, the list's first item (badge, facts line, hairline). */
     const val SYSTEM_BAND = "home_system_band"
     const val SYSTEM_BAND_FACTS = "home_system_band_facts"
@@ -525,6 +520,7 @@ internal object HomeTags {
 
     /** A page of the games list (one per entry built); only the shown one has its rows in the tree. */
     const val GAMES_PAGE = "home_games_page"
+    const val GRID_PAGE = "home_grid_page"
     const val EMPTY_MESSAGE = "home_empty_message"
 
     fun emptyButton(button: EmptyButton) = "home_empty_button_${button.name.lowercase()}"

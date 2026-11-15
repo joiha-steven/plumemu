@@ -3,7 +3,6 @@ package com.plumemu.usage
 import com.plumemu.coreinput.Column
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.ConfirmButtonSetting
-import com.plumemu.coredata.settings.LeftEdgeSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coredata.settings.TextSizeSetting
@@ -109,6 +108,9 @@ internal fun launchEmulatorIdOf(outcome: LaunchOutcome): String? =
 /** A value of a setting that is not one of the app's enums: a colour of the person's own, or the text size left to the screen. */
 internal enum class SettingWord { Custom, BySystem }
 
+/** A setting changed from the main screen (L1 / R1, the Size hint), with no Settings row: its name is the `setting_changed` key. */
+internal enum class MainScreenSetting { GridSize }
+
 /**
  * `setting_changed` for every fixed choice that differs between [before] and [after], keyed by
  * its Settings option. Colours are sent as their preset's name or `custom`, never a value; the
@@ -142,28 +144,26 @@ internal fun settingChanges(
         choice(SettingsOption.TextColor, textWord(a.textColor), textWord(b.textColor))
         choice(SettingsOption.Accent, accentWord(a.accent), accentWord(b.accent))
         choice(SettingsOption.TextSize, a.textSize ?: TextSizeSetting.Default, b.textSize ?: TextSizeSetting.Default)
-        choice(SettingsOption.LeftEdge, a.leftEdge ?: LeftEdgeSetting.Default, b.leftEdge ?: LeftEdgeSetting.Default)
-        choice(SettingsOption.GridSize, a.gridSize, b.gridSize)
+        choice(MainScreenSetting.GridSize, a.gridSize, b.gridSize)
+        choice(SettingsOption.PageGrain, a.pageGrain, b.pageGrain)
         val c = before.controls
         val d = after.controls
         switch(SettingsOption.ConfirmBottom, c.confirmButton == ConfirmButtonSetting.Bottom, d.confirmButton == ConfirmButtonSetting.Bottom)
-        switch(SettingsOption.ShowButtonHints, c.showButtonHints, d.showButtonHints)
         choice(SettingsOption.Keyboard, c.keyboard, d.keyboard)
         choice(SettingsOption.SwitchSystemWith, c.switchSystemWith, d.switchSystemWith)
         switch(SettingsOption.PushRightToPlay, c.pushRightToPlay, d.pushRightToPlay)
         val l = before.library
         val m = after.library
-        choice(SettingsOption.SortGames, l.sortGames, m.sortGames)
         choice(SettingsOption.BoxArtRegion, l.boxArtRegion, m.boxArtRegion)
         choice(SettingsOption.SystemOrder, l.systemOrder, m.systemOrder)
         val h = before.homeScreen
         val i = after.homeScreen
         switch(SettingsOption.ShowApps, h.showApps, i.showApps)
-        switch(SettingsOption.ClockAndBattery, SettingsOption.ClockAndBattery.switchValue(before), SettingsOption.ClockAndBattery.switchValue(after))
         if (before.secondScreen.enabled != after.secondScreen.enabled && after.secondScreen.enabled != null) {
             add(TelemetryEvent.SettingChanged(SettingsOption.SecondScreen, after.secondScreen.enabled == true))
         }
         choice(SettingsOption.SecondScreenInGame, before.secondScreen.inGame, after.secondScreen.inGame)
+        choice(SettingsOption.SecondScreenAppsOn, before.secondScreen.appsOn, after.secondScreen.appsOn)
         switch(SettingsOption.Animations, before.advanced.animations, after.advanced.animations)
         choice(SettingsOption.Sounds, before.advanced.sounds, after.advanced.sounds)
         switch(SettingsOption.Vibration, before.advanced.vibration, after.advanced.vibration)

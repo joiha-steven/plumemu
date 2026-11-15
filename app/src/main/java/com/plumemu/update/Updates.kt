@@ -199,7 +199,7 @@ class Updates(
         }
     }
 
-    /** Settings › About › Updates › Check now: ignores the switch and the 24 h, still needs a network. */
+    /** Settings › About › Version › Check now: ignores the switch and the 24 h, still needs a network. */
     fun checkNow(): Job =
         scope.launch {
             loaded()

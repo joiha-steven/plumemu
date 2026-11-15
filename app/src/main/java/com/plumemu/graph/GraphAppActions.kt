@@ -3,7 +3,11 @@ package com.plumemu.graph
 import android.util.Log
 import com.plumemu.content.LibraryHomeContent
 import com.plumemu.coredata.db.AppKind
+import com.plumemu.coredata.settings.AppsScreen
+import com.plumemu.content.HomeState
 import com.plumemu.game.AppActions
+import com.plumemu.game.StoreHint
+import com.plumemu.home.EntryKind
 import com.plumemu.game.AppOpenOutcome
 import com.plumemu.game.AppToolResult
 import com.plumemu.launcher.apps.AppToolOutcome
@@ -25,8 +29,8 @@ import kotlinx.coroutines.withContext
  */
 internal class GraphAppActions(
     private val listed: () -> List<LaunchableApp>,
-    /** Starts [LaunchableApp]; null when the launcher could not be set up (the graph has logged why). */
-    private val launch: suspend (LaunchableApp) -> AppLaunchOutcome?,
+    /** Starts [LaunchableApp], on the display given or this screen; null when the launcher could not be set up (the graph has logged why). */
+    private val launch: suspend (LaunchableApp, displayId: Int?) -> AppLaunchOutcome?,
     private val refreshApps: suspend () -> Unit,
     private val scope: CoroutineScope,
     /** Whether Uninstall is offered for a package (`InstalledApps.canUninstall`); a PackageManager read, so off the main thread. */
@@ -40,10 +44,16 @@ internal class GraphAppActions(
     /** `AppGraph.appGames.setChoice`: stores the answer, then the library follows; throws when it could not be stored. */
     private val setChoiceOf: suspend (packageName: String, kind: AppKind) -> Boolean = { _, _ -> throw IllegalStateException("app kinds are not wired") },
     private val log: (String) -> Unit = { Log.w(TAG, it) },
+    /** The display an open goes to (`appDisplayId` over the stored settings and the second screen); null for this screen. */
+    private val displayFor: (otherScreen: Boolean) -> Int? = { null },
+    /** The screen the app menu offers "Open on …" for (`otherAppsScreen`); null when none. */
+    private val otherScreenOf: () -> AppsScreen? = { null },
+    /** Ids of the systems that have games now (the home content already held); null while it is not read. */
+    private val systemsWithGames: () -> Set<String>? = { null },
 ) : AppActions {
     constructor(graph: AppGraph) : this(
         listed = { graph.listedApps.value },
-        launch = { app -> graph.launching()?.apps?.launch(app) },
+        launch = { app, display -> graph.launching()?.apps?.launch(app, display) },
         refreshApps = graph::refreshApps,
         scope = graph.appScope,
         canUninstallPackage = { app -> withContext(Dispatchers.IO) { graph.launching()?.apps?.canUninstall(app.packageName) == true } },
@@ -51,18 +61,33 @@ internal class GraphAppActions(
         uninstallOf = { app -> graph.launching()?.apps?.uninstall(app) },
         canChooseKindOf = { app -> withContext(Dispatchers.IO) { graph.launching()?.apps?.canShowAsGame(app.packageName) == true } },
         setChoiceOf = { packageName, kind -> graph.appGames.setChoice(packageName, kind) is AppGamesSyncOutcome.Synced },
+        displayFor = { other -> graph.settings.value?.let { appDisplayId(it.secondScreen, graph.secondScreens.current.value, other) } },
+        otherScreenOf = { graph.settings.value?.let { otherAppsScreen(it.secondScreen, graph.secondScreens.current.value) } },
+        systemsWithGames = {
+            (graph.homeContent.value as? HomeState.Ready)?.content?.let { c ->
+                (c.entries + c.hiddenEntries).filter { it.kind == EntryKind.System && it.count > 0 }.map { it.id }.toSet()
+            }
+        },
     )
 
-    override suspend fun open(rowId: String): AppOpenOutcome {
+    override fun otherScreen(): AppsScreen? = otherScreenOf()
+
+    override fun storeHint(rowId: String): StoreHint? {
+        val app = listed().firstOrNull { LibraryHomeContent.appRowId(it) == rowId } ?: return null
+        return StoreHint.of(app.packageName, systemsWithGames() ?: return null)
+    }
+
+    override suspend fun open(rowId: String, otherScreen: Boolean): AppOpenOutcome {
         val app = listed().firstOrNull { LibraryHomeContent.appRowId(it) == rowId }
         if (app == null) {
             log("apps: row $rowId is not in the app list; reading it again")
             readAgain()
             return AppOpenOutcome.NotListed
         }
+        val display = displayFor(otherScreen)
         val outcome =
             try {
-                launch(app)
+                launch(app, display)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -74,6 +99,7 @@ internal class GraphAppActions(
         return when (outcome) {
             null -> AppOpenOutcome.Unavailable.also { log("apps: $rowId not opened, the launcher is not set up") }
             AppLaunchOutcome.Started -> AppOpenOutcome.Started
+            AppLaunchOutcome.StartedOnTop -> AppOpenOutcome.StartedOnTop
             AppLaunchOutcome.Missing -> AppOpenOutcome.Missing.also { readAgain() }
             is AppLaunchOutcome.Failed -> AppOpenOutcome.Refused
         }

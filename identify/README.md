@@ -309,7 +309,7 @@ run-together key table: 430 KB, built in 35 ms, 0.031 ms per lookup (machine und
 | `src/main/.../IdentifyLog.kt` | Where log lines go |
 | `src/main/.../Identification.kt` | `IdentifyRequest`, `Identification`, `Confidence`, `Method`, `ScrapeHints`, `NameTrust` |
 | `src/main/.../Identifier.kt` | The layers in order; one name matcher per pack |
-| `src/main/.../LaunchFileSystems.kt` | Systems whose files hold only a launch id (`steam`): never read, named from the file name |
+| `src/main/.../LaunchFileSystems.kt` | Systems whose files hold only a launch id or shortcut (`steam`, `epic`, `windows`): never read, named from the file name |
 | `src/main/.../pack/PackFormat.kt` | Constants, `PackKind`, `PackMasks` (region and language bits) |
 | `src/main/.../pack/PackHeader.kt` | Header and section table checks on open |
 | `src/main/.../pack/NamePack.kt` | The mapped reader and its result types |

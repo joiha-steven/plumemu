@@ -27,14 +27,14 @@ private const val NOW = ENTRY_NOW
 private const val H = 3_600_000L
 private const val D = 24 * H
 
-private fun game(
+internal fun entryGame(
     id: Long,
     title: String,
     system: String,
     ago: Long,
 ) = EntryGame(id, title, system, null, NOW - ago)
 
-private val LOOKS =
+internal val LOOKS =
     mapOf(
         "snes" to EntrySystemLook("Super Nintendo", "SNES", 1.4f),
         "md" to EntrySystemLook("Mega Drive", "MD", 0.7f),
@@ -44,15 +44,15 @@ private val LOOKS =
     )
 
 /** The boards' `SecondSystem`: Super Nintendo with six covers, three tiles, one status line and its foot. */
-private val BOARD_SYSTEM =
+internal val BOARD_SYSTEM =
     SystemEntry(
         "snes", "Super Nintendo", 248, SnesAboutInfo, 1.4f,
         figures =
             SystemFigures(
                 lastPlayed =
                     listOf(
-                        game(1, "Super Metroid", "snes", 2 * H), game(2, "Chrono Trigger", "snes", 26 * H), game(3, "Secret of Mana", "snes", 3 * D),
-                        game(4, "F-Zero", "snes", 9 * D), game(5, "Contra III", "snes", 20 * D), game(6, "Star Fox", "snes", 34 * D),
+                        entryGame(1, "Super Metroid", "snes", 2 * H), entryGame(2, "Chrono Trigger", "snes", 26 * H), entryGame(3, "Secret of Mana", "snes", 3 * D),
+                        entryGame(4, "F-Zero", "snes", 9 * D), entryGame(5, "Contra III", "snes", 20 * D), entryGame(6, "Star Fox", "snes", 34 * D),
                     ),
                 playSeconds = 42 * 3_600L + 10 * 60, playedGames = 37, achievements = SystemAchievements(5, 12, 2_140), newThisWeek = 3, leftOutFiles = 4,
                 emulator = EmulatorToStart("RetroArch", isInstalled = true, coreName = "Snes9x"), now = NOW,
@@ -60,14 +60,14 @@ private val BOARD_SYSTEM =
     )
 
 /** The boards' `SecondRecent`: five covers with when and system, and the week. */
-private val BOARD_RECENT =
+internal val BOARD_RECENT =
     RecentEntry(
         "Recent", 24, LOOKS,
         figures =
             RecentFigures(
                 listOf(
-                    game(1, "Super Metroid", "snes", 2 * H), game(2, "Sonic", "md", 26 * H), game(3, "Metroid Fusion", "gba", 30 * H),
-                    game(4, "Crash", "ps", 3 * D), game(5, "Tetris", "gb", 9 * D),
+                    entryGame(1, "Super Metroid", "snes", 2 * H), entryGame(2, "Sonic", "md", 26 * H), entryGame(3, "Metroid Fusion", "gba", 30 * H),
+                    entryGame(4, "Crash", "ps", 3 * D), entryGame(5, "Tetris", "gb", 9 * D),
                 ),
                 WeekFigures(listOf(5_400L, 0, 9_000, 2_700, 0, 12_000, 2_400), 6, 5, 3 * 3_600L + 5 * 60, Calendar.MONDAY), NOW,
             ),
@@ -81,7 +81,7 @@ private val FAVORITE_TITLES =
     )
 
 /** The boards' `SecondFavorites`: 18 favourites on 6 systems, as many shown as three rows hold. */
-private val BOARD_FAVORITES = FavoritesEntry("Favorites", 18, 6, FAVORITE_TITLES.mapIndexed { at, (title, system) -> EntryGame(at + 1L, title, system, null) }, LOOKS)
+internal val BOARD_FAVORITES = FavoritesEntry("Favorites", 18, 6, FAVORITE_TITLES.mapIndexed { at, (title, system) -> EntryGame(at + 1L, title, system, null) }, LOOKS)
 
 /**
  * The three system column cards at the Thor's bottom screen (538x468 dp, 369 dpi) on Graphite and Paper, and at 4:3 (480x360): the

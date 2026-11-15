@@ -37,15 +37,14 @@ import com.plumemu.account.RaAccountStatus
 import com.plumemu.coredata.settings.BoxArtRegionSetting
 import com.plumemu.secondscreen.isSecondScreenOn
 import com.plumemu.coredata.settings.ColorSetting
+import com.plumemu.coredata.settings.AppsScreen
 import com.plumemu.coredata.settings.InGameSetting
 import com.plumemu.coredata.settings.PlumSettings
-import com.plumemu.coredata.settings.SortGamesSetting
 import com.plumemu.coredata.settings.SoundLevel
 import com.plumemu.language.AppLanguages
 import com.plumemu.language.languageName
 import com.plumemu.coredata.settings.TextColorSetting
-import com.plumemu.coredata.settings.GridSizeSetting
-import com.plumemu.coredata.settings.LeftEdgeSetting
+import com.plumemu.coredata.settings.PageGrainSetting
 import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.SwitchSystemWithSetting
 import com.plumemu.coredata.settings.TextSizeSetting
@@ -85,21 +84,11 @@ internal fun choiceName(
                 TextSizeSetting.Huge -> R.string.settings_size_huge
                 TextSizeSetting.Largest -> R.string.settings_size_largest
             }
-        SettingsOption.LeftEdge -> leftEdgeNameRes(index)
-        SettingsOption.GridSize ->
-            when (GridSizeSetting.entries[index]) {
-                GridSizeSetting.Small -> R.string.settings_size_small
-                GridSizeSetting.Medium -> R.string.settings_size_medium
-                GridSizeSetting.Large -> R.string.settings_size_large
-            }
-        SettingsOption.SortGames ->
-            when (SortGamesSetting.entries[index]) {
-                SortGamesSetting.Name -> R.string.settings_sort_by_name
-                SortGamesSetting.LastPlayed -> R.string.settings_sort_by_last_played
-                SortGamesSetting.MostPlayed -> R.string.settings_sort_by_most_played
-                SortGamesSetting.RecentlyAdded -> R.string.settings_sort_by_recently_added
-                SortGamesSetting.Year -> R.string.settings_sort_by_year
-                SortGamesSetting.Rating -> R.string.settings_sort_by_rating
+        SettingsOption.PageGrain ->
+            when (PageGrainSetting.entries[index]) {
+                PageGrainSetting.Off -> R.string.settings_page_grain_off
+                PageGrainSetting.Light -> R.string.settings_page_grain_light
+                PageGrainSetting.Strong -> R.string.settings_page_grain_strong
             }
         SettingsOption.SystemOrder -> systemOrderName(index)
         SettingsOption.SwitchSystemWith -> if (index == SwitchSystemWithSetting.Triggers.ordinal) R.string.settings_switch_system_triggers else R.string.settings_switch_system_bumpers
@@ -114,6 +103,11 @@ internal fun choiceName(
             when (InGameSetting.entries[index]) {
                 InGameSetting.Clock -> R.string.settings_second_screen_clock
                 InGameSetting.Black -> R.string.settings_second_screen_black
+            }
+        SettingsOption.SecondScreenAppsOn ->
+            when (AppsScreen.entries[index]) {
+                AppsScreen.Top -> R.string.settings_second_screen_apps_top
+                AppsScreen.Bottom -> R.string.settings_second_screen_apps_bottom
             }
         SettingsOption.BoxArtRegion -> when (BoxArtRegionSetting.entries[index]) {
             BoxArtRegionSetting.Usa -> R.string.settings_region_usa
@@ -226,14 +220,6 @@ internal fun accentName(preset: AccentPreset): Int =
         AccentPreset.Blue -> R.string.settings_accent_blue
         AccentPreset.Green -> R.string.settings_accent_green
         AccentPreset.Mono -> R.string.settings_accent_mono
-    }
-
-/** The name of Left edge's value [index] (`LeftEdgeSetting.entries` order). */
-internal fun leftEdgeNameRes(index: Int): Int =
-    when (LeftEdgeSetting.entries[index]) {
-        LeftEdgeSetting.Counts -> R.string.settings_left_edge_counts
-        LeftEdgeSetting.Codes -> R.string.settings_left_edge_codes
-        LeftEdgeSetting.Letters -> R.string.settings_left_edge_letters
     }
 
 /** The backgrounds or accents of the looks [ColorSet.formerLooks] that now read as this set. */

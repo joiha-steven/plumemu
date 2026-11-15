@@ -42,6 +42,9 @@
     <string name="home_hint_update">アップデート</string>
     <string name="home_update_pill">アップデート %1$s</string>
     <string name="home_whatsnew_title">%1$s の新機能</string>
+    <string name="home_usage_offer_title">実際のプレイだけを数える</string>
+    <string name="home_usage_offer_body">今は他のアプリも数えます。使用状況へのアクセスを許可すると、ゲームだけを数えます。データは外に出ません。</string>
+    <string name="home_usage_offer_allow">許可する</string>
     <!-- Hint bar label: a verb, start the game. -->
     <string name="home_hint_play">プレイ</string>
     <!-- Hint bar label: a verb, open the focused entry or app. -->
@@ -457,9 +460,9 @@
     <string name="game_error_title_id_title">このPS VitaゲームにはタイトルIDがありません</string>
     <string name="game_error_title_id_empty_body">%1$sが空です。PCSE00000のような、ゲームのタイトルIDだけを書き込んでください。ゲームはエミュレーターにインストールされている必要があります。</string>
     <string name="game_error_title_id_invalid_body">%1$sには、ゲームのタイトルIDだけを書いてください。PCSE00000のような、英大文字または数字の9文字です。</string>
-    <string name="game_error_steam_app_id_title">この.steamファイルにはSteamのアプリIDがありません</string>
-    <string name="game_error_steam_app_id_empty_body">%1$sが空です。274190のような、ゲームのSteamアプリIDだけを書き込んでください。ゲームはSteamアプリに入っている必要があります。</string>
-    <string name="game_error_steam_app_id_invalid_body">%1$sには、ゲームのSteamアプリIDだけを書いてください。274190のような数字です。</string>
+    <string name="game_error_steam_app_id_title">このファイルにはゲームIDがありません</string>
+    <string name="game_error_steam_app_id_empty_body">%1$sが空です。274190のような、ゲームのIDだけを書き込んでください。ゲームは、このファイルの書き出し元のアプリに入っている必要があります。</string>
+    <string name="game_error_steam_app_id_invalid_body">%1$sには、ゲームのIDだけを書いてください。274190のような数字です。</string>
     <string name="game_error_needs_path_title">%1$sにはファイルパスが必要です</string>
     <string name="game_error_needs_path_body">このエミュレーターは内部ストレージかSDカードにあるゲームしか開けませんが、このフォルダはそれ以外の場所にあります。</string>
     <string name="game_error_not_in_library_title">このゲームはもうライブラリにありません</string>
@@ -523,6 +526,7 @@
     <string name="app_error_refused_body">Androidが起動を拒否しました。</string>
     <string name="app_error_not_listed_body">表示したあとにアプリの一覧が変わりました。読み込み直しているので、少し待ってからもう一度お試しください。</string>
     <string name="app_error_unavailable_body">アプリを開く準備ができませんでした。少し待ってからもう一度お試しください。</string>
+    <string name="app_error_bottom_screen_body">このアプリは下の画面で開けなかったため、こちらで開きました。</string>
     <string name="game_error_app_game_missing_body">アンインストールまたは無効化されました。ここから遊ぶには、もう一度インストールするか有効にしてください。</string>
     <!-- Settings. The top bar: "Settings › Appearance › Background". -->
     <string name="settings_title">設定</string>
@@ -625,14 +629,12 @@
     <string name="settings_rescan_a_folder">フォルダ</string>
     <string name="settings_rescan_failed">ゲームを読み込めませんでした。もう一度お試しください。</string>
     <string name="settings_rescan_busy">すでにゲームを読み込み中です。</string>
-    <string name="settings_sort_games">ゲームの並び順</string>
     <string name="settings_sort_by_name">名前</string>
     <string name="settings_sort_by_last_played">最終プレイ</string>
     <string name="settings_sort_by_most_played">プレイ時間が長い順</string>
     <string name="settings_sort_by_recently_added">追加が新しい順</string>
     <string name="settings_sort_by_year">発売年</string>
     <string name="settings_sort_by_rating">評価</string>
-    <string name="settings_sort_games_body">各機種のリストとお気に入りの並べ方です。並べ替えの基準がないゲーム（未プレイ、発売年なし、評価なし）は、名前順で後ろに並びます。発売年と評価は、ScreenScraper のその値を持つゲームがあるときだけ選べます。「最近遊んだ」は常に、最後に遊んだゲームが先頭です。</string>
     <string name="settings_clear_recent">最近遊んだを消去…</string>
     <string name="settings_clear_recent_body">「最近遊んだ」を空にします。もう一度遊ぶと、そのゲームは戻ってきます。プレイ時間と統計は残ります。</string>
     <string name="settings_clear_recent_confirm">消去</string>
@@ -707,8 +709,6 @@
     <!-- Controls -->
     <string name="settings_push_right">右を2回押してプレイ</string>
     <string name="settings_push_right_body">片手で遊べます。ゲームのリストで右を2回押すと、選んでいるゲームが始まります。1回目で選び、2秒以内に2回目を押すと起動します。ほかのボタンを押すとキャンセルされます。Aボタンも使えます。幅の狭い画面では、詳細欄へはタッチで移動します。ここでいつでもオフにできます。</string>
-    <string name="settings_show_hints">ボタンガイドを表示</string>
-    <string name="settings_show_hints_body">メイン画面の下に、ボタンとその働きを表示します。設定と初期設定では、戻り方がわかるよう常に表示されます。タッチで設定を開くには、機種の列を長押ししてください。</string>
     <string name="settings_switch_system_with">機種の切り替え</string>
     <string name="settings_switch_system_body">メイン画面で機種を切り替えるショルダーボタンの組です。もう一方の組は、リストでは文字へジャンプし、グリッドではサイズを変えます。</string>
     <string name="settings_keyboard">キーボード</string>
@@ -720,9 +720,6 @@
     <string name="settings_home_unavailable">この端末にはホームアプリを選ぶ画面がありません。Androidの「設定 › アプリ › デフォルトのアプリ」でPlumemuを選んでください。</string>
     <string name="settings_show_apps">Androidアプリを表示</string>
     <string name="settings_show_apps_body">端末のすべてのAndroidアプリを、お気に入りのすぐ下の「アプリ」に表示します。オフにすると「アプリ」は表示されません。</string>
-    <string name="settings_clock_battery">時計とバッテリー</string>
-    <string name="settings_clock_battery_body">画面の右上に時刻とバッテリー残量を表示します。</string>
-    <string name="settings_clock_battery_body_two_screens">画面の右上に時刻とバッテリー残量を表示します。バッテリー残量はサブ画面の時計にも表示されます。</string>
     <!-- The band over a system's games list ("Nintendo · Home console · 1990–2003". -->
     <string name="system_kind_console">据え置き機</string>
     <string name="system_kind_handheld">携帯機</string>
@@ -796,8 +793,6 @@
     <string name="system_about_mame">目的はゲームの歴史を保存することで、ゲームが遊べるのは「うれしい副産物」だとしています。3万2000以上の機種を記録しています。</string>
     <!-- https://github.com/finalburnneo/FBNeo (README; Wikipedia has no page) -->
     <string name="system_about_fbneo">FinalBurnと古いバージョンのMAMEを基にしています。カプコンのCPS-1、CPS-2、CPS-3、ネオジオ、セガのSystem 16の基板をエミュレートします。</string>
-    <string name="settings_system_info">機種情報</string>
-    <string name="settings_system_info_body">ゲームリストの一番上に、バッジ、機種の概要（メーカー、種類、発売年）、その機種についての短い説明を表示します。</string>
     <!-- Second screen, picking cards. Top line: "Super Nintendo · USA"; the separator is also used in the facts line (quoted: Android trims the spaces of an unquoted string). -->
     <string name="second_screen_android_app">Androidアプリ</string>
     <string name="second_screen_app_tag">アプリ</string>
@@ -902,6 +897,10 @@
     <string name="settings_second_screen_in_game_body">ゲーム中にサブ画面に表示する内容です。2画面を使うエミュレーターは、自動でサブ画面を使います。画面保護のため、表示は1分ごとに少しずつ動きます。</string>
     <string name="settings_second_screen_clock">時計とバッテリー</string>
     <string name="settings_second_screen_black">黒</string>
+    <string name="settings_second_screen_apps_on">アプリを開く画面</string>
+    <string name="settings_second_screen_apps_on_body">アプリ一覧から起動したアプリを開く画面です。ゲームには影響しません。</string>
+    <string name="settings_second_screen_apps_top">上の画面</string>
+    <string name="settings_second_screen_apps_bottom">下の画面</string>
 
     <!-- Appearance -->
     <!-- Ready-made colour sets (never a console's or a brand's name. -->
@@ -926,9 +925,8 @@
     <string name="settings_background">背景</string>
     <string name="settings_text_color">文字の色</string>
     <string name="settings_accent">アクセントカラー</string>
+    <string name="settings_page_grain">背景のざらつき</string>
     <string name="settings_text_size">文字サイズ</string>
-    <string name="settings_left_edge">左の帯</string>
-    <string name="settings_grid_size">グリッドのサイズ</string>
     <string name="settings_bg_graphite">グラファイト</string>
     <string name="settings_bg_black">黒</string>
     <string name="settings_bg_midnight">ミッドナイト</string>
@@ -992,9 +990,9 @@
     <string name="settings_size_larger">特大</string>
     <string name="settings_size_huge">超特大</string>
     <string name="settings_size_largest">最大</string>
-    <string name="settings_left_edge_counts">ゲーム数</string>
-    <string name="settings_left_edge_codes">機種コード</string>
-    <string name="settings_left_edge_letters">アルファベット</string>
+    <string name="settings_page_grain_off">オフ</string>
+    <string name="settings_page_grain_light">弱</string>
+    <string name="settings_page_grain_strong">強</string>
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
     <string name="settings_badge_current">使用中</string>
     <string name="settings_background_body">色を選ぶか、+を選んで自分で作れます。</string>
@@ -1021,8 +1019,7 @@
     <string name="settings_color_adjusted_both">読みやすさを保つため、文字の色とアクセントカラーを変更しました</string>
     <string name="settings_accent_body">選択中の機種、フォーカスの点、スイッチ、ボタンに使う色です。「機種別」では、機種ごとに色が変わります。</string>
     <string name="settings_text_size_body">Plumemuのすべての文字の大きさを変えます。Android本体のフォントサイズも上乗せされます。</string>
-    <string name="settings_left_edge_body">ゲーム一覧を開いているとき、左の細い帯に表示するもの。機種ごとのゲーム数、機種ごとの短いコード、または今の一覧の頭文字。</string>
-    <string name="settings_grid_size_body">グリッド表示でのカバーの大きさです。すべての機種と「最近遊んだ」「お気に入り」に適用されます。「小」は一度に最も多く、「大」は最も少なく表示します。</string>
+    <string name="settings_page_grain_body">背景の色にきめ細かなざらつきを重ねて、紙のような質感にします。オフなら平らなまま、弱はほのかに、強はどの画面でもはっきり見えます。</string>
     <!-- Sample lines in the colour panel (the board's). -->
 
     <!-- Advanced (includes the confirm-button option) -->
@@ -1261,12 +1258,11 @@
     <string name="report_error_refused">サーバーがこの報告を受け付けませんでした。メールアドレスを確認してください。入力した内容は残っているので、もう一度送信できます。</string>
     <string name="report_error_unavailable">このビルドでは報告を送信できません。「ログをエクスポート」を使って、ファイルを直接送ってください。</string>
     <string name="report_error_not_saved">報告をこの端末に保存できませんでした。</string>
-    <string name="settings_privacy_body">ライブラリ、設定、プレイ時間は、この端末のPlumemu専用の保存領域に保存され、送信されることはありません。オンにした場合のみ（設定 › 情報 › 利用統計を送信）、Plumemuは、匿名の利用状況とクラッシュレポートを開発者に送信します。内容は、国、端末のモデル、Androidとアプリのバージョン、使っている画面と設定、機種ごとのプレイ時間です。Plumemuが名前を判別できなかったゲームについては、機種、ファイルの保存形式、サイズ、CRC-32、ゲーム自体から読み取った製品コードまたはディスクのシリアルも、インストールごとに1回送ります。ゲームのタイトル、検索語、ScreenScraperのアカウントは送りません。クラッシュレポートにはファイルパスが含まれることがあります。オフにすると、オフにしたことだけを匿名で1回送り、以後は何も送りません。問題の報告は「問題を報告」で「送信」を押したときだけ送られ、添付を選んだログ（ファイルパスを含む）が含まれることがあります。送信された情報は、期限を設けずに保管されます。Plumemuは1日1回、Wi-Fi接続時にplumemu-app.stevensdesk.comへ新しいバージョンがあるかを問い合わせます。このサーバーをホストしているCloudflareには、IPアドレスが見えます。この確認は「設定 › 情報 › アップデート」でオフにできます。この毎日の確認では、同じサーバーから最新のプラットフォームデータ（機種とエミュレーターの一覧）もダウンロードします。それ以外は何も送信しません。ScreenScraperのアカウントを使っている場合、Plumemuはパッケージ画像を探すため、各ゲームのファイル名、サイズ、チェックサムを、それで見つからなければタイトルもScreenScraperに送ります。「標準の取得元」を選んでいる場合、Plumemuはパッケージ画像をlibretroの公開サーバー（thumbnails.libretro.com）からWi-Fi接続時にダウンロードします。アドレスにはゲーム名が含まれ、このサーバーにはIPアドレスが見えます。RetroAchievementsのアカウントを使っている場合、Plumemuはゲームの情報を開いたとき、プレイしたあと、Wi-Fi接続時の1日1回、ユーザー名、キー、各ゲームのRetroAchievements番号をretroachievements.orgに送ります。バッジ画像はmedia.retroachievements.orgから取得します。キーはこの端末に暗号化して保存し、バックアップやログには入れません。サインアウトすると送信は止まります。「設定」\u203A「統計」で正確なプレイ時間をオンにすると、Plumemuはプレイ時間帯のイベントをAndroidの使用状況へのアクセスから受け取り、Plumemuから起動したゲームやアプリと画面に関するものだけを残します。プレイ時間の長さ以外は保存せず、送信もしません。</string>
+    <string name="settings_privacy_body">ライブラリ、設定、プレイ時間は、この端末のPlumemu専用の保存領域に保存され、送信されることはありません。オンにした場合のみ（設定 › 情報 › 利用統計を送信）、Plumemuは、匿名の利用状況とクラッシュレポートを開発者に送信します。内容は、国、端末のモデル、Androidとアプリのバージョン、使っている画面と設定、機種ごとのプレイ時間です。Plumemuが名前を判別できなかったゲームについては、機種、ファイルの保存形式、サイズ、CRC-32、ゲーム自体から読み取った製品コードまたはディスクのシリアルも、インストールごとに1回送ります。ゲームのタイトル、検索語、ScreenScraperのアカウントは送りません。クラッシュレポートにはファイルパスが含まれることがあります。オフにすると、オフにしたことだけを匿名で1回送り、以後は何も送りません。問題の報告は「問題を報告」で「送信」を押したときだけ送られ、添付を選んだログ（ファイルパスを含む）が含まれることがあります。送信された情報は、期限を設けずに保管されます。Plumemuは1日1回、Wi-Fi接続時にplumemu-app.stevensdesk.comへ新しいバージョンがあるかを問い合わせます。このサーバーをホストしているCloudflareには、IPアドレスが見えます。この確認は「設定 › 情報 › バージョン」でオフにできます。この毎日の確認では、同じサーバーから最新のプラットフォームデータ（機種とエミュレーターの一覧）もダウンロードします。それ以外は何も送信しません。ScreenScraperのアカウントを使っている場合、Plumemuはパッケージ画像を探すため、各ゲームのファイル名、サイズ、チェックサムを、それで見つからなければタイトルもScreenScraperに送ります。「標準の取得元」を選んでいる場合、Plumemuはパッケージ画像をlibretroの公開サーバー（thumbnails.libretro.com）からWi-Fi接続時にダウンロードします。アドレスにはゲーム名が含まれ、このサーバーにはIPアドレスが見えます。RetroAchievementsのアカウントを使っている場合、Plumemuはゲームの情報を開いたとき、プレイしたあと、Wi-Fi接続時の1日1回、ユーザー名、キー、各ゲームのRetroAchievements番号をretroachievements.orgに送ります。バッジ画像はmedia.retroachievements.orgから取得します。キーはこの端末に暗号化して保存し、バックアップやログには入れません。サインアウトすると送信は止まります。「設定」\u203A「統計」で正確なプレイ時間をオンにすると、Plumemuはプレイ時間帯のイベントをAndroidの使用状況へのアクセスから受け取り、Plumemuから起動したゲームやアプリと画面に関するものだけを残します。プレイ時間の長さ以外は保存せず、送信もしません。</string>
     <!-- Updates -->
     <string name="settings_update_value_downloading">ダウンロード中…</string>
     <string name="settings_update_value_installing">インストール中…</string>
     <string name="settings_update_value_available">%1$s 利用可能</string>
-    <string name="settings_updates">アップデート</string>
     <string name="settings_updates_check_now">今すぐ確認</string>
     <string name="settings_check_updates_body">Plumemuのアップデートサーバーに、新しいバージョンがあるかを今すぐ確認します。モバイルデータ通信中は、ダウンロードの前に確認します。</string>
     <string name="settings_check_updates_daily">アップデートを毎日確認</string>
@@ -1277,7 +1273,6 @@
     <string name="settings_check_updates_value_found">アップデートあり</string>
     <string name="settings_check_updates_value_needs_android">Android非対応</string>
     <string name="settings_check_updates_value_failed">確認に失敗</string>
-    <string name="settings_check_updates_value_busy">ダウンロード中</string>
     <string name="settings_check_updates_busy">アップデートをダウンロード中です。完了してから、もう一度確認してください。</string>
     <string name="settings_check_updates_unexpected">アップデートを確認できませんでした。しばらくしてからもう一度お試しください。</string>
     <string name="settings_update_checking">アップデートを確認しています…</string>
@@ -1485,8 +1480,12 @@
     <!-- App menu in Apps -->
     <string name="app_menu_info">アプリ情報</string>
     <string name="app_menu_uninstall">アンインストール</string>
+    <string name="app_menu_open_bottom">下の画面で開く</string>
+    <string name="app_menu_open_top">上の画面で開く</string>
     <string name="app_menu_show_as_game">ゲームとして表示</string>
     <string name="app_menu_show_as_port">ポートとして表示</string>
+    <string name="app_menu_hint_gamenative">「Frontend Sync」をオン、ROM内のフォルダ</string>
+    <string name="app_menu_hint_droiddeck">「Sync all game files to folder」をROM内に</string>
     <string name="app_tool_error_body">Androidでその画面を開けませんでした。少し待ってからもう一度お試しください。</string>
 
     <!-- Library › an unknown folder (a folder whose name matches no system): its row, side panel and the home notice. %1$s is the folder's name or a number. -->

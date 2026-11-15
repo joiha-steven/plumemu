@@ -7,7 +7,7 @@ import org.junit.Test
 
 class BrokenDataTest {
     private val valid = """
-        {"formatVersion":2,
+        {"formatVersion":3,
          "systems":[{"id":"nes","name":"NES","shortName":"NES","displayName":"NES","order":0,"folders":["nes"],"extensions":["nes"],
                      "cover":"landscape","tier":"tested","emulators":["e1"]}],
          "emulators":[{"id":"e1","name":"E","package":"com.example.emu","game":{"mode":"path","target":"data"}}]}
@@ -118,14 +118,14 @@ class BrokenDataTest {
 
     @Test
     fun anUnknownFormatVersionIsRejected() {
-        val (failure, log) = failureOf(valid.replace("\"formatVersion\":2", "\"formatVersion\":3"))
-        assertEquals(3, (failure as PlatformFailure.UnsupportedVersion).found)
-        assertOneLogLine(log, "formatVersion 3")
+        val (failure, log) = failureOf(valid.replace("\"formatVersion\":3", "\"formatVersion\":4"))
+        assertEquals(4, (failure as PlatformFailure.UnsupportedVersion).found)
+        assertOneLogLine(log, "formatVersion 4")
     }
 
     @Test
     fun aMissingFormatVersionIsRejected() {
-        val (failure, _) = failureOf(valid.replace("\"formatVersion\":2,", ""))
+        val (failure, _) = failureOf(valid.replace("\"formatVersion\":3,", ""))
         assertEquals(null, (failure as PlatformFailure.UnsupportedVersion).found)
     }
 
@@ -340,6 +340,25 @@ class BrokenDataTest {
     }
 
     @Test
+    fun extrasByExtensionIsReadAndNeedsAcceptedExtensionsAndNoRepeatedExtra() {
+        val ok = withEmulatorField("\"accepts\":[\"nes\"],\"extrasByExtension\":{\"nes\":{\"src\":\"NES\",\"n\":2}}")
+        val e1 = (load(ok) as PlatformLoadResult.Loaded).catalog.emulator("e1")!!
+        assertEquals(mapOf("nes" to mapOf("src" to ExtraValue.Text("NES"), "n" to ExtraValue.Number(2))), e1.extrasByExtension)
+        val bad = listOf(
+            "\"accepts\":[\"nes\"],\"extrasByExtension\":{\"zip\":{\"a\":\"b\"}}",   // not accepted
+            "\"extrasByExtension\":{\"nes\":{\"a\":\"b\"}}",                           // no accepts at all
+            "\"accepts\":[\"nes\"],\"extrasByExtension\":{\"nes\":{}}",               // empty
+            "\"accepts\":[\"nes\"],\"extrasByExtension\":{\"nes\":{\"a\":1.5}}",     // bad value
+            "\"accepts\":[\"nes\"],\"extras\":{\"a\":\"x\"},\"extrasByExtension\":{\"nes\":{\"a\":\"y\"}}", // repeats
+        )
+        for (field in bad) {
+            val (failure, log) = failureOf(withEmulatorField(field))
+            assertTrue(field, (failure as PlatformFailure.BadValue).field.startsWith("extras"))
+            assertOneLogLine(log, "test.json", "e1")
+        }
+    }
+
+    @Test
     fun acceptsOutsideTheEmulatorsSystemsOrMalformedIsRejected() {
         for (accepts in listOf("[\"iso\"]", "[]", "[\"NES\"]", "[\".nes\"]", "[\"\"]", "[\"nes\",\"nes\"]")) {
             val (failure, log) = failureOf(withEmulatorField("\"accepts\":$accepts"))
@@ -401,11 +420,11 @@ class BrokenDataTest {
 
     @Test
     fun noSystemsOrNoEmulatorsIsRejected() {
-        val (noSystems, log) = failureOf("""{"formatVersion":2,"systems":[],"emulators":[]}""")
+        val (noSystems, log) = failureOf("""{"formatVersion":3,"systems":[],"emulators":[]}""")
         assertEquals("systems", (noSystems as PlatformFailure.EmptyField).field)
         assertOneLogLine(log, "'systems'")
         val systems = valid.substringAfter("\"systems\":").substringBefore(",\n \"emulators\"")
-        val (noEmulators, _) = failureOf("""{"formatVersion":2,"systems":$systems,"emulators":[]}""")
+        val (noEmulators, _) = failureOf("""{"formatVersion":3,"systems":$systems,"emulators":[]}""")
         assertEquals("emulators", (noEmulators as PlatformFailure.EmptyField).field)
     }
 

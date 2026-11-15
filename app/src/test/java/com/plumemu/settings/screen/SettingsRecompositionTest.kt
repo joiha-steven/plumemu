@@ -47,7 +47,7 @@ class SettingsRecompositionTest {
 
     @Test
     fun movingBetweenOptionsRecomposesOnlyTheTwoRowsThatChange() {
-        show(optionsAt(SettingsOption.Accent))
+        show(optionsAt(SettingsOption.Colors))
         SettingsRecomposeProbe.reset()
         repeat(3) { move(Direction.Down) }
         assertEquals("the strip is not redrawn by moves inside the options", 0, SettingsRecomposeProbe.strips)

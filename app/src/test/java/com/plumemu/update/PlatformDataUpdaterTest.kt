@@ -158,11 +158,22 @@ class PlatformDataUpdaterTest {
     @Test
     fun anUnknownFormatVersionIsSkippedWithoutDownloading() =
         runTest {
-            serve(http, published(formatVersion = 3))
+            serve(http, published(formatVersion = 4))
             updater().check("daily")
             assertEquals(0, fileRequests())
             assertEquals(1, logs.size)
-            assertTrue(logs[0].contains("format 3"))
+            assertTrue(logs[0].contains("format 4"))
+        }
+
+    // Format 2 lacks extrasByExtension; reading it with the current code would launch GameNative wrongly.
+    @Test
+    fun aFormat2DownloadIsSkippedWithoutDownloading() =
+        runTest {
+            serve(http, published(formatVersion = 2))
+            updater().check("daily")
+            assertEquals(0, fileRequests())
+            assertEquals(1, logs.size)
+            assertTrue(logs[0].contains("format 2"))
         }
 
     @Test

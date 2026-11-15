@@ -19,10 +19,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.drawscope.inset
 import com.plumemu.coreui.theme.HintKeyDimens
 import com.plumemu.coreui.theme.PlumLayout
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.AlignmentLine
+import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -59,6 +60,7 @@ import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.Rgb
 import com.plumemu.coreui.theme.toComposeColor
+import kotlin.math.roundToInt
 
 /*
  * The two bars around the strip (docs/design/rules.md › The strip): the top bar, 18 high, says
@@ -355,7 +357,11 @@ fun TitledHintBar(
                 BarTitle(chosen.withMeta, chosen.text, title, chosen.style, tagged)
             }.single().measure(Constraints(maxWidth = titleWidth)) // its line may be taller than the bar (Serif 23); the bar keeps its height
         layout(constraints.maxWidth, height) {
-            titlePlaceable.placeRelative(0, (height - titlePlaceable.height) / 2)
+            // The title's first baseline on the hint labels' (each hint centres its label in the bar), not its box on the bar's middle.
+            val label = measurer.measure("Ag", type.hintLabel, maxLines = 1)
+            val labelBaseline = (height - label.size.height) / 2 + label.firstBaseline.roundToInt()
+            val titleBaseline = titlePlaceable[FirstBaseline]
+            titlePlaceable.placeRelative(0, if (titleBaseline == AlignmentLine.Unspecified) (height - titlePlaceable.height) / 2 else labelBaseline - titleBaseline)
             var x = constraints.maxWidth - hintsWidth() + gap
             hintPlaceables.forEachIndexed { index, placeable ->
                 if (!shown[index]) return@forEachIndexed
@@ -485,16 +491,8 @@ fun Hint(
         Box(
             modifier =
                 Modifier
-                    // The key's collar (CollarSize.Hint) is drawn outside the cap's bounds, so the bar keeps its height:
-                    // sideways it has room in the layout, up and down it reaches past the bar like the focus ring.
+                    // The key's collar is no longer drawn (lighter caps); its room stays so no hint moves and the drop tables hold.
                     .padding(horizontal = HintKeyDimens.collarSide)
-                    .drawBehind {
-                        val l = CollarSize.Hint.lip.toPx() + CollarSize.Hint.groove.toPx()
-                        val b = CollarSize.Hint.lipBottom.toPx() + CollarSize.Hint.grooveBottom.toPx()
-                        inset(-l, -l, -l, -b) {
-                            drawCollar(colors.collar, CollarSize.Hint, cornerRadius = size.height.minus(l + b) / 2, glow = colors.partGlow)
-                        }
-                    }
                     .testTag(HINT_KEY_CAP_TAG) // outside the layer: its bounds stay the resting cap's
                     // Pressed (design/rules.md › Shapes and motion › Pressed): only the cap dips, and
                     // `press.progress` is read in the layer and draw blocks, never in composition.

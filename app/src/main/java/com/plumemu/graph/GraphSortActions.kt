@@ -7,8 +7,7 @@ import kotlinx.coroutines.flow.first
 
 /**
  * [SortActions] on the app's graph: the sort in use is read from the settings store and written
- * back to it (the one setting Settings › Library › Sort games also writes, so the lists follow
- * the same way); Year and Rating are offered only while some listed game has one
+ * back to it (the one stored sort the lists follow); Year and Rating are offered only while some listed game has one
  * ([com.plumemu.coredata.db.GameDao.observeHasYear], [com.plumemu.coredata.db.GameDao.observeHasRating]).
  */
 internal class GraphSortActions(

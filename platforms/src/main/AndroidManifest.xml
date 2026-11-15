@@ -96,7 +96,6 @@
         <package android:name="com.seleuco.mame4droid" />
         <package android:name="com.simongellis.vvb" />
         <package android:name="com.sky.SkyEmu" />
-        <package android:name="com.tencent.ig" />
         <package android:name="com.virtualapplications.play" />
         <package android:name="com.winlator" />
         <package android:name="com.winlator.cmod" />

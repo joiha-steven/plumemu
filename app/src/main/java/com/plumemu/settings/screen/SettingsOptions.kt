@@ -5,15 +5,14 @@ import com.plumemu.R
 import com.plumemu.coredata.settings.BoxArtRegionSetting
 import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.ConfirmButtonSetting
+import com.plumemu.coredata.settings.AppsScreen
 import com.plumemu.coredata.settings.InGameSetting
 import com.plumemu.coredata.settings.KeyboardSetting
 import com.plumemu.coredata.settings.SwitchSystemWithSetting
 import com.plumemu.coredata.settings.PlumSettings
-import com.plumemu.game.SortChoices
 import com.plumemu.coredata.settings.SoundLevel
 import com.plumemu.coredata.settings.SystemOrderSetting
-import com.plumemu.coredata.settings.GridSizeSetting
-import com.plumemu.coredata.settings.LeftEdgeSetting
+import com.plumemu.coredata.settings.PageGrainSetting
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.secondscreen.SecondScreen
 import com.plumemu.secondscreen.isSecondScreenOn
@@ -39,15 +38,15 @@ internal enum class SettingsSection(
 ) {
     Library(
         R.string.settings_section_library,
-        listOf(SettingsOption.RomFolders, SettingsOption.Rescan, SettingsOption.SortGames),
+        listOf(SettingsOption.RomFolders, SettingsOption.Rescan),
     ),
     Appearance(
         R.string.settings_section_appearance,
-        listOf(SettingsOption.Language, SettingsOption.Colors, SettingsOption.Accent, SettingsOption.TextSize),
+        listOf(SettingsOption.Language, SettingsOption.Colors, SettingsOption.PageGrain, SettingsOption.TextSize),
     ),
     HomeScreen(
         R.string.settings_section_home_screen,
-        listOf(SettingsOption.UseAsHome, SettingsOption.ShowApps, SettingsOption.ClockAndBattery, SettingsOption.SystemInfo, SettingsOption.LeftEdge),
+        listOf(SettingsOption.UseAsHome, SettingsOption.ShowApps),
     ),
     /** Listed only while there is a second screen; In game only while it is in use (Settings has no dimmed rows). */
     SecondScreen(R.string.settings_section_second_screen, listOf(SettingsOption.SecondScreen)),
@@ -58,7 +57,6 @@ internal enum class SettingsSection(
             SettingsOption.ConfirmBottom,
             SettingsOption.SwitchSystemWith,
             SettingsOption.PushRightToPlay,
-            SettingsOption.ShowButtonHints,
             SettingsOption.Keyboard,
             SettingsOption.Sounds,
             SettingsOption.Vibration,
@@ -81,7 +79,6 @@ internal enum class SettingsSection(
         R.string.settings_section_about,
         listOf(
             SettingsOption.Version,
-            SettingsOption.Updates,
             SettingsOption.UsageStatistics,
             SettingsOption.Licenses,
             SettingsOption.Privacy,
@@ -92,8 +89,8 @@ internal enum class SettingsSection(
 
     /**
      * The rows shown for [content]: in Emulators one [SettingsOption.SystemEmulator] per system with
-     * games; in Controls Vibration only on a device with a vibrator; in Home screen Grid size only while Show button hints is off; in Library "Folder could not be read" after Rescan library (only while a scan could not read a sub-folder), Systems after Sort games (only while a system has games), Files not added, then "Unidentified games (n)"
-     * and "Hidden games (n)", each only while it has games, then Clear Recent… last; in Second screen In
+     * games; in Controls Vibration only on a device with a vibrator; in Library "Folder could not be read" after Rescan library (only while a scan could not read a sub-folder), Systems after Rescan library (only while a system has games), Files not added, then "Unidentified games (n)"
+     * and "Hidden games (n)", each only while it has games; in Second screen In
      * game after the switch only while it is on (Settings has no dimmed rows); nothing in a section that is not [shownIn]. A build from source has
      * no statistics server and no update manifest: none of the rows that need them is listed, and Export logs,
      * which Report a problem's form holds elsewhere, is listed only there ([SettingsContent.isInThisBuild]).
@@ -104,7 +101,6 @@ internal enum class SettingsSection(
         when {
             this == Emulators -> List(content.systems.size) { SettingsOption.SystemEmulator }
             this == Controls && !content.hasVibrator -> options - SettingsOption.Vibration
-            this == HomeScreen && content.hasNoButtonHints -> options + SettingsOption.GridSize
             this == Statistics -> statisticsStopsIn(content)
             // ScreenScraper (its status line only in a build without credentials), then RetroAchievements.
             this == Accounts -> accountRowsIn(content) + options
@@ -118,11 +114,9 @@ internal enum class SettingsSection(
                     listOfNotNull(
                         SettingsOption.UnidentifiedGames.takeIf { content.unidentifiedGames.isNotEmpty() },
                         SettingsOption.HiddenGames.takeIf { content.hiddenGames.isNotEmpty() },
-                    ) +
-                    // Recent last, after every row that shows only sometimes.
-                    SettingsOption.ClearRecent
+                    )
             this == SettingsSection.SecondScreen ->
-                if (content.secondScreen == null) emptyList() else options + listOfNotNull(SettingsOption.SecondScreenInGame.takeIf { content.isSecondScreenOn })
+                if (content.secondScreen == null) emptyList() else options + listOfNotNull(SettingsOption.SecondScreenInGame, SettingsOption.SecondScreenAppsOn).filter { content.isSecondScreenOn }
             else -> options
         }
 
@@ -178,16 +172,13 @@ internal enum class SettingsOption(
 
     /** A row of Colors' panel, not of the list ([COLORS_TEXT_ITEM]). */
     TextColor(R.string.settings_text_color, OptionKind.Swatch),
+
+    /** A row of Colors' panel, not of the list ([COLORS_ACCENT_ITEM]); its page holds By system as one choice. */
     Accent(R.string.settings_accent, OptionKind.Swatch),
+    PageGrain(R.string.settings_page_grain, OptionKind.Choice), // ‹ Off / Light / Strong › grain on the page colour; a list row, not in Colors' panel
     TextSize(R.string.settings_text_size, OptionKind.Choice),
 
     /** ‹ Thin › / ‹ Medium › / ‹ Bold ›: how heavy every text role is drawn; not picked is Medium. */
-
-    /** ‹ Game counts › / ‹ System codes › / ‹ Letters ›: what the home screen's peek shows while a games list is focused; not picked is Game counts. */
-    LeftEdge(R.string.settings_left_edge, OptionKind.Choice),
-
-    /** ‹ Small › / ‹ Medium › / ‹ Large ›: touch's way to the grid's size, listed only while Show button hints is off, when the tappable Size hint is gone. */
-    GridSize(R.string.settings_grid_size, OptionKind.Choice),
 
     ConfirmBottom(R.string.settings_confirm_bottom, OptionKind.Switch),
     Animations(R.string.settings_animations, OptionKind.Switch),
@@ -221,12 +212,14 @@ internal enum class SettingsOption(
 
     /** Shares the app's log file with Android's share sheet. Listed only in a build with no Report a problem, whose form does this otherwise ([SettingsContent.isInThisBuild]). */
     ExportLogs(R.string.settings_export_logs, OptionKind.Action),
-    Version(R.string.settings_version, OptionKind.Info),
+    /**
+     * The installed version with what the last check found ("0.1.5 · Up to date", "0.1.6 available"). Its panel
+     * ([UpdatePanel]) has the version, the platform data, the update, Check now and the daily switch. A build with no
+     * update manifest ([SettingsContent.hasUpdates]) shows the version only, read only.
+     */
+    Version(R.string.settings_version, OptionKind.Opens),
 
-    /** One row for everything about updates: its value is the update found or the last check, its panel ([UpdatePanel]) has the update, Check now and the daily switch. */
-    Updates(R.string.settings_updates, OptionKind.Opens),
-
-    /** Never a row: the switch of Updates' panel; telemetry reports it by this name. */
+    /** Never a row: the switch of Version's panel; telemetry reports it by this name. */
     CheckUpdatesDaily(R.string.settings_check_updates_daily, OptionKind.Switch),
     Licenses(R.string.settings_licenses, OptionKind.Opens),
     Privacy(R.string.settings_privacy, OptionKind.Info),
@@ -241,9 +234,8 @@ internal enum class SettingsOption(
     Language(R.string.settings_language, OptionKind.Opens),
     RomFolders(R.string.settings_rom_folders, OptionKind.Opens),
     Rescan(R.string.settings_rescan, OptionKind.Action),
-    SortGames(R.string.settings_sort_games, OptionKind.Choice),
 
-    /** "»": Clear Recent…'s confirm step. */
+    /** Never a row: the third item of Advanced › Reset…, with its own confirm ([ResetPanelItem.Recent]). */
     ClearRecent(R.string.settings_clear_recent, OptionKind.Opens),
 
     /** ‹ A–Z › / ‹ Maker & year › / ‹ Manual ›: how the main screen's system column is arranged. Never a row: the first item of the Systems panel. */
@@ -270,7 +262,6 @@ internal enum class SettingsOption(
     /** One per system with games (its name is the label); the row's index is the system's. */
     SystemEmulator(R.string.settings_section_emulators, OptionKind.Opens),
     PushRightToPlay(R.string.settings_push_right, OptionKind.Switch),
-    ShowButtonHints(R.string.settings_show_hints, OptionKind.Switch),
 
     /** ‹ L2 / R2 › / ‹ L1 / R1 ›: which shoulder pair switches system on the main screen. */
     SwitchSystemWith(R.string.settings_switch_system_with, OptionKind.Choice),
@@ -280,15 +271,14 @@ internal enum class SettingsOption(
     UseAsHome(R.string.settings_use_as_home, OptionKind.Action),
     ShowApps(R.string.settings_show_apps, OptionKind.Switch),
 
-    /** One switch for the two stored keys: on while either is, and a flip writes both ([toggled]). */
-    ClockAndBattery(R.string.settings_clock_battery, OptionKind.Switch),
-    SystemInfo(R.string.settings_system_info, OptionKind.Switch),
-
     /** Listed only while there is a second screen; shows [isSecondScreenOn], A or a tap stores the other value. */
     SecondScreen(R.string.settings_second_screen, OptionKind.Switch),
 
     /** Listed after [SecondScreen] while the switch is on; hidden while it is off (Settings has no dimmed rows). */
     SecondScreenInGame(R.string.settings_second_screen_in_game, OptionKind.Choice),
+
+    /** Listed after [SecondScreenInGame] under the same condition; which screen the Apps entry opens an app on (games never). */
+    SecondScreenAppsOn(R.string.settings_second_screen_apps_on, OptionKind.Choice),
 
     /**
      * "Box art »" with the source in force as its value: its panel ([PanelPage.BoxArtSource]) lists the three
@@ -355,14 +345,11 @@ internal enum class PanelPage {
     TextPresets,
     TextCustom,
 
-    /** Cancel and Clear, for Clear Recent…. */
-    Confirm,
-
-    /** Advanced › Reset…: Reset all settings and Reset library, each with what it does ([ResetPanelItem]). */
+    /** Advanced › Reset…: Reset all settings, Reset library and Clear Recent…, each with what it does ([ResetPanelItem]). */
     Reset,
 
-    /** Reset all settings' and Reset library's confirm: Cancel (focused first) and Reset. */
-    ResetAllConfirm, ResetLibraryConfirm,
+    /** Reset all settings', Reset library's and Clear Recent…'s confirm: Cancel (focused first) and Reset (Clear). */
+    ResetAllConfirm, ResetLibraryConfirm, ResetRecentConfirm,
 
     /** Advanced › Back up and restore: Back up…, Restore…, and Undo restore while the way-back set exists ([backupRestoreItems]). */
     BackupRestore,
@@ -379,7 +366,7 @@ internal enum class PanelPage {
     /** Back up and restore › Undo restore: Undo the restore and Forget the copy ([undoPanelItems]). */
     UndoRestore,
 
-    /** About › Updates: the update's own buttons while one is found ([updatePanelItems]), Check now and the daily switch ([updatesPanelItems]). */
+    /** About › Version: the update's own buttons while one is found ([updatePanelItems]), Check now and the daily switch ([updatesPanelItems]). */
     Update,
     Licenses,
 
@@ -457,41 +444,37 @@ internal enum class PanelPage {
 }
 
 /**
- * Value of a ‹ › option, for the row and for stepping. [sorts]: which of Year and Rating Sort games lists
- * (the default lists every sort: the row's name is read by position in all of them; stepping passes the library's answer).
+ * Value of a ‹ › option, for the row and for stepping.
  */
 internal fun SettingsOption.choiceIndex(
     settings: PlumSettings,
     defaultTextSize: TextSizeSetting,
-    sorts: SortChoices.Values = SortChoices.Values.All,
 ): Int =
     when (this) {
         SettingsOption.Colors -> settings.appearance.let { it.colorsCycle().indexOf(it.colorSet()) }
         SettingsOption.TextSize -> (settings.appearance.textSize ?: defaultTextSize).ordinal
-        SettingsOption.LeftEdge -> (settings.appearance.leftEdge ?: LeftEdgeSetting.Default).ordinal
-        SettingsOption.GridSize -> settings.appearance.gridSize.ordinal
-        SettingsOption.SortGames -> SortChoices(settings.library.sortGames, sorts).options.indexOf(settings.library.sortGames)
+        SettingsOption.PageGrain -> settings.appearance.pageGrain.ordinal
         SettingsOption.Keyboard -> settings.controls.keyboard.ordinal
         SettingsOption.SwitchSystemWith -> settings.controls.switchSystemWith.ordinal
         SettingsOption.SystemOrder -> settings.library.systemOrder.ordinal
         SettingsOption.SecondScreenInGame -> settings.secondScreen.inGame.ordinal
+        SettingsOption.SecondScreenAppsOn -> settings.secondScreen.appsOn.ordinal
         SettingsOption.BoxArtRegion -> settings.library.boxArtRegion.ordinal
         SettingsOption.Sounds -> settings.advanced.sounds.ordinal
         else -> 0
     }
 
-internal fun SettingsOption.choiceCount(settings: PlumSettings, sorts: SortChoices.Values = SortChoices.Values.All): Int =
+internal fun SettingsOption.choiceCount(settings: PlumSettings): Int =
     when (this) {
         // Custom is a value only while there is a custom look to be on or go back to.
         SettingsOption.Colors -> settings.appearance.colorsCycle().size
         SettingsOption.TextSize -> TextSizeSetting.entries.size
-        SettingsOption.LeftEdge -> LeftEdgeSetting.entries.size
-        SettingsOption.GridSize -> GridSizeSetting.entries.size
-        SettingsOption.SortGames -> SortChoices(settings.library.sortGames, sorts).options.size
+        SettingsOption.PageGrain -> PageGrainSetting.entries.size
         SettingsOption.Keyboard -> KeyboardSetting.entries.size
         SettingsOption.SwitchSystemWith -> SwitchSystemWithSetting.entries.size
         SettingsOption.SystemOrder -> SystemOrderSetting.entries.size
         SettingsOption.SecondScreenInGame -> InGameSetting.entries.size
+        SettingsOption.SecondScreenAppsOn -> AppsScreen.entries.size
         SettingsOption.BoxArtRegion -> BoxArtRegionSetting.entries.size
         SettingsOption.Sounds -> SoundLevel.entries.size
         else -> 1
@@ -501,15 +484,14 @@ internal fun SettingsOption.choiceCount(settings: PlumSettings, sorts: SortChoic
 internal fun SettingsOption.withChoice(
     settings: PlumSettings,
     index: Int,
-    sorts: SortChoices.Values = SortChoices.Values.All,
 ): PlumSettings =
     when (this) {
-        SettingsOption.SortGames -> settings.copy(library = settings.library.copy(sortGames = SortChoices(settings.library.sortGames, sorts).options[index]))
         SettingsOption.Keyboard -> settings.copy(controls = settings.controls.copy(keyboard = KeyboardSetting.entries[index]))
         SettingsOption.SwitchSystemWith -> settings.copy(controls = settings.controls.copy(switchSystemWith = SwitchSystemWithSetting.entries[index]))
         // The manual list stays when the order moves away: coming back to Manual finds it.
         SettingsOption.SystemOrder -> settings.copy(library = settings.library.copy(systemOrder = SystemOrderSetting.entries[index]))
         SettingsOption.SecondScreenInGame -> settings.copy(secondScreen = settings.secondScreen.copy(inGame = InGameSetting.entries[index]))
+        SettingsOption.SecondScreenAppsOn -> settings.copy(secondScreen = settings.secondScreen.copy(appsOn = AppsScreen.entries[index]))
         SettingsOption.BoxArtRegion -> settings.copy(library = settings.library.copy(boxArtRegion = BoxArtRegionSetting.entries[index]))
         SettingsOption.Sounds -> settings.copy(advanced = settings.advanced.copy(sounds = SoundLevel.entries[index]))
         else -> withAppearanceChoice(settings, index)
@@ -523,8 +505,7 @@ private fun SettingsOption.withAppearanceChoice(
         when (this@withAppearanceChoice) {
             SettingsOption.Colors -> it.withColors(it.colorsCycle()[index])
             SettingsOption.TextSize -> it.copy(textSize = TextSizeSetting.entries[index])
-            SettingsOption.LeftEdge -> it.copy(leftEdge = LeftEdgeSetting.entries[index])
-            SettingsOption.GridSize -> it.copy(gridSize = GridSizeSetting.entries[index])
+            SettingsOption.PageGrain -> it.copy(pageGrain = PageGrainSetting.entries[index])
             else -> it
         }
     }
@@ -538,10 +519,7 @@ internal fun SettingsOption.switchValue(settings: PlumSettings): Boolean =
         SettingsOption.ExactPlayTime -> settings.advanced.exactPlayTime
         SettingsOption.CheckUpdatesDaily -> settings.updates.checkDaily
         SettingsOption.PushRightToPlay -> settings.controls.pushRightToPlay
-        SettingsOption.ShowButtonHints -> settings.controls.showButtonHints
         SettingsOption.ShowApps -> settings.homeScreen.showApps
-        SettingsOption.ClockAndBattery -> settings.homeScreen.showClock || settings.homeScreen.showBattery
-        SettingsOption.SystemInfo -> settings.homeScreen.isSystemInfoShown
         else -> false
     }
 
@@ -558,13 +536,7 @@ internal fun SettingsOption.toggled(settings: PlumSettings): PlumSettings =
         SettingsOption.ExactPlayTime -> settings.copy(advanced = settings.advanced.copy(exactPlayTime = !settings.advanced.exactPlayTime))
         SettingsOption.CheckUpdatesDaily -> settings.copy(updates = settings.updates.copy(checkDaily = !settings.updates.checkDaily))
         SettingsOption.PushRightToPlay -> settings.copy(controls = settings.controls.copy(pushRightToPlay = !settings.controls.pushRightToPlay))
-        SettingsOption.ShowButtonHints -> settings.copy(controls = settings.controls.copy(showButtonHints = !settings.controls.showButtonHints))
         SettingsOption.ShowApps -> settings.copy(homeScreen = settings.homeScreen.copy(showApps = !settings.homeScreen.showApps))
-        SettingsOption.ClockAndBattery -> {
-            val next = !switchValue(settings)
-            settings.copy(homeScreen = settings.homeScreen.copy(showClock = next, showBattery = next))
-        }
-        SettingsOption.SystemInfo -> settings.copy(homeScreen = settings.homeScreen.copy(showSystemInfo = !settings.homeScreen.isSystemInfoShown))
         else -> settings
     }
 

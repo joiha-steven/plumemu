@@ -37,7 +37,6 @@ import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.plumemu.R
-import com.plumemu.coredata.settings.LeftEdgeSetting
 import com.plumemu.coreinput.Action
 import com.plumemu.settings.LocalButtonLetters
 import com.plumemu.coreinput.Column
@@ -106,8 +105,13 @@ internal fun HomeStrip(
     val keepsFullWidth = content.isLibraryEmpty && !content.hasBoxArt && !(onApps && showsDetails)
     // With the systems focused and no room for the details, the list runs to the right margin (ListStretch.kt): the slot keeps the full width, nothing beside it moves.
     val fullWidth = if (keepsFullWidth) layout.listWidthWithoutArt else homeGamesWidth(layout, content.hasBoxArt, showsGrid)
-    val stretch = rememberListStretch(state, layout, fullWidth, stretches = !showsGrid && !keepsFullWidth && !detailsCoverFitsWithSystemsOpen(layout, content.hasBoxArt))
-    val gamesWidth = fullWidth
+    // The list's own width (a grid's slot is another); the stretch is made for a list kept hidden beside a grid too, so a switch keeps the same one. It is null on a grid for all else (details, fade).
+    val listWidth = if (showsGrid) homeGamesWidth(layout, content.hasBoxArt, showsGrid = false) else fullWidth
+    val listStretch = rememberListStretch(state, layout, listWidth, stretches = !keepsFullWidth && !detailsCoverFitsWithSystemsOpen(layout, content.hasBoxArt))
+    val stretch = if (showsGrid) null else listStretch
+    // A grid's width, shown or built beside the shown list: the same, so showing one does not measure it again.
+    val gridWidth = if (keepsFullWidth) layout.listWidthWithoutArt else homeGamesWidth(layout, content.hasBoxArt, showsGrid = true)
+    val anyGrid = remember(content, gridIds) { content.entries.any { content.showsGrid(it, gridIds) } }
     // No fade where nothing continues: a grid with its games focused ends at the margin, and the
     // narrow details stop ends at it too (Nova-3-details draws none).
     val hideFade by remember(state, content, gridIds, stretch) {
@@ -137,17 +141,23 @@ internal fun HomeStrip(
         ) {
             // Starts at the screen edge: the 24 dp margin is inside the column, so the selector can run under the edge.
             SystemsColumn(content, state, onAction, Modifier.width(PlumDimens.stripMarginSide + PlumTheme.layout.systemsColumnWidth).fillMaxHeight(), isPanelOpen)
-            if (showsGrid) {
-                CompositionLocalProvider(LocalAppsSpread provides appsPreview.spread) { GamesGrid(content, state, onAction, appsPreview.modifier.width(gamesWidth).fillMaxHeight(), isPanelOpen()) }
-                PrefetchNeighbourCovers(content, state, gridIds)
-            } else {
-                // The list's width in px as it is laid out (the bleed of boardListStart included), for the pill images built ahead.
+            // One slot for both: the list stays composed while a grid is shown, hidden (measured, never placed: measuredNotPlaced), so the list
+            // pages beside the grid are built ahead and a switch to a list places a built page; the grids are pages too (GridPages), hidden the same way
+            // while a list is shown, so the grids beside the shown system are built ahead. A hidden one is the shown one's size alone (no child added to the Row).
+            Box {
+                if (anyGrid) {
+                    val gridPanelOpen = remember(isPanelOpen) { derivedStateOf { isPanelOpen() } }
+                    val gridSize = (if (showsGrid) appsPreview.modifier else Modifier.measuredNotPlaced()).width(gridWidth).fillMaxHeight()
+                    CompositionLocalProvider(LocalAppsSpread provides appsPreview.spread) { GridPages(content, gridIds, state, onAction, gridPanelOpen, gridWidth, gridSize) }
+                }
+                // The bleed of boardListStart is in the list's width in px, for the pill images built ahead.
                 val density = LocalDensity.current
-                val listWidthPx = with(density) { gamesWidth.roundToPx() + if (keepsFullWidth) 0 else PlumDimens.gamesListBleed.roundToPx() }
-                CompositionLocalProvider(LocalGamesListWidthPx provides listWidthPx, LocalListStretch provides stretch, LocalRowEndShift provides remember(stretch) { stretch?.let { it::rowEndShift } }) {
-                    GamesList(content, state, gridIds, positions, onAction, Modifier.width(gamesWidth).fillMaxHeight().then(if (keepsFullWidth) Modifier else Modifier.boardListStart()), isPanelOpen, listShowsPlace(layout, PlumTheme.type.font), showSystemInfo)
+                val listWidthPx = with(density) { listWidth.roundToPx() + if (keepsFullWidth) 0 else PlumDimens.gamesListBleed.roundToPx() }
+                CompositionLocalProvider(LocalGamesListWidthPx provides listWidthPx, LocalListStretch provides listStretch, LocalRowEndShift provides remember(listStretch) { listStretch?.let { it::rowEndShift } }) {
+                    GamesList(content, state, gridIds, positions, onAction, (if (showsGrid) Modifier.measuredNotPlaced() else Modifier).width(listWidth).fillMaxHeight().then(if (keepsFullWidth) Modifier else Modifier.boardListStart()), isPanelOpen, listShowsPlace(layout, PlumTheme.type.font), showSystemInfo)
                 }
             }
+            if (showsGrid) PrefetchNeighbourCovers(content, state, gridIds)
             // Beside the list on wide screens; on narrow ones the third stop, after list or grid.
             if (showsDetails && (layout.widthClass == WidthClass.Wide || detailsWidth > 0.dp)) {
                 DetailsColumn(content, state, onAction, Modifier.width(detailsWidth).fillMaxHeight().inStrip().fadedWith({ slide.value() }, detailsHidden).then(if (stretch != null) Modifier.plainLayer { translationX = stretch.followerShift() } else Modifier), detailsWidth)
@@ -158,8 +168,8 @@ internal fun HomeStrip(
 }
 
 /**
- * Recent, Favorites, Apps, a 4 dp gap, then each system; every entry with its count. In the peek the letter rail
- * ([LetterRail]) takes the counts' place, only while the focused list has letters ([HomeEntry.railLetters]).
+ * Recent, Favorites, Apps, then each system at the same stride; every entry with its count. In the peek each row shows
+ * the entry's code ([entryCode]) instead, in every sort.
  */
 @Composable
 private fun SystemsColumn(
@@ -191,25 +201,19 @@ private fun SystemsColumn(
         }
     }
     val systemsOpen by remember(state) { derivedStateOf { state.focus.column == Column.Systems } }
-    // Letters only where the focused list has letters to show: Recent and lists not in name order keep the counts
-    // (the default) in the peek instead of a blank edge; the stored setting stays Letters.
-    val countsGiveWay by remember(state, content) {
-        derivedStateOf { content.leftEdge == LeftEdgeSetting.Letters && content.entries.getOrNull(state.focus.systemIndex)?.railLetters?.isNotEmpty() == true }
-    }
     // The focus pill is drawn by the list, so it glides from row to row; inset as the row's own was.
     val pillShape = remember { InsetFocusPillShape(LeftColumnDimens.systemPillStart, LeftColumnDimens.systemBarInset) }
     val pill =
-        rememberGlidingPill(listState, glide, rowHeight = PlumTheme.layout.systemRowHeight, stride = PlumTheme.layout.systemRowHeight, extraGap = PlumDimens.systemGroupGap, shape = pillShape, fromBottom = true) {
+        rememberGlidingPill(listState, glide, rowHeight = PlumTheme.layout.gameRowHeight, stride = PlumTheme.layout.systemRowHeight, shape = pillShape) {
             if (state.focus.column == Column.Systems && !notices.emptyFocus.inButtons) state.focus.systemIndex else -1
         }
     // The column runs from bar to bar, its rows under both (design/rules.md › Lists that scroll).
     val density = LocalDensity.current
     val barRoom = LocalBarRoom.current
     val rest = barRows(PlumTheme.layout.systemRowHeight, 0.dp)
-    val groupGapPx = with(density) { PlumDimens.systemGroupGap.toPx() }
     val topRoomPx = with(density) { barRoom.top.toPx() }
-    val clips = remember(listState, glide, state, content.firstSystemIndex, groupGapPx, topRoomPx) {
-        BarRunClips(listState, glide, topRoomPx, gapAbove = { if (it == content.firstSystemIndex) groupGapPx else 0f }, minShown = ONE_LINE_MIN_SHOWN) { state.focus.systemIndex }
+    val clips = remember(listState, glide, state, topRoomPx) {
+        BarRunClips(listState, glide, topRoomPx, minShown = ONE_LINE_MIN_SHOWN) { state.focus.systemIndex }
     }
     FollowBarRunner(clips)
     Box(modifier) {
@@ -220,20 +224,16 @@ private fun SystemsColumn(
                 contentPadding = PaddingValues(top = glide.extra + barRoom.top, bottom = glide.extra + with(density) { rest.below.toDp() }),
             ) {
                 itemsIndexed(content.entries, key = { _, entry -> entry.id }) { index, entry ->
-                    if (index == content.firstSystemIndex) Spacer(Modifier.height(PlumDimens.systemGroupGap))
                     // Read the focus in its own derived state: a game-row move changes the focus object
                     // but not this row's look, so the row is not recomposed.
                     val look by remember(state, index) { derivedStateOf { systemLook(state.focus, index, notices.emptyFocus.inButtons) } }
                     val tap = remember(index, onAction) { Modifier.tapItem(Column.Systems, index, onAction).testTag(HomeTags.system(index)) }
-                    // Counts and System codes stay in the peek as the names fade; the rail covers the count's place, so it fades with the names.
-                    // Codes stand in for the counts only in the peek: the open column keeps its counts.
-                    val edgeText = if (content.leftEdge == LeftEdgeSetting.Codes && !systemsOpen) entryCode(entry) else numbers.formatSystemCount(entry.shownCount)
-                    SystemRow(name = entryName(entry), count = edgeText, look = look, nameAlpha = nameAlpha, modifier = tap, bleedStart = LeftColumnDimens.systemLabelStart, hasDot = entry.id in newGameSystems, fadeCount = countsGiveWay, countHidden = countHidden)
+                    // The system's code stays in the peek as the names fade, in every sort; the open column keeps its counts.
+                    val edgeText = if (!systemsOpen) entryCode(entry) else numbers.formatSystemCount(entry.shownCount)
+                    SystemRow(name = entryName(entry), count = edgeText, look = look, nameAlpha = nameAlpha, modifier = tap, bleedStart = LeftColumnDimens.systemLabelStart, hasDot = entry.id in newGameSystems, fadeCount = false, countHidden = countHidden)
                 }
             }
         }
-        // The peek is the column's last stretch: the rail sits there, centred in it.
-        if (content.leftEdge == LeftEdgeSetting.Letters) LetterRail(content, state, Modifier.align(Alignment.CenterEnd).width(PlumTheme.layout.peek).fillMaxHeight().inStrip())
     }
     KeepFocusedVisible(listState, glide, snapsToRows = true, bandPx = rest.inset) { state.focus.systemIndex }
 }
@@ -273,7 +273,10 @@ private fun GamesList(
     }
     // L1/R1 with the games focused: the next system's games fade in instead of popping. Moves in
     // the system column swap the preview at once (a held key would strobe it).
-    val fade = rememberSlidingSwap(entry.id, { state.focus.systemIndex }, wrapsAt = content.entries.size) { fadesSystemSwap(state) }
+    // A switch to or from a grid cuts in (this list is kept composed, hidden, while a grid is shown, so its fade must not start there).
+    val gridShown = remember { BooleanArray(1) { content.showsGrid(entry, gridIds) } }
+    val fade = rememberSlidingSwap(entry.id, { state.focus.systemIndex }, wrapsAt = content.entries.size) { fadesSystemSwap(state) && !gridShown[0] && !content.showsGrid(entry, gridIds) }
+    gridShown[0] = content.showsGrid(entry, gridIds)
     GamesPages(content, entryIndex, gridIds, state, onAction, panelOpen, positions, showsPlace, showSystemInfo, modifier.testTag(HomeTags.GAMES).fadingIn(fade))
 }
 

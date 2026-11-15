@@ -55,7 +55,7 @@ internal fun ProvideLaunchOrigin(content: @Composable () -> Unit) {
     val scope = rememberCoroutineScope()
     val launch = remember { LaunchMotion(scope) }
     DisposableEffect(origin, view) {
-        val host: (Intent) -> Unit = { intent -> launch.start(view, origin, motionOn.value, intent) }
+        val host: (Intent, Int?) -> Unit = { intent, display -> launch.start(view, origin, motionOn.value, intent, display) }
         LaunchAnimation.host = host
         onDispose { if (LaunchAnimation.host === host) LaunchAnimation.host = null }
     }
@@ -114,7 +114,13 @@ private class LaunchMotion(
         origin: LaunchOrigin,
         isMotionOn: Boolean,
         intent: Intent,
+        displayId: Int? = null,
     ) {
+        if (displayId != null) {
+            // On the second screen: Plumemu stays in front, so no leave motion and no scale-up. A throw reaches the caller.
+            view.context.startActivity(intent, LaunchAnimation.displayOptions(displayId))
+            return
+        }
         if (!isMotionOn) {
             view.context.startActivity(intent, ActivityOptions.makeCustomAnimation(view.context, 0, 0).toBundle())
             return

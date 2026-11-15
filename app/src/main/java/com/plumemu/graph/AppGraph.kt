@@ -257,7 +257,6 @@ class AppGraph(
             showApps = settings.filterNotNull().map { it.homeScreen.showApps }.distinctUntilChanged(),
             appGames = appGames.marked, appPackages = flow { emitAll(database.appGameDao().observePackages()) }, log = log,
             sort = settings.filterNotNull().map { it.library.sortGames }.distinctUntilChanged(),
-            leftEdge = settings.filterNotNull().map { it.appearance.leftEdge }.distinctUntilChanged(),
             // Settings › Library › System order and Systems: the column follows at once.
             arrangement = settings.filterNotNull().map { SystemArrangement.of(it.library) }.distinctUntilChanged(),
             locale = locale,
@@ -298,6 +297,8 @@ class AppGraph(
 
     /** In-app updates: checked from [startup]'s front hook and Settings › About. */
     internal val updates: Updates by lazy { graphUpdates(app, settings, appScope, io, telemetry) }
+
+    internal val usageAccessOffer: UsageAccessOffer by lazy { usageAccessOfferFor(app, settingsStore, settingsWriter, log) }
 
     /** Settings' writes, in order (see [SettingsWriter]). */
     internal val settingsWriter: SettingsWriter by lazy { SettingsWriter(appScope, settingsStore::update, log) }

@@ -59,7 +59,7 @@ class EmulatorResolverTest {
     fun aSystemChoiceThatCannotOpenTheFileWithOnlyALegalRiskOneThatCanAsks() {
         val json =
             """
-            {"formatVersion":2,
+            {"formatVersion":3,
              "systems":[{"id":"snes","name":"Super Nintendo","shortName":"SNES","displayName":"Super Nintendo","order":0,
                "folders":["snes"],"extensions":["sfc","smc"],"cover":"landscape","tier":"tested","emulators":["risky","snes9x"]}],
              "emulators":[

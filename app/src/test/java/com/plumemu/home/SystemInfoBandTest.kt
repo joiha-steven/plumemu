@@ -42,7 +42,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The band over a system's games list: the list's first item, there
- * whichever column is focused and scrolling away with the rows; never with Settings › Home screen › System info off, for Recent, Favorites or Apps, or for a system
+ * whichever column is focused and scrolling away with the rows; never while a second screen is in use, for Recent, Favorites or Apps, or for a system
  * without info.
  */
 @RunWith(RobolectricTestRunner::class)

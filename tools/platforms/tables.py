@@ -1,6 +1,6 @@
 """Hand-kept decisions of the converter. Everything here is documented in README.md."""
 
-FORMAT_VERSION = 2
+FORMAT_VERSION = 3
 
 # RULES R5: the twelve systems tested on hardware (Game Boy and Game Boy Color are two systems).
 TESTED = {"nes", "snes", "gb", "gbc", "gba", "n64", "nds", "megadrive", "psx", "psp", "ps2",
@@ -423,10 +423,66 @@ APPS_SYSTEMS = {"android": "Android games"}
 # Installed app package name -> the system it belongs to (`android` or `ports`), shipped as `knownApps`.
 # Only packages a file in this repo states; never a guess. The person's own choice in the app wins.
 KNOWN_APP_SYSTEMS = {"android", "ports"}
+# Port apps run a PC or console game, mostly with the person's own game files, and many declare
+# themselves games to Android (appCategory or isGame), which alone would file them under Android games.
+# Each id was read in the source named (research docs/research/2026-11-14-game-sorting.md, owner
+# approved 2026-11-14); only the release id, never .debug/.dev/nightly builds. No Android-game entries:
+# every verified store game carries Android's own mark.
 KNOWN_APPS = {
     # Delta Touch, the Doom engines app: docs/research/2026-10-23-launcher-comparison.md section 8
     # (native Android source ports), Play Store id in its reference 21p.
     "com.opentouchgaming.deltatouch": "ports",
+    # D2R Mobile: github.com/jhaizhou-ops/d2r-mobile dm/android/app/build.gradle (applicationId).
+    "com.xiaoboluo.d2r": "ports",
+    # Ship of Harkinian: github.com/Waterdish/Shipwright-Android Android/app/build.gradle.
+    "com.dishii.soh": "ports",
+    # 2Ship2Harkinian: github.com/Waterdish/2ship2harkinian-Android (branch android) Android/app/build.gradle.
+    "com.dishii.mm": "ports",
+    # Zelda 3: github.com/Waterdish/zelda3-android app/build.gradle.
+    "com.dishii.zelda3": "ports",
+    # DevilutionX: github.com/diasurgical/DevilutionX android-project/app/build.gradle.
+    "org.diasurgical.devilutionx": "ports",
+    # Xash3D FWGS: github.com/FWGS/xash3d-fwgs android/app/build.gradle.kts.
+    "su.xash.engine": "ports",
+    # OpenMW: github.com/xyzz/openmw-android app/build.gradle.
+    "is.xyz.omw": "ports",
+    # doukutsu-rs: github.com/doukutsu-rs/doukutsu-rs drsandroid/app/build.gradle.kts.
+    "io.github.doukutsu_rs": "ports",
+    # RSDKv5: github.com/RSDKModding/RSDKv5-Decompilation android/app/build.gradle.
+    "org.rems.rsdkv5": "ports",
+    # RSDKv4: github.com/RSDKModding/RSDKv4-Decompilation android/app/build.gradle.
+    "com.decomp.rsdkv4": "ports",
+    # Augustus: github.com/Keriew/augustus android/augustus/build.gradle.
+    "com.github.Keriew.augustus": "ports",
+    # Julius: github.com/bvschaik/julius android/julius/build.gradle.
+    "com.github.bvschaik.julius": "ports",
+    # OpenRCT2: github.com/OpenRCT2/OpenRCT2 src/openrct2-android/app/build.gradle.
+    "io.openrct2": "ports",
+    # Fallout CE: github.com/alexbatalov/fallout1-ce os/android/app/build.gradle.
+    "com.alexbatalov.falloutce": "ports",
+    # Fallout 2 CE: github.com/alexbatalov/fallout2-ce os/android/app/build.gradle.
+    "com.alexbatalov.fallout2ce": "ports",
+    # TheXTech: github.com/Wohlstand/TheXTech android-project/thextech/build.gradle.
+    "ru.wohlsoft.thextech": "ports",
+    # OpenLara: github.com/XProger/OpenLara src/platform/android/app/build.gradle.
+    "com.xproger.openlara": "ports",
+    # Open Surge: f-droid.org/packages/org.opensurge2d.surgeengine.
+    "org.opensurge2d.surgeengine": "ports",
+    # SDLPAL: github.com/sdlpal/sdlpal android/app/build.gradle.
+    "com.sdlpal.sdlpal": "ports",
+    # VCMI: f-droid.org/packages/is.xyz.vcmi.
+    "is.xyz.vcmi": "ports",
+    # Exult: github.com/exult/exult android/app/build.gradle.in.
+    "info.exult": "ports",
+    # idTech4A++: f-droid.org/packages/com.karin.idTech4Amm.
+    "com.karin.idTech4Amm": "ports",
+    # ScummVM (plays the person's own adventure games; owner 2026-11-14: a port):
+    # github.com/scummvm/scummvm dists/android/build.gradle.
+    "org.scummvm.scummvm": "ports",
+    # Perfect Dark: github.com/Mr4xd3mn/perfect-dark-android android/app/build.gradle.
+    "org.sdl2.perfectdark": "ports",
+    # OpenXcom: github.com/sfalexrog/openxcom-android app/build.gradle.
+    "org.libsdl.openxcom": "ports",
 }
 
 # Package name -> the page "Get it" opens, written as the emulator's `page`: the project's GitHub or
@@ -597,6 +653,14 @@ EXTRA_VARIANTS = {
     "ppsspp": [("org.ppsspp.ppssppduo", "org.ppsspp.ppsspp.PpssppActivity")],
 }
 
+# Packages dropped from every emulator's variants (ES-DE's find rules list them as disguises of a
+# benchmark app; Daijisho players of the package are skipped too). The converter fails when no source
+# gives one any more, so a row cannot outlive its cause.
+DROPPED_VARIANT_PACKAGES = {
+    "com.tencent.ig": "the real PUBG Mobile (play.google.com/store/apps/details?id=com.tencent.ig); as a variant it "
+                      "could never be listed as an Android game (RULES R45). Owner 2026-11-14.",
+}
+
 # Emulators no source gives in a form the converter reads, written by hand and checked by
 # common.check_launch. The Steam apps (owner approved 2026-10-23; research
 # docs/research/2026-10-23-launcher-comparison.md section 7.1): a Steam game is a small ".steam" text
@@ -609,12 +673,17 @@ EXTRA_VARIANTS = {
 HAND_EMULATORS = [
     {
         # Explicit intent to .MainActivity; app_id is read as an Int (getIntExtra), game_source names the store.
-        "id": "gamenative", "name": "GameNative", "systems": ["steam"],
+        # Frontend sync writes <title>.<ext> holding the numeric id, one extension per store (owner 2026-11-14;
+        # github.com/utkarshdalal/GameNative at 064f35f sync/FrontendSyncManager.kt).
+        "id": "gamenative", "name": "GameNative", "systems": ["steam", "epic", "windows"],
         "package": "app.gamenative", "activity": "app.gamenative.MainActivity",
         "action": "app.gamenative.LAUNCH_GAME",
         "game": {"mode": "steam_app_id", "target": "extra", "key": "app_id", "type": "int"},
-        "extras": {"game_source": "STEAM"},
-        "accepts": ["steam"],
+        "extrasByExtension": {
+            "steam": {"game_source": "STEAM"}, "epic": {"game_source": "EPIC"}, "gog": {"game_source": "GOG"},
+            "amazon": {"game_source": "AMAZON"}, "pcgame": {"game_source": "CUSTOM_GAME"},
+        },
+        "accepts": ["steam", "epic", "gog", "amazon", "pcgame"],
     },
     {
         # Patched GameSir GameHub; the same activity under both package names it ships as.
@@ -657,10 +726,19 @@ HAND_EMULATORS = [
 
 # Extensions of its systems a source emulator cannot open: its "accepts" becomes every other extension
 # of its systems (a hand-kept emulator says what it accepts in its own "accepts"). Each must be an
-# extension of one of the emulator's systems (checked). WinNative takes a file path (ES-DE's
-# shortcut_path=%ROM%): a .steam file holds only a Steam app id, which only the Steam apps start;
-# its .desktop, .epic, .gog, .amazon, .pcgame and .app files stay its own. Owner 2026-10-23.
-NOT_ACCEPTED = {"winnative": ["steam"]}
+# extension of one of the emulator's systems (checked). WinNative and the Winlator family take a file path
+# (ES-DE's shortcut_path=%ROM%): .steam, .epic, .gog, .amazon and .pcgame files hold only a game id, which
+# only GameNative (and for .steam the other Steam apps) starts; their .desktop and .app files stay theirs.
+# Owner 2026-10-23 for .steam; owner 2026-11-14 for the rest, GameNative writes them as id files.
+_ID_FILES = ["steam", "epic", "gog", "amazon", "pcgame"]
+NOT_ACCEPTED = {
+    "winnative": _ID_FILES,
+    # Windows only lists epic, gog, amazon, pcgame (no .steam), so these refuse the four.
+    "winlator-cmod": _ID_FILES[1:],
+    "winlator-glibc": _ID_FILES[1:],
+    "winlator-proot": _ID_FILES[1:],
+    "com-micewine-emu": _ID_FILES[1:],
+}
 
 # Emulators whose file types are read from Daijisho (audit item 20): their "accepts" is the union of the
 # acceptedFilenameRegex of the named players (sources/daijisho/<Platform>.json, one player or more for each of
@@ -740,6 +818,9 @@ GAME_PATH_EXTENSIONS = {"duckstation": ["m3u"]}
 # the default ahead of RetroArch; its quality there is unknown, so it goes last (owner review 2026-11-01).
 SYSTEM_EMULATOR_ORDER = {
     "steam": ["gamenative", "gamehub-lite", "droiddeck", "winnative"],
+    # GameNative first: it starts the id files of these systems, the others only .desktop files.
+    "epic": ["gamenative", "winnative"],
+    "windows": ["gamenative", "winlator-cmod", "winlator-glibc", "winlator-proot", "winnative", "com-micewine-emu"],
     "atari7800": ["retroarch-prosystem", "com-omnidroid-3"],
     "dos": ["retroarch-dosbox-pure", "retroarch-dosbox-core", "retroarch-dosbox-svn", "retroarch-virtualxt",
             "com-omnidroid-4"],

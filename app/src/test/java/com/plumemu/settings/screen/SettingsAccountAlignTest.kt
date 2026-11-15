@@ -64,7 +64,6 @@ abstract class SettingsAccountAlignBase {
         val libraryLabels =
             mapOf(
                 SettingsOption.RomFolders to "Game folders",
-                SettingsOption.SortGames to "Sort games",
                 SettingsOption.FilesNotAdded to "Files not added",
             )
         val accountLabels = mapOf(SettingsOption.ScraperAccount to "ScreenScraper", SettingsOption.RetroAchievementsAccount to "RetroAchievements")
@@ -87,8 +86,8 @@ abstract class SettingsAccountAlignBase {
                 }
             }
             check(libraryLabels)
-            // Files not added follows Sort games: Systems is listed only with systems, which this library has not.
-            val order = listOf(SettingsOption.SortGames, SettingsOption.FilesNotAdded)
+            // Files not added follows Rescan library: Systems is listed only with systems, which this library has not.
+            val order = listOf(SettingsOption.Rescan, SettingsOption.FilesNotAdded)
             order.zipWithNext().forEach { (above, below) ->
                 val gap = bounds(SettingsTags.option(below)).top.value - bounds(SettingsTags.option(above)).bottom.value
                 if (!near(gap, PlumDimens.listRowGap.value)) problems += "$at: gap $above to $below is $gap"

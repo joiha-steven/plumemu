@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.IntrinsicMeasurable
 import androidx.compose.ui.layout.IntrinsicMeasureScope
 import androidx.compose.ui.layout.Layout
@@ -86,7 +87,7 @@ internal fun ColumnScope.DetailsBlock(
     val facts =
         when (shown) {
             is ShownPlay.Fixed -> shown.play
-            is ShownPlay.Read -> PlayFacts(shown.play.lastPlayedDaysAgo, shown.play.playTimeMinutes, emulatorLabel(shown.play.emulator))
+            is ShownPlay.Read -> PlayFacts(shown.play.lastPlayedDaysAgo, shown.play.playTimeMinutes, shown.play.emulatorText())
             else -> null
         }
     // One read of each per pass, handed to the texts below.
@@ -98,8 +99,10 @@ internal fun ColumnScope.DetailsBlock(
     val ratingValue = shownDetails?.rating?.takeIf { it in 1..MAX_RATING }
     val ratingNumber = if (dots > 0f && ratingValue != null) ratingNumberOf(ratingValue, locale, numbers) else ""
     val rating = if (ratingNumber.isEmpty()) "" else stringResource(R.string.home_details_rating, ratingNumber)
-    val playTimeText = facts?.let { playTime(it.playTimeMinutes, numbers) }.orEmpty()
-    val lastPlayedText = facts?.let { lastPlayed(it.lastPlayedDaysAgo, numbers) }.orEmpty()
+    // A game never played says so once, in the Played cell; there is no Last played cell for it.
+    val never = facts?.neverPlayed() == true
+    val playTimeText = facts?.let { if (never) stringResource(R.string.second_screen_not_played) else playTime(it.playTimeMinutes, numbers) }.orEmpty()
+    val lastPlayedText = facts?.let { if (never) "" else lastPlayed(it.lastPlayedDaysAgo, numbers) }.orEmpty()
     val emulator = facts?.emulator.orEmpty()
     val pace = paceOf(shown)
     val battery = pace?.let { pickingBatteryCellText(it) }
@@ -140,7 +143,8 @@ internal fun ColumnScope.DetailsBlock(
             }
         }
     val batteryText = if (arrangement?.batteryShort == true) battery?.short.orEmpty() else batteryFull
-    val policy = remember(cellHeight) { FactsPolicy(cellHeight) }
+    val lineHeight = remember(measurer, density, meta, labelStyle) { lineHeightPx(measurer, meta, labelStyle) }
+    val policy = remember(cellHeight, lineHeight) { FactsPolicy(cellHeight, lineHeight) }
     // The hairline is drawn in the column's top padding so the facts' own room is unchanged.
     FactsLayout(
         policy = policy,
@@ -185,7 +189,13 @@ private fun FactsCells(arrangement: DetailsArrangement, t: FactTexts, l: FactLab
                 DetailsCell.RATING -> RatingCell(l.rating, t.ratingNumber, t.rating, t.dots, CellId(DropRank.RATING, share, row, need(DetailsCell.RATING)))
                 DetailsCell.PLAYED -> Cell(l.played, t.played, CellId(DropRank.PLAYED, share, row, need(DetailsCell.PLAYED)), VALUE_LINES, mono = true)
                 DetailsCell.LAST -> Cell(l.last, t.last, CellId(DropRank.LAST_PLAYED, share, row, need(DetailsCell.LAST)), VALUE_LINES, mono = true)
-                DetailsCell.EMULATOR -> Cell(l.emulator, t.emulator, CellId(DropRank.EMULATOR, share, row, need(DetailsCell.EMULATOR)), VALUE_LINES, testTag = HomeTags.DETAILS_EMULATOR)
+                DetailsCell.EMULATOR ->
+                    if (cells.size == 1) {
+                        // Alone in its row: one line, label and value side by side, so the row is as high as one line and the table ends sooner.
+                        InlineCell(l.emulator, t.emulator, CellId(DropRank.EMULATOR, share, row, need(DetailsCell.EMULATOR), isInline = true), HomeTags.DETAILS_EMULATOR)
+                    } else {
+                        Cell(l.emulator, t.emulator, CellId(DropRank.EMULATOR, share, row, need(DetailsCell.EMULATOR)), VALUE_LINES, testTag = HomeTags.DETAILS_EMULATOR)
+                    }
                 DetailsCell.BATTERY -> Cell(l.battery, t.battery, CellId(DropRank.BATTERY, share, row, need(DetailsCell.BATTERY)), VALUE_LINES, mono = true, testTag = HomeTags.DETAILS_BATTERY)
             }
         }
@@ -203,6 +213,13 @@ private fun cellHeightPx(
     val valueHeight = measurer.measure(HELD_LINE, meta, maxLines = 1).size.height
     return with(density) { labelHeight + PlumDimens.detailsLabelGap.roundToPx() + maxOf(valueHeight, PlumDimens.ratingDotSize.roundToPx()) }
 }
+
+/** One line of an inline cell in px: the taller of the label's line and the value's. */
+private fun lineHeightPx(
+    measurer: androidx.compose.ui.text.TextMeasurer,
+    meta: TextStyle,
+    label: TextStyle,
+): Int = maxOf(measurer.measure(HELD_LINE, label, maxLines = 1).size.height, measurer.measure(HELD_LINE, meta, maxLines = 1).size.height)
 
 private fun paceOf(shown: ShownPlay): BatteryPace? =
     when (shown) {
@@ -225,7 +242,7 @@ private object DropRank {
 }
 
 /** A cell's place in [FactsPolicy]: its drop rank, its share of the column's width, its row and the share it needs to stand whole. */
-private data class CellId(val dropRank: Int, val share: Float, val row: Int, val need: Float)
+private data class CellId(val dropRank: Int, val share: Float, val row: Int, val need: Float, val isInline: Boolean = false)
 
 // Parent data (not a layout id) so the intrinsic measurables can read it too.
 private fun Modifier.cellId(id: CellId): Modifier =
@@ -249,7 +266,7 @@ private fun FactsLayout(
  * order (BATTERY, EMULATOR, GENRE, then RATING; PLAYED and LAST PLAYED stay) and the rest keep their rows; a cell is never cut. Intrinsic heights
  * are the box's, so the cover is sized from it before any value is in.
  */
-private class FactsPolicy(private val cellHeight: Int) : MeasurePolicy {
+private class FactsPolicy(private val cellHeight: Int, private val lineHeight: Int = cellHeight) : MeasurePolicy {
     private class Measured(val id: CellId, val width: Int, val placeable: Placeable)
 
     private fun held(rows: Int, gap: Int) = rows * (cellHeight + gap)
@@ -265,10 +282,11 @@ private class FactsPolicy(private val cellHeight: Int) : MeasurePolicy {
 
         fun rowsWithout(dropped: Int) = measurables.indices.filter { ids[it].dropRank !in DROP_ORDER.take(dropped) }.groupBy { ids[it].row }.toSortedMap().values.toList()
 
-        // Every cell is as high as [cellHeight], so what leaves is known before anything is measured.
+        // Every cell is as high as [cellHeight], a row of one inline cell one line ([lineHeight]), so what leaves is known before anything is measured.
+        fun rowsHeight(rows: List<List<Int>>) = rows.sumOf { row -> (if (row.all { ids[it].isInline }) lineHeight else cellHeight) + gap }
         var dropped = 0
         var kept = rowsWithout(0)
-        while (kept.size * (cellHeight + gap) > box && dropped < DROP_ORDER.size) {
+        while (rowsHeight(kept) > box && dropped < DROP_ORDER.size) {
             dropped++
             kept = rowsWithout(dropped)
         }
@@ -280,7 +298,7 @@ private class FactsPolicy(private val cellHeight: Int) : MeasurePolicy {
                     val id = ids[i]
                     val back = if (slack > 0f && id.need > id.share) minOf(slack, id.need - id.share) else 0f
                     slack -= back
-                    val w = ((id.share + back) * width).roundToInt().coerceAtMost(width)
+                    val w = if (id.isInline) width else ((id.share + back) * width).roundToInt().coerceAtMost(width)
                     Measured(id, w, measurables[i].measure(Constraints(minWidth = w, maxWidth = w)))
                 }
             }
@@ -338,6 +356,39 @@ private fun Cell(
     Column(Modifier.cellId(id).padding(end = PlumDimens.factsColumnGap).then(if (testTag != null) Modifier.testTag(testTag) else Modifier), verticalArrangement = Arrangement.spacedBy(PlumDimens.detailsLabelGap)) {
         BasicText(text = label, style = type.detailsLabel.copy(color = colors.muted), maxLines = LABEL_LINES)
         BasicText(text = value, style = (if (mono) type.factNumber else type.meta).copy(color = colors.text), maxLines = valueLines, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** A cell alone in its row on one line: the label, then the value (one line, an ellipsis at the column's edge), on one baseline. */
+@Composable
+private fun InlineCell(
+    label: String,
+    value: String,
+    id: CellId,
+    testTag: String,
+) {
+    val colors = PlumTheme.colors
+    val type = PlumTheme.type
+    val gap = PlumDimens.factsColumnGap
+    Layout(
+        content = {
+            BasicText(text = label, style = type.detailsLabel.copy(color = colors.muted), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            BasicText(text = value, style = type.meta.copy(color = colors.text), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        },
+        modifier = Modifier.cellId(id).testTag(testTag),
+    ) { (labelPart, valuePart), constraints ->
+        val gapPx = gap.roundToPx()
+        val minValue = PlumDimens.factsInlineValueMin.roundToPx()
+        // The value keeps at least a minimum width: the label ellipsises first (it needs the room only when the column is very narrow).
+        val label = labelPart.measure(Constraints(maxWidth = (constraints.maxWidth - gapPx - minValue).coerceAtLeast(0)))
+        val value = valuePart.measure(Constraints(maxWidth = (constraints.maxWidth - label.width - gapPx).coerceAtLeast(0)))
+        val base = maxOf(label[FirstBaseline], value[FirstBaseline])
+        val labelY = base - label[FirstBaseline]
+        val valueY = base - value[FirstBaseline]
+        layout((label.width + gapPx + value.width).coerceIn(constraints.minWidth, constraints.maxWidth), maxOf(labelY + label.height, valueY + value.height)) {
+            label.place(0, labelY)
+            value.place(label.width + gapPx, valueY)
+        }
     }
 }
 

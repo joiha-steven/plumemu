@@ -22,12 +22,16 @@ package com.plumemu.library.scrape
  * only in tests ([WrongSystemMatches.forgetCodeDroppedMatches], [FileNameTitles.showWhereMissing]).
  * The scraper itself judges answers as in version 3.
  *
+ * 5: `epic` and `windows` games are looked up by name (launcher files, not game data); before, they
+ * were hashed (`epic` had no ScreenScraper system), so their stored no-matches are made due once
+ * ([LAUNCHER_NO_MATCH_SINCE_VERSION], `ScrapedGameDao.makeNoMatchesDueNowIn`).
+ *
  * Each repair runs once per library: only when the stored version is below the version that
  * brought it ([SERIAL_ONLY_REPAIR_SINCE_VERSION], [NO_MATCH_RETRY_SINCE_VERSION],
  * [WRONG_SYSTEM_REPAIR_SINCE_VERSION], [CODE_DROPPED_REPAIR_SINCE_VERSION]). Running an older one again would forget results the
  * rules then in force judged right and spend ScreenScraper quota asking them again.
  */
-const val SCRAPE_RULES_VERSION = 4
+const val SCRAPE_RULES_VERSION = 5
 
 /** 1: the serial-only matches are forgotten (`ScrapedGameDao.forgetSerialOnlyHashMatches`) by libraries below this version only. */
 const val SERIAL_ONLY_REPAIR_SINCE_VERSION = 1
@@ -46,3 +50,6 @@ const val CODE_DROPPED_REPAIR_SINCE_VERSION = 4
  * no-matches, so only a stored version below this one makes them due.
  */
 const val NO_MATCH_RETRY_SINCE_VERSION = 2
+
+/** 5: no-matches of the `epic` and `windows` games are made due by libraries below this version only (version 2 already did every system's). */
+const val LAUNCHER_NO_MATCH_SINCE_VERSION = 5

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.CacheDrawScope
 import androidx.compose.ui.draw.DrawResult
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -47,11 +49,12 @@ import com.plumemu.R
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.components.CollarSize
-import com.plumemu.coreui.components.ListEdgeFade
+import com.plumemu.coreui.components.drawPageFade
 import com.plumemu.coreui.components.collar
 import com.plumemu.coreui.theme.ButtonColors
 import com.plumemu.coreui.theme.ColorSet
 import com.plumemu.coreui.theme.FlatFace
+import com.plumemu.coreui.theme.LocalPageGrain
 import com.plumemu.coreui.theme.PlumColors
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumDimens
@@ -72,30 +75,32 @@ import com.plumemu.setup.bringIntoViewWhen
  * there is one, each a tiny home screen in that set's own colours with its name under it. D-pad
  * moves, A (or a second tap) uses the set through the row's own write and closes the panel, B goes
  * back to the row. Nothing applies while the cursor moves: the tiles are the preview. Under the
- * tiles two rows, Background and Text color, open their colour pages.
+ * tiles three rows, Background, Text color and Accent color, open their colour pages.
  */
 
-/** Colors' panel items of the two rows under the tiles. Fixed, past any tile: a row's place holds while Custom comes and goes. */
+/** Colors' panel items of the three rows under the tiles. Fixed, past any tile: a row's place holds while Custom comes and goes. */
 internal const val COLORS_BACKGROUND_ITEM = 1000
 internal const val COLORS_TEXT_ITEM = 1001
+internal const val COLORS_ACCENT_ITEM = 1002
 
 /** The option of Colors' panel item [index] when it is a row; null for a tile. */
 internal fun colorsRowOption(index: Int): SettingsOption? =
     when (index) {
         COLORS_BACKGROUND_ITEM -> SettingsOption.Background
         COLORS_TEXT_ITEM -> SettingsOption.TextColor
+        COLORS_ACCENT_ITEM -> SettingsOption.Accent
         else -> null
     }
 
-/** The item of [kind]'s row in Colors' panel; null for Accent color, a row of the list. */
-internal fun colorsRowItemOf(kind: ColorKind): Int? =
+/** The item of [kind]'s row in Colors' panel. */
+internal fun colorsRowItemOf(kind: ColorKind): Int =
     when (kind) {
         ColorKind.Background -> COLORS_BACKGROUND_ITEM
         ColorKind.Text -> COLORS_TEXT_ITEM
-        ColorKind.Accent -> null
+        ColorKind.Accent -> COLORS_ACCENT_ITEM
     }
 
-/** Where [direction] goes from item [index] of Colors' panel: down the [count] tiles' grid, then the two rows; [index] itself at an edge. */
+/** Where [direction] goes from item [index] of Colors' panel: down the [count] tiles' grid, then the three rows; [index] itself at an edge. */
 internal fun colorSetsItemAfter(
     index: Int,
     count: Int,
@@ -104,7 +109,8 @@ internal fun colorSetsItemAfter(
 ): Int =
     when (index) {
         COLORS_BACKGROUND_ITEM -> if (direction == Direction.Up) count - 1 else if (direction == Direction.Down) COLORS_TEXT_ITEM else index
-        COLORS_TEXT_ITEM -> if (direction == Direction.Up) COLORS_BACKGROUND_ITEM else index
+        COLORS_TEXT_ITEM -> if (direction == Direction.Up) COLORS_BACKGROUND_ITEM else if (direction == Direction.Down) COLORS_ACCENT_ITEM else index
+        COLORS_ACCENT_ITEM -> if (direction == Direction.Up) COLORS_TEXT_ITEM else index
         else -> PanelGrid(count, columns).move(index, direction).let { if (it == index && direction == Direction.Down) COLORS_BACKGROUND_ITEM else it }
     }
 
@@ -164,6 +170,7 @@ internal fun ColorSetsPanel(
             Column(Modifier.padding(bottom = SlabDimens.listEndRoom), verticalArrangement = Arrangement.spacedBy(PlumDimens.listRowGap)) {
                 ColorPageRow(COLORS_BACKGROUND_ITEM, SettingsOption.Background, settings, focusedIndex, touch, anchors.place(COLORS_BACKGROUND_ITEM))
                 ColorPageRow(COLORS_TEXT_ITEM, SettingsOption.TextColor, settings, focusedIndex, touch, anchors.place(COLORS_TEXT_ITEM))
+                ColorPageRow(COLORS_ACCENT_ITEM, SettingsOption.Accent, settings, focusedIndex, touch, anchors.place(COLORS_ACCENT_ITEM))
             }
         }
         ColorSetsPanelEndFade(scroll, anchors, focusedIndex, Modifier.align(Alignment.BottomCenter))
@@ -190,7 +197,7 @@ private fun ColorSetsPanelEndFade(
                 anchors.roomBelow(focusedIndex())?.let { fadeReachOver(it, overhangPx, fadePx) } ?: 1f
             }
         }
-    if (scroll.canScrollForward) ListEdgeFade(atBottom = true, modifier.testTag(SettingsTags.COLOR_SETS_PANEL + FADE_BOTTOM_SUFFIX), reach)
+    if (scroll.canScrollForward) PanelEdgeFade(atBottom = true, modifier.testTag(SettingsTags.COLOR_SETS_PANEL + FADE_BOTTOM_SUFFIX), reach)
 }
 
 /** The top edge's fade once the tiles scrolled. Its own scope, as the end's. */
@@ -199,7 +206,31 @@ private fun ColorSetsPanelTopFade(
     scroll: ScrollState,
     modifier: Modifier,
 ) {
-    if (scroll.canScrollBackward) ListEdgeFade(atBottom = false, modifier.testTag(SettingsTags.COLOR_SETS_PANEL + FADE_TOP_SUFFIX))
+    if (scroll.canScrollBackward) PanelEdgeFade(atBottom = false, modifier.testTag(SettingsTags.COLOR_SETS_PANEL + FADE_TOP_SUFFIX))
+}
+
+/**
+ * [com.plumemu.coreui.components.ListEdgeFade] on the page colour, drawn through [drawPageFade] so that over a grained page the fade is
+ * grain too, not a smooth band. Same box, same curve, same [reach].
+ */
+@Composable
+private fun PanelEdgeFade(
+    atBottom: Boolean,
+    modifier: Modifier,
+    reach: () -> Float = { 1f },
+) {
+    val colors = PlumTheme.colors
+    val grain = LocalPageGrain.current
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(PlumDimens.listFadeBand)
+            .drawBehind {
+                val band = size.height * reach().coerceIn(0f, 1f)
+                if (band <= 0f) return@drawBehind
+                drawPageFade(colors.bg, grain, Offset(0f, if (atBottom) size.height - band else 0f), Size(size.width, band), atBottom)
+            },
+    )
 }
 
 /** How much of the bottom fade may be drawn with [room] px under the focused item, whose focus reaches [overhang] past it: it stops short of the focus. */
@@ -225,7 +256,7 @@ private class FocusAnchors {
     }
 }
 
-/** Background or Text color under the tiles: the colour's dot and name, as on a colour row. Its page's swatches are built only when it opens. */
+/** Background, Text color or Accent color under the tiles: the colour's dot and name, as on a colour row. Its page's swatches are built only when it opens. */
 @Composable
 private fun ColorPageRow(
     item: Int,

@@ -31,6 +31,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
                 ownColors = decodeOwnColors(p),
                 buttonSet = p[Keys.buttonSet],
                 language = p[Keys.language],
+                pageGrain = enum(p, Keys.pageGrain, d.appearance.pageGrain),
             ),
             controls = ControlsSettings(
                 confirmButton = enum(p, Keys.confirmButton, d.controls.confirmButton),
@@ -60,6 +61,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
             secondScreen = SecondScreenSettings(
                 enabled = p[Keys.secondScreenEnabled],
                 inGame = decodeInGame(p, d.secondScreen.inGame),
+                appsOn = decodeAppsOn(p, d.secondScreen.appsOn),
             ),
             advanced = AdvancedSettings(
                 animations = p[Keys.animations] ?: d.advanced.animations,
@@ -68,6 +70,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
                 usageStatistics = p[Keys.usageStatistics] ?: (p[Keys.setupCompleted] == true || d.advanced.usageStatistics),
                 vibration = p[Keys.vibration] ?: d.advanced.vibration,
                 exactPlayTime = p[Keys.exactPlayTime] ?: d.advanced.exactPlayTime,
+                usageAccessOffered = p[Keys.usageAccessOffered] ?: d.advanced.usageAccessOffered,
             ),
             updates = UpdateSettings(
                 checkDaily = p[Keys.checkUpdatesDaily] ?: d.updates.checkDaily,
@@ -109,6 +112,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
         if (buttonSet == null) p.remove(Keys.buttonSet) else p[Keys.buttonSet] = buttonSet
         val language = s.appearance.language
         if (language == null) p.remove(Keys.language) else p[Keys.language] = language
+        p[Keys.pageGrain] = s.appearance.pageGrain.name
         p[Keys.confirmButton] = s.controls.confirmButton.name
         p[Keys.holdToScrollFaster] = s.controls.holdToScrollFaster
         p[Keys.showButtonHints] = s.controls.showButtonHints
@@ -133,6 +137,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
         val secondScreenEnabled = s.secondScreen.enabled
         if (secondScreenEnabled == null) p.remove(Keys.secondScreenEnabled) else p[Keys.secondScreenEnabled] = secondScreenEnabled
         p[Keys.secondScreenInGame] = encodeInGame(s.secondScreen.inGame)
+        p[Keys.secondScreenAppsOn] = encodeAppsOn(s.secondScreen.appsOn)
         p[Keys.animations] = s.advanced.animations
         p[Keys.soundLevel] = s.advanced.sounds.name.lowercase(Locale.ROOT)
         // The old on/off switch stays written beside the level, so an older build keeps Off (Quiet and Loud read as on there).
@@ -140,6 +145,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
         p[Keys.vibration] = s.advanced.vibration
         p[Keys.usageStatistics] = s.advanced.usageStatistics
         p[Keys.exactPlayTime] = s.advanced.exactPlayTime
+        p[Keys.usageAccessOffered] = s.advanced.usageAccessOffered
         p[Keys.checkUpdatesDaily] = s.updates.checkDaily
         p[Keys.setupCompleted] = s.flags.setupCompleted
         p[Keys.homeRoleAsked] = s.flags.homeRoleAsked
@@ -188,6 +194,12 @@ internal class SettingsCodec(private val log: SettingsLog) {
         return InGameSetting.entries.firstOrNull { encodeInGame(it) == stored } ?: default.also { unknown(Keys.secondScreenInGame) }
     }
 
+    /** Stored in lower case (`top`, `bottom`). */
+    private fun decodeAppsOn(p: Preferences, default: AppsScreen): AppsScreen {
+        val stored = p[Keys.secondScreenAppsOn] ?: return default
+        return AppsScreen.entries.firstOrNull { encodeAppsOn(it) == stored } ?: default.also { unknown(Keys.secondScreenAppsOn) }
+    }
+
     /** Stored as ScreenScraper's region code (`us`, `eu`, `jp`, `wor`), the value the scraper is given. */
     private fun decodeBoxArtRegion(p: Preferences, default: BoxArtRegionSetting): BoxArtRegionSetting {
         val stored = p[Keys.boxArtRegion] ?: return default
@@ -201,6 +213,8 @@ internal class SettingsCodec(private val log: SettingsLog) {
     }
 
     private fun encodeInGame(value: InGameSetting): String = value.name.lowercase(Locale.ROOT)
+
+    private fun encodeAppsOn(value: AppsScreen): String = value.name.lowercase(Locale.ROOT)
 
     /** Stored in lower case (`name`, `maker`, `manual`), as the settings file spells them. */
     private fun decodeSystemOrder(
@@ -252,6 +266,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
         /** Name of the colour set whose A/B/X/Y colours are in use, or `None`. Absent: not decided yet. */
         val buttonSet = stringPreferencesKey("appearance.button_set")
         val language = stringPreferencesKey("appearance.language")
+        val pageGrain = stringPreferencesKey("appearance.page_grain")
         val confirmButton = stringPreferencesKey("controls.confirm_button")
         val holdToScrollFaster = booleanPreferencesKey("controls.hold_to_scroll_faster")
         val showButtonHints = booleanPreferencesKey("controls.show_button_hints")
@@ -275,6 +290,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
         /** Absent until the person decides: the app then follows the kind of screen. */
         val secondScreenEnabled = booleanPreferencesKey("second_screen.enabled")
         val secondScreenInGame = stringPreferencesKey("second_screen.in_game")
+        val secondScreenAppsOn = stringPreferencesKey("second_screen.apps_on")
         val animations = booleanPreferencesKey("advanced.animations")
         /** The old Sounds switch; still read (on is Loud, off is Off) when [soundLevel] is absent. */
         val sounds = booleanPreferencesKey("advanced.sounds")
@@ -282,6 +298,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
         val vibration = booleanPreferencesKey("advanced.vibration")
         val usageStatistics = booleanPreferencesKey("advanced.usage_statistics")
         val exactPlayTime = booleanPreferencesKey("advanced.exact_play_time")
+        val usageAccessOffered = booleanPreferencesKey("advanced.usage_access_offered")
         val checkUpdatesDaily = booleanPreferencesKey("updates.check_daily")
         val setupCompleted = booleanPreferencesKey("flags.setup_completed")
         val homeRoleAsked = booleanPreferencesKey("flags.home_role_asked")

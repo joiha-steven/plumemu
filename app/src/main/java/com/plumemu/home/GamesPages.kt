@@ -2,6 +2,7 @@ package com.plumemu.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListLayoutInfo
@@ -35,6 +36,7 @@ import androidx.compose.ui.layout.LocalPinnableContainer
 import androidx.compose.ui.layout.PinnableContainer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.strip.StripState
@@ -106,7 +108,7 @@ internal fun GamesPages(
         userScrollEnabled = false,
     ) {
         itemsIndexed(content.entries, key = { _, entry -> entry.id }, contentType = { _, _ -> GAMES_PAGE }) { index, entry ->
-            GamesPage(index, entry, prefetch, halos, content.hasBoxArt, showsPlace, showSystemInfo, state, positions, onAction, panelOpen)
+            GamesPage(index, entry, prefetch, listKeys, halos, content.hasBoxArt, showsPlace, showSystemInfo, state, positions, onAction, panelOpen)
         }
     }
 }
@@ -122,6 +124,7 @@ private fun LazyItemScope.GamesPage(
     index: Int,
     entry: HomeEntry,
     prefetch: NeighbourPagesPrefetch,
+    listKeys: Set<String>,
     halos: PageHalos,
     hasBoxArt: Boolean,
     showsPlace: Boolean,
@@ -131,7 +134,34 @@ private fun LazyItemScope.GamesPage(
     onAction: (Action) -> Unit,
     panelOpen: State<Boolean>,
 ) {
-    val key = entry.id
+    // An entry shown as a grid has no list page: an empty one of the same size keeps the row's places (the shown page is found by its offset).
+    if (entry.id !in listKeys) {
+        Spacer(Modifier.fillParentMaxSize())
+        return
+    }
+    val pin = rememberPagePin(index, entry.id, prefetch, state)
+    val shown = pin.shown
+    val page = remember(shown, pin) { Modifier.fillParentMaxSize().placedOnlyWhen(shown, pin.keepWhenMeasured).rowsInSemanticsOnlyWhen(shown) }
+    EntryGames(entry, halos, hasBoxArt, showsPlace, showSystemInfo, shown, state, positions, onAction, panelOpen, page)
+}
+
+/** What a page needs from [rememberPagePin]: whether it is the shown one (read while placing) and the call a layout that built it makes. */
+internal class PagePin(
+    val shown: () -> Boolean,
+    val keepWhenMeasured: () -> Unit,
+)
+
+/**
+ * Pins page [index] (key [key]) of a lazy row of pages while it is the shown entry's, or beside it and built ([NeighbourPagesPrefetch.isReady]),
+ * so the row keeps it built; released when it is no longer beside the shown one. Used by the games lists and the grids ([GridPages]).
+ */
+@Composable
+internal fun rememberPagePin(
+    index: Int,
+    key: String,
+    prefetch: NeighbourPagesPrefetch,
+    state: StripState,
+): PagePin {
     val distance = { abs(state.focus.systemIndex - index) }
     val isNear by remember(state, index) { derivedStateOf { distance() <= 1 } }
     val isPinned by remember(state, index, prefetch, key) { derivedStateOf { distance().let { it == 0 || (it == 1 && prefetch.isReady(key)) } } }
@@ -149,8 +179,7 @@ private fun LazyItemScope.GamesPage(
     // Read while placing, not composing: showing a kept page only places it.
     val isShown = remember(state, index) { derivedStateOf { state.focus.systemIndex == index } }
     val shown = remember(isShown) { { isShown.value } }
-    val page = remember(shown, keepWhenMeasured) { Modifier.fillParentMaxSize().placedOnlyWhen(shown, keepWhenMeasured).rowsInSemanticsOnlyWhen(shown) }
-    EntryGames(entry, halos, hasBoxArt, showsPlace, showSystemInfo, shown, state, positions, onAction, panelOpen, page)
+    return remember(shown, keepWhenMeasured) { PagePin(shown, keepWhenMeasured) }
 }
 
 /**
@@ -158,7 +187,7 @@ private fun LazyItemScope.GamesPage(
  * built and measured, and is neither drawn nor touchable. (Not being placed does not take it out
  * of the semantics tree: [rowsInSemanticsOnlyWhen] does.)
  */
-private fun Modifier.placedOnlyWhen(
+internal fun Modifier.placedOnlyWhen(
     shown: () -> Boolean,
     onMeasured: () -> Unit,
 ): Modifier =
@@ -169,6 +198,16 @@ private fun Modifier.placedOnlyWhen(
         val placeable = measurable.measure(constraints)
         layout(placeable.width, placeable.height) { if (shown()) placeable.place(0, 0) }
     }
+
+/**
+ * Measures the content as it would be and places nothing, taking no room: built (a list kept beside a grid has its
+ * pages prefetched), never drawn or touched. Not placed, so also out of focus search; the caller clears its semantics.
+ */
+internal fun Modifier.measuredNotPlaced(): Modifier =
+    layout { measurable, constraints ->
+        measurable.measure(constraints)
+        layout(0, 0) {}
+    }.clearAndSetSemantics {}
 
 /** The games list's width in px as the strip lays it out; 0 when not known (a screen that builds the pages itself). */
 internal val LocalGamesListWidthPx = compositionLocalOf { 0 }
@@ -364,6 +403,35 @@ internal fun rememberGamesPagePositions(): GamesPagePositions = rememberSaveable
 internal class NeighbourPagesPrefetch : LazyListPrefetchStrategy {
     var pageKeys: List<String> = emptyList()
     var listKeys: Set<String> = emptySet()
+
+    /**
+     * Grid pages: a request is made only while the focus [rest]s, and the ones still pending are cancelled when it moves, so nothing is
+     * built while a key is held, a grid scrolls or a system switch is in progress. Pages already built stay.
+     */
+    var waitsForRest = false
+    private var rested = false
+
+    /**
+     * What the screen's rest is judged by (the focus, a scroll in progress), read without observing. A rest holds only while it still
+     * reads as it did when the rest began: a move asks nothing before [rest] hears of it, which comes a frame later.
+     */
+    var restKey: (() -> Any?)? = null
+    private var restedKey: Any? = null
+
+    private fun readRestKey(): Any? = restKey?.let { Snapshot.withoutReadObservation(it) }
+
+    private fun isRestedNow(): Boolean {
+        if (!rested) return false
+        if (readRestKey() != restedKey) {
+            rest(false)
+            return false
+        }
+        return true
+    }
+
+    /** The prefetcher's scope and the shown page of the last layout: a rest asks without a layout (a layout at rest is a state change at rest). */
+    private var scope: LazyListPrefetchScope? = null
+    private var lastShownKey: String? = null
     private val pages = PagesAhead<String, LazyLayoutPrefetchState.PrefetchHandle> { it.cancel() }
     private val asked = mutableStateSetOf<String>()
 
@@ -378,6 +446,22 @@ internal class NeighbourPagesPrefetch : LazyListPrefetchStrategy {
      */
     fun isReady(key: String): Boolean = key !in asked
 
+    /** The focus moved ([isResting] false: pending requests are cancelled) or has rested long enough ([isResting] true: the next layout asks). */
+    fun rest(isResting: Boolean) {
+        rested = isResting
+        if (isResting) {
+            restedKey = readRestKey()
+            val ready = scope
+            val shown = lastShownKey
+            if (ready != null && shown != null) with(ready) { update(shown) }
+            return
+        }
+        Snapshot.withoutReadObservation {
+            pages.cancelPending { it in asked }
+            asked.filter { it !in pages.ahead }.forEach { asked.remove(it) }
+        }
+    }
+
     /** The pages built or being built beside the shown one (tests read it through [GamesPagesInfo]). */
     val ahead: Set<String> get() = pages.ahead
 
@@ -389,10 +473,17 @@ internal class NeighbourPagesPrefetch : LazyListPrefetchStrategy {
     override fun LazyListPrefetchScope.onVisibleItemsUpdated(layoutInfo: LazyListLayoutInfo) {
         // Pinned pages are laid out beside the shown one; the shown one is at the start.
         val shown = layoutInfo.visibleItemsInfo.minByOrNull { abs(it.offset - layoutInfo.viewportStartOffset) }?.key as? String ?: return
+        scope = this
+        lastShownKey = shown
+        update(shown)
+    }
+
+    private fun LazyListPrefetchScope.update(shown: String) {
         val keys = pageKeys
+        val mayAsk = !waitsForRest || isRestedNow()
         // Read without observing: the pages' layout must not run again for a change of this set.
         Snapshot.withoutReadObservation {
-            pages.show(shown, keys, canBuild = { it in listKeys }) { index ->
+            pages.show(shown, keys, canBuild = { it in listKeys && (mayAsk || it in pages.ahead || it == pages.lastShown) }) { index ->
                 val key = keys[index]
                 asked.add(key)
                 // Done in idle time; a request cancelled before then never reports.
@@ -418,6 +509,15 @@ internal class PagesAhead<K, H : Any>(
     private var shown: K? = null
 
     val ahead: Set<K> get() = pages.keys.toSet()
+
+    /** The page shown at the last [show]. */
+    val lastShown: K? get() = shown
+
+    /** Cancels the requests of the pages for which [isPending] is true (a finished request must not be cancelled: that would drop its page); the pages already built stay. */
+    fun cancelPending(isPending: (K) -> Boolean) {
+        val pending = pages.filter { (key, handle) -> handle != null && isPending(key) }.keys.toList()
+        pending.forEach { key -> pages.remove(key)?.let(cancel) }
+    }
 
     /** Page [shownKey] is on screen among [keys]: ask with [schedule] (by index) for its neighbours not asked for yet, cancel the rest. */
     fun show(

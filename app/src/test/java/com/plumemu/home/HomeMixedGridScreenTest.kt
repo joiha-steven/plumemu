@@ -5,8 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -167,10 +167,15 @@ class HomeMixedGridScreenTest {
             compose.waitForIdle()
         }
 
-    private fun favoritesCountShown(): String =
-        compose.onNodeWithTag(HomeTags.system(1), useUnmergedTree = true).fetchSemanticsNode().children
-            .mapNotNull { child -> child.config.getOrElseNullable(SemanticsProperties.Text) { null }?.joinToString { it.text } }
-            .last()
+    /** The game count drawn in the top bar while the Favorites list is focused ("Favorites · 3 games"). */
+    private fun favoritesCountInTopBar(): String {
+        val texts =
+            compose.onNodeWithTag(HomeTags.TOP_BAR, useUnmergedTree = true).fetchSemanticsNode().let { bar ->
+                generateSequence(listOf(bar)) { level -> level.flatMap { it.children }.takeIf { it.isNotEmpty() } }.flatten()
+                    .mapNotNull { it.config.getOrElseNullable(SemanticsProperties.Text) { null }?.joinToString { t -> t.text } }.toList()
+            }
+        return texts.firstNotNullOf { Regex("(\\d+) games?").find(it)?.groupValues?.get(1) }
+    }
 
     @Test
     fun yInTheFavoritesGridDimsTheCoverAndDropsTheCountThenLeavingRemovesIt() {
@@ -182,7 +187,7 @@ class HomeMixedGridScreenTest {
         send(Action.Move(Direction.Right)) // snes-2
         send(Action.ToggleFavorite)
         assertEquals(listOf("snes-2" to false), games.favorites)
-        assertEquals("the count says three", "3", favoritesCountShown())
+        assertEquals("the count says three", "3", favoritesCountInTopBar())
         assertTrue("its cover stays", exists(HomeTags.cover(3)))
         assertEquals("and is dimmed, the one cue the grid has", 1, dimmedCovers())
         send(Action.ToggleFavorite) // and back

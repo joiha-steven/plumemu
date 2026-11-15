@@ -145,13 +145,14 @@ class SteamAppIdTests(unittest.TestCase):
                     convert.convert(sources)
             finally:
                 tables.HAND_EMULATORS[0] = original
+        original = tables.NOT_ACCEPTED["winnative"]
         for broken in (["gba"], [], ["steam", "steam"]):
             tables.NOT_ACCEPTED["winnative"] = broken
             try:
                 with self.subTest(not_accepted=broken), self.assertRaises(ConvertError):
                     convert.convert(sources)
             finally:
-                tables.NOT_ACCEPTED["winnative"] = ["steam"]
+                tables.NOT_ACCEPTED["winnative"] = original
 
     def test_disc_emulators_take_only_the_files_daijisho_lists_for_them(self):
         sources = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources")
@@ -268,15 +269,18 @@ class SteamAppIdTests(unittest.TestCase):
         self.assertEqual({"id": "gamenative", "name": "GameNative", "package": "app.gamenative",
                           "activity": "app.gamenative.MainActivity",
                           "game": {"mode": "steam_app_id", "target": "extra", "key": "app_id", "type": "int"},
-                          "action": "app.gamenative.LAUNCH_GAME", "extras": {"game_source": "STEAM"},
-                          "accepts": ["steam"], "page": tables.DOWNLOAD_PAGES["app.gamenative"]},
+                          "action": "app.gamenative.LAUNCH_GAME",
+                          "extrasByExtension": {"amazon": {"game_source": "AMAZON"}, "epic": {"game_source": "EPIC"},
+                                                "gog": {"game_source": "GOG"}, "pcgame": {"game_source": "CUSTOM_GAME"},
+                                                "steam": {"game_source": "STEAM"}},
+                          "accepts": ["steam", "epic", "gog", "amazon", "pcgame"], "page": tables.DOWNLOAD_PAGES["app.gamenative"]},
                          emulators["gamenative"])
         for app in ("gamehub-lite", "droiddeck"):
             self.assertEqual(["steam"], emulators[app]["accepts"])
-        # WinNative opens everything of its systems but an app id file (.epic, .gog, .amazon stay).
-        self.assertEqual(["amazon", "app", "desktop", "epic", "gog", "pcgame"], emulators["winnative"]["accepts"])
+        # WinNative opens everything of its systems but the id files (.steam .epic .gog .amazon .pcgame).
+        self.assertEqual(["app", "desktop"], emulators["winnative"]["accepts"])
         # Everything else takes every extension of its systems, but those whose list is read from Daijisho.
-        self.assertEqual({"gamenative", "gamehub-lite", "droiddeck", "winnative"} | set(tables.ACCEPTS_FROM_DAIJISHO),
+        self.assertEqual({"gamenative", "gamehub-lite", "droiddeck"} | set(tables.NOT_ACCEPTED) | set(tables.ACCEPTS_FROM_DAIJISHO),
                          {e["id"] for e in data["emulators"] if "accepts" in e})
         hub = emulators["gamehub-lite"]
         self.assertEqual(("gamehub.lite", "com.xj.landscape.launcher.ui.gamedetail.GameDetailActivity"),
@@ -296,6 +300,75 @@ class SteamAppIdTests(unittest.TestCase):
         for package in ("app.gamenative", "gamehub.lite", "emuready.gamehub.lite", "com.droiddeck.launcher"):
             self.assertIn(f'<package android:name="{package}" />', rendered)
         self.assertNotIn("uses-permission", rendered)
+
+
+class IdFileTests(unittest.TestCase):
+    """GameNative starts every id file (.steam .epic .gog .amazon .pcgame) with its own game_source (2026-11-14)."""
+
+    def setUp(self):
+        self.data = convert.convert(os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources"))[0]
+        self.emulators = {e["id"]: e for e in self.data["emulators"]}
+
+    @staticmethod
+    def entry(**more):
+        base = {"id": "x", "name": "X", "systems": ["steam"], "package": "a.b", "accepts": ["steam", "epic"],
+                "game": {"mode": "steam_app_id", "target": "extra", "key": "app_id", "type": "int"},
+                "extras": {"fixed": "1"}}
+        base.update(more)
+        return base
+
+    def test_gamenative_has_a_source_per_extension(self):
+        gamenative = self.emulators["gamenative"]
+        self.assertEqual(["steam", "epic", "gog", "amazon", "pcgame"], gamenative["accepts"])
+        self.assertEqual({"steam": "STEAM", "epic": "EPIC", "gog": "GOG", "amazon": "AMAZON", "pcgame": "CUSTOM_GAME"},
+                         {x: e["game_source"] for x, e in gamenative["extrasByExtension"].items()})
+        self.assertNotIn("extras", gamenative)
+
+    def test_per_extension_extras_are_checked(self):
+        import common
+        common.hand_launch(self.entry(extrasByExtension={"epic": {"game_source": "EPIC"}}))
+        bad = [
+            {"gog": {"game_source": "GOG"}},        # not in accepts
+            {"epic": {}},                           # empty
+            {"epic": {"a": 1.5}},                   # type
+            {"epic": {"a": None}},                  # type
+            {"epic": {"fixed": "2"}},               # repeats an extra
+            ["epic"],                               # not an object
+        ]
+        for value in bad:
+            with self.subTest(value=value), self.assertRaises(ConvertError):
+                common.hand_launch(self.entry(extrasByExtension=value))
+
+    def test_id_files_go_to_gamenative_not_to_the_path_apps(self):
+        ids = {"steam", "epic", "gog", "amazon", "pcgame"}
+        for emulator_id in ("winnative", "winlator-cmod", "winlator-glibc", "winlator-proot", "com-micewine-emu"):
+            self.assertEqual(set(), ids & set(self.emulators[emulator_id]["accepts"]), emulator_id)
+        self.assertIn("desktop", self.emulators["winnative"]["accepts"])
+        self.assertIn("app", self.emulators["winnative"]["accepts"])
+        systems = {s["id"]: s for s in self.data["systems"]}
+        for system_id in ("steam", "epic", "windows"):
+            self.assertIn("gamenative", systems[system_id]["emulators"])
+        for system_id in ("epic", "windows"):
+            self.assertEqual("gamenative", systems[system_id]["emulators"][0], system_id)
+
+
+class DroppedVariantTests(unittest.TestCase):
+    def test_pubg_is_no_emulator_package_or_query(self):
+        data = convert.convert(os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources"))[0]
+        packages = {e["package"] for e in data["emulators"]}
+        packages |= {v["package"] for e in data["emulators"] for v in e.get("variants", ())}
+        self.assertNotIn("com.tencent.ig", packages)
+        self.assertNotIn("com.tencent.ig", manifest.render(data))
+        self.assertIn("com.tencent.ig", tables.DROPPED_VARIANT_PACKAGES)
+
+    def test_a_dropped_package_is_removed_and_one_no_source_gives_fails(self):
+        rules = {"a": [("x.one", None), ("x.two", ".Main")], "b": [("x.two", ".Main"), ("y.three", None)]}
+        convert.drop_variant_packages(rules, {"x.two": "why"})
+        self.assertEqual({"a": [("x.one", None)], "b": [("y.three", None)]}, rules)
+        with self.assertRaises(ConvertError):
+            convert.drop_variant_packages(rules, {"x.two": "why"})
+        with self.assertRaises(ConvertError):
+            convert.drop_variant_packages({"a": [("x.one", None)]}, {"x.one": "why"})
 
 
 class ExtraVariantTests(unittest.TestCase):
@@ -742,6 +815,15 @@ class AppsSystemTests(unittest.TestCase):
         for package, system_id in self.data["knownApps"].items():
             self.assertIn(system_id, ids, package)
             self.assertIn(system_id, tables.KNOWN_APP_SYSTEMS, package)
+
+    def test_a_known_app_that_is_an_emulator_package_or_variant_fails_loudly(self):
+        sources = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources")
+        emulator = next(e for e in self.data["emulators"] if e.get("variants"))
+        for package in (emulator["package"], emulator["variants"][0]["package"]):
+            with self.subTest(package=package), mock.patch.dict(tables.KNOWN_APPS, {package: "ports"}):
+                with self.assertRaises(ConvertError) as raised:
+                    convert.convert(sources)
+                self.assertIn(package, str(raised.exception))
 
     def test_the_known_apps_table_has_no_package_twice(self):
         # A dict literal silently keeps the last of two equal keys, so read the source text instead.

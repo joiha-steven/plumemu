@@ -136,6 +136,7 @@ private fun pageOfListItem(option: SettingsOption): Triple<SettingsOption, Panel
         SettingsOption.UndoRestore -> Triple(SettingsOption.BackupAndRestore, PanelPage.UndoRestore, 0)
         SettingsOption.ResetAll -> Triple(SettingsOption.Reset, PanelPage.ResetAllConfirm, SettingsModel.CONFIRM_CANCEL)
         SettingsOption.ResetLibrary -> Triple(SettingsOption.Reset, PanelPage.ResetLibraryConfirm, SettingsModel.CONFIRM_CANCEL)
+        SettingsOption.ClearRecent -> Triple(SettingsOption.Reset, PanelPage.ResetRecentConfirm, SettingsModel.CONFIRM_CANCEL)
         else -> null
     }
 
@@ -147,6 +148,7 @@ internal fun listItemOf(option: SettingsOption): Pair<SettingsOption, Int>? =
         SettingsOption.UndoRestore -> SettingsOption.BackupAndRestore to BackupRestoreItem.Undo.ordinal
         SettingsOption.ResetAll -> SettingsOption.Reset to ResetPanelItem.All.ordinal
         SettingsOption.ResetLibrary -> SettingsOption.Reset to ResetPanelItem.Library.ordinal
+        SettingsOption.ClearRecent -> SettingsOption.Reset to ResetPanelItem.Recent.ordinal
         else -> null
     }
 

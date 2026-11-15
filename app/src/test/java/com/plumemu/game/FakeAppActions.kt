@@ -1,6 +1,7 @@
 package com.plumemu.game
 
 import com.plumemu.coredata.db.AppKind
+import com.plumemu.coredata.settings.AppsScreen
 import kotlinx.coroutines.CompletableDeferred
 
 /** [AppActions] for the screen's and the controller's tests: records the rows asked to open. */
@@ -8,6 +9,19 @@ internal class FakeAppActions(
     var outcome: (rowId: String) -> AppOpenOutcome = { AppOpenOutcome.Started },
 ) : AppActions {
     val opened = mutableListOf<String>()
+
+    /** The `otherScreen` flag of each open, in order. */
+    val openedOther = mutableListOf<Boolean>()
+
+    /** What the app menu offers "Open on …" for; null when no second screen is on. */
+    var other: AppsScreen? = null
+
+    override fun otherScreen(): AppsScreen? = other
+
+    /** The store hint each row's menu carries (a PC store app whose games are not listed). */
+    val hints = mutableMapOf<String, StoreHint>()
+
+    override fun storeHint(rowId: String): StoreHint? = hints[rowId]
 
     /** When set, an open waits for it (a start that takes a moment). */
     var gate: CompletableDeferred<Unit>? = null
@@ -60,8 +74,9 @@ internal class FakeAppActions(
         return toolResult
     }
 
-    override suspend fun open(rowId: String): AppOpenOutcome {
+    override suspend fun open(rowId: String, otherScreen: Boolean): AppOpenOutcome {
         opened += rowId
+        openedOther += otherScreen
         gate?.await()
         return outcome(rowId)
     }

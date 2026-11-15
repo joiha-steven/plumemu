@@ -48,7 +48,7 @@ class SettingsUpdateStatusLineTest {
     private val found = UpdateView(lastCheck = LastCheck(checkedAt, CheckOutcome.Found), found = release)
 
     private fun focusOn(item: UpdatePanelItem, view: UpdateView) =
-        SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1), page = PanelPage.Update, panelIndex = updatesPanelItems(view).indexOf(item))
+        SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 0), page = PanelPage.Update, panelIndex = updatesPanelItems(view).indexOf(item))
 
     private fun lines(needle: String) = compose.onAllNodesWithText(needle, substring = true, useUnmergedTree = true).fetchSemanticsNodes()
 

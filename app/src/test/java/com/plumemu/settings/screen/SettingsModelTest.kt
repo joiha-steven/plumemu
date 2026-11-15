@@ -12,6 +12,7 @@ import com.plumemu.coredata.settings.SoundLevel
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coredata.settings.LeftEdgeSetting
+import com.plumemu.coredata.settings.PageGrainSetting
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import org.junit.Assert.assertEquals
@@ -59,7 +60,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
     @Test
     fun l1AndR1ChangeSectionAndEachRemembersItsOption() {
         openSection(SettingsSection.Appearance)
-        focusOption(SettingsOption.Accent) // remembered for Appearance
+        focusOption(SettingsOption.TextSize) // remembered for Appearance
         press(Action.NextSystem)
         assertEquals(SettingsSection.HomeScreen, model.focus.section)
         assertEquals(SettingsColumn.Options, model.focus.column)
@@ -78,7 +79,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
         assertEquals("the last section stays", SettingsSection.About, model.focus.section)
         repeat(5) { press(Action.PreviousSystem) }
         assertEquals(SettingsSection.Appearance, model.focus.section)
-        assertEquals("each section remembers its option", SettingsOption.Accent, model.focusedOption)
+        assertEquals("each section remembers its option", SettingsOption.TextSize, model.focusedOption)
     }
 
     @Test
@@ -110,44 +111,55 @@ internal class SettingsModelTest : SettingsModelHarness() {
     }
 
     @Test
-    fun leftEdgeFollowsSystemInfoShowsGameCountsUntilPickedThenStepsAndWraps() {
-        val rows = SettingsSection.HomeScreen.rowsIn(model.content)
-        assertEquals("right after System info", rows.indexOf(SettingsOption.SystemInfo) + 1, rows.indexOf(SettingsOption.LeftEdge))
-        assertEquals(OptionKind.Choice, SettingsOption.LeftEdge.kind)
-        assertEquals(3, SettingsOption.LeftEdge.choiceCount(actions.settings))
-        openSection(SettingsSection.HomeScreen)
-        focusOption(SettingsOption.LeftEdge)
-        assertNull("nothing is stored until a pick", appearance.leftEdge)
-        assertEquals(
-            "not picked shows Game counts",
-            R.string.settings_left_edge_counts,
-            choiceName(SettingsOption.LeftEdge, SettingsOption.LeftEdge.choiceIndex(actions.settings, TextSizeSetting.Medium)),
-        )
+    fun pageGrainFollowsColorsIsOffUntilPickedThenStepsAppliesAtOnceAndWraps() {
+        val rows = SettingsSection.Appearance.rowsIn(model.content)
+        assertEquals("right after Colors", rows.indexOf(SettingsOption.Colors) + 1, rows.indexOf(SettingsOption.PageGrain))
+        assertEquals(OptionKind.Choice, SettingsOption.PageGrain.kind)
+        assertEquals(3, SettingsOption.PageGrain.choiceCount(actions.settings))
+        openSection(SettingsSection.Appearance)
+        focusOption(SettingsOption.PageGrain)
+        assertEquals(PageGrainSetting.Off, appearance.pageGrain)
+        assertEquals(R.string.settings_page_grain_off, choiceName(SettingsOption.PageGrain, SettingsOption.PageGrain.choiceIndex(actions.settings, TextSizeSetting.Medium)))
 
+        move(Direction.Right)
+        assertEquals("Right applies at once", PageGrainSetting.Light, appearance.pageGrain)
+        move(Direction.Right)
+        assertEquals(PageGrainSetting.Strong, appearance.pageGrain)
+        move(Direction.Right)
+        assertEquals("right stops at Strong", PageGrainSetting.Strong, appearance.pageGrain)
         move(Direction.Left)
-        assertEquals(LeftEdgeSetting.Counts, appearance.leftEdge)
-        move(Direction.Right)
-        assertEquals(LeftEdgeSetting.Codes, appearance.leftEdge)
-        move(Direction.Right)
-        assertEquals(LeftEdgeSetting.Letters, appearance.leftEdge)
-        move(Direction.Right)
-        assertEquals("right stops at Letters", LeftEdgeSetting.Letters, appearance.leftEdge)
+        assertEquals(PageGrainSetting.Light, appearance.pageGrain)
+        move(Direction.Left)
+        move(Direction.Left)
+        assertEquals("left stops at Off", PageGrainSetting.Off, appearance.pageGrain)
         press(Action.Enter)
-        assertEquals("A wraps", LeftEdgeSetting.Counts, appearance.leftEdge)
+        press(Action.Enter)
+        press(Action.Enter)
+        assertEquals("A steps and wraps", PageGrainSetting.Off, appearance.pageGrain)
+        assertEquals(
+            listOf(R.string.settings_page_grain_off, R.string.settings_page_grain_light, R.string.settings_page_grain_strong),
+            PageGrainSetting.entries.indices.map { choiceName(SettingsOption.PageGrain, it) },
+        )
     }
 
     @Test
-    fun aTapOnTheLeftEdgeValueStepsItAndTheNamesAreGameCountsSystemCodesLetters() {
-        openSection(SettingsSection.HomeScreen)
-        val index = SettingsSection.HomeScreen.rowsIn(model.content).indexOf(SettingsOption.LeftEdge)
-        model.onTapValue(index, actions.settings, wide) // not picked shows Game counts; the first tap focuses and steps to System codes
-        assertEquals(LeftEdgeSetting.Codes, appearance.leftEdge)
+    fun aTapOnThePageGrainValueStepsIt() {
+        openSection(SettingsSection.Appearance)
+        val index = SettingsSection.Appearance.rowsIn(model.content).indexOf(SettingsOption.PageGrain)
+        model.onTapValue(index, actions.settings, wide)
+        assertEquals(PageGrainSetting.Light, appearance.pageGrain)
         model.onTapValue(index, actions.settings, wide)
         model.onTapValue(index, actions.settings, wide)
-        assertEquals("a tap past the end wraps", LeftEdgeSetting.Counts, appearance.leftEdge)
+        assertEquals("a tap past the end wraps", PageGrainSetting.Off, appearance.pageGrain)
+    }
+
+    @Test
+    fun homeScreenNoLongerListsTheLeftStripWhateverIsStored() {
+        // The stored value stays (backups restore it) but the app neither offers nor obeys it.
+        actions.settings = actions.settings.copy(appearance = AppearanceSettings(leftEdge = LeftEdgeSetting.Letters))
         assertEquals(
-            listOf(R.string.settings_left_edge_counts, R.string.settings_left_edge_codes, R.string.settings_left_edge_letters),
-            LeftEdgeSetting.entries.indices.map { choiceName(SettingsOption.LeftEdge, it) },
+            listOf(SettingsOption.UseAsHome, SettingsOption.ShowApps),
+            SettingsSection.HomeScreen.rowsIn(model.content),
         )
     }
 
@@ -169,7 +181,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
         assertEquals("right stops at Android", KeyboardSetting.Android, actions.settings.controls.keyboard)
         press(Action.Enter)
         assertEquals("A wraps back to Plumemu", KeyboardSetting.Plumemu, actions.settings.controls.keyboard)
-        assertEquals("nothing else in Controls moves", true, actions.settings.controls.showButtonHints)
+        assertEquals("nothing else in Controls moves", false, actions.settings.controls.pushRightToPlay)
     }
 
     @Test
@@ -194,7 +206,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
     @Test
     fun leftOnAnOptionThatIsNotAChoiceGoesBackToTheSections() {
         openSection(SettingsSection.Appearance)
-        focusOption(SettingsOption.Accent)
+        focusOption(SettingsOption.Language)
         move(Direction.Left)
         assertEquals(SettingsColumn.Sections, model.focus.column)
     }
@@ -363,9 +375,6 @@ internal class SettingsModelTest : SettingsModelHarness() {
         model.onTapSection(SettingsSection.Appearance)
         model.onTapSection(SettingsSection.Appearance)
         val rows = SettingsSection.Appearance.options
-        model.onTapValue(rows.indexOf(SettingsOption.Accent), actions.settings, wide)
-        assertEquals("the swatch value opens the colours", ColorKind.Accent, ColorPages.kindOf(checkNotNull(model.focus.page)))
-        repeat(2) { if (model.focus.page != null) press(Action.Back) }
         model.onTapValue(rows.indexOf(SettingsOption.Colors), actions.settings, wide)
         assertEquals("the Colors value opens its panel", PanelPage.ColorSets, model.focus.page)
     }

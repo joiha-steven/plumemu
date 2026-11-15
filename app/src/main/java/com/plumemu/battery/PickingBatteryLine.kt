@@ -62,7 +62,7 @@ internal object PickingBatteryTags {
  * text's size showing the level now, then "2 h on this charge · 30% an hour" ("30% an hour" while
  * charging), in [style] (the place's own fact role). The level and charging are the screen's one
  * reading ([LocalBatteryReading]: no receiver of its own, so the line comes in the frame its pace
- * does); until the screen has one, or with Show battery off (the screen gives none), nothing.
+ * does); until the screen has one, nothing.
  *
  * [pace]'s figures are those of when it was read; once the reading's level or charging differs from
  * the one the line first showed with, they are worked out again ([rememberPaceNow]), so a game rested
@@ -124,7 +124,7 @@ internal fun PickingBatteryLine(
 
 /**
  * The time on this charge as the details block's battery cell shows it ("About 2 h 45 min", "2 h"): the line's own estimate
- * ([rememberPaceNow], [pickingBatteryParts]) and wording without the pace; null with Show battery off, no reading yet, while
+ * ([rememberPaceNow], [pickingBatteryParts]) and wording without the pace; null with no reading yet, while
  * charging or when the pace tells no time, so the cell is left out.
  */
 @Composable

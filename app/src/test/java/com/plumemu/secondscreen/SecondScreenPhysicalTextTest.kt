@@ -95,7 +95,8 @@ class SecondScreenPhysicalTextTest {
         val problems = mutableListOf<String>()
         val sizes = mutableMapOf<TextSize, Double>()
         for (size in TextSize.entries) {
-            show(BOARD_GAME_NO_RA.copy(lastPlayedDaysAgo = null, weeks = PlayWeeks(List(8) { 0L }, 0, 0)), size)
+            // A played game: a game never played has no chart, so no "this wk".
+            show(BOARD_GAME_NO_RA, size)
             val label = mmOf(byText("PLAY TIME"))
             val thisWeek = mmOf(byText("this wk"))
             val system = mmOf(byTag(GameCardTags.SYSTEM))

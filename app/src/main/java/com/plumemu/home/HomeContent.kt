@@ -3,7 +3,6 @@ package com.plumemu.home
 import androidx.compose.runtime.Immutable
 import com.plumemu.coreinput.strip.StripContent
 import com.plumemu.coreinput.strip.SystemEntry
-import com.plumemu.coredata.settings.LeftEdgeSetting
 import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.identify.name.VariantTag
 import com.plumemu.coreui.theme.PlumLayout
@@ -148,6 +147,9 @@ data class PlayFacts(
     val batteryPercentPerHour: Double? = null,
 )
 
+/** True for a game with no play at all: it gets one "Not played yet" line, not "Played 0 min" and "Last played Never". */
+internal fun PlayFacts.neverPlayed(): Boolean = lastPlayedDaysAgo == null && playTimeMinutes == 0
+
 /** The entries of the system column: three fixed ones, then each system with games. */
 enum class EntryKind {
     Recent,
@@ -159,7 +161,7 @@ enum class EntryKind {
     /** Recent and Favorites hold games of many systems, so their rows show the system's short name in place of the year. */
     val mixesSystems: Boolean get() = this == Recent || this == Favorites
 
-    /** A system's list and Favorites follow Settings › Library › Sort games; Recent is newest first and Apps are listed by Android. */
+    /** A system's list and Favorites follow the stored sort; Recent is newest first and Apps are listed by Android. */
     val followsSort: Boolean get() = this == System || this == Favorites
 }
 
@@ -212,22 +214,16 @@ data class HomeEntry(
     val systemShortNames: Map<String, String> = emptyMap(),
     /** A system's badge and facts for the band over its list ([SystemInfo]); null for the fixed entries and unknown systems. */
     val info: SystemInfo? = null,
-    /** The rows are in name order; false for a list sorted by last played (Settings › Library › Sort games). */
+    /** The rows are in name order; false for a list sorted by last played (the stored sort). */
     val sortedByName: Boolean = true,
     /** The system's three-character code (platform data `code`) for the peek's System codes; empty where the data has none ([entryCode] then spells one from the name). */
     val code: String = "",
 ) {
     /**
-     * The peek shows a letter rail of this list: not for Recent, and not
-     * where the order is not by name, since the letters would be out of order.
+     * L1 / R1 jump by letter in this list: not for Recent, and not
+     * where the order is not by name, since the letters would be out of order (they jump a page there).
      */
     val hasLetterRail: Boolean get() = kind != EntryKind.Recent && sortedByName
-
-    /** The rail's letters, built once per entry. */
-    val railLetters: List<Char> by lazy(LazyThreadSafetyMode.PUBLICATION) { if (hasLetterRail) railLettersOf(rows, railStart) else emptyList() }
-
-    /** Rows before the rail's first (the Apps list's pinned Settings app): focus on them lights no letter. */
-    val railStart: Int by lazy(LazyThreadSafetyMode.PUBLICATION) { if (kind == EntryKind.Apps) pinnedLeadingRows(rows) else 0 }
 
     /** Rows the focus can stand on. */
     val count: Int get() = rows.size
@@ -270,8 +266,6 @@ class HomeContent private constructor(
      * Favorites come from their own queries and hold them already).
      */
     val hiddenEntries: List<HomeEntry> = emptyList(),
-    /** Settings › Home screen › Left edge: what the peek shows while a games list is focused. Counts is the default. */
-    val leftEdge: LeftEdgeSetting = LeftEdgeSetting.Default,
 ) {
     /** Systems with games (the "18 systems" of the top bar). */
     val systemCount: Int = entries.count { it.kind == EntryKind.System }
@@ -279,7 +273,7 @@ class HomeContent private constructor(
     /** Games across all systems (the "1,284 games"); Recent and Favorites repeat games and do not count. */
     val gameCount: Int = entries.filter { it.kind == EntryKind.System }.sumOf { it.count }
 
-    /** Where the systems start, after Recent, Favorites and (when shown) Apps; the 4 dp gap goes above it. */
+    /** Where the systems start, after Recent, Favorites and (when shown) Apps; no gap above it, so every count stays on its game row's baseline. */
     val firstSystemIndex: Int = entries.count { it.kind != EntryKind.System }
 
     /** No system has games: the screen shows the empty-library message instead of the strip. */
@@ -324,10 +318,7 @@ class HomeContent private constructor(
     internal fun withEntries(
         entries: List<HomeEntry>,
         hiddenEntries: List<HomeEntry> = this.hiddenEntries,
-    ): HomeContent = HomeContent(entries, hasBoxArt, hiddenEntries, leftEdge)
-
-    /** The same screen with the peek showing [edge] (Settings › Home screen › Left edge). */
-    fun withLeftEdge(edge: LeftEdgeSetting): HomeContent = if (edge == leftEdge) this else HomeContent(entries, hasBoxArt, hiddenEntries, edge)
+    ): HomeContent = HomeContent(entries, hasBoxArt, hiddenEntries)
 
     /**
      * Whether [entry] is shown as a grid: it can be one ([hasGridFor]), it is switched to the grid, and it
@@ -356,10 +347,8 @@ class HomeContent private constructor(
             showApps: Boolean = true,
             /** Library › Systems: systems left out of the column, still searched. */
             hiddenSystems: List<SystemGames> = emptyList(),
-            /** Sort games by name (false: any other sort), which decides whether the lists have a letter rail. */
+            /** Sort games by name (false: any other sort), which decides whether the lists have letters for the page jump. */
             sortedByName: Boolean = true,
-            /** Settings › Home screen › Left edge. */
-            leftEdge: LeftEdgeSetting = LeftEdgeSetting.Default,
         ): HomeContent {
             val shapes = (systems + hiddenSystems).associate { it.id to it.coverShape }
             val names = (systems + hiddenSystems).associate { it.id to it.name }
@@ -372,7 +361,7 @@ class HomeContent private constructor(
                 )
             fun entriesOf(list: List<SystemGames>) =
                 list.filter { it.games.isNotEmpty() }.map { HomeEntry(it.id, EntryKind.System, it.name, it.games, it.coverShape, info = it.info, sortedByName = sortedByName, code = it.code) }
-            return HomeContent(fixed + entriesOf(systems), hasBoxArt, entriesOf(hiddenSystems), leftEdge)
+            return HomeContent(fixed + entriesOf(systems), hasBoxArt, entriesOf(hiddenSystems))
         }
 
         /** Nothing scanned yet. */
@@ -406,25 +395,5 @@ internal fun letterJumpTarget(
     } else {
         val start = groupStart(from)
         if (start < from || start == 0) start else groupStart(start - 1)
-    }
-}
-
-/**
- * The row the letter rail's tap or drag lands on for [letter]: the first row of that letter's group, found by
- * stepping [letterJumpTarget] forward from [skip] (the rows left out of the rail, [HomeEntry.railStart]) so the
- * rail and L1 / R1 always agree. Null when the list has no such letter.
- */
-internal fun letterStartRow(
-    rows: List<GameRowModel>,
-    letter: Char,
-    skip: Int = 0,
-): Int? {
-    if (skip > rows.lastIndex) return null
-    var at = skip
-    while (true) {
-        if (LetterKey.of(rows[at]) == letter) return at
-        val next = letterJumpTarget(rows, at, forward = true)
-        if (next == at) return null
-        at = next
     }
 }

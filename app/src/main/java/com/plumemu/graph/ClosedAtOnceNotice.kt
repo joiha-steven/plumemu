@@ -45,8 +45,10 @@ internal fun AppGraph.afterReturn(): Job =
         var played: PlaySessionOutcome? = null
         try {
             // The same time Settings › Statistics counts goes to the statistics (game_session).
+            usageAccessOffer.afterResume()
             played = launching()?.playTime?.onResume()
             played?.let { afterPlay(it) }
+            played?.let { usageAccessOffer.afterPlay(it) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

@@ -67,7 +67,8 @@ class HintPressedConfirmWithBTest {
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite) {
                 CompositionLocalProvider(LocalHeldKeys provides router.held, LocalButtonLetters provides ButtonLetters.of(ConfirmButtonSetting.Bottom)) {
-                    HomeAt(FakeHomeContent.board(), listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX), Action.Enter))
+                    // A cover grid: it keeps the Back hint (the games list's bar left it out).
+                    HomeAt(FakeHomeContent.withArtwork(), gridActions(FakeHomeContent.BOARD_SNES_INDEX, 0), gridIds = setOf("snes"))
                 }
             }
         }

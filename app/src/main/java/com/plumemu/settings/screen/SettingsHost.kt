@@ -207,7 +207,7 @@ internal class SettingsHost(
     val accounts: ScraperAccounts = ScraperAccounts.Unavailable,
     /** The RetroAchievements account (Accounts). */
     val raAccounts: RaAccounts = RaAccounts.None,
-    /** Library › Clear Recent…. */
+    /** Advanced › Reset… › Clear Recent…. */
     val recent: SettingsRecentActions = SettingsRecentActions.None,
     /** Box art's Download missing, Re-download, Pause and Resume. */
     val boxArt: SettingsBoxArtActions = SettingsBoxArtActions.None,
@@ -219,7 +219,7 @@ internal class SettingsHost(
     val backupWork: BackupWork = BackupWork.None,
     /** Advanced › Restore… and Undo last restore (the picker is [activity]'s). */
     val restoreWork: RestoreWork = RestoreWork.None,
-    /** About › Updates: Check now and Update. */
+    /** About › Version: Check now and Update. */
     val updates: SettingsUpdateActions = SettingsUpdateActions.None,
     /** About › Report a problem. */
     val problemReports: ProblemReportActions = ProblemReportActions.None,

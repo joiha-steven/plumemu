@@ -484,14 +484,7 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
     @Test
     fun leftFromTheLeftmostItemOfEveryColourPageReturnsToItsRow() {
         openSection(SettingsSection.Appearance)
-        focusOption(SettingsOption.Accent)
-        press(Action.Enter)
-        assertLeftReturnsToTheRow(SettingsOption.Accent, "Accent color presets")
-        press(Action.Enter)
-        openPlus()
-        assertLeftReturnsToTheRow(SettingsOption.Accent, "Accent color custom grid")
-        move(Direction.Up)
-        for ((option, item) in listOf(SettingsOption.Background to COLORS_BACKGROUND_ITEM, SettingsOption.TextColor to COLORS_TEXT_ITEM)) {
+        for ((option, item) in listOf(SettingsOption.Accent to COLORS_ACCENT_ITEM, SettingsOption.Background to COLORS_BACKGROUND_ITEM, SettingsOption.TextColor to COLORS_TEXT_ITEM)) {
             focusOption(option)
             press(Action.Enter)
             assertLeftReturnsToItsRowInColors(option, item, "presets")

@@ -129,7 +129,7 @@ internal const val USUAL_DIFFERS_BY = 0.15
  * The part from what the meter has ([snapshot], null before its first read), the battery
  * broadcast's [reading] (the level the clock card shows) and the wall clock [nowMillis]. Null:
  * nothing to show, not even a note: before the first read, or on a device that gives no figure
- * ([givesNoFigure]), where the card is the clock alone as with Show battery off. [driftNote]: the
+ * ([givesNoFigure]), where the card is the clock alone. [driftNote]: the
  * once-ever minute of "Moves a little…". [starting]: the first minutes of a play are not shown
  * ([SteadyBatteryPace]), "Measuring battery use…" instead. [zoneOffset]: the wall clock's offset
  * from UTC at a time, for the chart's whole hours.

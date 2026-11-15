@@ -62,6 +62,35 @@
             </intent-filter>
         </activity>
 
+        <!-- The second screen's card (secondscreen/SecondScreenCardActivity.kt): Plumemu starts it on
+             the second display while it is in front. launchMode standard on purpose: AOSP refuses a
+             singleTask or singleInstance secondary home and falls back to its own. Its own task, out
+             of Recents. No intent filter here: only the alias below makes it a home. -->
+        <activity
+            android:name=".secondscreen.SecondScreenCardActivity"
+            android:exported="false"
+            android:launchMode="standard"
+            android:taskAffinity="com.plumemu.card"
+            android:excludeFromRecents="true"
+            android:resizeableActivity="true" />
+
+        <!-- The card as the second display's home (SECONDARY_HOME). Disabled here; enabled at run
+             time only while Plumemu is the default home and a second screen is found and switched on
+             (secondscreen/SecondScreenHome.kt, with DONT_KILL_APP). An alias takes its target's launch
+             mode, task affinity and Recents setting (AOSP resolves an alias to its target's
+             ActivityInfo), so it stays standard. -->
+        <activity-alias
+            android:name=".secondscreen.SecondScreenHome"
+            android:targetActivity=".secondscreen.SecondScreenCardActivity"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.SECONDARY_HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- Another app's "Add to home screen":
              Android starts this only in the default home app, from Android 8.0. Exported as
              Launcher3's AddItemActivity is (the system starts it for the app that asks). Only the

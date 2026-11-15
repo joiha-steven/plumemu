@@ -173,6 +173,27 @@ class LibraryIdentifyTest {
     }
 
     @Test
+    fun anEpicOrGogIdFileIsNamedFromItsFileNeverOpenedAndNotUnidentified() = runTest {
+        // GameNative's id files: a store id inside; WinNative's .desktop shortcut is the same kind.
+        write("epic/Fortnite.epic", "Fortnite".toByteArray())
+        write("windows/Hades.gog", "1207658791".toByteArray())
+        write("windows/Celeste.epic", "abc".toByteArray())
+        val shipped = com.plumemu.library.corpus.RealData.systemRules()
+        fx.tree.opened.clear()
+        fx.scanner(naming = naming, rules = shipped).scan().toList()
+        for ((file, system, title) in listOf(Triple("Fortnite.epic", "epic", "Fortnite"), Triple("Hades.gog", "windows", "Hades"), Triple("Celeste.epic", "windows", "Celeste"))) {
+            val game = fx.game(file)
+            assertEquals(file, system, game.systemId)
+            assertEquals(file, title, game.title)
+            assertEquals(file, "FILE_NAME", game.idMethod)
+            assertFalse(file, game.needsIdentify)
+        }
+        assertEquals(fx.tree.opened.toString(), emptyList<String>(), fx.tree.opened.filter { it.endsWith(".epic") || it.endsWith(".gog") })
+        val unidentified = fx.db.identifyDao().observeUnidentified(LaunchFileSystems.IDS).first().map { it.title }
+        assertFalse(unidentified.toString(), unidentified.any { it in setOf("Fortnite", "Hades", "Celeste") })
+    }
+
+    @Test
     fun aSteamFileListedAsWindowsByOldDataBecomesSteamKeepingItsRowFavoriteAndPlays() = runTest {
         write("windows/Half-Life.steam", "70".toByteArray())
         val shipped = com.plumemu.library.corpus.RealData.systemRules()

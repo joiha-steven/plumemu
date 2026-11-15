@@ -30,6 +30,7 @@ import com.plumemu.settings.LocalButtonLetters
 import com.plumemu.settings.SettingsTheme
 import com.plumemu.settings.followSettings
 import com.plumemu.settings.toInputSettings
+import com.plumemu.settings.toPageGrain
 import com.plumemu.shortcuts.PinAddOutcome
 import com.plumemu.shortcuts.PinConfirmActions
 import com.plumemu.shortcuts.PinConfirmScreen
@@ -82,7 +83,7 @@ open class PinShortcutActivity : LocalizedActivity(followsLanguage = false) {
             SideEffect { sounds.follow(stored.advanced) }
             val letters = ButtonLetters.of(stored.controls.confirmButton)
             SettingsTheme(stored) {
-                CompositionLocalProvider(LocalButtonLetters provides letters, LocalConfirmCap provides stringResource(letters.confirm), LocalUiSounds provides sounds, LocalHeldKeys provides input.held) {
+                CompositionLocalProvider(LocalButtonLetters provides letters, LocalConfirmCap provides stringResource(letters.confirm), LocalUiSounds provides sounds, LocalHeldKeys provides input.held, com.plumemu.coreui.theme.LocalPageGrain provides stored.appearance.pageGrain.toPageGrain()) {
                     PinConfirmScreen(state, input, letters)
                 }
             }

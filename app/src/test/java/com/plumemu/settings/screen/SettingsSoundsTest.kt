@@ -4,7 +4,7 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.TypedKey
 import com.plumemu.coreui.components.keyboard.KeyboardEvent
-import com.plumemu.coredata.settings.LeftEdgeSetting
+import com.plumemu.coredata.settings.PageGrainSetting
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.sound.Outcome
 import com.plumemu.sound.Reported
@@ -143,9 +143,9 @@ internal class SettingsSoundsTest : SettingsModelHarness() {
 
     @Test
     fun aChoiceAtItsEndSaysNothingAndWrapsWithAConfirm() {
-        openSection(SettingsSection.HomeScreen)
-        focusOption(SettingsOption.LeftEdge)
-        actions.settings = actions.settings.copy(appearance = appearance.copy(leftEdge = LeftEdgeSetting.Counts))
+        openSection(SettingsSection.Appearance)
+        focusOption(SettingsOption.PageGrain)
+        actions.settings = actions.settings.copy(appearance = appearance.copy(pageGrain = PageGrainSetting.Off))
         reported.drain()
         assertEquals("first value, Left", emptyList<Outcome>(), heard(Direction.Left))
         assertEquals(listOf(Outcome.Moved), heard(Direction.Right))

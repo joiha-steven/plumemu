@@ -70,8 +70,8 @@ class EmulatorDetectorTest {
 
     @Test
     fun anAppWhosePackageNameAnEmulatorBuildBorrowsIsNotThatEmulator() = runTest {
-        // ES-DE lists Eden's build that installs as com.miHoYo.Yuanshen and GameHub's as com.tencent.ig;
-        // the real game of that name lacks the emulator's activity and must not count.
+        // ES-DE lists Eden's build that installs as com.miHoYo.Yuanshen; the real game of that name lacks the
+        // emulator's activity and must not count. The real PUBG Mobile (com.tencent.ig) is no variant any more.
         FakePackages.install("com.miHoYo.Yuanshen", "com.miHoYo.GetMobileInfo.MainActivity")
         FakePackages.install("com.tencent.ig", "com.epicgames.ue4.SplashActivity")
         val found = detector.detect(TestCatalogs.shipped)

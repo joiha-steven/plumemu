@@ -62,10 +62,8 @@ internal class SettingsUnknownFolderModelTest : SettingsModelHarness() {
             listOf(
                 SettingsOption.RomFolders,
                 SettingsOption.Rescan,
-                SettingsOption.SortGames,
                 SettingsOption.FilesNotAdded,
                 SettingsOption.UnidentifiedGames,
-                SettingsOption.ClearRecent,
             ),
             SettingsSection.Library.rowsIn(model.content),
         )

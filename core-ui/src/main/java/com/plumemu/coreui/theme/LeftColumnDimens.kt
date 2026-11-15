@@ -4,6 +4,9 @@ import androidx.compose.ui.unit.dp
 
 /** Where the left columns' (Home systems, Settings sections) slab, accent bar and labels stand. */
 object LeftColumnDimens {
+    /** How much of the muted colour the resting number (or code) in the systems column keeps: a step dimmer than the names. */
+    const val RESTING_COUNT_ALPHA = 0.75f
+
     /** The slab starts this far before the page margin ([PlumDimens.stripMarginSide]): 16 dp from the screen edge. */
     val systemPillOverhang = 8.dp
     val systemPillStart = PlumDimens.stripMarginSide - systemPillOverhang

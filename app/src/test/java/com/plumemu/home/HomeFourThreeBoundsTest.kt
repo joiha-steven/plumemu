@@ -14,6 +14,7 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import org.junit.Assert.assertEquals
@@ -77,11 +78,19 @@ abstract class HomeFourThreeBoundsBase(
     /** The text starts at the column's left edge, the cover slot ends at its right edge, the gap lies between them (peek and stop alike). */
     private fun assertTextLeftAndCoverRight() {
         val column = bounds(HomeTags.DETAILS)
-        val cover = bounds(HomeTags.DETAILS_COVER)
+        // The cover wears the glass frame now: the frame (the picture and the collar's padding round it) is the stop's width.
+        val picture = bounds(HomeTags.DETAILS_COVER)
+        val frameLeft = picture.left - CollarSize.Cover.sidePadding
+        val frameRight = picture.right + CollarSize.Cover.sidePadding
         assertDp("the title starts at the column's left edge", column.left, bounds(HomeTags.DETAILS_TITLE).left)
-        assertDp("the cover is the stop's width", PlumDimens.detailsStopCoverWidth, cover.right - cover.left)
-        assertDp("the cover ends at the column's right edge", column.right, cover.right)
-        assertTrue("the title ends a gap before the cover: title ${bounds(HomeTags.DETAILS_TITLE)} cover $cover", bounds(HomeTags.DETAILS_TITLE).right <= cover.left - PlumDimens.detailsStopCoverGap + TOLERANCE.dp)
+        val slot = bounds(HomeTags.DETAILS_COVER_SLOT)
+        assertDp("the box fills the height inside the frame", PlumDimens.detailsStopCoverHeight - CollarSize.Cover.topPadding - CollarSize.Cover.bottomPadding, picture.bottom - picture.top)
+        assertDp("the frame is the slot, left", slot.left, frameLeft)
+        assertDp("the frame is the slot, right", slot.right, frameRight)
+        assertDp("the frame is the slot, top", slot.top, picture.top - CollarSize.Cover.topPadding)
+        assertDp("the frame is the slot, bottom", slot.bottom, picture.bottom + CollarSize.Cover.bottomPadding)
+        assertDp("the frame ends at the column's right edge", column.right, frameRight)
+        assertTrue("the title ends a gap before the frame: title ${bounds(HomeTags.DETAILS_TITLE)} cover $picture", bounds(HomeTags.DETAILS_TITLE).right <= frameLeft - PlumDimens.detailsStopCoverGap + TOLERANCE.dp)
     }
 
     @Test

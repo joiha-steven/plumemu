@@ -74,7 +74,7 @@ abstract class FourThreeScreensBoundsBase(
 
     @Test fun settingsSections() = assertWhole("sections") { SettingsAt(SettingsFocus(section = SettingsSection.Appearance)) }
 
-    @Test fun settingsAppearanceOption() = assertWhole("Left strip") { SettingsAt(optionsAt(SettingsOption.LeftEdge), settingsForShot()) }
+    @Test fun settingsAppearanceOption() = assertWhole("Page grain") { SettingsAt(optionsAt(SettingsOption.PageGrain), settingsForShot()) }
 
     @Test
     fun settingsBackgroundPanel() =

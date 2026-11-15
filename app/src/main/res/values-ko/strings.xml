@@ -42,6 +42,9 @@
     <string name="home_hint_update">업데이트</string>
     <string name="home_update_pill">업데이트 %1$s</string>
     <string name="home_whatsnew_title">%1$s의 새로운 기능</string>
+    <string name="home_usage_offer_title">실제 플레이만 세기</string>
+    <string name="home_usage_offer_body">지금은 에뮬레이터 메뉴와 다른 앱도 플레이로 계산됩니다. Android 사용 기록 접근을 허용하면 게임 시간만 셉니다. 데이터는 휴대 기기 밖으로 나가지 않습니다.</string>
+    <string name="home_usage_offer_allow">허용</string>
     <!-- Hint bar label: a verb, start the game. -->
     <string name="home_hint_play">플레이</string>
     <!-- Hint bar label: a verb, open the focused entry or app. -->
@@ -457,9 +460,9 @@
     <string name="game_error_title_id_title">이 PS Vita 게임에는 타이틀 ID가 없어요</string>
     <string name="game_error_title_id_empty_body">%1$s 파일이 비어 있어요. PCSE00000처럼 게임의 타이틀 ID만 적어 넣으세요. 게임은 에뮬레이터에 설치되어 있어야 해요.</string>
     <string name="game_error_title_id_invalid_body">%1$s 파일에는 게임의 타이틀 ID만 있어야 해요. PCSE00000처럼 대문자나 숫자 9자리예요.</string>
-    <string name="game_error_steam_app_id_title">이 .steam 파일에는 Steam 앱 ID가 없어요</string>
-    <string name="game_error_steam_app_id_empty_body">%1$s 파일이 비어 있어요. 274190처럼 게임의 Steam 앱 ID만 적어 넣으세요. 게임은 Steam 앱에 있어야 해요.</string>
-    <string name="game_error_steam_app_id_invalid_body">%1$s 파일에는 274190처럼 숫자로 된 게임의 Steam 앱 ID만 있어야 해요.</string>
+    <string name="game_error_steam_app_id_title">이 파일에는 게임 ID가 없어요</string>
+    <string name="game_error_steam_app_id_empty_body">%1$s 파일이 비어 있어요. 274190처럼 게임 ID만 적어 넣으세요. 게임은 이 파일을 내보낸 앱에 있어야 해요.</string>
+    <string name="game_error_steam_app_id_invalid_body">%1$s 파일에는 274190처럼 숫자로 된 게임 ID만 있어야 해요.</string>
     <string name="game_error_needs_path_title">%1$s 에뮬레이터에는 파일 경로가 필요해요</string>
     <string name="game_error_needs_path_body">이 에뮬레이터는 내장 저장공간이나 SD 카드에 있는 게임만 열 수 있는데, 이 폴더는 다른 곳에 있어요.</string>
     <string name="game_error_not_in_library_title">이 게임은 이제 라이브러리에 없어요</string>
@@ -523,6 +526,7 @@
     <string name="app_error_refused_body">Android에서 열기를 거부했어요.</string>
     <string name="app_error_not_listed_body">목록을 표시한 뒤 앱 목록이 바뀌었어요. 다시 불러오는 중이니 잠시 후 한 번 더 시도하세요.</string>
     <string name="app_error_unavailable_body">앱을 열 준비를 하지 못했어요. 잠시 후 다시 시도하세요.</string>
+    <string name="app_error_bottom_screen_body">이 앱을 아래 화면에서 열 수 없어서 여기에서 열었어요.</string>
     <string name="game_error_app_game_missing_body">삭제되었거나 사용 중지되었어요. 여기서 플레이하려면 다시 설치하거나 사용 설정하세요.</string>
     <!-- Settings. The top bar: "Settings › Appearance › Background". -->
     <string name="settings_title">설정</string>
@@ -625,14 +629,12 @@
     <string name="settings_rescan_a_folder">폴더 하나</string>
     <string name="settings_rescan_failed">게임을 불러오지 못했어요. 다시 시도하세요.</string>
     <string name="settings_rescan_busy">이미 게임을 불러오는 중이에요.</string>
-    <string name="settings_sort_games">게임 정렬</string>
     <string name="settings_sort_by_name">이름순</string>
     <string name="settings_sort_by_last_played">최근 플레이순</string>
     <string name="settings_sort_by_most_played">플레이 시간순</string>
     <string name="settings_sort_by_recently_added">최근 추가순</string>
     <string name="settings_sort_by_year">출시 연도순</string>
     <string name="settings_sort_by_rating">평점순</string>
-    <string name="settings_sort_games_body">기종별 목록과 즐겨찾기의 정렬 방식이에요. 정렬 기준이 없는 게임(플레이한 적 없음, 연도 없음, 평점 없음)은 이름순으로 뒤에 놓여요. 출시 연도와 평점은 ScreenScraper의 값이 있는 게임이 있을 때만 나와요. 최근 플레이에는 항상 마지막으로 한 게임이 맨 위에 나와요.</string>
     <string name="settings_clear_recent">최근 플레이 비우기…</string>
     <string name="settings_clear_recent_body">최근 플레이를 비워요. 게임을 다시 하면 목록에 돌아와요. 플레이 시간과 통계는 남아요.</string>
     <string name="settings_clear_recent_confirm">비우기</string>
@@ -707,8 +709,6 @@
     <!-- Controls -->
     <string name="settings_push_right">오른쪽 두 번 눌러 플레이</string>
     <string name="settings_push_right_body">한 손으로 플레이할 수 있어요. 게임 목록에서 오른쪽을 두 번 누르면 선택한 게임이 시작돼요. 한 번 누르면 실행 준비가 되고, 2초 안에 한 번 더 누르면 시작돼요. 다른 버튼을 누르면 취소돼요. A 버튼도 그대로 쓸 수 있어요. 화면이 좁은 기기에서는 이때 세부 정보 열을 터치로 열어요. 언제든 여기서 끌 수 있어요.</string>
-    <string name="settings_show_hints">버튼 가이드 표시</string>
-    <string name="settings_show_hints_body">메인 화면 아래쪽에 버튼과 그 기능을 보여 줘요. 설정과 초기 설정 화면에는 길을 잃지 않도록 항상 표시돼요. 터치로 설정을 열려면 기종 열을 길게 누르세요.</string>
     <string name="settings_switch_system_with">시스템 전환 버튼</string>
     <string name="settings_switch_system_body">메인 화면에서 시스템을 전환할 어깨 버튼 쌍이에요. 다른 쌍은 목록에서 글자로 건너뛰고 그리드에서 크기를 바꿔요.</string>
     <string name="settings_keyboard">키보드</string>
@@ -720,9 +720,6 @@
     <string name="settings_home_unavailable">이 기기에는 홈 앱을 고르는 화면이 없어요. Android 설정 › 앱 › 기본 앱에서 Plumemu를 선택하세요.</string>
     <string name="settings_show_apps">Android 앱 표시</string>
     <string name="settings_show_apps_body">기기의 모든 Android 앱을 즐겨찾기 바로 아래 ‘앱’에 보여 줘요. 끄면 ‘앱’ 항목이 표시되지 않아요.</string>
-    <string name="settings_clock_battery">시계 및 배터리</string>
-    <string name="settings_clock_battery_body">화면 오른쪽 위에 시간과 배터리 잔량을 표시해요.</string>
-    <string name="settings_clock_battery_body_two_screens">화면 오른쪽 위에 시간과 배터리 잔량을 표시해요. 배터리 잔량은 보조 화면의 시계에도 표시돼요.</string>
     <!-- The band over a system's games list ("Nintendo · Home console · 1990–2003". -->
     <string name="system_kind_console">가정용 게임기</string>
     <string name="system_kind_handheld">휴대용 게임기</string>
@@ -796,8 +793,6 @@
     <string name="system_about_mame">게임 역사 보존이 목적이고, 게임을 즐길 수 있는 건 “좋은 부수 효과”라고 해요. 3만 2,000개 넘는 기기를 기록하고 있어요.</string>
     <!-- https://github.com/finalburnneo/FBNeo (README; Wikipedia has no page) -->
     <string name="system_about_fbneo">FinalBurn과 예전 MAME 버전을 바탕으로 해요. 캡콤 CPS-1, CPS-2, CPS-3, 네오지오, 세가 System 16 기판을 에뮬레이션해요.</string>
-    <string name="settings_system_info">기종 정보</string>
-    <string name="settings_system_info_body">게임 목록 맨 위에 기종 배지, 한 줄 요약(제조사, 종류, 연도), 그 기종에 관한 짧은 소개를 보여 줘요.</string>
     <!-- Second screen, picking cards. Top line: "Super Nintendo · USA"; the separator is also used in the facts line (quoted: Android trims the spaces of an unquoted string). -->
     <string name="second_screen_android_app">Android 앱</string>
     <string name="second_screen_app_tag">앱</string>
@@ -902,6 +897,10 @@
     <string name="settings_second_screen_in_game_body">게임 중에 보조 화면에 표시할 내용이에요. 두 화면을 쓰는 에뮬레이터는 보조 화면을 알아서 사용해요. 화면을 보호하기 위해 카드가 1분마다 조금씩 움직여요.</string>
     <string name="settings_second_screen_clock">시계와 배터리</string>
     <string name="settings_second_screen_black">검은 화면</string>
+    <string name="settings_second_screen_apps_on">앱을 열 화면</string>
+    <string name="settings_second_screen_apps_on_body">앱 목록에서 실행한 앱이 열리는 화면이에요. 게임에는 영향이 없어요.</string>
+    <string name="settings_second_screen_apps_top">위 화면</string>
+    <string name="settings_second_screen_apps_bottom">아래 화면</string>
 
     <!-- Appearance -->
     <!-- Ready-made colour sets (never a console's or a brand's name. -->
@@ -926,9 +925,8 @@
     <string name="settings_background">배경</string>
     <string name="settings_text_color">글자 색상</string>
     <string name="settings_accent">강조 색상</string>
+    <string name="settings_page_grain">배경 질감</string>
     <string name="settings_text_size">글자 크기</string>
-    <string name="settings_left_edge">왼쪽 띠</string>
-    <string name="settings_grid_size">그리드 크기</string>
     <string name="settings_bg_graphite">그래파이트</string>
     <string name="settings_bg_black">검정</string>
     <string name="settings_bg_midnight">미드나이트</string>
@@ -992,9 +990,9 @@
     <string name="settings_size_larger">더 크게</string>
     <string name="settings_size_huge">아주 크게</string>
     <string name="settings_size_largest">최대</string>
-    <string name="settings_left_edge_counts">게임 수</string>
-    <string name="settings_left_edge_codes">기종 코드</string>
-    <string name="settings_left_edge_letters">알파벳</string>
+    <string name="settings_page_grain_off">끔</string>
+    <string name="settings_page_grain_light">약하게</string>
+    <string name="settings_page_grain_strong">강하게</string>
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
     <string name="settings_badge_current">사용 중</string>
     <string name="settings_background_body">색상을 고르거나 +를 눌러 직접 만드세요.</string>
@@ -1021,8 +1019,7 @@
     <string name="settings_color_adjusted_both">잘 읽히도록 글자 색상과 강조 색상을 바꿨어요</string>
     <string name="settings_accent_body">현재 기종, 포커스 점, 스위치, 버튼에 쓰여요. ‘기종별’을 고르면 기종마다 다른 색상을 써요.</string>
     <string name="settings_text_size_body">Plumemu의 모든 글자 크기를 바꿔요. Android의 글꼴 크기 설정도 함께 적용돼요.</string>
-    <string name="settings_left_edge_body">게임 목록을 보고 있을 때 왼쪽의 좁은 띠에 표시할 내용: 기종별 게임 수, 기종별 짧은 코드, 또는 현재 목록의 글자.</string>
-    <string name="settings_grid_size_body">그리드 보기에서 커버의 크기예요. 모든 기종과 최근 플레이, 즐겨찾기에 적용돼요. ‘작게’는 한 번에 가장 많은 게임을, ‘크게’는 가장 적은 게임을 보여 줘요.</string>
+    <string name="settings_page_grain_body">배경색 위에 고운 질감을 입혀 종이 같은 느낌을 줍니다. 끔은 평평한 배경 그대로, 약하게는 은은하게, 강하게는 모든 화면에서 또렷하게 보입니다.</string>
     <!-- Sample lines in the colour panel (the board's). -->
 
     <!-- Advanced (includes the confirm-button option) -->
@@ -1261,12 +1258,11 @@
     <string name="report_error_refused">서버에서 이 신고를 받지 않았어요. 이메일 주소를 확인하세요. 입력한 내용은 남아 있으니 다시 시도할 수 있어요.</string>
     <string name="report_error_unavailable">이 빌드에서는 신고를 보낼 수 없어요. ‘로그 내보내기’로 파일을 직접 보내 주세요.</string>
     <string name="report_error_not_saved">이 기기에 신고를 저장하지 못했어요.</string>
-    <string name="settings_privacy_body">라이브러리, 설정, 플레이 시간은 이 기기의 Plumemu 전용 저장공간에만 있고, 밖으로 보내지 않아요. 직접 켠 경우에만(설정 › 정보 › 사용 통계 보내기) Plumemu는 개발자에게 익명 사용 집계와 오류 보고를 보내요. 국가, 기기 모델, Android 버전과 앱 버전, 사용하는 화면과 설정, 기종별 플레이 시간이 포함돼요. Plumemu가 이름을 알아내지 못한 게임은 기종, 파일 저장 방식, 크기, CRC-32, 게임에서 읽은 제품 코드나 디스크 시리얼도 설치당 한 번 보내요. 게임 제목, 검색어, ScreenScraper 계정은 보내지 않아요. 오류 보고에는 파일 경로가 들어 있을 수 있어요. 끄면 익명으로 “꺼짐” 집계를 한 번 보내고, 그 뒤로는 아무것도 보내지 않아요. 문제 신고는 ‘문제 신고’에서 ‘보내기’를 눌렀을 때만 보내며, 첨부하기로 고른 로그와 그 안의 파일 경로가 포함될 수 있어요. 보낸 정보는 기한 없이 보관해요. Plumemu는 하루에 한 번 Wi-Fi에서 plumemu-app.stevensdesk.com에 새 버전이 있는지 확인해요. 이 서버를 호스팅하는 Cloudflare는 IP 주소를 볼 수 있어요. 설정 › 정보 › 업데이트에서 끌 수 있어요. 같은 매일 확인에서 같은 서버로부터 최신 플랫폼 데이터(기종과 에뮬레이터 목록)도 내려받아요. 그 밖에는 아무것도 보내지 않아요. ScreenScraper 계정을 쓰면 박스 아트를 찾기 위해 Plumemu가 ScreenScraper에 게임마다 파일 이름, 크기, 체크섬을 보내고, 이것으로 찾지 못하면 제목도 보내요. 기본 소스를 쓰면 Plumemu는 Wi-Fi에서 libretro의 공개 서버(thumbnails.libretro.com)에서 박스 앞면을 내려받아요. 주소에 게임 이름이 들어가고, 이 서버는 IP 주소를 볼 수 있어요. RetroAchievements 계정을 쓰면 Plumemu가 retroachievements.org에 사용자 이름, 키, 게임마다 RetroAchievements 번호를 보내요. 게임 정보를 열 때, 플레이한 뒤, 그리고 Wi-Fi에서 하루에 한 번이에요. 배지 그림은 media.retroachievements.org에서 받아요. 키는 이 기기에 암호화해 저장하고 백업이나 로그에는 절대 넣지 않아요. 로그아웃하면 보내지 않아요. 설정 \u203A 통계에서 정확한 플레이 시간을 켜면, Plumemu는 Android의 사용 기록 접근에서 플레이 시간대의 이벤트를 받아 Plumemu에서 시작한 게임이나 앱과 화면에 관한 것만 남깁니다. 플레이 시간의 길이 외에는 저장하지 않으며 전송하지 않습니다.</string>
+    <string name="settings_privacy_body">라이브러리, 설정, 플레이 시간은 이 기기의 Plumemu 전용 저장공간에만 있고, 밖으로 보내지 않아요. 직접 켠 경우에만(설정 › 정보 › 사용 통계 보내기) Plumemu는 개발자에게 익명 사용 집계와 오류 보고를 보내요. 국가, 기기 모델, Android 버전과 앱 버전, 사용하는 화면과 설정, 기종별 플레이 시간이 포함돼요. Plumemu가 이름을 알아내지 못한 게임은 기종, 파일 저장 방식, 크기, CRC-32, 게임에서 읽은 제품 코드나 디스크 시리얼도 설치당 한 번 보내요. 게임 제목, 검색어, ScreenScraper 계정은 보내지 않아요. 오류 보고에는 파일 경로가 들어 있을 수 있어요. 끄면 익명으로 “꺼짐” 집계를 한 번 보내고, 그 뒤로는 아무것도 보내지 않아요. 문제 신고는 ‘문제 신고’에서 ‘보내기’를 눌렀을 때만 보내며, 첨부하기로 고른 로그와 그 안의 파일 경로가 포함될 수 있어요. 보낸 정보는 기한 없이 보관해요. Plumemu는 하루에 한 번 Wi-Fi에서 plumemu-app.stevensdesk.com에 새 버전이 있는지 확인해요. 이 서버를 호스팅하는 Cloudflare는 IP 주소를 볼 수 있어요. 설정 › 정보 › 버전에서 끌 수 있어요. 같은 매일 확인에서 같은 서버로부터 최신 플랫폼 데이터(기종과 에뮬레이터 목록)도 내려받아요. 그 밖에는 아무것도 보내지 않아요. ScreenScraper 계정을 쓰면 박스 아트를 찾기 위해 Plumemu가 ScreenScraper에 게임마다 파일 이름, 크기, 체크섬을 보내고, 이것으로 찾지 못하면 제목도 보내요. 기본 소스를 쓰면 Plumemu는 Wi-Fi에서 libretro의 공개 서버(thumbnails.libretro.com)에서 박스 앞면을 내려받아요. 주소에 게임 이름이 들어가고, 이 서버는 IP 주소를 볼 수 있어요. RetroAchievements 계정을 쓰면 Plumemu가 retroachievements.org에 사용자 이름, 키, 게임마다 RetroAchievements 번호를 보내요. 게임 정보를 열 때, 플레이한 뒤, 그리고 Wi-Fi에서 하루에 한 번이에요. 배지 그림은 media.retroachievements.org에서 받아요. 키는 이 기기에 암호화해 저장하고 백업이나 로그에는 절대 넣지 않아요. 로그아웃하면 보내지 않아요. 설정 \u203A 통계에서 정확한 플레이 시간을 켜면, Plumemu는 Android의 사용 기록 접근에서 플레이 시간대의 이벤트를 받아 Plumemu에서 시작한 게임이나 앱과 화면에 관한 것만 남깁니다. 플레이 시간의 길이 외에는 저장하지 않으며 전송하지 않습니다.</string>
     <!-- Updates -->
     <string name="settings_update_value_downloading">다운로드 중…</string>
     <string name="settings_update_value_installing">설치 중…</string>
     <string name="settings_update_value_available">%1$s 사용 가능</string>
-    <string name="settings_updates">업데이트</string>
     <string name="settings_updates_check_now">지금 확인</string>
     <string name="settings_check_updates_body">Plumemu 업데이트 서버에 새 버전이 있는지 지금 확인해요. 모바일 데이터를 쓰는 중이면 업데이트를 받기 전에 물어봐요.</string>
     <string name="settings_check_updates_daily">매일 업데이트 확인</string>
@@ -1277,7 +1273,6 @@
     <string name="settings_check_updates_value_found">업데이트 있음</string>
     <string name="settings_check_updates_value_needs_android">Android 버전 낮음</string>
     <string name="settings_check_updates_value_failed">확인 실패</string>
-    <string name="settings_check_updates_value_busy">업데이트 받는 중</string>
     <string name="settings_check_updates_busy">업데이트를 받고 있어요. 다 받은 뒤 다시 확인하세요.</string>
     <string name="settings_check_updates_unexpected">업데이트를 확인하지 못했어요. 나중에 다시 시도하세요.</string>
     <string name="settings_update_checking">업데이트 확인 중…</string>
@@ -1485,8 +1480,12 @@
     <!-- App menu in Apps -->
     <string name="app_menu_info">앱 정보</string>
     <string name="app_menu_uninstall">설치 삭제</string>
+    <string name="app_menu_open_bottom">아래 화면에서 열기</string>
+    <string name="app_menu_open_top">위 화면에서 열기</string>
     <string name="app_menu_show_as_game">게임으로 표시</string>
     <string name="app_menu_show_as_port">포트로 표시</string>
+    <string name="app_menu_hint_gamenative">\"Frontend Sync\" 켜기, ROM 안의 폴더</string>
+    <string name="app_menu_hint_droiddeck">\"Sync all game files to folder\" 켜기, ROM 안</string>
     <string name="app_tool_error_body">Android에서 해당 화면을 열지 못했어요. 잠시 후 다시 시도하세요.</string>
 
     <!-- Library › an unknown folder (a folder whose name matches no system): its row, side panel and the home notice. %1$s is the folder's name or a number. -->

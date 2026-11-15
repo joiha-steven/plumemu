@@ -14,7 +14,9 @@ import androidx.compose.ui.draw.drawWithContent
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumMotionState
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.components.drawPage
 import com.plumemu.coreui.components.plainLayer
+import com.plumemu.coreui.theme.LocalPageGrain
 
 /** The fade's spec: the one curve (Decelerate) over [PlumMotion.FADE_IN_MS], or an instant jump with motion off. */
 internal fun <T> PlumMotionState.fadeSpec(): AnimationSpec<T> = if (isOn) tween(PlumMotion.FADE_IN_MS, easing = PlumMotion.Decelerate) else snap()
@@ -51,7 +53,9 @@ internal fun FadeIn(
         if (!isHeld && alpha.value != 1f) alpha.animateTo(1f, if (depth != 0f && motion.isOn) tween(PlumMotion.SCREEN_MS, easing = PlumMotion.Decelerate) else motion.fadeSpec())
     }
     val colors = PlumTheme.colors
-    val held = if (isHeld) Modifier.drawWithContent { drawRect(colors.bg) } else Modifier
+    val grain = LocalPageGrain.current
+    // The page's own paint (with its grain, if on), so the grain does not blink out while Settings opens.
+    val held = if (isHeld) Modifier.drawWithContent { drawPage(colors.bg, grain) } else Modifier
     Box(
         if (depth == 0f) {
             modifier.then(held).plainLayer { this.alpha = alpha.value }
@@ -67,7 +71,7 @@ internal fun FadeIn(
                 }.drawWithContent {
                     drawContent()
                     val veil = 1f - alpha.value
-                    if (veil > 0f) drawRect(colors.bg, alpha = veil)
+                    if (veil > 0f) drawPage(colors.bg, grain, alpha = veil)
                 }
         },
     ) { content() }

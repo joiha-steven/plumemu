@@ -156,7 +156,10 @@ class SemanticsTreeSizeTest {
         const val HOME = 112
         const val GAMES_LIST = 146
         const val GAME_MENU = 138
-        const val APPS_GRID = 225
+        // 38 nodes more since the games list was kept built beside a shown grid (HiddenListBesideGridTest): its two neighbour pages' rows stay in the
+        // unmerged tree, unplaced, as they already do beside a shown list (GAMES_LIST counts them); a grid-to-list switch fell from 45 to 36 ms warm.
+        // 2 more since grids are pages of a lazy row (GridPages, neighbour grids built ahead): the row and the shown page's node.
+        const val APPS_GRID = 263
         const val SETTINGS = 66
         const val PLAY_HINT = "home_hint_Play"
         const val SORT_WARM_UP = 50

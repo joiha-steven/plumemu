@@ -30,7 +30,7 @@ internal object TestCatalogs {
         }
 
     private val SMALL = """
-        {"formatVersion":2,
+        {"formatVersion":3,
          "systems":[
           {"id":"snes","name":"Super Nintendo","shortName":"SNES","displayName":"Super Nintendo","order":0,"folders":["snes"],"extensions":["sfc"],
            "cover":"landscape","tier":"tested","emulators":["risky","ra-snes9x","ra-bsnes","snes9x"]},

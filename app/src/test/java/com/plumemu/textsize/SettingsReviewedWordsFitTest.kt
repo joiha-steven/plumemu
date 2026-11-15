@@ -14,6 +14,7 @@ import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
+import com.plumemu.settings.screen.TEST_VERSION
 import com.plumemu.settings.screen.PanelPage
 import com.plumemu.settings.screen.SettingsAt
 import com.plumemu.settings.screen.SettingsContent
@@ -27,7 +28,6 @@ import com.plumemu.settings.screen.ShotContent
 import com.plumemu.settings.screen.SystemEmulators
 import com.plumemu.settings.screen.optionsAt
 import com.plumemu.settings.screen.panelAt
-import com.plumemu.settings.screen.withGamesListed
 import com.plumemu.update.CheckOutcome
 import com.plumemu.update.LastCheck
 import com.plumemu.update.UpdateManifest
@@ -58,15 +58,14 @@ abstract class SettingsReviewedWordsFitBase {
         get() {
             val library = ShotContent.library
             val emulators = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Emulators, rememberedOption = mapOf(SettingsSection.Emulators to 0), page = PanelPage.Emulators, panelIndex = 0, systemId = "psx")
-            // Clear Recent's place follows the rows that show only sometimes.
-            val clearRecent = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Library, rememberedOption = mapOf(SettingsSection.Library to SettingsSection.Library.rowsIn(library.withGamesListed()).indexOf(SettingsOption.ClearRecent)))
             return listOf(
                 optionsAt(SettingsOption.BackupAndRestore) to library,
                 panelAt(SettingsOption.BackupAndRestore, PanelPage.BackupRestore, 0) to library,
-                optionsAt(SettingsOption.Updates) to library.copy(update = UpdateView(lastCheck = LastCheck(1, CheckOutcome.Found), found = release)),
                 optionsAt(SettingsOption.Version) to library.copy(update = UpdateView(lastCheck = LastCheck(1, CheckOutcome.Found), found = release)),
-                clearRecent to library,
-                clearRecent.copy(column = SettingsColumn.Panel, page = PanelPage.Confirm, panelIndex = SettingsModel.CONFIRM_CANCEL) to library,
+                optionsAt(SettingsOption.Version) to library.copy(update = UpdateView(lastCheck = LastCheck(1, CheckOutcome.UpToDate))),
+                optionsAt(SettingsOption.Version) to library.copy(update = UpdateView(lastCheck = LastCheck(1, CheckOutcome.NeedsNewerAndroid))),
+                optionsAt(SettingsOption.Reset) to library,
+                panelAt(SettingsOption.ClearRecent, PanelPage.ResetRecentConfirm, SettingsModel.CONFIRM_CANCEL) to library,
                 emulators to library.copy(systems = listOf(noEmulator)),
                 optionsAt(SettingsOption.PushRightToPlay) to library,
             )
@@ -82,7 +81,8 @@ abstract class SettingsReviewedWordsFitBase {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val names =
             listOf(R.string.settings_backup_and_restore, R.string.settings_clear_recent_confirm, R.string.settings_emulator_automatic_none, R.string.settings_push_right).map(context::getString) +
-                context.getString(R.string.settings_update_value_available, release.versionName)
+                context.getString(R.string.settings_update_value_available, release.versionName) +
+                listOf(R.string.settings_check_updates_value_up_to_date, R.string.settings_check_updates_value_needs_android).map { context.getString(R.string.settings_check_updates_value, TEST_VERSION, context.getString(it)) }
         for (eachFont in listOf(PlumFont.Jost)) {
             for ((stop, shown) in stops) {
                 focus = stop

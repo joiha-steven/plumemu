@@ -99,6 +99,9 @@ class Registry:
         self.signatures[emulator_id] = launch_signature(launch)
         if "accepts" in entry:
             self.by_id[emulator_id]["accepts"] = entry["accepts"]
+        if "extrasByExtension" in entry:
+            self.by_id[emulator_id]["extrasByExtension"] = {
+                x: dict(sorted(e.items())) for x, e in sorted(entry["extrasByExtension"].items())}
         return emulator_id
 
     def esde_packages(self):
@@ -135,9 +138,22 @@ def add_extra_variants(rules, extra):
             rules[key].append((package, activity))
 
 
+def drop_variant_packages(rules, dropped):
+    """Removes tables.DROPPED_VARIANT_PACKAGES from the find rules; one that no rule lists any more fails."""
+    for package in dropped:
+        found = [key for key, entries in rules.items() if any(p == package for p, _ in entries)]
+        if not found:
+            raise ConvertError(f"DROPPED_VARIANT_PACKAGES {package!r}: es_find_rules.xml no longer lists it, remove the row")
+        for key in found:
+            rules[key] = [(p, a) for p, a in rules[key] if p != package]
+            if not rules[key]:
+                raise ConvertError(f"DROPPED_VARIANT_PACKAGES {package!r}: {key} would have no package left")
+
+
 def convert(sources):
     rules = esde.read_find_rules(os.path.join(sources, "esde", "es_find_rules.xml"))
     add_extra_variants(rules, tables.EXTRA_VARIANTS)
+    drop_variant_packages(rules, tables.DROPPED_VARIANT_PACKAGES)
     es_systems = esde.read_systems(os.path.join(sources, "esde", "es_systems.xml"))
     dj_platforms = daijisho.read_platforms(os.path.join(sources, "daijisho"))
     registry = Registry(rules)
@@ -189,6 +205,9 @@ def convert(sources):
                 continue
             dj_players[player_name].append({"system": target["id"], "package": package, "activity": activity,
                                             "core": core, "regex": dj["accepted"].get(player_name)})
+            if package in tables.DROPPED_VARIANT_PACKAGES:
+                skipped["Daijishō: package in DROPPED_VARIANT_PACKAGES"] += 1
+                continue
             if package in es_packages and not core:
                 skipped["Daijishō: package already defined by ES-DE"] += 1
                 continue
@@ -526,7 +545,11 @@ def finish(systems, registry, skipped, dj_players=None):
         emulators.append(record)
     add_download_pages(emulators, tables.DOWNLOAD_PAGES)
     package_name = re.compile(r"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$")
+    emulator_packages = {e["package"] for e in emulators}
+    emulator_packages |= {v["package"] for e in emulators for v in e.get("variants", ())}
     for package, system_id in tables.KNOWN_APPS.items():
+        if package in emulator_packages:
+            raise ConvertError(f"KNOWN_APPS lists {package}, which is an emulator package or variant in the platforms data")
         if not package_name.match(package):
             raise ConvertError(f"KNOWN_APPS package {package!r} is not a package name")
         if system_id not in ids:

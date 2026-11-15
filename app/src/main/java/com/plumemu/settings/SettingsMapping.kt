@@ -7,11 +7,13 @@ import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.ControlsSettings
 import com.plumemu.coredata.settings.GridSizeSetting
 import com.plumemu.coredata.settings.KeyboardSetting
+import com.plumemu.coredata.settings.PageGrainSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coreinput.ButtonLayout
 import com.plumemu.coreinput.InputSettings
+import com.plumemu.coreui.components.PageGrain
 import com.plumemu.coreui.theme.AccentChoice
 import com.plumemu.coreui.theme.AccentPreset
 import com.plumemu.coreui.theme.BackgroundChoice
@@ -83,6 +85,14 @@ internal fun ControlsSettings.toKeyboardChoice(): KeyboardChoice =
     when (keyboard) {
         KeyboardSetting.Plumemu -> KeyboardChoice.Plumemu
         KeyboardSetting.Android -> KeyboardChoice.Android
+    }
+
+/** The grain strength the screens paint their page with. */
+internal fun PageGrainSetting.toPageGrain(): PageGrain =
+    when (this) {
+        PageGrainSetting.Off -> PageGrain.Off
+        PageGrainSetting.Light -> PageGrain.Light
+        PageGrainSetting.Strong -> PageGrain.Strong
     }
 
 private const val RGB_MASK = 0xFFFFFF

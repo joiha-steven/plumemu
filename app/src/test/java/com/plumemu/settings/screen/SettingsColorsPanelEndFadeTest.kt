@@ -131,6 +131,8 @@ class SettingsColorsPanelEndFadeTest {
         }
         press(Action.Move(Direction.Down))
         assertEquals(COLORS_TEXT_ITEM, model.focus.panelIndex)
+        press(Action.Move(Direction.Down))
+        assertEquals(COLORS_ACCENT_ITEM, model.focus.panelIndex)
         assertFalse("nothing is cut at the end of the panel", hasFade())
     }
 }

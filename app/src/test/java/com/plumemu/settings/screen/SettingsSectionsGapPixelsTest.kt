@@ -58,7 +58,7 @@ class SettingsSectionsGapPixelsTest {
                     when (cursor) {
                         "First" -> SettingsFocus(section = SettingsSection.shownIn(SettingsContent()).first())
                         "Last" -> SettingsFocus(section = SettingsSection.shownIn(SettingsContent()).last())
-                        else -> optionsAt(SettingsOption.Accent)
+                        else -> optionsAt(SettingsOption.Colors)
                     },
                 )
             }

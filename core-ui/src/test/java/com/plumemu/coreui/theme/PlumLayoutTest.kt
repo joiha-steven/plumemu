@@ -390,10 +390,10 @@ class PlumLayoutTest {
         assertEquals(38.dp, PlumLayout(768.dp, 432.dp, textScale = TextSize.Small.heightScale).gameRowHeight)
         assertEquals(34.dp * 1.2f, PlumLayout(837.dp, 471.dp, textScale = TextSize.Large.heightScale).gameRowHeight)
         assertEquals(34.dp * 1.5f, largest.gameRowHeight)
-        assertEquals(34.dp * 1.5f, largest.systemRowHeight)
-        // System rows: 34 designed, never under 40 drawn.
-        assertEquals(40.dp, medium.systemRowHeight)
-        assertEquals(34.dp * 1.2f, PlumLayout(768.dp, 432.dp, textScale = TextSize.Large.heightScale).systemRowHeight)
+        // System rows take the games' stride (game row + its gap), so a count in the peek stands on the baseline of the game beside it.
+        assertEquals(34.dp * 1.5f + PlumDimens.listRowGap, largest.systemRowHeight)
+        assertEquals(38.dp + PlumDimens.listRowGap, medium.systemRowHeight)
+        assertEquals(34.dp * 1.2f + PlumDimens.listRowGap, PlumLayout(768.dp, 432.dp, textScale = TextSize.Large.heightScale).systemRowHeight)
         assertEquals(18.dp * 1.5f, largest.topBarHeight)
         // The hint bar stops growing at Medium (1.1).
         assertEquals(22.dp * 1.1f, largest.hintBarHeight)

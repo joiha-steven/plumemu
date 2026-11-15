@@ -62,7 +62,7 @@ abstract class SettingsLongNamesFitBase {
         val failures = mutableListOf<String>()
         val context = ApplicationProvider.getApplicationContext<Context>()
         val names =
-            listOf(R.string.settings_rom_folders, R.string.settings_left_edge, R.string.settings_sounds, R.string.settings_second_screen_in_game)
+            listOf(R.string.settings_rom_folders, R.string.settings_page_grain, R.string.settings_sounds, R.string.settings_second_screen_in_game)
                 .map(context::getString) + SettingsSection.entries.map { context.getString(it.title) }
         val allow = FitAllowance(scrollTags = setOf(SettingsTags.OPTION_LIST, SettingsTags.SECTIONS, SettingsTags.PANEL))
         for (each in listOf(TextSize.Medium, TextSize.Largest)) {

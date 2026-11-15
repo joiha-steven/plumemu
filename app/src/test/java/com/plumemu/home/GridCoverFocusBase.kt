@@ -250,9 +250,9 @@ abstract class GridCoverFocusBase {
 
     protected fun exists(index: Int) = compose.onAllNodesWithTag(HomeTags.cover(index), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
-    /** The right edge (px) of the column left of the grid: the letter rail, else the systems column; 0 when there is none. */
+    /** The right edge (px) of the column left of the grid: the systems column; 0 when there is none. */
     protected fun leftColumnRight(): Float =
-        listOf(HomeTags.RAIL, HomeTags.SYSTEMS).maxOf { tag ->
+        listOf(HomeTags.SYSTEMS).maxOf { tag ->
             compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().maxOfOrNull { it.boundsInRoot.right } ?: 0f
         }
 

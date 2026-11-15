@@ -8,27 +8,13 @@ import com.plumemu.coredata.settings.SortGamesSetting
  * The sorts a person can pick now: every [SortGamesSetting] in its declared order, except Year while
  * no listed game has a year from ScreenScraper and Rating while none has a rating (never an empty
  * choice). The sort in use is always listed, so a Year or Rating picked earlier does not vanish from
- * the list when the values do. One list for Settings › Library › Sort games and the games list's
- * "Sort by…".
+ * the list when the values do. The games list's "Sort by…" offers it (Settings has no Sort games row).
  */
 internal data class SortChoices(
     val current: SortGamesSetting,
     val hasYear: Boolean,
     val hasRating: Boolean,
 ) {
-    constructor(current: SortGamesSetting, values: Values) : this(current, values.hasYear, values.hasRating)
-
-    /** Whether some listed game has a year and a rating: Year and Rating are listed only then. */
-    data class Values(
-        val hasYear: Boolean,
-        val hasRating: Boolean,
-    ) {
-        companion object {
-            /** Every sort listed: the Settings row reads a choice's name by its place among all of them. */
-            val All = Values(hasYear = true, hasRating = true)
-        }
-    }
-
     val options: List<SortGamesSetting> =
         SortGamesSetting.entries.filter { sort ->
             when (sort) {
@@ -63,7 +49,7 @@ internal interface SortActions {
     /** The sorts on offer and the one in use, read when the choices open. */
     suspend fun choices(): SortChoices
 
-    /** Stores [sort] as Settings › Library › Sort games; the lists follow the setting. Throws when it could not be stored. */
+    /** Stores [sort] as the one stored sort; the lists follow it. Throws when it could not be stored. */
     suspend fun set(sort: SortGamesSetting)
 
     /** Benchmark and preview builds: Name only, nothing stored. */

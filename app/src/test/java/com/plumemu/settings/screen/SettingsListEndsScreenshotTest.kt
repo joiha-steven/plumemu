@@ -7,7 +7,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Settings › Library with its last row (Clear Recent…) focused: the pill's shadow fades out under it instead of ending in a line above the hint keys. */
+/** Settings › Library with its last row focused: the pill's shadow fades out under it instead of ending in a line above the hint keys. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])

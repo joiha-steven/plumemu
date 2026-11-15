@@ -66,7 +66,7 @@ class ShortcutScrapeTest {
 
     @Test
     fun onlyShortcutsOfTheNameOnlySystemAreAsked() = runTest {
-        // core-data lists them in SQL (PinnedShortcutDao.NOT_SKIPPED_BY_BOX_ART); SystemIdsTest pins the scraper's set to it.
+        // core-data lists them in SQL (PinnedShortcutDao.NOT_SKIPPED_BY_BOX_ART); narrower than the scraper's NAME_ONLY on purpose (Windows and Epic shortcuts stay skipped).
         val systems = listOf("steam", "windows", "shortcuts", "android", "snes")
         systems.forEach { pin("game_$it", "Game $it", it) }
 

@@ -14,6 +14,7 @@ import com.plumemu.coreui.theme.GridSize
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -64,10 +65,16 @@ class HomeCoverRatioTest {
             compose.waitForIdle()
             val slot = compose.onNodeWithTag(HomeTags.DETAILS_COVER, useUnmergedTree = true).getUnclippedBoundsInRoot()
             val picture = pictureIn(HomeTags.DETAILS_COVER)
-            // One left edge for the cover and the text under it (design/rules.md: the title never moves).
             val title = compose.onNodeWithTag(HomeTags.DETAILS_TITLE, useUnmergedTree = true).getUnclippedBoundsInRoot()
-            assertEquals("details, box $aspect: the cover's collar starts on the edge the title starts", title.left.value + com.plumemu.coreui.components.CollarSize.Cover.sidePadding.value, picture.left, EPSILON)
-            assertEquals("details, box $aspect: slot and title share a left edge", title.left.value, slot.left.value, EPSILON)
+            if (aspect < TALL_BELOW) {
+                // A tall box has the title beside it, top-aligned with the box (design/rules.md, art not its slot's shape).
+                assertTrue("details, box $aspect: the title is beside the box", title.left.value >= picture.right - EPSILON)
+                assertEquals("details, box $aspect: the title starts at the box's top", picture.top, title.top.value, EPSILON)
+            } else {
+                // One left edge for the cover and the text under it (design/rules.md: the title never moves).
+                assertEquals("details, box $aspect: the cover's collar starts on the edge the title starts", title.left.value + com.plumemu.coreui.components.CollarSize.Cover.sidePadding.value, picture.left, EPSILON)
+                assertEquals("details, box $aspect: slot and title share a left edge", title.left.value, slot.left.value, EPSILON)
+            }
             assertEquals("details, box $aspect: in its collar on the slot's bottom", slot.bottom.value - com.plumemu.coreui.components.CollarSize.Cover.bottomPadding.value, picture.bottom, EPSILON)
         }
     }

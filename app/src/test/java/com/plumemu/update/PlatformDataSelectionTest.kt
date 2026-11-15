@@ -52,10 +52,20 @@ class PlatformDataSelectionTest {
 
     @Test
     fun aStoredCopyThatFailsToLoadFallsBackToTheBundledDataWithOneLogLineAndIsForgotten() {
-        store.write(stored(6, json = """{"formatVersion":2,"systems":[],"emulators":[]}"""))
+        store.write(stored(6, json = """{"formatVersion":3,"systems":[],"emulators":[]}"""))
         val loaded = select()!!
         assertEquals(bundled, loaded.version)
         // The loader logs its own line through Android's Log; ours is the only one that reaches `logs`.
+        assertEquals(1, logs.size)
+        assertTrue(logs[0].contains("does not load"))
+        assertNull(store.read())
+    }
+
+    @Test
+    fun aStoredFormat2CopyNewerThanTheBundledDataFallsBackToTheBundledDataAndIsDeleted() {
+        store.write(stored(6, json = PlatformDataFixtures.json.replace("\"formatVersion\":3", "\"formatVersion\":2")))
+        val loaded = select()!!
+        assertEquals(bundled, loaded.version)
         assertEquals(1, logs.size)
         assertTrue(logs[0].contains("does not load"))
         assertNull(store.read())

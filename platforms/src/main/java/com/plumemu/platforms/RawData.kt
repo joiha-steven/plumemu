@@ -89,6 +89,8 @@ internal class RawEmulator(
     val legalRisk: Boolean = false,
     /** Optional: the extensions (of its systems) it can open; absent means every extension of its systems. */
     val accepts: List<String>? = null,
+    /** Optional: extras added for a game of one extension (lowercase, no dot), on top of [extras]; each key is in [accepts]. */
+    val extrasByExtension: Map<String, Map<String, JsonPrimitive>> = emptyMap(),
     /** Optional: the project's own download page (`tables.py` `DOWNLOAD_PAGES`). */
     val page: String? = null,
 )

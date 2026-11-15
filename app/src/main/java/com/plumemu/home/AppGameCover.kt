@@ -179,7 +179,7 @@ internal fun AppGameCover(
             },
     ) {
         Box(
-            Modifier.fillMaxSize().testTag(if (icon is TileIcon.Picture) HomeTags.APP_ICON else HomeTags.APP_GAME_CARD).drawWithCache {
+            Modifier.fillMaxSize().gridTag(if (icon is TileIcon.Picture) HomeTags.APP_ICON else HomeTags.APP_GAME_CARD).drawWithCache {
                 // Read here: the colour landing rebuilds the card (a redraw), nothing recomposes.
                 val found = average.value
                 val look = if (found != null) appGameLook(found) else appGameNeutralLook(colors)

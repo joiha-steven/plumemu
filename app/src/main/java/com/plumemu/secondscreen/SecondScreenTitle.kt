@@ -52,7 +52,7 @@ internal fun SecondScreenTitle(
         val widthPx = constraints.maxWidth
         val shown =
             remember(title, isFavorite, titleStyle, starStyle, starColor, maxLines, widthPx, gap, density) {
-                fittedTitle(measurer, title, isFavorite, titleStyle, starStyle, starColor, maxLines, widthPx, gap)
+                fittedTitleKept(measurer, title, isFavorite, titleStyle, starStyle, starColor, maxLines, widthPx, gap, density.density, density.fontScale)
             }
         BasicText(
             text = shown,
@@ -124,7 +124,10 @@ internal fun fittedTitle(
 ): AnnotatedString {
     fun build(text: String) = withStar(text, isFavorite, starStyle, starColor)
 
-    fun fits(text: String) = linesOf(measurer, build(text), isFavorite, titleStyle, widthPx, gap) <= maxLines
+    fun fits(text: String): Boolean {
+        CardLayoutCount.note("titleMeasure")
+        return linesOf(measurer, build(text), isFavorite, titleStyle, widthPx, gap) <= maxLines
+    }
     if (fits(title)) return build(title)
     val cuts = characterBoundaries(title)
 
@@ -137,3 +140,44 @@ internal fun fittedTitle(
     }
     return build(cut(low))
 }
+
+private data class FitKey(
+    val title: String,
+    val isFavorite: Boolean,
+    val titleStyle: TextStyle,
+    val starStyle: TextStyle,
+    val starColor: Color,
+    val maxLines: Int,
+    val widthPx: Int,
+    val gap: TextUnit,
+    val density: Float,
+    val fontScale: Float,
+)
+
+private val fitted = object : LinkedHashMap<FitKey, AnnotatedString>(TITLES_KEPT, 0.75f, true) {
+    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<FitKey, AnnotatedString>) = size > TITLES_KEPT
+}
+
+private const val TITLES_KEPT = 32
+
+/** [fittedTitle], remembered for the last titles: a card offered again, or one the person walks back to, measures nothing. */
+private fun fittedTitleKept(
+    measurer: TextMeasurer,
+    title: String,
+    isFavorite: Boolean,
+    titleStyle: TextStyle,
+    starStyle: TextStyle,
+    starColor: Color,
+    maxLines: Int,
+    widthPx: Int,
+    gap: TextUnit,
+    density: Float,
+    fontScale: Float,
+): AnnotatedString {
+    val key = FitKey(title, isFavorite, titleStyle, starStyle, starColor, maxLines, widthPx, gap, density, fontScale)
+    synchronized(fitted) { fitted[key] }?.let { return it }
+    return fittedTitle(measurer, title, isFavorite, titleStyle, starStyle, starColor, maxLines, widthPx, gap).also { synchronized(fitted) { fitted[key] = it } }
+}
+
+/** Forgets the remembered titles (tests that count measures start from none). */
+internal fun forgetFittedTitles() = synchronized(fitted) { fitted.clear() }

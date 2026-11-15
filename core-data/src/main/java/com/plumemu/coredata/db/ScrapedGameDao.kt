@@ -333,6 +333,10 @@ abstract class ScrapedGameDao {
     @Query("UPDATE scraped_game SET scraped_at = 0 WHERE outcome = 'NO_MATCH' AND is_person_choice = 0")
     abstract suspend fun makeNoMatchesDueNow(): Int
 
+    /** [makeNoMatchesDueNow] for the games of [systemIds] only. */
+    @Query("UPDATE scraped_game SET scraped_at = 0 WHERE outcome = 'NO_MATCH' AND is_person_choice = 0 AND scrape_key IN (SELECT " + SCRAPE_KEY + " FROM game WHERE game.system_id IN (:systemIds))")
+    abstract suspend fun makeNoMatchesDueNowIn(systemIds: List<String>): Int
+
     /** Listed games (named or not) that have a saved box front: "2,012 of 2,054 have box art". */
     @Query("SELECT COUNT(game.id)" + FROM_GAMES + " WHERE " + LISTED + " AND " + PinnedShortcutDao.NOT_SKIPPED_BY_BOX_ART + " AND " + AppGameDao.NOT_APP_GAME + " AND scraped_game.has_box_front = 1")
     abstract suspend fun countWithBoxFront(): Int

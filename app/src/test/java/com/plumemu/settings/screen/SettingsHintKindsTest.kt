@@ -13,7 +13,7 @@ import org.junit.Test
  * What the hint bar says A does on each kind of row: "Open" on a row
  * that opens a page or the sign-in form, "Change" on a value, a switch, a colour dot and a system's
  * emulator (their panels are choices), "Select" on an action, nothing on read-only rows (Privacy,
- * Version, the box art status) at any width.
+ * the box art status) at any width. Version opens its panel.
  */
 internal class SettingsHintKindsTest : SettingsModelHarness() {
     private fun hintOn(
@@ -45,7 +45,14 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
         for (option in listOf(SettingsOption.BackupAndRestore, SettingsOption.Reset)) {
             assertEquals(option.name, R.string.settings_hint_open, hintOn(SettingsSection.Advanced, option))
         }
+        assertEquals("Version opens its panel", R.string.settings_hint_open, hintOn(SettingsSection.About, SettingsOption.Version))
         assertEquals(R.string.settings_hint_open, hintOn(SettingsSection.About, SettingsOption.Licenses))
+    }
+
+    @Test
+    fun versionInABuildWithNoUpdateManifestSaysNothing() {
+        model.content = model.content.copy(hasUpdates = false)
+        assertNull(hintOn(SettingsSection.About, SettingsOption.Version))
     }
 
     @Test
@@ -56,11 +63,7 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
 
     @Test
     fun valuesSwitchesAndChoicePanelsSayChange() {
-        for (option in listOf(SettingsOption.Colors, SettingsOption.Accent)) {
-            assertEquals(option.name, R.string.settings_hint_change, hintOn(SettingsSection.Appearance, option))
-        }
-        assertEquals(R.string.settings_hint_change, hintOn(SettingsSection.HomeScreen, SettingsOption.ClockAndBattery))
-        assertEquals(R.string.settings_hint_change, hintOn(SettingsSection.Library, SettingsOption.SortGames))
+        assertEquals(R.string.settings_hint_change, hintOn(SettingsSection.Appearance, SettingsOption.Colors))
         assertEquals(R.string.settings_hint_change, hintOn(SettingsSection.Advanced, SettingsOption.Animations))
     }
 
@@ -79,8 +82,6 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
 
     @Test
     fun readOnlyRowsHaveNoAHintOnAnyWidth() {
-        // Version first: the focus only walks down, and About opens on the row it was left on.
-        assertNull(hintOn(SettingsSection.About, SettingsOption.Version))
         assertNull(hintOn(SettingsSection.About, SettingsOption.Privacy))
     }
 
@@ -123,9 +124,8 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 SettingsOption.Background to change,
                 SettingsOption.TextColor to change,
                 SettingsOption.Accent to change,
+                SettingsOption.PageGrain to change,
                 SettingsOption.TextSize to change,
-                SettingsOption.LeftEdge to change,
-                SettingsOption.GridSize to change,
                 SettingsOption.ConfirmBottom to change,
                 SettingsOption.Animations to change,
                 SettingsOption.Sounds to change,
@@ -138,8 +138,7 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 SettingsOption.ResetAll to open,
                 SettingsOption.ResetLibrary to open,
                 SettingsOption.ExportLogs to select,
-                SettingsOption.Version to none,
-                SettingsOption.Updates to open,
+                SettingsOption.Version to open,
                 SettingsOption.CheckUpdatesDaily to change,
                 SettingsOption.Licenses to open,
                 SettingsOption.Privacy to none,
@@ -148,7 +147,6 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 SettingsOption.Vibration to change,
                 SettingsOption.RomFolders to open,
                 SettingsOption.Rescan to select,
-                SettingsOption.SortGames to change,
                 SettingsOption.SystemOrder to change,
                 SettingsOption.ClearRecent to open,
                 SettingsOption.Systems to open,
@@ -159,15 +157,13 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 SettingsOption.FilesNotAdded to open,
                 SettingsOption.UnreadableFolders to open,
                 SettingsOption.PushRightToPlay to change,
-                SettingsOption.ShowButtonHints to change,
                 SettingsOption.Keyboard to change,
                 SettingsOption.SwitchSystemWith to change,
                 SettingsOption.UseAsHome to select,
                 SettingsOption.ShowApps to change,
-                SettingsOption.ClockAndBattery to change,
-                SettingsOption.SystemInfo to change,
                 SettingsOption.SecondScreen to change,
                 SettingsOption.SecondScreenInGame to change,
+                SettingsOption.SecondScreenAppsOn to change,
                 SettingsOption.BoxArtSource to open,
                 SettingsOption.ScraperAccount to open,
                 SettingsOption.RetroAchievementsAccount to open,

@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -93,6 +94,19 @@ internal class FocusOutline(
         item: Int,
         touch: TouchPressScale,
     ): Float = minOf(touch.scaleOf(item), if (item == index) confirmDip() else 1f)
+
+    /**
+     * [liftOf], [dipOf] and "is [item] focused" as state of one item: a cell reads these in its draw block, so a move invalidates only the cells whose
+     * value changes (the two it concerns), not every cell as [liftOf] ([version]) and [dipOf] ([index], the finger's progress) would. Make it once per cell (remember).
+     */
+    fun liftStateOf(item: Int): State<Float> = derivedStateOf { liftOf(item) }
+
+    fun dipStateOf(
+        item: Int,
+        touch: TouchPressScale,
+    ): State<Float> = derivedStateOf { dipOf(item, touch) }
+
+    fun focusedStateOf(item: Int): State<Boolean> = derivedStateOf { index == item }
 
     /** Focus moved to [target] ([NO_COVER]: the grid lost it, or a panel opened). Call it from the code that follows the focus, not while drawing. */
     fun moveTo(target: Int) {

@@ -119,4 +119,66 @@ class EmulatorChoicesTest {
     fun aPackageThatIsNotAnEmulatorOfTheSystemIsRefused() = runTest {
         choices.chooseForSystem(snes, "pathemu")
     }
+
+    // hasOwnChoice, with the shipped Steam data (Steam apps open `.steam`, WinNative `.desktop`), in-memory Room.
+    private val shipped = TestCatalogs.shipped
+    private val steam = checkNotNull(shipped.system("steam"))
+
+    private fun steamChoices() = EmulatorChoices(dao, shipped, { it.packageName in installed }, RecordingLog(), UnconfinedTestDispatcher())
+
+    @Test
+    fun aGameWithNoChoiceOfItsOwnHasNone() = runTest {
+        val game = db.addGame("steam", "primary:ROMs/steam/a.steam")
+        installed += setOf("app.gamenative", "gamehub.lite")
+        assertEquals(false, steamChoices().hasOwnChoice(game, steam, "a.steam"))
+    }
+
+    @Test
+    fun theSameEmulatorAsTheSystemsIsNotOwnAndAnotherIs() = runTest {
+        val game = db.addGame("steam", "primary:ROMs/steam/a.steam")
+        installed += setOf("app.gamenative", "gamehub.lite")
+        val c = steamChoices()
+        c.chooseForSystem(steam, "gamenative")
+        c.chooseForGame(game, steam, "gamenative")
+        assertEquals(false, c.hasOwnChoice(game, steam, "a.steam"))
+        c.chooseForGame(game, steam, "gamehub-lite")
+        assertEquals(true, c.hasOwnChoice(game, steam, "a.steam"))
+    }
+
+    @Test
+    fun aGameChoiceThatCannotOpenTheFileIsIgnoredAtLaunchSoNotOwn() = runTest {
+        val game = db.addGame("steam", "primary:ROMs/steam/a.steam")
+        installed += setOf("app.gamenative", "com.winnative.cmod")
+        val c = steamChoices()
+        c.chooseForSystem(steam, "gamenative")
+        c.chooseForGame(game, steam, "winnative") // WinNative opens .desktop, not .steam
+        assertEquals(false, c.hasOwnChoice(game, steam, "a.steam"))
+    }
+
+    @Test
+    fun withNoSystemChoicePlayAsksSoAnyUsableGameChoiceIsOwn() = runTest {
+        val game = db.addGame("steam", "primary:ROMs/steam/a.steam")
+        installed += setOf("app.gamenative", "gamehub.lite")
+        val c = steamChoices()
+        val recommended = (c.resolve(game, steam, "a.steam") as EmulatorPick.NotChosen).recommended!!.id
+        // Changed requirement (second review): a game choice equal to the recommendation turns "ask at launch" into "run X", so it is the game's own.
+        c.chooseForGame(game, steam, recommended)
+        assertEquals(true, c.hasOwnChoice(game, steam, "a.steam"))
+        c.chooseForGame(game, steam, if (recommended == "gamenative") "gamehub-lite" else "gamenative")
+        assertEquals(true, c.hasOwnChoice(game, steam, "a.steam"))
+    }
+
+    @Test
+    fun aSystemChoiceThatCannotOpenTheFileIsComparedWithTheRecommendationThatStartsInstead() = runTest {
+        val game = db.addGame("steam", "primary:ROMs/steam/a.steam")
+        installed += setOf("app.gamenative", "gamehub.lite", "com.winnative.cmod")
+        val c = steamChoices()
+        c.chooseForSystem(steam, "winnative") // cannot open a .steam file: passed over for this game
+        val starts = (c.resolve(game, steam, "a.steam") as EmulatorPick.Ready).emulator.id
+        val other = if (starts == "gamenative") "gamehub-lite" else "gamenative"
+        c.chooseForGame(game, steam, starts)
+        assertEquals("the game's choice is what starts anyway", false, c.hasOwnChoice(game, steam, "a.steam"))
+        c.chooseForGame(game, steam, other)
+        assertEquals(true, c.hasOwnChoice(game, steam, "a.steam"))
+    }
 }

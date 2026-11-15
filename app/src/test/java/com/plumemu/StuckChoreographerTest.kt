@@ -5,7 +5,8 @@ import android.view.Choreographer
 import androidx.core.view.ViewCompat
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.home.drainMainLooper
-import com.plumemu.secondscreen.StrayFocusCatcher
+import com.plumemu.secondscreen.ControllerHandBack
+import com.plumemu.secondscreen.TopScreen
 import org.junit.After
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -43,13 +44,14 @@ class StuckChoreographerTest {
     }
 
     @Test
-    fun theStrayFocusCatcherStartsAfterAStuckFrame() {
+    fun theTopScreenIsFollowedAfterAStuckFrame() {
         leaveAFrameThatNeverComes()
         unstickMainChoreographer()
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         controller.pause()
         controller.resume()
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(StrayFocusCatcher.DELAY_MS + 50))
-        assertTrue("resumed without the controller: catching", controller.get().strayFocus.isCatching)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ControllerHandBack.RETRY_MS))
+        assertTrue("the card can give the controller back to it", TopScreen.side?.isResumed == true)
+        controller.pause().stop().destroy()
     }
 }

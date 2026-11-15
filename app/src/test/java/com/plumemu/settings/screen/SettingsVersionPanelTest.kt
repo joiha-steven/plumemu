@@ -45,7 +45,7 @@ class SettingsVersionPanelTest {
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite.copy(textSize = textSize)) {
                 geometry = settingsGeometry(PlumTheme.layout)
-                model = remember { SettingsModel(NoActions, optionsAt(SettingsOption.Version)).also { it.content = SettingsContent(platformData = PlatformDataVersion(6, "0".repeat(64), "2026-11-01")) } }
+                model = remember { SettingsModel(NoActions, optionsAt(SettingsOption.Version)).also { it.content = SettingsContent(hasUpdates = false, platformData = PlatformDataVersion(6, "0".repeat(64), "2026-11-01")) } }
                 SettingsLayout(settings, model, NoTouch, TEST_VERSION, clock = { BOARD_CLOCK }, battery = { BOARD_BATTERY })
             }
         }

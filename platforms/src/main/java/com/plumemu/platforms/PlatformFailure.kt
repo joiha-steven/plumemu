@@ -66,7 +66,7 @@ sealed class PlatformFailure(val source: String) {
     }
 }
 
-internal const val SUPPORTED_FORMAT_VERSION = 2
+internal const val SUPPORTED_FORMAT_VERSION = 3
 
 private fun idPart(id: String?) = if (id == null) "" else " (id '$id')"
 

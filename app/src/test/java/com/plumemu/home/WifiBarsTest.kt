@@ -3,11 +3,8 @@ package com.plumemu.home
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.NetworkInfo
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithTag
 import com.plumemu.coreinput.InputRouter
@@ -63,47 +60,30 @@ class WifiBarsTest {
     private fun glyphs() = compose.onAllNodesWithTag(TopBarTags.WIFI, useUnmergedTree = true)
 
     @Test
-    fun mainScreenFollowsShowBattery() {
-        var showBattery by mutableStateOf(false)
+    fun mainScreenAlwaysShowsTheMarkAndListens() {
         compose.setContent {
             PlumTheme {
                 val scope = rememberCoroutineScope()
-                HomeScreen(FakeHomeContent.board(), remember { InputRouter(scope, onDebug = {}) }, HomeCallbacks(), bars = HomeBars(showBattery = showBattery))
+                HomeScreen(FakeHomeContent.board(), remember { InputRouter(scope, onDebug = {}) }, HomeCallbacks())
             }
         }
         compose.waitForIdle()
-        assertEquals("battery off: nothing listens", 0, callbacks())
-        glyphs().assertCountEquals(0)
-        showBattery = true
-        compose.waitForIdle()
-        assertEquals("battery on: listening", 1, callbacks())
+        assertEquals("listening", 1, callbacks())
         glyphs().assertCountEquals(1)
-        showBattery = false
-        compose.waitForIdle()
-        assertEquals("battery switched off while up: unregistered", 0, callbacks())
-        glyphs().assertCountEquals(0)
     }
 
     @Test
-    fun settingsFollowsShowBattery() {
-        var showBattery by mutableStateOf(false)
+    fun settingsShowsTheMarkWhateverIsStoredForShowBattery() {
+        // A stored off (older version, restored backup) is no longer read.
         compose.setContent {
             PlumTheme {
                 val scope = rememberCoroutineScope()
-                val settings = PlumSettings().let { it.copy(homeScreen = it.homeScreen.copy(showBattery = showBattery)) }
+                val settings = PlumSettings().let { it.copy(homeScreen = it.homeScreen.copy(showClock = false, showBattery = false)) }
                 SettingsScreen(settings, remember { InputRouter(scope, onDebug = {}) }, NoActions, versionName = "test")
             }
         }
         compose.waitForIdle()
-        assertEquals("battery off: nothing listens", 0, callbacks())
-        glyphs().assertCountEquals(0)
-        showBattery = true
-        compose.waitForIdle()
         assertEquals(1, callbacks())
         glyphs().assertCountEquals(1)
-        showBattery = false
-        compose.waitForIdle()
-        assertEquals("switched off while up: unregistered", 0, callbacks())
-        glyphs().assertCountEquals(0)
     }
 }

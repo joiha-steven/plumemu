@@ -103,13 +103,13 @@ class HomeDetailsPanelTest {
     @Test
     fun aGameNeverPlayedWithNoRatingOrGenre() {
         show("", null, PlayFacts(null, 0, "Asked on Play"))
-        check(listOf("Played", "Last played", "Emulator"))
+        check(listOf("Played", "Not played yet", "Emulator"))
     }
 
     @Test
     fun aLongGenreBesideTheOtherCells() {
         show("Role Playing Game", 17, PlayFacts(null, 0, "Asked on Play"))
-        check(listOf("Genre", "Rating", "Played", "Last played", "Emulator"))
+        check(listOf("Genre", "Rating", "Played", "Not played yet", "Emulator"))
     }
 
     @Test

@@ -21,6 +21,7 @@ import com.plumemu.coreui.components.GameRowLook
 import com.plumemu.coreui.components.composedAs
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
+import com.plumemu.coreui.theme.WidthClass
 import com.plumemu.coreui.theme.TextSize
 import com.plumemu.identify.name.VariantTag
 
@@ -73,7 +74,10 @@ internal fun GamesListItem(
     val subtitle = remember(resources, row.variantTags, row.variantRegion) { variantSubtitle(resources, row.variantTags, row.variantRegion) }
     // At the narrow details stop only the year of a slid-out row shows: a smaller right inset keeps it whole at every text size.
     // A game card open over the list would cut the year and region by its edge: they are not drawn while it is open (read while drawing).
-    val endHidden = remember(panelOpen) { { panelOpen.value } }
+    // At the narrow details stop the strip shows years only: a region code (a game without a year) is not drawn there. Read while
+    // drawing, so a change of stop recomposes no row.
+    val isNarrow = PlumTheme.layout.widthClass == WidthClass.Narrow
+    val endHidden = remember(panelOpen, state, isNarrow, trailingIsCode) { { panelOpen.value || (isNarrow && trailingIsCode && state.focus.column == Column.Details) } }
     val peekEndPadding = if (PlumTheme.type.textSize == TextSize.Largest) PlumDimens.gameRowPeekEndPaddingLargest else PlumDimens.gameRowPeekEndPadding
     val endPadding = remember(state, peekEndPadding) { { if (state.focus.column == Column.Details) peekEndPadding else PlumDimens.gameRowEndPadding } }
     GameRow(title = row.title, trailing = trailing, look = form.look, modifier = tap, isFavorite = row.isFavorite, drawnLook = drawnLook, subtitle = subtitle, masteredLabel = masteredLabel(row.id), region = columns?.second, endPadding = endPadding, trailingIsCode = trailingIsCode, endHidden = endHidden)

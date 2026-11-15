@@ -110,7 +110,8 @@ class HomeEdgesTest {
 
     @Test
     fun theCoverPreviewStandsCentredInItsColumn() {
-        show(gridActions(PSP_INDEX, 3))
+        // A wide-shaped system: a tall box (the PSP's) stands left with the title beside it, so its slot is not the column's width (HomeDetailsTallBesideTest).
+        show(gridActions(FakeHomeContent.BOARD_SNES_INDEX, 3))
         val column = bounds(HomeTags.DETAILS)
         val cover = bounds(HomeTags.DETAILS_COVER)
         assertEquals("centred", (column.left.value + column.right.value) / 2, (cover.left.value + cover.right.value) / 2, 0.5f)

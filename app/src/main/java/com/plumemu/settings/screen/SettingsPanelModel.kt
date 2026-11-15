@@ -99,7 +99,7 @@ internal abstract class SettingsPanelModel(
         if (direction == Direction.Left && ColorPages.kindOf(page) != null) leaveColourPageToItsRow(page)
     }
 
-    /** Updates' panel: Up and Down walk its items; past the first item, and past the update's last button while the notes run on, they scroll the notes. */
+    /** Version's panel: Up and Down walk its items; past the first item, and past the update's last button while the notes run on, they scroll the notes. */
     private fun moveInUpdatePage(
         direction: Direction,
         settings: PlumSettings,
@@ -164,16 +164,10 @@ internal abstract class SettingsPanelModel(
                 work.chooseEmulator(system.systemId, chosen?.id)
                 closePanel()
             }
-            PanelPage.Confirm -> {
-                closePanel()
-                if (index == SettingsModel.CONFIRM_RESET) {
-                    work.clearRecent()
-                    doneOption = SettingsOption.ClearRecent
-                }
-            }
             PanelPage.Reset -> onResetEnter(ResetPanelItem.entries.getOrNull(index))
             PanelPage.ResetAllConfirm -> onResetConfirmEnter(ResetPanelItem.All, index)
             PanelPage.ResetLibraryConfirm -> onResetConfirmEnter(ResetPanelItem.Library, index)
+            PanelPage.ResetRecentConfirm -> onResetConfirmEnter(ResetPanelItem.Recent, index)
             PanelPage.BackupRestore -> onBackupRestoreEnter(backupRestoreItems(content).getOrNull(index))
             PanelPage.Backup -> onBackupEnter(backupPanelItems(content.backup).getOrNull(index))
             PanelPage.Update -> onUpdateEnter(updatesPanelItems(content.update).getOrNull(index))
@@ -191,7 +185,7 @@ internal abstract class SettingsPanelModel(
                 val presets = ColorPages.presetsOf(ColorPages.kindOf(page) ?: return)
                 moveTo(focus.copy(page = presets, panelIndex = custom.presetCount(presets) - 1))
             }
-            PanelPage.BackgroundPresets, PanelPage.TextPresets -> closeColourPage(page)
+            PanelPage.BackgroundPresets, PanelPage.AccentPresets, PanelPage.TextPresets -> closeColourPage(page)
             PanelPage.LicenseText -> moveTo(focus.copy(page = PanelPage.Licenses, panelIndex = focus.licenseIndex))
             PanelPage.RemoveFolder -> backToFolderPage(FolderPageItem.Remove)
             PanelPage.Folder -> backToFolders()
@@ -208,6 +202,7 @@ internal abstract class SettingsPanelModel(
             PanelPage.Restore -> backToBackupRestore(BackupRestoreItem.Restore)
             PanelPage.ResetAllConfirm -> backToReset(ResetPanelItem.All)
             PanelPage.ResetLibraryConfirm -> backToReset(ResetPanelItem.Library)
+            PanelPage.ResetRecentConfirm -> backToReset(ResetPanelItem.Recent)
             else -> closePanel()
         }
     }
@@ -223,7 +218,7 @@ internal abstract class SettingsPanelModel(
         before: SettingsContent,
         after: SettingsContent,
     ): SettingsFocus? {
-        val rowKept = SettingsListPages.libraryFocusKept(focus, before, after) ?: SettingsListPages.accountsFocusKept(focus, before, after) ?: SettingsListPages.homeScreenFocusKept(focus, before, after)
+        val rowKept = SettingsListPages.libraryFocusKept(focus, before, after) ?: SettingsListPages.accountsFocusKept(focus, before, after)
         // The row under ScreenScraper's form left: the form goes with it, or the next one would open with its words.
         if (rowKept != null && rowKept.page == null && this.focus.page == PanelPage.ScraperSignIn) signIn.close()
         val focus = rowKept ?: focus
@@ -353,9 +348,12 @@ internal abstract class SettingsPanelModel(
             when (item) {
                 ResetPanelItem.All -> PanelPage.ResetAllConfirm
                 ResetPanelItem.Library -> PanelPage.ResetLibraryConfirm
+                ResetPanelItem.Recent -> PanelPage.ResetRecentConfirm
                 null -> return
             }
         doneOption = null
+        // A count from an earlier Clear must not read as the answer to this ask.
+        if (item == ResetPanelItem.Recent && work.notice?.first == SettingsOption.ClearRecent) work.clearNotice()
         moveTo(focus.copy(page = page, panelIndex = SettingsModel.CONFIRM_CANCEL))
     }
 
@@ -374,6 +372,7 @@ internal abstract class SettingsPanelModel(
                 actions.resetAllSettings()
             }
             ResetPanelItem.Library -> actions.resetLibrary()
+            ResetPanelItem.Recent -> work.clearRecent()
         }
         doneOption = item.option
     }
@@ -496,8 +495,8 @@ internal abstract class SettingsPanelModel(
         settings: PlumSettings,
         geometry: SettingsGeometry,
     ) {
-        val count = option.choiceCount(settings, content.sortValues)
-        val raw = option.choiceIndex(settings, geometry.defaultTextSize, content.sortValues) + step
+        val count = option.choiceCount(settings)
+        val raw = option.choiceIndex(settings, geometry.defaultTextSize) + step
         // At the end of a list a press changes nothing, and says nothing. The Sounds row is silent itself: Off must not
         // click, and the screen plays one confirm at the new volume once the level is stored (SettingsScreen).
         if (option == SettingsOption.Sounds) {
@@ -509,10 +508,10 @@ internal abstract class SettingsPanelModel(
         if (option == SettingsOption.Colors) custom.forgetWritten()
         // From the stored value inside the write: presses faster than the store answers each count.
         actions.update { stored ->
-            val raw = option.choiceIndex(stored, geometry.defaultTextSize, content.sortValues) + step
+            val raw = option.choiceIndex(stored, geometry.defaultTextSize) + step
             // Colors has one value more while there is a custom look: count what is stored too.
-            val storedCount = option.choiceCount(stored, content.sortValues)
-            option.withChoice(stored, if (wrap) Math.floorMod(raw, storedCount) else raw.coerceIn(0, storedCount - 1), content.sortValues)
+            val storedCount = option.choiceCount(stored)
+            option.withChoice(stored, if (wrap) Math.floorMod(raw, storedCount) else raw.coerceIn(0, storedCount - 1))
         }
     }
 
@@ -595,4 +594,4 @@ internal fun PlumSettings.withManualSystems(arranged: List<String>): PlumSetting
     copy(library = library.copy(systemOrder = SystemOrderSetting.Manual, manualSystemOrder = SystemOrder.manualAfterMove(arranged, library.manualSystemOrder)))
 
 /** Pages of two buttons in one row of [PanelGrid]. */
-private val TWO_BUTTON_PAGES = setOf(PanelPage.Confirm, PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm, PanelPage.RemoveFolder)
+private val TWO_BUTTON_PAGES = setOf(PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm, PanelPage.ResetRecentConfirm, PanelPage.RemoveFolder)

@@ -179,8 +179,9 @@ abstract class PinnedShortcutDao {
          * SQL, in a query that names `game`: the row is not a pinned shortcut the box-art run skips.
          * A shortcut filed under a system ScreenScraper finds by name only (`steam`: DroidDeck's
          * games) is asked like a `.steam` file; shortcuts of other systems are not.
-         * The list mirrors `SystemIds.NAME_ONLY` in the scraper module, which core-data cannot see;
-         * `ShortcutScrapeTest` in library fails when the two differ.
+         * Narrower than `SystemIds.NAME_ONLY` in the scraper module (which core-data cannot see):
+         * Windows and Epic shortcuts stay skipped. `ShortcutScrapeTest` in library
+         * fails when this list changes.
          */
         const val NOT_SKIPPED_BY_BOX_ART = "(" + NOT_SHORTCUT_GAME + " OR game.system_id IN ('steam'))"
 

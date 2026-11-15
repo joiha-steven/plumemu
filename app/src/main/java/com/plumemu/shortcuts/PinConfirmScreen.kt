@@ -1,6 +1,5 @@
 package com.plumemu.shortcuts
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +33,7 @@ import com.plumemu.coreinput.hint
 import com.plumemu.coreinput.tapItem
 import com.plumemu.coreui.components.Hint
 import com.plumemu.coreui.components.HintBar
+import com.plumemu.coreui.components.pageBackground
 import com.plumemu.coreui.components.PanelTitleWithDot
 import com.plumemu.coreui.components.raisedCard
 import com.plumemu.coreui.theme.PlumDimens
@@ -80,7 +80,7 @@ internal fun PinConfirmLayout(
     Column(
         Modifier
             .fillMaxSize()
-            .background(colors.bg.copy(alpha = SCRIM_ALPHA))
+            .pageBackground(alpha = SCRIM_ALPHA)
             // Taps outside the panel land here, not on the app underneath.
             .pointerInput(Unit) { detectTapGestures { } }
             .padding(top = PlumDimens.stripMarginTop + PlumTheme.layout.topBarHeight + PlumDimens.barGap, bottom = PlumDimens.footerBelow)
@@ -111,7 +111,7 @@ internal fun PinConfirmLayout(
             }
         }
         Spacer(Modifier.height(PlumDimens.footerGap))
-        HintBar(Modifier.background(colors.bg)) {
+        HintBar(Modifier.pageBackground()) {
             Hint(
                 keyCap = stringResource(letters.confirm),
                 label = stringResource(if (isAsking) R.string.pin_hint_select else R.string.pin_ok),

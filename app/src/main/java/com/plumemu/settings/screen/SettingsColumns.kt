@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
+import com.plumemu.coreui.components.pageBackground
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.SettingsThreeDimens
 import com.plumemu.coreui.theme.PlumLayout
@@ -62,7 +63,6 @@ internal fun BoxScope.ThreeColumnPanel(
     content: @Composable () -> Unit,
 ) {
     val layout = PlumTheme.layout
-    val colors = PlumTheme.colors
     val isWide = model.focus.isWidePage()
     val width = if (isWide) layout.settingsOptionsWidth + SettingsThreeDimens.panelGap + SettingsThreeDimens.panelWidth else SettingsThreeDimens.panelWidth
     Box(
@@ -72,7 +72,7 @@ internal fun BoxScope.ThreeColumnPanel(
             .width(width)
             .fillMaxHeight()
             .clipPanel()
-            .then(if (isWide) Modifier.drawBehind { drawRect(colors.bg) }.pointerInput(Unit) {} else Modifier)
+            .then(if (isWide) Modifier.pageBackground().pointerInput(Unit) {} else Modifier)
             .testTag(SettingsTags.PANEL),
     ) {
         content()

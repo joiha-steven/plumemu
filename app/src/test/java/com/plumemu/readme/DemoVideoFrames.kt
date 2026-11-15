@@ -158,7 +158,7 @@ class DemoVideoFrames {
         var pageRows = 6
         compose.setContent {
             CompositionLocalProvider(LocalGlideClock provides { compose.mainClock.currentTime * 1_000_000L }) {
-                PlumTheme(settings(ColorSet.SpiceCube).toThemeSettings()) {
+                PlumTheme(settings(ColorSet.Plumemu).toThemeSettings()) {
                     val bgNow = PlumTheme.colors.bg.value
                     val accentNow = PlumTheme.colors.accent.value
                     val rowsNow = PlumTheme.layout.listRowsThatFit
@@ -279,7 +279,7 @@ class DemoVideoFrames {
         lateinit var state: StripState
         compose.setContent {
             CompositionLocalProvider(LocalGlideClock provides { compose.mainClock.currentTime * 1_000_000L }) {
-                PlumTheme(settings(ColorSet.ColdGrey).toThemeSettings()) {
+                PlumTheme(settings(ColorSet.ClearGrape).toThemeSettings()) {
                     val bgNow = PlumTheme.colors.bg.value
                     val accentNow = PlumTheme.colors.accent.value
                     SideEffect { take.colours = "$bgNow $accentNow" }
@@ -311,7 +311,7 @@ class DemoVideoFrames {
         val take = Take("settings")
         begin()
         var focus by mutableStateOf(optionsAt(SettingsOption.Colors))
-        var set by mutableStateOf(ColorSet.SpiceCube)
+        var set by mutableStateOf(ColorSet.Plumemu)
         compose.setContent {
             CompositionLocalProvider(LocalGlideClock provides { compose.mainClock.currentTime * 1_000_000L }) {
                 val s = settings(set)
@@ -336,7 +336,7 @@ class DemoVideoFrames {
             val next = ColorSet.entries[set.ordinal + 1]
             take.press("RIGHT", "move", 0.75) { set = next; focus = panelAt(SettingsOption.Colors, PanelPage.ColorSets, next.ordinal) }
         }
-        take.press("LEFT", "move", 0.75) { set = ColorSet.Banana; focus = panelAt(SettingsOption.Colors, PanelPage.ColorSets, set.ordinal) }
+        take.press("LEFT", "move", 0.75) { set = ColorSet.entries[set.ordinal - 1]; focus = panelAt(SettingsOption.Colors, PanelPage.ColorSets, set.ordinal) }
         take.press("B", "back", 0.7) { focus = optionsAt(SettingsOption.Colors) }
         take.seconds(0.2)
         take.finish()
@@ -349,7 +349,7 @@ class DemoVideoFrames {
         lateinit var state: StripState
         compose.setContent {
             CompositionLocalProvider(LocalGlideClock provides { compose.mainClock.currentTime * 1_000_000L }) {
-                PlumTheme(settings(ColorSet.Banana).toThemeSettings()) {
+                PlumTheme(settings(ColorSet.Magenta).toThemeSettings()) {
                     val bgNow = PlumTheme.colors.bg.value
                     val accentNow = PlumTheme.colors.accent.value
                     SideEffect { take.colours = "$bgNow $accentNow" }

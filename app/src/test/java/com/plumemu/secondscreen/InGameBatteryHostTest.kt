@@ -163,16 +163,16 @@ class InGameBatteryHostTest : SecondScreenHostTestBase() {
     }
 
     @Test
-    fun showBatteryOffIsTheClockCardAloneAsBefore() {
+    fun aStoredShowBatteryOffIsNoLongerReadAndThePartShows() {
         noteAlreadyShown()
-        settings.value = settings.value!!.let { it.copy(homeScreen = it.homeScreen.copy(showBattery = false)) }
+        showBattery(false)
         val host = startHost(battery = reads)
         startAGame()
         idle(5_000)
         val tags = shownTags(host)
         assertTrue(tags.contains(InGameTags.BLOCK))
-        assertFalse("no part, no note: $tags", tags.any { it.startsWith("in_game_battery_") })
-        assertEquals("nothing read", 0, fixed.reads)
+        assertTrue("the part shows: $tags", tags.contains(InGameBatteryTags.CHART))
+        assertTrue("the meter is read", fixed.reads > 0)
     }
 
     @Test
@@ -247,15 +247,12 @@ class InGameBatteryHostTest : SecondScreenHostTestBase() {
     }
 
     @Test
-    fun inGameBuildsNoThemeObserverWithShowBatteryOffOrOn() {
+    fun inGameBuildsNoThemeObserverForThePart() {
         noteAlreadyShown()
         val before = animatorScaleObservers()
         startHost(battery = reads)
         assertEquals("picking is themed (the check sees the observer)", before + 1, animatorScaleObservers())
-        showBattery(false)
         startAGame()
-        assertEquals("Show battery off: the clock card alone, no theme", before, animatorScaleObservers())
-        showBattery(true)
         idle(2_000)
         assertTrue(shownTags(host!!).contains(InGameBatteryTags.CHART))
         assertEquals("the part takes the person's type only", before, animatorScaleObservers())

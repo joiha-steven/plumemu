@@ -31,7 +31,7 @@ class LibraryPlayFactsTest {
     private val now = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 12); set(Calendar.MINUTE, 0) }.timeInMillis
     private val snes9x = EmulatorToStart("Snes9x", isInstalled = true)
     private val asked = mutableListOf<Long>()
-    private val facts = LibraryPlayFacts(plays = { db.playDao() }, games = { db.gameDao() }, emulatorOf = { asked += it; snes9x }, now = { now })
+    private val facts = LibraryPlayFacts(plays = { db.playDao() }, games = { db.gameDao() }, emulatorOf = { asked += it; EmulatorRead(snes9x) }, now = { now })
     private lateinit var ids: Map<String, Long>
 
     private fun daysBack(days: Int): Long = Calendar.getInstance().apply { timeInMillis = now; add(Calendar.DAY_OF_YEAR, -days) }.timeInMillis
@@ -74,14 +74,14 @@ class LibraryPlayFactsTest {
     fun aPlayedGameGetsItsDaysWholeMinutesAndTheEmulatorPlayWouldStart() =
         runBlocking {
             val metroid = ids.getValue("Super Metroid")
-            assertEquals(GamePlay(lastPlayedDaysAgo = 2, playTimeMinutes = 252, emulator = snes9x), facts.read(metroid))
+            assertEquals(GamePlay(lastPlayedDaysAgo = 2, playTimeMinutes = 252, emulator = snes9x, hasOwnEmulator = false), facts.read(metroid))
             assertEquals("the emulator asked for this game", listOf(metroid), asked)
         }
 
     @Test
     fun theUsualBatteryPaceComesWithThePlayFacts() =
         runBlocking {
-            val withPace = LibraryPlayFacts(plays = { db.playDao() }, games = { db.gameDao() }, emulatorOf = { snes9x }, paceOf = { com.plumemu.battery.BatteryPace(minutesOnCharge = 120.0, percentPerHour = 30.0) }, now = { now })
+            val withPace = LibraryPlayFacts(plays = { db.playDao() }, games = { db.gameDao() }, emulatorOf = { EmulatorRead(snes9x) }, paceOf = { com.plumemu.battery.BatteryPace(minutesOnCharge = 120.0, percentPerHour = 30.0) }, now = { now })
             assertEquals(com.plumemu.battery.BatteryPace(minutesOnCharge = 120.0, percentPerHour = 30.0), withPace.read(ids.getValue("Super Metroid"))?.batteryPace)
             assertEquals("none by default", null, facts.read(ids.getValue("Super Metroid"))?.batteryPace)
         }
@@ -89,13 +89,21 @@ class LibraryPlayFactsTest {
     @Test
     fun aGameNeverPlayedReadsAsNeverPlayedWithNoTime() =
         runBlocking {
-            assertEquals(GamePlay(lastPlayedDaysAgo = null, playTimeMinutes = 0, emulator = snes9x), facts.read(ids.getValue("Zelda")))
+            assertEquals(GamePlay(lastPlayedDaysAgo = null, playTimeMinutes = 0, emulator = snes9x, hasOwnEmulator = false), facts.read(ids.getValue("Zelda")))
+        }
+
+    @Test
+    fun aGameWithItsOwnEmulatorChoiceSaysSo() =
+        runBlocking {
+            val own = LibraryPlayFacts(plays = { db.playDao() }, games = { db.gameDao() }, emulatorOf = { EmulatorRead(snes9x, isOwn = true) }, now = { now })
+            assertEquals(true, own.read(ids.getValue("Zelda"))?.hasOwnEmulator)
+            assertEquals("not by default", false, facts.read(ids.getValue("Zelda"))?.hasOwnEmulator)
         }
 
     @Test
     fun noEmulatorInstalledIsNullForTheScreenToWordAsNoneInstalled() =
         runBlocking {
-            val none = LibraryPlayFacts(plays = { db.playDao() }, games = { db.gameDao() }, emulatorOf = { null }, now = { now })
+            val none = LibraryPlayFacts(plays = { db.playDao() }, games = { db.gameDao() }, emulatorOf = { EmulatorRead(null) }, now = { now })
             assertEquals(null, none.read(ids.getValue("Zelda"))?.emulator)
         }
 

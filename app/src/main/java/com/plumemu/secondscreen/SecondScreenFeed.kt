@@ -1,6 +1,8 @@
 package com.plumemu.secondscreen
 
+import android.os.Looper
 import android.util.Log
+import android.view.Choreographer
 import com.plumemu.coreui.theme.PlumMotion
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
  * What the second screen's window shows, handed from the top screen's effects to the window's
@@ -31,6 +34,8 @@ import kotlinx.coroutines.launch
  * The first card after the window shows (cold start, wake, back from a game) skips the settle:
  * nothing moves then, so it is read at once; a move meanwhile cancels it and settles as usual. The
  * same card offered again while it waits keeps its wait, and is read once more after the settle.
+ * A card is published one frame after its read ends ([nextFrame]), so it never lands in the frame
+ * the top screen's own page change lands in.
  */
 internal class SecondScreenFeed(
     private val scope: CoroutineScope,
@@ -38,6 +43,8 @@ internal class SecondScreenFeed(
     private val facts: (suspend (SecondScreenContent) -> SecondScreenContent?)? = null,
     private val io: CoroutineDispatcher = Dispatchers.IO,
     private val warn: (String) -> Unit = { Log.w(SecondScreenHost.TAG, it) },
+    /** Returns at the start of the next frame; a settled card is published then, never in the frame the settle ended in. */
+    private val nextFrame: suspend () -> Unit = ::nextChoreographerFrame,
 ) {
     private val shown = MutableStateFlow<SecondScreenContent>(SecondScreenContent.Calm)
     private val following = MutableStateFlow(false)
@@ -126,7 +133,7 @@ internal class SecondScreenFeed(
         val isSameOffer = shownFrom == next
         shownFrom = next
         if (read == null) {
-            if (!isSameOffer) shown.value = next.withKnownFactsOf(shown.value)
+            if (!isSameOffer) publish(next.withKnownFactsOf(shown.value))
             return
         }
         coroutineScope {
@@ -147,12 +154,18 @@ internal class SecondScreenFeed(
             val quick = withTimeoutOrNull(FILL_WAIT_MS) { answer.await() }
             if (quick != null) {
                 val filled = quick.content
-                if (filled != null) shown.value = filled else if (!isSameOffer) shown.value = next.withKnownFactsOf(shown.value)
+                if (filled != null) publish(filled) else if (!isSameOffer) publish(next.withKnownFactsOf(shown.value))
             } else {
-                if (!isSameOffer) shown.value = next.withKnownFactsOf(shown.value)
-                answer.await().content?.let { shown.value = it }
+                if (!isSameOffer) publish(next.withKnownFactsOf(shown.value))
+                answer.await().content?.let { publish(it) }
             }
         }
+    }
+
+    /** Hands [card] to the window one frame after now (a move or a cancel in that frame drops it). */
+    private suspend fun publish(card: SecondScreenContent) {
+        nextFrame()
+        shown.value = card
     }
 
     /** [this] with [previous]'s play facts when both are the same game or list (by its play key) and they were read. */
@@ -196,5 +209,16 @@ internal class SecondScreenFeed(
          * the card changing twice a game would flicker on a screen the person watches at rest.
          */
         const val FILL_WAIT_MS = 100L
+    }
+}
+
+/** Waits for the next frame of the main thread's Choreographer; at once off a looper thread. */
+private suspend fun nextChoreographerFrame() {
+    if (Looper.myLooper() == null) return
+    suspendCancellableCoroutine { continuation ->
+        val choreographer = Choreographer.getInstance()
+        val callback = Choreographer.FrameCallback { continuation.resume(Unit) {} }
+        choreographer.postFrameCallback(callback)
+        continuation.invokeOnCancellation { choreographer.removeFrameCallback(callback) }
     }
 }

@@ -7,10 +7,11 @@ import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SecondScreenSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -79,42 +80,17 @@ internal fun isSecondScreenOn(
 ): Boolean = screen != null && (settings.enabled ?: (screen.kind == ScreenKind.BuiltIn))
 
 /**
- * The band over a system's games list is off by default where a second screen is in use, because the
- * system's card there shows the same facts. [settings] with that choice written once:
- * only while the person never set the switch ([com.plumemu.coredata.settings.HomeScreenSettings.showSystemInfo]
- * null) and the second screen is on; a stored value, either way, is never touched. Written, not
- * derived, so the choice stays if the display is missing at a later start; with the second screen
- * off the band stays on (nothing else shows the facts).
+ * Whether the second screen is in use, as a flow: [isSecondScreenOn] of the stored choice and the
+ * screen now. The home band over a system's games list follows it (off while in use, because the
+ * system's card there shows the same facts). Derived, never stored: turning the second screen off
+ * brings the band back at once.
  */
-internal fun withSystemInfoDecided(
-    settings: PlumSettings,
-    screen: SecondScreen?,
-): PlumSettings =
-    if (settings.homeScreen.showSystemInfo == null && isSecondScreenOn(settings.secondScreen, screen)) {
-        settings.copy(homeScreen = settings.homeScreen.copy(showSystemInfo = false))
-    } else {
-        settings
-    }
-
-/**
- * Follows the settings and the second screen in [scope] for the Activity's life, and each time
- * [withSystemInfoDecided] has something to change (the first start, and again after Reset all
- * settings or a backup without the value) asks [write] to apply it. The transform re-checks against
- * the stored value, so a value the person sets while the write is pending wins; after the write the
- * value is no longer null, so nothing loops.
- */
-internal fun decideSystemInfoOnce(
-    scope: CoroutineScope,
+internal fun secondScreenInUse(
     screens: StateFlow<SecondScreen?>,
-    settings: StateFlow<PlumSettings?>,
-    write: ((PlumSettings) -> PlumSettings) -> Unit,
-) {
-    scope.launch {
-        combine(screens, settings.filterNotNull(), ::Pair)
-            .filter { (screen, now) -> withSystemInfoDecided(now, screen) !== now }
-            .collect { write { stored -> withSystemInfoDecided(stored, screens.value) } }
-    }
-}
+    settings: Flow<PlumSettings?>,
+): Flow<Boolean> =
+    combine(screens, settings.filterNotNull()) { screen, stored -> isSecondScreenOn(stored.secondScreen, screen) }
+        .distinctUntilChanged()
 
 /** Where the displays come from: Android's `DisplayManager`, or a fake in tests. Called on the main thread. */
 internal interface DisplaySource {
@@ -155,14 +131,15 @@ internal class SecondScreenDisplays(
         if (isListening) recompute() else noScreenWithoutListener()
     }
 
-    /** [start], and the home band's off-with-a-second-screen choice ([decideSystemInfoOnce]). */
-    fun startAndDecideSystemInfo(
+    /** [start], and [secondScreenInUse] kept in [into] for the Activity's life (the home band follows it), each change also told to [onChange] (the cache of the next start). */
+    fun startAndFollowInUse(
         scope: CoroutineScope,
-        settings: StateFlow<PlumSettings?>,
-        write: ((PlumSettings) -> PlumSettings) -> Unit,
+        settings: Flow<PlumSettings?>,
+        into: MutableStateFlow<Boolean>,
+        onChange: (Boolean) -> Unit = {},
     ) {
         start()
-        decideSystemInfoOnce(scope, current, settings, write)
+        scope.launch { secondScreenInUse(current, settings).collect { into.value = it; onChange(it) } }
     }
 
     fun stop() {

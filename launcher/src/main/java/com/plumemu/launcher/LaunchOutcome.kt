@@ -112,8 +112,8 @@ sealed interface LaunchOutcome {
     data class BadTitleIdFile(override val gameId: Long, val fileName: String, val problem: TitleIdProblem) : LaunchOutcome
 
     /**
-     * A Steam game is a small `.steam` text file holding the game's Steam app id (274190), ES-DE's
-     * convention, and this one does not. [fileName] is for the message on screen only; never logged.
+     * A store game is a small text file (`.steam`, or GameNative's `.epic`, `.gog`, `.amazon`, `.pcgame`) holding the
+     * game's numeric id (274190), ES-DE's convention, and this one does not. [fileName] is for the message on screen only; never logged.
      */
     data class BadSteamAppIdFile(override val gameId: Long, val fileName: String, val problem: SteamAppIdProblem) : LaunchOutcome
 

@@ -88,9 +88,8 @@ class SettingsPanelTextLineTest {
                 optionsAt(SettingsOption.PushRightToPlay) to listOf("Push right twice to play"),
                 panelAt(SettingsOption.Background, PanelPage.BackgroundPresets, 0) to listOf("Background", "Graphite"),
                 // The Accent page names the focused accent under the swatches, like Background and Text color.
-                optionsAt(SettingsOption.Accent) to listOf("Red"),
-                optionsAt(SettingsOption.Version) to listOf("Plumemu", "Version 0.0.2-alpha"),
-                SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1)) to
+                panelAt(SettingsOption.Accent, PanelPage.AccentPresets, com.plumemu.coreui.theme.AccentPreset.Red.ordinal) to listOf("Red"),
+                optionsAt(SettingsOption.Version) to
                     // A note's text hangs one indent past the line, after its dot (SettingsUpdateNotesAlignTest).
                     listOf(if (size == com.plumemu.coreui.theme.TextSize.Small) "Plumemu 0.0.2-alpha → 0.0.3-alpha" else "0.0.2-alpha → 0.0.3-alpha"),
             )
@@ -109,7 +108,7 @@ class SettingsPanelTextLineTest {
     @Test
     fun theUpdateNotesHeadingStartsOnTheColumnsLeftEdgeInThreeColumns() {
         val grouped = SettingsContent(update = UpdateView(lastCheck = LastCheck(1, CheckOutcome.Found), found = release.copy(sections = listOf(NoteSection(SectionKind.New, listOf("One."))))))
-        val inPanel = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1), page = PanelPage.Update)
+        val inPanel = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 0), page = PanelPage.Update)
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { SettingsAt(inPanel, content = grouped) } }
         val inset = bounds(SettingsTags.UPDATE_HEADING).left.value - bounds(SettingsTags.PANEL).left.value
         assertTrue("heading starts $inset in, not on the column's left edge", kotlin.math.abs(inset) <= TOLERANCE)
@@ -117,7 +116,7 @@ class SettingsPanelTextLineTest {
 
     @Test
     fun theUpdateButtonStartsOnThePanelsEdgeLikeSignIn() {
-        val inPanel = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1), page = PanelPage.Update)
+        val inPanel = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 0), page = PanelPage.Update)
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { SettingsAt(inPanel, content = withUpdate) } }
         val edge = bounds(SettingsTags.PANEL).left.value
         val update = bounds(SettingsTags.panelItem(0)).left.value
@@ -134,7 +133,7 @@ class SettingsPanelTextLineTest {
 
     @Test
     fun theReleasedLineIsQuieterThanTheNotes() {
-        val inPanel = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 1), page = PanelPage.Update)
+        val inPanel = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 0), page = PanelPage.Update)
         var colors: com.plumemu.coreui.theme.PlumComposeColors? = null
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite) {

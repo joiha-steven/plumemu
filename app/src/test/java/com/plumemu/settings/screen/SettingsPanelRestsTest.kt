@@ -286,14 +286,14 @@ class SettingsPanelRestsTest {
     fun confirmResetLibrarysTextComesBackByGamepad() = confirmBodyComesBackOnUp(SettingsOption.ResetLibrary, PanelPage.ResetLibraryConfirm, R.string.settings_reset_library_body)
 
     @Test
-    fun confirmClearRecentsTextComesBackByGamepad() = confirmBodyComesBackOnUp(SettingsOption.ClearRecent, PanelPage.Confirm, R.string.settings_clear_recent_body)
+    fun confirmClearRecentsTextComesBackByGamepad() = confirmBodyComesBackOnUp(SettingsOption.ClearRecent, PanelPage.ResetRecentConfirm, R.string.settings_clear_recent_body)
 
     private fun aboutTop() = compose.onNode(hasText(RuntimeEnvironment.getApplication().getString(R.string.app_name)) and hasAnyAncestor(hasTestTag(SettingsPanelTags.ABOUT)), useUnmergedTree = true).getUnclippedBoundsInRoot().top
 
     @Test
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
     fun aboutsUpAlwaysMoves() {
-        val content = SettingsContent(platformData = PlatformDataVersion(6, "0".repeat(64), "2026-11-01"))
+        val content = SettingsContent(hasUpdates = false, platformData = PlatformDataVersion(6, "0".repeat(64), "2026-11-01"))
         panel(optionsAt(SettingsOption.Version), content, PlumFont.Jost)
         key(Direction.Right)
         assertEquals("Right enters the panel", PanelPage.ReadOnly, model.focus.page)

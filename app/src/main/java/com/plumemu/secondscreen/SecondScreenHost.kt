@@ -5,39 +5,20 @@ import com.plumemu.coreui.theme.ProvidePlumMotion
 import com.plumemu.coreui.theme.fadingIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
-import android.app.Dialog
-import android.app.Presentation
 import android.content.Context
-import android.graphics.drawable.ColorDrawable
 import android.hardware.display.DisplayManager
-import android.os.Bundle
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.util.DisplayMetrics
 import android.util.Log
-import android.view.Display
-import android.view.WindowManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.ComposeView
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.savedstate.SavedStateRegistry
-import androidx.savedstate.SavedStateRegistryController
-import androidx.savedstate.SavedStateRegistryOwner
-import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.plumemu.battery.BatteryPaceNow
 import com.plumemu.battery.LocalBatteryPaceNow
 import com.plumemu.coredata.settings.PlumSettings
-import com.plumemu.language.AppLocale
 import com.plumemu.coreui.theme.InGameColors
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.theme.SecondScreenDimens
 import com.plumemu.home.HomeAppIcons
 import com.plumemu.home.LocalHomeAppIcons
@@ -56,20 +37,22 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.getValue
+
 
 /**
- * The second screen's window: one [Presentation] on
- * the chosen display while there is a second screen and it is on ([isSecondScreenOn]), showing
- * [feed]'s content in the stored theme. Never an Activity on that display (research: an ANR).
+ * The second screen's card: [SecondScreenCardActivity] on the chosen display while there is a
+ * second screen and it is on ([isSecondScreenOn]), showing [feed]'s content in the stored theme.
  * Owned by `MainActivity`: [start] after its first content frame, [stop] in its `onDestroy`. Main
  * thread only.
  *
- * Its mode follows [presence]: the picking cards while Plumemu is
- * visible, the In game setting (the clock card or black) while a game or an app Plumemu started
- * runs, and no window when Plumemu was left any other way.
+ * Its mode follows [presence]: the picking cards while Plumemu is visible, the In game setting
+ * (the clock card or black) while a game or an app Plumemu started runs, and nothing of Plumemu's
+ * when Plumemu was left any other way: the card is closed then, or drawn blank while it is the
+ * bottom display's home ([SecondScreenHome]), which Android would only bring back.
  */
 internal class SecondScreenHost(
-    /** The Activity: the window belongs to it. */
+    /** The Activity: it starts the card. */
     private val context: Context,
     /** The Activity's scope (main thread); cancelled when it is destroyed. */
     private val scope: CoroutineScope,
@@ -78,9 +61,9 @@ internal class SecondScreenHost(
     private val feed: SecondScreenFeed,
     /** Whether Plumemu is visible, playing, or left ([SecondScreenPresence.current]). */
     private val presence: StateFlow<Presence>,
-    /** What the window paints before its first frame: the cached background of the top screen. */
+    /** What the card paints before its first frame: the cached background of the top screen. */
     private val backgroundArgb: Int,
-    /** Benchmark builds asked to measure the window on a screen that is off by default (the emulator's overlay). */
+    /** Benchmark builds asked to measure the card on a screen that is off by default (the emulator's overlay). */
     private val forcedOn: Boolean = false,
     /** Decodes the box art the picking card shows; none: cards without art. */
     private val images: CoverImages = CoverImages.None,
@@ -88,18 +71,18 @@ internal class SecondScreenHost(
     private val badges: BadgeImages = BadgeImages.None,
     /** Android's icons for the card of an app game; none: the stand-in letter. */
     private val appIcons: HomeAppIcons = HomeAppIcons.None,
-    /** `Dialog.show`; a test makes it throw. */
-    private val showWindow: (Dialog) -> Unit = Dialog::show,
+    /** Starts the card on a display ([startSecondScreenCard]); a test makes it throw or builds the activity itself. */
+    private val startCard: (displayId: Int) -> Unit = { startSecondScreenCard(context, it) },
+    /** Whether the card is the bottom display's home; null: never (tests that do not need it). */
+    private val home: SecondScreenHome? = null,
     /** The in-game clock's time source; a test passes its own. */
     private val clock: () -> Long = System::currentTimeMillis,
-    /** Reads the battery while the in-game card is up with Show battery on; none: no reads. */
+    /** Reads the battery while the in-game card is up; none: no reads. */
     private val battery: BatteryReads = BatteryReads.None,
     /** Works the picking line's figures out again when the battery changes; null: the line keeps those read with the facts. */
     private val paceNow: BatteryPaceNow? = null,
     /** The in-game card's once-ever drift note started showing: stores `flags.in_game_drift_note_shown`. */
     private val onDriftNoteShown: () -> Unit = {},
-    /** The key focus landed on the window while [catchesStrayFocus]: the top screen takes the controller back. */
-    private val onStrayFocus: () -> Unit = {},
     /** The system last viewed on the top screen, for Accent color › By system; null: the fallback accent. */
     private val viewedSystem: ViewedSystem? = null,
     private val info: (String) -> Unit = { Log.i(TAG, it) },
@@ -108,7 +91,14 @@ internal class SecondScreenHost(
     private val mainHandler = Handler(Looper.getMainLooper())
     private var following: Job? = null
     private var wanted: Want = Want(null, "not started")
-    private var window: SecondScreenWindow? = null
+
+    /** The display this host shows the card on (it holds the card); null while it shows none. */
+    private var shownOn: Int? = null
+
+    private val goneListener: (String) -> Unit = { onCardGone(it) }
+
+    /** Cards that went without Plumemu closing them since the wanted state last changed. */
+    private var losses = 0
 
     /** Tries again once the quick tries are used up. */
     private val late =
@@ -117,37 +107,24 @@ internal class SecondScreenHost(
             mainHandler,
             warn,
             LATE_RETRY_MS,
-            isWanted = { displayId -> following != null && window == null && wanted.displayId == displayId },
+            isWanted = { displayId -> following != null && shownOn == null && wanted.displayId == displayId },
             tryNow = { displayId -> show(displayId, wanted.reason, SHOW_ATTEMPTS) },
         )
 
-    /** What the window draws; the window's composition reads it. */
+    /** What the card draws; the card's composition reads it. */
     private val mode = MutableStateFlow(WindowMode.Picking)
 
-    /** The mode the shown window was last logged in (one line per change while it is up). */
+    /** The mode the shown card was last logged in (one line per change while it is up). */
     private var loggedMode: WindowMode? = null
 
-    /** What the window draws now, for tests. */
-    internal val shownMode: WindowMode? get() = if (window != null) mode.value else null
+    /** What the card draws now, for tests. */
+    internal val shownMode: WindowMode? get() = if (shownOn != null) mode.value else null
 
-    /** The display the window is on now; null without one. */
-    val shownDisplayId: Int? get() = window?.displayId
+    /** The display the card is shown on now; null without one. */
+    val shownDisplayId: Int? get() = shownOn
 
-    /** The window, for tests (flags, lifecycle). */
-    internal val shownWindow: Dialog? get() = window
-
-    /**
-     * While true the window may take the key focus, so that a focus another app left on its display
-     * lands here and goes to [onStrayFocus]. `MainActivity` sets it while it stays resumed but is no longer the top resumed activity:
-     * the bottom display took the controller (a tap on the AYN panel there). False otherwise: never
-     * focusable while Plumemu has the controller or is in the background.
-     */
-    var catchesStrayFocus: Boolean = false
-        set(value) {
-            if (field == value) return
-            field = value
-            window?.setFocusable(value)
-        }
+    /** The live card while this host shows it, for tests. */
+    internal val shownWindow: SecondScreenCardActivity? get() = if (shownOn != null) CardInstances.live?.takeIf { cardHolder.value === this } else null
 
     /** Follows the screen and the switch until [stop]. */
     fun start() {
@@ -155,33 +132,38 @@ internal class SecondScreenHost(
         following =
             scope.launch {
                 val claimed = presence.onEach { if (it == Presence.InPlumemu) activityInFront.value = this@SecondScreenHost }
-                combine(screens, settings, windowHolder, claimed, activityInFront) { screen, stored, holder, where, inFront ->
+                combine(screens, settings, cardHolder, claimed, activityInFront) { screen, stored, holder, where, inFront ->
+                    // The home check is asked again on each change, so also each time Plumemu comes back to the front.
+                    home?.update(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && stored != null && isSecondScreenOn(stored.secondScreen, screen))
                     when {
                         // Home makes a second Activity beside one opened from an icon, and the first is never destroyed: it must let go.
-                        where != Presence.InPlumemu && inFront != null && inFront !== this@SecondScreenHost -> Want(null, "another activity is in front")
-                        // That window is still up: not a reason to bring the top screen's column back.
-                        holder != null && holder !== this@SecondScreenHost -> Want(null, "another activity's window is up")
+                        where != Presence.InPlumemu && inFront != null && inFront !== this@SecondScreenHost -> Want(null, "another activity is in front", keepsCard = true)
+                        // That card is still held: not a reason to bring the top screen's column back.
+                        holder != null && holder !== this@SecondScreenHost -> Want(null, "another activity's card is up", keepsCard = true)
                         else -> wantFor(screen, stored, where)
                     }
                 }
                     .distinctUntilChanged()
                     .collect { want ->
                         wanted = want
+                        losses = 0
                         mode.value = want.mode
-                        sync(want.reason)
+                        sync(want)
                         followIfPicking()
                     }
             }
+        CardInstances.onGone = goneListener
     }
 
-    /** The Activity is going: the window goes with it. */
+    /** The Activity is going: the card goes with it, or stays blank while it is the bottom display's home. */
     fun stop() {
         following?.cancel()
         following = null
         if (activityInFront.value === this) activityInFront.value = null
-        wanted = Want(null, "activity destroyed")
+        if (CardInstances.onGone === goneListener) CardInstances.onGone = null
+        wanted = Want(null, "activity destroyed", keepsCard = true)
         late.stop()
-        sync("activity destroyed")
+        sync(wanted)
     }
 
     private fun wantFor(
@@ -193,25 +175,28 @@ internal class SecondScreenHost(
             when {
                 screen == null -> return Want(null, "no second screen")
                 stored == null -> return Want(null, "settings not read yet")
+                // Before Android 10 one activity is resumed at a time: starting the card would pause MainActivity, and the
+                // card could never give the controller back. No card there: the bottom screen shows nothing of Plumemu's.
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.Q -> return Want(null, "Android older than 10")
                 isSecondScreenOn(stored.secondScreen, screen) -> "switched on"
                 forcedOn -> "benchmark"
                 else -> return Want(null, "switched off")
             }
-        val shown = windowModeOf(where, stored.secondScreen.inGame) ?: return Want(null, "Plumemu left")
+        val shown = windowModeOf(where, stored.secondScreen.inGame) ?: return Want(null, "Plumemu left", keepsCard = true)
         return Want(screen.displayId, reason, shown)
     }
 
     /**
-     * The top screen feeds the window only while it shows the picking cards. In game the feed
+     * The top screen feeds the card only while it shows the picking cards. In game the feed
      * goes back to Calm and stops, so on the way back the card of the game just played is read
-     * again (its new play time) as the window's first card, without the settle, never shown stale.
+     * again (its new play time) as the card's first, without the settle, never shown stale.
      */
     private fun followIfPicking() {
-        val up = window ?: return
+        val up = shownOn ?: return
         val now = mode.value
         feed.setFollowing(now == WindowMode.Picking)
         if (now != loggedMode) {
-            info("Second screen window: ${describe(now)} on display ${up.displayId}")
+            info("Second screen card: ${describe(now)} on display $up")
             loggedMode = now
         }
     }
@@ -223,15 +208,13 @@ internal class SecondScreenHost(
             WindowMode.InGameBlack -> "in game, black"
         }
 
-    private fun sync(reason: String) {
-        val target = wanted.displayId
-        val current = window
-        if (current != null && current.displayId == target) return
+    private fun sync(want: Want) {
+        val target = want.displayId
+        val current = shownOn
+        if (current != null && current == target) return
         late.stop()
-        if (current != null) dismiss(current, reason)
-        if (target != null) {
-            show(target, reason)
-        }
+        if (current != null) dismiss(current, want)
+        if (target != null) show(target, want.reason)
     }
 
     private fun show(
@@ -241,59 +224,43 @@ internal class SecondScreenHost(
     ) {
         val display = context.getSystemService(DisplayManager::class.java)?.getDisplay(displayId)
         if (display == null) {
-            info("Second screen window: none, display $displayId is gone ($reason)")
+            info("Second screen card: none, display $displayId is gone ($reason)")
             return
         }
-        val next =
+        // Held and named before the start, so the card made by it knows its display is the second screen's and draws this
+        // host's content from its first frame.
+        shownOn = displayId
+        cardHolder.value = this
+        val live = CardInstances.live
+        if (live == null || live.displayIdNow() != displayId) {
             try {
-                SecondScreenWindow(context, display, ::onGone, ::onDisplayResized, ::onFocusLanded).also {
-                    it.prepare(firstPaint()) { WindowContent() }
-                    it.setFocusable(catchesStrayFocus)
-                }
+                startCard(displayId)
             } catch (e: RuntimeException) {
-                // A display that went away between the lookup and the window: no window, never a crash.
-                warn("Second screen window: could not be made for display $displayId (${e.javaClass.simpleName})")
+                // A refused start (SecurityException, a display gone): a crash here would loop when Plumemu is the home app.
+                shownOn = null
+                releaseHolder()
+                val retries = attempt < SHOW_ATTEMPTS
+                warn("Second screen card: could not start on display $displayId (${e.javaClass.simpleName})${if (retries) ", trying again" else ""}")
+                if (retries) retryShow(displayId, reason, attempt + 1) else late.start(displayId)
                 return
             }
-        window = next
-        try {
-            showWindow(next)
-        } catch (e: RuntimeException) {
-            // InvalidDisplayException, BadTokenException: a crash here would loop when Plumemu is the home app.
-            window = null
-            undoFailedShow(next, displayId)
-            val retries = attempt < SHOW_ATTEMPTS
-            warn("Second screen window: could not show on display $displayId (${e.javaClass.simpleName})${if (retries) ", trying again" else ""}")
-            if (retries) retryShow(displayId, reason, attempt + 1) else late.start(displayId)
-            return
         }
         feed.hasArtRoom = SecondScreenDimens.forShorterSide(shorterSideDp(display)).showsArt
-        windowHolder.value = this
         val wasLate = late.isActive
         late.stop()
-        info("Second screen window: shown on display $displayId (${if (wasLate) "late try, " else ""}$reason)")
+        info("Second screen card: ${if (live == null) "started" else "shown"} on display $displayId (${if (wasLate) "late try, " else ""}$reason)")
         // Shown picking: nothing more to say; shown in game (a display changed during a game): said once.
         loggedMode = WindowMode.Picking
         followIfPicking()
     }
 
-    /**
-     * The key focus landed on [landed] while catching: nothing else on its display takes keys. The
-     * host ([onStrayFocus], `StrayFocusCatcher`) stops the catching and takes the controller back.
-     */
-    private fun onFocusLanded(landed: SecondScreenWindow) {
-        if (window !== landed || !catchesStrayFocus) return
-        info("Second screen window: the controller was left on display ${landed.displayId}; giving it back to the top screen")
-        onStrayFocus()
-    }
-
     /** Before the first frame: the top screen's background for the picking cards, black in game. */
-    private fun firstPaint(): Int = if (mode.value == WindowMode.Picking) backgroundArgb else InGameColors.background.toArgb()
+    internal fun firstPaint(): Int = if (mode.value == WindowMode.Picking) backgroundArgb else InGameColors.background.toArgb()
 
     /**
-     * Android refused the window. Seen right after the previous Activity's window was removed (a
-     * warm start: the removal finishes on the system's side a moment later), so a few tries follow;
-     * only while the same display is still wanted and no window has come meanwhile.
+     * Android refused the start. A refused window was seen right after the previous Activity's
+     * window was removed (a warm start), so a few tries follow; only while the same display is still
+     * wanted and no card has come meanwhile.
      */
     private fun retryShow(
         displayId: Int,
@@ -301,84 +268,62 @@ internal class SecondScreenHost(
         attempt: Int,
     ) {
         mainHandler.postDelayed(
-            { if (following != null && window == null && wanted.displayId == displayId) show(displayId, reason, attempt) },
+            { if (following != null && shownOn == null && wanted.displayId == displayId) show(displayId, reason, attempt) },
             SHOW_RETRY_MS,
         )
     }
 
-    /**
-     * [failed]'s `show()` threw. `Dialog.show()` runs `onStart` (where the Presentation registers a
-     * display listener that holds the window, and so the Activity) before `WindowManager.addView`;
-     * when the add is refused the dialog is not showing, so neither `dismiss()` nor `onStop` would
-     * ever unregister it, and each refusal would leak an Activity.
-     */
-    private fun undoFailedShow(
-        failed: SecondScreenWindow,
-        displayId: Int,
-    ) {
-        try {
-            failed.undoFailedShow()
-        } catch (e: RuntimeException) {
-            warn("Second screen window: could not undo the refused window on display $displayId (${e.javaClass.simpleName})")
-        }
-    }
-
-    /** No window of this host any more: another Activity's host waiting for the display may show its own. */
+    /** No card of this host any more: another Activity's host waiting for it may show its own. */
     private fun releaseHolder() {
-        if (windowHolder.value === this) windowHolder.value = null
+        if (cardHolder.value === this) cardHolder.value = null
     }
 
+    /**
+     * Stops showing on [from]. The card is closed, except while it is the bottom display's home and
+     * Plumemu only left the front ([Want.keepsCard]): Android would make it again at once, so it
+     * stays, drawing nothing of Plumemu's.
+     */
     private fun dismiss(
-        current: SecondScreenWindow,
-        reason: String,
+        from: Int,
+        want: Want,
     ) {
-        window = null
+        shownOn = null
         loggedMode = null
         feed.setFollowing(false)
-        current.dismiss()
-        info("Second screen window: dismissed from display ${current.displayId} ($reason)")
+        val kept = want.keepsCard && home?.isOn == true
+        // Closed before the card is let go: a host waiting for it would otherwise find this one still live.
+        if (!kept) CardInstances.finishLive()
+        info("Second screen card: ${if (kept) "blank" else "closed"} on display $from (${want.reason})")
         releaseHolder()
     }
 
     /**
-     * Android dismissed [gone] itself (its display was removed). Asked again once the display
-     * callbacks have all run: the detection may not have heard of the removal yet, and the new
-     * attempt finds the display gone.
+     * The card went without Plumemu closing it (its display removed, Android ending it). Asked
+     * again once the display callbacks have all run: the detection may not have heard of a removal
+     * yet, and the new attempt finds the display gone. A few times per wanted state, never a loop.
      */
-    private fun onGone(
-        gone: SecondScreenWindow,
-        reason: String,
-    ) {
-        if (window !== gone) return
-        window = null
+    private fun onCardGone(reason: String) {
+        val on = shownOn ?: return
+        if (cardHolder.value !== this) return
+        shownOn = null
         loggedMode = null
         feed.setFollowing(false)
-        info("Second screen window: dismissed by Android on display ${gone.displayId} ($reason)")
-        releaseHolder()
-        resyncSoon("recreated after: $reason")
+        info("Second screen card: gone from display $on ($reason)")
+        if (++losses > SHOW_ATTEMPTS) {
+            warn("Second screen card: gone $losses times; not started again until the next change")
+            releaseHolder()
+            return
+        }
+        mainHandler.post { if (following != null && shownOn == null) wanted.displayId?.let { show(it, "started again after: $reason") } }
     }
 
-    /**
-     * [changed]'s display has another size or density: its context still has the old ones, so a
-     * new window is made. Android up to 10 dismisses a Presentation itself then; later versions
-     * keep it, so the host does it the same way on both.
-     */
-    private fun onDisplayResized(changed: SecondScreenWindow) {
-        if (window !== changed) return
-        dismiss(changed, "display changed")
-        resyncSoon("recreated after: display changed")
-    }
-
-    private fun resyncSoon(reason: String) {
-        mainHandler.post { if (following != null) sync(reason) }
-    }
-
+    /** The card's content: the mode, the cards, the clock. */
     @Composable
-    private fun WindowContent() {
+    internal fun CardContent() {
         val shown by mode.collectAsState()
         val animations by settings.collectAsState()
         // The in-game card settles in from smaller as a game starts and the cards from larger as it ends, with the top
-        // screen's tokens; the window's first content shows at once. Only the motion setting is read here, not the theme.
+        // screen's tokens; the card's first content shows at once. Only the motion setting is read here, not the theme.
         ProvidePlumMotion(animations?.advanced?.animations ?: true) {
             val swap = rememberModeSwap(shown)
             Box(Modifier.fillMaxSize().fadingIn(swap)) { ModeContent(shown) }
@@ -391,13 +336,10 @@ internal class SecondScreenHost(
             // Composed only while shown: the clock's tick and battery listeners exist only then.
             WindowMode.InGameClock -> {
                 val stored by settings.collectAsState()
-                // Unread settings: the default, on, as the top bar before they arrive.
-                val showBattery = stored?.homeScreen?.showBattery ?: true
                 val card =
                     @Composable {
                         InGameClockCard(
                             clock,
-                            showBattery = showBattery,
                             battery = battery,
                             driftNoteDue = stored?.flags?.inGameDriftNoteShown == false,
                             onDriftNoteShown = onDriftNoteShown,
@@ -406,20 +348,19 @@ internal class SecondScreenHost(
                 // The battery part's font and Text size are the person's; the clock card's are
                 // fixed. Only the type, and only when the part can show: the whole theme would build a
                 // palette and watch Android's animator scale all play for nothing.
-                if (showBattery && battery !== BatteryReads.None) SettingsType(stored ?: PlumSettings(), card) else card()
+                if (battery !== BatteryReads.None) SettingsType(stored ?: PlumSettings(), card) else card()
             }
             // Nothing that listens or animates: one black frame.
             WindowMode.InGameBlack -> InGameBlack()
             WindowMode.Picking -> {
                 val stored by settings.collectAsState()
                 val content by feed.content.collectAsState()
-                // Show battery off: no battery line on the cards and no battery receiver (as in game).
                 stored?.let { current ->
                     cardTrace("SS:theme") {
                         SettingsTheme(current, viewedSystem) {
                             CompositionLocalProvider(LocalBatteryPaceNow provides paceNow) {
                                 CompositionLocalProvider(LocalHomeAppIcons provides appIcons, LocalBadgeImages provides badges) {
-                                    cardTrace("SS:card") { SecondScreenCard(content, images = images, showBattery = current.homeScreen.showBattery) }
+                                    cardTrace("SS:card") { SecondScreenCard(content, images = images) }
                                 }
                             }
                         }
@@ -433,165 +374,31 @@ internal class SecondScreenHost(
         val displayId: Int?,
         val reason: String,
         val mode: WindowMode = WindowMode.Picking,
+        /** Plumemu left or another Activity takes over: a card that is the bottom display's home stays, blank. */
+        val keepsCard: Boolean = false,
     )
 
     companion object {
         const val TAG = "PlumSecondScreen"
 
         /**
-         * The host whose window is up, one per process (main thread). A new Activity can draw its
-         * first frame before the old one is destroyed (a warm start, Home to a singleTask Activity
-         * that was finishing); Android refuses its window then (`InvalidDisplayException`, seen on
-         * the Android 17 emulator), so it waits until the old window has gone.
+         * The host whose card is up, one per process (main thread): the card draws its content. A
+         * new Activity can draw its first frame before the old one is destroyed (a warm start, Home
+         * to a singleTask Activity that was finishing): it waits until the old host lets go.
          */
-        private val windowHolder = MutableStateFlow<SecondScreenHost?>(null)
+        internal val cardHolder = MutableStateFlow<SecondScreenHost?>(null)
 
-        /** The host of the Activity last started; another host left in game gives up the window to it. */
+        /** The host of the Activity last started; another host left in game gives up the card to it. */
         private val activityInFront = MutableStateFlow<SecondScreenHost?>(null)
 
-        /** Tries of one `show()` Android refuses, [SHOW_RETRY_MS] apart: about a second in all, then none until the next change. */
+        /** Tries of one start Android refuses, [SHOW_RETRY_MS] apart: about a second in all, then none until the next change. */
         const val SHOW_ATTEMPTS = 5
         const val SHOW_RETRY_MS = 250L
 
-        /** After those, one more try each [LATE_RETRY_MS] and on each display change, while the same window is wanted (`LateShowTries`). */
+        /** After those, one more try each [LATE_RETRY_MS] and on each display change, while the same card is wanted (`LateShowTries`). */
         const val LATE_RETRY_MS = 5_000L
 
-        /** Benchmark builds only (`BuildConfig.BENCHMARK_CONTENT`): show the window even on an Unsure screen. */
+        /** Benchmark builds only (`BuildConfig.BENCHMARK_CONTENT`): show the card even on an Unsure screen. */
         const val EXTRA_BENCHMARK_SECOND_SCREEN = "com.plumemu.benchmark.SECOND_SCREEN"
-    }
-}
-
-/**
- * The window itself: not focusable (a tap must not take the controller from the top screen or a
- * game, research › 3) except while the host catches a stray focus ([setFocusable]); touchable
- * over the whole display and ignoring every tap, so a tap reaches nothing on the bottom screen
- * (with `FLAG_NOT_TOUCHABLE` it would fall through to the focusable window under ours, Launcher3's
- * secondary home on the Thor, and move the controller there: research › 5). Its
- * own lifecycle, RESUMED while shown: Compose pauses a window's recomposer when its lifecycle owner stops, and
- * the card must keep drawing while the Activity is stopped.
- */
-private class SecondScreenWindow(
-    context: Context,
-    display: Display,
-    private val onGone: (SecondScreenWindow, String) -> Unit,
-    private val onResized: (SecondScreenWindow) -> Unit,
-    private val onFocusLanded: (SecondScreenWindow) -> Unit,
-) : Presentation(context, display) {
-    val displayId: Int = display.displayId
-    val owner = WindowOwner()
-    private var goneReason = "dismissed"
-    private val madeWith = metricsOf(display)
-
-    fun prepare(
-        backgroundArgb: Int,
-        content: @Composable () -> Unit,
-    ) {
-        window?.apply {
-            addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
-            setBackgroundDrawable(ColorDrawable(backgroundArgb))
-        }
-        // The Presentation's own context (the second display's size and density) in the picked
-        // language: Presentation makes it with createDisplayContext, which drops the Activity's
-        // language override before Android 13.
-        // This panel's dp is smaller to the eye than the main screen's: its text is drawn larger by that much (SecondScreenPhysical).
-        val textScale = physicalTextScaleOf(this.context, display)
-        val view =
-            ComposeView(AppLocale.localized(this.context)).apply {
-                isFocusable = false
-                isFocusableInTouchMode = false
-                // Nothing there is needed to play: a tap is taken and does nothing.
-                setOnTouchListener { _, _ -> true }
-                setContent { WithPhysicalTextScale(textScale, content) }
-            }
-        setContentView(view)
-        window?.decorView?.let {
-            it.setViewTreeLifecycleOwner(owner)
-            it.setViewTreeSavedStateRegistryOwner(owner)
-        }
-        setOnDismissListener { onGone(this, goneReason) }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setCancelable(false)
-    }
-
-    /** Only while the host catches a stray focus; the flag takes effect at the window's next layout. */
-    fun setFocusable(focusable: Boolean) {
-        val notFocusable = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-        window?.apply { if (focusable) clearFlags(notFocusable) else addFlags(notFocusable) }
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) onFocusLanded(this)
-    }
-
-    /** Between `onStart` and `onStop`: `show()` starts the window before adding it, so a refused add leaves it started. */
-    private var isStarted = false
-
-    override fun onStart() {
-        super.onStart()
-        isStarted = true
-        owner.resume()
-    }
-
-    override fun onStop() {
-        isStarted = false
-        owner.destroy()
-        super.onStop()
-    }
-
-    /**
-     * `show()` threw: stop what it started (the Presentation's own `onStop` unregisters its display
-     * listener) and end the window's lifecycle, so nothing outside keeps this window or its Activity.
-     */
-    fun undoFailedShow() {
-        setOnDismissListener(null)
-        // Not `isShowing`: it reads the decor view's visibility, already set before the add was refused.
-        if (isStarted) onStop()
-        owner.destroy()
-    }
-
-    override fun onDisplayRemoved() {
-        goneReason = "display removed"
-        super.onDisplayRemoved()
-    }
-
-    /** Also called for a display turning off or another refresh rate: only a new size or density needs a new window. */
-    override fun onDisplayChanged() {
-        super.onDisplayChanged()
-        goneReason = "display changed"
-        if (metricsOf(display) != madeWith) onResized(this)
-    }
-}
-
-private fun shorterSideDp(display: Display): Dp = metricsOf(display).let { (minOf(it.widthPixels, it.heightPixels) / it.density).dp }
-
-private fun metricsOf(display: Display): DisplayMetrics = DisplayMetrics().also { display.getMetrics(it) }
-
-/** The window's lifecycle and saved state: CREATED when made, RESUMED on show, DESTROYED on dismiss or a refused show. */
-internal class WindowOwner : LifecycleOwner, SavedStateRegistryOwner {
-    private val registry = LifecycleRegistry(this)
-    private val savedState = SavedStateRegistryController.create(this)
-
-    init {
-        savedState.performAttach()
-        savedState.performRestore(null)
-        registry.currentState = Lifecycle.State.CREATED
-    }
-
-    override val lifecycle: Lifecycle get() = registry
-
-    override val savedStateRegistry: SavedStateRegistry get() = savedState.savedStateRegistry
-
-    fun resume() {
-        if (registry.currentState == Lifecycle.State.DESTROYED) return
-        registry.currentState = Lifecycle.State.RESUMED
-    }
-
-    fun destroy() {
-        if (registry.currentState == Lifecycle.State.DESTROYED) return
-        registry.currentState = Lifecycle.State.DESTROYED
     }
 }

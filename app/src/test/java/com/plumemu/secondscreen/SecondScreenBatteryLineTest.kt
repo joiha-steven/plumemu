@@ -56,14 +56,13 @@ abstract class SecondScreenBatteryLineBase(
 
     private var settings by mutableStateOf(PlumThemeSettings.Default)
     private var content by mutableStateOf<SecondScreenContent>(SecondScreenContent.Calm)
-    private var showBattery by mutableStateOf(true)
     private val badges = CacheOnlyBadges()
 
     @Before
     fun hostTheCard() {
         RuntimeEnvironment.setQualifiers("w${size.widthDp}dp-h${size.heightDp}dp-land-xhdpi")
         battery(level = 60, isCharging = false)
-        compose.setContent { PlumTheme(settings) { CompositionLocalProvider(LocalBadgeImages provides badges) { SecondScreenCard(content, showBattery = showBattery) } } }
+        compose.setContent { PlumTheme(settings) { CompositionLocalProvider(LocalBadgeImages provides badges) { SecondScreenCard(content) } } }
     }
 
     // The system's battery broadcast is sticky; a test can only send one with this deprecated call.
@@ -199,22 +198,12 @@ abstract class SecondScreenBatteryLineBase(
         assertEquals("$size: where the line is left out", LINE_LEFT_OUT.getValue(size), leftOut)
     }
 
-    /** Settings › Show battery off: no line on the cards and no battery receiver for them (as in game); on again, both back. */
+    /** The line is always on the card: one battery receiver for the window. */
     @Test
-    fun showBatteryOffShowsNoLineAndListensToNothing() {
+    fun theLineAlwaysShowsWithOneReceiverForTheWindow() {
         show(BOARD_GAME.copy(batteryPace = thirty))
-        assertEquals("on: the line", 1, all(PickingBatteryTags.LINE).size)
-        assertEquals("on: one receiver for the window", 1, batteryReceivers())
-        showBattery = false
-        compose.waitForIdle()
-        assertTrue("off: no line", all(PickingBatteryTags.LINE).isEmpty())
-        assertEquals("off: no battery receiver", 0, batteryReceivers())
-        show(BOARD_GAME_NO_RA.copy(batteryPace = thirty))
-        assertTrue("off: none on the other card either", all(PickingBatteryTags.LINE).isEmpty())
-        showBattery = true
-        compose.waitForIdle()
-        assertEquals("on again: the line", 1, all(PickingBatteryTags.LINE).size)
-        assertEquals(1, batteryReceivers())
+        assertEquals("the line", 1, all(PickingBatteryTags.LINE).size)
+        assertEquals("one receiver for the window", 1, batteryReceivers())
     }
 
     private fun batteryReceivers() = shadowOf(RuntimeEnvironment.getApplication()).registeredReceivers.count { it.intentFilter.hasAction(Intent.ACTION_BATTERY_CHANGED) }

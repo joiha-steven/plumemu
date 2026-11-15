@@ -76,8 +76,7 @@ internal fun SettingsPanel(
         SettingsOption.Colors -> ColorSetsPanel(settings, model, touch)
         SettingsOption.Background, SettingsOption.TextColor, SettingsOption.Accent -> ColorPanel(option, settings, model, touch)
         SettingsOption.TextSize -> ExplainPanel(model, option.label, R.string.settings_text_size_body)
-        SettingsOption.LeftEdge -> ExplainPanel(model, option.label, R.string.settings_left_edge_body)
-        SettingsOption.GridSize -> ExplainPanel(model, option.label, R.string.settings_grid_size_body)
+        SettingsOption.PageGrain -> ExplainPanel(model, option.label, R.string.settings_page_grain_body)
         SettingsOption.ConfirmBottom -> ExplainPanel(model, option.label, R.string.settings_confirm_bottom_body)
         SettingsOption.Animations -> ExplainPanel(model, option.label, R.string.settings_animations_body)
         SettingsOption.Sounds -> ExplainPanel(model, option.label, R.string.settings_sounds_body)
@@ -89,15 +88,13 @@ internal fun SettingsPanel(
         SettingsOption.Backup -> BackupPanel(model, touch)
         SettingsOption.Restore -> RestorePanel(model, touch)
         SettingsOption.UndoRestore -> UndoRestorePanel(model, touch)
-        SettingsOption.Version -> AboutPanel(versionName, model)
-        SettingsOption.Updates -> UpdatePanel(model, touch, settings, installedLine = versionName)
-        // A switch inside Updates' panel, which says what it does.
+        SettingsOption.Version -> if (model.content.hasUpdates) UpdatePanel(model, touch, settings, installedLine = versionName) else AboutPanel(versionName, model)
+        // A switch inside Version's panel, which says what it does.
         SettingsOption.CheckUpdatesDaily -> Unit
         SettingsOption.Licenses -> LicensesPanel(model, touch)
         SettingsOption.RomFolders -> FoldersPanel(model, touch)
         SettingsOption.Rescan -> RescanPanel(model)
         SettingsOption.UnreadableFolders -> UnreadableFoldersPanel(model, touch)
-        SettingsOption.SortGames -> ExplainPanel(model, option.label, R.string.settings_sort_games_body)
         SettingsOption.Keyboard -> ExplainPanel(model, option.label, R.string.settings_keyboard_body)
         SettingsOption.SwitchSystemWith -> ExplainPanel(model, option.label, R.string.settings_switch_system_body)
         SettingsOption.Language -> LanguagePanel(model, touch, settings)
@@ -117,16 +114,12 @@ internal fun SettingsPanel(
         SettingsOption.SystemEmulator -> EmulatorsPanel(model, touch)
         SettingsOption.FilesNotAdded -> if (model.focus.page == PanelPage.UnknownFolder) UnknownFolderPanel(model, touch) else FilesNotAddedPanel(model, touch)
         SettingsOption.PushRightToPlay -> ExplainPanel(model, option.label, R.string.settings_push_right_body)
-        SettingsOption.ShowButtonHints -> ExplainPanel(model, option.label, R.string.settings_show_hints_body)
         SettingsOption.UseAsHome -> ExplainPanel(model, option.label, R.string.settings_use_as_home_body) { PanelLine(model, option, null) }
         SettingsOption.ExportLogs -> ExplainPanel(model, option.label, R.string.settings_export_logs_body) { PanelLine(model, option, null) }
         SettingsOption.ShowApps -> ExplainPanel(model, option.label, R.string.settings_show_apps_body)
-        // The switch also governs the battery line of the second screen's in-game clock card.
-        SettingsOption.ClockAndBattery ->
-            ExplainPanel(model, option.label, if (model.content.secondScreen != null) R.string.settings_clock_battery_body_two_screens else R.string.settings_clock_battery_body)
-        SettingsOption.SystemInfo -> ExplainPanel(model, option.label, R.string.settings_system_info_body)
         SettingsOption.SecondScreen -> ExplainPanel(model, option.label, R.string.settings_second_screen_body)
         SettingsOption.SecondScreenInGame -> ExplainPanel(model, option.label, R.string.settings_second_screen_in_game_body)
+        SettingsOption.SecondScreenAppsOn -> ExplainPanel(model, option.label, R.string.settings_second_screen_apps_on_body)
         SettingsOption.ReportProblem -> ReportProblemPanel(model, touch, settings)
         SettingsOption.BoxArtSource -> BoxArtSourcePanel(settings, model, touch)
         SettingsOption.ScraperAccount -> ScraperAccountPanel(settings, model, touch)
@@ -467,13 +460,17 @@ private fun AboutPanel(
     PanelScrollColumn(PlumDimens.titleLineGap, scroll = scroll, tag = SettingsPanelTags.ABOUT, keyMoves = model.licenseScroll) {
         BasicText(stringResource(R.string.app_name), style = type.settingsAboutTitle.copy(color = colors.text), maxLines = 1, modifier = Modifier.onPanelTextLine())
         BasicText(stringResource(R.string.settings_version_line, versionName), style = type.meta.copy(color = colors.meta), maxLines = 1, modifier = Modifier.onPanelTextLine())
-        platformData?.let { data ->
-            val line = stringResource(R.string.settings_platform_data_line, stringResource(R.string.settings_platform_data), platformDataRowValue(data))
-            BasicText(line, style = type.meta.copy(color = colors.meta), modifier = Modifier.onPanelTextLine().testTag(SettingsPanelTags.PLATFORM_DATA))
-        }
+        platformData?.let { PlatformDataLine(it) }
         PanelBody(stringResource(R.string.settings_about_body), Modifier.padding(top = PlumDimens.titleLineGap))
         if (platformData != null) PanelBody(stringResource(R.string.settings_platform_data_body), Modifier.padding(top = PlumDimens.titleLineGap))
     }
+}
+
+/** "Platform data · Version 6 · Nov 1, 2026", under the version in Version's panel. */
+@Composable
+internal fun PlatformDataLine(data: PlatformDataVersion) {
+    val line = stringResource(R.string.settings_platform_data_line, stringResource(R.string.settings_platform_data), platformDataRowValue(data))
+    BasicText(line, style = PlumTheme.type.meta.copy(color = PlumTheme.colors.meta), modifier = Modifier.onPanelTextLine().testTag(SettingsPanelTags.PLATFORM_DATA))
 }
 
 internal object SettingsPanelTags {
@@ -502,7 +499,7 @@ internal object SettingsPanelTags {
 
     const val STATUS = "settings_status"
 
-    /** The last check's answer under a step left standing in the Updates panel. */
+    /** The last check's answer under a step left standing in Version's panel. */
     const val UPDATE_LAST_CHECK = "settings_update_last_check"
     const val UPDATE_NOTICE = "settings_update_notice"
 

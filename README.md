@@ -15,12 +15,12 @@ handhelds.</p>
 </p>
 
 <p align="center">
-  <b>0.1.5</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket Classic ·
+  <b>0.1.6</b> · Android 6.0 or later · tested on the AYN Thor, the Retroid Pocket 6, the Retroid Pocket Nova and the Retroid Pocket Classic ·
   <a href="../../releases">Download</a> · <a href="https://plumemu.stevensdesk.com">Website</a>
 </p>
 
 <p align="center">
-  0.1.4 brings new color sets, one typeface, a clearer focus, a simpler setup, and menus and lists that move faster and more smoothly. The source is open: GPL-3.0, see <a href="#source">Source</a>.
+  0.1.6 brings faster system switches, a calmer home screen, fewer settings, and play time that counts only real play. The source is open: GPL-3.0, see <a href="#source">Source</a>.
 </p>
 
 ---

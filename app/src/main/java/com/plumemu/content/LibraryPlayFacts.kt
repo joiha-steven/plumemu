@@ -7,6 +7,7 @@ import com.plumemu.coredata.db.PlayDao
 import com.plumemu.game.EmulatorToStart
 import com.plumemu.game.daysAgo
 import com.plumemu.game.emulatorToStart
+import com.plumemu.game.fileNameForEmulator
 import com.plumemu.graph.AppGraph
 import com.plumemu.home.GamePlay
 import com.plumemu.home.HomePlayFactsSource
@@ -28,8 +29,8 @@ internal class LibraryPlayFacts(
     private val plays: () -> PlayDao,
     /** The library's games, to tell a game it no longer has; called on [io]. */
     private val games: () -> GameDao,
-    /** The emulator Play would start for a game id; null when none is installed or the game is unknown. */
-    private val emulatorOf: suspend (Long) -> EmulatorToStart?,
+    /** The emulator Play would start for a game id and whether it is the game's own choice, from one read; called on [io]. */
+    private val emulatorOf: suspend (Long) -> EmulatorRead,
     /** The game's usual battery pace (`batteryPaceOf`); null for a game never measured. */
     private val paceOf: suspend (Long) -> BatteryPace? = { null },
     private val now: () -> Long = System::currentTimeMillis,
@@ -39,10 +40,12 @@ internal class LibraryPlayFacts(
         withContext(io) {
             if (games().game(gameId) == null) return@withContext null
             val play = plays().play(gameId)
+            val emulator = emulatorOf(gameId)
             GamePlay(
                 lastPlayedDaysAgo = play?.let { daysAgo(it.lastPlayedAt, now()) },
                 playTimeMinutes = play?.let { TimeUnit.SECONDS.toMinutes(it.totalSeconds).toInt() } ?: 0,
-                emulator = emulatorOf(gameId),
+                emulator = emulator.emulator,
+                hasOwnEmulator = emulator.isOwn,
                 batteryPace = paceOf(gameId),
             )
         }
@@ -50,4 +53,21 @@ internal class LibraryPlayFacts(
 
 /** The library's play facts for the home screen's details column, from [AppGraph]'s database (stateless: one per Activity is fine). */
 internal fun AppGraph.homePlayFacts(): HomePlayFactsSource =
-    LibraryPlayFacts(plays = { database.playDao() }, games = { database.gameDao() }, emulatorOf = { id -> emulatorToStart(id) }, paceOf = { id -> batteryPaceOf(id) })
+    LibraryPlayFacts(plays = { database.playDao() }, games = { database.gameDao() }, emulatorOf = { id -> emulatorRead(id) }, paceOf = { id -> batteryPaceOf(id) })
+
+/** The emulator Play would start (null: none installed or the game unknown) and whether it is the game's own choice. */
+internal data class EmulatorRead(val emulator: EmulatorToStart?, val isOwn: Boolean = false)
+
+/**
+ * [gameId]'s emulator for the details column, from one read of the game row, the catalog and the file name: what Play would start, and whether the
+ * game's own choice changes it ([com.plumemu.launcher.choice.EmulatorChoices.hasOwnChoice]: the launch's resolution with and without it); the
+ * column names the emulator only then. Call off the main thread.
+ */
+internal suspend fun AppGraph.emulatorRead(gameId: Long): EmulatorRead {
+    val game = database.gameDao().game(gameId) ?: return EmulatorRead(null)
+    val system = catalog()?.system(game.systemId) ?: return EmulatorRead(null)
+    val fileName = fileNameForEmulator(gameId, system, game.fileName)
+    val emulator = emulatorToStart(gameId, system, fileName)
+    val own = launching()?.choices?.hasOwnChoice(gameId, system, fileName) ?: false
+    return EmulatorRead(emulator, own)
+}

@@ -2,6 +2,7 @@ package com.plumemu.coredata.backup
 
 import com.plumemu.coredata.settings.AdvancedSettings
 import com.plumemu.coredata.settings.AppearanceSettings
+import com.plumemu.coredata.settings.AppsScreen
 import com.plumemu.coredata.settings.BoxArtRegionSetting
 import com.plumemu.coredata.settings.BoxArtSourceSetting
 import com.plumemu.coredata.settings.ColorSetting
@@ -59,7 +60,8 @@ object SettingsJson {
                     .put("ownColors", s.appearance.ownColors?.let(::ownColorsJson) ?: JSONObject.NULL)
                     .put("buttonSet", s.appearance.buttonSet ?: JSONObject.NULL)
                     // Null follows the system's language, so a restore clears a language picked on this device.
-                    .put("language", s.appearance.language ?: JSONObject.NULL),
+                    .put("language", s.appearance.language ?: JSONObject.NULL)
+                    .put("pageGrain", s.appearance.pageGrain.name),
             ).put(
                 CONTROLS,
                 JSONObject()
@@ -94,7 +96,8 @@ object SettingsJson {
                 SECOND_SCREEN,
                 JSONObject()
                     .put("enabled", s.secondScreen.enabled ?: JSONObject.NULL)
-                    .put("inGame", s.secondScreen.inGame.name.lowercase(Locale.ROOT)),
+                    .put("inGame", s.secondScreen.inGame.name.lowercase(Locale.ROOT))
+                    .put("appsOn", s.secondScreen.appsOn.name.lowercase(Locale.ROOT)),
             ).put(
                 ADVANCED,
                 JSONObject()
@@ -102,7 +105,8 @@ object SettingsJson {
                     .put("sounds", s.advanced.sounds.name.lowercase(Locale.ROOT))
                     .put("usageStatistics", s.advanced.usageStatistics)
                     .put("vibration", s.advanced.vibration)
-                    .put("exactPlayTime", s.advanced.exactPlayTime),
+                    .put("exactPlayTime", s.advanced.exactPlayTime)
+                    .put("usageAccessOffered", s.advanced.usageAccessOffered),
             ).put(
                 UPDATES,
                 JSONObject()
@@ -177,6 +181,8 @@ object SettingsJson {
                             buttonSet = string(a, APPEARANCE, "buttonSet"),
                             // Older backups have no key: the system's language.
                             language = string(a, APPEARANCE, "language"),
+                            // Older backups have no key: Off.
+                            pageGrain = enum(a, APPEARANCE, "pageGrain", d.appearance.pageGrain),
                         ),
                     controls =
                         ControlsSettings(
@@ -215,6 +221,7 @@ object SettingsJson {
                         SecondScreenSettings(
                             enabled = optionalBool(s, SECOND_SCREEN, "enabled"),
                             inGame = coded(s, SECOND_SCREEN, "inGame", InGameSetting.entries, { it.name.lowercase(Locale.ROOT) }, d.secondScreen.inGame),
+                            appsOn = coded(s, SECOND_SCREEN, "appsOn", AppsScreen.entries, { it.name.lowercase(Locale.ROOT) }, d.secondScreen.appsOn),
                         ),
                     advanced =
                         AdvancedSettings(
@@ -223,6 +230,7 @@ object SettingsJson {
                             usageStatistics = bool(v, ADVANCED, "usageStatistics", d.advanced.usageStatistics),
                             vibration = bool(v, ADVANCED, "vibration", d.advanced.vibration),
                             exactPlayTime = bool(v, ADVANCED, "exactPlayTime", d.advanced.exactPlayTime),
+                            usageAccessOffered = bool(v, ADVANCED, "usageAccessOffered", d.advanced.usageAccessOffered),
                         ),
                     updates = UpdateSettings(checkDaily = bool(u, UPDATES, "checkDaily", d.updates.checkDaily)),
                     flags =

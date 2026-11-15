@@ -3,6 +3,39 @@
 What changed in each version of Plumemu, newest first. Downloads are under
 [Releases](../../releases).
 
+## 0.1.6 (15 November 2026)
+
+Smoother system switches, a calmer home screen, fewer settings, and play time that counts only real play.
+
+### New
+
+- On the AYN Thor, apps started from Apps can open on the bottom screen: Second screen › Open apps on, or the app's menu.
+- A Grain on the background setting under Appearance adds a fine sand texture to the page, Light or Strong; it is off by default.
+- After your first game, Plumemu offers once to count only the time a game is on screen, using Android's Usage access.
+- Ports you installed as Android apps, such as Diablo II, now appear under Ports, and GameNative starts Epic, GOG and Amazon games.
+
+### Improved
+
+- Switching to another system for the first time is much faster, and lists and grids next to it are ready before you get there.
+- The left strip always shows each system's short code, in your system order, in every sort; Game counts and Letters are gone.
+- The home screen is quieter: lighter button hints, softer game counts, a framed cover and the title beside tall boxes.
+- Settings is shorter: Accent color sits in Colors, About › Updates became About › Version, and Clear Recent is under Reset.
+- Button hints, the clock and battery are always shown, even if you had turned them off, and the system info band follows your screens.
+- Epic and Windows games are named from their file and get box art by name instead of being listed as unidentified.
+- A game left running for hours counts as its usual play time, and sleep is no longer counted when Android closes Plumemu.
+- The game details show Emulator only when the game has its own, and a game never played says Not played yet.
+
+### Fixed
+
+- The bottom screen's Recent rows are evenly spaced and Favorites reach the right edge.
+- The narrow details view keeps the facts above the fade at the bottom of the screen.
+
+### Known issues
+
+- Wii games in RVZ or WIA are not checked for achievements, and 3DS, MS-DOS and Arduboy games show none yet.
+- The second screen is tested on the AYN Thor only, and most translations other than French have not been read by a native speaker.
+- Android's own folder picker cannot be finished with a gamepad on some handhelds: use touch for that step.
+
 ## 0.1.5 (9 November 2026)
 
 A fix for your own colours.

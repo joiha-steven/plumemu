@@ -315,12 +315,12 @@ internal fun optionValue(
         SettingsOption.Language ->
             OptionValue.Opens(languageName(AppLanguages.byTag(settings.appearance.language)?.tag))
         SettingsOption.Colors -> OptionValue.Choice(stringResource(choiceName(option, option.choiceIndex(settings, textSizeInUse()))), opensPanel = true)
-        SettingsOption.TextSize, SettingsOption.LeftEdge, SettingsOption.GridSize, SettingsOption.SortGames, SettingsOption.SystemOrder,
-        SettingsOption.SecondScreenInGame, SettingsOption.BoxArtRegion, SettingsOption.Keyboard, SettingsOption.SwitchSystemWith, SettingsOption.Sounds,
+        SettingsOption.TextSize, SettingsOption.PageGrain, SettingsOption.SystemOrder,
+        SettingsOption.SecondScreenInGame, SettingsOption.SecondScreenAppsOn, SettingsOption.BoxArtRegion, SettingsOption.Keyboard, SettingsOption.SwitchSystemWith, SettingsOption.Sounds,
         ->
             OptionValue.Choice(stringResource(choiceName(option, option.choiceIndex(settings, textSizeInUse()))))
         SettingsOption.ConfirmBottom, SettingsOption.Animations, SettingsOption.Vibration, SettingsOption.UsageStatistics, SettingsOption.CheckUpdatesDaily,
-        SettingsOption.PushRightToPlay, SettingsOption.ShowButtonHints, SettingsOption.ShowApps, SettingsOption.ClockAndBattery, SettingsOption.SystemInfo,
+        SettingsOption.PushRightToPlay, SettingsOption.ShowApps,
         -> OptionValue.Switch(option.switchValue(settings))
         SettingsOption.SecondScreen -> OptionValue.Switch(isSecondScreenOn(settings.secondScreen, content.secondScreen))
         SettingsOption.RomFolders -> {
@@ -334,8 +334,7 @@ internal fun optionValue(
         SettingsOption.UnreadableFolders -> OptionValue.Opens(unreadableRowValue(content))
         // Shown as the board's switch; A asks Android, which is the only one that can change it.
         SettingsOption.UseAsHome -> OptionValue.Switch(content.isHomeApp)
-        SettingsOption.Version -> OptionValue.Text(versionName)
-        SettingsOption.Updates -> updatesRowValue(content.update)
+        SettingsOption.Version -> if (content.hasUpdates) versionRowValue(versionName, content.update) else OptionValue.Text(versionName)
         SettingsOption.BackupAndRestore -> backupAndRestoreValue(content)
         SettingsOption.Backup -> opensUnlessBusy(backupRowValue(content.backup), content.backup is BackupState.Running)
         SettingsOption.Restore -> opensUnlessBusy(restoreRowValue(content.restore), content.restore.isRunning())

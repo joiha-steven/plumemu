@@ -22,12 +22,16 @@ import androidx.compose.ui.semantics.testTag
  * [HomeTags.GAMES_PAGE]. Compose keeps cleared nodes in the unmerged tree, so the rows also drop
  * their tags there ([gameRowTag]); a title searched with `useUnmergedTree` can still be a kept page's.
  */
-internal fun Modifier.rowsInSemanticsOnlyWhen(shown: () -> Boolean): Modifier = this then PageSemanticsElement(shown)
+internal fun Modifier.rowsInSemanticsOnlyWhen(
+    shown: () -> Boolean,
+    tag: String = HomeTags.GAMES_PAGE,
+): Modifier = this then PageSemanticsElement(shown, tag)
 
 private data class PageSemanticsElement(
     val shown: () -> Boolean,
+    val tag: String,
 ) : ModifierNodeElement<PageSemanticsNode>() {
-    override fun create() = PageSemanticsNode(shown)
+    override fun create() = PageSemanticsNode(shown, tag)
 
     override fun update(node: PageSemanticsNode) {
         node.shown = shown
@@ -37,6 +41,7 @@ private data class PageSemanticsElement(
 
 private class PageSemanticsNode(
     var shown: () -> Boolean,
+    val tag: String,
 ) : Modifier.Node(),
     SemanticsModifierNode,
     ObserverModifierNode {
@@ -54,7 +59,7 @@ private class PageSemanticsNode(
     }
 
     override fun SemanticsPropertyReceiver.applySemantics() {
-        testTag = HomeTags.GAMES_PAGE
+        testTag = tag
     }
 }
 
@@ -67,23 +72,29 @@ private class PageSemanticsNode(
 internal fun Modifier.gameRowTag(
     index: Int,
     tagged: () -> Boolean,
-): Modifier = this then GameRowTagElement(index, tagged)
+): Modifier = tagWhen(HomeTags.game(index), tagged)
 
-private data class GameRowTagElement(
-    val index: Int,
+/** [tag] on this node only while [tagged] says so (read while building the semantics, without recomposing): what a page kept beside the shown one must not show. */
+internal fun Modifier.tagWhen(
+    tag: String,
+    tagged: () -> Boolean,
+): Modifier = this then TagWhenElement(tag, tagged)
+
+private data class TagWhenElement(
+    val tag: String,
     val tagged: () -> Boolean,
-) : ModifierNodeElement<GameRowTagNode>() {
-    override fun create() = GameRowTagNode(index, tagged)
+) : ModifierNodeElement<TagWhenNode>() {
+    override fun create() = TagWhenNode(tag, tagged)
 
-    override fun update(node: GameRowTagNode) {
-        node.index = index
+    override fun update(node: TagWhenNode) {
+        node.tag = tag
         node.tagged = tagged
         node.follow()
     }
 }
 
-private class GameRowTagNode(
-    var index: Int,
+private class TagWhenNode(
+    var tag: String,
     var tagged: () -> Boolean,
 ) : Modifier.Node(),
     SemanticsModifierNode,
@@ -100,6 +111,13 @@ private class GameRowTagNode(
     }
 
     override fun SemanticsPropertyReceiver.applySemantics() {
-        if (isTagged) testTag = HomeTags.game(index)
+        if (isTagged) testTag = tag
     }
 }
+
+/** Whether the grid page being composed is the shown one (read while building the semantics); a grid not in a page of [GridPages] counts as shown. */
+internal val LocalGridPageShown = androidx.compose.runtime.staticCompositionLocalOf<() -> Boolean> { { true } }
+
+/** [tag] for a grid's node, only while its page is shown ([LocalGridPageShown]): a grid built ahead is in the unmerged tree and must not carry the tags tests and screen readers find. */
+@androidx.compose.runtime.Composable
+internal fun Modifier.gridTag(tag: String): Modifier = tagWhen(tag, LocalGridPageShown.current)

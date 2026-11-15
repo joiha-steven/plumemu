@@ -8,6 +8,7 @@ import com.plumemu.coredata.db.PlumDatabase
 import com.plumemu.coredata.db.ScrapedPicture
 import com.plumemu.coredata.db.ScrapedPictures
 import com.plumemu.coredata.db.TestDetailsRating
+import com.plumemu.coredata.settings.AdvancedSettings
 import com.plumemu.coredata.settings.LibrarySettings
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SetupFlags
@@ -142,6 +143,17 @@ class RestoredDatabaseTest {
                 ratings,
             )
         }
+    }
+
+    @Test
+    fun theUsageAccessOfferStaysShownWhicheverSideSaysSo() {
+        fun withOffered(on: Boolean) = PlumSettings(advanced = AdvancedSettings(exactPlayTime = true, usageAccessOffered = on))
+        for (withLibrary in listOf(true, false)) {
+            assertEquals("an older file (false) does not bring the card back (withLibrary=$withLibrary)", true, RestoreSettings.merge(withOffered(false), withOffered(true), withLibrary).advanced.usageAccessOffered)
+            assertEquals("a file that says shown keeps it shown (withLibrary=$withLibrary)", true, RestoreSettings.merge(withOffered(true), withOffered(false), withLibrary).advanced.usageAccessOffered)
+            assertEquals("neither side shown stays not shown (withLibrary=$withLibrary)", false, RestoreSettings.merge(withOffered(false), withOffered(false), withLibrary).advanced.usageAccessOffered)
+        }
+        assertEquals("the rest of advanced is still the file's", true, RestoreSettings.merge(withOffered(false), PlumSettings(), withLibrary = false).advanced.exactPlayTime)
     }
 
     @Test

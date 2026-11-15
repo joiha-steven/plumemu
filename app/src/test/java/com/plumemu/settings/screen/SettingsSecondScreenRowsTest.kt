@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import com.plumemu.R
+import com.plumemu.coredata.settings.AppsScreen
 import com.plumemu.coredata.settings.InGameSetting
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SecondScreenSettings
@@ -45,7 +46,7 @@ class SettingsSecondScreenRowsTest {
         stored: PlumSettings = settings,
     ) {
         val content = SettingsContent().withSecondScreen(screen, stored.secondScreen)
-        val section = if (option == SettingsOption.ClockAndBattery) SettingsSection.HomeScreen else SettingsSection.SecondScreen
+        val section = if (option == SettingsOption.ShowApps) SettingsSection.HomeScreen else SettingsSection.SecondScreen
         val rows = section.rowsIn(content)
         val focus =
             SettingsFocus(
@@ -58,11 +59,12 @@ class SettingsSecondScreenRowsTest {
 
     @Test
     fun withoutASecondScreenNoSectionListsTheRows() {
-        show(null, SettingsOption.ClockAndBattery)
+        show(null, SettingsOption.ShowApps)
         // The focused row's label shows twice: the row and its panel's title.
-        compose.onAllNodesWithText(text(R.string.settings_clock_battery))[0].assertIsDisplayed()
+        compose.onAllNodesWithText(text(R.string.settings_show_apps))[0].assertIsDisplayed()
         compose.onNodeWithText(text(R.string.settings_second_screen)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.settings_second_screen_in_game)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.settings_second_screen_apps_on)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.settings_section_second_screen)).assertDoesNotExist()
     }
 
@@ -71,6 +73,7 @@ class SettingsSecondScreenRowsTest {
         show(SecondScreen(4, "Screen-2", ScreenKind.BuiltIn), SettingsOption.SecondScreen)
         compose.onAllNodesWithText(text(R.string.settings_second_screen)).assertCountEquals(2) // the row and its panel's title
         compose.onNodeWithText(text(R.string.settings_second_screen_in_game)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.settings_second_screen_apps_on)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.settings_second_screen_body)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.settings_second_screen_clock)).assertIsDisplayed()
     }
@@ -87,10 +90,25 @@ class SettingsSecondScreenRowsTest {
     }
 
     @Test
+    fun theOpenAppsOnRowShowsItsValueAndSaysItNeverTouchesGames() {
+        val stored = settings.copy(secondScreen = SecondScreenSettings(enabled = true, appsOn = AppsScreen.Bottom))
+        show(SecondScreen(4, "Screen-2", ScreenKind.BuiltIn), SettingsOption.SecondScreenAppsOn, stored)
+        compose.onNodeWithText(text(R.string.settings_second_screen_apps_bottom)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.settings_second_screen_apps_on_body)).assertIsDisplayed()
+    }
+
+    @Test
+    fun theOpenAppsOnRowShowsTopByDefault() {
+        show(SecondScreen(4, "Screen-2", ScreenKind.BuiltIn), SettingsOption.SecondScreen)
+        compose.onNodeWithText(text(R.string.settings_second_screen_apps_top)).assertIsDisplayed()
+    }
+
+    @Test
     fun withTheSwitchOffInGameIsNotListed() {
         val stored = settings.copy(secondScreen = SecondScreenSettings(enabled = false))
         show(SecondScreen(4, "Screen-2", ScreenKind.BuiltIn), SettingsOption.SecondScreen, stored)
         compose.onAllNodesWithText(text(R.string.settings_second_screen)).assertCountEquals(2)
         compose.onNodeWithText(text(R.string.settings_second_screen_in_game)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.settings_second_screen_apps_on)).assertDoesNotExist()
     }
 }

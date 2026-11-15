@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -19,13 +18,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -47,12 +44,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
 import com.plumemu.coreui.theme.FocusSlab
 import com.plumemu.coreui.theme.PlumComposeColors
-import com.plumemu.coreui.theme.LeftColumnDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumFonts
 import com.plumemu.coreui.theme.PlumMotion
 import com.plumemu.coreui.theme.PlumTheme
-import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.PlumTypography
 
 /*
@@ -243,13 +238,13 @@ private fun TextStyle.heavierBy(by: Int): FontWeight =
 
 private val DefaultRowEndPadding: () -> Dp = { PlumDimens.gameRowEndPadding }
 
-private val NeverHidden: () -> Boolean = { false }
+internal val NeverHidden: () -> Boolean = { false }
 
 /**
  * Not drawn, and invisible to semantics, while [hidden] is true; read in the draw and semantics passes only, so a change recomposes and
  * lays out nothing. Used for text a card over the list would cut by its edge.
  */
-private fun Modifier.hiddenWhile(hidden: () -> Boolean): Modifier =
+internal fun Modifier.hiddenWhile(hidden: () -> Boolean): Modifier =
     drawWithContent { if (!hidden()) drawContent() }.semantics { if (hidden()) invisibleToUser() }
 
 /** Leaves [inset] free at the right of the content; read in the layout pass, so a changing inset does not recompose. */
@@ -425,172 +420,3 @@ const val FAVORITE_STAR = "\u2605"
 
 /** The drawn part of a game row (what the focus fill covers), inside its taller tap area. */
 const val GAME_ROW_DRAWN_TAG = "game_row_drawn"
-
-
-/** How a system row looks. */
-enum class SystemRowLook {
-    /** The cursor on the system column: `sel` fill, accent dot, `strong` text 500, count `meta`. */
-    Focused,
-
-    /** Another entry: name `text2`, count `muted`. */
-    Normal,
-
-    /** The current system while games have focus: accent text 600, no fill, count accent. */
-    Current,
-}
-
-/**
- * An entry of the system column, 34 high (the board's height): name with an ellipsis, [count]
- * at the right. With [showName] false (the 48 dp peek) the name keeps its place but is not
- * drawn, so only counts show and a long name never pokes in (docs/design/rules.md › The strip).
- */
-@Composable
-fun SystemRow(
-    name: String,
-    count: String,
-    look: SystemRowLook,
-    showName: Boolean,
-    modifier: Modifier = Modifier,
-    bleedStart: Dp,
-    hasDot: Boolean = false,
-    /** False: no count and none of its room (Settings' sections in three columns, whose labels need it); [endPadding] 0 there too. */
-    showCount: Boolean = true,
-    endPadding: Dp = PlumDimens.systemRowPadding,
-    barInset: Dp = LeftColumnDimens.systemBarInset,
-) = SystemRow(name, count, look, nameAlpha = if (showName) NameShown else NameHidden, modifier = modifier, bleedStart = bleedStart, hasDot = hasDot, showCount = showCount, endPadding = endPadding, barInset = barInset)
-
-/**
- * The same row with the name drawn at [nameAlpha], read while drawing: the main screen fades the
- * names with the strip's position as it slides to the peek, without recomposing a row per frame.
- *
- * The row is [bleedStart] wider on the left (Home and Settings pass the page margin): the label
- * starts at [bleedStart] whether focused or not, the focus dot sits centred in that space, and the
- * selector fills the whole row with square left corners, as if it ran on under the screen edge.
- */
-@Composable
-fun SystemRow(
-    name: String,
-    count: String,
-    look: SystemRowLook,
-    nameAlpha: () -> Float,
-    modifier: Modifier = Modifier,
-    bleedStart: Dp,
-    hasDot: Boolean = false,
-    /** True: the count fades with the names (the letter rail takes its place in the peek). False: it stays, as counts and system codes do. */
-    fadeCount: Boolean = false,
-    showCount: Boolean = true,
-    endPadding: Dp = PlumDimens.systemRowPadding,
-    /** Read while drawing: true leaves the count undrawn (a card over the page would cut it); its room stays. */
-    countHidden: () -> Boolean = NeverHidden,
-    /** The accent bar's distance from the slab's left edge (the slab itself starts at [LeftColumnDimens.systemPillStart]). */
-    barInset: Dp = LeftColumnDimens.systemBarInset,
-) {
-    BleedingSystemRow(name, count, look, nameAlpha, bleedStart, modifier, hasDot, fadeCount, showCount, endPadding, countHidden, barInset)
-}
-
-/** Label at [bleedStart]; the focus pill starts at [LeftColumnDimens.systemPillStart] and its accent bar [barInset] in (Home and Settings). */
-@Composable
-private fun BleedingSystemRow(
-    name: String,
-    count: String,
-    look: SystemRowLook,
-    nameAlpha: () -> Float,
-    bleedStart: Dp,
-    modifier: Modifier,
-    hasDot: Boolean,
-    fadeCount: Boolean,
-    showCount: Boolean,
-    endPadding: Dp,
-    countHidden: () -> Boolean,
-    barInset: Dp,
-) {
-    val colors = PlumTheme.colors
-    val focused = look == SystemRowLook.Focused
-    // The pill starts [systemPillStart] from the screen edge and the label never moves with focus. It is drawn by focusPill so it dips with the row;
-    // the empty PILL box only keeps the tag for the layout test.
-    val inset = LeftColumnDimens.systemPillStart
-    // The press (dip and finger) is on the whole row, the touch target; only the drawn pill starts at [inset].
-    Box(modifier = modifier.fillMaxWidth().height(PlumTheme.layout.systemRowHeight).focusPill(focused, shape = remember(inset, barInset) { InsetFocusPillShape(inset, barInset) })) {
-        if (focused) Box(Modifier.fillMaxSize().padding(start = inset).testTag(SystemRowTags.PILL))
-        Row(
-            modifier = Modifier.fillMaxSize().padding(start = bleedStart, end = endPadding),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(modifier = Modifier.weight(1f).fadedBy(nameAlpha), verticalAlignment = Alignment.CenterVertically) {
-                SystemName(name, look)
-            }
-            if (hasDot) {
-                // Something new here (games added by a change check): the hint bar's accent dot, gone with the name in the peek.
-                Spacer(Modifier.width(PlumDimens.hintKeyGap))
-                Box(Modifier.fadedBy(nameAlpha).size(PlumDimens.hintDot).drawBehind { drawCircle(colors.accent) }.testTag(SystemRowTags.NEW_DOT))
-            }
-            // Faded with the names only while the letter rail takes the peek (Settings › Home screen › Left edge).
-            if (showCount) SystemCount(count, look, nameAlpha, fadeCount, countHidden)
-        }
-    }
-}
-
-@Composable
-private fun SystemName(
-    name: String,
-    look: SystemRowLook,
-) {
-    val type = PlumTheme.type
-    val colors = PlumTheme.colors
-    val style =
-        when (look) {
-            SystemRowLook.Focused -> type.systemNameFocused
-            SystemRowLook.Normal -> type.systemName
-            SystemRowLook.Current -> type.systemNameCurrent
-        }
-    // The colour is read while drawing, so a moved theme colour redraws the name without recomposing it.
-    val color: () -> Color =
-        when (look) {
-            SystemRowLook.Focused -> { { colors.strong } }
-            SystemRowLook.Normal -> { { colors.text2 } }
-            SystemRowLook.Current -> { { colors.accent } }
-        }
-    EllipsisText(text = name, style = style, color = color, maxLines = 1, modifier = Modifier.testTag(SystemRowTags.LABEL))
-}
-
-@Composable
-private fun SystemCount(
-    count: String,
-    look: SystemRowLook,
-    nameAlpha: () -> Float,
-    fade: Boolean,
-    hidden: () -> Boolean,
-) {
-    val colors = PlumTheme.colors
-    val color: () -> Color =
-        when (look) {
-            SystemRowLook.Focused -> { { colors.meta } }
-            SystemRowLook.Normal -> { { colors.muted } }
-            SystemRowLook.Current -> { { colors.accent } }
-        }
-    Spacer(Modifier.width(PlumDimens.rowTrailingGap))
-    BasicText(text = count, modifier = (if (fade) Modifier.fadedBy(nameAlpha) else Modifier).hiddenWhile(hidden).testTag(SystemRowTags.COUNT), style = PlumTheme.type.systemRowCount, color = color, maxLines = 1)
-}
-
-/** Draws at [alpha], read while drawing; no offscreen buffer per row while the names fade (dot and name do not overlap). */
-private fun Modifier.fadedBy(alpha: () -> Float): Modifier =
-    plainLayer {
-        this.alpha = alpha()
-        compositingStrategy = CompositingStrategy.ModulateAlpha
-    }
-
-/** Test tags inside a [SystemRow], for the layout test (read from the unmerged tree). */
-object SystemRowTags {
-    const val PILL = "system_row_pill"
-    const val LABEL = "system_row_label"
-
-    /** The count (or system code) at the row's end; faded out with the names only when the letter rail covers its place. */
-    const val COUNT = "system_row_count"
-
-    /** The dot of a system with new games ([SystemRow] `hasDot`). */
-    const val NEW_DOT = "system_row_new_dot"
-}
-
-private val NameShown: () -> Float = { 1f }
-private val NameHidden: () -> Float = { 0f }
-

@@ -362,13 +362,14 @@ internal fun appOpenMessage(
     val (title, body) =
         when (outcome) {
             AppOpenOutcome.Started -> return null
+            AppOpenOutcome.StartedOnTop -> null to R.string.app_error_bottom_screen_body
             AppOpenOutcome.Missing -> R.string.app_error_missing_title to R.string.app_error_missing_body
             AppOpenOutcome.Refused -> R.string.app_error_start_title to R.string.app_error_refused_body
             AppOpenOutcome.NotListed -> R.string.app_error_start_title to R.string.app_error_not_listed_body
             AppOpenOutcome.Unavailable -> R.string.app_error_start_title to R.string.app_error_unavailable_body
         }
     return PanelContent(
-        title = UiText.Res(title, listOf(appName)),
+        title = title?.let { UiText.Res(it, listOf(appName)) } ?: UiText.Plain(appName),
         body = listOf(UiText.Res(body)),
         items = listOf(okRow()),
     )

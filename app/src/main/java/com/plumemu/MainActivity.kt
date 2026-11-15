@@ -36,6 +36,7 @@ import com.plumemu.content.HomeState
 import com.plumemu.battery.batteryPaceNow
 import com.plumemu.content.homePlayFacts
 import com.plumemu.coredata.settings.ControlsSettings
+import com.plumemu.coredata.settings.PageGrainSetting
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreui.components.ImageBuilding
@@ -71,7 +72,8 @@ import com.plumemu.home.HomePlayFactsSource
 import com.plumemu.launcher.play.battery.BatteryReads
 import com.plumemu.secondscreen.SecondScreenFeed
 import com.plumemu.secondscreen.SecondScreenHost
-import com.plumemu.secondscreen.StrayFocusCatcher
+import com.plumemu.secondscreen.SecondScreenHome
+import com.plumemu.secondscreen.TopScreen
 import com.plumemu.secondscreen.secondScreenPlayFacts
 import com.plumemu.secondscreen.cardResult
 import com.plumemu.secondscreen.SecondScreenPresence
@@ -81,6 +83,7 @@ import com.plumemu.settings.screen.SettingsActivityActions
 import com.plumemu.coredata.backup.BackupKind
 import com.plumemu.settings.screen.SettingsHost
 import com.plumemu.settings.toInputSettings
+import com.plumemu.settings.toPageGrain
 import com.plumemu.settings.toSetting
 import com.plumemu.settings.toThemeSettings
 import com.plumemu.settings.withGridView
@@ -151,6 +154,15 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
             updateFound = if (isBenchmarkBuild) MutableStateFlow(null) else graph.updates.foundVersionName,
             whatsNew = if (isBenchmarkBuild) MutableStateFlow(null) else graph.updates.whatsNew,
             onWhatsNewShown = { code -> if (!isBenchmarkBuild) graph.updates.whatsNewShown(code) },
+            usageAccessOfferDue = if (isBenchmarkBuild) MutableStateFlow(false) else graph.usageAccessOffer.isDue,
+            onUsageAccessOfferShown = { if (!isBenchmarkBuild) graph.usageAccessOffer.shown() },
+            onUsageAccessAllow = {
+                if (!isBenchmarkBuild) {
+                    // Remembered before the screen opens: the answer is read when Plumemu comes back.
+                    graph.usageAccessOffer.allowed()
+                    if (!UsageAccess.open(this)) graph.usageAccessOffer.couldNotOpen()
+                }
+            },
             onAddFolder = { if (!isBenchmarkBuild) graph.addFolderFromHome(settingsActivityActions) },
             notices = if (isBenchmarkBuild) HomeNotices() else graph.homeNotices(),
             achievements = if (isBenchmarkBuild) HomeAchievements() else graph.homeAchievements(),
@@ -205,12 +217,10 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
      * when that start threw.
      */
     private val secondScreenPresence = SecondScreenPresence()
+    private val isSecondScreenInUse by lazy { MutableStateFlow(graph.appearanceCache.wasSecondScreenInUse()) } // the home band is off while true; the last answer until the second screens start
 
-    /** The second screen's window, made after the first content frame with the listener, gone in onDestroy. */
+    /** The second screen's card, started after the first content frame with the listener, let go in onDestroy. */
     private var secondScreenHost: SecondScreenHost? = null
-
-    /** Gives the controller back to this screen when the bottom display kept it (the AYN panel on the Thor). */
-    internal val strayFocus = StrayFocusCatcher(this, isResumed = { lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) })
 
     /** The cached background, read in onCreate: the second screen's window paints it before its first frame. */
     private var cachedBackgroundArgb = 0
@@ -307,6 +317,8 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
             }
         }
         graph.gameStarts.target = secondScreenPresence
+        // The second screen's card hands the controller and its stray keys back to this Activity.
+        TopScreen.follow(this)
         usage?.onActivityCreated(openFromOf(intent), isRecreated = savedInstanceState != null)
         pickerForSettings = savedInstanceState?.getBoolean(STATE_PICKER_FOR_SETTINGS) == true
         backupPicker.restore(savedInstanceState)
@@ -331,6 +343,7 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
         val homeStates = homeStates()
         setContent {
             val settings by settingsFlow.collectAsStateWithLifecycle()
+            val hasSecondScreenInUse by isSecondScreenInUse.collectAsStateWithLifecycle()
             val textColor = settings?.toThemeSettings()?.textMode // drawn mode: a background change can flip it with the stored text unchanged
             LaunchedEffect(textColor) { settings?.let { applySystemBarStyle(it.toThemeSettings().textMode) } }
             val showsSetup = setupHost != null && settings?.flags?.setupCompleted == false
@@ -342,7 +355,7 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
                 val isLibrary = state is HomeState.Ready
                 LaunchedEffect(isLibrary) { onContentComposed(isLibrary) }
             }
-            CompositionLocalProvider(LocalScreenTracker provides { usage?.onScreen(it) }, LocalErrorTracker provides { where, code -> usage?.onError(where, code) }, com.plumemu.coreui.components.LocalHeldKeys provides input.held) { // held: pressed hint caps
+            CompositionLocalProvider(LocalScreenTracker provides { usage?.onScreen(it) }, LocalErrorTracker provides { where, code -> usage?.onError(where, code) }, com.plumemu.coreui.components.LocalHeldKeys provides input.held, com.plumemu.coreui.theme.LocalPageGrain provides (settings?.appearance?.pageGrain ?: PageGrainSetting.Off).toPageGrain()) { // held: pressed hint caps
                 MainScreen(
                 settings,
                 state,
@@ -354,6 +367,7 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
                 sounds = sounds,
                 secondScreen = secondScreenFeed,
                 homePresses = homePresses,
+                isSecondScreenInUse = hasSecondScreenInUse,
                 viewedSystem = graph.viewedSystemAccent(),
                 waitingAppearance = cached,
                 )
@@ -434,7 +448,7 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
     private fun startSecondScreens() {
         // The posted step may run after the Activity was finished: nothing would stop the listener then.
         if (lifecycle.currentState == Lifecycle.State.DESTROYED || hasStartedSecondScreens) return
-        graph.secondScreens.startAndDecideSystemInfo(lifecycleScope, graph.settings, graph.settingsWriter::submit)
+        graph.secondScreens.startAndFollowInUse(lifecycleScope, graph.settings, isSecondScreenInUse, graph.appearanceCache::writeSecondScreenInUse)
         hasStartedSecondScreens = true
         secondScreenHost =
             SecondScreenHost(
@@ -457,11 +471,8 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
                 // The picking line's figures again when the battery changes (benchmark builds: no line).
                 paceNow = if (isBenchmarkBuild) null else graph.batteryPaceNow(),
                 onDriftNoteShown = { graph.settingsWriter.submit { it.copy(flags = it.flags.copy(inGameDriftNoteShown = true)) } },
-                onStrayFocus = strayFocus::takeControllerBack,
-            ).also {
-                strayFocus.host = it
-                it.start()
-            }
+                home = SecondScreenHome.of(this),
+            ).also { it.start() }
     }
 
     override fun onStart() {
@@ -483,7 +494,6 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
         ReopenNotice.onResumed()
         secondScreenPresence.onResume()
         usage?.onResume()
-        strayFocus.onResume()
         if (isBenchmarkBuild) return
         // Adds the time of a game started from here, once the person is back.
         graph.afterReturn()
@@ -492,15 +502,9 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
         graph.appScope.launch(Dispatchers.IO) { ReopenNotice.cancel(app) }
     }
 
-    override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
-        super.onTopResumedActivityChanged(isTopResumedActivity)
-        strayFocus.onTopResumedChanged(isTopResumedActivity)
-    }
-
     override fun onPause() {
         super.onPause()
         ReopenNotice.onPaused()
-        strayFocus.onPause()
     }
 
     private fun applySystemBarStyle(textMode: TextMode) {
@@ -569,7 +573,6 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
         // Before super: a window left up would leak the Activity (and sit on that screen with nothing behind it).
         secondScreenHost?.stop()
         secondScreenHost = null
-        strayFocus.host = null
         graph.gameStarts.release(secondScreenPresence)
         if (hasStartedSecondScreens) graph.secondScreens.stop()
         hasStartedSecondScreens = false

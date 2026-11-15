@@ -33,7 +33,7 @@ class SettingsUpdateTextsTest {
 
     private fun texts(view: UpdateView): Triple<String, String?, String?> {
         var result: Triple<String, String?, String?>? = null
-        compose.setContent { result = Triple(checkRowValue(view), checkLineText(view), updateStepText(view)) }
+        compose.setContent { result = Triple(versionRowValue("0.0.2-alpha", view).words ?: "", checkLineText(view), updateStepText(view)) }
         compose.waitForIdle()
         return result!!
     }
@@ -41,7 +41,7 @@ class SettingsUpdateTextsTest {
     @Test
     fun checkPressedDuringADownloadSaysAnUpdateIsDownloading() {
         val (row, line, _) = texts(UpdateView(found = manifest, step = UpdateStep.Downloading(1, 3)))
-        assertEquals("Update downloading", row)
+        assertEquals("Downloading…", row)
         assertEquals("An update is downloading. Check again when it is done.", line)
     }
 

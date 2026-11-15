@@ -8,13 +8,15 @@ import com.plumemu.coredata.db.PlumDatabase
 import com.plumemu.coredata.db.RomFolderEntity
 import com.plumemu.coredata.db.ScanBatch
 import com.plumemu.coredata.db.SystemEntity
-import com.plumemu.coredata.settings.LeftEdgeSetting
+import com.plumemu.coredata.backup.SettingsJson
+import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SortGamesSetting
 import com.plumemu.coredata.settings.SystemOrderSetting
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.CoverClass
 import com.plumemu.home.EntryKind
 import com.plumemu.home.HomeContent
+import com.plumemu.home.LetterKey
 import com.plumemu.launcher.apps.LaunchableApp
 import com.plumemu.platforms.PlatformCatalog
 import com.plumemu.platforms.PlatformLoadResult
@@ -26,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
@@ -163,24 +166,16 @@ class LibraryHomeContentTest {
         )
         val nes = withTimeout(TIMEOUT_MS) { source.content.first { c -> c.entries.any { it.id == "nes" } } }.entries.first { it.id == "nes" }
         assertEquals(listOf("The Legend of Zelda", "Lemmings", "Lost Vikings", "Mario Kart", "Tetris"), nes.rows.map { it.title })
-        assertEquals(listOf('L', 'M', 'T'), nes.railLetters)
+        assertEquals(listOf('L', 'M', 'T'), nes.rows.map { LetterKey.of(it) }.distinct())
     }
 
-    /** Settings › Home screen › Left edge: each system carries the platform data's code, and the setting reaches the content (default Game counts). */
+    /** Each system carries the platform data's code, which the peek shows. */
     @Test
-    fun systemsCarryTheirCodeAndTheLeftEdgeSettingReachesTheContent() = runBlocking {
+    fun systemsCarryTheirCode() = runBlocking {
         val first = withTimeout(TIMEOUT_MS) { source.content.first { it.systemCount == 3 } }
-        assertEquals(LeftEdgeSetting.Counts, first.leftEdge)
         assertEquals(listOf("GBA", "SNS"), listOf("gba", "snes").map { id -> first.entries.first { it.id == id }.code }.sorted())
         val recent = first.entries.first { it.id == HomeContent.RECENT_ID }
         assertEquals("Recent's captions take the data's short name", catalog.systems.first { it.id == "snes" }.shortName, recent.systemShortNames["snes"])
-        val edge = MutableStateFlow<LeftEdgeSetting?>(null)
-        val withEdge = LibraryHomeContent(db.gameDao(), { catalog }, apps, showApps, Dispatchers.Default, leftEdge = edge)
-        assertEquals("not picked is Game counts", LeftEdgeSetting.Counts, withTimeout(TIMEOUT_MS) { withEdge.content.first { it.entries.any { e -> e.id == "snes" } } }.leftEdge)
-        edge.value = LeftEdgeSetting.Codes
-        assertEquals(LeftEdgeSetting.Codes, withTimeout(TIMEOUT_MS) { withEdge.content.first { it.leftEdge == LeftEdgeSetting.Codes } }.leftEdge)
-        edge.value = LeftEdgeSetting.Letters
-        assertEquals(LeftEdgeSetting.Letters, withTimeout(TIMEOUT_MS) { withEdge.content.first { it.leftEdge == LeftEdgeSetting.Letters } }.leftEdge)
     }
 
     /** Each system's cover shape comes from the platform data, then from the person's own covers. */
@@ -324,6 +319,21 @@ class LibraryHomeContentTest {
             assertEquals(listOf("Mario", "Zelda", "ActRaiser"), byLastPlayed.entry("snes").rows.map { it.title })
             assertEquals(listOf("Zelda", "ActRaiser"), byLastPlayed.entry(HomeContent.FAVORITES_ID).rows.map { it.title })
             assertEquals("Recent is always newest first", listOf("Mario", "Zelda"), byLastPlayed.entry(HomeContent.RECENT_ID).rows.map { it.title })
+        }
+    }
+
+    @Test
+    fun aRestoredBackupHoldingLastPlayedOrdersTheListByLastPlayed() = runBlocking {
+        // Settings has no Sort games row: the sort a backup carries is the one the lists follow.
+        val stored = PlumSettings.Defaults.copy(library = PlumSettings.Defaults.library.copy(sortGames = SortGamesSetting.LastPlayed))
+        val restored = SettingsJson.decode(SettingsJson.encode(stored).toString()).settings
+        val sorted = LibraryHomeContent(db.gameDao(), { catalog }, apps, showApps, Dispatchers.Default, sort = flowOf(restored.library.sortGames))
+        val ids = gameIdsByTitle()
+        db.playDao().addSession(ids.getValue("Zelda"), endedAt = 1_000, seconds = 60)
+        db.playDao().addSession(ids.getValue("Mario"), endedAt = 2_000, seconds = 60)
+        withTimeout(TIMEOUT_MS) {
+            val content = sorted.content.first { it.entry(HomeContent.RECENT_ID).count == 2 }
+            assertEquals(listOf("Mario", "Zelda", "ActRaiser"), content.entry("snes").rows.map { it.title })
         }
     }
 

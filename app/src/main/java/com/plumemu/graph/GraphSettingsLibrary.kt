@@ -169,12 +169,10 @@ internal class GraphSettingsLibrary(
                     removingFolderIds = gone,
                 )
             }
-        // Which sorts have values (Year, Rating): Sort games lists those only.
-        val sortValues = combine(games.observeHasYear(), games.observeHasRating()) { hasYear, hasRating -> hasYear to hasRating }
         // Hidden games and Unidentified games, with each game's system named as the platform data names it.
         val withNames =
-            combine(shown, names.hiddenGames(), names.unidentifiedGames(), graph.startup.scanReport, sortValues) { content, hidden, unidentified, report, (hasYear, hasRating) ->
-                content.copy(hiddenGames = hidden, unidentifiedGames = unidentified, scan = report, hasYear = hasYear, hasRating = hasRating)
+            combine(shown, names.hiddenGames(), names.unidentifiedGames(), graph.startup.scanReport) { content, hidden, unidentified, report ->
+                content.copy(hiddenGames = hidden, unidentifiedGames = unidentified, scan = report)
             }
         val folderSystems = graph.database.folderSystemDao()
         val unknown = combine(folderSystems.observeUnknownFolders(), folderSystems.observeAnsweredFolders(), folderAnswers.saving) { open, answered, saving -> Triple(open, answered, saving) }

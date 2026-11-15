@@ -1,6 +1,7 @@
 package com.plumemu.game
 
 import com.plumemu.coredata.db.AppKind
+import com.plumemu.coredata.settings.AppsScreen
 import com.plumemu.graph.CoreQuestion
 import com.plumemu.launcher.LaunchOutcome
 import androidx.annotation.StringRes
@@ -83,7 +84,7 @@ internal sealed interface PanelCommand {
     /** Sort by…: the sorts of the games list, the one in use marked. */
     data object OpenSortMenu : PanelCommand
 
-    /** Stores [sort] as the sort of every games list (Settings › Library › Sort games) and closes the panel. */
+    /** Stores [sort] as the sort of every games list (the one stored sort) and closes the panel. */
     data class SetSort(val sort: SortGamesSetting) : PanelCommand
 
     data object RescanLibrary : PanelCommand
@@ -132,6 +133,9 @@ internal sealed interface PanelCommand {
 
     /** App menu: Android's App info page of the app. */
     data object AppInfo : PanelCommand
+
+    /** App menu: opens the app on the screen the setting does not name; the menu closes. */
+    data object OpenAppOnOtherScreen : PanelCommand
 
     /** App menu: Android's uninstall confirmation for the app. */
     data object AppUninstall : PanelCommand
@@ -201,9 +205,9 @@ internal sealed interface PanelScreen {
 
     /**
      * The Apps entry's menu (START or a long press on an app): App info, Show as game and Show as port when
-     * [canChooseKind], and Uninstall when [canUninstall].
+     * [canChooseKind], Open on the [otherScreen] when there is one, and Uninstall when [canUninstall].
      */
-    data class AppMenu(val canUninstall: Boolean, val canChooseKind: Boolean = false) : PanelScreen
+    data class AppMenu(val canUninstall: Boolean, val canChooseKind: Boolean = false, val otherScreen: AppsScreen? = null, val storeHint: StoreHint? = null) : PanelScreen
 
     data class PlayWith(val listing: EmulatorListing) : PanelScreen
 
@@ -274,7 +278,7 @@ internal fun contentOf(
 ): PanelContent =
     when (screen) {
         is PanelScreen.Menu -> gameMenuContent(game, screen.facts)
-        is PanelScreen.AppMenu -> appMenuContent(game, screen.canUninstall, screen.canChooseKind)
+        is PanelScreen.AppMenu -> appMenuContent(game, screen.canUninstall, screen.canChooseKind, screen.otherScreen, screen.storeHint)
         is PanelScreen.NameMenu -> nameMenuContent(game, screen.facts)
         is PanelScreen.SortMenu -> sortMenuContent(screen.choices)
         is PanelScreen.PlayWith -> playWithContent(screen.listing)

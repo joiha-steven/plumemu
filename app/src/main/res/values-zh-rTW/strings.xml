@@ -42,6 +42,9 @@
     <string name="home_hint_update">更新</string>
     <string name="home_update_pill">更新 %1$s</string>
     <string name="home_whatsnew_title">%1$s 的新內容</string>
+    <string name="home_usage_offer_title">只計算實際遊戲時間</string>
+    <string name="home_usage_offer_body">目前模擬器選單和其他 App 也會算成遊戲時間。允許 Android 的「使用情況存取權」後，只計算遊戲本身。資料不會離開掌機。</string>
+    <string name="home_usage_offer_allow">允許</string>
     <!-- Hint bar label: a verb, start the game. -->
     <string name="home_hint_play">開始遊戲</string>
     <!-- Hint bar label: a verb, open the focused entry or app. -->
@@ -457,9 +460,9 @@
     <string name="game_error_title_id_title">這款 PS Vita 遊戲缺少 Title ID</string>
     <string name="game_error_title_id_empty_body">「%1$s」是空的。請在其中只寫入遊戲的 Title ID（例如 PCSE00000），不要寫其他內容。遊戲必須已安裝在模擬器中。</string>
     <string name="game_error_title_id_invalid_body">「%1$s」中只能包含遊戲的 Title ID：9 個大寫英文字母或數字，例如 PCSE00000。</string>
-    <string name="game_error_steam_app_id_title">這個 .steam 檔案缺少 Steam App ID</string>
-    <string name="game_error_steam_app_id_empty_body">「%1$s」是空的。請在其中只寫入遊戲的 Steam App ID（例如 274190），不要寫其他內容。遊戲必須在 Steam 應用程式的遊戲庫中。</string>
-    <string name="game_error_steam_app_id_invalid_body">「%1$s」中只能包含遊戲的 Steam App ID：只能是數字，例如 274190。</string>
+    <string name="game_error_steam_app_id_title">這個檔案缺少遊戲 ID</string>
+    <string name="game_error_steam_app_id_empty_body">「%1$s」是空的。請在其中只寫入遊戲的 ID（例如 274190），不要寫其他內容。遊戲必須在匯出此檔案的應用程式中。</string>
+    <string name="game_error_steam_app_id_invalid_body">「%1$s」中只能包含遊戲的 ID：只能是數字，例如 274190。</string>
     <string name="game_error_needs_path_title">%1$s 需要檔案路徑</string>
     <string name="game_error_needs_path_body">這個模擬器只能開啟內部儲存空間或 SD 卡中的遊戲，而這個資料夾位於其他位置。</string>
     <string name="game_error_not_in_library_title">這款遊戲已不在遊戲庫中</string>
@@ -523,6 +526,7 @@
     <string name="app_error_refused_body">Android 拒絕開啟它。</string>
     <string name="app_error_not_listed_body">應用程式清單在顯示後有所變動，正在重新讀取，請稍後再試一次。</string>
     <string name="app_error_unavailable_body">Plumemu 還沒準備好開啟應用程式，請稍後再試。</string>
+    <string name="app_error_bottom_screen_body">此應用程式無法在下方螢幕開啟，已改在這裡開啟。</string>
     <string name="game_error_app_game_missing_body">這個應用程式已解除安裝或停用。重新安裝或啟用後即可在這裡玩。</string>
     <!-- Settings. The top bar: "Settings › Appearance › Background". -->
     <string name="settings_title">設定</string>
@@ -625,14 +629,12 @@
     <string name="settings_rescan_a_folder">某個資料夾</string>
     <string name="settings_rescan_failed">無法讀取你的遊戲，請再試一次。</string>
     <string name="settings_rescan_busy">正在讀取遊戲。</string>
-    <string name="settings_sort_games">遊戲排序</string>
     <string name="settings_sort_by_name">名稱</string>
     <string name="settings_sort_by_last_played">上次遊玩</string>
     <string name="settings_sort_by_most_played">遊玩最多</string>
     <string name="settings_sort_by_recently_added">最近加入</string>
     <string name="settings_sort_by_year">發行年份</string>
     <string name="settings_sort_by_rating">評分</string>
-    <string name="settings_sort_games_body">各平台清單和「收藏」的排列順序。沒有排序依據的遊戲（從未遊玩、沒有年份、沒有評分）依名稱排在後面。有遊戲帶有來自 ScreenScraper 的年份或評分時，才會列出「發行年份」或「評分」。「最近」一律將最近玩過的遊戲排在最前面。</string>
     <string name="settings_clear_recent">清空最近…</string>
     <string name="settings_clear_recent_body">將清空「最近」。再次玩某個遊戲時，它會重新出現。遊玩時間和統計會保留。</string>
     <string name="settings_clear_recent_confirm">清空</string>
@@ -707,8 +709,6 @@
     <!-- Controls -->
     <string name="settings_push_right">向右推兩次開始遊戲</string>
     <string name="settings_push_right_body">單手遊玩：在遊戲清單中向右推兩次，即可啟動選取的遊戲。第一次推動會標記遊戲，兩秒內再推一次即可啟動；按其他任何按鈕則會取消。A 鍵照常可用。開啟後，在窄螢幕上需透過觸控進入詳細資訊欄。隨時可在這裡關閉。</string>
-    <string name="settings_show_hints">顯示按鈕提示</string>
-    <string name="settings_show_hints_body">在首頁底部顯示各個按鈕及其功能。「設定」和初始設定一律會顯示提示，讓你找得到返回的方式。如要用觸控開啟「設定」，請長按平台欄。</string>
     <string name="settings_switch_system_with">切換系統按鍵</string>
     <string name="settings_switch_system_body">在主畫面上用哪一對肩鍵切換系統。另一對在清單中跳到字母，在網格中調整大小。</string>
     <string name="settings_keyboard">鍵盤</string>
@@ -720,9 +720,6 @@
     <string name="settings_home_unavailable">這部裝置無法直接切換主畫面應用程式。請到 Android 的「設定 › 應用程式 › 預設應用程式」中選擇 Plumemu。</string>
     <string name="settings_show_apps">顯示 Android 應用程式</string>
     <string name="settings_show_apps_body">裝置上的所有 Android 應用程式都會列在「收藏」下方的「應用程式」中。關閉後就不顯示「應用程式」。</string>
-    <string name="settings_clock_battery">時鐘和電量</string>
-    <string name="settings_clock_battery_body">在螢幕右上角顯示時間和電池電量。</string>
-    <string name="settings_clock_battery_body_two_screens">在螢幕右上角顯示時間和電池電量。副螢幕的時鐘上也會顯示電量。</string>
     <!-- The band over a system's games list ("Nintendo · Home console · 1990–2003". -->
     <string name="system_kind_console">家用主機</string>
     <string name="system_kind_handheld">掌機</string>
@@ -796,8 +793,6 @@
     <string name="system_about_mame">宗旨是保存遊戲歷史，能玩遊戲只是「一個不錯的附帶效果」。它記錄了 3.2 萬多種機器。</string>
     <!-- https://github.com/finalburnneo/FBNeo (README; Wikipedia has no page) -->
     <string name="system_about_fbneo">以 FinalBurn 和舊版 MAME 為基礎，可模擬 Capcom CPS-1、CPS-2、CPS-3、Neo Geo 和 SEGA System 16 基板。</string>
-    <string name="settings_system_info">平台資訊</string>
-    <string name="settings_system_info_body">在遊戲清單頂端顯示平台標誌、一行簡介（廠商、類型、年代）和幾句介紹。</string>
     <!-- Second screen, picking cards. Top line: "Super Nintendo · USA"; the separator is also used in the facts line (quoted: Android trims the spaces of an unquoted string). -->
     <string name="second_screen_android_app">Android 應用程式</string>
     <string name="second_screen_app_tag">應用</string>
@@ -902,6 +897,10 @@
     <string name="settings_second_screen_in_game_body">遊戲執行時副螢幕顯示的內容。使用雙螢幕的模擬器會自行接管副螢幕。卡片每分鐘會輕微移動，以保護螢幕。</string>
     <string name="settings_second_screen_clock">時鐘和電量</string>
     <string name="settings_second_screen_black">黑畫面</string>
+    <string name="settings_second_screen_apps_on">應用程式開啟位置</string>
+    <string name="settings_second_screen_apps_on_body">從應用程式清單啟動的應用程式要在哪個螢幕開啟。不影響遊戲。</string>
+    <string name="settings_second_screen_apps_top">上方螢幕</string>
+    <string name="settings_second_screen_apps_bottom">下方螢幕</string>
 
     <!-- Appearance -->
     <!-- Ready-made colour sets (never a console's or a brand's name. -->
@@ -926,9 +925,8 @@
     <string name="settings_background">背景</string>
     <string name="settings_text_color">文字顏色</string>
     <string name="settings_accent">強調色</string>
+    <string name="settings_page_grain">背景顆粒</string>
     <string name="settings_text_size">文字大小</string>
-    <string name="settings_left_edge">左側窄條</string>
-    <string name="settings_grid_size">格狀檢視大小</string>
     <string name="settings_bg_graphite">石墨</string>
     <string name="settings_bg_black">黑色</string>
     <string name="settings_bg_midnight">午夜</string>
@@ -992,9 +990,9 @@
     <string name="settings_size_larger">較大</string>
     <string name="settings_size_huge">特大</string>
     <string name="settings_size_largest">最大</string>
-    <string name="settings_left_edge_counts">遊戲數量</string>
-    <string name="settings_left_edge_codes">平台代碼</string>
-    <string name="settings_left_edge_letters">字母</string>
+    <string name="settings_page_grain_off">關閉</string>
+    <string name="settings_page_grain_light">輕微</string>
+    <string name="settings_page_grain_strong">強烈</string>
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
     <string name="settings_badge_current">目前</string>
     <string name="settings_background_body">選擇一種顏色，或選「+」自訂顏色。</string>
@@ -1021,8 +1019,7 @@
     <string name="settings_color_adjusted_both">已調整文字顏色和強調色，以保持清楚易讀</string>
     <string name="settings_accent_body">用於標示目前的平台、焦點圓點、開關和按鈕。「依平台」會讓每個平台使用各自的顏色。</string>
     <string name="settings_text_size_body">變更 Plumemu 中的所有文字。Android 本身的字型大小設定也會一併套用。</string>
-    <string name="settings_left_edge_body">瀏覽遊戲清單時，左側的窄條顯示什麼：每個平台的遊戲數量、每個平台的簡短代碼，或目前清單的字母。</string>
-    <string name="settings_grid_size_body">格狀檢視中封面的大小，適用於所有平台以及「最近」和「收藏」。「小」一次顯示的遊戲最多，「大」最少。</string>
+    <string name="settings_page_grain_body">在背景色上加一層細緻的顆粒，像紙張一樣。關閉時背景保持平整，輕微幾乎看不出，強烈在每個畫面都清晰可見。</string>
     <!-- Sample lines in the colour panel (the board's). -->
 
     <!-- Advanced (includes the confirm-button option) -->
@@ -1261,12 +1258,11 @@
     <string name="report_error_refused">伺服器不接受這則回報，請檢查電子郵件地址。你寫的內容已保留，可以再試一次。</string>
     <string name="report_error_unavailable">這個版本無法傳送回報。請使用「匯出記錄檔」，再自行傳送檔案。</string>
     <string name="report_error_not_saved">無法在這部裝置上儲存這則回報。</string>
-    <string name="settings_privacy_body">你的遊戲庫、設定和遊玩時間都儲存在這部裝置上 Plumemu 自己的儲存空間中，絕不會傳送出去。只有在你開啟這項功能（「設定 › 關於 › 傳送使用資料」）時，Plumemu 才會向開發者傳送匿名的使用次數和當機報告：國家或地區、裝置型號、Android 和應用程式版本、使用過哪些畫面和設定，以及依平台統計的遊玩時間。對於 Plumemu 無法辨識名稱的遊戲，還會在每次安裝時傳送一次：平台、檔案的儲存方式、大小、CRC-32，以及從遊戲本身讀取的產品代碼或光碟序號。絕不包含遊戲名稱、搜尋字詞或你的 ScreenScraper 帳號。當機報告可能包含檔案路徑。關閉後只會傳送一次匿名的「已關閉」通知，之後不再傳送任何資料。問題回報只會在你於「回報問題」中按下「傳送」時傳送，可能包含你選擇附上的記錄檔（含檔案路徑）。已傳送的資料會無限期保存。Plumemu 每天會在連上 Wi-Fi 時詢問一次 plumemu-app.stevensdesk.com 是否有新版本；代管該網站的 Cloudflare 會看到你的 IP 位址。可在「設定 › 關於 › 更新」中關閉這項功能。這項每日檢查也會從同一台伺服器下載更新後的平台資料（系統和模擬器清單），不會額外傳送任何內容。如果你使用 ScreenScraper 帳號，Plumemu 會將每款遊戲的檔案名稱、大小和檢查碼傳送給 ScreenScraper 來尋找封面；這些資訊找不到結果時，還會傳送遊戲名稱。如果選擇「預設來源」，Plumemu 會在連上 Wi-Fi 時從 libretro 的公開伺服器（thumbnails.libretro.com）下載盒裝封面，遊戲名稱會出現在位址中；該伺服器能看到你的 IP 位址。如果你使用 RetroAchievements 帳號，Plumemu 會在你開啟遊戲資訊時、玩完遊戲後，以及連上 Wi-Fi 時每天一次，將你的使用者名稱、金鑰和每款遊戲的 RetroAchievements 編號傳送給 retroachievements.org；徽章圖片來自 media.retroachievements.org。金鑰以加密方式儲存在這部裝置上，絕不會進入備份或記錄檔。登出後就不再傳送。 精確遊玩時間（在「設定」\u203A「統計」中開啟後）會透過 Android 的使用情況存取權取得該次遊玩時間段內的事件，只保留從 Plumemu 啟動的遊戲或應用程式以及螢幕的事件；除遊玩時間長度外不儲存任何內容，也絕不會傳送。</string>
+    <string name="settings_privacy_body">你的遊戲庫、設定和遊玩時間都儲存在這部裝置上 Plumemu 自己的儲存空間中，絕不會傳送出去。只有在你開啟這項功能（「設定 › 關於 › 傳送使用資料」）時，Plumemu 才會向開發者傳送匿名的使用次數和當機報告：國家或地區、裝置型號、Android 和應用程式版本、使用過哪些畫面和設定，以及依平台統計的遊玩時間。對於 Plumemu 無法辨識名稱的遊戲，還會在每次安裝時傳送一次：平台、檔案的儲存方式、大小、CRC-32，以及從遊戲本身讀取的產品代碼或光碟序號。絕不包含遊戲名稱、搜尋字詞或你的 ScreenScraper 帳號。當機報告可能包含檔案路徑。關閉後只會傳送一次匿名的「已關閉」通知，之後不再傳送任何資料。問題回報只會在你於「回報問題」中按下「傳送」時傳送，可能包含你選擇附上的記錄檔（含檔案路徑）。已傳送的資料會無限期保存。Plumemu 每天會在連上 Wi-Fi 時詢問一次 plumemu-app.stevensdesk.com 是否有新版本；代管該網站的 Cloudflare 會看到你的 IP 位址。可在「設定 › 關於 › 版本」中關閉這項功能。這項每日檢查也會從同一台伺服器下載更新後的平台資料（系統和模擬器清單），不會額外傳送任何內容。如果你使用 ScreenScraper 帳號，Plumemu 會將每款遊戲的檔案名稱、大小和檢查碼傳送給 ScreenScraper 來尋找封面；這些資訊找不到結果時，還會傳送遊戲名稱。如果選擇「預設來源」，Plumemu 會在連上 Wi-Fi 時從 libretro 的公開伺服器（thumbnails.libretro.com）下載盒裝封面，遊戲名稱會出現在位址中；該伺服器能看到你的 IP 位址。如果你使用 RetroAchievements 帳號，Plumemu 會在你開啟遊戲資訊時、玩完遊戲後，以及連上 Wi-Fi 時每天一次，將你的使用者名稱、金鑰和每款遊戲的 RetroAchievements 編號傳送給 retroachievements.org；徽章圖片來自 media.retroachievements.org。金鑰以加密方式儲存在這部裝置上，絕不會進入備份或記錄檔。登出後就不再傳送。 精確遊玩時間（在「設定」\u203A「統計」中開啟後）會透過 Android 的使用情況存取權取得該次遊玩時間段內的事件，只保留從 Plumemu 啟動的遊戲或應用程式以及螢幕的事件；除遊玩時間長度外不儲存任何內容，也絕不會傳送。</string>
     <!-- Updates -->
     <string name="settings_update_value_downloading">正在下載…</string>
     <string name="settings_update_value_installing">正在安裝…</string>
     <string name="settings_update_value_available">可更新至 %1$s</string>
-    <string name="settings_updates">更新</string>
     <string name="settings_updates_check_now">立即檢查</string>
     <string name="settings_check_updates_body">立即詢問 Plumemu 的更新伺服器是否有新版本。使用行動數據時，Plumemu 會在下載更新前先詢問你。</string>
     <string name="settings_check_updates_daily">每天檢查更新</string>
@@ -1277,7 +1273,6 @@
     <string name="settings_check_updates_value_found">有可用的更新</string>
     <string name="settings_check_updates_value_needs_android">Android 版本過舊</string>
     <string name="settings_check_updates_value_failed">檢查失敗</string>
-    <string name="settings_check_updates_value_busy">正在下載更新</string>
     <string name="settings_check_updates_busy">正在下載更新，請等下載完成後再檢查。</string>
     <string name="settings_check_updates_unexpected">檢查更新失敗，請稍後再試。</string>
     <string name="settings_update_checking">正在檢查更新…</string>
@@ -1485,8 +1480,12 @@
     <!-- App menu in Apps -->
     <string name="app_menu_info">應用程式資訊</string>
     <string name="app_menu_uninstall">解除安裝</string>
+    <string name="app_menu_open_bottom">在下方螢幕開啟</string>
+    <string name="app_menu_open_top">在上方螢幕開啟</string>
     <string name="app_menu_show_as_game">顯示為遊戲</string>
     <string name="app_menu_show_as_port">顯示為移植版</string>
+    <string name="app_menu_hint_gamenative">開啟「Frontend Sync」，資料夾放在 ROM 內</string>
+    <string name="app_menu_hint_droiddeck">開啟「Sync all game files to folder」到 ROM</string>
     <string name="app_tool_error_body">Android 無法開啟該畫面，請稍後再試。</string>
 
     <!-- Library › an unknown folder (a folder whose name matches no system): its row, side panel and the home notice. %1$s is the folder's name or a number. -->

@@ -441,7 +441,7 @@ internal abstract class SettingsModelHarness {
     protected fun focusOption(option: SettingsOption) {
         // Downward only, bounded by the rows on screen: an option above the focus, or a focus that
         // is not in the options column, fails with the reason instead of looping forever.
-        // Background and Text color are rows of Colors' panel: A on Colors, then through the tiles to the row.
+        // Background, Text color and Accent color are rows of Colors' panel: A on Colors, then through the tiles to the row.
         val row = ColorPages.kindOf(option)?.let(::colorsRowItemOf)
         if (row == null && model.focus.page == PanelPage.ColorSets) press(Action.Back)
         if (row != null) {
@@ -450,7 +450,7 @@ internal abstract class SettingsModelHarness {
                 repeat(model.focus.section.rowsIn(model.content).size) { if (model.focusedOption != SettingsOption.Colors) move(if (model.optionIndex > colors) Direction.Up else Direction.Down) }
                 press(Action.Enter)
             }
-            repeat(colorSetsPanelEntries(actions.shown).size + 2) { if (model.focus.panelIndex != row) move(if (model.focus.panelIndex == COLORS_TEXT_ITEM) Direction.Up else Direction.Down) }
+            repeat(colorSetsPanelEntries(actions.shown).size + 2) { if (model.focus.panelIndex != row) move(if (model.focus.panelIndex > row) Direction.Up else Direction.Down) }
             assertEquals("focusOption($option): the row was not reached", row, model.focus.panelIndex)
             return
         }

@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
+import com.plumemu.coredata.settings.AppsScreen
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.InputRouter
@@ -104,6 +105,40 @@ class AppsMenuScreenTest {
         assertTrue(hasRow(AppMenuEntryId.Uninstall))
         send(Action.Move(Direction.Down), Action.Enter)
         assertEquals(listOf(AppsGridApps[0].id), apps.uninstalled)
+        assertFalse(isPanelOpen())
+    }
+
+    @Test
+    fun openOnTheBottomScreenRowIsHiddenWithoutASecondScreen() {
+        show()
+        openApps()
+        send(Action.Menu)
+        assertFalse(hasRow(AppMenuEntryId.OpenOtherScreen))
+    }
+
+    @Test
+    fun aOnTheOpenOnRowOpensTheAppOnTheOtherScreenAndClosesTheMenu() {
+        apps.other = AppsScreen.Bottom
+        show()
+        openApps()
+        send(Action.Menu)
+        assertTrue(hasText("Open on the bottom screen"))
+        send(Action.Move(Direction.Down), Action.Enter)
+        assertEquals(listOf(AppsGridApps[0].id), apps.opened)
+        assertEquals(listOf(true), apps.openedOther)
+        assertFalse(isPanelOpen())
+    }
+
+    @Test
+    fun aTapOnTheRowSaysTopWhenTheSettingIsBottomAndOpensOnceOnTheOtherScreen() {
+        apps.other = AppsScreen.Top
+        show()
+        openApps()
+        send(Action.Menu)
+        assertTrue(hasText("Open on the top screen"))
+        compose.onNodeWithTag(GamePanelTags.row(AppMenuEntryId.OpenOtherScreen.name), useUnmergedTree = true).performTouchInput { click() }
+        compose.waitForIdle()
+        assertEquals(listOf(true), apps.openedOther)
         assertFalse(isPanelOpen())
     }
 }

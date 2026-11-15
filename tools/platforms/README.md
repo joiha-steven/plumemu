@@ -29,10 +29,12 @@ JVM test `ConverterTest` runs the converter and compares with the committed asse
 | `esde.py` | Reads ES-DE `es_systems.xml` and `es_find_rules.xml`; parses one command |
 | `daijisho.py` | Reads Daijishō `platforms/*.json`; parses one `amStartArguments` |
 | `gen_folder_names.py` | Writes `library/.../matching/DatFolderNames.kt` (folder names like `Sony - PlayStation 2`) from the name tool's system list; `--check` fails when it is stale (run by `scripts/verify.sh`) |
-| `tables.py` | Hand-kept decisions: tested systems, `SYSTEM_COLORS` (each system's own colour, `#RRGGBB`, written as `color`; adding a system means adding its colour, or leaving it out when it has none: engines, frontends, stores and generic folders), aliases, extra folders, excluded and extra extensions, short names, hand-kept emulators (the Steam apps), extra package names of a source's emulator (`EXTRA_VARIANTS`) |
+| `tables.py` | Hand-kept decisions: tested systems, `SYSTEM_COLORS` (each system's own colour, `#RRGGBB`, written as `color`; adding a system means adding its colour, or leaving it out when it has none: engines, frontends, stores and generic folders), aliases, extra folders, excluded and extra extensions, short names, hand-kept emulators (the Steam apps), extra package names of a source's emulator (`EXTRA_VARIANTS`), packages dropped from every emulator's variants (`DROPPED_VARIANT_PACKAGES`), known installed apps (`KNOWN_APPS`) |
 | `common.py` | Errors, package-name check, shape of the launch part, the check of a hand-kept emulator's launch |
 | `test_convert.py` | Converter unit tests |
 | `sources/daijisho/`, `sources/esde/` | The snapshots, each with `LICENSE` and `SOURCE.md` (URL, commit, date) |
+
+`KNOWN_APPS` packages must not be an emulator package or variant (the converter fails: an emulator is never an app game).
 
 ## Merge rules
 
@@ -56,7 +58,9 @@ JVM test `ConverterTest` runs the converter and compares with the committed asse
    `n3ds`: `.cia`; identify step S5a); the converter fails if another system lists one of them.
 4. **Emulators.** ES-DE commands are the base: package and activity come from
    `es_find_rules.xml` (first entry preferred, the rest are `variants`), the Intent from the
-   command. `EXTRA_VARIANTS` in `tables.py` adds builds ES-DE's find rules miss (Eden Duo, PPSSPP Duo)
+   command. `DROPPED_VARIANT_PACKAGES` removes a package from every emulator's variants (and skips a Daijishō player of it):
+   `com.tencent.ig`, ES-DE's benchmark disguise, which is the real PUBG Mobile; the converter
+   fails when no find rule lists a dropped package any more. `EXTRA_VARIANTS` in `tables.py` adds builds ES-DE's find rules miss (Eden Duo, PPSSPP Duo)
    after its entries, as variants with the same launch; the converter fails if the find-rule key is
    unknown or the package is already listed. A Daijishō player is added only when its package is not defined by ES-DE at all
    (RetroArch players are matched by core instead); ES-DE wins on conflicts. Daijishō's own
@@ -133,6 +137,10 @@ JVM test `ConverterTest` runs the converter and compares with the committed asse
    `{"mode": "steam_app_id", "target": "extra", "key": "app_id", "type": "int"}` (GameNative),
    `{"mode": "steam_app_id", "target": "extra", "key": "steamAppId", "type": "string"}` (GameHub Lite),
    `{"mode": "steam_app_id", "target": "data", "template": "droiddeck://game/{id}"}` (DroidDeck).
+   GameNative (systems steam, epic, windows) accepts all five id files and its optional `extrasByExtension`
+   (`{"epic": {"game_source": "EPIC"}, ...}`) adds the extras of the game file's extension on top of `extras`; every key
+   must be in `accepts`, a value is a boolean, integer or string, and no name repeats one of `extras`
+   (`common.hand_launch`; the app reads it as `Emulator.extrasByExtension`).
    The launcher reads the file (at most 1025 bytes: `SteamAppId.MAX_FILE_BYTES` + 1).
    Lemon (Switch, added 2026-11-01, in neither ES-DE nor the Daijisho snapshot of 2026-10-10) is hand-kept
    too: `TECH_DISCOVERED` and a content URI (Eden's Intent, and Daijisho's for Lemon); its builds are
@@ -142,8 +150,8 @@ JVM test `ConverterTest` runs the converter and compares with the committed asse
    emulator lists is skipped (it would list the emulator twice).
 16. **File types.** An emulator's optional `accepts` names the extensions it can open: a hand-kept
    emulator's own field; for a source's, `NOT_ACCEPTED` in `tables.py` names what it cannot open and
-   `accepts` is every other extension of its systems (WinNative: all but `steam`, so `amazon`, `app`,
-   `desktop`, `epic`, `gog`, `pcgame`). `ACCEPTS_FROM_DAIJISHO` names, for an emulator, the Daijisho
+   `accepts` is every other extension of its systems (WinNative: `app`, `desktop`; the Winlator family and MiceWine:
+   `desktop`; the id files `steam epic gog amazon pcgame` belong to GameNative, which writes them as id files). `ACCEPTS_FROM_DAIJISHO` names, for an emulator, the Daijisho
    players (one or more for each of its systems) whose `acceptedFilenameRegex` is its list: `accepts` is
    their extensions within its systems' (`daijisho.accepted_extensions` reads only the `^(.*).(?:a|b)$`
    shape; a player that starts another emulator, or a system left without a player, fails). Only where
@@ -159,7 +167,7 @@ JVM test `ConverterTest` runs the converter and compares with the committed asse
    fails on a link that is not https, on a host in `NOT_DOWNLOAD_HOSTS` (the Play Store, sites that re-host APKs), and
    on a row whose package no emulator lists. Without a row an emulator has no page and the app does not list it to get.
 18. **Whole order.** `SYSTEM_EMULATOR_ORDER` replaces a system's emulator order and must name exactly
-   its emulators (steam: GameNative, GameHub Lite, DroidDeck, WinNative; atari7800 and dos: Omnidroid last, so RetroArch stays the default).
+   its emulators (steam: GameNative, GameHub Lite, DroidDeck, WinNative; epic and windows: GameNative first; atari7800 and dos: Omnidroid last, so RetroArch stays the default).
 
 ## What is skipped (never guessed)
 
