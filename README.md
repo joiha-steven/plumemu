@@ -1,8 +1,8 @@
 <h1 align="center">Plumemu</h1>
 
-<p align="center"><b>Drop in a messy ROM folder, get a tidy library.</b><br>
-Right names, one row per game, no account, no internet. A light, free launcher for Android retro
-handhelds.</p>
+<p align="center"><b>Drop in a messy ROM folder, get a tidy game shelf.</b><br>
+Real names, one row per game, a cover for every game. No account, no Wi-Fi needed. A light, free
+home screen for Android retro handhelds.</p>
 
 
 <p align="center">
@@ -10,175 +10,165 @@ handhelds.</p>
 </p>
 
 <p align="center">
-  <a href="https://plumemu.stevensdesk.com/assets/media/demo-v015.mp4"><img src="media/demo.jpg" width="100%" alt="Play the one-minute demo: Plumemu on a 4:3 handheld screen driven by its buttons, here the Super Nintendo games as a grid of covers"></a>
+  <a href="https://plumemu.stevensdesk.com/assets/media/demo-v017.mp4"><img src="media/demo.jpg" width="100%" alt="Play the one-minute demo: Plumemu on a 4:3 handheld screen driven by its buttons, here the Super Nintendo games as a grid of covers"></a>
   <br><sub>One minute with the buttons, on a 4:3 screen. The only sound is Plumemu's own clicks.</sub>
 </p>
 
 <p align="center">
-  <b>0.1.6</b> · Android 6.0 or later · tested on the AYN Thor (earlier versions also on the Retroid Pocket 6, Nova and Classic) ·
+  <b>0.1.7</b> · Android 6.0 or later · tested on the AYN Thor (earlier versions also on the Retroid Pocket 6, Nova and Classic) ·
   <a href="../../releases">Download</a> · <a href="https://plumemu.stevensdesk.com">Website</a>
 </p>
 
 <p align="center">
-  0.1.6 brings faster system switches, a calmer home screen, fewer settings, and play time that counts only real play. The source is open: GPL-3.0, see <a href="#source">Source</a>.
+  New in 0.1.7: collections for your own lists of games, Settings in six sections, and a launcher that stays quick after an update. The source is open: GPL-3.0, see <a href="#source">Source</a>.
 </p>
 
 ---
 
+> I made Plumemu for my own handheld. Every launcher I tried wanted an evening of setup, or felt
+> heavy on a small chip. I wanted one that opens fast, knows my games and gets out of the way when
+> it's time to play. So I built it, and now it's yours too.
+
 ## Why pick Plumemu
 
-**Your games get their real names, offline.** Most launchers only trim `(USA) [!]` off the file
-name, so `sf2.zip` stays "sf2". Plumemu reads each game's own code inside zip, 7z, CHD and disc
-images and knows about 29,000 arcade sets, so `sf2.zip` becomes *Street Fighter II: The World
-Warrior*. No account, no scraping, no waiting.
+- **Build your library anywhere, even with no Wi-Fi.** Plumemu reads each game's own code inside
+  zip, 7z, CHD and disc images, so `sf2.zip` becomes *Street Fighter II: The World Warrior*, not "sf2".
+- **See each game once.** Three regional copies, a Rev 1 and a set in another folder are one row
+  in your list, not five.
+- **Play in two minutes, not an evening.** Pick your ROMs folder; Plumemu finds your emulators,
+  picks one for each system and adds new games by itself.
+- **Keep the power for your games.** A small download that runs on Android 6.0 and 2 GB handhelds,
+  opens 10,000 games in about a quarter of a second and sits idle while it waits.
+- **Put the second screen to work.** On the AYN Thor, the bottom screen shows the game's details
+  and how long your battery lasts at this game's pace.
+- **Use buttons or touch.** Every screen works fully with the gamepad and with your finger.
+- **Keep your files safe.** It sees only the folder you pick and never deletes, moves or renames a
+  game file.
+- **Pay nothing, check everything.** No price, no account, no ads. The source is public under
+  GPL-3.0, and [what Plumemu sends](#what-plumemu-sends) is a short table you can check against the code.
 
-**One row per game.** Three regional copies, a Rev 1 and a set in another folder are one game in
-your list, not five. You pick which copy plays from the game's menu.
+### The numbers
 
-**Playing in two minutes, not an evening.** Pick your ROMs folder; Plumemu finds the emulators you
-have, chooses one for each system and adds new games by itself. There are no platform files to
-import, no theme engine to learn and no scraper to configure before the first game.
-
-**Light enough for the handheld you already own.** A 9.4 MB download that runs on Android 6.0
-and 2 GB devices, fits 4:3 screens as well as 16:9, opens 10,000 games in about a quarter
-of a second and uses no CPU while it waits.
-
-**Made for dual-screen handhelds.** On the AYN Thor the second screen shows the game's details and
-how long your battery lasts at this game's pace.
-
-**Buttons and touch, both first.** Every screen works fully with the gamepad and with your finger.
-
-**Hands off your files.** It sees only the folder you pick and never deletes, moves or renames a
-game file.
-
-**Free and open.** No price, no account. The source is public under GPL-3.0, and
-[what Plumemu sends](#what-plumemu-sends) is a short table you can check against the code.
-
-### At a glance
-
-| | Plumemu |
+| | |
 |---|---|
-| Game names | Read from the game itself, offline, about 29,000 arcade sets |
-| Duplicates | Regions, revisions and arcade clones folded into one row |
-| Setup | Pick a folder and say whether you want box art; emulators found and chosen for you |
-| Covers | A drawn cover for every game; real box art with no account, or game details too with a free ScreenScraper account |
-| Runs on | Android 6.0 and later, 2 GB devices, 16:9 and 4:3 screens |
-| Second screen | Details and battery time left on the AYN Thor |
-| Achievements | RetroAchievements shown per game |
+| Download | 9.5 MB |
+| Runs on | Android 6.0 and later, 2 GB handhelds, 16:9 and 4:3 screens |
+| Start to your library, 10,000 games | 0.25 s on a slow Android 6.0 emulator; 0.31 s on the AYN Thor with 2,058 games |
+| Memory, 10,000 games | 63 MB |
+| CPU on the home screen | almost none: one CPU tick in 60 s |
+| Arcade sets it knows by name | about 29,000 |
 | Price, source | Free, GPL-3.0 |
+
+How each figure was measured: [Light on the hardware](#light-on-the-hardware).
+
+### Quick install
+
+```sh
+# On the handheld: download the APK from the latest release and open it. Or, from a computer:
+adb install -r plumemu-<version>.apk
+adb shell am start -n com.plumemu/.MainActivity
+```
+
+Pick your ROMs folder, say whether you want box art, and you're playing. To make Plumemu your home
+screen, say yes when it asks, or press Home and choose Plumemu. More in [Install](#install).
 
 ## What it does
 
 ### Your games, named and in order
 
-- **Names your games itself, offline.** It reads the game's own code inside zip, 7z and CHD files
-  and disc images, knows about 29,000 arcade sets by their short names, takes names for newer
-  Switch games from GameTDB and cleans up messy file names. Arcade games get a clean name with the
-  region in its own column. No account, no internet. A wrong name is fixed from the game menu, and
-  the fix sticks.
-- **One row per game.** Copies of one game (regions, revisions, arcade sets) show as one row, even
-  from separate folders; Other versions in the game menu picks which one plays. Same-name variants
-  carry a label (Rev 1, Beta, translation, hack), and `.cue`, `.gdi` and `.m3u` parts are not rows
-  of their own.
-- **New games show up by themselves.** Copy games in or put in an SD card: they appear when you
-  come back to Plumemu, and Home tells you about them. A folder Plumemu cannot place in a system is
-  listed in Settings › Library › Files not added, where you pick its system.
+- **Names your games itself, offline.** It reads the game's own code, knows about 29,000 arcade
+  sets by their short names and cleans up messy file names. A wrong name is fixed from the game
+  menu, and the fix sticks.
+- **One row per game.** Regions, revisions and arcade sets fold into one row, even from separate
+  folders; Other versions in the game menu picks which one plays. Same-name variants carry a label
+  (Rev 1, Beta, translation, hack), and `.cue`, `.gdi` and `.m3u` parts never show as rows.
+- **New games show up by themselves.** Copy games in or put in an SD card: they're there when you
+  come back, and Home tells you. A folder Plumemu cannot place is listed in Settings › Library ›
+  Files not added, where you pick its system.
+- **Collections, made by you or for you.** Recent, Most played and Recently added fill themselves,
+  between Favorites and Apps. Make your own from any game's menu, with games from any system, and
+  rename, move or delete them in Settings › Library › Collections.
 - **Android games and Ports.** Installed Android games get a system of their own, and native port
-  apps (Delta Touch and others) join Ports. Show as game, Show as port and Not a game in the menus
-  correct Plumemu's choice.
-- **Covers for every game.** A game without box art gets a card in its system's color with its title
-  (covers still on their way show the same card), so every system, Recent and Favorites can use the grid, with no account. Android games and Ports
-  show their app icon as a cover card.
-- **Real box art, if you want it.** Setup asks first, No by default. Choose the default source and Plumemu fetches box fronts over Wi-Fi
-  from libretro's public server, with no account. Or sign in with your own free
-  [ScreenScraper](https://www.screenscraper.fr) account (Settings › Box art & accounts › ScreenScraper) and
-  Plumemu fetches box art and game details too. A wrong cover is replaced from the game
-  menu. The ScreenScraper panel shows the space used, picks the Box art region and has Clear box
-  art; a daily cleanup removes orphaned images, and games that keep failing on the server stop
-  retrying after 3 days.
-- **Achievements, if you use RetroAchievements.** Sign in under Settings › Box art & accounts ›
+  apps join Ports. Show as game, Show as port and Not a game in the menus correct Plumemu's choice.
+- **A cover for every game.** A game without box art gets a card in its system's color with its
+  title, so every system and collection can be a grid of covers with no account. Android games and
+  Ports show their app icon.
+- **Real box art, if you want it.** Setup asks first, No by default. The default source fetches box
+  fronts over Wi-Fi from libretro's public server with no account, or your own free
+  [ScreenScraper](https://www.screenscraper.fr) account (Settings › Library › ScreenScraper) adds
+  game details too.
+- **Achievements, if you use RetroAchievements.** Sign in under Settings › Library ›
   RetroAchievements with your user name and Web API key, never your password. A game's Info lists
-  its achievements with badges, points and dates, and a game you have mastered carries a small
-  trophy in the list. Plumemu only shows them; your emulator awards them. The key is kept
-  encrypted on the device, and Sign out deletes it.
-- **Details and sorting.** Info shows the year, publisher, developer, genre, players, the whole
-  description and, with RetroAchievements, the game's achievements. Sort games by name, last played, year, most played, recently added or rating, right from the
-  list.
-- **Nothing goes missing quietly.** Settings › Library › Files not added lists every file left out
-  of your library, with the reason, and Unidentified games suggests the closest official titles. Folders the last scan could not read are listed
-  there too, with Scan again and a way to skip each one.
-- **Recent that you control.** Take one game out of Recent from its menu (Undo brings it back for four seconds), or clear it
-  (Settings › Advanced › Reset… › Clear Recent…). Recent keeps the last 50 games. Your play time and statistics stay.
-- **Skip a sub-folder.** Settings › Library › Game folders can leave out a sub-folder (a folder of
-  demos, say) so its games never show up. Nothing on disk is touched.
+  its badges, points and dates, and a mastered game carries a small trophy in the list.
+- **Find the right game fast.** Sort by name, last played, year, most played, recently added or
+  rating, right from the list. Info shows the year, publisher, developer, genre, players and the
+  whole description.
+- **Nothing goes missing quietly.** Settings › Library › Files not added lists every file left out,
+  with the reason, and Unidentified games suggests the closest official titles.
+- **Skip a sub-folder.** Settings › Library › Game folders can leave out a folder of demos, say,
+  so its games never show up. Nothing on disk is touched.
 
 ### Playing
 
-- **Emulators picked for you.** Plumemu finds the emulators you have installed and picks one per
-  system; any game or system can use another. Dual-screen builds such as Eden Duo and PPSSPP Duo
-  count as the emulators they are. Each emulator is offered only for the file types it
-  opens. If a RetroArch core may be missing, Plumemu asks "Did the game start?" and offers the
-  other emulators. A game that is slow to start shows "Starting game…", and if the emulator has not
-  opened after 20 seconds Plumemu says so instead of waiting for ever. While you play, Plumemu holds
-  its background work (reading new files, box art downloads) until you are back.
-- **Second screen, and your battery.** On a handheld with two screens, like the AYN Thor, the
-  lower screen shows the chosen game's details, app icons and the Apps grid, a game's
-  achievements, your statistics while Settings is open, and, while you play, a clock with the
-  battery as a ring, how long it lasts at this game's pace and a chart of the session against your
-  usual pace. The top bar shows a small bolt before the battery percentage while the device is on
-  its charger. A game you have played says "2 h on this charge" before you start it. Its options
-  are in Settings › Second screen, which appears only on a handheld that has one. Everything still
-  works on one screen.
-- **Light enough for old handhelds.** A 9.4 MB download that runs on Android 6.0, opens your
-  library in about a quarter of a second and uses no CPU while it sits on the home screen.
-  [Measured](#light-on-the-hardware) on a slow emulator with 10,000 games.
-- **Smooth.** Every list and grid glides over 200 ms and slows into place, and the selection pill
-  glides with it. Plumemu builds the next page before you reach it, so a step never stalls to draw.
+- **Emulators picked for you.** Plumemu finds the emulators you have and picks one per system; any
+  game or system can use another. Each emulator is offered only for the file types it opens.
+- **No silent dead ends.** If a RetroArch core may be missing, Plumemu asks "Did the game start?"
+  and offers other emulators. If an emulator hasn't opened after 20 seconds, Plumemu says so
+  instead of waiting forever.
+- **Quiet while you play.** Plumemu holds its background work, like reading new files and box art
+  downloads, until you're back.
+- **Your second screen, and your battery.** On a handheld with two screens, like the AYN Thor, the
+  bottom screen shows the selected game, its achievements, and your statistics while Settings is open. While you play it
+  shows a clock, a battery ring, how long the battery lasts at this game's pace and a chart of the
+  session; its options are in Settings › Screens.
+- **Smooth.** Every list and grid glides over 200 ms and slows into place. Plumemu builds the next
+  page before you reach it, so a step never stalls to draw.
 
 ### Make it yours
 
-- **Colors.** Seventeen ready-made sets, each previewed before you pick it: Plumemu (a deep blue, the
-  default), Daylight, Ultramarine, Magenta, Peach, Matcha, Mocha, Front loader, Spice cube, Pea green, Pocket, Lavender, Red and gold, Ivory, Clear grape, Cold grey and Banana. Eight of them color the A, B, X and Y keys,
-  and on a handheld with an OLED screen setup offers true black. Or make your own background, text and accent colors with
-  sliders that show the whole screen in the new color as you drag.
-- **Lists or covers.** Show any system, Recent or Favorites as a list or as a grid of covers in
-  three sizes (L1 / R1, or the Size hint). Covers sit in a glass frame with rounded corners; the focused cover or app lifts a little inside its
-  own space, with a thin light rim, so nothing overlaps. Apps can be a grid of larger icons too.
+- **Colors.** Pick one of seventeen ready-made sets, each previewed first: Plumemu (a deep blue, the
+  default), Daylight, Ultramarine, Magenta, Peach, Matcha, Mocha, Front loader, Spice cube, Pea
+  green, Pocket, Lavender, Red and gold, Ivory, Clear grape, Cold grey and Banana. Or mix your own
+  background, text and accent with sliders that repaint the screen as you drag.
+- **True black and classic keys.** On an OLED screen setup offers true black, and eight of the sets
+  color the A, B, X and Y keys.
+- **Lists or covers.** Show any system or collection as a list or as a grid of covers in three
+  sizes (L1 / R1). Apps can be a grid of larger icons too.
 - **One sliding view.** Systems, games and details move as one strip, laid out for 16:9 and 4:3
-  screens. On 4:3 and narrow screens the game's details peek in beside the list. Beside the games,
-  a narrow strip shows a short code for each system, in your order, that you can tap.
-- **About each system.** Above a system's games, a short band with its badge, the years it was
-  made and a few lines about it.  It follows the screens your handheld has.
-- **Text you can read.** Text size starts at Large. Every screen uses Jost in one weight, and the clock,
-  battery and years use a monospaced face so their figures line up.
-  Lists, menus and panels run under the top and bottom bars and fade there.
-- **Sounds and vibration.** Settings › Controls › Button sounds sets sounds Off, Quiet or Loud (they follow the
-  media volume) and vibration, which is on by default. Language is in Settings › Appearance:
-  English, Vietnamese, Spanish, French, Japanese, Korean and Chinese.
-- **Buttons and touch**, equally, everywhere. Plumemu has its own compact keyboard, made for the
-  D-pad, so Search keeps its results in view while you type. It has a Paste key, and sign-in steps
-  open with the keyboard ready.
+  screens. A narrow strip at the edge shows a short code for each system that you can tap.
+- **Text you can read.** Text size starts at Large, and every screen uses one typeface, Jost. The
+  clock, battery and years use a monospaced face so their figures line up.
+- **Sounds, vibration and language.** Button sounds can be Off, Quiet or Loud, and vibration is on
+  by default (Settings › Controls). Language is in Settings › Appearance: English, Vietnamese,
+  Spanish, French, Japanese, Korean and Chinese.
+- **A keyboard made for the D-pad.** Search keeps its results in view while you type, and the
+  keyboard has a Paste key.
 
 ### Your files and your data
 
-- **Your files stay yours.** Setup takes two minutes: pick your ROMs folder in Android's own folder
-  picker. No access to all your files, ever, and Plumemu never deletes, moves or renames a game
-  file.
-- **Back up and restore.** Save your settings, or everything (library, box art, play time), into
-  one file, checked after writing, and put it back on this device or a new one.
+- **Your files stay yours.** You pick your ROMs folder in Android's own folder picker. Plumemu never
+  asks for all your files, and never deletes, moves or renames a game file.
+- **Move to a new handheld with one file.** Save your settings, or everything (library, box art,
+  play time), into one file that is checked after writing. Put it back on this handheld or a new
+  one from Settings › About › Back up and restore.
 - **Updates from inside the app** (official builds). Once a day on Wi-Fi Plumemu looks for a new
-  version; the top bar then shows "Update" and the version, and START or Settings › About › Version
-  installs it. After an update Plumemu opens itself again, or shows a notification to tap if Android keeps
-  it from coming to the front, and a card tells you what is new, once.
+  version, and START opens it. Afterwards a card tells you what's new, once.
 - **Anonymous usage statistics and crash reports, only if you want them** (official builds). They
-  are off until you switch them on in the setup or in Settings › About › Send usage statistics.
-  [What Plumemu sends](#what-plumemu-sends) lists every connection.
+  stay off until you switch them on in setup or in Settings › About › Send usage statistics.
 
 <p align="center">
   <img src="media/color-sets.png" width="100%" alt="The same Super Nintendo screen in all seventeen ready-made color sets, each named below: Plumemu, Daylight, Ultramarine, Magenta, Peach, Matcha, Mocha, Front loader, Spice cube, Pea green, Pocket, Lavender, Red and gold, Ivory, Clear grape, Cold grey and Banana">
 </p>
 
 <table>
+  <tr>
+    <td width="50%"><img src="media/collection-grid.png" alt="An own collection called RPG in Mocha, a grid of twelve covers from the Super Nintendo, PlayStation and Dreamcast, Final Fantasy VII selected (the covers are drawn posters)"></td>
+    <td width="50%"><img src="media/game-menu.png" alt="Super Metroid's game menu in Magenta over the Super Nintendo list: Play, Play with Snes9x, Add to Favorites, Add to collection, Name and Info"></td>
+  </tr>
+  <tr>
+    <td align="center">Your own collections, mixing every system</td>
+    <td align="center">START on any game opens its menu</td>
+  </tr>
   <tr>
     <td width="50%"><img src="media/battery-in-game.png" alt="The lower screen while a game runs: a large clock at 21:47, a ring at 38%, \"45 min left\" and \"empty at about 22:32\", a chart of the session with a dotted line for the usual pace, and \"Played 0:40 · Used 32% · 48% an hour · usually 40%\""></td>
     <td width="50%"><img src="media/system-card.png" alt="The lower screen's card for Super Nintendo: the four games played last as cards, play time, games played and achievements, then Nintendo, home console, 1990 to 2003, and a line about it"></td>
@@ -226,24 +216,29 @@ game file.
     <td align="center">A, B, X and Y in their classic colors</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/settings.png" alt="Settings › Library in Pea green, a green screen: Game folders, Rescan library and Files not added; the Game folders panel on the right lists Internal storage and SD card with their game counts"></td>
-    <td width="50%"><img src="media/update.png" alt="Settings › About in Daylight with the update panel: Plumemu 0.1.3 → 0.1.4, a short list of release notes and an Update button (an example screen)"></td>
+    <td width="50%"><img src="media/settings.png" alt="Settings › Library in Pea green, a green screen: the six sections on the left, then Game folders, Rescan library, Files not added, Emulators, Box art and both accounts; the Game folders panel on the right lists Internal storage and SD card with their game counts"></td>
+    <td width="50%"><img src="media/update.png" alt="Settings › About in Daylight with the update panel: Plumemu 0.1.6 → 0.1.7, a short list of release notes and an Update button (an example screen)"></td>
   </tr>
   <tr>
     <td align="center">Settings that say what they do</td>
     <td align="center">Updates from inside the app</td>
   </tr>
+  <tr>
+    <td colspan="2"><img src="media/statistics.png" alt="Settings › Statistics in Clear grape: total play time, this week by day, games played and box art, then the most played games"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">Your play time, day by day this week</td>
+  </tr>
 </table>
 
 ## Light on the hardware
 
-Many retro handhelds are slow and run old Android, so Plumemu is built to use as little as it
-can. These figures were measured with 0.0.7-beta (the download size is the current one), on a slow Android 6.0 emulator (2 GB of memory) with a library of
+Plenty of retro handhelds have modest chips and old Android, so I measure instead of guessing. These figures were measured with 0.0.7-beta (the download size is the current one), on a slow Android 6.0 emulator (2 GB of memory) with a library of
 10,000 games:
 
 | | |
 |---|---|
-| Download | 9.4 MB |
+| Download | 9.5 MB |
 | Start to your library | 0.25 s |
 | Memory | 63 MB |
 | CPU while it sits on the home screen | almost none (one CPU tick in 60 s); the clock redraws once a minute |
@@ -284,7 +279,7 @@ optional: on the Thor it shows details, a clock and your battery, and nothing ne
 
 1. Download the APK from the latest [release](../../releases) or from the
    [website](https://plumemu.stevensdesk.com).
-2. Open it on the device and allow the install when Android asks.
+2. Open it on the handheld and allow the install when Android asks.
 3. Open Plumemu and pick your ROMs folder. To make it the home screen, say yes when it asks, or
    press Home and choose Plumemu.
 
@@ -292,7 +287,7 @@ optional: on the Thor it shows details, a clock and your battery, and nothing ne
 stay. The official build also finds new versions itself: START Settings shows a dot, and
 Settings › About › Version downloads it, checks that it really is Plumemu, and installs it. On
 Android 8 and later, Android asks once to let Plumemu install apps. Nothing installs while you
-play. Settings › About › Version has a switch that turns the daily check off.
+play. Settings › About › Check for updates daily turns the daily check off.
 
 ## Controls
 
@@ -304,12 +299,12 @@ play. Settings › About › Version has a switch that turns the daily check off
 | Y | Add to or remove from Favorites |
 | START | Game menu; Settings from the system column |
 | SELECT | List or grid (covers, or app icons in Apps) |
-| L2 / R2 | Previous / next system |
+| L2 / R2 | Switch list: previous / next system or collection |
 | L1 / R1 | In a list sorted by name, previous / next letter; in Recent and in lists sorted by Last played or Year, one page up / down; in a game grid, smaller / larger covers |
 | Home | With Plumemu as the home screen: back to the game you played last |
 
 The button printed A confirms. Settings › Controls › Confirm with B can make the bottom button (B,
-or ✕) confirm instead, and Settings › Controls › Switch system with can move system switching to L1 / R1. Touch
+or ✕) confirm instead, and Settings › Controls › Switch list with can move it to L1 / R1. Touch
 works everywhere: tap to select, tap again to play. Settings › Controls › Push right twice to play lets
 one hand do it: push right once to mark a game, again to start it. Pinned shortcuts (Steam,
 Windows) start from Plumemu.
@@ -336,10 +331,10 @@ official build can send, and to whom:
 | Usage statistics and crash reports: device model, Android and Plumemu versions, a random install number, which screens and settings are used, play time by system. For a game Plumemu could not name, once: its system, size, checksum and any code read from the game. Never game titles, file names or search words. | The developer (`plumemu.stevensdesk.com`) | Only after you switch it on | Settings › About › Send usage statistics |
 | A problem report: what you wrote, an e-mail if you give one, the log unless you untick it | The developer | Only when you press Send | Do not press Send |
 | An update check: a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | Once a day on Wi-Fi, or when you press Check for updates | Settings › About › Version |
-| Box art lookups: your ScreenScraper account, and each game's file name, size, checksum and title | [ScreenScraper](https://www.screenscraper.fr) | Only while you are signed in, on Wi-Fi | Settings › Box art & accounts › ScreenScraper: Sign out or Pause |
+| Box art lookups: your ScreenScraper account, and each game's file name, size, checksum and title | [ScreenScraper](https://www.screenscraper.fr) | Only while you are signed in, on Wi-Fi | Settings › Library › ScreenScraper: Sign out or Pause |
 | Box art ScreenScraper lacks: a Steam game's title, or a game's file name | Steam (Valve) and the libretro thumbnail server | Only while you are signed in to ScreenScraper, on Wi-Fi | The same |
-| Box art with no account: a game's name, in the picture's address | The libretro thumbnail server | Only if you choose the default source, on Wi-Fi | Settings › Box art & accounts › Box art: Plumemu's own covers |
-| Achievements: your RetroAchievements user name, your Web API key and the RetroAchievements number of a game, found from a hash of the game file that Plumemu computes on the handheld (no file leaves it). Badge pictures are plain downloads with no account data | [RetroAchievements](https://retroachievements.org) (`retroachievements.org`, badges from `media.retroachievements.org`) | Only while you are signed in: when a game's Info opens, after you play, and once a day on Wi-Fi | Settings › Box art & accounts › RetroAchievements: Sign out deletes your name, key and progress |
+| Box art with no account: a game's name, in the picture's address | The libretro thumbnail server | Only if you choose the default source, on Wi-Fi | Settings › Library › Box art: Plumemu's own covers |
+| Achievements: your RetroAchievements user name, your Web API key and the RetroAchievements number of a game, found from a hash of the game file that Plumemu computes on the handheld (no file leaves it). Badge pictures are plain downloads with no account data | [RetroAchievements](https://retroachievements.org) (`retroachievements.org`, badges from `media.retroachievements.org`) | Only while you are signed in: when a game's Info opens, after you play, and once a day on Wi-Fi | Settings › Library › RetroAchievements: Sign out deletes your name, key and progress |
 | Platform data (the list of systems and emulators): a request for one file, nothing about you | The developer (`plumemu-app.stevensdesk.com`) | In the same daily update check | Settings › About › Version |
 
 A build you make yourself from the source sends no statistics and checks no updates, and has no

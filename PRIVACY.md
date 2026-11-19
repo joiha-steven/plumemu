@@ -91,7 +91,7 @@ address, as for any web request. Choose Plumemu's own covers and no box art serv
   (`thumbnails.libretro.com`). Nothing else, and no account, goes to either.
 - **What stays on the device**: the box art and details it sends back, and your password,
   encrypted with a key that never leaves the device.
-- **Sign out** in Settings › Box art & accounts › ScreenScraper removes the account from the device.
+- **Sign out** in Settings › Library › ScreenScraper removes the account from the device.
 - Your ScreenScraper account is never written to Plumemu's logs.
 
 ## Achievements (only if you sign in to RetroAchievements)
@@ -111,7 +111,7 @@ contact RetroAchievements at all.
 - **What stays on the device**: the game list it downloads, your progress and the games it matched,
   and your key, encrypted with a key that never leaves the device. The key is never written to
   Plumemu's logs and never put in a backup; after a restore you sign in again.
-- **Sign out** in Settings › Box art & accounts › RetroAchievements deletes your name, your key and your
+- **Sign out** in Settings › Library › RetroAchievements deletes your name, your key and your
   progress from the device.
 
 ## Battery use
@@ -140,7 +140,7 @@ default, and it can be switched on or off in Settings › Statistics › Exact p
 
 ## Backups
 
-Settings › Advanced › Back up… saves a file where you choose. It holds your settings and, while
+Settings › About › Back up and restore › Back up… saves a file where you choose. It holds your settings and, while
 you are signed in, your ScreenScraper user name and password in plain text, so keep it private. It
 never holds your RetroAchievements key. A backup of everything also holds your library, box art,
 play time and battery use. Plumemu never

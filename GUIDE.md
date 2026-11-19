@@ -1,7 +1,7 @@
 # Using Plumemu
 
-How to lay out your games, what Plumemu does with them, and where to change things. Buttons are
-in the [README](README.md#controls).
+Everything you need to get from a folder of files to playing: how to lay out your games, what
+Plumemu does with them, and where to change things. Buttons are in the [README](README.md#controls).
 
 ## Your games folder
 
@@ -135,7 +135,7 @@ Install emulators from their own developers. Plumemu finds the ones installed (i
 - **Box art** is optional. Setup asks "Download box art?" (No to begin with). Default source
   fetches box fronts from libretro's public server with no account; or sign in with your own free
   [ScreenScraper](https://www.screenscraper.fr) account for box art and game details. Change it
-  later in Settings › Box art & accounts. It downloads on Wi-Fi only. Wrong cover? Game menu › Fix
+  later in Settings › Library › Box art. It downloads on Wi-Fi only. Wrong cover? Game menu › Fix
   box art. Box art region, for games with no box in their own region, is in the ScreenScraper panel.
 
 ## Achievements
@@ -144,21 +144,24 @@ To see a game's achievements, sign in to [RetroAchievements](https://retroachiev
 
 1. On retroachievements.org, open your settings and copy your user name and your Web API key. Use
    the key, not your password.
-2. In Plumemu open Settings › Box art & accounts › RetroAchievements and type both (Paste in Plumemu's
+2. In Plumemu open Settings › Library › RetroAchievements and type both (Paste in Plumemu's
    keyboard helps). Sign in checks them.
 3. Open a game's Info: its achievements show with badges, points and dates, and a game you have
    mastered has a small trophy in the list.
 
 Plumemu only shows achievements; your emulator awards them, signed in there on its own. Some
 `.chd`, `.rvz` and `.wia` files may not match a game yet, and 3DS, MS-DOS and Arduboy games show
-none. Settings › Box art & accounts › RetroAchievements › Sign out removes your name, key and progress.
+none. Settings › Library › RetroAchievements › Sign out removes your name, key and progress.
 
 ## Lists and keeping things tidy
 
-- **Recent, Favorites and Apps** sit at the top of the system column. Y adds or removes a favorite.
+- **Favorites, Collections and Apps** sit at the top of the system column. Y adds or removes a favorite.
+- **Collections**: Recent, Most played and Recently added fill themselves. Make your own from a
+  game's menu › Add to collection…, with games from any system; Settings › Library › Collections
+  renames, moves and deletes them. SELECT switches a collection between covers and a list.
 - **Recent** keeps the last 50 games. In a
   game's menu, "Remove from Recent" takes one out (Undo brings it back for four seconds);
-  Settings › Advanced › Reset… › Clear Recent… empties it.
+  Settings › About › Reset… › Clear Recent… empties it.
   Play time and statistics stay either way.
 - **Search**: X.
 - **Hide a game**: game menu › Hide; or Not a game for a file that is not one. Both come back in
@@ -171,8 +174,7 @@ none. Settings › Box art & accounts › RetroAchievements › Sign out removes
 
 Settings › Home screen › Use as home screen makes Plumemu what the Home button opens. Home then
 brings you back to the game you played last. On a handheld with a second screen, such as the AYN
-Thor, Settings › Second screen sets what it shows (that section appears only on a handheld that has
-one).
+Thor, the second screen's rows sit in the same section, which is then named Settings › Screens.
 
 ## Typing
 
@@ -181,8 +183,8 @@ field. Settings › Controls › Keyboard switches to Android's keyboard.
 
 ## Look
 
-Settings › Appearance: seventeen ready-made [color sets](COLORS.md) or your own colors, text size,
-Fade list edges and Language. Every screen uses Jost in one weight. The focused cover or app lifts a
+Settings › Appearance: seventeen ready-made [color sets](COLORS.md) or your own colors, text size and
+Language. Every screen uses Jost in one weight. The focused cover or app lifts a
 little inside its own space with a thin light rim; buttons and switches are flat, and a switch that
 is off is outlined. Settings › Home screen: Use as home screen and Show Android apps. The hints, clock and battery always show.
 Settings › Controls: Confirm with B, sounds and vibration. List or grid is SELECT on the main
@@ -190,7 +192,7 @@ screen.
 
 ## Back up, restore, update
 
-- Settings › Advanced › Back up saves your settings, or everything (library, box art, play time),
+- Settings › About › Back up and restore saves your settings, or everything (library, box art, play time),
   to a file; Restore puts it back.
 - When a new version is out, the top bar shows "Update" and the version; START opens it. You can
   also use Settings › About › Version. It installs the new version, keeping your library and
