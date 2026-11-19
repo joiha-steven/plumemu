@@ -75,8 +75,8 @@ abstract class SettingsLayoutAuditBase {
     private val themes = listOf("Graphite" to TableText.Graphite, "Paper" to TableText.Paper)
 
     /**
-     * With nine sections the column does not all fit 432 high at Small text: it scrolls and fades the cut row
-     * (design/rules.md › Lists that scroll). What still holds: equal rows of at least 40, the focused row and the one past it whole,
+     * Six sections fit 432 high at Small text, so nothing is cut here; a column that does scroll fades the cut row
+     * (design/rules.md › Lists that scroll; [SettingsSectionsFadeEndTest] at a larger text). What holds either way: equal rows of at least 40, the focused row and the one past it whole,
      * the bottom fade drawn while rows are cut.
      */
     @Test
@@ -96,7 +96,6 @@ abstract class SettingsLayoutAuditBase {
             assertTrue("$name: every row not cut ends above the hint bar (${hint.top}), got ${kept.map { rows[it].bottom }}", kept.all { rows[it].bottom <= hint.top })
             val fades = compose.onAllNodesWithTag(SettingsTags.SECTIONS + FADE_BOTTOM_SUFFIX).fetchSemanticsNodes().isNotEmpty()
             assertEquals("$name: the bottom fade is drawn exactly while rows are cut ($seen of $full)", cut.isNotEmpty(), fades)
-            assertTrue("$name: nine rows do not fit here, so the fade must show ($seen of $full)", fades)
         }
 
     @Test

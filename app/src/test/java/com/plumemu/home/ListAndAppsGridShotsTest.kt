@@ -47,13 +47,14 @@ abstract class ListAndAppsGridShotsBase(
         File(dir, "${fault}_${size.label}_${p.label}_$label.png").outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
     }
 
-    private fun entryRows(id: String) = content.entries.first { it.id == id }.rows
+    // Recent is a folder inside Collections since the Collections change: looked up beside the column's entries.
+    private fun entryRows(id: String) = (content.entries + content.folderEntries).first { it.id == id }.rows
 
     private fun edit(
         id: String,
         rows: List<GameRowModel>,
     ) {
-        compose.runOnIdle { content = content.withEntries(content.entries.map { if (it.id == id) it.copy(rows = rows) else it }) }
+        compose.runOnIdle { content = content.withEntries(content.entries.map { if (it.id == id) it.copy(rows = rows) else it }, folderEntries = content.folderEntries.map { if (it.id == id) it.copy(rows = rows) else it }) }
         compose.waitForIdle()
     }
 
@@ -70,7 +71,7 @@ abstract class ListAndAppsGridShotsBase(
     fun fault1RowAddedAboveTheWindow() {
         val deep = entryRows("recent")
         edit("recent", deep + deep.map { it.copy(id = it.id + "-b") })
-        host(listOf(Action.TapItem(Column.Systems, 0), Action.Enter))
+        host(OpenRecentFolderByTap)
         edit("recent", listOf(entryRows("recent").first().copy(id = "just-played", title = "Super Mario 3D Land")) + entryRows("recent"))
         ReferenceShots.Preset.entries.forEach { write("fault1", it) }
     }

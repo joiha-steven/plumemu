@@ -139,7 +139,7 @@ enum class ConfirmButtonSetting { Right, Bottom }
 enum class KeyboardSetting { Plumemu, Android }
 
 /**
- * Settings › Controls › Switch system with: which pair of shoulder buttons
+ * Settings › Controls › Switch list with: which pair of shoulder buttons
  * switches system on the main screen. [Triggers] (L2 / R2, keys or analog triggers) is the default and
  * what the app always did; [Bumpers] (L1 / R1) trades the two pairs, so L2 / R2 then jump a letter in a
  * list and change Size in a grid. The names are what `controls.switch_system_with` stores.
@@ -163,6 +163,13 @@ data class AppearanceSettings(
      * none of them and reads as lists.
      */
     val gridSystems: Set<String> = emptySet(),
+    /**
+     * Collections the main screen shows as a list (SELECT); every other collection is a grid, the
+     * other way round from [gridSystems]. Ids: "recent", "most_played", "recently_added" for the
+     * built-in ones, "collection:<id>" for the person's own. An id of a deleted collection stays
+     * until the app removes it and is ignored meanwhile.
+     */
+    val listCollections: Set<String> = emptySet(),
     /**
      * The person's own colours, kept when they pick a ready-made set while their colours matched
      * none (Settings › Appearance › Colors), so "Custom" brings them back exactly. Null

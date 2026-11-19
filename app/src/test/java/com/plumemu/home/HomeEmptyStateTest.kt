@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.CompositionLocalProvider
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -56,7 +57,7 @@ class HomeEmptyStateTest {
             router = remember { InputRouter(scope) }
             PlumTheme(theme) {
                 CompositionLocalProvider(LocalHomeNotices provides notices) {
-                    HomeScreen(FakeHomeContent.noGames(), router, HomeCallbacks(onAddFolder = { folderAsked++ }, onFilesNotAdded = { filesNotAdded++ }, notices = notices))
+                    HomeScreen(FakeHomeContent.noGames(), router, HomeCallbacks(onAddFolder = { folderAsked++ }, onFilesNotAdded = { filesNotAdded++ }, notices = notices), initialFocus = StripFocus())
                 }
             }
         }

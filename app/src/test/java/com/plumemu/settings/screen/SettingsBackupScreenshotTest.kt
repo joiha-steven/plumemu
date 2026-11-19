@@ -13,7 +13,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings › Advanced › Back up and restore and Reset…: the rows with their lists, Back up…'s
+ * Settings › About › Back up and restore and Reset…: the rows with their lists, Back up…'s
  * choice with the password warning, the progress with Cancel, and how it ended.
  */
 @RunWith(RobolectricTestRunner::class)

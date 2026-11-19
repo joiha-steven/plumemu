@@ -27,6 +27,7 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.home.FakeHomeContent
 import com.plumemu.home.HomeCallbacks
 import com.plumemu.home.appComposeRule
+import com.plumemu.home.assertHomeLandedOnFavorites
 import com.plumemu.home.rulesAround
 import com.plumemu.secondscreen.ScreenKind
 import kotlinx.coroutines.CoroutineScope
@@ -99,7 +100,7 @@ class SetupScreenTest {
     fun aCompletedSetupGoesStraightToTheMainScreen() {
         show(completed(homeRoleAsked = true))
         compose.onNodeWithTag(SetupTags.SCREEN).assertDoesNotExist()
-        compose.onNodeWithText("Super Nintendo").assertIsDisplayed()
+        compose.assertHomeLandedOnFavorites() // landing is Favorites' first game since the Collections change
     }
 
     @Test

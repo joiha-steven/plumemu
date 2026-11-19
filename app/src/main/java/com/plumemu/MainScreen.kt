@@ -67,6 +67,7 @@ import com.plumemu.content.HomeState
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreui.theme.PlumDimens
+import com.plumemu.coreui.theme.HoldPlumTheme
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.home.EmptyStateWithButton
 import com.plumemu.home.HomeBars
@@ -77,6 +78,7 @@ import com.plumemu.home.LocalHomeAppIcons
 import com.plumemu.home.LocalHomePlayFacts
 import com.plumemu.battery.LocalBatteryPaceNow
 import com.plumemu.home.LocalHomeAchievements
+import com.plumemu.home.LocalHomeLeaving
 import com.plumemu.home.LocalHomeNotices
 import com.plumemu.home.LocalMasteredGames
 import com.plumemu.game.LocalBadgeImages
@@ -107,6 +109,8 @@ import com.plumemu.setup.HomeRolePromptState
 import com.plumemu.setup.SetupModel
 import com.plumemu.setup.SetupScreen
 import com.plumemu.telemetry.ScreenId
+import com.plumemu.usage.LocalScreenTracker
+import com.plumemu.usage.SETTLE_MS
 import com.plumemu.usage.TrackScreen
 import com.plumemu.sound.LocalUiSounds
 import com.plumemu.sound.UiSounds
@@ -224,7 +228,7 @@ private fun MainContent(
             return@Box
         }
         when (state) {
-            is HomeState.Ready -> HomeWithSettings(state, settings, input, callbacks, letters, setup?.homeRole, settingsHost, secondScreen, homePresses, isSecondScreenInUse, settingsOpen, landsOnStart = hasShownSetup[0], startTarget = landOnStart)
+            is HomeState.Ready -> HomeWithSettings(state, settings, input, callbacks, setup?.homeRole, settingsHost, secondScreen, homePresses, isSecondScreenInUse, settingsOpen, landsOnStart = hasShownSetup[0], startTarget = landOnStart)
             HomeState.Failed -> {
                 TrackError(ScreenId.Home, LibraryReadError.LibraryUnreadable)
                 LibraryErrorWithSettings(settings, input, onRetry, settingsHost, secondScreen, homePresses)
@@ -238,9 +242,9 @@ private fun MainContent(
 }
 
 /**
- * The main screen and, in its place, Settings (START on the system column or its hint). The main
- * screen leaves the composition while Settings shows; its saved state comes back with it, so Back
- * from the sections column returns to it with the focus where it was. With no [settingsHost]
+ * The main screen and, over it, Settings (START on the system column or its hint). The main screen stays composed
+ * under Settings, hidden and deaf, with its inputs frozen, so Back from the sections column only shows it again with the
+ * focus where it was. With no [settingsHost]
  * (benchmark builds) the callbacks are used as given.
  */
 @Composable
@@ -249,7 +253,6 @@ private fun HomeWithSettings(
     settings: PlumSettings,
     input: InputRouter,
     callbacks: HomeCallbacks,
-    letters: ButtonLetters,
     homeRole: HomeRoleActions?,
     settingsHost: SettingsHost?,
     secondScreen: SecondScreenFeed?,
@@ -292,50 +295,45 @@ private fun HomeWithSettings(
         }
     // Raised when Settings opens, lowered only once the main screen shows again: the press that closes Settings in its
     // first frames (the main screen still composed under it) is not read by the main screen as well.
-    val homeLeaving = remember { BooleanArray(1) }
-    val homeCallbacks = remember(callbacks, settingsHost) { if (settingsHost == null) callbacks else callbacks.copy(onSettings = { opensOnUpdate = callbacks.updateFound.value != null; opensOnFilesNotAdded = false; isSettingsOpen = true }, onFilesNotAdded = { opensOnUpdate = false; opensOnFilesNotAdded = true; isSettingsOpen = true }, isLeaving = { settingsOpen.value || homeLeaving[0] }) }
+    val homeLeaving = remember { mutableStateOf(false) }
+    val homeCallbacks = remember(callbacks, settingsHost) { if (settingsHost == null) callbacks else callbacks.copy(onSettings = { opensOnUpdate = callbacks.updateFound.value != null; opensOnFilesNotAdded = false; isSettingsOpen = true }, onFilesNotAdded = { opensOnUpdate = false; opensOnFilesNotAdded = true; isSettingsOpen = true }, isLeaving = { settingsOpen.value || homeLeaving.value }) }
     val showsSettings = isSettingsOpen && settingsHost != null
-    // Settings covers the whole screen: composing the main screen under it re-ran its layout on
-    // every colour Settings previews (19% janky frames walking the palette on the Android 6
-    // emulator, 3% without). Its saveable state (the strip's focus) is kept for Back.
+    // The main screen stays composed, hidden and deaf, under Settings: closing it only shows the screen again (it was
+    // composed, measured and recorded from nothing, one 90-120 ms frame on the Thor). What it composes from is frozen
+    // while Settings is open (the theme through HoldPlumTheme, the settings and content here), so a colour previewed in
+    // Settings re-lays out nothing under it; at the close it takes the live values (nothing changed: nothing recomposes).
+    val homeInputs = heldHomeInputs(HomeInputs(state, settings, isSecondScreenInUse), showsSettings)
+    val homeLetters = remember(homeInputs.settings.controls.confirmButton) { ButtonLetters.of(homeInputs.settings.controls.confirmButton) }
+    val homeShoulders = remember(homeInputs.settings.controls.switchSystemWith) { ShoulderKeys.of(homeInputs.settings.controls.switchSystemWith) }
     val homeState = rememberSaveableStateHolder()
     // Settings and the main screen swap places; the one coming in fades in over 110 ms (no pop).
     // The first start of the app shows the main screen at once, with nothing to fade from.
     val hasOpenedSettings = remember { BooleanArray(1) }
     if (showsSettings) hasOpenedSettings[0] = true
-    // Settings comes in over a few frames ([SettingsOpening]); until it is whole the main screen stays composed under it,
-    // not drawn and taking no action (HomeCallbacks.isLeaving), so the press's frame does not also dispose its whole tree.
-    var isSettingsWhole by remember { mutableStateOf(false) }
-    if (showsSettings) homeLeaving[0] = true
-    LaunchedEffect(showsSettings) {
-        if (!showsSettings) {
-            isSettingsWhole = false
-            homeLeaving[0] = false
-        }
-    }
-    // Each opening restarts the main screen's own entrance, held while Settings shows: closed before Settings was whole
-    // (the main screen never left), it still settles back in from larger as it does after leaving.
+    if (showsSettings) homeLeaving.value = true
+    val homeTracker = rememberHomeScreenTracker(showsSettings, homeLeaving, hasOpenedSettings)
+    // Each opening restarts the main screen's own entrance, held while Settings shows: it settles back in from larger on the close.
     val openings = remember { IntArray(1) }
     val wasShowingSettings = remember { BooleanArray(1) }
     if (showsSettings && !wasShowingSettings[0]) openings[0]++
     wasShowingSettings[0] = showsSettings
-    if (!showsSettings || !isSettingsWhole) {
-        homeState.SaveableStateProvider(HOME_STATE_KEY) {
-            // The same call either way: a different branch would give the main screen's
-            // rememberSaveable state a different key, and Back would find none (focus on Recent).
-            FadeIn(homeEntrances to openings[0], if (showsSettings) HiddenUnderSettings else Modifier, isFading = hasOpenedSettings[0] || homeEntrances > 0, depth = PlumMotion.SCREEN_DEPTH, isHeld = showsSettings) {
-                ProvideLaunchOrigin {
-                    DisposableEffect(Unit) {
-                        HomeTreeProbe.live++
-                        onDispose { HomeTreeProbe.live-- }
+    homeState.SaveableStateProvider(HOME_STATE_KEY) {
+        HoldPlumTheme(isHeld = showsSettings) {
+            CompositionLocalProvider(LocalButtonLetters provides homeLetters, LocalShoulderKeys provides homeShoulders, LocalScreenTracker provides homeTracker) {
+                FadeIn(homeEntrances to openings[0], Modifier.homeProbed().then(if (showsSettings) HiddenUnderSettings else Modifier), isFading = hasOpenedSettings[0] || homeEntrances > 0, depth = PlumMotion.SCREEN_DEPTH, isHeld = showsSettings) {
+                    ProvideLaunchOrigin {
+                        DisposableEffect(Unit) {
+                            HomeTreeProbe.live++
+                            onDispose { HomeTreeProbe.live-- }
+                        }
+                        HomeWithRolePrompt(homeInputs.state, homeInputs.settings, input, homeCallbacks, homeLetters, homeRole, secondScreen.takeUnless { showsSettings }, homeInputs.isSecondScreenInUse, landingRequest, landingTarget)
                     }
-                    HomeWithRolePrompt(state, settings, input, homeCallbacks, letters, homeRole, secondScreen, isSecondScreenInUse, landingRequest, landingTarget)
                 }
             }
         }
     }
     if (showsSettings && settingsHost != null) {
-        SettingsOverHome(settingsHost, settings, input, secondScreen, opensOnUpdate, showOnHome, opensOnFilesNotAdded, onWhole = { isSettingsWhole = true }) { isSettingsOpen = false }
+        SettingsOverHome(settingsHost, settings, input, secondScreen, opensOnUpdate, showOnHome, opensOnFilesNotAdded) { isSettingsOpen = false }
     }
 }
 
@@ -343,12 +341,6 @@ private const val HOME_STATE_KEY = "home"
 
 /** The main screen while it lies under Settings coming in: not drawn and not in the semantics tree (TalkBack never reads it). */
 private val HiddenUnderSettings = Modifier.clearAndSetSemantics { hideFromAccessibility() }.drawWithContent { }
-
-/** How many main screens are composed (never more than one, also across Settings' openings); for tests. */
-internal object HomeTreeProbe {
-    var live = 0
-}
-
 
 /**
  * The main screen, and over it, once, the home screen question (after the library
@@ -385,6 +377,7 @@ private fun HomeWithRolePrompt(
     var card by remember { mutableStateOf<WhatsNewState?>(null) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val currentOnShown by rememberUpdatedState(callbacks.onWhatsNewShown)
+    val currentIsLeaving by rememberUpdatedState(callbacks.isLeaving)
     // The last version whose card was closed here, so the card does not reopen while the record is still being saved.
     var closedCode by rememberSaveable { mutableStateOf(0L) }
     // Idle is read in the effect, not in composition: the game panel opening or closing must not recompose this screen.
@@ -392,8 +385,15 @@ private fun HomeWithRolePrompt(
         val release = whatsNew ?: return@LaunchedEffect
         snapshotFlow { isHomeIdle.value }.collectLatest { isIdle ->
             if (card != null || offerOpen.value || !isIdle || showsPrompt || release.versionCode == closedCode) return@collectLatest
-            // Waits for the front instead of skipping: the notes can arrive before the activity is started.
-            lifecycle.withStarted { }
+            // The main screen stays composed under Settings: a card made there would hear Settings' presses and be counted as shown unseen.
+            // Waits on the state, not on frames: a hidden main screen must cost no frame.
+            // Waits for the front instead of skipping: the notes can arrive before the activity is started. Settings opening
+            // meanwhile sends it back to waiting, not to the next idle change.
+            do {
+                snapshotFlow { currentIsLeaving() }.first { !it }
+                lifecycle.withStarted { }
+            } while (currentIsLeaving())
+            if (!isHomeIdle.value) return@collectLatest
             card = WhatsNewState(release)
         }
     }
@@ -421,6 +421,7 @@ private fun HomeWithRolePrompt(
             LocalBatteryPaceNow provides callbacks.batteryPaceNow,
             LocalUpdateFound provides callbacks.updateFound,
             LocalHomeNotices provides callbacks.notices,
+            LocalHomeLeaving provides callbacks.isLeaving,
             LocalHomeAppIcons provides callbacks.appIcons,
         ) {
             HomeScreen(
@@ -433,13 +434,14 @@ private fun HomeWithRolePrompt(
                 landingTarget = landingTarget,
                 keyboard = settings.controls.toKeyboardChoice(),
                 gridSystems = settings.appearance.gridSystems,
+                listCollections = settings.appearance.listCollections,
                 onIdle = { isHomeIdle.value = it },
             )
         }
     }
     if (showsPrompt && prompt != null) HomeRolePrompt(prompt, input, letters)
-    if (openCard != null) WhatsNewCard(openCard, input, letters)
-    if (openOffer != null) UsageAccessOfferCard(openOffer, input, letters)
+    if (openCard != null) WhatsNewCard(openCard, input, letters, isLeaving = callbacks.isLeaving)
+    if (openOffer != null) UsageAccessOfferCard(openOffer, input, letters, isLeaving = callbacks.isLeaving)
 }
 
 /**

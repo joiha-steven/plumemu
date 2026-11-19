@@ -281,17 +281,19 @@ abstract class HomeDetailsHoldCasesBase(
     }
 
     /** The mixed lists name a game's system once the focus has rested: the line is held (a blank line has a height) so the facts below never move. */
+    // Recent is a folder inside Collections since the Collections change: reached through it.
     @Test
     fun theSystemLineArrivesInRecentWithoutBoxArt() {
         assumeFalse("the text-only column is wide screens only", narrow)
-        val frames = run(Slow(full, 100), hasBoxArt = false, focus = listOf(Action.TapItem(Column.Systems, 0), Action.Enter, Action.TapItem(Column.Games, 1)))
+        val frames = run(Slow(full, 100), hasBoxArt = false, focus = OpenRecentFolderByTap + Action.TapItem(Column.Games, 1))
         assertTrue("the system line arrived", frames.last().texts.any { "Super Nintendo" in it.first })
     }
 
+    // Favorites is the column's first entry since the Collections change.
     @Test
     fun theSystemLineArrivesInFavoritesWithoutBoxArt() {
         assumeFalse("the text-only column is wide screens only", narrow)
-        val frames = run(Slow(full, 100), hasBoxArt = false, focus = listOf(Action.TapItem(Column.Systems, 1), Action.Enter, Action.TapItem(Column.Games, 0)))
+        val frames = run(Slow(full, 100), hasBoxArt = false, focus = listOf(Action.TapItem(Column.Systems, 0), Action.Enter, Action.TapItem(Column.Games, 0)))
         assertTrue("the system line arrived", frames.last().texts.any { "Super Nintendo" in it.first })
     }
 

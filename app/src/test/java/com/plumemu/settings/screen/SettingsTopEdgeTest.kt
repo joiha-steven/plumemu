@@ -69,7 +69,7 @@ abstract class SettingsTopEdgeBase {
         }
     }
 
-    private val fixedSections = shownSections.filter { it.options.isNotEmpty() && it != SettingsSection.Emulators }
+    private val fixedSections = shownSections.filter { it.options.isNotEmpty() }
 
     private fun rowsOf(section: SettingsSection) = section.rowsIn(ShotContent.library)
 

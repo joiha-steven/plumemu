@@ -47,7 +47,10 @@ data class PinnedShortcutKey(
  * Settings folder list sees it, and box-art runs skip these games (`ScrapedGameDao`).
  */
 @Dao
-abstract class PinnedShortcutDao {
+abstract class PinnedShortcutDao(
+    /** For the collections bound again in [add]'s transaction ([CollectionDao.bindFolder]). */
+    private val database: PlumDatabase,
+) {
     /**
      * Lists the shortcut as a game, once: a shortcut already stored (same app, id and user) keeps
      * its game, favourite and play time, is shown again if the person had hidden it, is marked
@@ -97,6 +100,8 @@ abstract class PinnedShortcutDao {
                 addedAt = shortcut.addedAt,
             ),
         )
+        // A shortcut pinned again after Reset library takes back its collections.
+        database.collectionDao().bindFolder(folderId)
         return PinnedShortcutAdded(gameId, isNew = true)
     }
 

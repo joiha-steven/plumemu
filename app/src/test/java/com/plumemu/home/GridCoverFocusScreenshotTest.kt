@@ -43,8 +43,8 @@ class GridCoverFocusScreenshotTest {
         compose.setContent {
             PlumTheme(settings) {
                 if (mixed) {
-                    val entry = MixedGridLibrary.entries[0]
-                    HomeWithArt(rememberSource { mixedGridSource() }, gridActions(0, 0), MixedGridLibrary, gridIds = setOf(entry.id), onState = { strip = it })
+                    val entry = MixedGridLibrary.recentEntry
+                    HomeWithArt(rememberSource { mixedGridSource() }, recentGridActions(0), MixedGridLibrary, gridIds = setOf(entry.id), onState = { strip = it })
                 } else {
                     Snes(onState = { strip = it })
                 }

@@ -21,6 +21,7 @@ import com.plumemu.library.scan.SubfolderListing
 import com.plumemu.platforms.Emulator
 import com.plumemu.platforms.PlatformCatalog
 import com.plumemu.settings.screen.EmulatorEntry
+import com.plumemu.settings.screen.SettingsCollection
 import com.plumemu.settings.screen.FolderAnswer
 import com.plumemu.settings.screen.FolderKey
 import com.plumemu.settings.screen.FolderSystemChoice
@@ -83,6 +84,9 @@ internal class GraphSettingsLibrary(
 
     /** Hidden and Unidentified games, Fix name…. */
     val names: GraphSettingsNames by lazy { GraphSettingsNames(graph, io, main) }
+
+    /** Library › Collections: rename, delete, move. */
+    val collections: GraphSettingsCollections by lazy { GraphSettingsCollections(graph.collections, graph.appScope, main, log) }
 
     /** Answers for unknown folders, stored and applied in the process's scope so closing Settings loses none. */
     private val folderAnswers by lazy {
@@ -171,8 +175,8 @@ internal class GraphSettingsLibrary(
             }
         // Hidden games and Unidentified games, with each game's system named as the platform data names it.
         val withNames =
-            combine(shown, names.hiddenGames(), names.unidentifiedGames(), graph.startup.scanReport) { content, hidden, unidentified, report ->
-                content.copy(hiddenGames = hidden, unidentifiedGames = unidentified, scan = report)
+            combine(shown, names.hiddenGames(), names.unidentifiedGames(), graph.startup.scanReport, graph.collections.own()) { content, hidden, unidentified, report, own ->
+                content.copy(hiddenGames = hidden, unidentifiedGames = unidentified, scan = report, collections = own.map { SettingsCollection(it.id, it.name, it.gameCount) })
             }
         val folderSystems = graph.database.folderSystemDao()
         val unknown = combine(folderSystems.observeUnknownFolders(), folderSystems.observeAnsweredFolders(), folderAnswers.saving) { open, answered, saving -> Triple(open, answered, saving) }

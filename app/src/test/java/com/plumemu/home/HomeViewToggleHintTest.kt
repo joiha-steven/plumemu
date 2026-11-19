@@ -61,7 +61,8 @@ class HomeViewToggleHintTest {
     /** Serif at the default size is 14 dp short of SELECT (see the class comment). */
     private val fontsWithRoom = listOf(PlumFont.Jost)
 
-    private val recentGames = listOf(Action.TapItem(Column.Systems, 0), Action.Enter)
+    // Recent is a folder inside Collections since the Collections change.
+    private val recentGames = OpenRecentFolderByTap
 
     @Test
     fun aSystemsListKeepsGridViewAtTheDefaultSizeOn576() {

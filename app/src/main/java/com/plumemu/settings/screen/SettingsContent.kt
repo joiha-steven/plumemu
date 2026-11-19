@@ -45,6 +45,8 @@ internal data class SettingsContent(
     val systemCount: Int = 0,
     /** Systems with games, in the platform data's order. */
     val systems: List<SystemEmulators> = emptyList(),
+    /** Library › Collections: the own collections in their order. */
+    val collections: List<SettingsCollection> = emptyList(),
     /** Emulator apps found by the last detection; null before one ran. */
     val emulatorAppCount: Int? = null,
     /** Plumemu is the home app now (asked again whenever Settings comes back to the front). */
@@ -69,7 +71,7 @@ internal data class SettingsContent(
     val account: AccountStatus = AccountStatus.NotInThisBuild,
     /** The stored box art choice, null while none was made; with [account] it gives the source in force ([boxArtSourceIn]). */
     val chosenBoxArtSource: BoxArtSourceSetting? = null,
-    /** The RetroAchievements account (Accounts › RetroAchievements): its row's value and its panel. */
+    /** The RetroAchievements account (Library › RetroAchievements): its row's value and its panel. */
     val raAccount: RaAccountStatus = RaAccountStatus.SignedOut,
     /** The box-art run (`AppGraph.scrapeStatus`): the account row's value and its panel's status line. */
     val boxArt: ScrapeStatus = ScrapeStatus.NotInThisBuild,
@@ -79,7 +81,7 @@ internal data class SettingsContent(
     val boxArtBytes: Long? = null,
     /** Games no longer asked for after server errors on 3 different days; Re-download all asks them again. */
     val boxArtGivenUp: Int = 0,
-    /** Advanced › Back up… (`AppGraph.backup`): running with its progress, or how the last one ended. */
+    /** About › Back up… (`AppGraph.backup`): running with its progress, or how the last one ended. */
     val backup: BackupState = BackupState.Idle,
 
     /**
@@ -93,7 +95,7 @@ internal data class SettingsContent(
     val update: UpdateView = UpdateView(),
     /** The platform data in use (`withPlatformData`): named in Version's panel; null until read, and then not named. */
     val platformData: PlatformDataVersion? = null,
-    /** Advanced › Restore… (`AppGraph.restore`): reading, the confirm, replacing, or how the last one ended. */
+    /** About › Restore… (`AppGraph.restore`): reading, the confirm, replacing, or how the last one ended. */
     val restore: RestoreState = RestoreState.Idle,
     /** The way back the last restore kept; Undo last restore is listed only while it exists. */
     val wayBack: WayBackSet? = null,
@@ -124,6 +126,8 @@ internal data class SettingsContent(
     fun isInThisBuild(option: SettingsOption): Boolean =
         when (option) {
             SettingsOption.UsageStatistics, SettingsOption.ReportProblem -> hasStatistics
+            // No update manifest, no daily check to switch.
+            SettingsOption.CheckUpdatesDaily -> hasUpdates
             // Report a problem's Share log does it where there is a form.
             SettingsOption.ExportLogs -> !hasStatistics
             else -> true
@@ -209,7 +213,7 @@ internal data class EmulatorEntry(
 )
 
 /**
- * A system's row in Settings › Emulators. [chosen] is the person's choice for every game of the
+ * A system's row in Settings › Library › Emulators. [chosen] is the person's choice for every game of the
  * system; null means nothing is chosen and the first game played asks. [automatic] is
  * the recommendation that question puts first (the first installed of the system's defaults, never
  * legal-risk); it starts nothing by itself. Both follow the launch's order (`EmulatorChoices.resolve`).
@@ -239,6 +243,9 @@ internal enum class SettingsNotice(
     @PluralsRes val plural: Int = 0,
 ) {
     ScanBusy(R.string.settings_rescan_busy),
+
+    /** Library › Collections: a rename, move or delete was not stored. */
+    CollectionFailed(R.string.collections_settings_failed),
     NoFolderPicker(R.string.setup_message_no_picker),
     FolderRemoveFailed(R.string.settings_folder_remove_failed),
     EmulatorChoiceFailed(R.string.settings_emulator_choice_failed),
@@ -250,7 +257,7 @@ internal enum class SettingsNotice(
     /** Statistics › Exact play time: the device has no Usage access screen, so the switch stays off. */
     UsageAccessUnavailable(R.string.settings_exact_play_time_unavailable),
 
-    /** Advanced › Export logs: no log yet, the file could not be written or nothing can share it. */
+    /** About › Export logs: no log yet, the file could not be written or nothing can share it. */
     ExportLogsFailed(R.string.settings_export_logs_failed),
     UnhideFailed(R.string.settings_unhide_failed),
     NameFixFailed(R.string.settings_name_fix_failed),
@@ -263,15 +270,15 @@ internal enum class SettingsNotice(
     BoxArtClearInUse(R.string.settings_box_art_clear_in_use),
     BoxArtClearRunGoing(R.string.settings_box_art_clear_run_going),
 
-    /** Advanced › Reset… › Clear Recent…: how many games left Recent, that it was already empty, or that it could not be written. */
+    /** About › Reset… › Clear Recent…: how many games left Recent, that it was already empty, or that it could not be written. */
     RecentCleared(plural = R.plurals.settings_clear_recent_done),
     RecentAlreadyEmpty(R.string.settings_clear_recent_empty),
     RecentClearFailed(R.string.settings_clear_recent_failed),
 
-    /** Advanced › Back up…: the device has no save picker. */
+    /** About › Back up…: the device has no save picker. */
     NoSavePicker(R.string.settings_backup_no_picker),
 
-    /** Advanced › Restore…: the device has no open picker. */
+    /** About › Restore…: the device has no open picker. */
     NoOpenPicker(R.string.settings_restore_no_picker),
 
     /** Library › Systems: a system picked up while the order was A–Z or Maker & year. */

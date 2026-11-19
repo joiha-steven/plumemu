@@ -258,22 +258,23 @@ abstract class GameDao {
     )
     protected abstract fun folderCounts(): Flow<List<FolderGameCount>>
 
-    private companion object {
+    // Internal: the collection and smart-list queries (`CollectionDao`, `SmartListDao`) build their rows and orders from these.
+    internal companion object {
         /** Bound parameters per statement stay under Android 6's 999. */
         private const val MAX_IDS_PER_STATEMENT = 500
 
         /** Each list row's [GameListRow.scrapeKey]. */
         /** The scraped row of a game, for the year and the rating. */
-        private const val YEAR_JOIN = "LEFT JOIN scraped_game ON scraped_game.scrape_key = " + ScrapedGameDao.SCRAPE_KEY + " "
+        const val YEAR_JOIN = "LEFT JOIN scraped_game ON scraped_game.scrape_key = " + ScrapedGameDao.SCRAPE_KEY + " "
 
         /** Oldest first; no year (none stored, or 0) after every year. */
-        private const val YEAR_ORDER = "CASE WHEN scraped_game.year > 0 THEN scraped_game.year ELSE 2147483647 END"
+        const val YEAR_ORDER = "CASE WHEN scraped_game.year > 0 THEN scraped_game.year ELSE 2147483647 END"
 
         /** Highest first; no rating (none stored, or 0) after every rating. */
-        private const val RATING_ORDER = "CASE WHEN scraped_game.rating > 0 THEN -scraped_game.rating ELSE 0 END"
+        const val RATING_ORDER = "CASE WHEN scraped_game.rating > 0 THEN -scraped_game.rating ELSE 0 END"
 
         /** Most play time first; no play row, or 0 seconds, after every game that has some. */
-        private const val PLAYED_ORDER = "CASE WHEN play.total_seconds > 0 THEN -play.total_seconds ELSE 0 END"
+        const val PLAYED_ORDER = "CASE WHEN play.total_seconds > 0 THEN -play.total_seconds ELSE 0 END"
 
         /**
          * Newest library entry first. `game.id` is the order rows entered the library (rows are
@@ -281,7 +282,7 @@ abstract class GameDao {
          * merges it back to the old id, so during a scan a moved game can briefly come first),
          * so it stands for "added" without a stored time; the games of one scan batch are told apart by it too, so there are no ties.
          */
-        private const val ADDED_ORDER = "game.id DESC"
+        const val ADDED_ORDER = "game.id DESC"
 
         const val LIST_SCRAPE_KEY = ScrapedGameDao.SCRAPE_KEY + " AS scrape_key"
     }

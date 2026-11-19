@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Advanced › Reset… › Clear Recent…: the line under the panel's title says how it ended (a count, already empty, or failed). */
+/** About › Reset… › Clear Recent…: the line under the panel's title says how it ended (a count, already empty, or failed). */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
 class SettingsClearRecentResultTest {

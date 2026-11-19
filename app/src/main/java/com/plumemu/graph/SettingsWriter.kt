@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Settings' writes, one after another in the order they were made. Walking the colour palette
@@ -29,6 +30,12 @@ internal class SettingsWriter(
     /** The last write failed (Settings says so; the screen keeps showing what is stored). False again after one lands. */
     val failed: StateFlow<Boolean> = mutableFailed.asStateFlow()
 
+    /** Writes submitted and not yet landed or failed; the process may end only when there are none. */
+    private val pending = AtomicInteger(0)
+
+    /** No write is waiting or running: ending the process now loses nothing the person changed. */
+    val isIdle: Boolean get() = pending.get() == 0
+
     init {
         scope.launch {
             for (each in queue) {
@@ -42,6 +49,8 @@ internal class SettingsWriter(
                     log("Settings could not be saved (${e.javaClass.simpleName})")
                     mutableFailed.value = true
                     each.onFailed()
+                } finally {
+                    pending.decrementAndGet()
                 }
             }
         }
@@ -76,7 +85,9 @@ internal class SettingsWriter(
         onFailed: () -> Unit = {},
         onWritten: () -> Unit,
     ) {
-        queue.trySend(Write(transform, onWritten, onFailed))
+        // Counted before it is queued, so there is no moment it is waiting yet looks idle.
+        pending.incrementAndGet()
+        if (queue.trySend(Write(transform, onWritten, onFailed)).isFailure) pending.decrementAndGet()
     }
 
     /**

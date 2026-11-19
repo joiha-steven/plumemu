@@ -1,5 +1,6 @@
 package com.plumemu.settings.screen
 
+import com.plumemu.account.AccountStatus
 import android.view.InputDevice
 import android.view.KeyEvent
 import androidx.compose.runtime.Composable
@@ -170,17 +171,14 @@ class SettingsScrollFramesTest {
         assertTrue(lines.joinToString("\n"), lines.none { it.contains(Regex(", [1-9][0-9]* bad frames")) })
     }
 
-    /** Emulators with a row per system: the long options column, walked end to end. */
+    /** Library with every row it can list: the longest options column, walked end to end. */
     @Test
     fun optionsColumn() {
-        val systems = List(SYSTEMS) { SystemEmulators("system$it", "System $it", automatic = null, chosen = null, installed = emptyList()) }
-        showSettings(SettingsHost(versionName = "test", update = {}, resetAllSettings = {}, resetLibrary = {}, content = flowOf(SettingsContent(systems = systems))))
-        send(*Array(SettingsSection.shownIn(SettingsContent(systems = systems)).indexOf(SettingsSection.Emulators)) { Action.Move(Direction.Down) }, Action.Enter) // Emulators › its rows
-        val rows = SettingsSection.Emulators.rowsIn(SettingsContent(systems = systems))
-        val lines =
-            walk("Emulators options", rows.size - 1, SettingsTags.OPTION_LIST) { i ->
-                if (rows[i] == SettingsOption.SystemEmulator) SettingsTags.system(i) to 0 else SettingsTags.option(rows[i]) to 0
-            }
+        val content = longLibrary()
+        showSettings(SettingsHost(versionName = "test", update = {}, resetAllSettings = {}, resetLibrary = {}, content = flowOf(content)))
+        send(Action.Enter) // Library › its rows
+        val rows = SettingsSection.Library.rowsIn(content)
+        val lines = walk("Library options", rows.size - 1, SettingsTags.OPTION_LIST) { i -> SettingsTags.option(rows[i]) to 0 }
         println(lines.joinToString("\n"))
         assertTrue(lines.joinToString("\n"), lines.none { it.contains(Regex(", [1-9][0-9]* bad frames")) })
     }
@@ -211,15 +209,25 @@ class SettingsScrollFramesTest {
      */
     @Test
     fun theRememberedRowIsInViewWhenASectionIsShownAgain() {
-        val systems = List(14) { SystemEmulators("system$it", "System $it", null, null, emptyList()) }
-        val content = SettingsContent(systems = systems)
+        val content = longLibrary()
         showSettings(SettingsHost(versionName = "test", update = {}, resetAllSettings = {}, resetLibrary = {}, content = flowOf(content)))
-        repeat(SettingsSection.shownIn(content).indexOf(SettingsSection.Emulators)) { send(Action.Move(Direction.Down)) }
         send(Action.Enter) // the long section's options
-        repeat(systems.size - 1) { send(Action.Move(Direction.Down)) }
+        val rows = SettingsSection.Library.rowsIn(content)
+        repeat(rows.size - 1) { send(Action.Move(Direction.Down)) }
         send(Action.NextSystem, Action.Move(Direction.Down), Action.Move(Direction.Down), Action.PreviousSystem)
         val list = compose.onNodeWithTag(SettingsTags.OPTION_LIST, useUnmergedTree = true).getBoundsInRoot()
-        val row = compose.onNodeWithTag(SettingsTags.system(systems.lastIndex), useUnmergedTree = true).getBoundsInRoot()
+        val row = compose.onNodeWithTag(SettingsTags.option(rows.last()), useUnmergedTree = true).getBoundsInRoot()
         assertTrue("row $row not inside list $list", row.top >= list.top - SLACK.dp && row.bottom <= list.bottom + SLACK.dp)
+    }
+
+    /** Every row Library can list: unreadable-free, with unidentified and hidden games, systems, emulators and a signed-in ScreenScraper. */
+    private fun longLibrary(): SettingsContent {
+        val games = List(3) { SettingsGame(it + 1L, "Game $it", "Super Nintendo") }
+        return ShotContent.library.copy(
+            hiddenGames = games,
+            unidentifiedGames = games,
+            librarySystems = List(3) { LibrarySystem("system$it", "System ${'A' + it}", gameCount = it + 1) },
+            account = AccountStatus.SignedIn("plumtester"),
+        )
     }
 }

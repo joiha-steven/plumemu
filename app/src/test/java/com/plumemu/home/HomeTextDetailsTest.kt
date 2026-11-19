@@ -121,9 +121,10 @@ class HomeTextDetailsTest {
         assertEquals("Super Nintendo", text(HomeTags.DETAILS_SYSTEM))
     }
 
+    // Recent is a folder inside Collections since the Collections change: reached through it.
     @Test
     fun recentShowsTheGamesOwnSystemOnceTheFocusRests() {
-        show(listOf(Action.TapItem(Column.Systems, 0), Action.Enter))
+        show(OpenRecentFolderByTap)
         assertEquals("Sonic the Hedgehog", text(HomeTags.DETAILS_TITLE))
         assertEquals("Mega Drive · EUR", text(HomeTags.DETAILS_SYSTEM))
         compose.mainClock.autoAdvance = false
@@ -135,14 +136,16 @@ class HomeTextDetailsTest {
         assertEquals("Super Nintendo · USA", text(HomeTags.DETAILS_SYSTEM))
     }
 
+    // Favorites is the column's first entry since the Collections change.
     @Test
     fun favoritesShowItsGamesSystemToo() {
-        show(listOf(Action.TapItem(Column.Systems, 1), Action.Enter))
+        show(listOf(Action.TapItem(Column.Systems, 0), Action.Enter))
         assertEquals("Super Nintendo · USA", text(HomeTags.DETAILS_SYSTEM))
         assertEquals(1, count(HomeTags.DETAILS_FACTS))
     }
 
     /**
+     * (Favorites is the column's first entry since the Collections change.)
      * Y on a game in Favorites gives the screen new content twice (the shown mark, then the library's
      * data); the system line keeps its name through both and never empties.
      */
@@ -152,7 +155,7 @@ class HomeTextDetailsTest {
         compose.setContent {
             PlumTheme(TableText.Default) {
                 CompositionLocalProvider(LocalHomePlayFacts provides source) {
-                    HomeAt(content, listOf(Action.TapItem(Column.Systems, 1), Action.Enter), onState = { state = it })
+                    HomeAt(content, listOf(Action.TapItem(Column.Systems, 0), Action.Enter), onState = { state = it })
                 }
             }
         }
@@ -313,19 +316,21 @@ class HomeTextDetailsTest {
     // An empty library without box art keeps the no-details width for Recent and Favorites (their message is centred in the full list width).
 
     @Test
-    fun anEmptyLibraryKeepsRecentFullWidth() = assertEmptyLibraryFullWidth(systemRow = 0)
+    fun anEmptyLibraryKeepsRecentFullWidth() = assertEmptyLibraryFullWidth(OpenRecentFolderByTap) // Recent is a folder since the Collections change
 
     @Test
-    fun anEmptyLibraryKeepsFavoritesFullWidth() = assertEmptyLibraryFullWidth(systemRow = 1)
+    fun anEmptyLibraryKeepsFavoritesFullWidth() = assertEmptyLibraryFullWidth(listOf(Action.TapItem(Column.Systems, 0), Action.Enter)) // Favorites is the first entry since the Collections change
 
-    private fun assertEmptyLibraryFullWidth(systemRow: Int) {
+    private fun assertEmptyLibraryFullWidth(actions: List<Action>) {
         val empty = HomeContent.of(emptyList(), emptyList(), List(APPS) { GameRowModel("app-$it", "App $it", "") }, emptyList(), hasBoxArt = false)
-        show(listOf(Action.TapItem(Column.Systems, systemRow), Action.Enter), empty)
+        show(actions, empty)
         // The message is centred in the width the list is given (the full width, no bleed); a narrower list pulls its centre left.
         val message = bounds(HomeTags.EMPTY_MESSAGE)
         val onScreen = layout.width - PlumDimens.stripMarginSide * 2 - layout.systemsColumnWidth - PlumDimens.columnGap
         val centre = (message.left + message.right) / 2
-        assertDp("the message is centred on the list's full width (it ends at the right margin)", layout.width - PlumDimens.stripMarginSide - onScreen / 2, centre)
+        // An empty folder opens with the cursor in its games column: the strip has slid left by the systems column's offset (0 with the cursor in the column).
+        val slide = bounds(HomeTags.SYSTEMS).left
+        assertDp("the message is centred on the list's full width (it ends at the right margin)", layout.width - PlumDimens.stripMarginSide - onScreen / 2 + slide, centre)
         assertEquals("no details column beside it", 0, count(HomeTags.DETAILS))
     }
 

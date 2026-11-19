@@ -8,7 +8,7 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coredata.settings.SwitchSystemWithSetting
 
 /**
- * Which shoulder pair does what on the main screen (Settings › Controls › Switch system with).
+ * Which shoulder pair does what on the main screen (Settings › Controls › Switch list with).
  * By default L2 / R2 switch system and L1 / R1 jump a letter in a list or change Size in a
  * grid; with [bumpersSwitch] the two pairs trade roles. The one place that decides them: the main screen
  * reads every action through [read] and prints its key caps from [switchSystemCap] and [sizeCap].

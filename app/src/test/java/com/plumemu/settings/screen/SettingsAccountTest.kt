@@ -29,10 +29,10 @@ internal class SettingsAccountTest : SettingsModelHarness() {
     private fun library() = SettingsSection.Library.rowsIn(model.content)
 
     /** Accounts' rows: ScreenScraper, then RetroAchievements. */
-    private fun accounts() = SettingsSection.Accounts.rowsIn(model.content)
+    private fun accounts() = SettingsSection.Library.rowsIn(model.content).filter { it in setOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount) }
 
     private fun openAccountRow() {
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(SettingsOption.ScraperAccount)
     }
 
@@ -52,10 +52,10 @@ internal class SettingsAccountTest : SettingsModelHarness() {
     }
 
     @Test
-    fun noDeveloperCredentialsListsOnlyTheNotAvailableLine() {
+    fun noDeveloperCredentialsListsOnlyBoxArtAndNoNotAvailableLine() {
         show(AccountStatus.NotInThisBuild)
         val rows = accounts()
-        assertTrue(SettingsOption.ScraperStatus in rows)
+        assertTrue(SettingsOption.BoxArtSource in rows)
         assertFalse("never asks for an account", SettingsOption.ScraperAccount in rows)
         assertFalse(SettingsOption.BoxArtRegion in library())
         assertEquals(BoxArtLine.NotInThisBuild, boxArtLineOf(model.content.account, model.content.boxArt))
@@ -86,9 +86,12 @@ internal class SettingsAccountTest : SettingsModelHarness() {
     }
 
     @Test
-    fun theAccountsSectionComesBeforeAdvanced() {
-        show(AccountStatus.SignedOut)
-        assertEquals(SettingsSection.Advanced.ordinal - 1, SettingsSection.Accounts.ordinal)
+    fun theAccountRowsComeAfterTheLibraryRowsAndBoxArtBeforeScreenScraper() {
+        show(AccountStatus.SignedIn("plumtester"))
+        val rows = library()
+        assertTrue(rows.indexOf(SettingsOption.RomFolders) < rows.indexOf(SettingsOption.BoxArtSource))
+        assertTrue(rows.indexOf(SettingsOption.BoxArtSource) < rows.indexOf(SettingsOption.ScraperAccount))
+        assertTrue(rows.indexOf(SettingsOption.ScraperAccount) < rows.indexOf(SettingsOption.RetroAchievementsAccount))
         assertFalse("System order is in the Systems panel", SettingsOption.SystemOrder in library())
     }
 
@@ -153,9 +156,9 @@ internal class SettingsAccountTest : SettingsModelHarness() {
     @Test
     fun touchOpensTheFormAndPressesSignIn() {
         show(AccountStatus.SignedOut)
-        openSection(SettingsSection.Accounts)
-        // Box art is the first row and has the focus on entering the section: a tap on the account row focuses it, the second opens it.
-        val row = accounts().indexOf(SettingsOption.ScraperAccount)
+        openSection(SettingsSection.Library)
+        // Game folders has the focus on entering the section: a tap on the account row focuses it, the second opens it.
+        val row = library().indexOf(SettingsOption.ScraperAccount)
         model.onTapOption(row, actions.shown, wide)
         model.onTapOption(row, actions.shown, wide)
         val form = requireNotNull(model.signIn.form)
@@ -252,7 +255,7 @@ internal class SettingsAccountTest : SettingsModelHarness() {
             show(AccountStatus.SignedIn("plumtester", isRefused = true))
             if (model.focus.column != SettingsColumn.Sections) press(Action.Back, geometry)
             if (model.focus.column != SettingsColumn.Sections) press(Action.Back, geometry)
-            while (model.focus.section != SettingsSection.Accounts) press(Action.Move(Direction.Down), geometry)
+            while (model.focus.section != SettingsSection.Library) press(Action.Move(Direction.Down), geometry)
             press(Action.Enter, geometry)
             focusOption(SettingsOption.ScraperAccount)
             press(Action.Enter, geometry)
@@ -288,6 +291,6 @@ internal class SettingsAccountTest : SettingsModelHarness() {
     }
 
     private companion object {
-        val ACCOUNT_ROWS = setOf(SettingsOption.ScraperAccount, SettingsOption.ScraperStatus, SettingsOption.BoxArtRegion)
+        val ACCOUNT_ROWS = setOf(SettingsOption.BoxArtRegion)
     }
 }

@@ -61,7 +61,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The files and fakes of `GraphRestoreTest` and `GraphRestoreRecoveryTest`: Settings › Advanced › Restore… on the graph, on real files: a
+ * The files and fakes of `GraphRestoreTest` and `GraphRestoreRecoveryTest`: Settings › About › Restore… on the graph, on real files: a
  * device library database with a WAL and box art, and a real backup zip of another device's
  * library (made by Back up…'s own writer). A "restart" is a new [GraphRestore] over the same files,
  * as the relaunched process makes it.

@@ -21,8 +21,8 @@ class HomeContentTest {
     private val board = FakeHomeContent.board()
 
     @Test
-    fun systemColumnIsRecentFavoritesAppsThenSystems() {
-        assertEquals(listOf(EntryKind.Recent, EntryKind.Favorites, EntryKind.Apps), board.entries.take(3).map { it.kind })
+    fun systemColumnIsFavoritesCollectionsAppsThenSystems() {
+        assertEquals(listOf(EntryKind.Favorites, EntryKind.Collections, EntryKind.Apps), board.entries.take(3).map { it.kind })
         assertTrue(board.entries.drop(3).all { it.kind == EntryKind.System })
     }
 
@@ -31,7 +31,7 @@ class HomeContentTest {
         // RP5-1-systems: "18 systems · 1,284 games"; Recent 12, Favorites 9, Apps 41; SNES 248 … Mega Drive 173.
         assertEquals(18, board.systemCount)
         assertEquals(1284, board.gameCount)
-        assertEquals(listOf(12, 9, 41), board.entries.take(3).map { it.count })
+        assertEquals("Favorites 9, Collections 4 rows (Recent, Most played, Recently added, New collection), Apps 41", listOf(9, 4, 41), board.entries.take(3).map { it.count })
         assertEquals(
             listOf("Super Nintendo" to 248, "Game Boy Advance" to 96, "PlayStation" to 142, "PSP" to 64, "Nintendo DS" to 88, "GameCube" to 37, "Mega Drive" to 173),
             board.entries.drop(3).take(7).map { it.name to it.count },
@@ -51,7 +51,7 @@ class HomeContentTest {
                 apps = emptyList(),
                 systems = listOf(SystemGames("snes", "Super Nintendo", listOf(GameRowModel("a", "A", "USA"))), SystemGames("n64", "Nintendo 64", emptyList())),
             )
-        assertEquals(listOf("recent", "favorites", "apps", "snes"), content.entries.map { it.id })
+        assertEquals(listOf("favorites", "collections", "apps", "snes"), content.entries.map { it.id })
         assertEquals(1, content.systemCount)
         assertFalse(content.isLibraryEmpty)
     }
@@ -204,18 +204,18 @@ class HomeContentTest {
     @Test
     fun withNoGamesHintsOfferOnlyWhatWorks() {
         val noGames = FakeHomeContent.noGames()
-        val recent = noGames.entries[0]
+        val recent = noGames.entries[0] // Favorites, empty
         val apps = noGames.entries[2]
         assertEquals("the empty state's Add folder button asks for the folder, so the bar does not repeat it", listOf(R.string.home_hint_settings), hintsFor(noGames, Column.Systems, recent).map { it.label })
         assertEquals(listOf(R.string.home_hint_select, R.string.home_hint_settings, R.string.home_hint_grid_view), hintsFor(noGames, Column.Systems, apps).map { it.label })
         // Apps' grid of icons needs no box art: SELECT is offered on the Apps list too.
         assertEquals(
             // B Back is hidden on the games list
-            "no other list to switch to, no B Back",
-            listOf(R.string.home_hint_open, R.string.home_hint_menu, R.string.home_hint_grid_view),
+            "Collections is always another list to switch to; no B Back",
+            listOf(R.string.home_hint_open, R.string.home_hint_menu, R.string.home_hint_switch_system, R.string.home_hint_grid_view),
             hintsFor(noGames, Column.Games, apps).map { it.label },
         )
         assertTrue(noGames.isLibraryEmpty)
-        assertEquals(listOf(0, 0, 41), noGames.entries.map { it.count })
+        assertEquals("Favorites empty, Collections its 3 folders and New collection, Apps 41", listOf(0, 4, 41), noGames.entries.map { it.count })
     }
 }

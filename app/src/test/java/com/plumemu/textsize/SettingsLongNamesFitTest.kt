@@ -54,7 +54,7 @@ abstract class SettingsLongNamesFitBase {
         var focus by mutableStateOf(SettingsFocus(section = SettingsSection.Library))
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { SettingsAt(focus, content = content) } }
         val stops = mutableListOf(panelAt(SettingsOption.RomFolders, PanelPage.Folders, 0))
-        for (section in SettingsSection.shownIn(content)) {
+        for (section in SettingsSection.entries) {
             stops += SettingsFocus(column = SettingsColumn.Sections, section = section)
             val rows = section.rowsIn(content)
             rows.indices.forEach { stops += SettingsFocus(column = SettingsColumn.Options, section = section, rememberedOption = mapOf(section to it)) }

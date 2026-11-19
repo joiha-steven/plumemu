@@ -18,6 +18,8 @@ import com.plumemu.coreinput.strip.StripIntent
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.game.GameMenuController
 import com.plumemu.game.GameRef
+import com.plumemu.game.OwnCollectionRef
+import com.plumemu.collections.ownCollectionIdOf
 import com.plumemu.settings.ShoulderKeys
 import com.plumemu.home.search.SearchEffect
 import com.plumemu.home.search.SearchState
@@ -72,13 +74,13 @@ internal fun FollowRouterActions(
                         feel.act { menu.undo.take().also { if (it) feel.report(Outcome.Activated) } }
                         return@collect
                     }
-                    // From here the main screen's own reading: Switch system with trades the pairs.
+                    // From here the main screen's own reading: Switch list with trades the pairs.
                     val read = shoulders().read(action)
                     // L1 / R1 in a game grid is its size, in Apps' grid nothing.
                     if (gridSizeKeys.handle(read, state.focus, content(), feel)) return@collect
                     // An empty library: Left and Right move between the empty state's buttons, A presses the focused one
                     // (Add folder and Choose folder open the folder picker, as Settings › Library › Add folder does).
-                    if (content().asksForFolderAt(content().entries.getOrNull(state.focus.systemIndex))) {
+                    if (content().asksForFolderAt(content().shownEntry(state.focus))) {
                         if (onEmptyState(read, targets)) return@collect
                     }
                     val homeAction = homeAction(read)
@@ -167,7 +169,7 @@ private fun handleIntent(
             if (entry.kind == EntryKind.Apps) {
                 entry.gameAt(intent.index)?.let(menu::openAppMenu) == true
             } else {
-                entry.gameAt(intent.index)?.let { menu.openMenu(it, fromRecent = entry.kind == EntryKind.Recent, canSort = entry.kind.followsSort) } == true
+                entry.gameAt(intent.index)?.let { menu.openMenu(it, fromRecent = entry.kind == EntryKind.Recent, canSort = entry.kind.followsSort, ownCollection = ownCollectionOf(entry)) } == true
             }
         } == true
     // R3 on a game of a list the sort orders: the sort choices alone, without the game menu.
@@ -177,6 +179,15 @@ private fun handleIntent(
         callbacks.onSettings()
         true
     }
+    // A on a folder-list row that opens no folder: New collection….
+    is StripIntent.ActivateRow ->
+        if (intent.rowId == HomeContent.NEW_COLLECTION_ID) {
+            callbacks.onNewCollection()
+            menu.openNewCollection()
+            true
+        } else {
+            false
+        }
     is StripIntent.ToggleFavorite ->
         markedNow().entry(intent.systemId)?.let { entry ->
             if (entry.kind == EntryKind.Apps) {
@@ -302,3 +313,7 @@ internal fun pageJumpTarget(
     val step = pageRows.coerceAtLeast(1)
     return (if (forward) fromIndex + step else fromIndex - step).coerceIn(0, count - 1)
 }
+
+/** The own collection [entry] is (a folder of the person's), for the game menu's Remove from "<name>"; null for every other entry. */
+private fun ownCollectionOf(entry: HomeEntry): OwnCollectionRef? =
+    if (entry.isFolder && entry.name != null) ownCollectionIdOf(entry.id)?.let { OwnCollectionRef(it, entry.name) } else null

@@ -17,7 +17,7 @@ internal class SettingsBoxArtSourceTest : SettingsModelHarness() {
     }
 
     private fun openPanel() {
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(SettingsOption.BoxArtSource)
         press(Action.Enter)
         assertEquals(PanelPage.BoxArtSource, model.focus.page)
@@ -33,10 +33,12 @@ internal class SettingsBoxArtSourceTest : SettingsModelHarness() {
     }
 
     @Test
-    fun theBoxArtRowIsFirstInAccountsInEveryBuild() {
+    fun theBoxArtRowIsFirstOfTheAccountRowsInEveryBuild() {
         for (account in listOf(AccountStatus.SignedOut, AccountStatus.SignedIn("plumtester"), AccountStatus.NotInThisBuild)) {
             show(account)
-            assertEquals(SettingsOption.BoxArtSource, SettingsSection.Accounts.rowsIn(model.content).first())
+            val rows = SettingsSection.Library.rowsIn(model.content)
+            assertEquals("the account rows start with Box art", accountRowsIn(model.content), rows.subList(rows.indexOf(SettingsOption.BoxArtSource), rows.indexOf(SettingsOption.RetroAchievementsAccount)))
+            assertTrue("after Library's own rows", rows.indexOf(SettingsOption.BoxArtSource) > rows.indexOf(SettingsOption.FilesNotAdded))
         }
     }
 

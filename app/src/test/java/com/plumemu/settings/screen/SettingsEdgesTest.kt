@@ -179,8 +179,8 @@ class SettingsEdgesTest {
     fun aPanelTitleIsWholeOrGone() {
         RuntimeEnvironment.setQualifiers("w768dp-h432dp-land-xhdpi")
         val content = AccountShotContent.of(AccountStatus.SignedOut).copy(raAccount = RaAccountStatus.SignedIn("plumtester", 1234))
-        val row = SettingsSection.Accounts.rowsIn(content).indexOf(SettingsOption.RetroAchievementsAccount)
-        val at = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Accounts, rememberedOption = mapOf(SettingsSection.Accounts to row), page = PanelPage.RaAccount)
+        val row = SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.RetroAchievementsAccount)
+        val at = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Library, rememberedOption = mapOf(SettingsSection.Library to row), page = PanelPage.RaAccount)
         compose.setContent { PlumTheme(TableText.Paper.copy(textSize = TextSize.Largest)) { SettingsAt(at, settingsForShot(), content) } }
         compose.waitForIdle()
         val panel = compose.onNodeWithTag(SettingsTags.PANEL, useUnmergedTree = true).getUnclippedBoundsInRoot()

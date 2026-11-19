@@ -16,12 +16,12 @@ class SettingsSectionsGapScreenshotTest {
     @Test
     fun sectionsAtTheEndMedium() =
         ReferenceShots.capture("settings_sections_end", sizes = ReferenceShots.Size.WithPocket6) {
-            SettingsAt(SettingsFocus(section = SettingsSection.shownIn(SettingsContent()).last()))
+            SettingsAt(SettingsFocus(section = SettingsSection.entries.last()))
         }
 
     @Test
     fun sectionsAtTheEnd() =
         ReferenceShots.capture("settings_sections_end", textSize = TextSize.Largest, sizes = ReferenceShots.Size.WithPocket6) {
-            SettingsAt(SettingsFocus(section = SettingsSection.shownIn(SettingsContent()).last()))
+            SettingsAt(SettingsFocus(section = SettingsSection.entries.last()))
         }
 }

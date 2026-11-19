@@ -71,8 +71,8 @@ abstract class SettingsListEndsBase {
 
     private fun px(dp: Dp) = with(density) { dp.toPx() }
 
-    /** Every section with option rows (Emulators adds a row per system, Statistics has none). */
-    private val fixedSections = shownSections.filter { it.options.isNotEmpty() && it != SettingsSection.Emulators }
+    /** Every section with option rows (Statistics has none). */
+    private val fixedSections = shownSections.filter { it.options.isNotEmpty() }
 
     private fun rowsOf(section: SettingsSection) = section.rowsIn(ShotContent.library)
 

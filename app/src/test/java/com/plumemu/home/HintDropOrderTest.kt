@@ -196,7 +196,7 @@ abstract class HintDropOrderBase(private val width: Int) {
             "apps-short@576/Small" to "A B START SELECT",
             "apps-short@640/Larger" to "A B X START SELECT",
             "apps-short@640/Small" to "A B X START SELECT",
-            "apps-short@768/Larger" to "A B X START SELECT",
+            "apps-short@768/Larger" to "A B X START L2R2 SELECT", // "Switch list" is shorter than the old "Switch system" and now fits
             "apps-short@768/Small" to "A B X START L2R2 SELECT",
             "apps-medium@576/Larger" to "A B SELECT",
             "apps-medium@576/Small" to "A B START SELECT",

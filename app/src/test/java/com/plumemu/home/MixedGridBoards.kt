@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.Composable
+import com.plumemu.coreinput.Action
 import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.coreui.theme.GridSize
 import com.plumemu.coreui.theme.ProvideGridSize
@@ -37,9 +38,15 @@ internal val MixedGridLibrary: HomeContent by lazy {
 /** Real-looking covers for [MixedGridLibrary]'s games at their systems' shapes; [MIXED_NO_ART_INDEX] without pictures. */
 internal fun mixedGridSource(): FakeArtSource =
     realCoverSource(MixedGridLibrary).apply {
-        val key = artKey(MixedGridLibrary.entries[0].rows[MIXED_NO_ART_INDEX].id)
+        val key = artKey(MixedGridLibrary.recentRows[MIXED_NO_ART_INDEX].id)
         results.value = results.value + (key to results.value.getValue(key).copy(grid = null, large = null))
     }
+
+/** The board's entry [entryIndex]: 0 is Recent (a folder inside Collections), 1 is Favorites (the column's first entry). Kept so the boards read as before the Collections change. */
+internal fun HomeContent.mixedEntry(entryIndex: Int): HomeEntry = if (entryIndex == 0) recentEntry else entries[0]
+
+/** Open [entryIndex]'s grid (see [mixedEntry]) with game [focused] focused. */
+internal fun mixedGridActions(entryIndex: Int, focused: Int): List<Action> = if (entryIndex == 0) recentGridActions(focused) else gridActions(0, focused)
 
 /** Recent ([entryIndex] 0) or Favorites (1) as a grid at [gridSize], game [focused] focused. */
 @Composable
@@ -48,8 +55,8 @@ internal fun MixedGridBoard(
     focused: Int,
     gridSize: GridSize = GridSize.Small,
 ) {
-    val id = MixedGridLibrary.entries[entryIndex].id
+    val id = MixedGridLibrary.mixedEntry(entryIndex).id
     ProvideGridSize(gridSize) {
-        HomeWithArt(rememberSource { mixedGridSource() }, gridActions(entryIndex, focused), MixedGridLibrary, gridIds = setOf(id))
+        HomeWithArt(rememberSource { mixedGridSource() }, mixedGridActions(entryIndex, focused), MixedGridLibrary, gridIds = setOf(id))
     }
 }

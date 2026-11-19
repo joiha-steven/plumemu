@@ -66,8 +66,10 @@ internal fun DetailsColumn(
     modifier: Modifier,
     width: Dp = PlumDimens.detailsColumnWidth,
 ) {
-    val entryIndex by remember(state) { derivedStateOf { state.focus.systemIndex } }
-    val entry = content.entries.getOrNull(entryIndex) ?: return
+    val shownEntry by remember(state, content) { derivedStateOf { content.shownEntry(state.focus) } }
+    val entry = shownEntry ?: return
+    // The folder list has nothing to detail: its rows are folders, not games.
+    if (entry.isFolderList) return
     val row by remember(state, entry.id) { derivedStateOf { state.focus.rowOf(entry.id) } }
     val game = entry.rows.getOrNull(row) ?: return
     // With the systems focused the strip rests at its start and the column sits under the screen's right

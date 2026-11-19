@@ -146,7 +146,7 @@ class SettingsExplainPanelScrollTest {
     fun aRowWithAnotherPanelIsNotOfferedMorePastPrivacy() {
         show(SettingsOption.Privacy)
         assertTrue(model.panelTextScrolls)
-        press(Action.Move(Direction.Up))
+        press(Action.Move(Direction.Down)) // Open-source licenses
         assertFalse("the panel that scrolled is gone", model.panelTextScrolls)
     }
 

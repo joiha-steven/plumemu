@@ -15,6 +15,7 @@ import com.plumemu.content.HomeState
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coreinput.Action
 import com.plumemu.home.pressButton
+import com.plumemu.home.fromSystemColumn
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.InputRouter
@@ -54,6 +55,7 @@ class MainScreenReturnTest {
             val host = remember { SettingsHost("test", update = {}, resetAllSettings = {}, resetLibrary = {}) }
             MainScreen(PlumSettings.Defaults, HomeState.Ready(content), router, HomeCallbacks(), onRetry = {}, settingsHost = host)
         }
+        compose.fromSystemColumn(router) // the cold start is Favorites' games column since the Collections change
     }
 
     private fun press(vararg actions: Action) {

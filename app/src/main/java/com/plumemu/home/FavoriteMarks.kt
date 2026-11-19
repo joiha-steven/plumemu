@@ -109,7 +109,7 @@ internal class FavoriteMarks {
                 }
             }
         // Hidden systems' games are found by Search, which reads these too: their star flips at once as well.
-        return live.withEntries(entries, live.hiddenEntries.map { it.withMarks(marks) })
+        return live.withEntries(entries, live.hiddenEntries.map { it.withMarks(marks) }, live.folderEntries.map { it.withMarks(marks) })
     }
 
     private fun favoritesShown(

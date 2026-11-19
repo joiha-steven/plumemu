@@ -82,10 +82,10 @@ internal class SettingsSystemOrderTest : SettingsModelHarness() {
     }
 
     @Test
-    fun itIsNoLongerARowOfLibraryAndSystemsFollowsRescan() {
+    fun itIsNoLongerARowOfLibraryAndSystemsFollowsFilesNotAdded() {
         val rows = SettingsSection.Library.rowsIn(model.content)
         assertFalse(SettingsOption.SystemOrder in rows)
-        assertEquals(SettingsOption.Systems, rows[rows.indexOf(SettingsOption.Rescan) + 1])
+        assertEquals(SettingsOption.Systems, rows[rows.indexOf(SettingsOption.FilesNotAdded) + 1])
         assertFalse("no systems, nothing to arrange", SettingsOption.Systems in SettingsSection.Library.rowsIn(SettingsContent()))
     }
 

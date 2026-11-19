@@ -168,29 +168,29 @@ class HomeCoverArtTest {
         compose.onNodeWithText("Mega Man X 1993 · Capcom", useUnmergedTree = true).assertExists()
     }
 
-    /** At 768 the focused game's year and publisher and "L1 R1 Size" stay; "L2 R2 Switch system" is the first to go, so it is never kept without Size (in Jost it still fits here). */
+    /** At 768 the focused game's year and publisher and "L1 R1 Size" stay; "L2 R2 Switch list" is the first to go, so it is never kept without Size (in Jost it still fits here). */
     @Test
     @Config(qualifiers = WIDE)
     fun at768AGameGridKeepsYearAndPublisherAndSize() {
         show { CoverGridBoard(rememberSource { coverArtSource() }) }
         compose.onNodeWithText("Mega Man X 1993 · Capcom", useUnmergedTree = true).assertExists()
         assertTrue("L1 R1 Size stays", isPlaced(Action.NextSystem))
-        assertTrue("Switch system is not kept over Size", !isPlaced(Action.JumpLetterNext) || isPlaced(Action.NextSystem))
+        assertTrue("Switch list is not kept over Size", !isPlaced(Action.JumpLetterNext) || isPlaced(Action.NextSystem))
     }
 
-    /** At 576 the grid bar keeps "L1 R1 Size" if anything and drops "L2 R2 Switch system" first (never the reverse). */
+    /** At 576 the grid bar keeps "L1 R1 Size" if anything and drops "L2 R2 Switch list" first (never the reverse). */
     @Test
     @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
     fun at576AGameGridNeverKeepsSwitchSystemWithoutSize() {
         show { CoverGridBoard(rememberSource { coverArtSource() }) }
-        assertTrue("Switch system is not kept over Size", !isPlaced(Action.JumpLetterNext) || isPlaced(Action.NextSystem))
+        assertTrue("Switch list is not kept over Size", !isPlaced(Action.JumpLetterNext) || isPlaced(Action.NextSystem))
         assertTrue("L1 R1 Size stays at 576", isPlaced(Action.NextSystem))
     }
 
     private fun isPlaced(action: Action): Boolean =
         compose.onAllNodesWithTag(HomeTags.hint(action), useUnmergedTree = true).fetchSemanticsNodes().any { it.layoutInfo.isPlaced }
 
-    /** The Thor (832 x 468 dp, density about 2.3): the year and publisher stay, and so does "L1 R1 Size"; "L2 R2 Switch system" gives way. */
+    /** The Thor (832 x 468 dp, density about 2.3): the year and publisher stay, and so does "L1 R1 Size"; "L2 R2 Switch list" gives way. */
     @Test
     @Config(qualifiers = "w832dp-h468dp-land-xxhdpi")
     fun theGridBarOnTheThorKeepsYearPublisherAndSize() {
@@ -410,5 +410,5 @@ internal fun largeWithBoxArt(totalGames: Int = 10_000): HomeContent {
     val large = FakeHomeContent.large(totalGames)
     val systems = large.entries.filter { it.kind == EntryKind.System }.map { SystemGames(it.id, it.name.orEmpty(), it.rows, it.coverShape) }
     val fixed = { kind: EntryKind -> large.entries.first { it.kind == kind }.rows }
-    return HomeContent.of(fixed(EntryKind.Recent), fixed(EntryKind.Favorites), fixed(EntryKind.Apps), systems, hasBoxArt = true)
+    return HomeContent.of(large.recentRows, fixed(EntryKind.Favorites), fixed(EntryKind.Apps), systems, hasBoxArt = true)
 }

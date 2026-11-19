@@ -113,19 +113,37 @@ internal object NoActions : SettingsActions {
 internal val NoTouch = SettingsTouch({}, {}, {}, {}, {}, {}, {})
 
 /** The section's place in the sections column on a device without a second screen: Downs from the top. */
-internal val SettingsSection.shownIndex: Int get() = SettingsSection.shownIn(SettingsContent()).indexOf(this)
+internal val SettingsSection.shownIndex: Int get() = SettingsSection.entries.indexOf(this)
 
 /** The sections a device without a second screen shows, in order. */
-internal val shownSections: List<SettingsSection> = SettingsSection.shownIn(SettingsContent())
+internal val shownSections: List<SettingsSection> = SettingsSection.entries
 
-/** The focus on [option] of its section in the options column. */
-internal fun optionsAt(option: SettingsOption): SettingsFocus {
+/** Rows only some content lists: Library's and Home screen's, by section. */
+private val contentRows: Map<SettingsSection, Set<SettingsOption>> =
+    mapOf(
+        SettingsSection.Library to
+            setOf(
+                SettingsOption.UnreadableFolders, SettingsOption.FilesNotAdded, SettingsOption.UnidentifiedGames, SettingsOption.HiddenGames, SettingsOption.Systems,
+                SettingsOption.Emulators, SettingsOption.Collections, SettingsOption.BoxArtSource, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount,
+            ),
+        SettingsSection.HomeScreen to setOf(SettingsOption.SecondScreen, SettingsOption.SecondScreenInGame, SettingsOption.SecondScreenAppsOn),
+    )
+
+/** The section that lists [option] for some content. */
+internal fun sectionOf(option: SettingsOption): SettingsSection = SettingsSection.entries.first { option in it.options || option in contentRows[it].orEmpty() }
+
+/** The focus on [option] of its section in the options column; its row is the place in [content]'s rows (what [SettingsAt] shows by default). */
+internal fun optionsAt(
+    option: SettingsOption,
+    content: SettingsContent = SettingsContent().withGamesListed(),
+): SettingsFocus {
     // Background and Text color are rows of Colors' panel: the cursor on that row, the Colors row behind it.
-    ColorPages.kindOf(option)?.let(::colorsRowItemOf)?.let { item -> return optionsAt(SettingsOption.Colors).copy(column = SettingsColumn.Panel, page = PanelPage.ColorSets, panelIndex = item) }
+    ColorPages.kindOf(option)?.let(::colorsRowItemOf)?.let { item -> return optionsAt(SettingsOption.Colors, content).copy(column = SettingsColumn.Panel, page = PanelPage.ColorSets, panelIndex = item) }
     // An item of a panel's list: its page open, the list's row behind it.
-    pageOfListItem(option)?.let { (row, page, index) -> return optionsAt(row).copy(column = SettingsColumn.Panel, page = page, panelIndex = index) }
-    val section = SettingsSection.entries.first { option in it.options }
-    return SettingsFocus(column = SettingsColumn.Options, section = section, rememberedOption = mapOf(section to section.options.indexOf(option)))
+    pageOfListItem(option)?.let { (row, page, index) -> return optionsAt(row, content).copy(column = SettingsColumn.Panel, page = page, panelIndex = index) }
+    val section = sectionOf(option)
+    val row = section.rowsIn(content).indexOf(option).takeIf { it >= 0 } ?: section.options.indexOf(option).also { check(it >= 0) { "$option is not a row of $section for this content" } }
+    return SettingsFocus(column = SettingsColumn.Options, section = section, rememberedOption = mapOf(section to row))
 }
 
 /** An item of Back up and restore's or Reset…'s panel: the row that lists it, its own page, the cursor's first place on that page. */
@@ -157,7 +175,21 @@ internal fun panelAt(
     option: SettingsOption,
     page: PanelPage,
     index: Int,
-): SettingsFocus = optionsAt(option).copy(column = SettingsColumn.Panel, page = page, panelIndex = index)
+    content: SettingsContent = SettingsContent().withGamesListed(),
+): SettingsFocus = optionsAt(option, content).copy(column = SettingsColumn.Panel, page = page, panelIndex = index)
+
+/** Library › Emulators' list of systems, the cursor on item [index]; [content] is what the screen is drawn with. */
+internal fun emulatorSystemsAt(
+    content: SettingsContent,
+    index: Int = 0,
+): SettingsFocus = panelAt(SettingsOption.Emulators, PanelPage.EmulatorSystems, index, content)
+
+/** The page of system [systemId]'s emulators, the cursor on choice [index]. */
+internal fun emulatorsPageAt(
+    content: SettingsContent,
+    systemId: String = "psx",
+    index: Int = 0,
+): SettingsFocus = panelAt(SettingsOption.Emulators, PanelPage.Emulators, index, content).copy(systemId = systemId)
 
 /** Background's or Text color's page as [settings] open it, reached from Colors' panel. */
 internal fun colorPageAt(

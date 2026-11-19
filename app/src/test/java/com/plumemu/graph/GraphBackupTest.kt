@@ -46,7 +46,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Settings › Advanced › Back up… on the graph: a real library database in
+ * Settings › About › Back up… on the graph: a real library database in
  * a file, a box-art folder, and the picked document as a plain file. What each kind holds, Cancel,
  * and a failing document, each ending with the right state and no unfinished file left behind.
  */
@@ -154,7 +154,7 @@ class GraphBackupTest {
         assertEquals("manifest.json", zip.keys.first())
         val manifest = BackupManifest.fromJson(zip.getValue("manifest.json").decodeToString())
         assertEquals(BackupKind.Everything, manifest.kind)
-        assertEquals("the schema since unreadable sub-folders are stored", 19, manifest.databaseSchemaVersion)
+        assertEquals("the schema since collections (20) are stored", 20, manifest.databaseSchemaVersion)
         assertEquals(2, manifest.gameCount)
         assertEquals(2, manifest.mediaFileCount)
         assertEquals(300_040L, manifest.mediaBytes)

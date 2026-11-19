@@ -107,13 +107,15 @@ internal fun FixNameBody(
 internal fun OwnNameBody(
     state: OwnNameState,
     onAction: (Action) -> Unit,
+    /** The field's label once something is typed; a collection's name says so. */
+    hint: String = stringResource(R.string.game_name_hint),
 ) {
     TypingField(
         value = state.text,
         onValueChange = state::onTextChange,
         typing = state,
         placeholder = stringResource(R.string.game_own_name_prompt),
-        hint = stringResource(R.string.game_name_hint),
+        hint = hint,
         options = KeyboardOptions(capitalization = KeyboardCapitalization.Words, autoCorrectEnabled = false, imeAction = ImeAction.Done),
         onAction = onAction,
         tag = FixNameTags.OWN_FIELD,
@@ -357,7 +359,7 @@ internal fun TypingPanelBody(
     Column {
         when (screen) {
             is PanelScreen.FixName -> FixNameBody(screen.typing, onAction)
-            is PanelScreen.OwnName -> OwnNameBody(screen.typing, onAction)
+            is PanelScreen.OwnName -> OwnNameBody(screen.typing, onAction, hint = if (screen.collection != null) stringResource(R.string.collections_name_title) else stringResource(R.string.game_name_hint))
             is PanelScreen.FixBoxArt -> FixBoxArtBody(screen.typing, onAction)
             else -> Unit
         }

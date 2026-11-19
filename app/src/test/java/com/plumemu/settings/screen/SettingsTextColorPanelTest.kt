@@ -392,7 +392,7 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
         backToSections()
         // Restore a backup: the confirm, then Restore (the graph replaces the settings after).
         model.content = SettingsContent(restore = com.plumemu.graph.RestoreState.Confirm(com.plumemu.graph.RestoreSummary(com.plumemu.coredata.backup.BackupKind.Everything, 1L, games = 1, pictures = 0, account = com.plumemu.graph.AccountInFile.SignsIn)))
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.Restore)
         press(Action.Enter)
         move(Direction.Up)

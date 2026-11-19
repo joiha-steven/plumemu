@@ -16,7 +16,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Advanced › Back up and restore by gamepad and touch: the list, each item's page, and when a result counts as seen. */
+/** About › Back up and restore by gamepad and touch: the list, each item's page, and when a result counts as seen. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 internal class SettingsBackupRestoreListTest : SettingsModelHarness() {
@@ -27,7 +27,7 @@ internal class SettingsBackupRestoreListTest : SettingsModelHarness() {
 
     private fun openRow(content: SettingsContent = SettingsContent()) {
         model.content = content
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.BackupAndRestore)
     }
 

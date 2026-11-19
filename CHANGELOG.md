@@ -3,6 +3,38 @@
 What changed in each version of Plumemu, newest first. Downloads are under
 [Releases](../../releases).
 
+## 0.1.7 (19 November 2026)
+
+Collections for your own lists of games, Settings in six sections, and a launcher that stays quick after an update.
+
+### New
+
+- Collections sit between Favorites and Apps: Recent, Most played and Recently added fill themselves, beside the collections you make.
+- Add a game to a collection from its game menu, or make a new one there; a collection can hold games from any system.
+- Collections open as a grid of covers and SELECT turns one into a list; Settings › Library › Collections renames, moves and deletes them.
+- Reset library keeps your collections and puts their games back once the library is scanned again.
+
+### Improved
+
+- Settings has six sections instead of ten: Library, Appearance, Home screen, Controls, Statistics and About.
+- Emulators is one row under Library, Box art and both accounts are in Library too, and Back up, Reset and logs moved to About.
+- Check for updates daily is a switch right under About › Version.
+- After an update Plumemu restarts once, only while the screen is off and nothing is busy, so it runs at full speed again.
+- Lists and grids scroll more smoothly, closing Settings is faster, and coming back to Colors no longer stutters.
+- The L2 and R2 hint reads Switch list, since it moves between systems and collections.
+- With nothing saved yet, Plumemu opens on Favorites.
+
+### Fixed
+
+- A notice or the What's new card no longer passes unseen behind Settings, and the home under Settings ignores presses.
+
+### Known issues
+
+- Wii games in RVZ or WIA are not checked for achievements, and 3DS, MS-DOS and Arduboy games show none yet.
+- The second screen is tested on the AYN Thor only, and most translations other than French have not been read by a native speaker.
+- Android's own folder picker cannot be finished with a gamepad on some handhelds: use touch for that step.
+- Moving through Settings can still drop a frame now and then on the AYN Thor.
+
 ## 0.1.6 (15 November 2026)
 
 Smoother system switches, a calmer home screen, fewer settings, and play time that counts only real play.

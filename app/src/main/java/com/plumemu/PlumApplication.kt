@@ -14,6 +14,7 @@ import com.plumemu.graph.telemetryConfig
 import com.plumemu.keyboard.AndroidClipSource
 import com.plumemu.keyboard.PasteBoard
 import com.plumemu.language.AppLocale
+import com.plumemu.restart.CompiledCodeRestart
 import com.plumemu.scraper.DeveloperCredentials
 import com.plumemu.scraper.work.ScraperHost
 import com.plumemu.scraper.work.ScraperWork
@@ -60,10 +61,24 @@ open class PlumApplication : Application(), Configuration.Provider, ScraperHost,
             statistics.start()
             graph.followUsageStatistics(statistics)
         }
+        if (restartsForCompiledCode) CompiledCodeRestart(this, graph, statistics).start()
+        com.plumemu.home.SharedBoxFrontImages.releaseWhenStopped(this) { it is MainActivity }
         // Shows in CI and on a device whether the build got the credentials; never a value.
         val state = if (DeveloperCredentials.buildHasCredentials) "present" else "absent"
         Log.i(TAG, "ScreenScraper developer credentials: $state")
     }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        com.plumemu.home.SharedBoxFrontImages.trim(level)
+    }
+
+    /**
+     * The process ends itself, screen off, when Android compiled its code after it started
+     * ([CompiledCodeRestart]). Never in a benchmark build (a run must not be ended midway) nor in
+     * the tests' Application.
+     */
+    protected open val restartsForCompiledCode: Boolean get() = !BuildConfig.BENCHMARK_CONTENT
 
     /** The process's statistics; the tests' Application answers null. */
     protected open fun makeTelemetry(): Telemetry? {

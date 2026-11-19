@@ -92,7 +92,7 @@ abstract class SettingsAccountAlignBase {
                 val gap = bounds(SettingsTags.option(below)).top.value - bounds(SettingsTags.option(above)).bottom.value
                 if (!near(gap, PlumDimens.listRowGap.value)) problems += "$at: gap $above to $below is $gap"
             }
-            section = SettingsSection.Accounts
+            section = SettingsSection.Library
             compose.waitForIdle()
             check(accountLabels)
             val gap = bounds(SettingsTags.option(SettingsOption.RetroAchievementsAccount)).top.value - bounds(SettingsTags.option(SettingsOption.ScraperAccount)).bottom.value

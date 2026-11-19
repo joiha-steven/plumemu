@@ -299,19 +299,19 @@ class ReadmeMediaShots {
     fun update() {
         val release =
             UpdateManifest(
-                versionCode = 901,
-                versionName = "0.1.4",
+                versionCode = 2017,
+                versionName = "0.1.6",
                 apkUrl = "https://example.invalid/plumemu.apk",
-                size = 8_100_000,
+                size = 9_465_889,
                 sha256 = "ab".repeat(32),
                 minSdk = 23,
-                released = "2026-11-09",
-                notes = listOf("Seventeen colour sets, with true black on OLED screens.", "A game without box art gets a card in its system's colour.", "Settings and the game menu open faster."),
+                released = "2026-11-15",
+                notes = listOf("Switching to another system for the first time is much faster.", "The left strip always shows each system's short code.", "Play time counts only the time a game is on screen."),
                 notesUrl = null,
             )
         val content = SettingsContent(update = UpdateView(lastCheck = LastCheck(1_794_216_600_000L, CheckOutcome.Found), found = release))
         val row = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 0))
-        shoot("update", stored(ColorSet.Daylight)) { s -> SettingsAt(row.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0), s, content, version = "0.1.3") }
+        shoot("update", stored(ColorSet.Daylight)) { s -> SettingsAt(row.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0), s, content, version = "0.1.5") }
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import android.view.InputDevice
+import com.plumemu.coreinput.strip.StripFocus
 import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.compose.runtime.CompositionLocalProvider
@@ -30,7 +31,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Settings › Controls › Switch system with: L2 / R2 (the default) or L1 / R1 switch
+ * Settings › Controls › Switch list with: L2 / R2 (the default) or L1 / R1 switch
  * system on the main screen, and the other pair does what the first did: a letter jump in a list, Size in a grid.
  * Keys and analog triggers go through the router as a handheld sends them; the hint text and taps follow the setting.
  */
@@ -52,7 +53,7 @@ class HomeSwitchSystemWithTest {
             router = remember { InputRouter(scope) }
             PlumTheme(PlumThemeSettings.Default.copy(gridSize = GridSize.Medium)) {
                 CompositionLocalProvider(LocalShoulderKeys provides ShoulderKeys.of(setting)) {
-                    HomeScreen(FakeHomeContent.withArtwork(), router, HomeCallbacks(games = games, onGridSize = { size, _ -> sizes += size }))
+                    HomeScreen(FakeHomeContent.withArtwork(), router, HomeCallbacks(games = games, onGridSize = { size, _ -> sizes += size }), initialFocus = StripFocus())
                 }
             }
         }
@@ -148,7 +149,7 @@ class HomeSwitchSystemWithTest {
         openSnesList()
         compose.onNodeWithTag(HomeTags.hint(Action.JumpLetterNext), useUnmergedTree = true).performClick()
         compose.waitForIdle()
-        assertTrue("a tap on Switch system went to the next system under $setting", !inSnes())
+        assertTrue("a tap on Switch list went to the next system under $setting", !inSnes())
     }
 
     @Test

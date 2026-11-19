@@ -21,6 +21,22 @@ data class SystemEntry(
     val hasDetails: Boolean = true,
     val itemIds: List<String> = emptyList(),
     val packed: PackedRows? = null,
+    /**
+     * A folder list (Collections): [itemIds] are its folders' ids and [folders] the folders' own entries, one per id
+     * that opens (a row with no entry here, "New collection...", opens nothing: A on it is [StripIntent.ActivateRow]).
+     * Which one is open is [StripFocus.openFolder], by id, so a new folder never moves it.
+     */
+    val folders: List<SystemEntry> = emptyList(),
+    val isFolderList: Boolean = false,
+    /** A folder's games: the cursor may stand in it while it is empty (it opens on its one line, never hidden). */
+    val isFolder: Boolean = false,
+)
+
+/** The folder [id] open inside the entry [host] (the strip has one extra level there). */
+@Immutable
+data class OpenFolder(
+    val host: String,
+    val id: String,
 )
 
 /** What the strip shows; [hasBoxArt] false means no details stop (grids do not depend on it) (wide screens show a text-only details column, which is not a stop). */
@@ -46,8 +62,21 @@ data class StripFocus(
     val systemId: String? = null,
     val rows: Map<String, Int> = emptyMap(),
     val rowIds: Map<String, String> = emptyMap(),
+    /**
+     * The folder last open in a folder list. Kept when the cursor leaves the list (L2 / R2, Left) so coming back reopens it;
+     * only Back from its games closes it. Rows of a folder are kept under the folder's id, like a system's.
+     */
+    val openFolder: OpenFolder? = null,
 ) {
     fun rowOf(systemId: String): Int = rows[systemId] ?: 0
+
+    /** What the remembered row and the focused game belong to: the open folder's id inside its host, else the system's. */
+    val entryKey: String?
+        get() = systemId?.let { id -> openFolder?.takeIf { it.host == id }?.id ?: id }
+
+    /** What the cursor stands in for [host]: its open folder's entry, else [host] itself. */
+    internal fun shownIn(host: SystemEntry): SystemEntry =
+        openFolder?.takeIf { host.isFolderList && it.host == host.id }?.let { open -> host.folders.firstOrNull { it.id == open.id } } ?: host
 
     /** Row [row] of [entry] remembered, with its item's id when the entry gives ids. */
     internal fun withRow(entry: SystemEntry, row: Int): StripFocus {
@@ -67,7 +96,7 @@ data class StripFocus(
 
     /** The focused game row of the focused system (0 when nothing is focused). */
     val row: Int
-        get() = systemId?.let { rowOf(it) } ?: 0
+        get() = entryKey?.let { rowOf(it) } ?: 0
 
     /**
      * This focus made valid for [content]: the system found again by id (or the nearest index),
@@ -86,18 +115,23 @@ data class StripFocus(
         if (systems.isEmpty()) return this
         val byId = systemId?.let { id -> systems.indexOfFirst { it.id == id } } ?: -1
         val index = if (byId >= 0) byId else systemIndex.coerceIn(0, systems.lastIndex)
-        val entry = systems[index]
+        val host = systems[index]
+        val open = openFolder?.takeIf { host.isFolderList && it.host == host.id }
+        val folder = open?.let { o -> host.folders.firstOrNull { it.id == o.id } }
+        // A folder the content no longer has (a collection deleted) is closed; one that belongs to another system is kept for later.
+        val keptOpen = if (open != null && folder == null) null else openFolder
+        val entry = folder ?: host
         val row = rowIn(entry)
         val column =
             when {
-                entry.itemCount == 0 -> Column.Systems
+                entry.itemCount == 0 && folder == null -> Column.Systems
                 column == Column.Details && (!hasDetailsStop || !entry.hasDetails) -> Column.Games
                 else -> column
             }
         val newRows = if (rowOf(entry.id) == row) rows else rows + (entry.id to row)
         val idAtRow = entry.itemIds.getOrNull(row)
         val newRowIds = if (idAtRow == null || rowIds[entry.id] == idAtRow) rowIds else rowIds + (entry.id to idAtRow)
-        val same = column == this.column && index == systemIndex && entry.id == systemId && newRows === rows && newRowIds === rowIds
-        return if (same) this else StripFocus(column, index, entry.id, newRows, newRowIds)
+        val same = column == this.column && index == systemIndex && host.id == systemId && newRows === rows && newRowIds === rowIds && keptOpen == openFolder
+        return if (same) this else StripFocus(column, index, host.id, newRows, newRowIds, keptOpen)
     }
 }

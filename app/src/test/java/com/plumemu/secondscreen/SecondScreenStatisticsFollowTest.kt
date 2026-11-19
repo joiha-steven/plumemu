@@ -19,6 +19,7 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.home.FakeHomeContent
+import com.plumemu.home.fromSystemColumn
 import com.plumemu.home.HomeArtSource
 import com.plumemu.home.HomeCallbacks
 import com.plumemu.home.appComposeRule
@@ -96,6 +97,7 @@ class SecondScreenStatisticsFollowTest {
             compose.setContent { key(variant) { Hosted(variant) } }
         }
         compose.waitForIdle()
+        compose.fromSystemColumn(router) // the cold start is Favorites' games column since the Collections change
         // The main screen's game index is built off the main thread before its first card.
         if (withSecondScreen) compose.waitUntil(WAIT_MS) { shown() is EntryContent }
     }

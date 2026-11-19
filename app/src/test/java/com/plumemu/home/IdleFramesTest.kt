@@ -14,6 +14,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.ObserverHandle
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.withFrameNanos
+import com.plumemu.coreui.testing.imageBuildsWaiting
+import com.plumemu.coreui.components.WARM_DELAY_MS
 import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.LocalGlideClock
@@ -32,6 +34,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowLooper
+import java.util.concurrent.TimeUnit
 
 /**
  * A screen at rest asks for no frame and recomposes nothing. Once settled, with motion on:
@@ -95,15 +99,46 @@ class IdleFramesTest {
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(SETTLE_MS)
         compose.waitForIdle()
+        finishOneOffWork()
         val before = compose.mainClock.currentTime
         compose.waitForIdle()
         assertEquals("$what: the clock ran on to get idle: a frame is awaited at rest", before, compose.mainClock.currentTime)
         compositions = 0
         stateChanges = 0
         repeat(FRAMES) { compose.mainClock.advanceTimeByFrame() }
+        // The looper clock passing the rest delay again adds nothing: the one-off work does not repeat.
+        passMainLooper(WARM_DELAY_MS + LOOPER_SLACK_MS)
         compose.waitForIdle()
         assertEquals("$what: composable calls in 2 s at rest", 0, compositions)
         assertEquals("$what: state changes (animation or polling) in 2 s at rest", 0, stateChanges)
+    }
+
+    private fun passMainLooper(ms: Long) {
+        compose.runOnUiThread { ShadowLooper.idleMainLooper(ms, TimeUnit.MILLISECONDS) }
+        compose.waitForIdle()
+    }
+
+    /**
+     * Counting starts after the work a screen does once on its own: the rest timer on the main looper (WARM_DELAY_MS, which Compose's clock
+     * does not drive) and the background image builds, whose landing is posted to the main looper from a build thread at a time the test does not
+     * choose (a lone class run, with a cold JVM, landed one in the counted window).
+     */
+    private fun finishOneOffWork() {
+        // A warm-up queues its next build only once the previous one's coroutine has resumed in a frame, so "no build waits" counts only after quiet rounds.
+        var quiet = 0
+        var rounds = 0
+        while (quiet < QUIET_ROUNDS) {
+            assertTrue("image builds did not finish", rounds++ < MAX_ROUNDS)
+            if (imageBuildsWaiting() > 0) {
+                Thread.sleep(BUILD_POLL_MS)
+                quiet = 0
+                continue
+            }
+            passMainLooper(WARM_DELAY_MS + LOOPER_SLACK_MS)
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+            if (imageBuildsWaiting() == 0) quiet++ else quiet = 0
+        }
     }
 
     @Test
@@ -142,5 +177,9 @@ class IdleFramesTest {
     private companion object {
         const val FRAMES = 125
         const val SETTLE_MS = 1000L
+        const val LOOPER_SLACK_MS = 100L
+        const val MAX_ROUNDS = 1000
+        const val QUIET_ROUNDS = 3
+        const val BUILD_POLL_MS = 20L
     }
 }

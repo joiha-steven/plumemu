@@ -62,8 +62,8 @@ internal fun HomeTopBar(
     val updateName by LocalUpdateFound.current.collectAsState()
     // Only what the bar shows: a row move changes the focus but neither of these.
     val column by remember(state) { derivedStateOf { state.focus.column } }
-    val systemIndex by remember(state) { derivedStateOf { state.focus.systemIndex } }
-    val entry = content.entries.getOrNull(systemIndex)
+    val shownEntry by remember(state, content) { derivedStateOf { content.shownEntry(state.focus) } }
+    val entry = shownEntry
     val numbers = rememberCountFormat()
     val isAsking = content.systemCount == 0 && (column == Column.Systems || entry == null)
     val (lead, count) =
@@ -74,7 +74,13 @@ internal fun HomeTopBar(
             pluralStringResource(R.plurals.home_systems_count, content.systemCount, numbers.format(content.systemCount)) to
                 pluralStringResource(R.plurals.home_games_count, content.gameCount, numbers.format(content.gameCount))
         } else {
-            val countRes = if (entry.kind == EntryKind.Apps) R.plurals.home_apps_count else R.plurals.home_games_count
+            // The folders page counts collections (New collection… is not one); a folder's games are "n games".
+            val countRes =
+                when {
+                    entry.isFolderList -> R.plurals.collections_count
+                    entry.kind == EntryKind.Apps -> R.plurals.home_apps_count
+                    else -> R.plurals.home_games_count
+                }
             entryName(entry) to pluralStringResource(countRes, entry.shownCount, numbers.format(entry.shownCount))
         }
     val shown = rememberShownNotice()
@@ -118,6 +124,7 @@ internal fun entryName(entry: HomeEntry): String =
         EntryKind.Recent -> stringResource(R.string.home_entry_recent)
         EntryKind.Favorites -> stringResource(R.string.home_entry_favorites)
         EntryKind.Apps -> stringResource(R.string.home_entry_apps)
+        EntryKind.Collections -> if (entry.isFolder) folderTitle(entry.id, entry.name) else stringResource(R.string.collections_entry)
         EntryKind.System -> entry.name.orEmpty()
     }
 
@@ -131,6 +138,7 @@ internal fun entryCode(entry: HomeEntry): String =
         EntryKind.Recent -> stringResource(R.string.home_code_recent)
         EntryKind.Favorites -> stringResource(R.string.home_code_favorites)
         EntryKind.Apps -> stringResource(R.string.home_code_apps)
+        EntryKind.Collections -> stringResource(R.string.home_code_collections)
         EntryKind.System -> entry.code.ifEmpty { entry.name.orEmpty().filter { it.isLetterOrDigit() }.take(CODE_LENGTH).uppercase() }
     }
 
@@ -150,127 +158,9 @@ internal data class HintSpec(
     val action: Action,
     /** A tap cycles the grid size (Small, Medium, Large, Small) instead of sending [action]; the keys stop at the ends. */
     val cyclesGridSize: Boolean = false,
-    /** What a tap sends. It differs from [action] only for "Switch system" under Switch system with L1 / R1, where [action] stays L2 / R2's name so the hints keep their order and test tags. */
+    /** What a tap sends. It differs from [action] only for "Switch list" under Switch list with L1 / R1, where [action] stays L2 / R2's name so the hints keep their order and test tags. */
     val tapAction: Action = action,
 )
-
-/**
- * The hints for where the focus is (the board's RP5-1, RP5-2, RP5-3 and Nova-3). SELECT shows for an
- * entry that can be a grid ([HomeContent.hasGridFor]): a system, Recent, Favorites and Apps, with or without box art. "A Select" only where there is something to open
- * (an empty Recent has nothing), "L1 R1" only when there is another list to switch to (with no
- * games only Apps), "X Search" only when there are games to find, "Y Favorite" (or "Y Unfavorite"
- * for a favorite, [focusedIsFavorite]) only on a game. A grid shows A, B and "SELECT List view"
- * (RP5-3) and "L1 R1 Size" (they change the grid size); Apps' grid has none (its
- * size is fixed and L1 / R1 do nothing there); every list and grid with another
- * entry to go to also shows "L2 R2 Switch system" (L2 / R2 switch the entry everywhere, L1 / R1 jump a letter in a list); the narrow details stop A, B, Y and "START More" (Nova-3).
- * The pair names here are the default's: with Switch system with = L1 / R1 ([shoulders]) the two pairs trade places in these hints.
- */
-internal fun hintsFor(
-    content: HomeContent,
-    column: Column,
-    entry: HomeEntry?,
-    showsGrid: Boolean = false,
-    letters: ButtonLetters = ButtonLetters.Default,
-    focusedIsFavorite: Boolean = false,
-    pushRightPlays: Boolean = false,
-    pushRightArmed: Boolean = false,
-    updateWaiting: Boolean = false,
-    shoulders: ShoulderKeys = ShoulderKeys.Default,
-    hasDetailsStop: Boolean = false,
-    /** The empty state's focused button; null while it shows none (reading the folders): A then offers nothing. */
-    emptyButton: EmptyButton? = EmptyButton.AddFolder,
-): List<HintSpec> {
-    // While an update waits START opens Settings on it, so the hint says what it is for.
-    val settings = HintSpec(R.string.home_key_start, if (updateWaiting) R.string.home_hint_update else R.string.home_hint_settings, Action.OpenSettings)
-    val hasItems = (entry?.count ?: 0) > 0
-    val isApps = entry?.kind == EntryKind.Apps
-    val play = HintSpec(letters.confirm, if (isApps) R.string.home_hint_open else R.string.home_hint_play, Action.Play)
-    // Push right to play: "→ Twice to play" beside "A Play" (a list; not a grid); after the first Right "→ Again to play".
-    val pushRight = if (pushRightPlays && hasItems) HintSpec(R.string.home_key_right, pushRightLabel(isApps, pushRightArmed), Action.Play) else null
-    val back = HintSpec(letters.back, R.string.home_hint_back, Action.Back)
-    val search = if (content.gameCount > 0) HintSpec(letters.search, R.string.home_hint_search, Action.Search) else null
-    val favorite = if (hasItems && !isApps) favoriteHint(letters, focusedIsFavorite) else null
-    return when {
-        column == Column.Systems ->
-            listOfNotNull(
-                when {
-                    hasItems -> HintSpec(letters.confirm, R.string.home_hint_select, Action.Enter)
-                    // The only button says it itself; with two, the hint says which one A presses.
-                    content.asksForFolderAt(entry) -> emptyButton?.takeIf { it != EmptyButton.AddFolder }?.let { HintSpec(letters.confirm, it.label(), Action.Enter) }
-                    else -> null
-                },
-                search,
-                settings,
-                // Where the focused system's games can be a grid: SELECT says which view comes next (as the games list's hint does).
-                if (hasItems && entry != null && content.hasGridFor(entry)) {
-                    HintSpec(R.string.home_key_select, if (showsGrid) R.string.home_hint_list_view else R.string.home_hint_grid_view, Action.ToggleView)
-                } else {
-                    null
-                },
-            )
-        // Narrow with box art and Push right to play: Right at the stop arms, so the hint is here too.
-        column == Column.Details -> listOfNotNull(play, pushRight.takeIf { !showsGrid }, back, favorite, HintSpec(R.string.home_key_start, R.string.home_hint_menu, Action.Menu))
-        // Apps' grid has one fixed size and L1 R1 do nothing there: no L1 R1 hint.
-        showsGrid && (isApps || entry?.isAppGamesGrid == true) ->
-            appsGridHints(play, back, search, switchSystem(content, shoulders))
-        // L1 R1 change the grid size here, not the system (the system column is a Back away).
-        showsGrid ->
-            listOfNotNull(
-                play,
-                back,
-                favorite,
-                HintSpec(shoulders.sizeCap, R.string.home_hint_grid_size, Action.NextSystem, cyclesGridSize = true),
-                switchSystem(content, shoulders),
-                HintSpec(R.string.home_key_select, R.string.home_hint_list_view, Action.ToggleView),
-            )
-        else ->
-            listOfNotNull(
-                play,
-                // With a details stop Right goes there first, so the hint waits for the stop.
-                pushRight.takeIf { !hasDetailsStop },
-                // No "B Back" here: the key still goes back, the games list's bar leaves it out.
-                favorite,
-                search,
-                // "R3 Sort" on a list the sort orders (a system's, Favorites); it gives way after Switch system.
-                if (hasItems && entry?.kind?.followsSort == true) HintSpec(R.string.home_key_r3, R.string.home_hint_sort, Action.Sort) else null,
-                HintSpec(R.string.home_key_start, R.string.home_hint_menu, Action.Menu),
-                switchSystem(content, shoulders),
-                if (entry != null && content.hasGridFor(entry)) HintSpec(R.string.home_key_select, R.string.home_hint_grid_view, Action.ToggleView) else null,
-            )
-    }
-}
-
-/**
- * True where the games area says "No game folder yet": no system has games and [entry] shows nothing.
- * A there (or a tap on the message) opens the folder picker instead of a column.
- */
-internal fun HomeContent.asksForFolderAt(entry: HomeEntry?): Boolean = isLibraryEmpty && entry != null && entry.rows.isEmpty()
-
-/**
- * "L2 R2 Switch system" when there is another list to switch to (with no games only Apps has rows). Its
- * action is the switching pair's own name, so a tap goes through the same reading as the key ([ShoulderKeys.read], [homeAction]).
- */
-private fun switchSystem(
-    content: HomeContent,
-    shoulders: ShoulderKeys,
-): HintSpec? =
-    if (content.entries.count { it.count > 0 } > 1) {
-        // Under L1 / R1 the tap sends L1 / R1's name, the one the screen reads as "switch system" there.
-        val tap = if (shoulders.bumpersSwitch) Action.NextSystem else Action.JumpLetterNext
-        HintSpec(shoulders.switchSystemCap, R.string.home_hint_switch_system, Action.JumpLetterNext, tapAction = tap)
-    } else {
-        null
-    }
-
-@StringRes
-private fun pushRightLabel(
-    isApps: Boolean,
-    armed: Boolean,
-): Int =
-    when {
-        armed -> if (isApps) R.string.home_hint_again_open else R.string.home_hint_again_play
-        else -> if (isApps) R.string.home_hint_twice_open else R.string.home_hint_twice_play
-    }
 
 /** "Y Favorite", or "Y Unfavorite" on a game that is one. */
 internal fun favoriteHint(
@@ -397,10 +287,11 @@ internal fun HomeHints(
     val updateWaiting = LocalUpdateFound.current.collectAsState().value != null
     // Only what the hints depend on, so a row move does not recompose the bar.
     val column by remember(state) { derivedStateOf { state.focus.column } }
-    val systemIndex by remember(state) { derivedStateOf { state.focus.systemIndex } }
-    val entry = content.entries.getOrNull(systemIndex)
+    val shownEntry by remember(state, content) { derivedStateOf { content.shownEntry(state.focus) } }
+    val entry = shownEntry
     // Changes only when the cursor moves between a favorite and another game (Y Favorite / Unfavorite).
     val focusedIsFavorite by remember(state, entry) { derivedStateOf { entry?.rows?.getOrNull(state.focus.rowOf(entry.id))?.isFavorite == true } }
+    val focusedFolderIsNew by remember(state, entry) { derivedStateOf { entry?.isFolderList == true && entry.rows.getOrNull(state.focus.rowOf(entry.id))?.id == HomeContent.NEW_COLLECTION_ID } }
     val showsGrid = content.showsGrid(entry, gridIds) && panel == null
     // Push right to play: after the first Right the hint says "Again to play" (only this reads the arming).
     val stripArmed by remember(state) { derivedStateOf { state.isPushRightArmed } }
@@ -437,19 +328,19 @@ internal fun HomeHints(
     val emptyButton = rememberEmptyButton(column == Column.Systems && content.asksForFolderAt(entry))
     val undoOffered = LocalRecentUndoOffered.current()
     val hints =
-        searchHintsShown ?: typingHints ?: remember(content, column, entry, showsGrid, letters, shoulders, panel, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, hasDetailsStop, emptyButton, undoOffered) {
-            panel?.let { panelHints(it, letters) } ?: hintsFor(content, column, entry, showsGrid, letters, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, shoulders, hasDetailsStop, emptyButton).withUndo(undoOffered, letters)
+        searchHintsShown ?: typingHints ?: remember(content, column, entry, showsGrid, letters, shoulders, panel, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, hasDetailsStop, emptyButton, undoOffered, focusedFolderIsNew) {
+            panel?.let { panelHints(it, letters) } ?: hintsFor(content, column, entry, showsGrid, letters, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, shoulders, hasDetailsStop, emptyButton, focusedFolderIsNew).withUndo(undoOffered, letters)
         }
     // While Undo is offered X stays on every bar that has it (Search is dropped last), or its key would work with no hint drawn.
     val drops = (if (isTyping || isPanelTrayUp) TYPING_HINT_DROP_ORDER else if (showsGrid && entry?.isIconGrid == true) APPS_GRID_HINT_DROP_ORDER else if (showsGrid) GRID_HINT_DROP_ORDER else HINT_DROP_ORDER).let { if (undoOffered && panel == null && searchHintsShown == null) it - Action.Search else it }
     val dropOrder = remember(hints, drops) { drops.flatMap { action -> hints.indices.filter { hints[it].action == action } } }
     val views: @Composable () -> Unit = remember(hints, onAction, onCycleGridSize) { { hints.forEach { HintView(it, onAction, onCycleGridSize) } } }
     if (searchHintsShown == null && showsGrid && column == Column.Games && entry != null) {
-        // "L2 R2 Switch system" gives way before the game's year and publisher; the keys still work.
+        // "L2 R2 Switch list" gives way before the game's year and publisher; the keys still work.
         val beforeMeta = hints.indices.filter { hints[it].action == Action.JumpLetterNext }
         GridHintBar(entry, state, dropOrder, beforeMeta, views)
     } else {
-        // On a narrow screen in a wide font the games hints do not all fit: L2 R2 Switch system goes first (the
+        // On a narrow screen in a wide font the games hints do not all fit: L2 R2 Switch list goes first (the
         // system column's edge is a tap away), then L1 R1 Size, then B Back, SELECT last (HINT_DROP_ORDER); never cut or overlapped.
         FittingHintBar(modifier = Modifier.testTag(HomeTags.HINT_BAR), dropOrder = dropOrder, content = views)
     }
@@ -489,7 +380,7 @@ private fun HintView(
 }
 
 /**
- * Which hints give way first when the bar is too narrow for all of them (see [HomeHints]): L2 R2 Switch system, then
+ * Which hints give way first when the bar is too narrow for all of them (see [HomeHints]): L2 R2 Switch list, then
  * L1 R1 Size, R3 Sort, B Back, and SELECT last; START Menu and Y Favorite are not in the order (only a bar still too
  * narrow after those would drop hints from its end). By touch SELECT's hint is the only way
  * between a list and its grid, while B has the system's back gesture;
@@ -497,7 +388,7 @@ private fun HintView(
  */
 private val HINT_DROP_ORDER = listOf(Action.JumpLetterNext, Action.NextSystem, Action.Sort, Action.Back, Action.ToggleView)
 
-/** A grid's hints give way as a list's do, with Y Favorite going right after Switch system (L1 R1 Size stays at 576). */
+/** A grid's hints give way as a list's do, with Y Favorite going right after Switch list (L1 R1 Size stays at 576). */
 private val GRID_HINT_DROP_ORDER = listOf(Action.JumpLetterNext, Action.ToggleFavorite, Action.NextSystem, Action.Back, Action.ToggleView)
 
 /** The typing hints (Search's and a panel field's) give way in this order: L1 R1 Cursor, then SELECT Shift, then Y 123; A, B, X and START always stay. */
@@ -527,6 +418,7 @@ internal object HomeTags {
 
     const val EMPTY_FAVORITES = "home_empty_favorites"
     const val EMPTY_RECENT = "home_empty_recent"
+    const val EMPTY_FOLDER = "home_empty_folder"
     const val GRID = "home_grid"
     const val EDGE_FADE = "home_edge_fade"
     const val DETAILS = "home_details"

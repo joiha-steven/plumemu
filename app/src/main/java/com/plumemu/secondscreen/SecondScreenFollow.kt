@@ -7,6 +7,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.res.stringResource
 import com.plumemu.R
 import com.plumemu.coreui.theme.LocalLaunchOrigin
+import com.plumemu.collections.BuiltInFolder
+import com.plumemu.collections.Folder
+import com.plumemu.collections.entryIdOf
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.strip.StripFocus
 import com.plumemu.coreinput.strip.StripState
@@ -51,6 +54,9 @@ internal data class HomeLook(
 internal data class EntryNames(
     val recent: String,
     val favorites: String,
+    /** The built-in folders' names, for the card of a folder (Favorites' card, the nearest one). */
+    val mostPlayed: String = "",
+    val recentlyAdded: String = "",
 )
 
 /**
@@ -92,7 +98,7 @@ internal fun secondScreenContentOf(
     // The menu is about one game, wherever it was opened from (the strip or a search result).
     look.menuGameKey?.let { key -> systems.rowOf(key)?.let { return gameCard(it, systems, content.hasBoxArt) } }
     if (look.isSearchOpen) return look.searchHit?.let { gameCard(it.row, systems, content.hasBoxArt) } ?: SecondScreenContent.Calm
-    val entry = content.entries.getOrNull(look.focus.systemIndex) ?: return SecondScreenContent.Calm
+    val entry = content.shownEntry(look.focus) ?: return SecondScreenContent.Calm
     if (look.focus.column == Column.Systems) return entryCard(entry, names, content.hasBoxArt)
     val row = entry.rows.getOrNull(look.focus.rowOf(entry.id)) ?: return entryCard(entry, names, content.hasBoxArt)
     return if (entry.kind == EntryKind.Apps) SecondScreenContent.App(row.title, row.iconKey) else gameCard(row, systems, content.hasBoxArt)
@@ -127,17 +133,9 @@ private fun entryCard(
         EntryKind.Apps -> SecondScreenContent.Apps(entry.shownCount, entry.rows.take(MAX_APP_ICONS).map { AppIconRef(it.iconKey, it.title) })
         // Their figures are read after the settle (SecondScreenEntryReads); until then the card is its header.
         EntryKind.Recent -> RecentEntry(names.recent, entry.shownCount, systemLooksOf(entry), hasBoxArt)
-        EntryKind.Favorites -> {
-            val favorites = entry.rows.filter { it.isFavorite }
-            FavoritesEntry(
-                name = names.favorites,
-                gameCount = entry.shownCount,
-                systemCount = favorites.mapTo(HashSet()) { it.systemId }.size,
-                games = favorites.take(FAVORITES_CARRIED).mapNotNull { row -> row.id.toLongOrNull()?.let { EntryGame(it, row.title, row.systemId, row.scrapeKey.takeIf { hasBoxArt }) } },
-                systems = systemLooksOf(entry),
-                hasBoxArt = hasBoxArt,
-            )
-        }
+        // The folder list has no card of its own: calm. A folder other than Recent shows Favorites' card under its own name (no new card).
+        EntryKind.Collections -> if (entry.isFolderList) SecondScreenContent.Calm else favoritesCard(entry, folderName(entry, names), hasBoxArt, entry.rows)
+        EntryKind.Favorites -> favoritesCard(entry, names.favorites, hasBoxArt, entry.rows.filter { it.isFavorite })
         else ->
             SystemEntry(
                 systemId = entry.id,
@@ -147,6 +145,33 @@ private fun entryCard(
                 coverAspect = entry.coverShape.widthOverHeight,
                 hasBoxArt = hasBoxArt,
             )
+    }
+
+/** Favorites' card for [games] of [entry] under [name]: also the nearest card for the folders other than Recent. */
+private fun favoritesCard(
+    entry: HomeEntry,
+    name: String,
+    hasBoxArt: Boolean,
+    games: List<GameRowModel>,
+): FavoritesEntry =
+    FavoritesEntry(
+        name = name,
+        gameCount = entry.shownCount,
+        systemCount = games.mapTo(HashSet()) { it.systemId }.size,
+        games = games.take(FAVORITES_CARRIED).mapNotNull { row -> row.id.toLongOrNull()?.let { EntryGame(it, row.title, row.systemId, row.scrapeKey.takeIf { hasBoxArt }) } },
+        systems = systemLooksOf(entry),
+        hasBoxArt = hasBoxArt,
+    )
+
+/** A folder's name for its card: an own collection's, else the built-in's from [names]. */
+private fun folderName(
+    entry: HomeEntry,
+    names: EntryNames,
+): String =
+    entry.name ?: when (entry.id) {
+        entryIdOf(Folder.BuiltIn(BuiltInFolder.MostPlayed, 0)) -> names.mostPlayed
+        entryIdOf(Folder.BuiltIn(BuiltInFolder.RecentlyAdded, 0)) -> names.recentlyAdded
+        else -> names.favorites
     }
 
 /** The names and cover shapes of the systems of a mixed list's games (Recent, Favorites), by id. */
@@ -183,7 +208,7 @@ internal fun FollowHomeOnSecondScreen(
     menu: GameMenuController,
     buildSystems: (HomeContent) -> GameSystems = GameSystems::of,
 ) {
-    val names = EntryNames(stringResource(R.string.home_entry_recent), stringResource(R.string.home_entry_favorites))
+    val names = EntryNames(stringResource(R.string.home_entry_recent), stringResource(R.string.home_entry_favorites), stringResource(R.string.collections_most_played), stringResource(R.string.collections_recently_added))
     val origin = LocalLaunchOrigin.current
     LaunchedEffect(feed, content, state, search, menu, names) {
         feed.isFollowing.collectLatest { following ->

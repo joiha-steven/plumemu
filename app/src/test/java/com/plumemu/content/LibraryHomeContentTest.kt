@@ -83,6 +83,17 @@ class LibraryHomeContentTest {
     @After
     fun tearDown() = db.close()
 
+    /** No database passed (as the graph does today): Most played, Recently added and New collection… are still listed, empty. */
+    @Test
+    fun withoutADatabaseAllThreeBuiltInFoldersAndNewCollectionAreListed() = runBlocking {
+        val content = withTimeout(10_000) { source.content.first() }
+        assertEquals(listOf("recent", "most_played", "recently_added"), content.folderEntries.map { it.id })
+        assertEquals(listOf(0, 0), content.folderEntries.drop(1).map { it.count })
+        val list = content.entries.first { it.kind == EntryKind.Collections }
+        assertEquals(listOf("recent", "most_played", "recently_added", HomeContent.NEW_COLLECTION_ID), list.rows.map { it.id })
+        assertEquals("New collection… is not counted", 3, list.shownCount)
+    }
+
     /** the apps listed as games leave the Apps entry (grid and list share its rows); null (no sync yet) shows all; unmarking brings one back. */
     @Test
     fun appsListedAsGamesLeaveTheAppsEntryAndComeBack() = runBlocking {
@@ -134,8 +145,8 @@ class LibraryHomeContentTest {
         db.playDao().addSession(zelda.id.toLong(), endedAt = 100, seconds = 30)
         db.playDao().addSession(metroid.id.toLong(), endedAt = 200, seconds = 30)
         db.gameDao().setFavorite(zelda.id.toLong(), true)
-        val content = withTimeout(TIMEOUT_MS) { source.content.first { c -> c.entries.first { it.kind == EntryKind.Recent }.rows.size == 2 && c.entries.first { it.kind == EntryKind.Favorites }.rows.size == 1 } }
-        val recent = content.entries.first { it.kind == EntryKind.Recent }
+        val content = withTimeout(TIMEOUT_MS) { source.content.first { c -> c.folderEntries.first { it.kind == EntryKind.Recent }.rows.size == 2 && c.entries.first { it.kind == EntryKind.Favorites }.rows.size == 1 } }
+        val recent = content.folderEntries.first { it.kind == EntryKind.Recent }
         assertEquals(listOf("GBA", "SNES"), recent.rows.map { it.systemAbbr })
         // Their grid draws each game in its own system's cover shape.
         assertEquals(listOf("gba", "snes"), recent.rows.map { it.systemId })
@@ -174,7 +185,7 @@ class LibraryHomeContentTest {
     fun systemsCarryTheirCode() = runBlocking {
         val first = withTimeout(TIMEOUT_MS) { source.content.first { it.systemCount == 3 } }
         assertEquals(listOf("GBA", "SNS"), listOf("gba", "snes").map { id -> first.entries.first { it.id == id }.code }.sorted())
-        val recent = first.entries.first { it.id == HomeContent.RECENT_ID }
+        val recent = first.folderEntries.first { it.id == HomeContent.RECENT_ID }
         assertEquals("Recent's captions take the data's short name", catalog.systems.first { it.id == "snes" }.shortName, recent.systemShortNames["snes"])
     }
 
@@ -254,7 +265,7 @@ class LibraryHomeContentTest {
         val snes = systems.single { it.id == "snes" }
         assertEquals("by sort name, one copy per regional group", listOf("ActRaiser", "Mario", "Zelda"), snes.rows.map { it.title })
         assertEquals("the first region stands in for the year", listOf("JPN", "USA", "USA"), snes.rows.map { it.region })
-        assertEquals(listOf(HomeContent.RECENT_ID, HomeContent.FAVORITES_ID, HomeContent.APPS_ID), content.entries.take(3).map { it.id })
+        assertEquals(listOf(HomeContent.FAVORITES_ID, HomeContent.COLLECTIONS_ID, HomeContent.APPS_ID), content.entries.take(3).map { it.id })
     }
 
     @Test
@@ -365,7 +376,7 @@ class LibraryHomeContentTest {
             assertEquals("Zelda", hidden.entry(HomeContent.FAVORITES_ID).rows.single().title)
             assertEquals("Search still has its games", listOf("snes"), hidden.hiddenEntries.map { it.id })
             assertEquals(3, hidden.hiddenEntries.single().count)
-            assertEquals("Recent, Favorites and Apps never move", listOf(HomeContent.RECENT_ID, HomeContent.FAVORITES_ID, HomeContent.APPS_ID), hidden.entries.take(3).map { it.id })
+            assertEquals("Favorites, Collections and Apps never move", listOf(HomeContent.FAVORITES_ID, HomeContent.COLLECTIONS_ID, HomeContent.APPS_ID), hidden.entries.take(3).map { it.id })
 
             arrangement.value = arrangement.value.copy(hidden = setOf("snes", "gba", "3do"))
             val all = source.content.first { it.systemIds().size == 3 && it.hiddenEntries.isEmpty() }
@@ -432,7 +443,7 @@ class LibraryHomeContentTest {
         // Off: the entry leaves the column (not "Apps 0") and the systems move up by one.
         showApps.value = false
         val hidden = first { content -> content.entries.none { it.id == HomeContent.APPS_ID } }
-        assertEquals(listOf(HomeContent.RECENT_ID, HomeContent.FAVORITES_ID), hidden.entries.take(2).map { it.id })
+        assertEquals(listOf(HomeContent.FAVORITES_ID, HomeContent.COLLECTIONS_ID), hidden.entries.take(2).map { it.id })
         assertEquals(2, hidden.firstSystemIndex)
 
         showApps.value = true
@@ -502,7 +513,7 @@ class LibraryHomeContentTest {
     private suspend fun Flow<HomeContent>.firstMatching(predicate: (HomeContent) -> Boolean): HomeContent =
         withTimeout(TIMEOUT_MS) { first(predicate) }
 
-    private fun HomeContent.entry(id: String) = entries.single { it.id == id }
+    private fun HomeContent.entry(id: String) = (entries + folderEntries).single { it.id == id }
 
     private suspend fun gameIdsByTitle(): Map<String, Long> =
         listOf("snes", "3do", "gba").flatMap { db.gameDao().observeSystemGames(it).first() }.associate { it.title to it.id }

@@ -127,7 +127,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- Settings › Advanced › Export logs (LogExport.kt): shares the exported log only
+        <!-- Settings › About › Export logs (LogExport.kt): shares the exported log only
              (res/xml/log_export_paths.xml), read access granted per share. -->
         <provider
             android:name="androidx.core.content.FileProvider"

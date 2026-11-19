@@ -24,6 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
+import com.plumemu.collections.HomeTarget
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreinput.TextEntry
+import com.plumemu.coreinput.strip.StripFocus
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreinput.strip.rememberStripState
 import com.plumemu.coreui.theme.GridSize
@@ -56,6 +58,7 @@ import com.plumemu.game.GameActions
 import com.plumemu.game.TypingScreen
 import com.plumemu.game.isTrayUp
 import com.plumemu.game.GameMenuController
+import com.plumemu.graph.GraphCollections
 import com.plumemu.coreui.components.keyboard.KeyboardEvent
 import com.plumemu.keyboard.KeyboardChoice
 import com.plumemu.game.GameRef
@@ -129,6 +132,15 @@ internal data class HomeCallbacks(
     val onGridSize: (GridSize, onFailed: () -> Unit) -> Unit = { _, _ -> },
     /** SELECT made [systemId] a grid ([isGrid]) or a list; written to `appearance.grid_systems`, once per press; [onFailed] if the write could not be saved (on the writer's thread). */
     val onGridView: (systemId: String, isGrid: Boolean, onFailed: () -> Unit) -> Unit = { _, _, _ -> },
+    /**
+     * SELECT inside a folder made [folderId] (an entry id of `entryIdOf`) a grid ([isGrid]) or a list; to be written to
+     * `appearance.list_collections` (`toggledView`), where a grid is a folder NOT in the set.
+     */
+    val onFolderView: (folderId: String, isGrid: Boolean, onFailed: () -> Unit) -> Unit = { _, _, _ -> },
+    /** A (or a tap) on "New collection…", told besides the keyboard that [collections] opens. */
+    val onNewCollection: () -> Unit = {},
+    /** The own collections (the game menu's Add to collection…, New collection…, Remove from "<name>"); null: none of them is offered. */
+    val collections: GraphCollections? = null,
     /** Search closed after a search: the query's length, the results and whether one was opened; never the words (`search_used`). */
     val onSearchUsed: (queryLength: Int, results: Int, openedResult: Boolean) -> Unit = { _, _, _ -> },
     /** True while the screen stays composed but hidden under Settings coming in: it takes no action then (read per action). */
@@ -166,18 +178,23 @@ internal fun HomeScreen(
     landingTarget: HomeLandingTarget? = null,
     keyboard: KeyboardChoice = KeyboardChoice.Plumemu,
     gridSystems: Set<String> = emptySet(),
+    /** The folders shown as a list (`appearance.list_collections`); every other folder is a grid. */
+    listCollections: Set<String> = emptySet(),
     /** Told whether the screen is idle (no game panel and no search open): `MainScreen` shows the "What's new" card only then. */
     onIdle: (Boolean) -> Unit = {},
+    initialFocus: StripFocus = ColdStartFocus, // where a start with no saved focus begins; tests pass the system column
 ) {
-    // List or grid per system: the stored [gridSystems], there from the first frame (MainScreen
-    // composes nothing before the settings are read), with this screen's presses over it.
+    // List or grid per system: the stored [gridSystems] (there from the first frame), with this screen's presses over it.
     val gridViews = rememberGridViews(gridSystems)
+    // Folders are the other way round: the stored set holds the lists, a folder not in it is a grid.
+    val listViews = rememberGridViews(listCollections)
     // Y shows its star at once, and the Favorites list holds still while the person is in it.
     val marks = remember { FavoriteMarks() }
     val shown by remember(content, marks) { derivedStateOf { marks.shown(content) } }
     LaunchedEffect(content, marks) { marks.settle(content) }
     // The top screen lays out as if there were no second screen: its window never removes the details column.
-    val state = rememberHomeStripState(shown, gridViews.ids, PlumTheme.motion.isOn)
+    val gridIds by remember(shown) { derivedStateOf { gridIdsWithFolders(gridViews.ids, listViews.ids, shown.folderEntries) } }
+    val state = rememberHomeStripState(shown, gridIds, PlumTheme.motion.isOn, initialFocus)
     // Each system's list position, kept here beside the focus: the games pages leave the composition while search, a grid or an empty library shows.
     val positions = rememberGamesPagePositions()
     val search = rememberSearchState(keyboard).also { ApplyPushRightToPlay(bars.pushRightToPlay, state, it) }
@@ -187,10 +204,10 @@ internal fun HomeScreen(
     // read the first one's mark (two quick presses end where they started).
     val markedNow = remember(marks) { { marks.shown(currentLive) } }
     val currentCallbacks by rememberUpdatedState(callbacks)
-    val menu = rememberGameMenuController(callbacks.games, callbacks.apps, keyboard, callbacks.sorts)
-    val toggleView = remember(gridViews, state, menu) { { id: String -> gridViews.toggle(id, currentCallbacks.onGridView) { showSaveFailed(currentContent, state, menu) } } }
+    val menu = rememberGameMenuController(callbacks.games, callbacks.apps, keyboard, callbacks.sorts, callbacks.collections)
+    val toggleView = rememberToggleView(gridViews, listViews, state, menu, { currentContent }) { currentCallbacks }
     val gridSizeKeys = rememberGridSizeKeys(
-        gridViews.ids,
+        gridIds,
         onSize = { size, onFailed -> currentCallbacks.onGridSize(size, onFailed) },
         onWriteFailed = { showSaveFailed(currentContent, state, menu) },
     )
@@ -230,7 +247,7 @@ internal fun HomeScreen(
     TrackHomeScreen(state, search, menu) { currentContent }
     SideEffect { search.onSearchUsed = currentCallbacks.onSearchUsed }
     val undoOffered = remember(menu) { { menu.undo.game != null } }
-    CompositionLocalProvider(LocalBatteryReading provides batteryReading, LocalRecentUndoOffered provides undoOffered) {
+    CompositionLocalProvider(LocalBatteryReading provides batteryReading, LocalRecentUndoOffered provides undoOffered, LocalRecentUndoNotice provides remember(menu) { { menu.undo.notice } }) {
         HomeLayout(
             content = shown,
             state = state,
@@ -240,7 +257,7 @@ internal fun HomeScreen(
             wifi = { wifi?.value == true },
             charging = { charging?.value == true },
             modifier = modifier,
-            gridIds = gridViews.ids,
+            gridIds = gridIds,
             panel = { menu.panel },
             pushRightToPlay = bars.pushRightToPlay, showSystemInfo = bars.showSystemInfo,
             search = search,
@@ -248,35 +265,6 @@ internal fun HomeScreen(
             onCycleGridSize = { gridSizeKeys.cycle(feel) },
             onKeyboardEvent = menu::onKeyboardEvent,
         )
-    }
-}
-
-/**
- * Search and the game panel close once, when [request] is first seen. With nothing to land on yet
- * (setup's end can come before the scan writes a game) the request waits, but only until the
- * person's next action spends it ([obeyed] set by the action handler): a scan finishing later must
- * never move the focus under them.
- */
-@Composable
-private fun LandWhenAsked(
-    request: Int,
-    obeyed: MutableIntState,
-    state: StripState,
-    menu: GameMenuController,
-    search: SearchState,
-    target: () -> HomeLandingTarget?,
-    content: () -> HomeContent,
-) {
-    LaunchedEffect(request) {
-        if (request == obeyed.intValue) return@LaunchedEffect
-        menu.close()
-        search.close()
-        snapshotFlow { obeyed.intValue == request || content().landingEntryId() != null }.first { it }
-        if (obeyed.intValue == request) return@LaunchedEffect
-        obeyed.intValue = request
-        // A game asked for by id (Statistics) when its system is on the screen; otherwise the usual landing.
-        val asked = target()?.takeIf { want -> content().entries.any { it.id == want.systemId } }
-        if (asked != null) state.landOn(asked.systemId, asked.gameId) else content().landingEntryId()?.let { state.landOn(it) }
     }
 }
 
@@ -325,12 +313,12 @@ private fun ShowCoreQuestion(
 }
 
 /** A write the main screen made (a grid size, a list or grid) failed: say so over the focused game, as a failed Favorite does (the main screen has no other notice). */
-private fun showSaveFailed(
+internal fun showSaveFailed(
     content: HomeContent,
     state: StripState,
     menu: GameMenuController,
 ) {
-    content.entries.getOrNull(state.focus.systemIndex)?.let { entry -> entry.rows.getOrNull(state.focus.rowOf(entry.id)) }?.let { menu.showSaveFailed(GameRef(it.id, it.title)) }
+    content.shownEntry(state.focus)?.let { entry -> entry.rows.getOrNull(state.focus.rowOf(entry.id)) }?.let { menu.showSaveFailed(GameRef(it.id, it.title)) }
 }
 
 /**
@@ -353,6 +341,8 @@ internal fun rememberHomeStripState(
     content: HomeContent,
     gridIds: Set<String>,
     isMotionOn: Boolean,
+    /** Where a start with no saved focus begins: the main screen's landing; the test harness keeps the system column. */
+    initialFocus: StripFocus = StripFocus(),
 ): StripState {
     val layout = PlumTheme.layout
     // Set after the state exists (below); a change re-measures the details stop one frame later,
@@ -364,7 +354,8 @@ internal fun rememberHomeStripState(
         }
     val strip =
         remember(content, gridIds, layout) { content.stripWith(gridIds, layout) }
-    val state = rememberStripState(strip, geometry, isMotionOn, PlumTheme.motion.slideSpec())
+    // No saved focus: the landing of the Home button, Favorites' first game (the Favorites entry when it has none: the focus is made valid for it).
+    val state = rememberStripState(strip, geometry, isMotionOn, PlumTheme.motion.slideSpec(), initialFocus = initialFocus)
     FollowFocusedGrid(state, content, gridIds) { focusedShowsGrid = it }
     return state
 }
@@ -381,7 +372,7 @@ private fun FollowFocusedGrid(
     onChange: (Boolean) -> Unit,
 ) {
     val showsGrid by remember(state, content, gridIds) {
-        derivedStateOf { content.showsGrid(content.entries.getOrNull(state.focus.systemIndex), gridIds) }
+        derivedStateOf { content.showsGrid(content.shownEntry(state.focus), gridIds) }
     }
     SideEffect { onChange(showsGrid) }
 }
@@ -399,12 +390,12 @@ private fun FollowMenuGame(
     isSearchOpen: Boolean,
 ) {
     val open = menu.panel
-    val game = open?.game?.takeIf { open.screen !is PanelScreen.Message }
+    val game = open?.game?.takeIf { open.screen !is PanelScreen.Message && it.key != GameMenuController.NO_GAME_KEY }
     LaunchedEffect(content, game, isSearchOpen) {
         if (game == null) return@LaunchedEffect
         // Opened from a search result: the strip's focus is elsewhere; Hide closes the menu itself.
         if (isSearchOpen) return@LaunchedEffect
-        val rows = content.entries.getOrNull(state.focus.systemIndex)?.rows.orEmpty()
+        val rows = content.shownEntry(state.focus)?.rows.orEmpty()
         val index = rows.indexOfFirst { it.id == game.key }
         when {
             index < 0 -> {
@@ -447,7 +438,7 @@ internal fun HomeEntry.gameAt(index: Int): GameRef? =
     rows.getOrNull(index)?.let { GameRef(it.id, it.title) } ?: null.also { Log.w(TAG, "No row $index in $id; intent dropped") }
 
 internal fun HomeContent.entry(id: String): HomeEntry? =
-    entries.firstOrNull { it.id == id } ?: null.also { Log.w(TAG, "No entry $id in the content; intent dropped") }
+    entries.firstOrNull { it.id == id } ?: folderEntry(id) ?: null.also { Log.w(TAG, "No entry $id in the content; intent dropped") }
 
 /**
  * The screen's layout for a given [state]: top bar, strip, hint bar, inside the strip margins
@@ -579,8 +570,9 @@ private fun TrackHomeScreen(
     val screen by remember(state, search, menu) {
         derivedStateOf {
             val focus = state.focus
-            homeScreenIdOf(focus.column, content().entries.getOrNull(focus.systemIndex)?.kind, search.isOpen, menu.isOpen)
+            homeScreenIdOf(focus.column, content().shownEntry(focus)?.kind, search.isOpen, menu.isOpen)
         }
     }
     TrackScreen(screen)
 }
+

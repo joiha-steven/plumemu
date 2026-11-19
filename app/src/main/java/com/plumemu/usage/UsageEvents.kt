@@ -38,14 +38,10 @@ import com.plumemu.update.CheckOutcome
 internal fun screenIdOf(section: SettingsSection): ScreenId =
     when (section) {
         SettingsSection.Library -> ScreenId.SettingsLibrary
-        SettingsSection.Accounts -> ScreenId.SettingsAccounts
         SettingsSection.Appearance -> ScreenId.SettingsAppearance
-        SettingsSection.Emulators -> ScreenId.SettingsEmulators
         SettingsSection.Controls -> ScreenId.SettingsControls
         SettingsSection.HomeScreen -> ScreenId.SettingsHomeScreen
-        SettingsSection.SecondScreen -> ScreenId.SettingsSecondScreen
         SettingsSection.Statistics -> ScreenId.SettingsStatistics
-        SettingsSection.Advanced -> ScreenId.SettingsAdvanced
         SettingsSection.About -> ScreenId.SettingsAbout
     }
 
@@ -69,12 +65,13 @@ internal fun homeScreenIdOf(
             when (entryKind) {
                 EntryKind.Recent -> ScreenId.Recent
                 EntryKind.Favorites -> ScreenId.Favorites
+                EntryKind.Collections -> ScreenId.Collections
                 EntryKind.Apps -> ScreenId.Apps
                 EntryKind.System -> ScreenId.System
             }
     }
 
-/** `game_launched.from` for Play on a row of [entry]: Recent and Favorites by name, else the system's view. */
+/** `game_launched.from` for Play on a row of [entry]: Recent, Favorites and the other folders by name, else the system's view. */
 internal fun launchFromOf(
     entry: HomeEntry,
     isGrid: Boolean,
@@ -82,6 +79,7 @@ internal fun launchFromOf(
     when {
         entry.kind == EntryKind.Recent -> LaunchFrom.Recent
         entry.kind == EntryKind.Favorites -> LaunchFrom.Favorites
+        entry.kind == EntryKind.Collections -> LaunchFrom.Collections
         isGrid -> LaunchFrom.Grid
         else -> LaunchFrom.List
     }

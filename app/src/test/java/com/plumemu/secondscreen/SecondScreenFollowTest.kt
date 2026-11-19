@@ -1,6 +1,7 @@
 package com.plumemu.secondscreen
 
 import com.plumemu.coreinput.Column
+import com.plumemu.coreinput.strip.OpenFolder
 import com.plumemu.coreinput.strip.StripFocus
 import com.plumemu.home.GameDetails
 import com.plumemu.home.PlayFacts
@@ -39,7 +40,7 @@ class SecondScreenFollowTest {
         )
     private val systems = GameSystems.of(content)
 
-    // Entries: 0 Recent, 1 Favorites, 2 Apps, 3 Super Nintendo, 4 Mega Drive.
+    // Entries: 0 Favorites, 1 Collections, 2 Apps, 3 Super Nintendo, 4 Mega Drive. Recent is a folder inside Collections (see [atRecent]).
     private fun at(
         systemIndex: Int,
         column: Column = Column.Systems,
@@ -48,6 +49,12 @@ class SecondScreenFollowTest {
         val id = content.entries[systemIndex].id
         return HomeLook(StripFocus(column = column, systemIndex = systemIndex, systemId = id, rows = mapOf(id to row)))
     }
+
+    /** The cursor in the Recent folder (open inside Collections), on game [row] in [column]. */
+    private fun atRecent(
+        column: Column = Column.Systems,
+        row: Int = 0,
+    ) = HomeLook(StripFocus(column = column, systemIndex = 1, systemId = HomeContent.COLLECTIONS_ID, rows = mapOf(HomeContent.RECENT_ID to row), openFolder = OpenFolder(HomeContent.COLLECTIONS_ID, HomeContent.RECENT_ID)))
 
     private fun derive(
         look: HomeLook,
@@ -79,9 +86,10 @@ class SecondScreenFollowTest {
         assertEquals(derive(at(3, Column.Games, 1)), derive(at(3, Column.Details, 1)))
     }
 
+    // Recent is a folder inside Collections since the Collections change.
     @Test
     fun aGameInRecentNamesItsSystem() {
-        val card = derive(at(0, Column.Games, 0)) as SecondScreenContent.Game
+        val card = derive(atRecent(Column.Games, 0)) as SecondScreenContent.Game
         assertEquals("Sonic", card.title)
         assertEquals("Mega Drive", card.systemName)
         assertEquals("EUR", card.region)
@@ -108,13 +116,14 @@ class SecondScreenFollowTest {
         assertEquals(null, (derive(at(4), on = withInfo) as SystemEntry).info)
     }
 
+    // Recent is a folder inside Collections and Favorites the first entry since the Collections change.
     @Test
     fun recentCarriesItsCountAndFavoritesItsFavouritesInOrder() {
-        val recent = derive(at(0)) as RecentEntry
+        val recent = derive(atRecent()) as RecentEntry
         assertEquals("Recent", recent.name)
         assertEquals(2, recent.gameCount)
         assertEquals(null, recent.figures)
-        val favorites = derive(at(1)) as FavoritesEntry
+        val favorites = derive(at(0)) as FavoritesEntry
         assertEquals("Favorites", favorites.name)
         assertEquals(1, favorites.gameCount)
         assertEquals(listOf(1L), favorites.games.map { it.id })
@@ -122,11 +131,12 @@ class SecondScreenFollowTest {
         assertEquals("no art to read while box art is off", true, favorites.isArtRead)
     }
 
+    // Recent is a folder inside Collections and Favorites the first entry since the Collections change.
     @Test
     fun anEmptyRecentOrFavoritesHasNoGames() {
         val none = HomeContent.of(emptyList(), emptyList(), emptyList(), listOf(SystemGames("gb", "Game Boy", listOf(zelda))))
-        assertEquals(0, (derive(at(0), on = none) as RecentEntry).gameCount)
-        val favorites = derive(at(1), on = none) as FavoritesEntry
+        assertEquals(0, (derive(atRecent(), on = none) as RecentEntry).gameCount)
+        val favorites = derive(at(0), on = none) as FavoritesEntry
         assertEquals(0, favorites.gameCount)
         assertEquals(emptyList<EntryGame>(), favorites.games)
     }

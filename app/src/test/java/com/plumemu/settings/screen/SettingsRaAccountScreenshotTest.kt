@@ -40,8 +40,8 @@ class SettingsRaAccountScreenshotTest {
         status: RaAccountStatus,
     ) = ReferenceShots.capture(name) {
         val content = AccountShotContent.of(AccountStatus.SignedOut).copy(raAccount = status)
-        val row = SettingsSection.Accounts.rowsIn(content).indexOf(SettingsOption.RetroAchievementsAccount)
-        val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Accounts, rememberedOption = mapOf(SettingsSection.Accounts to row), page = PanelPage.RaAccount)
+        val row = SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.RetroAchievementsAccount)
+        val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Library, rememberedOption = mapOf(SettingsSection.Library to row), page = PanelPage.RaAccount)
         SettingsAt(focus, settingsForShot(), content)
     }
 

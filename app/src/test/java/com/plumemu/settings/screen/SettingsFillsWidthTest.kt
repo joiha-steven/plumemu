@@ -52,7 +52,7 @@ class SettingsFillsWidthTest {
         val problems = mutableListOf<String>()
         for (each in sizes) {
             // Statistics has no right column by design (its tiles span the page).
-            for (which in SettingsSection.shownIn(ShotContent.library).filter { it != SettingsSection.Statistics }) {
+            for (which in SettingsSection.entries.filter { it != SettingsSection.Statistics }) {
                 size = each
                 section = which
                 compose.waitForIdle()

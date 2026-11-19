@@ -81,13 +81,13 @@ interface StartupTasks {
     suspend fun syncAppGames() {}
 
     /**
-     * A backup the process did not finish (Settings › Advanced › Back up…): its torn file is deleted
+     * A backup the process did not finish (Settings › About › Back up…): its torn file is deleted
      * and the Back up row says so (`GraphBackup.recoverInterrupted`). Nothing to do by default.
      */
     suspend fun recoverInterruptedBackup() = Unit
 
     /**
-     * Settings › Advanced › Restore…: a swap the last process did
+     * Settings › About › Restore…: a swap the last process did
      * not finish is finished or put back, and the result of one that restarted the app is shown
      * (`GraphRestore.onStartup`). True when the library was just replaced: the startup scan does not
      * run this time (the person scans when they choose). Nothing to do by default.
@@ -383,7 +383,7 @@ class StartupWork(
     }
 
     /**
-     * Settings › Advanced › Reset library: waits until no scan runs, then, holding the scan slot so
+     * Settings › About › Reset library: waits until no scan runs, then, holding the scan slot so
      * no scan writes meanwhile, runs [forget] (the database's reset) and scans every folder again.
      * [scanState] is busy from this call until that scan ends. In the process's scope, so leaving
      * Settings or the app does not stop it; a second reset waits for the first and does it again.
@@ -427,7 +427,7 @@ class StartupWork(
     }
 
     /**
-     * Settings › Advanced › Restore…: takes the scan slot without scanning, so no scan writes while
+     * Settings › About › Restore…: takes the scan slot without scanning, so no scan writes while
      * the library is swapped; false (nothing taken) while a scan runs, waits or is asked for. Not
      * published as busy: the app restarts after the swap, and a failure gives it back
      * ([releaseScansAfterRestore]).

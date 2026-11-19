@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import android.content.Context
+import com.plumemu.coreinput.strip.StripFocus
 import android.content.Intent
 import android.os.BatteryManager
 import android.provider.Settings
@@ -45,7 +46,7 @@ class SystemStatusTest {
         shadowOf(app.packageManager).addActivityIfNotPresent(host)
         val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
         val activity = controller.get()
-        activity.setContent { PlumTheme { HomeScreen(FakeHomeContent.board(), InputRouter(activity.lifecycleScope), HomeCallbacks()) } }
+        activity.setContent { PlumTheme { HomeScreen(FakeHomeContent.board(), InputRouter(activity.lifecycleScope), HomeCallbacks(), initialFocus = StripFocus()) } }
         shadowOf(android.os.Looper.getMainLooper()).idle()
         return controller
     }

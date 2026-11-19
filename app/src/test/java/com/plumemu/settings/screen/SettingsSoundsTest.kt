@@ -82,11 +82,13 @@ internal class SettingsSoundsTest : SettingsModelHarness() {
 
     @Test
     fun tapsThatOpenConfirmAndTapsThatOnlyFocusMove() {
-        assertEquals(listOf(Outcome.Moved), tapped { model.onTapSection(SettingsSection.Advanced) })
-        assertEquals("the second tap opens it", listOf(Outcome.Activated), tapped { model.onTapSection(SettingsSection.Advanced) })
-        val animations = SettingsSection.Advanced.options.indexOf(SettingsOption.Animations)
+        assertEquals(listOf(Outcome.Moved), tapped { model.onTapSection(SettingsSection.Appearance) })
+        assertEquals("the second tap opens it", listOf(Outcome.Activated), tapped { model.onTapSection(SettingsSection.Appearance) })
+        val animations = SettingsSection.Appearance.options.indexOf(SettingsOption.Animations)
         assertEquals("a switch flips on the first tap", listOf(Outcome.Activated), tapped { model.onTapOption(animations, actions.settings, wide) })
-        val reset = SettingsSection.Advanced.options.indexOf(SettingsOption.Reset)
+        assertEquals("a tap on another section focuses it", listOf(Outcome.Moved), tapped { model.onTapSection(SettingsSection.About) })
+        assertEquals("the second tap opens About", listOf(Outcome.Activated), tapped { model.onTapSection(SettingsSection.About) })
+        val reset = SettingsSection.About.rowsIn(model.content).indexOf(SettingsOption.Reset)
         assertEquals("first tap focuses", listOf(Outcome.Moved), tapped { model.onTapOption(reset, actions.settings, wide) })
         assertEquals("second tap opens the list", listOf(Outcome.Activated), tapped { model.onTapOption(reset, actions.settings, wide) })
     }

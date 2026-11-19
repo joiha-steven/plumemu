@@ -88,23 +88,13 @@ class SettingsSectionsScreenshotTest {
     @Test
     fun emulators() =
         ReferenceShots.capture("settings_emulators") {
-            val focus = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Emulators, rememberedOption = mapOf(SettingsSection.Emulators to ShotContent.PSX_ROW))
-            SettingsAt(focus, content = ShotContent.library)
+            SettingsAt(optionsAt(SettingsOption.Emulators, ShotContent.library), content = ShotContent.library)
         }
 
     @Test
     fun emulatorsOfASystem() =
         ReferenceShots.capture("settings_emulators_system") {
-            val focus =
-                SettingsFocus(
-                    column = SettingsColumn.Panel,
-                    section = SettingsSection.Emulators,
-                    rememberedOption = mapOf(SettingsSection.Emulators to ShotContent.PSX_ROW),
-                    page = PanelPage.Emulators,
-                    panelIndex = 2,
-                    systemId = "psx",
-                )
-            SettingsAt(focus, content = ShotContent.library)
+            SettingsAt(emulatorsPageAt(ShotContent.library, index = 2), content = ShotContent.library)
         }
 
     @Test
@@ -130,7 +120,7 @@ class SettingsSectionsScreenshotTest {
     @Test
     fun controlsKeyboard() = ReferenceShots.capture("settings_controls_keyboard") { SettingsAt(optionsAt(SettingsOption.Keyboard), content = ShotContent.library) }
 
-    /** Controls › Switch system with: ‹ L2 / R2 ›, its explanation beside. */
+    /** Controls › Switch list with: ‹ L2 / R2 ›, its explanation beside. */
     @Test
     fun controlsSwitchSystemWith() = ReferenceShots.capture("settings_controls_switch_system_with") { SettingsAt(optionsAt(SettingsOption.SwitchSystemWith), content = ShotContent.library) }
 

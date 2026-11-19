@@ -50,8 +50,9 @@ internal object SecondScreenMotion {
         origin: LaunchOrigin? = this.origin,
     ) {
         this.origin = origin
-        val system = focus.systemId
-        places[cardIdentity(card)] = Place(focus.column.ordinal, focus.systemIndex, if (system == null) 0 else focus.rowOf(system), systems)
+        // Inside an open folder the row is the folder's own (entryKey), not the host entry's.
+        val key = focus.entryKey
+        places[cardIdentity(card)] = Place(focus.column.ordinal, focus.systemIndex, if (key == null) 0 else focus.rowOf(key), systems)
     }
 
     /** [card] is now on the window: keep where it came from for the next step. */

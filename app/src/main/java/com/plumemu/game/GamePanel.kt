@@ -89,6 +89,7 @@ import com.plumemu.coreui.theme.rememberListGlide
 import com.plumemu.home.BarRunClips
 import com.plumemu.home.KeepFocusedVisible
 import com.plumemu.settings.screen.ChevronSide
+import com.plumemu.settings.screen.ValueCheck
 import com.plumemu.settings.screen.ValueChevron
 
 /** The card's slide, 0 closed to 1 open. Already open on the first frame (a screenshot, a restored screen): no slide. Home shares it with the details column's fade. */
@@ -276,6 +277,16 @@ private fun PanelHeader(content: PanelContent) {
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(start = PlumDimens.panelTitleStart, end = PlumDimens.panelTitleStart).testTag(GamePanelTags.TITLE),
     )
+    content.subtitle?.let {
+        Spacer(Modifier.height(PlumDimens.titleLineGap))
+        BasicText(
+            text = it.resolve(),
+            style = type.smallFact.copy(color = colors.muted),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = PlumDimens.panelTitleStart, end = PlumDimens.panelTitleStart).testTag(GamePanelTags.SUBTITLE),
+        )
+    }
     // The question's body is the board's dialog body: text2 on a 1.47 em line, 6.67 under the title. Above Large the card has no
     // room for the looser line (a three-line body would push the buttons into the bottom padding), so it keeps the ramp's line and gap.
     val question = content.isButtonRow
@@ -444,7 +455,12 @@ internal fun PanelRowView(
             if (focusIndex >= 0) Modifier.tapItem(StripColumn.Details, focusIndex, onAction) else Modifier
         }
     val chevron: (@Composable () -> Unit)? =
-        if (row.command.opensSomething) {
+        if (row.isTicked) {
+            {
+                val colors = PlumTheme.colors
+                ValueCheck(PlumTheme.type.meta, { colors.accent }, tag = GamePanelTags.tick(row.key))
+            }
+        } else if (row.command.opensSomething) {
             {
                 val colors = PlumTheme.colors
                 ValueChevron(ChevronSide.Right, PlumTheme.type.meta, { colors.muted }, tag = GamePanelTags.chevron(row.key))
@@ -493,7 +509,11 @@ internal object GamePanelTags {
     const val CARD = "game_panel_card"
 
     fun chevron(key: String) = "game_panel_chevron_$key"
+
+    /** The picker's tick on a row of a collection holding the game. */
+    fun tick(key: String) = "game_panel_tick_$key"
     const val TITLE = "game_panel_title"
+    const val SUBTITLE = "game_panel_subtitle"
     const val ROWS = "game_panel_rows"
     const val FACTS = "game_panel_facts"
 

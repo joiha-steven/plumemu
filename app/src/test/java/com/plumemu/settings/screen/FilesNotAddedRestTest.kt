@@ -40,7 +40,7 @@ class FilesNotAddedRestTest {
     private val folders = List(FOLDERS) { SettingsFolderRow(FolderKey(it.toLong(), "Misc ROMs $it"), it + 1, FolderAnswer.Unanswered) }
     private val content = SettingsContent(unknownFolders = folders, notAdded = notAddedItems(emptyList(), folders), gameCount = 1)
 
-    private val section = SettingsSection.shownIn(content).first { SettingsOption.FilesNotAdded in it.rowsIn(content) }
+    private val section = SettingsSection.entries.first { SettingsOption.FilesNotAdded in it.rowsIn(content) }
     private val rowFocus = SettingsFocus(column = SettingsColumn.Options, section = section, rememberedOption = mapOf(section to section.rowsIn(content).indexOf(SettingsOption.FilesNotAdded)))
 
     private fun show(focus: SettingsFocus) {

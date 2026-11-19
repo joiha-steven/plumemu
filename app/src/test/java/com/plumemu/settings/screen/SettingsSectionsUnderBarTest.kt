@@ -47,7 +47,7 @@ class SettingsSectionsUnderBarTest {
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 density = LocalDensity.current
-                val sections = SettingsSection.shownIn(SettingsContent())
+                val sections = SettingsSection.entries
                 // At rest the focus is on the second section: the first one's own glow reaches past the strip's top, over the bar's bottom rows, which is not what this checks.
                 SettingsAt(SettingsFocus(column = SettingsColumn.Sections, section = if (last) sections.last() else sections[1]))
             }

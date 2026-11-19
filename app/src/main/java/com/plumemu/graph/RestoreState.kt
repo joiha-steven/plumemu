@@ -72,7 +72,7 @@ internal data class WayBackSet(
     val bytes: Long,
 )
 
-/** Where Settings › Advanced › Restore… and Undo last restore are. */
+/** Where Settings › About › Restore… and Undo last restore are. */
 internal sealed interface RestoreState {
     data object Idle : RestoreState
 

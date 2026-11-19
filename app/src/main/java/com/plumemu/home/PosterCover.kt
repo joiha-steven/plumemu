@@ -34,13 +34,19 @@ fun PosterCover(
     val measurer = LocalTileTitleFit.current?.measurer ?: rememberTextMeasurer(cacheSize = 8)
     val colors = PlumTheme.colors
     val tints = LocalSystemTints.current
+    val images = LocalBoxFrontImages.current
     Box(
         modifier.drawWithCache {
             // Colours are read here, so a theme change rebuilds the image without recomposing.
             val base = tints.value[systemTintKey(systemShort.ifBlank { system })] ?: colors.accent
             val look = boxFieldFor(base, title)
-            val layout = BoxFrontLayout.of(measurer, this, title, system, systemShort, look, size)
-            val image = layout.render(this)
+            val build = { BoxFrontLayout.of(measurer, this, title, system, systemShort, look, size).render(this) }
+            val image =
+                if (images == null) {
+                    build()
+                } else {
+                    images.getOrPut(BoxFrontKey.of(false, title, system, systemShort, look, size, density, fontScale), build)
+                }
             onDrawBehind {
                 if (image != null) {
                     drawImage(image)
@@ -69,7 +75,8 @@ internal fun rememberTileField(
     val tints = LocalSystemTints.current
     val title = spec?.title ?: titleOf.orEmpty()
     val key = spec?.let { systemTintKey(it.systemShort.ifBlank { it.system }) }
-    val look = remember(title, key, tints, colors.accent) { TileField(title, key, tints, colors.accent) }
+    val images = LocalBoxFrontImages.current
+    val look = remember(title, key, tints, colors.accent, images) { TileField(title, key, tints, colors.accent, images) }
     return look
 }
 
@@ -79,13 +86,20 @@ internal class TileField(
     private val key: String?,
     private val tints: State<Map<String, Color>>,
     private val accent: Color,
+    private val images: BoxFrontImages? = null,
 ) {
     val fill: Modifier =
         Modifier.drawWithCache {
             // Read here, so a theme or tint change rebuilds the image without recomposing.
             val base = if (key == null) BOX_NEUTRAL_BASE else tints.value[key] ?: accent
             val look = boxFieldFor(base, title)
-            val image = BoxFrontLayout.fieldOnly(title, look, size).render(this)
+            val build = { BoxFrontLayout.fieldOnly(title, look, size).render(this) }
+            val image =
+                if (images == null) {
+                    build()
+                } else {
+                    images.getOrPut(BoxFrontKey.of(true, title, "", "", look, size, density, fontScale), build)
+                }
             onDrawBehind {
                 if (image != null) {
                     drawImage(image)

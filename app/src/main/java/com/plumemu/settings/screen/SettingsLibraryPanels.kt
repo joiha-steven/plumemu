@@ -223,6 +223,41 @@ internal fun RescanPanel(model: SettingsModel) {
 internal fun emulatorsBody(systemName: String): String =
     stringResource(R.string.settings_emulators_body, systemName, stringResource(LocalButtonLetters.current.confirm))
 
+/** Library › Emulators: every system with games and what starts its games; A or a tap opens that system's [EmulatorsPanel]. */
+@Composable
+internal fun EmulatorSystemsPanel(
+    model: SettingsModel,
+    touch: SettingsTouch,
+) {
+    val focus = model.focus
+    val focused = if (focus.column == SettingsColumn.Panel && focus.page == PanelPage.EmulatorSystems) focus.panelIndex else -1
+    PanelListLayout(
+        Modifier.fillMaxHeight(),
+        header =
+            listOf(
+                { PanelTitle(stringResource(R.string.settings_section_emulators)) },
+                { PanelBody(stringResource(R.string.settings_emulators_list_body)) },
+            ),
+        list = {
+            PanelLazyList(focused, Modifier) {
+                itemsIndexed(model.content.systems, key = { _, system -> system.systemId }, contentType = { _, _ -> "system" }) { index, system ->
+                    PanelItem(
+                        title = system.name,
+                        detail = emulatorValue(system),
+                        isFocused = index == focused,
+                        modifier = Modifier.tapTarget { touch.onPanelItem(index) }.testTag(SettingsTags.panelItem(index)),
+                    )
+                }
+            }
+        },
+        footer = {
+            model.content.emulatorAppCount?.let { count ->
+                PanelFact(pluralStringResource(R.plurals.settings_emulators_found, count, rememberCountFormat().format(count)))
+            }
+        },
+    )
+}
+
 /** A system's emulators: "Asks on the first game" first, then each installed one (legal-risk ones with their warning line). */
 @Composable
 internal fun EmulatorsPanel(
@@ -231,7 +266,7 @@ internal fun EmulatorsPanel(
 ) {
     val focus = model.focus
     val inPanel = focus.column == SettingsColumn.Panel
-    val system = (if (inPanel) model.content.system(focus.systemId) else null) ?: SettingsListPages.systemAt(focus, model.content) ?: return
+    val system = model.content.system(focus.systemId) ?: return
     val focused = if (inPanel) focus.panelIndex else -1
     val current = system.currentIndex
     PanelListLayout(

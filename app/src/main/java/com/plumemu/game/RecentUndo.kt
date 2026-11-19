@@ -1,8 +1,10 @@
 package com.plumemu.game
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.plumemu.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -23,8 +25,17 @@ internal class RecentUndo(
 
     private var timer: Job? = null
 
-    fun offer(removed: GameRef) {
+    /** The top bar's words for the offer ("Removed from Recent", "Removed from collection"); kept after the offer ends so the line fades out with its own words. */
+    var notice: Int by mutableIntStateOf(R.string.home_notice_removed_from_recent)
+        private set
+
+    private var restoreOne: ((GameRef) -> Unit)? = null
+
+    /** [restoreWith]: what Undo does for this offer instead of the Recent restore (a game taken out of an own collection). */
+    fun offer(removed: GameRef, @androidx.annotation.StringRes notice: Int = R.string.home_notice_removed_from_recent, restoreWith: ((GameRef) -> Unit)? = null) {
         game = removed
+        this.notice = notice
+        restoreOne = restoreWith
         timer?.cancel()
         timer =
             scope.launch {
@@ -44,7 +55,7 @@ internal class RecentUndo(
         val offered = game ?: return false
         game = null
         timer?.cancel()
-        restore(offered)
+        (restoreOne ?: restore)(offered)
         return true
     }
 

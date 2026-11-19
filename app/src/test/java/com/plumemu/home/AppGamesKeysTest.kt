@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.CompositionLocalProvider
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,7 +55,7 @@ class AppGamesKeysTest {
             router = remember { InputRouter(scope) }
             PlumTheme(PlumThemeSettings.Default) {
                 CompositionLocalProvider(LocalHomeAppIcons provides FakeAppIcons()) {
-                    HomeScreen(content, router, HomeCallbacks(apps = apps, games = games, onGridSize = { size, _ -> sizes += size }), gridSystems = setOf(android))
+                    HomeScreen(content, router, HomeCallbacks(apps = apps, games = games, onGridSize = { size, _ -> sizes += size }), gridSystems = setOf(android), initialFocus = StripFocus())
                 }
             }
         }

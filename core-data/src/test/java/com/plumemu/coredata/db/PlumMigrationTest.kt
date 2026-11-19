@@ -410,6 +410,33 @@ class PlumMigrationTest {
         room.close()
     }
 
+    /** Schema 20 at the end of the whole chain: the person's rows stay, the collection tables start empty and take a game. */
+    @Test
+    fun version1MigratesThroughEveryStepToVersion20WithEmptyUsableCollections() = runTest {
+        helper.createDatabase(DB_NAME, 1).use(::fillVersion1)
+        helper.runMigrationsAndValidate(DB_NAME, 20, true, *PlumMigrations.all(TestDetailsRating)).use { db ->
+            // Not assertPersonDataKept: schema 15 zeroes directory times on purpose (one full listing).
+            db.query("SELECT is_favorite, is_hidden FROM game ORDER BY id").use { c ->
+                assertEquals(listOf(1 to 0, 0 to 0, 0 to 1), buildList { while (c.moveToNext()) add(c.getInt(0) to c.getInt(1)) })
+            }
+            db.query("SELECT game_id, total_seconds FROM play").use { c ->
+                c.moveToFirst()
+                assertEquals(listOf(1L, 3600L), listOf(c.getLong(0), c.getLong(1)))
+            }
+            assertEquals(0, countOf(db, "collection"))
+            assertEquals(0, countOf(db, "collection_game"))
+        }
+        val room = openRoom()
+        val rpgs = room.collectionDao().create("RPGs")
+        room.collectionDao().add(rpgs, 1)
+        assertEquals(listOf("Zork Quest"), room.collectionDao().observeCollectionGames(rpgs).first().map { it.title })
+        // The game row going (Reset library deletes every row) keeps the membership, unbound.
+        room.openHelper.writableDatabase.execSQL("DELETE FROM game WHERE id = 1")
+        assertEquals(emptyList<GameListRow>(), room.collectionDao().observeCollectionGames(rpgs).first())
+        assertEquals(1, countOf(room.openHelper.readableDatabase, "collection_game"))
+        room.close()
+    }
+
     /** A v2 library: the v1 rows migrated, one game named by the identifier and a person's fix. */
     private fun createVersion2() {
         helper.createDatabase(DB_NAME, 1).use(::fillVersion1)

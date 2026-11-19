@@ -20,6 +20,7 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.home.FakeHomeContent
 import com.plumemu.home.HomeCallbacks
 import com.plumemu.home.appComposeRule
+import com.plumemu.home.assertHomeLandedOnFavorites
 import com.plumemu.home.rulesAround
 import com.plumemu.reopensSkippedSetup
 import kotlinx.coroutines.CoroutineScope
@@ -277,7 +278,7 @@ class SetupSkippedQuestionsScreenTest {
     fun withTheMarkAndNoFolderHomeStaysAndNobodyIsBothered() {
         show(skipped = true)
         compose.onNodeWithTag(SetupTags.SCREEN).assertDoesNotExist()
-        compose.onNodeWithText("Super Nintendo").assertIsDisplayed()
+        compose.assertHomeLandedOnFavorites() // landing is Favorites' first game since the Collections change
     }
 
     @Test
@@ -293,7 +294,7 @@ class SetupSkippedQuestionsScreenTest {
         show(skipped = false)
         addFolder()
         compose.onNodeWithTag(SetupTags.SCREEN).assertDoesNotExist()
-        compose.onNodeWithText("Super Nintendo").assertIsDisplayed()
+        compose.assertHomeLandedOnFavorites() // landing is Favorites' first game since the Collections change
     }
 
     @Test

@@ -60,13 +60,17 @@ class SettingsSectionsBoundsTest {
     }
 
     @Test
-    fun systemRowsAreOptionRowsAndTheirEmulatorsListRowsInThePanel() {
-        show(SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Emulators, rememberedOption = mapOf(SettingsSection.Emulators to ShotContent.PSX_ROW)))
-        compose.onNodeWithTag(SettingsTags.system(0)).assertLeftPositionInRootIsEqualTo(222.5.dp).assertWidthIsEqualTo(298.17.dp).assertHeightIsEqualTo(40.dp)
-        assertEquals("rows 42 apart", 42f, (bounds(SettingsTags.system(1)).top - bounds(SettingsTags.system(0)).top).value, 0.01f)
-        // "Ask on the first game" beside its badge takes two lines here, with a card's padding above and below them.
-        compose.onNodeWithTag(SettingsTags.panelItem(0)).assertLeftPositionInRootIsEqualTo(538.67.dp).assertWidthIsEqualTo(205.33.dp).assertHeightIsEqualTo(58.dp)
-        assertEquals(60f, (bounds(SettingsTags.panelItem(1)).top - bounds(SettingsTags.panelItem(0)).top).value, 0.01f)
+    fun theEmulatorsRowIsAnOptionRowAndItsSystemsListRowsAreInThePanel() {
+        show(optionsAt(SettingsOption.Emulators, ShotContent.library))
+        val first = SettingsTags.option(SettingsOption.RomFolders)
+        val row = SettingsTags.option(SettingsOption.Emulators)
+        compose.onNodeWithTag(row).assertLeftPositionInRootIsEqualTo(222.5.dp).assertWidthIsEqualTo(298.17.dp).assertHeightIsEqualTo(40.dp)
+        assertEquals("the same left and width as the first row", bounds(first).left.value, bounds(row).left.value, 0.01f)
+        // The systems list: one card per system in the panel, every one a height, evenly spaced.
+        compose.onNodeWithTag(SettingsTags.panelItem(0)).assertLeftPositionInRootIsEqualTo(538.67.dp).assertWidthIsEqualTo(205.33.dp)
+        val step = (bounds(SettingsTags.panelItem(1)).top - bounds(SettingsTags.panelItem(0)).top).value
+        assertEquals("cards evenly spaced", step, (bounds(SettingsTags.panelItem(2)).top - bounds(SettingsTags.panelItem(1)).top).value, 0.01f)
+        assertEquals("a card's height and its gap", PANEL_STEP, step, 0.01f)
     }
 
     @Test
@@ -82,7 +86,7 @@ class SettingsSectionsBoundsTest {
         val duck = EmulatorEntry("duckstation", "DuckStation", isLegalRisk = false)
         val psx = SystemEmulators("psx", "PlayStation", automatic = duck, chosen = long, installed = listOf(duck, long))
         val content = ShotContent.library.copy(systems = listOf(psx))
-        val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Emulators, rememberedOption = mapOf(SettingsSection.Emulators to 0), page = PanelPage.Emulators, panelIndex = 0, systemId = "psx")
+        val focus = emulatorsPageAt(content)
         compose.setContent { PlumTheme(TableText.Graphite) { SettingsAt(focus, content = content) } }
         var seen = 0
         for (index in 0..2) {
@@ -119,3 +123,6 @@ class SettingsSectionsBoundsTest {
         return seen
     }
 }
+
+/** A systems-list card and the gap to the next one (two lines: the name and what starts its games). */
+private const val PANEL_STEP = 62f

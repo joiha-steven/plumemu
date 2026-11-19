@@ -50,8 +50,6 @@ internal fun SettingsOverHome(
     opensOnUpdate: Boolean = false,
     showOnHome: (systemId: String, gameId: Long) -> Unit = { _, _ -> },
     opensOnFilesNotAdded: Boolean = false,
-    /** Told once Settings is whole ([SettingsOpening.WHOLE]): what lay under it may leave. */
-    onWhole: () -> Unit = {},
     close: () -> Unit,
 ) {
     // The second screen shows the figures Settings reads for its Statistics page: handed over
@@ -88,7 +86,6 @@ internal fun SettingsOverHome(
     }
     // One stage a frame ([SettingsOpening]): a press's frame no longer composes and measures the whole screen at once.
     var stage by remember(settingsHost) { mutableIntStateOf(0) }
-    val currentOnWhole by rememberUpdatedState(onWhole)
     LaunchedEffect(settingsHost) {
         // The first stage as soon as the press's frame is done; each next one a frame later.
         stage++
@@ -96,7 +93,6 @@ internal fun SettingsOverHome(
             withFrameNanos { }
             stage++
         }
-        currentOnWhole()
     }
     // Until Settings reads the presses itself, Back still closes; nothing passes through to what lies under it.
     if (stage < SettingsOpening.SCREEN) {

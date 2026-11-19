@@ -41,14 +41,16 @@ internal class SettingsBuildFeaturesTest {
     @Test
     fun aBuildWithNeitherKeepsTheRestOfAbout() {
         val about = SettingsSection.About.rowsIn(SettingsContent(hasStatistics = false, hasUpdates = false))
-        assertTrue(about == listOf(SettingsOption.Version, SettingsOption.Licenses, SettingsOption.Privacy))
+        assertEquals(
+            listOf(SettingsOption.Version, SettingsOption.BackupAndRestore, SettingsOption.Reset, SettingsOption.Privacy, SettingsOption.Licenses, SettingsOption.ExportLogs),
+            about,
+        )
     }
 
     @Test
-    fun exportLogsIsARowOfAdvancedOnlyWithNoReportForm() {
-        val advanced = listOf(SettingsOption.Animations, SettingsOption.BackupAndRestore, SettingsOption.Reset)
-        assertEquals(advanced, SettingsSection.Advanced.rowsIn(SettingsContent(hasStatistics = true)))
-        assertEquals(advanced + SettingsOption.ExportLogs, SettingsSection.Advanced.rowsIn(SettingsContent(hasStatistics = false)))
+    fun exportLogsIsARowOfAboutOnlyWithNoReportForm() {
+        assertFalse(SettingsOption.ExportLogs in SettingsSection.About.rowsIn(SettingsContent(hasStatistics = true)))
+        assertEquals(SettingsOption.ExportLogs, SettingsSection.About.rowsIn(SettingsContent(hasStatistics = false)).last())
     }
 
     @Test

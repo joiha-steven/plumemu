@@ -140,7 +140,8 @@ internal abstract class SettingsPanelModel(
             PanelPage.HiddenGames -> SettingsListPages.unhideAt(index, content, work, focus)?.let(::moveTo) ?: closePanel()
             PanelPage.FilesNotAdded -> SettingsListPages.toUnknownFolder(index, content, focus)?.let(::moveTo) ?: feel.report(Outcome.Nothing)
             PanelPage.UnidentifiedGames -> openNameFix(index)
-            PanelPage.FixName, PanelPage.ScraperSignIn, PanelPage.ProblemReport -> Unit
+            PanelPage.FixName, PanelPage.CollectionRename, PanelPage.ScraperSignIn, PanelPage.ProblemReport, PanelPage.Systems -> Unit // Systems' presses go through onSystemsAction, which needs the settings shown
+            PanelPage.Collections, PanelPage.Collection, PanelPage.CollectionDelete -> onCollectionsEnter(page, index)
             PanelPage.BoxArtSource ->
                 when (val entry = boxArtPanelEntries(content).getOrNull(index)) {
                     is BoxArtPanelEntry.Work -> onAccountEnter(entry.item)
@@ -154,15 +155,14 @@ internal abstract class SettingsPanelModel(
             PanelPage.ScraperConfirm -> onBoxArtConfirmEnter(BoxArtConfirmItem.entries.getOrNull(index))
             PanelPage.ScraperSignOutConfirm -> onSignOutConfirmEnter(SignOutConfirmItem.entries.getOrNull(index))
             PanelPage.ScraperClearConfirm -> onClearConfirmEnter(ClearConfirmItem.entries.getOrNull(index))
-            // Its presses go through onSystemsAction, which needs the settings shown.
-            PanelPage.Systems -> Unit
             PanelPage.UnknownFolder -> onUnknownFolderEnter(index)
+            PanelPage.EmulatorSystems -> emulatorPageAt(focus, content, index)?.let(::moveTo)
             PanelPage.Emulators -> {
-                val system = content.system(focus.systemId) ?: return closePanel()
+                val system = content.system(focus.systemId) ?: return moveTo(emulatorListOn(focus, content))
                 // Item 0 is Automatic: the person's choice is forgotten.
                 val chosen = if (index == 0) null else system.choices.getOrNull(index - 1) ?: return
                 work.chooseEmulator(system.systemId, chosen?.id)
-                closePanel()
+                moveTo(emulatorListOn(focus, content))
             }
             PanelPage.Reset -> onResetEnter(ResetPanelItem.entries.getOrNull(index))
             PanelPage.ResetAllConfirm -> onResetConfirmEnter(ResetPanelItem.All, index)
@@ -196,6 +196,8 @@ internal abstract class SettingsPanelModel(
             PanelPage.RaSignOutConfirm -> backToRaPage()
             PanelPage.ScraperClearConfirm -> backToAccountPage(AccountPageItem.ClearBoxArt)
             PanelPage.UnknownFolder -> backToFilesNotAdded()
+            PanelPage.Emulators -> moveTo(emulatorListOn(focus, content))
+            PanelPage.Collection, PanelPage.CollectionRename, PanelPage.CollectionDelete -> onCollectionBack(page)
             // B at Undo's own confirm goes back to its first step, on the button it asked about.
             PanelPage.UndoRestore -> focus.undoAsk?.let { moveTo(focus.copy(undoAsk = null, panelIndex = it.ordinal)) } ?: backToBackupRestore(BackupRestoreItem.Undo)
             PanelPage.Backup -> backToBackupRestore(BackupRestoreItem.Backup)
@@ -207,7 +209,7 @@ internal abstract class SettingsPanelModel(
         }
     }
 
-    // Accounts › ScreenScraper's box art.
+    // Library › ScreenScraper's box art.
 
     /**
      * The account page's buttons and the picker's rows follow the run and the library (a refusal,
@@ -218,9 +220,10 @@ internal abstract class SettingsPanelModel(
         before: SettingsContent,
         after: SettingsContent,
     ): SettingsFocus? {
-        val rowKept = SettingsListPages.libraryFocusKept(focus, before, after) ?: SettingsListPages.accountsFocusKept(focus, before, after)
-        // The row under ScreenScraper's form left: the form goes with it, or the next one would open with its words.
+        val rowKept = SettingsListPages.libraryFocusKept(focus, before, after)
+        // The row under ScreenScraper's form or Collections' Rename left: the form goes with it, or the next one would open with its words.
         if (rowKept != null && rowKept.page == null && this.focus.page == PanelPage.ScraperSignIn) signIn.close()
+        if (rowKept != null && rowKept.page == null && this.focus.page == PanelPage.CollectionRename) collectionRename.close()
         val focus = rowKept ?: focus
         if (focus.column != SettingsColumn.Panel) return rowKept
         val at = focus.panelIndex
@@ -235,12 +238,12 @@ internal abstract class SettingsPanelModel(
                 PanelPage.Backup -> at.coerceAtMost(backupPanelItems(after.backup).size - 1)
                 // The way back that left takes Undo's item with it.
                 PanelPage.BackupRestore -> at.coerceAtMost(backupRestoreItems(after).size - 1)
-                // A check that finds an update puts its button above: Check now and the switch keep the cursor. Each step
+                // A check that finds an update puts its button above: Check now keeps the cursor. Each step
                 // has its own buttons: from one the cursor goes to the first, so A never lands on another one.
                 PanelPage.Update -> {
                     val item = updatesPanelItems(before.update).getOrNull(at)
                     when {
-                        item == UpdatePanelItem.CheckNow || item == UpdatePanelItem.CheckDaily -> updatesPanelItems(after.update).indexOf(item)
+                        item == UpdatePanelItem.CheckNow -> updatesPanelItems(after.update).indexOf(item)
                         updateStepItems(before.update) == updateStepItems(after.update) -> at
                         else -> 0
                     }
@@ -275,6 +278,9 @@ internal abstract class SettingsPanelModel(
                     boxArtPanelEntries(before).getOrNull(at)?.let { now.indexOf(it) }?.takeIf { it >= 0 } ?: at.coerceAtMost(now.lastIndex)
                 }
                 PanelPage.FilesNotAdded -> SettingsListPages.filesNotAddedLineAfter(at, before, after)
+                PanelPage.EmulatorSystems -> emulatorListIndexAfter(at, before, after)
+                PanelPage.Emulators -> if (after.system(focus.systemId) == null) return emulatorListOn(focus, after) else at
+                PanelPage.Collections, PanelPage.Collection, PanelPage.CollectionRename, PanelPage.CollectionDelete -> return collectionFocusKept(focus, before, after) ?: rowKept
                 PanelPage.UnreadableFolders -> unreadableIndexAfter(at, before, after)
                 // A folder that left goes back to the list; while it is there the page stays on the same item.
                 PanelPage.UnknownFolder ->
@@ -315,8 +321,6 @@ internal abstract class SettingsPanelModel(
             UpdatePanelItem.Cancel -> actions.updates.cancel()
             UpdatePanelItem.TurnOnNotifications -> actions.updates.openNotificationSettings()
             UpdatePanelItem.CheckNow -> actions.updates.checkNow()
-            // From the stored value inside the write, like every switch.
-            UpdatePanelItem.CheckDaily -> actions.update { SettingsOption.CheckUpdatesDaily.toggled(it) }
             null -> return
         }
         feel.report(Outcome.Activated)
@@ -426,7 +430,6 @@ internal abstract class SettingsPanelModel(
         feel.report(Outcome.Activated)
     }
 
-    protected fun systemAtFocus(): SystemEmulators? = SettingsListPages.systemAt(focus, content)
 
     /**
      * Every press on Library › Systems. Carrying: Up / Down move the system (a held key repeats
@@ -594,4 +597,4 @@ internal fun PlumSettings.withManualSystems(arranged: List<String>): PlumSetting
     copy(library = library.copy(systemOrder = SystemOrderSetting.Manual, manualSystemOrder = SystemOrder.manualAfterMove(arranged, library.manualSystemOrder)))
 
 /** Pages of two buttons in one row of [PanelGrid]. */
-private val TWO_BUTTON_PAGES = setOf(PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm, PanelPage.ResetRecentConfirm, PanelPage.RemoveFolder)
+private val TWO_BUTTON_PAGES = setOf(PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm, PanelPage.ResetRecentConfirm, PanelPage.RemoveFolder, PanelPage.CollectionDelete)

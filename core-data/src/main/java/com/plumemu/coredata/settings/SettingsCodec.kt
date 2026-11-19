@@ -28,6 +28,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
                 edgeFade = p[Keys.edgeFade] ?: d.appearance.edgeFade,
                 gridSize = enum(p, Keys.gridSize, d.appearance.gridSize),
                 gridSystems = p[Keys.gridSystems] ?: d.appearance.gridSystems,
+                listCollections = p[Keys.listCollections] ?: d.appearance.listCollections,
                 ownColors = decodeOwnColors(p),
                 buttonSet = p[Keys.buttonSet],
                 language = p[Keys.language],
@@ -106,6 +107,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
         p[Keys.edgeFade] = s.appearance.edgeFade
         p[Keys.gridSize] = s.appearance.gridSize.name
         p[Keys.gridSystems] = s.appearance.gridSystems
+        p[Keys.listCollections] = s.appearance.listCollections
         val ownColors = s.appearance.ownColors
         if (ownColors == null) p.remove(Keys.ownColors) else p[Keys.ownColors] = encodeOwnColors(ownColors)
         val buttonSet = s.appearance.buttonSet
@@ -261,6 +263,7 @@ internal class SettingsCodec(private val log: SettingsLog) {
         val gridSize = stringPreferencesKey("appearance.grid_size")
         /** System ids shown as a grid (a set: the order means nothing). Absent in older files: all lists. */
         val gridSystems = stringSetPreferencesKey("appearance.grid_systems")
+        val listCollections = stringSetPreferencesKey("appearance.list_collections")
         /** The person's own colours: `<background> <text color> <accent>` and, when kept with them, the button set then in use, e.g. `#1A2B3C Light Red Ivory` (an older 3-part value has none). Absent: none. */
         val ownColors = stringPreferencesKey("appearance.own_colors")
         /** Name of the colour set whose A/B/X/Y colours are in use, or `None`. Absent: not decided yet. */

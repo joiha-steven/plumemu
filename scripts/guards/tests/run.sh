@@ -624,6 +624,30 @@ else
   else bad "golden-triage tests (exit $rc)"; fi
 fi
 
+# baseline-profile-age.py: a throwaway repository, the profile then UI commits on top.
+BP="$TMP/bp"
+mkdir -p "$BP/app/src/main/generated/baselineProfiles" "$BP/app/src/main/java" "$BP/docs"
+(
+  cd "$BP" && git init -q &&
+  git config user.email t@example.com && git config user.name t &&
+  echo 'Lcom/a/B;' >app/src/main/generated/baselineProfiles/baseline-prof.txt &&
+  git add -A && git commit -q -m profile &&
+  for i in 1 2 3; do echo "val x$i = $i" >"app/src/main/java/K$i.kt"; git add -A; git commit -q -m "ui $i"; done &&
+  echo notes >docs/N.md && git add -A && git commit -q -m docs
+)
+expect_pass  "baseline-profile-age passes 3 UI commits since the profile with --max 3" "$BP" baseline-profile-age --max 3
+expect_count "baseline-profile-age fails 3 UI commits since the profile with --max 2 (the docs commit not counted)" 1 "$BP" baseline-profile-age --max 2
+# Not a git repository: git fails, which is exit 2 ("could not run"), never 1 ("too old").
+mkdir -p "$TMP/bp-nogit"
+run "$TMP/bp-nogit" baseline-profile-age
+if [[ $rc == 2 ]]; then ok "baseline-profile-age exits 2 when git fails"; else bad "baseline-profile-age exits 2 when git fails (got exit $rc)"; fi
+# The second git call failing (the profile is found, counting since it fails): still exit 2, never 1.
+mkdir -p "$TMP/bp-fakegit"
+printf '#!/bin/sh\n[ "$1" = rev-list ] && { echo "fatal: broken rev-list" >&2; exit 128; }\nexec %s "$@"\n' "$(command -v git)" >"$TMP/bp-fakegit/git"
+chmod +x "$TMP/bp-fakegit/git"
+PATH="$TMP/bp-fakegit:$PATH" run "$BP" baseline-profile-age
+if [[ $rc == 2 ]]; then ok "baseline-profile-age exits 2 when counting since the profile fails"; else bad "baseline-profile-age exits 2 when counting since the profile fails (got exit $rc)"; fi
+
 if [[ $failures == 0 ]]; then
   echo "guard self-tests: PASS ($checks checks)"
   exit 0

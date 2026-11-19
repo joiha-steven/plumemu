@@ -41,6 +41,6 @@ class GameInfoScrapedScreenshotTest {
                 SystemGames(entry.id, entry.name.orEmpty(), games, entry.coverShape, code = entry.code)
             }
         fun rows(kind: EntryKind) = content.entries.first { it.kind == kind }.rows
-        return HomeContent.of(rows(EntryKind.Recent), rows(EntryKind.Favorites), rows(EntryKind.Apps), systems, hasBoxArt = true)
+        return HomeContent.of(content.recentRows, rows(EntryKind.Favorites), rows(EntryKind.Apps), systems, hasBoxArt = true)
     }
 }

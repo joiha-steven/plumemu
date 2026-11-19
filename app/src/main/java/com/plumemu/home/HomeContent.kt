@@ -1,7 +1,13 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.Immutable
+import com.plumemu.collections.BuiltInFolder
+import com.plumemu.collections.Folder
+import com.plumemu.collections.collectionCount
+import com.plumemu.collections.entryIdOf
+import com.plumemu.coreinput.strip.OpenFolder
 import com.plumemu.coreinput.strip.StripContent
+import com.plumemu.coreinput.strip.StripFocus
 import com.plumemu.coreinput.strip.SystemEntry
 import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.identify.name.VariantTag
@@ -150,16 +156,21 @@ data class PlayFacts(
 /** True for a game with no play at all: it gets one "Not played yet" line, not "Played 0 min" and "Last played Never". */
 internal fun PlayFacts.neverPlayed(): Boolean = lastPlayedDaysAgo == null && playTimeMinutes == 0
 
-/** The entries of the system column: three fixed ones, then each system with games. */
+/**
+ * The entries of the system column: Favorites, Collections, Apps, then each system with games. Recent is the first
+ * folder inside Collections (its entry keeps this kind, so its names stay); Most played, Recently added and the person's
+ * own collections are [Collections] entries too ([HomeEntry.isFolder]).
+ */
 enum class EntryKind {
     Recent,
     Favorites,
+    Collections,
     Apps,
     System,
     ;
 
-    /** Recent and Favorites hold games of many systems, so their rows show the system's short name in place of the year. */
-    val mixesSystems: Boolean get() = this == Recent || this == Favorites
+    /** Recent, Favorites and the folders hold games of many systems, so their rows show the system's short name in place of the year. */
+    val mixesSystems: Boolean get() = this == Recent || this == Favorites || this == Collections
 
     /** A system's list and Favorites follow the stored sort; Recent is newest first and Apps are listed by Android. */
     val followsSort: Boolean get() = this == System || this == Favorites
@@ -218,7 +229,12 @@ data class HomeEntry(
     val sortedByName: Boolean = true,
     /** The system's three-character code (platform data `code`) for the peek's System codes; empty where the data has none ([entryCode] then spells one from the name). */
     val code: String = "",
+    /** A folder inside Collections (Recent, Most played, Recently added, an own collection): not in the column, reached by [HomeContent.folderEntries]. */
+    val isFolder: Boolean = false,
 ) {
+    /** The Collections entry itself: its rows are the folders, one per row. */
+    val isFolderList: Boolean get() = kind == EntryKind.Collections && !isFolder
+
     /**
      * L1 / R1 jump by letter in this list: not for Recent, and not
      * where the order is not by name, since the letters would be out of order (they jump a page there).
@@ -235,7 +251,7 @@ data class HomeEntry(
      * Every entry has a grid view: a system's games, Recent and Favorites
      * in [MixedGridShape] cells), and Apps (its icons at one fixed size, `AppsGrid.kt`).
      */
-    val hasGridView: Boolean get() = kind == EntryKind.System || kind.mixesSystems || kind == EntryKind.Apps
+    val hasGridView: Boolean get() = kind == EntryKind.System || (kind.mixesSystems && !isFolderList) || kind == EntryKind.Apps
 
     /** The shape [row]'s cover is drawn in: its own system's in Recent and Favorites (landscape when unknown), else [coverShape]. */
     fun shapeOf(row: GameRowModel): CoverShape = if (kind.mixesSystems) systemShapes[row.systemId] ?: CoverShape.Landscape else coverShape
@@ -248,12 +264,19 @@ data class HomeEntry(
     val isAppGamesGrid: Boolean by lazy(LazyThreadSafetyMode.PUBLICATION) { kind == EntryKind.System && rows.isNotEmpty() && rows.all { it.appPackage != null } }
 
     /** Every entry has a details column or stop; Apps shows its icon and package there ([AppDetails]), in its list only (see [HomeContent.systemEntryOf]). */
-    val hasDetails: Boolean get() = true
+    val hasDetails: Boolean get() = !isFolderList
 }
 
+/** One folder with its games, as the content layer gives it; [Folder.NewCollection] has none. */
+@Immutable
+data class FolderRows(
+    val folder: Folder,
+    val rows: List<GameRowModel>,
+)
+
 /**
- * Everything the main screen shows, immutable: the system column top to bottom (Recent,
- * Favorites, Apps, then each system that has games) and whether there is box art (
+ * Everything the main screen shows, immutable: the system column top to bottom (Favorites,
+ * Collections, Apps, then each system that has games) and whether there is box art (
  * false in the alpha). Build it with [of], which drops systems without games.
  */
 @Immutable
@@ -266,14 +289,37 @@ class HomeContent private constructor(
      * Favorites come from their own queries and hold them already).
      */
     val hiddenEntries: List<HomeEntry> = emptyList(),
+    /** The folders inside Collections as entries (not in the column): Recent, Most played, Recently added, the own collections. */
+    val folderEntries: List<HomeEntry> = emptyList(),
 ) {
+    /** The entry the cursor stands in for [focus] (reconciled): the open folder inside Collections, else the focused column entry. */
+    fun shownEntry(focus: StripFocus): HomeEntry? {
+        val host = entries.getOrNull(focus.systemIndex) ?: return null
+        if (!host.isFolderList) return host
+        val open: OpenFolder = focus.openFolder?.takeIf { it.host == host.id } ?: return host
+        return folderEntries.firstOrNull { it.id == open.id } ?: host
+    }
+
+    /**
+     * The folder of the folder list [host] that is open in [focus] (kept while the cursor is elsewhere, so coming back finds it),
+     * or null when [host] is no folder list or none is open.
+     */
+    fun openFolderIn(host: HomeEntry, focus: StripFocus): HomeEntry? {
+        if (!host.isFolderList) return null
+        val open = focus.openFolder?.takeIf { it.host == host.id } ?: return null
+        return folderEntry(open.id)
+    }
+
+    /** The folder entry [id], or null. */
+    fun folderEntry(id: String): HomeEntry? = folderEntries.firstOrNull { it.id == id }
+
     /** Systems with games (the "18 systems" of the top bar). */
     val systemCount: Int = entries.count { it.kind == EntryKind.System }
 
     /** Games across all systems (the "1,284 games"); Recent and Favorites repeat games and do not count. */
     val gameCount: Int = entries.filter { it.kind == EntryKind.System }.sumOf { it.count }
 
-    /** Where the systems start, after Recent, Favorites and (when shown) Apps; no gap above it, so every count stays on its game row's baseline. */
+    /** Where the systems start, after Favorites, Collections and (when shown) Apps; no gap above it, so every count stays on its game row's baseline. */
     val firstSystemIndex: Int = entries.count { it.kind != EntryKind.System }
 
     /** No system has games: the screen shows the empty-library message instead of the strip. */
@@ -285,6 +331,9 @@ class HomeContent private constructor(
      */
     val strip: StripContent = StripContent(entries.map { systemEntryOf(it, columns = 1) }, hasBoxArt)
 
+    /** Whether any entry, a folder included, is shown as a grid with [gridIds]. */
+    private fun anyGrid(gridIds: Set<String>): Boolean = entries.any { showsGrid(it, gridIds) } || folderEntries.any { showsGrid(it, gridIds) }
+
     /**
      * [strip] with the grid's columns for each entry in [gridIds] shown as a grid (SELECT), so
      * the focus moves by columns there: a game grid's from its cover shape and the grid size, Apps' from
@@ -294,7 +343,7 @@ class HomeContent private constructor(
         gridIds: Set<String>,
         layout: PlumLayout,
     ): StripContent {
-        if (gridIds.isEmpty() || entries.none { showsGrid(it, gridIds) }) return strip
+        if (gridIds.isEmpty() || !anyGrid(gridIds)) return strip
         return StripContent(
             entries.map { entry ->
                 val columns =
@@ -303,7 +352,7 @@ class HomeContent private constructor(
                         entry.kind == EntryKind.Apps || entry.isAppGamesGrid -> appsGridColumns(layout)
                         else -> layout.gridColumns(entry.coverShape)
                     }
-                systemEntryOf(entry, columns)
+                systemEntryOf(entry, columns, gridIds, layout)
             },
             hasBoxArt,
         )
@@ -312,13 +361,27 @@ class HomeContent private constructor(
     private fun systemEntryOf(
         entry: HomeEntry,
         columns: Int,
-    ) = SystemEntry(entry.id, entry.count, columns, entry.hasDetails && !(entry.kind == EntryKind.Apps && columns > 1), entry.rowIds)
+        gridIds: Set<String> = emptySet(),
+        layout: PlumLayout? = null,
+    ): SystemEntry {
+        val folders =
+            if (entry.isFolderList) {
+                folderEntries.map { folder ->
+                    val folderColumns = if (layout != null && showsGrid(folder, gridIds)) layout.gridColumns(folder.coverShape) else 1
+                    SystemEntry(folder.id, folder.count, folderColumns, folder.hasDetails, folder.rowIds, isFolder = true)
+                }
+            } else {
+                emptyList()
+            }
+        return SystemEntry(entry.id, entry.count, columns, entry.hasDetails && !(entry.kind == EntryKind.Apps && columns > 1), entry.rowIds, folders = folders, isFolderList = entry.isFolderList)
+    }
 
     /** The same screen with [entries] in place of these (Favorites marks, FavoriteMarks). */
     internal fun withEntries(
         entries: List<HomeEntry>,
         hiddenEntries: List<HomeEntry> = this.hiddenEntries,
-    ): HomeContent = HomeContent(entries, hasBoxArt, hiddenEntries)
+        folderEntries: List<HomeEntry> = this.folderEntries,
+    ): HomeContent = HomeContent(entries, hasBoxArt, hiddenEntries, folderEntries)
 
     /**
      * Whether [entry] is shown as a grid: it can be one ([hasGridFor]), it is switched to the grid, and it
@@ -336,6 +399,10 @@ class HomeContent private constructor(
         const val RECENT_ID = "recent"
         const val FAVORITES_ID = "favorites"
         const val APPS_ID = "apps"
+        const val COLLECTIONS_ID = "collections"
+
+        /** The folder list's last row: it opens no folder (A asks for a name). */
+        const val NEW_COLLECTION_ID = "new_collection"
 
         fun of(
             recent: List<GameRowModel>,
@@ -349,27 +416,52 @@ class HomeContent private constructor(
             hiddenSystems: List<SystemGames> = emptyList(),
             /** Sort games by name (false: any other sort), which decides whether the lists have letters for the page jump. */
             sortedByName: Boolean = true,
+            /** The folders after Recent (Most played, Recently added, then the own collections) with their games; the default has the two built-ins empty. */
+            otherFolders: List<FolderRows> = DEFAULT_FOLDERS,
         ): HomeContent {
             val shapes = (systems + hiddenSystems).associate { it.id to it.coverShape }
             val names = (systems + hiddenSystems).associate { it.id to it.name }
             val shortNames = (systems + hiddenSystems).filter { it.shortName.isNotEmpty() }.associate { it.id to it.shortName }
+            fun folderEntryOf(folder: Folder, rows: List<GameRowModel>): HomeEntry? {
+                val id = entryIdOf(folder) ?: return null
+                val own = folder as? Folder.Own
+                val smart = folder is Folder.BuiltIn && folder.kind != BuiltInFolder.Recent
+                val kind = if (folder is Folder.BuiltIn && folder.kind == BuiltInFolder.Recent) EntryKind.Recent else EntryKind.Collections
+                return HomeEntry(id, kind, own?.name, rows, MixedGridShape, systemShapes = shapes, systemNames = names, systemShortNames = shortNames, sortedByName = sortedByName && !smart && kind != EntryKind.Recent, isFolder = true)
+            }
+            val recentFolder = FolderRows(Folder.BuiltIn(BuiltInFolder.Recent, recent.size), recent)
+            val folders = (listOf(recentFolder) + otherFolders.map { it.copy(folder = withCount(it.folder, it.rows.size)) })
+            val folderEntries = folders.mapNotNull { folderEntryOf(it.folder, it.rows) }
+            val folderRows =
+                folders.map { (folder, rows) -> GameRowModel(entryIdOf(folder) ?: NEW_COLLECTION_ID, (folder as? Folder.Own)?.name.orEmpty(), rows.size.toString()) } +
+                    GameRowModel(NEW_COLLECTION_ID, "", "")
             val fixed =
                 listOfNotNull(
-                    HomeEntry(RECENT_ID, EntryKind.Recent, null, recent, MixedGridShape, systemShapes = shapes, systemNames = names, systemShortNames = shortNames),
                     HomeEntry(FAVORITES_ID, EntryKind.Favorites, null, favorites, MixedGridShape, systemShapes = shapes, systemNames = names, systemShortNames = shortNames, sortedByName = sortedByName),
+                    HomeEntry(COLLECTIONS_ID, EntryKind.Collections, null, folderRows, shownCount = collectionCount(folders.map { it.folder }), sortedByName = false),
                     if (showApps) HomeEntry(APPS_ID, EntryKind.Apps, null, apps) else null,
                 )
             fun entriesOf(list: List<SystemGames>) =
                 list.filter { it.games.isNotEmpty() }.map { HomeEntry(it.id, EntryKind.System, it.name, it.games, it.coverShape, info = it.info, sortedByName = sortedByName, code = it.code) }
-            return HomeContent(fixed + entriesOf(systems), hasBoxArt, entriesOf(hiddenSystems))
+            return HomeContent(fixed + entriesOf(systems), hasBoxArt, entriesOf(hiddenSystems), folderEntries)
         }
+
+        private fun withCount(folder: Folder, count: Int): Folder =
+            when (folder) {
+                is Folder.BuiltIn -> folder.copy(count = count)
+                is Folder.Own -> folder.copy(count = count)
+                Folder.NewCollection -> folder
+            }
+
+        /** Most played and Recently added with no games: always listed, also where there is no database. */
+        internal val DEFAULT_FOLDERS = listOf(FolderRows(Folder.BuiltIn(BuiltInFolder.MostPlayed, 0), emptyList()), FolderRows(Folder.BuiltIn(BuiltInFolder.RecentlyAdded, 0), emptyList()))
 
         /** Nothing scanned yet. */
         val Empty: HomeContent = of(emptyList(), emptyList(), emptyList(), emptyList())
     }
 }
 
-/** The index of the first system with the Apps entry shown ([HomeContent.firstSystemIndex] in general). */
+/** The index of the first system with the Apps entry shown ([HomeContent.firstSystemIndex] in general): Favorites, Collections, Apps. */
 internal const val FIRST_SYSTEM_INDEX = 3
 
 /**

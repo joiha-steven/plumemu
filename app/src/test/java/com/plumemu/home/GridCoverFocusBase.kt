@@ -78,7 +78,7 @@ abstract class GridCoverFocusBase {
                 background = PlumTheme.colors.bg
                 dark = PlumTheme.colors.isDark
                 ink = PlumTheme.colors.text
-                key(gridSize) { HomeWithArt(rememberSource { coverArtSource() }, gridActions(entry, 0), gridIds = setOf(id), onState = { state = it }) }
+                key(gridSize) { HomeWithArt(rememberSource { coverArtSource() }, if (entry == RECENT_FOLDER) recentGridActions(0) else gridActions(entry, 0), gridIds = setOf(id), onState = { state = it }) }
             }
         }
         compose.waitForIdle()
@@ -281,7 +281,8 @@ abstract class GridCoverFocusBase {
         label: String,
         entry: Int = FakeHomeContent.BOARD_SNES_INDEX,
     ) {
-        val last = FakeHomeContent.withArtwork().entries[entry].rows.lastIndex
+        val board = FakeHomeContent.withArtwork()
+        val last = (if (entry == RECENT_FOLDER) board.recentRows else board.entries[entry].rows).lastIndex
         for (size in GridSize.entries) {
             gridSize = size
             compose.waitForIdle()

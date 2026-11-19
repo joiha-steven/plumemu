@@ -47,7 +47,7 @@ internal suspend fun waitForBoxArtToStop(
 
 private const val POLL_MS = 100L
 
-/** What Settings drives of [restore] (Settings › Advanced › Restore… and Undo restore). */
+/** What Settings drives of [restore] (Settings › About › Restore… and Undo restore). */
 internal fun restoreWorkOf(restore: GraphRestore): SettingsHost.RestoreWork =
     object : SettingsHost.RestoreWork {
         override fun cancel() = restore.cancel()

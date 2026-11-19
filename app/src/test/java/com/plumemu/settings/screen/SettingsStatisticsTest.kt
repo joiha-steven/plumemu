@@ -79,10 +79,10 @@ internal class SettingsStatisticsTest : SettingsModelHarness() {
     }
 
     @Test
-    fun theSectionSitsBetweenControlsAndAccountsAndHasNoStopsUntilTheFiguresArrive() {
+    fun theSectionSitsBetweenControlsAndAboutAndHasNoStopsUntilTheFiguresArrive() {
         val sections = SettingsSection.entries
         assertEquals(sections.indexOf(SettingsSection.Controls) + 1, sections.indexOf(SettingsSection.Statistics))
-        assertEquals(sections.indexOf(SettingsSection.Accounts) - 1, sections.indexOf(SettingsSection.Statistics))
+        assertEquals(sections.indexOf(SettingsSection.About) - 1, sections.indexOf(SettingsSection.Statistics))
         assertEquals(emptyList<SettingsOption>(), SettingsSection.Statistics.rowsIn(SettingsContent()))
         assertEquals(
             "one stop per listed game, then the Exact play time switch",
@@ -259,7 +259,7 @@ internal class SettingsStatisticsTest : SettingsModelHarness() {
     fun l1AndR1ReachStatisticsOnceItsFiguresAreThereAndSkipItBefore() {
         openSection(SettingsSection.Controls)
         press(Action.NextSystem)
-        assertEquals("no stops yet: skipped", SettingsSection.Accounts, model.focus.section)
+        assertEquals("no stops yet: skipped", SettingsSection.About, model.focus.section)
         model.content = StatisticsShots.contentOf(StatisticsShots.nothingPlayed)
         press(Action.PreviousSystem)
         assertEquals(SettingsSection.Statistics, model.focus.section)

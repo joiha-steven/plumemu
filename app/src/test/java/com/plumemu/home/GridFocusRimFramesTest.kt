@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onRoot
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.strip.StripState
+import com.plumemu.coreui.components.WARM_DELAY_MS
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.testing.TableText
 import com.plumemu.coreui.theme.FocusLift
@@ -29,6 +30,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowLooper
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -342,6 +345,18 @@ abstract class GridFocusRimFramesBase {
         settle()
         settle()
         checkSwitch("covers fetched ahead")
+    }
+
+    /** The main looper's clock moved (the rest timer fires) before the switch: the order of the key's apply notification and the first frame changes. */
+    @Test
+    fun aSwitchToTheNextCoverGridAfterTheLooperClockMovedShowsNoLoneRim() {
+        openCovers(focus = 5)
+        settle()
+        settle()
+        compose.runOnUiThread { ShadowLooper.idleMainLooper(WARM_DELAY_MS + 100, TimeUnit.MILLISECONDS) }
+        frame()
+        shot()
+        checkSwitch("looper clock moved")
     }
 
     @Test

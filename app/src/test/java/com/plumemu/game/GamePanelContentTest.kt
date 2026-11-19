@@ -2,6 +2,7 @@ package com.plumemu.game
 
 import com.plumemu.graph.AchievementCount
 import com.plumemu.R
+import com.plumemu.collections.PickerState
 import com.plumemu.launcher.EmulatorOffer
 import com.plumemu.launcher.FailureReason
 import com.plumemu.launcher.FileProblem
@@ -27,7 +28,7 @@ class GamePanelContentTest {
     fun menuEntriesInOrderWithFavoriteOff() {
         // Every entry: Fix box art… (listed only while box art can be asked for) and Other versions…
         // (only for a row of two or more copies) included.
-        val rows = gameMenuEntries(sampleFacts(isFavorite = false, canFixBoxArt = true, versions = sampleVersions(), canRemoveFromRecent = true, canSort = true, achievementCount = AchievementCount(12, 40)))
+        val rows = gameMenuEntries(sampleFacts(isFavorite = false, canFixBoxArt = true, versions = sampleVersions(), canRemoveFromRecent = true, canSort = true, achievementCount = AchievementCount(12, 40)).copy(collections = PickerState(emptyList(), emptySet()), ownCollection = OwnCollectionRef(1, "RPG")))
         assertEquals(GameMenuEntryId.entries.map { it.name }, rows.map { it.key })
         assertEquals(UiText.Res(R.string.game_menu_favorite), rows[3].label)
         assertEquals(PanelCommand.SetFavorite(true), rows[3].command)

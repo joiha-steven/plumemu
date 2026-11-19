@@ -2,6 +2,7 @@ package com.plumemu.graph
 
 import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coredata.settings.PlumSettings
+import com.plumemu.settings.withFolderView
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CompletableDeferred
@@ -107,5 +108,53 @@ class SettingsWriterTest {
         runCurrent()
         assertEquals(0, runs)
         assertTrue(writer.failed.value)
+    }
+
+    @Test
+    fun aFoldersViewPressIsStoredInTheListsAndAFailedWriteIsTold() = runTest {
+        var calls = 0
+        var told = 0
+        val writer =
+            SettingsWriter(backgroundScope, { transform ->
+                calls++
+                if (calls == 3) throw IOException("disk")
+                stored = transform(stored)
+            }, logged::add)
+        // The wiring MainActivity gives HomeCallbacks.onFolderView.
+        val onFolderView = { id: String, isGrid: Boolean -> writer.submitTold({ it.withFolderView(id, isGrid) }, { told++ }) { _, _ -> } }
+        onFolderView("collection:7", false)
+        runCurrent()
+        assertEquals(setOf("collection:7"), stored.appearance.listCollections)
+        onFolderView("collection:7", true)
+        runCurrent()
+        assertEquals(emptySet<String>(), stored.appearance.listCollections)
+        onFolderView("most_played", false)
+        runCurrent()
+        assertEquals("the failed write is told, nothing stored", 1 to emptySet<String>(), told to stored.appearance.listCollections)
+    }
+
+    /** The compiled-code restart ends the process only while [SettingsWriter.isIdle]: a write waiting or running is never lost. */
+    @Test
+    fun isIdleOnlyWhenNoWriteWaitsOrRuns() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val writer = SettingsWriter(backgroundScope, { transform -> gate.await(); stored = transform(stored) }, logged::add)
+        assertTrue("nothing submitted", writer.isIdle)
+        writer.submit { it.copy(appearance = it.appearance.copy(textSize = TextSizeSetting.Small)) }
+        assertFalse("waiting in the queue", writer.isIdle)
+        runCurrent()
+        assertFalse("running", writer.isIdle)
+        gate.complete(Unit)
+        runCurrent()
+        assertTrue("landed", writer.isIdle)
+    }
+
+    @Test
+    fun aFailedWriteLeavesTheWriterIdle() = runTest {
+        val writer = SettingsWriter(backgroundScope, { throw IOException("disk") }, logged::add)
+        writer.submit { it }
+        writer.resetAll(onPauseCleared = {})
+        assertFalse(writer.isIdle)
+        runCurrent()
+        assertTrue("both failed, none pending", writer.isIdle)
     }
 }

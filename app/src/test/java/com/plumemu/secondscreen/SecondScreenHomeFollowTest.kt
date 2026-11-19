@@ -1,6 +1,7 @@
 package com.plumemu.secondscreen
 
 import androidx.compose.runtime.Composable
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.Composer
 import androidx.compose.runtime.CompositionTracer
 import androidx.compose.runtime.InternalComposeTracingApi
@@ -78,7 +79,7 @@ class SecondScreenHomeFollowTest {
                 }
             }
         feed = made
-        PlumTheme { HomeScreen(content, router, HomeCallbacks(), secondScreen = made) }
+        PlumTheme { HomeScreen(content, router, HomeCallbacks(), secondScreen = made, initialFocus = StripFocus()) }
     }
 
     private fun send(vararg actions: Action) {
@@ -96,13 +97,14 @@ class SecondScreenHomeFollowTest {
     @After
     fun stopTracing() = Composer.setTracer(null)
 
+    // The first entry is Favorites (its card) since the Collections change, where it was Recent's.
     @Test
     fun followsTheCursorFromSystemToGameToMenu() {
         show(withSecondScreen = true)
         // The board's ids are not the database's: nothing to read for its last game.
-        val recentCount = content.entries[0].shownCount
-        // The game index is built off the main thread first.
-        compose.waitUntil(WAIT_MS) { (shown() as? RecentEntry)?.let { it.name == "Recent" && it.gameCount == recentCount } == true }
+        val favoritesCount = content.entries[0].shownCount
+        // The game index is built off the main thread first. The harness starts on the system column.
+        compose.waitUntil(WAIT_MS) { (shown() as? FavoritesEntry)?.let { it.name == "Favorites" && it.gameCount == favoritesCount } == true }
         send(*List(FakeHomeContent.BOARD_SNES_INDEX) { Action.Move(Direction.Down) }.toTypedArray())
         val system = shown() as SystemEntry
         assertEquals(snes.name, system.name)

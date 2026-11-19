@@ -151,7 +151,7 @@ internal fun rememberAppsPreview(
         // The grid's left is where the strip puts it at rest: after the margin, the systems column and the gap.
         val limitPx = with(density) { (layout.width - PlumDimens.stripMarginSide * 2 - layout.systemsColumnWidth - PlumDimens.columnGap).roundToPx() }
         val spread = AppsSpread { state.systemNamesAlpha }
-        val isApps = { content.entries.getOrNull(state.focus.systemIndex)?.let { it.kind == EntryKind.Apps || it.isAppGamesGrid } == true }
+        val isApps = { content.shownEntry(state.focus)?.let { it.kind == EntryKind.Apps || it.isAppGamesGrid } == true }
         AppsPreview(
             Modifier.wholeColumnsWhile(appsGridColumns(layout), gapPx, limitPx, spread, isApps) {
                 // Not while the strip moves (a finger drag changes the column only on release): the grid then shows what the move brings in.

@@ -87,6 +87,7 @@ internal class SettingsModel(
                 when {
                     page == PanelPage.FixName ->
                         nameFix.open?.let { open -> (open.screen as? TypingScreen)?.let { SettingsTypingField(it.typing, typingActionWord(it)) } }
+                    page == PanelPage.CollectionRename -> collectionRename.open?.let { SettingsTypingField(it.typing, typingActionWord(it.screen)) }
                     // Kept after the code is used, so the tray slides down rather than vanishing.
                     SettingsCustomColor.isCustomPage(page) -> custom.hexTyping?.let { SettingsTypingField(it, R.string.settings_hint_done, KeyboardPage.Symbols) }
                     // One state for both fields: "Next" keeps the same tray up on the password.
@@ -110,6 +111,7 @@ internal class SettingsModel(
             cause = Cause.Tap
             when {
                 focus.page == PanelPage.FixName -> onNameFixKey(event)
+                focus.page == PanelPage.CollectionRename -> onCollectionRenameKey(event)
                 focus.page == PanelPage.ScraperSignIn -> onSignInKey(event)
                 focus.page == PanelPage.ProblemReport -> onReportKey(event)
                 isEditingHex -> custom.hexTyping?.let { hex -> onHexKeys(hex) { hex.onKeyboardEvent(event) } }
@@ -202,6 +204,7 @@ internal class SettingsModel(
             return
         }
         if (focus.page == PanelPage.FixName) return onNameFixAction(action)
+        if (focus.page == PanelPage.CollectionRename) return onCollectionRenameAction(action)
         if (focus.page == PanelPage.ScraperSignIn) return onSignInAction(action)
         if (focus.page == PanelPage.ProblemReport) return onReportAction(action)
         if (focus.page == PanelPage.Systems && focus.column == SettingsColumn.Panel) return onSystemsAction(action, settings, geometry)
@@ -284,11 +287,10 @@ internal class SettingsModel(
             return@tapped
         }
         if (page == PanelPage.ScraperSignIn) return@tapped onSignInAction(Action.TapItem(InputColumn.Details, index))
+        if (page == PanelPage.CollectionRename) return@tapped onCollectionRenameAction(Action.TapItem(InputColumn.Details, index))
         if (page == PanelPage.ProblemReport) return@tapped onReportAction(Action.TapItem(InputColumn.Details, index))
-        // A system's checkmark and the daily switch follow the first tap, like a switch; the picker's buttons take two like every button.
-        val isSwitch =
-            (page == PanelPage.ScraperSystems && systemsPickActionAt(content, index) == null) ||
-                (page == PanelPage.Update && updatesPanelItems(content.update).getOrNull(index) == UpdatePanelItem.CheckDaily)
+        // A system's checkmark follows the first tap, like a switch; the picker's buttons take two like every button.
+        val isSwitch = page == PanelPage.ScraperSystems && systemsPickActionAt(content, index) == null
         if (isSwitch) {
             focusPanelItem(index)
             onPanelEnter(settings)
@@ -446,7 +448,7 @@ internal class SettingsModel(
     }
 
     private fun onSections(action: Action) {
-        val sections = SettingsSection.shownIn(content)
+        val sections = SettingsSection.entries
         val at = sections.indexOf(focus.section)
         when (action) {
             is Action.Move ->
@@ -573,7 +575,8 @@ internal class SettingsModel(
                 SettingsOption.UnreadableFolders -> PanelPage.UnreadableFolders to 0
                 SettingsOption.HiddenGames, SettingsOption.UnidentifiedGames -> SettingsListPages.listPageOf.getValue(option) to 0
                 SettingsOption.FilesNotAdded -> PanelPage.FilesNotAdded to content.notAdded.indexOfFirst { it !is NotAddedItem.Heading }.coerceAtLeast(0)
-                SettingsOption.SystemEmulator -> PanelPage.Emulators to (systemAtFocus()?.currentIndex ?: 0)
+                SettingsOption.Emulators -> PanelPage.EmulatorSystems to 0
+                SettingsOption.Collections -> PanelPage.Collections to 0
                 SettingsOption.Systems -> PanelPage.Systems to FIRST_SYSTEM_ITEM
                 SettingsOption.BoxArtSource -> PanelPage.BoxArtSource to boxArtSourceChoices(content.account).indexOf(boxArtSourceIn(settings, content.account)).coerceAtLeast(0)
                 SettingsOption.ScraperAccount -> if (content.account is AccountStatus.SignedIn) PanelPage.ScraperAccount to 0 else return openSignIn().let { true }
@@ -584,7 +587,7 @@ internal class SettingsModel(
         if (ColorPages.kindOf(page) != null) {
             openColourPage(page, index, settings)
         } else {
-            moveTo(focus.copy(column = SettingsColumn.Panel, page = page, panelIndex = index, systemId = systemAtFocus()?.systemId, undoAsk = null))
+            moveTo(focus.copy(column = SettingsColumn.Panel, page = page, panelIndex = index, systemId = null, undoAsk = null))
         }
         return true
     }

@@ -60,8 +60,8 @@ class GridCoverFocusEdgesTest : GridCoverFocusBase() {
     @Test
     @Config(qualifiers = SIZE_640)
     fun liftIsWholeAtTheEdgesMixedGraphiteAt640() {
-        show(TableText.Graphite, entry = 0, id = "recent")
-        assertWholeAtEdges("640 mixed graphite", entry = 0)
+        show(TableText.Graphite, entry = RECENT_FOLDER, id = "recent")
+        assertWholeAtEdges("640 mixed graphite", entry = RECENT_FOLDER)
     }
 
     @Test
@@ -74,8 +74,8 @@ class GridCoverFocusEdgesTest : GridCoverFocusBase() {
     @Test
     @Config(qualifiers = SIZE_640)
     fun liftIsWholeAtTheEdgesMixedPaperAt640() {
-        show(TableText.Paper, entry = 0, id = "recent")
-        assertWholeAtEdges("640 mixed paper", entry = 0)
+        show(TableText.Paper, entry = RECENT_FOLDER, id = "recent")
+        assertWholeAtEdges("640 mixed paper", entry = RECENT_FOLDER)
     }
 
     @Test
@@ -88,8 +88,8 @@ class GridCoverFocusEdgesTest : GridCoverFocusBase() {
     @Test
     @Config(qualifiers = SIZE_576)
     fun liftIsWholeAtTheEdgesMixedGraphiteAt576() {
-        show(TableText.Graphite, entry = 0, id = "recent")
-        assertWholeAtEdges("576 mixed graphite", entry = 0)
+        show(TableText.Graphite, entry = RECENT_FOLDER, id = "recent")
+        assertWholeAtEdges("576 mixed graphite", entry = RECENT_FOLDER)
     }
 
     @Test
@@ -102,8 +102,8 @@ class GridCoverFocusEdgesTest : GridCoverFocusBase() {
     @Test
     @Config(qualifiers = SIZE_576)
     fun liftIsWholeAtTheEdgesMixedPaperAt576() {
-        show(TableText.Paper, entry = 0, id = "recent")
-        assertWholeAtEdges("576 mixed paper", entry = 0)
+        show(TableText.Paper, entry = RECENT_FOLDER, id = "recent")
+        assertWholeAtEdges("576 mixed paper", entry = RECENT_FOLDER)
     }
 
     @Test
@@ -116,8 +116,8 @@ class GridCoverFocusEdgesTest : GridCoverFocusBase() {
     @Test
     @Config(qualifiers = SIZE_832)
     fun liftIsWholeAtTheEdgesMixedGraphiteAt832() {
-        show(TableText.Graphite, entry = 0, id = "recent")
-        assertWholeAtEdges("832 mixed graphite", entry = 0)
+        show(TableText.Graphite, entry = RECENT_FOLDER, id = "recent")
+        assertWholeAtEdges("832 mixed graphite", entry = RECENT_FOLDER)
     }
 
     @Test
@@ -130,8 +130,8 @@ class GridCoverFocusEdgesTest : GridCoverFocusBase() {
     @Test
     @Config(qualifiers = SIZE_832)
     fun liftIsWholeAtTheEdgesMixedPaperAt832() {
-        show(TableText.Paper, entry = 0, id = "recent")
-        assertWholeAtEdges("832 mixed paper", entry = 0)
+        show(TableText.Paper, entry = RECENT_FOLDER, id = "recent")
+        assertWholeAtEdges("832 mixed paper", entry = RECENT_FOLDER)
     }
 
     @Test
@@ -144,8 +144,8 @@ class GridCoverFocusEdgesTest : GridCoverFocusBase() {
     @Test
     @Config(qualifiers = SIZE_853)
     fun liftIsWholeAtTheEdgesMixedGraphiteAt853() {
-        show(TableText.Graphite, entry = 0, id = "recent")
-        assertWholeAtEdges("853 mixed graphite", entry = 0)
+        show(TableText.Graphite, entry = RECENT_FOLDER, id = "recent")
+        assertWholeAtEdges("853 mixed graphite", entry = RECENT_FOLDER)
     }
 
     @Test
@@ -158,8 +158,8 @@ class GridCoverFocusEdgesTest : GridCoverFocusBase() {
     @Test
     @Config(qualifiers = SIZE_853)
     fun liftIsWholeAtTheEdgesMixedPaperAt853() {
-        show(TableText.Paper, entry = 0, id = "recent")
-        assertWholeAtEdges("853 mixed paper", entry = 0)
+        show(TableText.Paper, entry = RECENT_FOLDER, id = "recent")
+        assertWholeAtEdges("853 mixed paper", entry = RECENT_FOLDER)
     }
 
     @Test
@@ -172,8 +172,8 @@ class GridCoverFocusEdgesTest : GridCoverFocusBase() {
     @Test
     @Config(qualifiers = SIZE_768)
     fun liftIsWholeAtTheEdgesMixedGraphiteAt768() {
-        show(TableText.Graphite, entry = 0, id = "recent")
-        assertWholeAtEdges("768 mixed graphite", entry = 0)
+        show(TableText.Graphite, entry = RECENT_FOLDER, id = "recent")
+        assertWholeAtEdges("768 mixed graphite", entry = RECENT_FOLDER)
     }
 
     @Test
@@ -186,8 +186,8 @@ class GridCoverFocusEdgesTest : GridCoverFocusBase() {
     @Test
     @Config(qualifiers = SIZE_768)
     fun liftIsWholeAtTheEdgesMixedPaperAt768() {
-        show(TableText.Paper, entry = 0, id = "recent")
-        assertWholeAtEdges("768 mixed paper", entry = 0)
+        show(TableText.Paper, entry = RECENT_FOLDER, id = "recent")
+        assertWholeAtEdges("768 mixed paper", entry = RECENT_FOLDER)
     }
 
     @Test

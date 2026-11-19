@@ -23,7 +23,7 @@ internal const val EXTRA_SKIP_DRAWING = "com.plumemu.benchmark.SKIP_DRAWING"
 private const val FIRST_SCREEN_TEXT = "Super Nintendo"
 private const val FIRST_SCREEN_TIMEOUT_MS = 10_000L
 
-/** Super Nintendo sits under Recent, Favorites and Apps. */
+/** Super Nintendo sits under Favorites, Collections and Apps. */
 private const val MOVES_TO_FIRST_SYSTEM = 3
 
 /** Cold start to the main screen; [largeLibrary] asks for the 10,000 games, [secondScreen] for the second screen's window. */
@@ -41,6 +41,10 @@ internal fun MacrobenchmarkScope.startHome(
         intent.putExtra(EXTRA_COVERS, covers)
         intent.putExtra(EXTRA_SKIP_DRAWING, InstrumentationRegistry.getArguments().getString("plumemu.skip"))
     }
+    // A cold start with nothing saved lands on Favorites' games, which hides the
+    // systems column: one Left brings it back. On the column itself Left does nothing.
+    device.waitForIdle()
+    device.pressDPadLeft()
     check(device.wait(Until.hasObject(By.text(FIRST_SCREEN_TEXT)), FIRST_SCREEN_TIMEOUT_MS)) {
         "The main screen did not show \"$FIRST_SCREEN_TEXT\" within $FIRST_SCREEN_TIMEOUT_MS ms"
     }

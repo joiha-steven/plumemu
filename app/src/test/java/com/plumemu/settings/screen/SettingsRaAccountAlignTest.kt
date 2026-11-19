@@ -101,8 +101,8 @@ abstract class SettingsRaAccountAlignBase {
     ) {
         var size by mutableStateOf(TextSize.Small)
         val content = AccountShotContent.of(AccountStatus.SignedOut).copy(raAccount = status)
-        val row = SettingsSection.Accounts.rowsIn(content).indexOf(SettingsOption.RetroAchievementsAccount)
-        val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Accounts, rememberedOption = mapOf(SettingsSection.Accounts to row), page = PanelPage.RaAccount)
+        val row = SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.RetroAchievementsAccount)
+        val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Library, rememberedOption = mapOf(SettingsSection.Library to row), page = PanelPage.RaAccount)
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { SettingsAt(focus, content = content) } }
         val problems = mutableListOf<String>()
         for (each in TextSize.entries) {

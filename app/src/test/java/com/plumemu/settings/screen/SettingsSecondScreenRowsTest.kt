@@ -46,7 +46,7 @@ class SettingsSecondScreenRowsTest {
         stored: PlumSettings = settings,
     ) {
         val content = SettingsContent().withSecondScreen(screen, stored.secondScreen)
-        val section = if (option == SettingsOption.ShowApps) SettingsSection.HomeScreen else SettingsSection.SecondScreen
+        val section = SettingsSection.HomeScreen
         val rows = section.rowsIn(content)
         val focus =
             SettingsFocus(
@@ -65,7 +65,7 @@ class SettingsSecondScreenRowsTest {
         compose.onNodeWithText(text(R.string.settings_second_screen)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.settings_second_screen_in_game)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.settings_second_screen_apps_on)).assertDoesNotExist()
-        compose.onNodeWithText(text(R.string.settings_section_second_screen)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.settings_section_screens)).assertDoesNotExist()
     }
 
     @Test

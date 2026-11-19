@@ -253,24 +253,25 @@ abstract class HomeGridClipBase {
 
     private fun gamesGrid(
         label: String,
-        entryIndex: Int,
+        actions: List<Action>,
+        entryId: String,
         content: HomeContent,
         source: HomeArtSource,
         gridId: String,
         needsCutRow: Boolean = true,
-    ) = everySize(label, content.entries[entryIndex].id, GridSize.entries, needsCutRow) {
-        HomeWithArt(source, gridActions(entryIndex, 0), content, gridIds = setOf(gridId), onState = { state = it })
+    ) = everySize(label, entryId, GridSize.entries, needsCutRow) {
+        HomeWithArt(source, actions, content, gridIds = setOf(gridId), onState = { state = it })
     }
 
     // Medium and Small show whole rows (the mixed board is short enough not to scroll at all there), so only Large can cut one; this board's Large rows end on the grid's edge.
     @Test
-    fun recentGridCutsAtItsEdges() = gamesGrid("Recent", 0, MixedGridLibrary, mixedGridSource(), MixedGridLibrary.entries[0].id, needsCutRow = false)
+    fun recentGridCutsAtItsEdges() = gamesGrid("Recent", mixedGridActions(0, 0), HomeContent.RECENT_ID, MixedGridLibrary, mixedGridSource(), HomeContent.RECENT_ID, needsCutRow = false)
 
     @Test
-    fun favoritesGridCutsAtItsEdges() = gamesGrid("Favorites", 1, MixedGridLibrary, mixedGridSource(), MixedGridLibrary.entries[1].id, needsCutRow = false)
+    fun favoritesGridCutsAtItsEdges() = gamesGrid("Favorites", mixedGridActions(1, 0), HomeContent.FAVORITES_ID, MixedGridLibrary, mixedGridSource(), HomeContent.FAVORITES_ID, needsCutRow = false)
 
     @Test
-    fun systemGridCutsAtItsEdges() = gamesGrid("Super Nintendo", FakeHomeContent.BOARD_SNES_INDEX, CoverArtLibrary, coverArtSource(), "snes")
+    fun systemGridCutsAtItsEdges() = gamesGrid("Super Nintendo", gridActions(FakeHomeContent.BOARD_SNES_INDEX, 0), "snes", CoverArtLibrary, coverArtSource(), "snes")
 
     /** A touch fling (and a drag) leaves no sliver at the top: a cut row shows a third of itself or is left out. */
     private fun fling(

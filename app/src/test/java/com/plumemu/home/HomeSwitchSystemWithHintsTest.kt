@@ -9,7 +9,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The roles and key caps of the two Switch system with choices, without a screen. */
+/** The roles and key caps of the two Switch list with choices, without a screen. */
 class HomeSwitchSystemWithHintsTest {
     private val content = FakeHomeContent.withArtwork()
     private val snes = content.entries[FakeHomeContent.BOARD_SNES_INDEX]

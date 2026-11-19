@@ -51,7 +51,9 @@ abstract class ScanDao(
      * by CASCADE) and every directory record, so the next scan reads all folders from scratch. In
      * one transaction: a crash midway leaves the library as it was. The picked folders stay (their
      * rows, so the lasting grants Android holds for them keep being used), and so do the systems'
-     * emulator choices, which belong to Settings › Emulators rather than to the games.
+     * emulator choices, which belong to Settings › Emulators rather than to the games. Collections
+     * and their memberships stay too: `collection_game.game_id` is SET NULL, and the next scan of
+     * each folder binds them again by key ([CollectionDao.bindFolder]).
      */
     @Transaction
     open suspend fun forgetLibrary() {
@@ -169,6 +171,8 @@ abstract class ScanDao(
         if (finish.directories.isNotEmpty()) upsertDirectories(finish.directories)
         finish.leftOut?.let { leftOut.write(finish.folderId, it) }
         clearPending(finish.folderId)
+        // After every delete: memberships of removed rows are unbound now and may find a row of this folder.
+        database.collectionDao().bindFolder(finish.folderId)
     }
 
     /**
@@ -183,6 +187,7 @@ abstract class ScanDao(
         addPlay(keptId, newId)
         movePlayIfKeptHasNone(keptId, newId)
         moveSessions(keptId, newId)
+        moveMemberships(keptId, newId)
         moveEmulatorChoiceIfKeptHasNone(keptId, newId)
         moveRowKeyFixIfKeptHasNone(keptId, newId, NameFixEntity.rowKey(keptId))
         markForNamingIfFixed(keptId, NameFixEntity.rowKey(keptId))
@@ -214,6 +219,7 @@ abstract class ScanDao(
         addPlay(keptId, foldedId)
         movePlayIfKeptHasNone(keptId, foldedId)
         moveSessions(keptId, foldedId)
+        moveMemberships(keptId, foldedId)
         moveEmulatorChoiceIfKeptHasNone(keptId, foldedId)
         moveNamingRowKeyFixIfKeptHasNone(keptId, foldedId, keptKey)
         markForNamingIfFixedOrNotAGame(keptId, keptKey)
@@ -233,6 +239,7 @@ abstract class ScanDao(
         addPlay(keptId, newId)
         movePlayIfKeptHasNone(keptId, newId)
         moveSessions(keptId, newId)
+        moveMemberships(keptId, newId)
         moveEmulatorChoiceIfKeptHasNone(keptId, newId)
         moveNamingRowKeyFixIfKeptHasNone(keptId, newId, keptKey)
         markForNamingIfFixed(keptId, keptKey)
@@ -315,6 +322,23 @@ abstract class ScanDao(
     // CASCADE of the delete that follows would drop them. `system_id` stays what was played.
     @Query("UPDATE play_session SET game_id = :keptId WHERE game_id = :fromId")
     protected abstract suspend fun moveSessions(keptId: Long, fromId: Long)
+
+    // A collection holds the game once: the row going leaves the collections the kept row is
+    // already in, then its other memberships move. Without this the delete would only unbind them
+    // (SET NULL) and the kept row could not take them back where both were members.
+    private suspend fun moveMemberships(keptId: Long, fromId: Long) {
+        dropMembershipsKeptHas(keptId, fromId)
+        moveMembershipRows(keptId, fromId)
+    }
+
+    @Query(
+        "DELETE FROM collection_game WHERE game_id = :fromId " +
+            "AND collection_id IN (SELECT collection_id FROM collection_game WHERE game_id = :keptId)",
+    )
+    protected abstract suspend fun dropMembershipsKeptHas(keptId: Long, fromId: Long)
+
+    @Query("UPDATE collection_game SET game_id = :keptId WHERE game_id = :fromId")
+    protected abstract suspend fun moveMembershipRows(keptId: Long, fromId: Long)
 
     @Query(
         "UPDATE emulator_choice SET game_id = :keptId WHERE game_id = :newId " +

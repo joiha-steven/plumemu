@@ -40,7 +40,7 @@ internal class SettingsBoxArtPanelWorkTest : SettingsModelHarness() {
     ) {
         actions.settings = actions.settings.copy(library = actions.settings.library.copy(boxArtSource = source))
         model.content = content(source, account, boxArt)
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(SettingsOption.BoxArtSource)
         press(Action.Enter)
         assertEquals(PanelPage.BoxArtSource, model.focus.page)
@@ -104,7 +104,7 @@ internal class SettingsBoxArtPanelWorkTest : SettingsModelHarness() {
     fun chooseSystemsWorksHereAndComesBackHere() {
         actions.settings = actions.settings.copy(library = actions.settings.library.copy(boxArtSource = BoxArtSourceSetting.LibretroOnly))
         model.content = content(BoxArtSourceSetting.LibretroOnly).copy(systems = twoSystems)
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(SettingsOption.BoxArtSource)
         press(Action.Enter)
         toWork(AccountPageItem.ChooseSystems)
@@ -227,7 +227,7 @@ internal class SettingsBoxArtPanelWorkTest : SettingsModelHarness() {
     fun touchFocusesThenActs() {
         actions.settings = actions.settings.copy(library = actions.settings.library.copy(boxArtSource = BoxArtSourceSetting.LibretroOnly))
         model.content = content(BoxArtSourceSetting.LibretroOnly)
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(SettingsOption.BoxArtSource)
         val at = boxArtPanelEntries(model.content).indexOf(BoxArtPanelEntry.Work(AccountPageItem.DownloadMissing))
         model.onTapPanelItem(at, actions.shown, wide)
@@ -271,7 +271,7 @@ internal class SettingsBoxArtPanelWorkTest : SettingsModelHarness() {
     @Test
     fun aSignedInPersonsScreenScraperPanelIsUntouched() {
         model.content = content(BoxArtSourceSetting.ScreenScraper, usable)
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(SettingsOption.ScraperAccount)
         press(Action.Enter)
         assertEquals(PanelPage.ScraperAccount, model.focus.page)

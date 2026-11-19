@@ -1,6 +1,7 @@
 package com.plumemu.game
 
 import androidx.compose.runtime.Composable
+import com.plumemu.graph.GraphCollections
 import com.plumemu.keyboard.KeyboardChoice
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -37,9 +38,10 @@ internal fun rememberGameMenuController(
     apps: AppActions = AppActions.None,
     keyboard: KeyboardChoice = KeyboardChoice.Plumemu,
     sorts: SortActions = SortActions.None,
+    collections: GraphCollections? = null,
 ): GameMenuController {
     val scope = rememberCoroutineScope()
-    val controller = remember(actions, apps, sorts, scope) { GameMenuController(actions, scope, apps, sorts) }
+    val controller = remember(actions, apps, sorts, collections, scope) { GameMenuController(actions, scope, apps, sorts, collections = collections) }
     SideEffect { controller.keyboardKind = keyboard }
     // Back from a download (or a package change meanwhile): a panel about emulators shows what is installed now.
     val lifecycle = LocalLifecycleOwner.current.lifecycle

@@ -231,7 +231,8 @@ class SettingsSingleScreensTest {
         val body = textNodes("How the systems", substring = true).first().boundsInRoot
         val systemsGap = bounds(SettingsTags.SYSTEMS_LIST).top - body.bottom
         val psx = SystemEmulators("psx", "PlayStation", automatic = null, chosen = null, installed = emptyList())
-        open(SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Emulators, rememberedOption = mapOf(SettingsSection.Emulators to 0), page = PanelPage.Emulators, systemId = "psx"), SettingsContent(systems = listOf(psx)), TextSize.Large)
+        val psxContent = SettingsContent(systems = listOf(psx))
+        open(emulatorsPageAt(psxContent), psxContent, TextSize.Large)
         val emulatorsBody = textNodes("Used when", substring = true).first().boundsInRoot
         assertEquals("same gap from the text to the list", bounds(SettingsTags.PANEL_LIST).top - emulatorsBody.bottom, systemsGap, 1f)
     }
@@ -280,13 +281,16 @@ class SettingsSingleScreensTest {
         return SystemEmulators("psx", "PlayStation", automatic = EmulatorEntry("duckstation", "DuckStation", isLegalRisk = false), chosen = null, installed = listOf(EmulatorEntry("duckstation", "DuckStation", isLegalRisk = false), swan))
     }
 
-    private fun emulatorsFocus(index: Int) =
-        SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Emulators, rememberedOption = mapOf(SettingsSection.Emulators to 0), page = PanelPage.Emulators, panelIndex = index, systemId = "psx")
+    private fun emulatorsFocus(
+        index: Int,
+        content: SettingsContent,
+    ) = emulatorsPageAt(content, index = index)
 
     private fun emulatorsFooterKeepsTheListsEndRoom() {
         var shown = 0
         for (size in listOf(TextSize.Small, TextSize.Medium, TextSize.Large, TextSize.Largest)) {
-            open(emulatorsFocus(2), SettingsContent(systems = listOf(longEmulatorSystem()), emulatorAppCount = 9), size)
+            val content = SettingsContent(systems = listOf(longEmulatorSystem()), emulatorAppCount = 9)
+            open(emulatorsFocus(2, content), content, size)
             // Measured but left out when the list needs the room: a footer not placed is not on screen.
             val footer = textNodes("9 emulators", substring = true).firstOrNull { it.layoutInfo.isPlaced }?.boundsInRoot ?: continue
             val card = compose.onNodeWithTag(SettingsTags.panelItem(2), useUnmergedTree = true).getUnclippedBoundsInRoot().bottom.value * density.density
@@ -308,7 +312,8 @@ class SettingsSingleScreensTest {
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
     fun focusedCardKeepsARowsPaddingRoundManyLines() {
         val psx = SystemEmulators("psx", "PlayStation", automatic = null, chosen = null, installed = emptyList())
-        open(emulatorsFocus(0), SettingsContent(systems = listOf(psx)), TextSize.Largest)
+        val content = SettingsContent(systems = listOf(psx))
+        open(emulatorsFocus(0, content), content, TextSize.Largest)
         val card = bounds(SettingsTags.panelItem(0))
         val text = textNodes("Ask on the first game", substring = true).firstOrNull { it.boundsInRoot.left >= card.left && it.boundsInRoot.right <= card.right + 1f }
             ?: textNodes("None installed", substring = true).first { it.boundsInRoot.left >= card.left }

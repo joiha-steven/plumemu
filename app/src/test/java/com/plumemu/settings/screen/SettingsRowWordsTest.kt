@@ -105,7 +105,7 @@ class SettingsRowWordsTest {
 
     @Test
     fun readOnlyRowsHaveNoMark() {
-        for ((option, value) in valuesOf(listOf(SettingsOption.Privacy, SettingsOption.ScraperStatus))) {
+        for ((option, value) in valuesOf(listOf(SettingsOption.Privacy))) {
             assertEquals(option.name + ": " + value, true, value is OptionValue.Text)
         }
     }

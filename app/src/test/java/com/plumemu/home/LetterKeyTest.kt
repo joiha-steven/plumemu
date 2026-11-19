@@ -82,7 +82,7 @@ class LetterKeyTest {
         assertTrue(byName.entries.first { it.kind == EntryKind.Favorites }.hasLetterRail)
         assertTrue(byName.entries.first { it.kind == EntryKind.Apps }.hasLetterRail)
         assertTrue(byName.entries.first { it.kind == EntryKind.System }.hasLetterRail)
-        assertFalse("Recent is by recency", byName.entries.first { it.kind == EntryKind.Recent }.hasLetterRail)
+        assertFalse("Recent is by recency", byName.folderEntries.first { it.kind == EntryKind.Recent }.hasLetterRail)
 
         val byPlayed = HomeContent.of(games, games, games, listOf(SystemGames("snes", "Super Nintendo", games)), sortedByName = false)
         assertTrue(byPlayed.entries.filter { it.kind != EntryKind.Apps }.none { it.hasLetterRail })

@@ -22,6 +22,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.plumemu.coreui.components.LocalConfirmCap
+import com.plumemu.coreui.components.PageGrain
 
 /**
  * What the person picked in Settings › Appearance (and Advanced › Animations). Every token is
@@ -182,6 +184,52 @@ fun PlumTheme(
         LocalPlumDimens provides PlumDimens,
         LocalPlumButtons provides buttons,
         LocalPlumEdgeFade provides settings.edgeFadeOn,
+        content = content,
+    )
+}
+
+/** What [HoldPlumTheme] keeps: every look the theme provides, plus the page grain and the confirm key cap that go with it. */
+private class HeldLook(
+    val colors: PlumComposeColors,
+    val type: PlumTypography,
+    val layout: PlumLayout,
+    val motion: PlumMotionState,
+    val buttons: ButtonColors?,
+    val edgeFade: Boolean,
+    val grain: PageGrain,
+    val confirmCap: String,
+)
+
+private class HeldLookBox {
+    var look: HeldLook? = null
+}
+
+/**
+ * [content] under the theme it had when [isHeld] last turned true, while [isHeld] stays true; the live theme otherwise.
+ * A screen kept composed but hidden under another one (the main screen under Settings) sees none of the other's colour,
+ * text size or grid changes, so a preview there recomposes nothing in it. When [isHeld] ends it gets the live look again:
+ * the same objects if nothing changed (nothing recomposes), new ones if it did.
+ */
+@Composable
+fun HoldPlumTheme(
+    isHeld: Boolean,
+    content: @Composable () -> Unit,
+) {
+    val box = remember { HeldLookBox() }
+    if (!isHeld || box.look == null) {
+        box.look =
+            HeldLook(PlumTheme.colors, PlumTheme.type, PlumTheme.layout, PlumTheme.motion, PlumTheme.buttons, PlumTheme.edgeFadeOn, LocalPageGrain.current, LocalConfirmCap.current)
+    }
+    val look = box.look ?: return
+    CompositionLocalProvider(
+        LocalPlumColors provides look.colors,
+        LocalPlumType provides look.type,
+        LocalPlumLayout provides look.layout,
+        LocalPlumMotion provides look.motion,
+        LocalPlumButtons provides look.buttons,
+        LocalPlumEdgeFade provides look.edgeFade,
+        LocalPageGrain provides look.grain,
+        LocalConfirmCap provides look.confirmCap,
         content = content,
     )
 }

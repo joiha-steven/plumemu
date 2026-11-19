@@ -31,10 +31,10 @@ internal class SettingsRaAccountTest : SettingsModelHarness() {
         model.content = model.content.copy(raAccount = status)
     }
 
-    private fun accounts() = SettingsSection.Accounts.rowsIn(model.content)
+    private fun accounts() = SettingsSection.Library.rowsIn(model.content).filter { it in setOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount) }
 
     private fun openRaRow() {
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(SettingsOption.RetroAchievementsAccount)
     }
 
@@ -66,14 +66,15 @@ internal class SettingsRaAccountTest : SettingsModelHarness() {
     }
 
     @Test
-    fun accountsListsScreenScraperThenRetroAchievementsAndKeepsOnlyTheRegionInLibrary() {
+    fun libraryListsBoxArtScreenScraperThenRetroAchievementsAndNoRegionRow() {
         assertEquals(listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount), accounts())
-        assertTrue(SettingsOption.RetroAchievementsAccount !in SettingsSection.Library.rowsIn(model.content))
+        assertTrue(SettingsOption.BoxArtRegion !in SettingsSection.Library.rowsIn(model.content))
     }
 
     @Test
-    fun theGamepadWalksTheAccountsSectionInOrder() {
-        openSection(SettingsSection.Accounts)
+    fun theGamepadWalksLibrarysAccountRowsInOrder() {
+        openSection(SettingsSection.Library)
+        focusOption(SettingsOption.BoxArtSource)
         assertEquals(SettingsOption.BoxArtSource, model.focusedOption)
         move(Direction.Down)
         assertEquals(SettingsOption.ScraperAccount, model.focusedOption)
@@ -156,9 +157,9 @@ internal class SettingsRaAccountTest : SettingsModelHarness() {
 
     @Test
     fun touchOpensTheFormAndPressesSignIn() {
-        openSection(SettingsSection.Accounts)
-        val row = accounts().indexOf(SettingsOption.RetroAchievementsAccount)
-        // ScreenScraper has the focus on entering: a first tap focuses this row, a second opens it.
+        openSection(SettingsSection.Library)
+        val row = SettingsSection.Library.rowsIn(model.content).indexOf(SettingsOption.RetroAchievementsAccount)
+        // Game folders has the focus on entering: a first tap focuses this row, a second opens it.
         model.onTapOption(row, actions.shown, wide)
         model.onTapOption(row, actions.shown, wide)
         val form = requireNotNull(model.signIn.form)

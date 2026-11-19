@@ -80,7 +80,7 @@ abstract class GameRowAbbrAlignBase {
                 widest = widestAbbreviation()
                 val row = GameRowModel("r0", longTitle, "USA", systemAbbr = widest)
                 val content = HomeContent.of(listOf(row), emptyList(), emptyList(), emptyList())
-                HomeAt(content, listOf(Action.TapItem(CoreColumn.Systems, 0), Action.Enter))
+                HomeAt(content, OpenRecentFolderByTap) // Recent is a folder inside Collections since the Collections change
             }
         }
         compose.waitForIdle()

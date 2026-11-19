@@ -19,7 +19,7 @@ internal class SettingsBoxArtRetryTest : SettingsModelHarness() {
         account: AccountStatus = AccountStatus.SignedIn("plumtester"),
     ) {
         model.content = model.content.copy(account = account, boxArt = boxArt)
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(SettingsOption.ScraperAccount)
     }
 

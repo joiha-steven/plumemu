@@ -3,6 +3,7 @@ package com.plumemu.telemetry
 import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
@@ -321,6 +322,17 @@ class TelemetryTest {
         val again = h.take().json()
         assertEquals("the same event ids, so the server stores them once", events(first), events(again))
         assertEquals(0, h.telemetry.queue.size())
+    }
+
+    /** The app ends its own process right after `recorded()`: what was tracked before is in the file a new process reads. */
+    @Test
+    fun anEventTrackedBeforeRecordedSurvivesTheProcessEndingAtOnce() {
+        h.telemetry.track(TelemetryEvent.ProcessRestarted)
+        runBlocking { withTimeout(5_000) { h.telemetry.recorded() } }
+        h.restart()
+        h.answer(204)
+        assertEquals(SendOutcome.Done, h.send())
+        assertTrue(names(h.take().json()).contains("process_restarted"))
     }
 
     @Test

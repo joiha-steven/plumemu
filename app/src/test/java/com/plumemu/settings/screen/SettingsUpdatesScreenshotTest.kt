@@ -109,8 +109,7 @@ class SettingsUpdatesScreenshotTest {
             SettingsContent(update = UpdateView(lastCheck = LastCheck(checkedAt, CheckOutcome.Failed(CheckFailure.Offline)))),
         )
 
-    /** The panel with nothing found, and the daily switch with what it sends brought into view. */
+    /** The panel with nothing found. */
     @Test fun nothingFound() = shot("settings_update_nothing_found", inPanel, SettingsContent(update = UpdateView(lastCheck = LastCheck(checkedAt, CheckOutcome.UpToDate))))
 
-    @Test fun dailySwitch() = shot("settings_update_daily", inPanel.copy(panelIndex = updatesPanelItems(found).indexOf(UpdatePanelItem.CheckDaily)), withUpdate)
 }

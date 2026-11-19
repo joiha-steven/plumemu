@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import android.content.Intent
+import com.plumemu.coreinput.strip.StripFocus
 import android.os.BatteryManager
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -77,7 +78,7 @@ class HomeBatteryLineTest {
             router = remember { InputRouter(scope, onDebug = {}) }
             PlumTheme {
                 CompositionLocalProvider(LocalHomePlayFacts provides FakePlayFacts(pace = pace)) {
-                    HomeScreen(LibraryLikeContent.of(), router, HomeCallbacks(games = games))
+                    HomeScreen(LibraryLikeContent.of(), router, HomeCallbacks(games = games), initialFocus = StripFocus())
                 }
             }
         }

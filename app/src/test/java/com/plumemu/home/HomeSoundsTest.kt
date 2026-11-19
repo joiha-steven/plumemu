@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.CompositionLocalProvider
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.plumemu.coreinput.Action
@@ -43,7 +44,7 @@ class HomeSoundsTest {
         compose.setContent {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
-            CompositionLocalProvider(LocalUiSounds provides heard.uiSounds) { PlumTheme(PlumThemeSettings.Default.copy(gridSize = gridSize)) { HomeScreen(content, router, HomeCallbacks(games = games)) } }
+            CompositionLocalProvider(LocalUiSounds provides heard.uiSounds) { PlumTheme(PlumThemeSettings.Default.copy(gridSize = gridSize)) { HomeScreen(content, router, HomeCallbacks(games = games), initialFocus = StripFocus()) } }
         }
         compose.waitForIdle()
     }

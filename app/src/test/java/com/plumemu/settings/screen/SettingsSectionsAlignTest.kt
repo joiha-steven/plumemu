@@ -86,7 +86,7 @@ abstract class SettingsSectionsAlignBase {
             val pinned = if (isThree) width - PlumDimens.stripMarginSide.value - SettingsThreeDimens.panelWidth.value else PANEL_LEFT[label]
             val pillRight = if (isThree) SettingsThreeDimens.sectionsWidth.value else (PlumDimens.stripMarginSide + PlumDimens.settingsSectionsWidth).value
             expect("header = hint key cap", near(header, hint), "header $header, hint $hint")
-            expect("every section's label", lefts.size == SettingsSection.shownIn(ShotContent.library).size, "${lefts.size} of the sections shown")
+            expect("every section's label", lefts.size == SettingsSection.entries.size, "${lefts.size} of the sections shown")
             val labelStart = LeftColumnDimens.sectionLabelStart.value
             expect("every label a row padding inside the header", lefts.all { near(it, labelStart) }, "header $header, labels ${lefts.distinct()}")
             expect("focused label a row padding inside the header", near(focusedLabel, labelStart), "focused $focusedLabel, header $header")
@@ -120,7 +120,7 @@ abstract class SettingsSectionsAlignBase {
 
     companion object {
         const val TOLERANCE = 0.5f
-        internal val FOCUSED = SettingsSection.Emulators
+        internal val FOCUSED = SettingsSection.Controls
 
         /** Where the option panel's left edge was before this change, by screen size (measured on main; the same at all six text sizes). 667 was 891 before: with a section focused the options column now ends at the right margin (PlumLayout.settingsOptionsPreviewWidth) so the section preview's values are no longer cut, and the panel after it moved to the screen edge. */
         val PANEL_LEFT: Map<String, Float> = mapOf("576x432" to 800f, "667x375" to 667f, "768x432" to 720f, "837x471" to 789f)

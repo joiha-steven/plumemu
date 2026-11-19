@@ -103,6 +103,7 @@ class SettingsRepositoryTest {
                 textSize = TextSizeSetting.Largest,
                 gridSize = GridSizeSetting.Small,
                 gridSystems = setOf("snes", "psp"),
+                listCollections = setOf("recent", "collection:3"),
                 ownColors = OwnColors(ColorSetting.Preset("Plum"), TextColorSetting.Light, ColorSetting.Custom(0xA79CF5), buttonSet = "Super"),
                 buttonSet = "Ivory",
                 language = "zh-TW", edgeFade = false, pageGrain = PageGrainSetting.Light,

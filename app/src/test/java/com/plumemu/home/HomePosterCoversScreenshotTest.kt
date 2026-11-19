@@ -30,7 +30,7 @@ class HomePosterCoversScreenshotTest {
     @Test
     fun mixedRecentGridSignedOut() =
         ReferenceShots.capture("home_grid_posters_recent") {
-            HomeAt(mixedSignedOutBoard(), gridActions(0, 1), gridIds = setOf("recent"))
+            HomeAt(mixedSignedOutBoard(), recentGridActions(1), gridIds = setOf("recent"))
         }
 
     @Test

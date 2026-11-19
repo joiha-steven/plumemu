@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.CompositionLocalProvider
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.test.hasTestTag
@@ -79,7 +80,7 @@ class HomeAchievementsTest {
             val router = remember { InputRouter(scope) }
             PlumTheme {
                 CompositionLocalProvider(LocalHomeAchievements provides HomeAchievements(newAchievements = unlocks)) {
-                    HomeScreen(FakeHomeContent.board(), router, HomeCallbacks())
+                    HomeScreen(FakeHomeContent.board(), router, HomeCallbacks(), initialFocus = StripFocus())
                 }
             }
         }

@@ -137,7 +137,9 @@ class SemanticsTreeSizeTest {
     @Test
     fun eachMainScreenKeepsItsSemanticsTreeWithinItsBudget() {
         show()
-        assertWithin("home (Recent)", HOME, HomeTags.system(0))
+        // The home lands on Favorites' games: Left stands on the systems column, as the journey expects.
+        press(Action.Move(Direction.Left))
+        assertWithin("home (systems)", HOME, HomeTags.system(0))
         press(Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Move(Direction.Right))
         // The hint bar offers Play only with a game focused.
         assertWithin("games list", GAMES_LIST, PLAY_HINT)
@@ -160,7 +162,10 @@ class SemanticsTreeSizeTest {
         // unmerged tree, unplaced, as they already do beside a shown list (GAMES_LIST counts them); a grid-to-list switch fell from 45 to 36 ms warm.
         // 2 more since grids are pages of a lazy row (GridPages, neighbour grids built ahead): the row and the shown page's node.
         const val APPS_GRID = 263
-        const val SETTINGS = 66
+        // 133 more since the main screen stays composed under Settings: its nodes are in the unmerged tree, cleared from the merged one
+        // TalkBack reads (HiddenUnderSettings), and the traversal sort over all of them took 0.3 ms.
+        // Measured 176 with the walk reaching its screens again (the home lands on Favorites' games); about 10 % margin.
+        const val SETTINGS = 190
         const val PLAY_HINT = "home_hint_Play"
         const val SORT_WARM_UP = 50
         const val SORT_ROUNDS = 7

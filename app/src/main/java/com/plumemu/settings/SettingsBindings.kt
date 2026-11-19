@@ -64,7 +64,7 @@ internal class ViewedSystem(
 }
 
 /**
- * [PlumTheme] with the stored appearance and Advanced › Animations. With the accent By system and a
+ * [PlumTheme] with the stored appearance and Appearance › Animations. With the accent By system and a
  * [viewed] system, the accent follows it: through one [State] that only the readers of the
  * accent read, so a system move recomposes nothing else (`HomeAccentBySystemTest`). Without [viewed]
  * (setup before the home screen, a pinned shortcut) the fallback colour shows.

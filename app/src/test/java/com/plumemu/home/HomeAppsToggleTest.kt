@@ -51,9 +51,9 @@ class HomeAppsToggleTest {
         show: Boolean,
     ): HomeContent =
         HomeContent.of(
-            recent = board.entries[0].rows,
-            favorites = board.entries[1].rows,
-            apps = board.entries[2].rows,
+            recent = board.recentRows,
+            favorites = board.favoriteRows,
+            apps = board.appRows,
             systems = board.entries.drop(FIRST_SYSTEM_INDEX).map { SystemGames(it.id, it.name.orEmpty(), it.rows, it.coverShape) },
             hasBoxArt = board.hasBoxArt,
             showApps = show,

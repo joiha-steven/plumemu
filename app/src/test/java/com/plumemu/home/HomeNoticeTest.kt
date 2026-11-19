@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.CompositionLocalProvider
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -57,7 +58,7 @@ class HomeNoticeTest {
             val scope = rememberCoroutineScope()
             val router = remember { InputRouter(scope) }
             val notices = HomeNotices(notice, dots, { shown += it; notice.value = null }, { opened += it })
-            PlumTheme { CompositionLocalProvider(LocalHomeNotices provides notices) { HomeScreen(content, router, HomeCallbacks()) } }
+            PlumTheme { CompositionLocalProvider(LocalHomeNotices provides notices) { HomeScreen(content, router, HomeCallbacks(), initialFocus = StripFocus()) } }
         }
         compose.mainClock.advanceTimeBy(50)
     }
@@ -96,7 +97,7 @@ class HomeNoticeTest {
             val router = remember { InputRouter(scope) }
             val notices = HomeNotices(notice, dots, { shown += it; notice.value = null }, { opened += it })
             PlumTheme(PlumThemeSettings(animationsOn = animations)) {
-                CompositionLocalProvider(LocalHomeNotices provides notices) { HomeScreen(content, router, HomeCallbacks()) }
+                CompositionLocalProvider(LocalHomeNotices provides notices) { HomeScreen(content, router, HomeCallbacks(), initialFocus = StripFocus()) }
             }
         }
         compose.mainClock.advanceTimeBy(50)

@@ -102,13 +102,13 @@ internal fun GamesPages(
                 // Until the row stands at the focused page (a switch moves it in the next composition), that page is placed off to the
                 // side and draws nothing here: its halo alone would stand over an empty list.
                 if (pages.firstVisibleItemIndex != shown || pages.firstVisibleItemScrollOffset != 0) return@drawBehind
-                val host = content.entries.getOrNull(shown)?.let { halos.hosts[it.id] } ?: return@drawBehind
+                val host = content.shownEntry(state.focus)?.let { halos.hosts[it.id] } ?: return@drawBehind
                 if (stretch == null) host.drawHalo(this) else drawWithEndMoved(stretch.rowEndShift()) { host.drawHalo(this) }
             }.overflowingSlot(stretch),
         userScrollEnabled = false,
     ) {
         itemsIndexed(content.entries, key = { _, entry -> entry.id }, contentType = { _, _ -> GAMES_PAGE }) { index, entry ->
-            GamesPage(index, entry, prefetch, listKeys, halos, content.hasBoxArt, showsPlace, showSystemInfo, state, positions, onAction, panelOpen)
+            GamesPage(index, entry, content, gridIds, prefetch, listKeys, halos, content.hasBoxArt, showsPlace, showSystemInfo, state, positions, onAction, panelOpen)
         }
     }
 }
@@ -123,6 +123,8 @@ internal fun GamesPages(
 private fun LazyItemScope.GamesPage(
     index: Int,
     entry: HomeEntry,
+    content: HomeContent,
+    gridIds: Set<String>,
     prefetch: NeighbourPagesPrefetch,
     listKeys: Set<String>,
     halos: PageHalos,
@@ -142,7 +144,14 @@ private fun LazyItemScope.GamesPage(
     val pin = rememberPagePin(index, entry.id, prefetch, state)
     val shown = pin.shown
     val page = remember(shown, pin) { Modifier.fillParentMaxSize().placedOnlyWhen(shown, pin.keepWhenMeasured).rowsInSemanticsOnlyWhen(shown) }
-    EntryGames(entry, halos, hasBoxArt, showsPlace, showSystemInfo, shown, state, positions, onAction, panelOpen, page)
+    // The Collections slot holds its folder list, or the folder last open in it (a list here, a grid in GridPages). One page per entry stays: the slot's.
+    val inner by remember(state, content, entry) { derivedStateOf { content.openFolderIn(entry, state.focus) } }
+    val listed = inner
+    if (listed != null && content.showsGrid(listed, gridIds)) {
+        Spacer(Modifier.fillParentMaxSize())
+        return
+    }
+    EntryGames(listed ?: entry, halos, hasBoxArt, showsPlace, showSystemInfo, shown, state, positions, onAction, panelOpen, page)
 }
 
 /** What a page needs from [rememberPagePin]: whether it is the shown one (read while placing) and the call a layout that built it makes. */
@@ -153,7 +162,7 @@ internal class PagePin(
 
 /**
  * Pins page [index] (key [key]) of a lazy row of pages while it is the shown entry's, or beside it and built ([NeighbourPagesPrefetch.isReady]),
- * so the row keeps it built; released when it is no longer beside the shown one. Used by the games lists and the grids ([GridPages]).
+ * so the row keeps it built; released when it is no longer beside the shown one. [rowAt]: the page the row stands on, when that, not the focus, says which is shown. Used by the games lists and the grids ([GridPages]).
  */
 @Composable
 internal fun rememberPagePin(
@@ -161,6 +170,7 @@ internal fun rememberPagePin(
     key: String,
     prefetch: NeighbourPagesPrefetch,
     state: StripState,
+    rowAt: (() -> Int)? = null,
 ): PagePin {
     val distance = { abs(state.focus.systemIndex - index) }
     val isNear by remember(state, index) { derivedStateOf { distance() <= 1 } }
@@ -177,7 +187,9 @@ internal fun rememberPagePin(
     // it is built, and waiting for the next composition would drop it in this layout pass.
     val keepWhenMeasured = remember(hold, state, index) { { if (Snapshot.withoutReadObservation { distance() <= 1 }) hold.pin() } }
     // Read while placing, not composing: showing a kept page only places it.
-    val isShown = remember(state, index) { derivedStateOf { state.focus.systemIndex == index } }
+    // With [rowAt] (the grids) the page is shown once the row itself stands on it, so the old page stays placed until the row has moved: layout
+    // can see the new focus before the recomposition that scrolls the row has run, and following the focus would leave a frame with no page.
+    val isShown = remember(state, index, rowAt) { derivedStateOf { (rowAt?.invoke() ?: state.focus.systemIndex) == index } }
     val shown = remember(isShown) { { isShown.value } }
     return remember(shown, keepWhenMeasured) { PagePin(shown, keepWhenMeasured) }
 }
@@ -314,7 +326,7 @@ private fun EntryGames(
         ) {
             if (info != null) item(key = SYSTEM_BAND_KEY, contentType = SYSTEM_BAND_KEY) { SystemInfoBand(info, visibleWidth, isPeeking = { state.focus.column == com.plumemu.coreinput.Column.Details }, rule = bandRule) }
             itemsIndexed(entry.rows, key = { _, row -> row.id }) { index, row ->
-                GamesListItem(index, row, entry.id, hasBoxArt, entry.kind.mixesSystems, showsPlace, isShown, forms, state, onAction, panelOpen)
+                GamesListItem(index, row, entry.id, hasBoxArt, entry.kind.mixesSystems, showsPlace, isShown, forms, state, onAction, panelOpen, isFolderRow = entry.isFolderList)
             }
         }
     }

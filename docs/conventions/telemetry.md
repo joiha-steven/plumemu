@@ -35,11 +35,11 @@ private things. `system_id` and `emulator_id` are the platform data's ids.
 | `setup_step` | `step` (folders / second_screen / artwork / scan / ready), `seconds`, `action` (next / back / skip) |
 | `setup_completed` | `seconds`, `artwork` (yes / no), `folders` (count), `systems_found` (count), `emulators_picked` (count); emulators_picked counts the systems with games for which an installed emulator was found (setup finds emulators, the person picks one on each system's first game) |
 | `library_scanned` | `trigger` (setup / startup / manual / folder_added / change_check), `games_bucket` (0, 1–99, 100–999, 1k–5k, 5k–10k, 10k+), `systems` (count), `seconds`, `result` (ok / folder_lost / error) |
-| `screen_opened` | `screen` (home / system / search / favorites / recent / apps / details / game_menu / settings_<section> / report / setup) |
+| `screen_opened` | `screen` (home / system / search / favorites / recent / collections / apps / details / game_menu / settings_<section> / report / setup) |
 | `view_changed` | `system_id`, `view` (list / grid / details), `grid_size` (small / medium / large, grid only) |
 | `search_used` | `query_length_bucket` (1–2, 3–5, 6+), `results_bucket` (0, 1–9, 10+), `opened_result` (yes / no); never the words |
 | `favorite_changed` | `system_id`, `change` (added / removed) |
-| `game_launched` | `system_id`, `emulator_id`, `from` (list / grid / details / recent / favorites / search / second_screen; statistics is retired: Settings › Statistics no longer starts games), `result` (ok / emulator_missing / emulator_not_chosen / file_missing / error); emulator_id is left out when none was chosen or installed |
+| `game_launched` | `system_id`, `emulator_id`, `from` (list / grid / details / recent / favorites / collections / search / second_screen; statistics is retired: Settings › Statistics no longer starts games), `result` (ok / emulator_missing / emulator_not_chosen / file_missing / error); emulator_id is left out when none was chosen or installed |
 | `game_session` | `system_id`, `emulator_id`, `minutes` (whole, capped at 600; from the launch to Plumemu back in front, the same time Settings › Statistics counts; sessions under 10 seconds are not sent) |
 | `emulator_picked` | `system_id`, `emulator_id`, `where` (setup / settings / per_game); setup is not sent today, as setup picks none |
 | `setting_changed` | `key`, `value` (only fixed choices: background preset or "custom", text colour, accent preset, "by_system" or "custom", font, text size, grid size (key `grid_size`, sent for L1 / R1 and the Size hint; Settings has no such row), keyboard, switch system with, sounds, animations, …; never a colour value or free text) |
@@ -47,6 +47,7 @@ private things. `system_id` and `emulator_id` are the platform data's ids.
 | `artwork_status` | `downloaded`, `failed`, `quota_hit` (counts) |
 | `update_check` | `trigger` (daily / manual), `result` (none / available / error) |
 | `update_installed` | `from_version`; sent when the version that ran last is known. The first update onto the build that starts storing it sends nothing, as does a fresh install; neither is counted as the other |
+| `process_restarted` | none; Plumemu ended its own process with the screen off because Android had compiled its code since the process started, so the next start runs the compiled code. At most once per install |
 | `backup_made` / `restore_done` | `kind` (settings / everything), `result` (ok / error) |
 | `error_shown` | `where` (screen id), `code` (the app's error code, never its message) |
 | `queue_overflow` | `dropped` (count) |

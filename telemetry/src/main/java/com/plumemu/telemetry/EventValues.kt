@@ -67,7 +67,9 @@ public enum class ScanResult(override val wire: String) : WireValue {
 
 /**
  * `screen_opened.screen` and `error_shown.where`. The Settings sections are listed one by one
- * (`settings_<section>`); a new section is added here and in the server's allow-list.
+ * (`settings_<section>`); a new section is added here and in the server's allow-list. Emulators,
+ * Second screen, Box art & accounts and Advanced are no longer sections: only older versions send
+ * those four, so they stay here and on the server.
  */
 public enum class ScreenId(override val wire: String) : WireValue {
     Home("home"),
@@ -75,6 +77,7 @@ public enum class ScreenId(override val wire: String) : WireValue {
     Search("search"),
     Favorites("favorites"),
     Recent("recent"),
+    Collections("collections"),
     Apps("apps"),
     Details("details"),
     GameMenu("game_menu"),
@@ -112,6 +115,9 @@ public enum class LaunchFrom(override val wire: String) : WireValue {
     Details("details"),
     Recent("recent"),
     Favorites("favorites"),
+
+    /** A on a game of Most played, Recently added or an own collection (Recent keeps `recent`). */
+    Collections("collections"),
     Search("search"),
     SecondScreen("second_screen"),
 

@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import android.view.InputDevice
+import com.plumemu.coreinput.strip.StripFocus
 import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.compose.runtime.getValue
@@ -69,6 +70,7 @@ class HomeGridSizeKeysTest {
                             if (followsWrites) stored = size
                         },
                     ),
+                    initialFocus = StripFocus(),
                 )
             }
         }
@@ -254,12 +256,12 @@ class HomeGridSizeKeysTest {
     fun theHintSaysSwitchSystemEverywhereAndSizeInTheGridOnly() {
         show()
         send(*List(FakeHomeContent.BOARD_SNES_INDEX) { Action.Move(Direction.Down) }.toTypedArray(), Action.Enter)
-        assertTrue(hasText("Switch system") && !hasText("Size"))
+        assertTrue(hasText("Switch list") && !hasText("Size"))
         send(Action.ToggleView)
-        assertTrue("a game grid has both", hasText("Size") && hasText("Switch system"))
+        assertTrue("a game grid has both", hasText("Size") && hasText("Switch list"))
         assertTrue("SELECT still offers the list", hasText("List view"))
         send(Action.ToggleView)
-        assertTrue(hasText("Switch system") && !hasText("Size"))
+        assertTrue(hasText("Switch list") && !hasText("Size"))
     }
 
     @Test

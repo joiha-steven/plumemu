@@ -30,7 +30,7 @@ internal fun isGridSizeKey(
     gridIds: Set<String>,
 ): Boolean {
     if (action != Action.PreviousSystem && action != Action.NextSystem || focus.column != Column.Games) return false
-    val entry = content.entries.getOrNull(focus.systemIndex)
+    val entry = content.shownEntry(focus)
     return entry?.isIconGrid != true && content.showsGrid(entry, gridIds)
 }
 
@@ -45,7 +45,7 @@ internal fun isAppsGridKey(
     gridIds: Set<String>,
 ): Boolean {
     if (action != Action.PreviousSystem && action != Action.NextSystem || focus.column != Column.Games) return false
-    val entry = content.entries.getOrNull(focus.systemIndex)
+    val entry = content.shownEntry(focus)
     return entry?.isIconGrid == true && content.showsGrid(entry, gridIds)
 }
 

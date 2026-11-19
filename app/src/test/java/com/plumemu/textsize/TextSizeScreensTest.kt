@@ -326,11 +326,8 @@ abstract class TextSizeScreensBase(
 
     @Test
     fun settingsEmulators() =
-        check("settings_emulators", Spec(scrollTags = settingsLists + SettingsTags.PANEL_LIST, focused = tagged(SettingsTags.system(0)))) {
-            SettingsAt(
-                SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Emulators, rememberedOption = mapOf(SettingsSection.Emulators to 0)),
-                content = ShotContent.library,
-            )
+        check("settings_emulators", Spec(scrollTags = settingsLists + SettingsTags.PANEL_LIST, focused = tagged(SettingsTags.option(SettingsOption.Emulators)))) {
+            SettingsAt(optionsAt(SettingsOption.Emulators, ShotContent.library), content = ShotContent.library)
         }
 
     // Library › Systems with System order on top; the carried row at the bottom stays whole.
@@ -366,6 +363,9 @@ abstract class TextSizeScreensBase(
         OpenPanel(game, PanelScreen.Menu(facts), focus = 1).let { panel ->
             check("game_menu", Spec(GamePanelTags.PANEL, setOf(GamePanelTags.ROWS), focused = focusedRow(panel), shoot = true), panelOver(panel))
         }
+
+    @Test
+    fun gamePanelCollectionPickerLongTitle() = check("game_collection_picker_long", Spec(GamePanelTags.PANEL, setOf(GamePanelTags.ROWS), ellipsisUnder = GamePanelTags.SUBTITLE, ellipsisFrom = TextSize.Small, focused = focusedRow(longPickerPanel), shoot = true), panelOver(longPickerPanel))
 
     @Test
     fun gamePanelInfo() =
@@ -502,7 +502,8 @@ abstract class TextSizeScreensBase(
         page: PanelPage? = null,
         panelIndex: Int = 0,
         focusedTag: String = SettingsTags.option(option),
-    ) = check(name, Spec(scrollTags = settingsLists + SettingsTags.ACCOUNT_PANEL, focused = tagged(focusedTag))) {
+        panelTag: String = SettingsTags.ACCOUNT_PANEL,
+    ) = check(name, Spec(scrollTags = settingsLists + panelTag, focused = tagged(focusedTag))) {
         val content = AccountShotContent.of(account)
         SettingsAt(AccountShotContent.focusOn(content, option, page).copy(panelIndex = panelIndex), content = content)
     }
@@ -518,7 +519,7 @@ abstract class TextSizeScreensBase(
         accountRows("settings_account_daily_limit", AccountStatus.SignedIn("plumtester", dailyLimitUntilMillis = AccountShots.RESUME_AT_MILLIS), SettingsOption.ScraperAccount)
 
     @Test
-    fun settingsAccountNotAvailable() = accountRows("settings_account_not_available", AccountStatus.NotInThisBuild, SettingsOption.ScraperStatus)
+    fun settingsAccountNotAvailable() = accountRows("settings_account_not_available", AccountStatus.NotInThisBuild, SettingsOption.BoxArtSource, panelTag = SettingsTags.PANEL_LIST)
 
     @Test
     fun settingsBoxArtRegion() = accountPageItems(AccountShotContent.of(BoxArtShots.SIGNED_IN)).indexOf(AccountPageItem.BoxArtRegion).let { accountRows("settings_box_art_region", BoxArtShots.SIGNED_IN, SettingsOption.ScraperAccount, PanelPage.ScraperAccount, it, SettingsTags.panelItem(it)) }

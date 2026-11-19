@@ -481,7 +481,7 @@ class HomeRecompositionTest {
     fun mixedGridMoveWithLiveArtRecomposesNoCoverOnlyTheBarTitle() {
         lateinit var state: StripState
         compose.setContent {
-            PlumTheme { ProvideGridSize(GridSize.Large) { HomeWithArt(rememberSource { mixedGridSource() }, gridActions(0, 1), MixedGridLibrary, gridIds = setOf(HomeContent.RECENT_ID), onState = { state = it }) } }
+            PlumTheme { ProvideGridSize(GridSize.Large) { HomeWithArt(rememberSource { mixedGridSource() }, recentGridActions(1), MixedGridLibrary, gridIds = setOf(HomeContent.RECENT_ID), onState = { state = it }) } }
         }
         compose.waitForIdle()
         val before = state.focus.row

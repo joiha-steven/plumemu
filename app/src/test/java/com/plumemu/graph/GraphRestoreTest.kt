@@ -59,7 +59,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Settings › Advanced › Restore… on the graph, on real files
+ * Settings › About › Restore… on the graph, on real files
  * ([GraphRestoreFixture]): what an Everything and a Settings file replace, the way-back set and
  * Undo, the account, another device's folders and shortcuts.
  */

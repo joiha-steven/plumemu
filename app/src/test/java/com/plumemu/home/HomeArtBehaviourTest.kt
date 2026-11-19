@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.getValue
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -57,6 +58,7 @@ class HomeArtBehaviourTest {
                     content,
                     router,
                     HomeCallbacks(apps = apps, games = games),
+                    initialFocus = StripFocus(),
                 )
             }
         }
@@ -127,7 +129,7 @@ class HomeArtBehaviourTest {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
             PlumTheme(PlumThemeSettings.Default.copy(gridSize = gridSize)) {
-                HomeScreen(FakeHomeContent.withArtwork(), router, HomeCallbacks(games = games))
+                HomeScreen(FakeHomeContent.withArtwork(), router, HomeCallbacks(games = games), initialFocus = StripFocus())
             }
         }
         compose.waitForIdle()

@@ -9,7 +9,7 @@ Buttons and touch are equals. Every handheld has both.
   games focus reads them as grid size (`home/GridSizeKeys.kt`, hint "L1 R1 Size"). The main screen
   swaps the shoulder keys: L2 / R2 (`JumpLetter*`) switch the system and in a list
   L1 / R1 jump a letter (`homeAction` in `home/HomeActions.kt`); Settings, Search and the keyboard
-  read the generic names as before. Settings › Controls › Switch system with
+  read the generic names as before. Settings › Controls › Switch list with
   can trade the two pairs back: every shoulder key on Home goes through `ShoulderKeys.read`
   (`settings/ShoulderKeys.kt`) before `homeAction` or the grid size keys see it, and the hints come
   from `hintsFor(shoulders)`. A new reading of a shoulder key on Home goes through `read` too.

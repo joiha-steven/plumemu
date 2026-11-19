@@ -18,7 +18,7 @@ internal class SettingsRaKeyPageTest : SettingsModelHarness() {
     /** A on the row opens the form typing on the name (tray up); B puts the tray away and the form stays. */
     private fun openForm(option: SettingsOption) {
         model.content = model.content.copy(account = com.plumemu.account.AccountStatus.SignedOut, chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper)
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(option)
         press(Action.Enter)
         val form = requireNotNull(model.signIn.form)

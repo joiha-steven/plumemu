@@ -178,7 +178,7 @@ internal class GraphScraperAccounts(
     }
 
     /**
-     * The account for Settings › Advanced › Back up…: the name and the password
+     * The account for Settings › About › Back up…: the name and the password
      * decrypted, so another device can restore it (its key store cannot read this one's ciphertext).
      * Null when signed out or in a build without box art; the password null when it cannot be
      * decrypted here (the restore then asks for a sign-in). A failed read of the account file throws:

@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.getValue
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -67,7 +68,7 @@ class CoreQuestionScreenTest {
                         sent += notices.releaseHeldSession(question)
                     },
                 )
-            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games, notices = home)) }
+            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games, notices = home), initialFocus = StripFocus()) }
         }
         compose.waitForIdle()
     }

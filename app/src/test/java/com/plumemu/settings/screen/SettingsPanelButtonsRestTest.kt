@@ -161,8 +161,8 @@ class SettingsPanelButtonsRestTest {
     @Test
     fun theRefusedRaPageShowsItsTitleAtTheTopAtLarger() {
         val content = AccountShotContent.of(AccountStatus.SignedOut).copy(raAccount = RaAccountStatus.SignedIn("plumtester", 1234, isKeyRefused = true))
-        val row = SettingsSection.Accounts.rowsIn(content).indexOf(SettingsOption.RetroAchievementsAccount)
-        val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Accounts, rememberedOption = mapOf(SettingsSection.Accounts to row), page = PanelPage.RaAccount)
+        val row = SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.RetroAchievementsAccount)
+        val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Library, rememberedOption = mapOf(SettingsSection.Library to row), page = PanelPage.RaAccount)
         titleStaysAtTheTop(focus, content, TextSize.Larger, listOf(SIZES[1]))
     }
 

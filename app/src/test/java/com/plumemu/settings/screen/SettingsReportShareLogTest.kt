@@ -71,7 +71,7 @@ internal class SettingsReportShareLogTest : SettingsModelHarness() {
     @Test
     fun withNoStatisticsServerExportLogsIsTheWay() {
         model.content = SettingsContent(hasStatistics = false)
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.ExportLogs)
         press(Action.Enter)
         assertEquals(1, actions.logExports)

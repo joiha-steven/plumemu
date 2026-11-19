@@ -23,10 +23,10 @@ class HomeEmptyFavoritesScreenshotTest {
     @Test
     fun emptyRecent() =
         ReferenceShots.capture("home_recent_empty", sizes = ReferenceShots.Size.entries) {
-            HomeAt(FakeHomeContent.noRecent(), listOf(Action.TapItem(Column.Systems, 0)))
+            HomeAt(FakeHomeContent.noRecent(), OpenRecentFolderByTap)
         }
 
     private companion object {
-        const val FAVORITES_INDEX = 1
+        const val FAVORITES_INDEX = 0
     }
 }

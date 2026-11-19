@@ -395,6 +395,32 @@ object PlumMigrations {
     }
 
     /**
+     * Schema 20: the person's collections, two new empty tables. Writes no row and
+     * touches no existing table; `IF NOT EXISTS` makes a second run a no-op that keeps what was
+     * stored in between. Going back is the backup taken before an update: an older build refuses
+     * the file (Room has no downgrade).
+     */
+    val MIGRATION_19_20: Migration = object : Migration(19, 20) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `collection` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, " +
+                    "`position` INTEGER NOT NULL, `created_at` INTEGER NOT NULL)",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `collection_game` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`collection_id` INTEGER NOT NULL, `game_id` INTEGER, `content_key` TEXT, `path_key` TEXT NOT NULL, " +
+                    "`added_at` INTEGER NOT NULL, " +
+                    "FOREIGN KEY(`collection_id`) REFERENCES `collection`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                    "FOREIGN KEY(`game_id`) REFERENCES `game`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+            )
+            db.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_collection_game_collection_id_game_id` ON `collection_game` (`collection_id`, `game_id`)",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_collection_game_game_id` ON `collection_game` (`game_id`)")
+        }
+    }
+
+    /**
      * Every migration, oldest first. [rating] reads a stored details JSON for [migration15To16]:
      * the app passes the scraper's reader.
      */
@@ -402,7 +428,7 @@ object PlumMigrations {
         arrayOf(
             MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
             MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15,
-            migration15To16(rating), MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19,
+            migration15To16(rating), MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20,
         )
 
     private val SESSION_BATTERY_COLUMNS_V8 = listOf("battery_seconds", "charge_start_uah", "charge_end_uah", "battery_draw_ua")

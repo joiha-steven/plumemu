@@ -40,13 +40,11 @@ internal abstract class SettingsNavigation(
             shownContent = value
             // Not a move: no sound, only the same item kept under the cursor. The first content is
             // what the focus was made for (the placeholder before it has no rows to follow).
+            val rowBefore = focus.optionIn(before)
             if (hasContent && before != value) focusKeptIn(before, value)?.let { focus = it }
-            // A section that left (Second screen with its device, Emulators with the last game): the focus goes to the section above it.
-            // Not moveTo: no move sound for a change nobody made, and these sections open no page that onFocusChanging must leave.
-            val shown = SettingsSection.shownIn(value)
-            if (focus.section !in shown) {
-                val above = SettingsSection.entries.take(focus.section.ordinal).lastOrNull { it in shown } ?: shown.first()
-                focus = focus.copy(column = SettingsColumn.Sections, section = above, page = null, panelIndex = 0)
+            // The row whose panel is open left (a second screen unplugged): the panel closes on the nearest row, never showing another row's.
+            if (hasContent && focus.column == SettingsColumn.Panel && rowBefore != null && rowBefore !in focus.section.rowsIn(value)) {
+                focus = focus.copy(column = SettingsColumn.Options, page = null, panelIndex = 0, rememberedOption = focus.rememberedOption + (focus.section to focus.optionIndexIn(value)))
             }
             // "Already reading your games" stays under the progress line until the scan ends.
             if (before.isScanning && !value.isScanning) work.clearScanBusyNotice()
@@ -115,7 +113,7 @@ internal abstract class SettingsNavigation(
         step: Int,
         column: SettingsColumn,
     ) {
-        val sections = SettingsSection.shownIn(content)
+        val sections = SettingsSection.entries
         var at = sections.indexOf(focus.section) + step
         if (column == SettingsColumn.Options) {
             while (at in sections.indices && sections[at].rowsIn(content).isEmpty()) at += step
@@ -181,7 +179,7 @@ internal abstract class SettingsNavigation(
         moveTo(focus.copy(page = PanelPage.UnidentifiedGames, panelIndex = (page?.listIndex ?: 0).coerceAtMost(remaining - 1)))
     }
 
-    /** Accounts › ScreenScraper while signed out: the sign-in form. */
+    /** Library › ScreenScraper while signed out: the sign-in form. */
     val signIn = SettingsSignIn()
 
     /**
@@ -390,10 +388,10 @@ internal abstract class SettingsNavigation(
         /** Pages one step deeper because Colors' panel opened them. */
         private val PAGES_UNDER_COLORS = setOf(PanelPage.BackgroundPresets, PanelPage.TextPresets, PanelPage.AccentPresets, PanelPage.BackgroundCustom, PanelPage.TextCustom, PanelPage.AccentCustom)
 
-        /** Pages one step deeper because the list of Back up and restore's or Reset…'s panel opened them; they keep the column, unlike [DEEP_PAGES]. */
-        private val PAGES_UNDER_LISTS = setOf(PanelPage.Backup, PanelPage.Restore, PanelPage.UndoRestore, PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm, PanelPage.ResetRecentConfirm)
+        /** Pages one step deeper because the list of Emulators', Back up and restore's or Reset…'s panel opened them; they keep the column, unlike [DEEP_PAGES]. */
+        private val PAGES_UNDER_LISTS = setOf(PanelPage.Emulators, PanelPage.Collection, PanelPage.CollectionRename, PanelPage.CollectionDelete, PanelPage.Backup, PanelPage.Restore, PanelPage.UndoRestore, PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm, PanelPage.ResetRecentConfirm)
 
         /** Pages one step deeper than their column (a colour's custom page, a licence text, a confirm, Fix name…). */
-        val DEEP_PAGES = setOf(PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom, PanelPage.LicenseText, PanelPage.Folder, PanelPage.SkipSubfolder, PanelPage.RemoveFolder, PanelPage.FixName, PanelPage.ScraperSignIn, PanelPage.ProblemReport, PanelPage.ScraperSystems, PanelPage.ScraperConfirm, PanelPage.ScraperSignOutConfirm, PanelPage.RaSignOutConfirm, PanelPage.ScraperClearConfirm, PanelPage.UnknownFolder)
+        val DEEP_PAGES = setOf(PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom, PanelPage.LicenseText, PanelPage.Folder, PanelPage.SkipSubfolder, PanelPage.RemoveFolder, PanelPage.FixName, PanelPage.CollectionRename, PanelPage.ScraperSignIn, PanelPage.ProblemReport, PanelPage.ScraperSystems, PanelPage.ScraperConfirm, PanelPage.ScraperSignOutConfirm, PanelPage.RaSignOutConfirm, PanelPage.ScraperClearConfirm, PanelPage.UnknownFolder)
     }
 }

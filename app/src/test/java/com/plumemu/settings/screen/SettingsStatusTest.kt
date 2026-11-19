@@ -95,13 +95,12 @@ class SettingsStatusTest {
         show(optionsAt(SettingsOption.Version))
         compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed() // Version: A opens its panel
         compose.onNodeWithTag(SettingsTags.HINT_BACK).assertIsDisplayed()
-        press(Action.Move(Direction.Down)) // Send usage statistics: A flips it
-        compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed()
-        press(Action.Move(Direction.Down)) // Open-source licenses: A opens the list
-        compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed()
-        press(Action.Move(Direction.Down)) // Privacy
-        compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertDoesNotExist()
-        compose.onNodeWithTag(SettingsTags.HINT_BACK).assertIsDisplayed()
+        // Every row below Version has a confirm hint (a panel, a switch or a list) but Privacy, which is read only.
+        for (option in SettingsSection.About.rowsIn(SettingsContent()).drop(1)) {
+            press(Action.Move(Direction.Down))
+            if (option == SettingsOption.Privacy) compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertDoesNotExist() else compose.onNodeWithTag(SettingsTags.HINT_CONFIRM).assertIsDisplayed()
+            compose.onNodeWithTag(SettingsTags.HINT_BACK).assertIsDisplayed()
+        }
     }
 
     @Test

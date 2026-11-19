@@ -10,13 +10,13 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Advanced › Reset…: three items in a list (two resets and Clear Recent…), each asking first with the cursor on Cancel, by keys and by touch. */
+/** About › Reset…: three items in a list (two resets and Clear Recent…), each asking first with the cursor on Cancel, by keys and by touch. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 internal class SettingsResetPanelTest : SettingsModelHarness() {
     private fun openList() {
         model.content = SettingsContent()
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.Reset)
         press(Action.Enter)
         assertEquals(PanelPage.Reset, model.focus.page)
@@ -89,7 +89,7 @@ internal class SettingsResetPanelTest : SettingsModelHarness() {
     @Test
     fun byTouchTheResetTakesAFocusingTapAndAPress() {
         model.content = SettingsContent()
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.Reset)
         val settings = actions.shown
         model.onTapPanelItem(ResetPanelItem.Library.ordinal, settings, wide)
@@ -105,7 +105,7 @@ internal class SettingsResetPanelTest : SettingsModelHarness() {
     @Test
     fun theRowsStayReachableWhenTheLibraryCannotBeRead() {
         // Nothing of the library arrives: the section still lists them.
-        val rows = SettingsSection.Advanced.rowsIn(SettingsContent())
+        val rows = SettingsSection.About.rowsIn(SettingsContent())
         assertEquals(true, SettingsOption.Reset in rows)
         assertEquals(true, SettingsOption.BackupAndRestore in rows)
         assertEquals(ResetPanelItem.entries.size, PanelGrid.of(PanelPage.Reset, wide, SettingsContent(), SettingsFocus(), actions.shown)?.count)

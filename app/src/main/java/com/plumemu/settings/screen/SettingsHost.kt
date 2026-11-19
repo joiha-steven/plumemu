@@ -149,10 +149,10 @@ internal interface SettingsActivityActions {
     /** Plumemu has Usage access; asked when Settings comes back to the front, like [isHomeApp]. */
     fun isUsageAccessGranted(): Boolean = false
 
-    /** Android's save picker for a [kind] backup (Advanced › Back up…); false when the device has none. */
+    /** Android's save picker for a [kind] backup (About › Back up…); false when the device has none. */
     fun openBackupPicker(kind: BackupKind): Boolean
 
-    /** Android's open picker for a backup file (Advanced › Restore…); false when the device has none. */
+    /** Android's open picker for a backup file (About › Restore…); false when the device has none. */
     fun openRestorePicker(): Boolean
 
     /**
@@ -164,7 +164,7 @@ internal interface SettingsActivityActions {
     /** Android's notification settings for Plumemu (Updates › Turn on notifications); false when the device has none. */
     fun openNotificationSettings(): Boolean = false
 
-    /** Advanced › Export logs: the log file to Android's share sheet; [onDone] on the main thread. */
+    /** About › Export logs: the log file to Android's share sheet; [onDone] on the main thread. */
     fun exportLogs(onDone: (Boolean) -> Unit) = onDone(false)
 
     object None : SettingsActivityActions {
@@ -203,11 +203,13 @@ internal class SettingsHost(
     val library: SettingsLibraryActions = SettingsLibraryActions.None,
     /** Unidentified games and Fix name…. */
     val names: SettingsNameActions = SettingsNameActions.None,
+    /** Library › Collections: rename, delete, move. */
+    val collections: SettingsCollectionActions = SettingsCollectionActions.None,
     /** The ScreenScraper account. */
     val accounts: ScraperAccounts = ScraperAccounts.Unavailable,
     /** The RetroAchievements account (Accounts). */
     val raAccounts: RaAccounts = RaAccounts.None,
-    /** Advanced › Reset… › Clear Recent…. */
+    /** About › Reset… › Clear Recent…. */
     val recent: SettingsRecentActions = SettingsRecentActions.None,
     /** Box art's Download missing, Re-download, Pause and Resume. */
     val boxArt: SettingsBoxArtActions = SettingsBoxArtActions.None,
@@ -215,9 +217,9 @@ internal class SettingsHost(
     val activity: SettingsActivityActions = SettingsActivityActions.None,
     /** Statistics' figures and the covers' loader. */
     val statistics: SettingsStatisticsSource = SettingsStatisticsSource.None,
-    /** Advanced › Back up…'s Cancel and its result (the picker is [activity]'s). */
+    /** About › Back up…'s Cancel and its result (the picker is [activity]'s). */
     val backupWork: BackupWork = BackupWork.None,
-    /** Advanced › Restore… and Undo last restore (the picker is [activity]'s). */
+    /** About › Restore… and Undo last restore (the picker is [activity]'s). */
     val restoreWork: RestoreWork = RestoreWork.None,
     /** About › Version: Check now and Update. */
     val updates: SettingsUpdateActions = SettingsUpdateActions.None,
@@ -312,6 +314,8 @@ internal class SettingsHost(
             ) = library.listSubfolders(folderId, onDone)
 
             override val names: SettingsNameActions get() = this@SettingsHost.names
+
+            override val collections: SettingsCollectionActions get() = this@SettingsHost.collections
 
             override val accounts: ScraperAccounts get() = this@SettingsHost.accounts
 

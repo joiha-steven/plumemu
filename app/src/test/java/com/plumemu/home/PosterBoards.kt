@@ -40,6 +40,6 @@ internal fun posterSnesBoardWithDetails(): HomeContent {
 internal fun mixedSignedOutBoard(): HomeContent {
     val library = MixedGridLibrary
     val systems = library.entries.filter { it.kind == EntryKind.System }.map { SystemGames(it.id, it.name.orEmpty(), it.rows.map { row -> row.copy(details = null) }, it.coverShape) }
-    val recent = library.entries[0].rows.map { it.copy(details = null) }
+    val recent = library.recentRows.map { it.copy(details = null) }
     return HomeContent.of(recent, emptyList(), emptyList(), systems, showApps = false)
 }

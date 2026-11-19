@@ -5,18 +5,18 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** Settings › Advanced › Export logs, in a build with no Report a problem: A or a tap asks the Activity to share; a failure is said under the row. */
+/** Settings › About › Export logs, in a build with no Report a problem: A or a tap asks the Activity to share; a failure is said under the row. */
 internal class SettingsExportLogsTest : SettingsModelHarness() {
     @Test
-    fun exportLogsIsListedLastInAdvanced() {
-        assertEquals(SettingsOption.ExportLogs, SettingsSection.Advanced.options.last())
+    fun exportLogsIsListedLastInAbout() {
+        assertEquals(SettingsOption.ExportLogs, SettingsSection.About.options.last())
         assertEquals(OptionKind.Action, SettingsOption.ExportLogs.kind)
     }
 
     @Test
     fun aPressSharesTheLogAndAFailureIsSaid() {
         model.content = SettingsContent(hasStatistics = false)
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.ExportLogs)
         press(Action.Enter)
         assertEquals(1, actions.logExports)

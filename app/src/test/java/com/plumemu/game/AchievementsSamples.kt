@@ -6,6 +6,7 @@ import com.plumemu.graph.AchievementsError
 import com.plumemu.graph.AchievementsState
 import com.plumemu.home.GameRowModel
 import com.plumemu.home.HomeContent
+import com.plumemu.home.recentRows
 import com.plumemu.home.SystemGames
 import com.plumemu.home.FakeHomeContent
 import com.plumemu.home.EntryKind
@@ -70,7 +71,7 @@ internal object AchievementsSamples {
                 SystemGames(entry.id, entry.name.orEmpty(), rows, entry.coverShape, code = entry.code)
             }
         fun rows(kind: EntryKind) = board.entries.first { it.kind == kind }.rows
-        return HomeContent.of(rows(EntryKind.Recent), rows(EntryKind.Favorites), rows(EntryKind.Apps), systems, hasBoxArt = true)
+        return HomeContent.of(board.recentRows, rows(EntryKind.Favorites), rows(EntryKind.Apps), systems, hasBoxArt = true)
     }
 
     const val FIRST_ID = 1000L

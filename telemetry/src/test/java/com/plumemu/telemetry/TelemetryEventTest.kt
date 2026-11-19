@@ -34,6 +34,7 @@ class TelemetryEventTest {
                             mapOf("trigger" to "folder_added", "games_bucket" to "10k+", "systems" to "30", "seconds" to "75", "result" to "folder_lost")
                     ),
                 TelemetryEvent.ScreenOpened(ScreenId.GameMenu) to ("screen_opened" to mapOf("screen" to "game_menu")),
+                TelemetryEvent.ScreenOpened(ScreenId.Collections) to ("screen_opened" to mapOf("screen" to "collections")),
                 TelemetryEvent.ViewChanged.ToList(SystemRef("snes")) to ("view_changed" to mapOf("system_id" to "snes", "view" to "list")),
                 TelemetryEvent.ViewChanged.ToGrid(SystemRef("snes"), GridSize.Medium) to
                     ("view_changed" to mapOf("system_id" to "snes", "view" to "grid", "grid_size" to "medium")),
@@ -59,6 +60,7 @@ class TelemetryEventTest {
                 TelemetryEvent.UpdateCheck(UpdateTrigger.Daily, UpdateCheckResult.Available) to
                     ("update_check" to mapOf("trigger" to "daily", "result" to "available")),
                 TelemetryEvent.UpdateInstalled("0.0.2-alpha") to ("update_installed" to mapOf("from_version" to "0.0.2-alpha")),
+                TelemetryEvent.ProcessRestarted to ("process_restarted" to emptyMap()),
                 TelemetryEvent.BackupMade(BackupKind.Everything, OkOrError.Ok) to ("backup_made" to mapOf("kind" to "everything", "result" to "ok")),
                 TelemetryEvent.RestoreDone(BackupKind.Settings, OkOrError.Error) to ("restore_done" to mapOf("kind" to "settings", "result" to "error")),
                 TelemetryEvent.ErrorShown(ScreenId.SettingsLibrary, ErrorCode.FOLDER_LOST) to

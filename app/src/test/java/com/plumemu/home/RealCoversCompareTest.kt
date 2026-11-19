@@ -97,11 +97,11 @@ class RealCoversCompareTest {
     fun favoritesMixingSystemsWithRealScans() {
         assumeTrue(System.getenv("V2COMPARE") != null)
         val all = scans()
-        val favorites = PackedFavoritesLibrary.entries[1].rows
+        val favorites = PackedFavoritesLibrary.entries[0].rows
         // Each favourite takes the next scan of its own system; a system with none (Game Boy) stays a poster.
         val used = HashMap<String, Int>()
         val picks = favorites.indices.map { FAVORITE_PICKS[it].first }
         val files = picks.map { system -> all[system]?.let { list -> list[used.merge(system, 1, Int::plus)!!.minus(1) % list.size] } }
-        shotsOf("favorites", { FakeArtSource(artOf(favorites) { files[it] }, images = JpgImages()) }, PackedFavoritesLibrary, 1, HomeContent.FAVORITES_ID)
+        shotsOf("favorites", { FakeArtSource(artOf(favorites) { files[it] }, images = JpgImages()) }, PackedFavoritesLibrary, 0, HomeContent.FAVORITES_ID)
     }
 }

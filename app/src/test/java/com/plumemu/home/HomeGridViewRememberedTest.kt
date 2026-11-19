@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.Composable
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -70,11 +71,18 @@ class HomeGridViewRememberedTest {
                 HomeScreen(
                     FakeHomeContent.withArtwork(),
                     router,
-                    HomeCallbacks(onGridView = { id, isGrid, onFailed ->
-                        writes += id to isGrid
-                        failures += onFailed
-                    }),
+                    HomeCallbacks(
+                        onGridView = { id, isGrid, onFailed ->
+                            writes += id to isGrid
+                            failures += onFailed
+                        },
+                        onFolderView = { id, isGrid, onFailed ->
+                            writes += id to isGrid
+                            failures += onFailed
+                        },
+                    ),
                     gridSystems = stored,
+                    initialFocus = StripFocus(),
                 )
             }
         }
@@ -90,7 +98,7 @@ class HomeGridViewRememberedTest {
 
     private fun openSnes() = openEntry(FakeHomeContent.BOARD_SNES_INDEX)
 
-    /** From the first frame (Recent focused in the system column): entry [index]'s games. */
+    /** From the first frame (Favorites focused in the system column): entry [index]'s games. */
     private fun openEntry(index: Int) = send(*List(index) { Action.Move(Direction.Down) }.toTypedArray(), Action.Enter)
 
     private fun gridCount() = compose.onAllNodesWithTag(HomeTags.GRID, useUnmergedTree = true).fetchSemanticsNodes().size
@@ -139,23 +147,16 @@ class HomeGridViewRememberedTest {
     @Test
     fun selectOnAnEntryWithoutGamesWritesNothingAndTheSavedGridStays() {
         stored = setOf("favorites")
-        val plain = FakeHomeContent.withArtwork()
-        val noFavorites = HomeContent.of(
-                plain.entries[0].rows,
-                emptyList(),
-                plain.entries[2].rows,
-                plain.entries.filter { it.kind == EntryKind.System }.map { SystemGames(it.id, it.name.orEmpty(), it.rows) },
-                hasBoxArt = true,
-            )
+        val noFavorites = FakeHomeContent.withArtwork().rebuilt(favorites = emptyList(), hasBoxArt = true)
         compose.setContent {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
             PlumTheme(PlumThemeSettings.Default) {
-                HomeScreen(noFavorites, router, HomeCallbacks(onGridView = { id, isGrid, onFailed -> writes += id to isGrid; failures += onFailed }), gridSystems = stored)
+                HomeScreen(noFavorites, router, HomeCallbacks(onGridView = { id, isGrid, onFailed -> writes += id to isGrid; failures += onFailed }), gridSystems = stored, initialFocus = StripFocus())
             }
         }
         compose.waitForIdle()
-        send(Action.Move(Direction.Down), Action.ToggleView) // Favorites, which is empty
+        send(Action.ToggleView) // Favorites, the first entry, which is empty
         assertEquals("nothing is written", emptyList<Pair<String, Boolean>>(), writes.toList())
         assertEquals("the saved choice is still the grid", setOf("favorites"), stored)
         assertEquals("and it shows as a list", 0, gridCount())
@@ -175,34 +176,37 @@ class HomeGridViewRememberedTest {
         assertEquals("no second write", 1, writes.size)
     }
 
-    /** Recent and Favorites switch like a system, each under its own entry id. */
+    /**
+     * Favorites switches like a system, under its entry id; Recent, a folder inside Collections since the Collections change,
+     * is a grid until SELECT and writes its switch through the folder callback.
+     */
     @Test
-    fun selectOnRecentAndOnFavoritesShowsTheirGridsAndWritesTheirIds() {
+    fun selectOnFavoritesAndOnRecentShowsTheirViewsAndWritesTheirIds() {
         showWithStandInStore()
-        openEntry(RECENT)
-        assertEquals("Recent is a list until SELECT", 0, gridCount())
+        openEntry(FAVORITES)
+        assertEquals("Favorites is a list until SELECT", 0, gridCount())
         send(Action.ToggleView)
-        assertEquals(listOf(HomeContent.RECENT_ID to true), writes.toList())
-        assertEquals("Recent's grid shows", 1, gridCount())
-        send(Action.Back, Action.Move(Direction.Down), Action.Enter)
-        assertEquals("Favorites is still a list", 0, gridCount())
-        send(Action.ToggleView)
-        assertEquals(listOf(HomeContent.RECENT_ID to true, HomeContent.FAVORITES_ID to true), writes.toList())
+        assertEquals(listOf(HomeContent.FAVORITES_ID to true), writes.toList())
         assertEquals("Favorites' grid shows", 1, gridCount())
         send(Action.ToggleView)
         assertEquals("and back to a list", HomeContent.FAVORITES_ID to false, writes.last())
         assertEquals(0, gridCount())
+        send(Action.Back, *OpenRecentFolder.toTypedArray())
+        assertEquals("Recent is a grid until SELECT", 1, gridCount())
+        send(Action.ToggleView)
+        assertEquals(listOf(HomeContent.FAVORITES_ID to true, HomeContent.FAVORITES_ID to false, HomeContent.RECENT_ID to false), writes.toList())
+        assertEquals("Recent's list shows", 0, gridCount())
     }
 
     @Test
-    fun storedRecentAndFavoritesGridsShowWithoutAPress() {
-        stored = setOf(HomeContent.RECENT_ID, HomeContent.FAVORITES_ID)
+    fun aStoredFavoritesGridAndRecentsDefaultGridShowWithoutAPress() {
+        stored = setOf(HomeContent.FAVORITES_ID)
         showWithStandInStore()
-        openEntry(RECENT)
-        assertEquals("Recent opens as the stored grid", 1, gridCount())
-        send(Action.Back, Action.Move(Direction.Down), Action.Enter)
+        openEntry(FAVORITES)
         assertEquals("Favorites opens as the stored grid", 1, gridCount())
-        send(Action.Back, Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Enter)
+        send(Action.Back, *OpenRecentFolder.toTypedArray())
+        assertEquals("Recent opens as a grid with nothing stored", 1, gridCount())
+        send(Action.Back, Action.Back, Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Enter)
         assertEquals("Super Nintendo is not in the set: a list", 0, gridCount())
         assertEquals("reading the stored choice writes nothing", emptyList<Pair<String, Boolean>>(), writes.toList())
     }
@@ -273,6 +277,7 @@ class HomeGridViewRememberedTest {
                         running.writer.submitTold({ it.withGridView(id, isGrid) }, onFailed)
                     }),
                     gridSystems = loaded.appearance.gridSystems,
+                    initialFocus = StripFocus(),
                 )
             }
         }
@@ -337,8 +342,7 @@ class HomeGridViewRememberedTest {
 
     private companion object {
         const val LOAD_MS = 5_000L
-        const val RECENT = 0
-        const val FAVORITES = 1
+        const val FAVORITES = 0
         const val APPS = 2
     }
 }

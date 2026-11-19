@@ -44,6 +44,7 @@ internal inline fun peeksShow(
  * The scroll position nearest [wanted] where [keepTop] to [keepEnd] stay whole in a window [window] px tall and each edge the list continues past
  * shows [peek] px of the next row (design/rules.md › Lists that scroll), or null when there is none (the window is too short for all of it). Positions
  * run from [min] to [max]; [top] and [end] are row edges in the same px, for rows `0 until count` in order. A move of the focus only; allocates nothing.
+ * When [min] is a real list start (not the far sentinel) and the kept rows fit from it, that is the rest: the first rows are whole, none cut under the top edge.
  * A rest that leaves a tall row's tail alone at the top ([peeksShow]) gives way to one showing more of the row, else to one with the row gone, up to [pastMax] px past [max] where
  * the list can add room at its foot.
  */
@@ -63,6 +64,8 @@ internal inline fun restWithPeeks(
     val low = maxOf(min, keepEnd - window)
     val high = minOf(max, keepTop)
     if (low > high) return null
+    // The list's start is known (a row laid out there) and the keep range fits from it: rest there, never with the first rows cut across under the top edge.
+    if (min > Int.MIN_VALUE / 4 && min in low..high && peeksShow(min, window, peek, min, max, count, top, end, TallRows.ShowMore)) return min
     val start = wanted.coerceIn(low, high)
     if (peeksShow(start, window, peek, min, max, count, top, end, TallRows.ShowMore)) return start
     // The tall row whole where that leaves the rest whole too; else as much of it as fits. Past the end only to take it out of the rest, never for a list opened with no rows laid out above its focus.

@@ -48,6 +48,7 @@ import com.plumemu.graph.ContentShown
 import com.plumemu.graph.StorageMounts
 import com.plumemu.graph.GraphAppActions
 import com.plumemu.graph.GraphAppIcons
+import com.plumemu.graph.collections
 import com.plumemu.graph.doAfterFirstDraw
 import com.plumemu.graph.trackUpdateInstalled
 import com.plumemu.usage.LocalScreenTracker
@@ -86,6 +87,7 @@ import com.plumemu.settings.toInputSettings
 import com.plumemu.settings.toPageGrain
 import com.plumemu.settings.toSetting
 import com.plumemu.settings.toThemeSettings
+import com.plumemu.settings.withFolderView
 import com.plumemu.settings.withGridView
 import com.plumemu.setup.HomeRoleActions
 import com.plumemu.setup.HomeRoleLauncher
@@ -156,13 +158,8 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
             onWhatsNewShown = { code -> if (!isBenchmarkBuild) graph.updates.whatsNewShown(code) },
             usageAccessOfferDue = if (isBenchmarkBuild) MutableStateFlow(false) else graph.usageAccessOffer.isDue,
             onUsageAccessOfferShown = { if (!isBenchmarkBuild) graph.usageAccessOffer.shown() },
-            onUsageAccessAllow = {
-                if (!isBenchmarkBuild) {
-                    // Remembered before the screen opens: the answer is read when Plumemu comes back.
-                    graph.usageAccessOffer.allowed()
-                    if (!UsageAccess.open(this)) graph.usageAccessOffer.couldNotOpen()
-                }
-            },
+            // Remembered before the screen opens: the answer is read when Plumemu comes back.
+            onUsageAccessAllow = { if (!isBenchmarkBuild) { graph.usageAccessOffer.allowed(); if (!UsageAccess.open(this)) graph.usageAccessOffer.couldNotOpen() } },
             onAddFolder = { if (!isBenchmarkBuild) graph.addFolderFromHome(settingsActivityActions) },
             notices = if (isBenchmarkBuild) HomeNotices() else graph.homeNotices(),
             achievements = if (isBenchmarkBuild) HomeAchievements() else graph.homeAchievements(),
@@ -178,10 +175,11 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
             // SELECT: list or grid for one system, in the same queue; benchmark builds keep it in memory.
             onSearchUsed = { length, results, opened -> usage?.onSearchUsed(length, results, opened) },
             onGridView = { systemId, isGrid, onFailed ->
-                if (!isBenchmarkBuild) {
-                    graph.settingsWriter.submitTold({ it.withGridView(systemId, isGrid) }, onFailed) { _, after -> graph.trackViewChanged(systemId, isGrid, after) }
-                }
+                if (!isBenchmarkBuild) graph.settingsWriter.submitTold({ it.withGridView(systemId, isGrid) }, onFailed) { _, after -> graph.trackViewChanged(systemId, isGrid, after) }
             },
+            onFolderView = { id, isGrid, onFailed -> if (!isBenchmarkBuild) graph.settingsWriter.submitTold({ it.withFolderView(id, isGrid) }, onFailed) { _, _ -> } },
+            // Add to collection…, New collection… and Remove from a collection in the game menu (benchmark builds: none).
+            collections = if (isBenchmarkBuild) null else graph.collections,
         )
     }
 
@@ -241,10 +239,10 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
             }
         }
 
-    /** Settings › Advanced › Back up and restore › Back up…'s save picker; its answer starts the backup in the graph. */
+    /** Settings › About › Back up and restore › Back up…'s save picker; its answer starts the backup in the graph. */
     private val backupPicker = BackupPicker(this) { graph }
 
-    /** Settings › Advanced › Back up and restore › Restore…'s open picker; its answer starts the reading in the graph. */
+    /** Settings › About › Back up and restore › Restore…'s open picker; its answer starts the reading in the graph. */
     private val restorePicker = RestorePicker(this) { graph }
 
     /** Android's own home-app screens (the question's Yes, Settings' row), with what came of them. */
@@ -295,9 +293,9 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
             override fun openNotificationSettings(): Boolean = NoticeSettings.open(this@MainActivity)
         }
 
-    /** Settings › …; benchmark builds have none (their START only logs). */
+    /** Settings › …, benchmark builds too: the Baseline Profile is generated on one, and its Settings journey needs it. */
     private val settingsHost: SettingsHost? by lazy {
-        if (isBenchmarkBuild) null else graph.settingsHost(versionLine(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE.toLong()), settingsActivityActions)
+        graph.settingsHost(versionLine(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE.toLong()), settingsActivityActions)
     }
 
     private val setupHost: SetupHost? =
@@ -355,7 +353,7 @@ class MainActivity : LocalizedActivity(followsLanguage = true) {
                 val isLibrary = state is HomeState.Ready
                 LaunchedEffect(isLibrary) { onContentComposed(isLibrary) }
             }
-            CompositionLocalProvider(LocalScreenTracker provides { usage?.onScreen(it) }, LocalErrorTracker provides { where, code -> usage?.onError(where, code) }, com.plumemu.coreui.components.LocalHeldKeys provides input.held, com.plumemu.coreui.theme.LocalPageGrain provides (settings?.appearance?.pageGrain ?: PageGrainSetting.Off).toPageGrain()) { // held: pressed hint caps
+            CompositionLocalProvider(com.plumemu.home.LocalBoxFrontImages provides com.plumemu.home.SharedBoxFrontImages.of(this), LocalScreenTracker provides { usage?.onScreen(it) }, LocalErrorTracker provides { where, code -> usage?.onError(where, code) }, com.plumemu.coreui.components.LocalHeldKeys provides input.held, com.plumemu.coreui.theme.LocalPageGrain provides (settings?.appearance?.pageGrain ?: PageGrainSetting.Off).toPageGrain()) { // held: pressed hint caps
                 MainScreen(
                 settings,
                 state,

@@ -91,7 +91,11 @@ class SecondScreenCardActivity : LocalizedActivity(followsLanguage = false) {
             ComposeView(AppLocale.localized(this)).apply {
                 isFocusable = false
                 isFocusableInTouchMode = false
-                setContent { WithPhysicalTextScale(scale) { host.CardContent() } }
+                setContent {
+                    androidx.compose.runtime.CompositionLocalProvider(com.plumemu.home.LocalBoxFrontImages provides com.plumemu.home.SharedBoxFrontImages.of(context)) {
+                        WithPhysicalTextScale(scale) { host.CardContent() }
+                    }
+                }
             }
         setContentView(view)
     }

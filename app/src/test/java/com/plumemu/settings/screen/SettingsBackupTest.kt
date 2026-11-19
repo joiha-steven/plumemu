@@ -13,24 +13,24 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Settings › Advanced › Back up… by gamepad and touch: the choice, the picker, Cancel, the line kept until the focus leaves. */
+/** Settings › About › Back up… by gamepad and touch: the choice, the picker, Cancel, the line kept until the focus leaves. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
 internal class SettingsBackupTest : SettingsModelHarness() {
     private fun openBackupPanel() {
         // The screen hands the model its first content at once; later ones keep the cursor on its item.
         model.content = SettingsContent()
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.Backup)
         press(Action.Enter)
         assertEquals(PanelPage.Backup, model.focus.page)
     }
 
     @Test
-    fun theRowSitsAfterAnimationsAndBeforeReset() {
-        val advanced = SettingsSection.Advanced.options
-        assertEquals(advanced.indexOf(SettingsOption.Animations) + 1, advanced.indexOf(SettingsOption.BackupAndRestore))
-        assertEquals(advanced.indexOf(SettingsOption.BackupAndRestore) + 1, advanced.indexOf(SettingsOption.Reset))
+    fun theRowSitsAfterReportAProblemAndBeforeReset() {
+        val about = SettingsSection.About.options
+        assertEquals(about.indexOf(SettingsOption.ReportProblem) + 1, about.indexOf(SettingsOption.BackupAndRestore))
+        assertEquals(about.indexOf(SettingsOption.BackupAndRestore) + 1, about.indexOf(SettingsOption.Reset))
     }
 
     @Test
@@ -47,7 +47,7 @@ internal class SettingsBackupTest : SettingsModelHarness() {
 
     @Test
     fun aTapOnEverythingInTheWidePanelAsksThePicker() {
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.Backup)
         press(Action.Enter)
         val settings = actions.shown
@@ -95,9 +95,9 @@ internal class SettingsBackupTest : SettingsModelHarness() {
     @Test
     fun onANarrowScreenTheResultStaysUntilThePanelWasOpened() {
         model.content = SettingsContent(backup = BackupState.Failed(deleted = false))
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         // Bounded: a walk that never reaches the row fails here instead of spinning.
-        repeat(SettingsSection.Advanced.rowsIn(model.content).size) {
+        repeat(SettingsSection.About.rowsIn(model.content).size) {
             if (model.focusedOption != SettingsOption.BackupAndRestore) move(Direction.Down, narrow)
         }
         assertEquals("walked to the row (${model.focus})", SettingsOption.BackupAndRestore, model.focusedOption)

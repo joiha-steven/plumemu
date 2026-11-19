@@ -1,5 +1,7 @@
 package com.plumemu.settings.screen
 
+import com.plumemu.account.AccountStatus
+import com.plumemu.coredata.settings.BoxArtSourceSetting
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -177,21 +179,29 @@ abstract class SettingsGlidingPillFramesBase {
         assertEquals("$what: ends exactly on the row: $tops", new, tops.last())
     }
 
-    private fun emulators(): SettingsContent =
-        SettingsContent(systems = List(SYSTEMS) { SystemEmulators("system$it", "System $it", automatic = null, chosen = null, installed = emptyList()) })
-
-    private fun emulatorRowTag(content: SettingsContent): (Int) -> String {
-        val rows = SettingsSection.Emulators.rowsIn(content)
-        return { i -> if (rows[i] == SettingsOption.SystemEmulator) SettingsTags.system(i) else SettingsTags.option(rows[i]) }
+    /**
+     * Library with every row it can list: the longest options column. ScreenScraper is listed signed out (its source chosen):
+     * signed in, its value's accent check sits in the bar's columns under the label and the bar detector reads no bar.
+     */
+    private fun longLibrary(): SettingsContent {
+        val games = List(3) { SettingsGame(it + 1L, "Game $it", "Super Nintendo") }
+        return ShotContent.library.copy(
+            hiddenGames = games,
+            unidentifiedGames = games,
+            librarySystems = List(3) { LibrarySystem("system$it", "System ${'A' + it}", gameCount = it + 1) },
+            account = AccountStatus.SignedOut,
+            chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper,
+        )
     }
 
-    /** Emulators' options with the focus on its first row. */
-    private fun openEmulators(animationsOn: Boolean, textSize: TextSizeSetting = TextSizeSetting.Medium): (Int) -> String {
-        val content = emulators()
+    /** Library's options with the focus on its first row. */
+    private fun openLibrary(animationsOn: Boolean, textSize: TextSizeSetting = TextSizeSetting.Medium): (Int) -> String {
+        val content = longLibrary()
         show(animationsOn, content, textSize)
-        down(SettingsSection.shownIn(content).indexOf(SettingsSection.Emulators))
+        down(SettingsSection.entries.indexOf(SettingsSection.Library))
         send(Action.Enter)
-        return emulatorRowTag(content)
+        val rows = SettingsSection.Library.rowsIn(content)
+        return { i -> SettingsTags.option(rows[i]) }
     }
 
     private fun sectionTag(i: Int) = SettingsTags.section(shownSections[i])
@@ -204,14 +214,13 @@ abstract class SettingsGlidingPillFramesBase {
 
     @Test
     fun theOptionsPillGlidesFromTheOldRowToTheNewOne() {
-        val tag = openEmulators(true)
-        // Row 1 is a system row: row 0 is the detect row, a different height from it.
+        val tag = openLibrary(true)
         assertPillGlides("options", oneStep(SettingsTags.OPTION_LIST, tag, 0))
     }
 
     @Test
     fun theSectionsListGlidesWhenItScrolls() {
-        // At Largest the seven sections do not fit: the last steps scroll the column.
+        // At Largest the six sections do not fit: the last steps scroll the column.
         show(true, textSize = TextSizeSetting.Largest)
         // The step that moves the list is found by pressing (it rests showing the next rows, so it may be the only one); then that step is taken again.
         var from = 0
@@ -229,9 +238,9 @@ abstract class SettingsGlidingPillFramesBase {
 
     @Test
     fun theOptionsListGlidesWhenItScrolls() {
-        val tag = openEmulators(true)
-        down(10)
-        assertScrollGlide("options", SettingsTags.OPTION_LIST, tag, 10)
+        val tag = openLibrary(true)
+        down(SCROLLED_TO)
+        assertScrollGlide("options", SettingsTags.OPTION_LIST, tag, SCROLLED_TO)
     }
 
     /** One step down from row [from] that makes the list scroll: the new row's drawn top travels to its place, inside the list on every frame. */
@@ -252,7 +261,7 @@ abstract class SettingsGlidingPillFramesBase {
         println("$what scroll: new row tops $tops, pill ${frames.map { it.pill }}")
         assertTrue("$what: the list scrolled, so the row was drawn off its place at first: $tops", abs(tops.first() - last) > 1f)
         // The glide starts in the frame of the move: a jump would show the row at its place at once.
-        assertTrue("$what: the first frame still has at least 60% of the way to go: $tops", abs(tops.first() - last) >= 0.6f * abs(before - last))
+        assertTrue("$what: the first frame still has at least 60% of the way to go (from $before to $last): $tops", abs(tops.first() - last) >= 0.6f * abs(before - last))
         assertTrue("$what: arrives and stays: $tops", tops.takeLast(3).all { it == last })
         assertTrue("$what: more than a few distinct places on the way (a glide, not a jump): $tops", tops.distinct().size > 4)
         assertTrue("$what: moves one way: $tops", tops.zipWithNext().all { (a, b) -> if (tops.first() > last) b <= a else b >= a })
@@ -262,7 +271,7 @@ abstract class SettingsGlidingPillFramesBase {
 
     @Test
     fun aHeldKeyKeepsTheOptionsPillWithTheFocus() {
-        val tag = openEmulators(true)
+        val tag = openLibrary(true)
         val first = rowTop(tag(0))
         val stride = rowTop(tag(1)) - first
         takeOverhang(tag(0))
@@ -272,7 +281,7 @@ abstract class SettingsGlidingPillFramesBase {
         var last = -1
         val frames =
             record(80, SettingsTags.OPTION_LIST, emptyList()) { i ->
-                if (i % HOLD_REPEAT_FRAMES == 0 && focus < 14) {
+                if (i % HOLD_REPEAT_FRAMES == 0 && focus < LAST_ROW) {
                     compose.runOnIdle { router.send(Action.Move(Direction.Down)) }
                     focus++
                 }
@@ -287,7 +296,7 @@ abstract class SettingsGlidingPillFramesBase {
         }
         println("held pill tops: $tops (focus $focus, row at $rowNow, stride $stride)")
         assertEquals("never jumps: $worst", emptyList<String>(), worst)
-        assertTrue("the focus moved down several rows: $focus", focus >= 10)
+        assertTrue("the focus moved down several rows: $focus", focus >= LAST_ROW - 1)
         assertTrue("within a row of the focused row at the end: pill ${tops.last()} row $rowNow stride $stride", abs(rowNow - tops.last()) <= 1)
     }
 
@@ -350,12 +359,12 @@ abstract class SettingsGlidingPillFramesBase {
 
     @Test
     fun withAnimationsOffAScrollingOptionsListJumps() {
-        val tag = openEmulators(false)
-        down(10)
-        takeOverhang(tag(10))
+        val tag = openLibrary(false)
+        down(SCROLLED_TO)
+        takeOverhang(tag(SCROLLED_TO))
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { router.send(Action.Move(Direction.Down)) }
-        val frames = record(6, SettingsTags.OPTION_LIST, listOf(tag(11)))
+        val frames = record(6, SettingsTags.OPTION_LIST, listOf(tag(SCROLLED_TO + 1)))
         val tops = frames.map { it.rows[0] }
         println("animations off options scroll: row tops $tops, pill ${frames.map { it.pill }}")
         assertTrue("the row is at its place from the first frame: $tops", tops.all { it == tops.first() })
@@ -364,9 +373,12 @@ abstract class SettingsGlidingPillFramesBase {
 
     private companion object {
         const val FRAME_MS = 16
+
+        /** Library with every row lists 10, which do not fit the list: the step from this row to the next scrolls it (768 and 576 alike). */
+        const val SCROLLED_TO = 4
+        const val LAST_ROW = 9
         const val FIRST_FRAME_SHARE = 0.3f
         const val HOLD_REPEAT_FRAMES = 4
-        const val SYSTEMS = 25
     }
 }
 

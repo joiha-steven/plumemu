@@ -16,6 +16,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,12 +100,15 @@ internal fun WhatsNewCard(
     state: WhatsNewState,
     input: InputRouter,
     letters: ButtonLetters,
+    isLeaving: () -> Boolean = { false },
 ) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val currentIsLeaving by rememberUpdatedState(isLeaving)
     HearFeel(state.feel)
     LaunchedEffect(state, input, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            input.actions.collect(state::onAction)
+            // The main screen lies hidden under Settings: a press made there is Settings' own.
+            input.actions.collect { if (!currentIsLeaving()) state.onAction(it) }
         }
     }
     val send = remember(input) { { action: Action -> input.send(action) } }

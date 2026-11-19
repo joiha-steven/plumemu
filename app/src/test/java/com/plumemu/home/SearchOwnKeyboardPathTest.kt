@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import android.view.InputDevice
+import com.plumemu.coreinput.strip.StripFocus
 import android.view.KeyEvent
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -59,7 +60,7 @@ class SearchOwnKeyboardPathTest {
             ime.view = LocalView.current
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope, InputSettings(swapAB = swapAB)) }
-            PlumTheme { HomeScreen(FakeHomeContent.withFavorites(), router, HomeCallbacks(games = games)) }
+            PlumTheme { HomeScreen(FakeHomeContent.withFavorites(), router, HomeCallbacks(games = games), initialFocus = StripFocus()) }
         }
         compose.waitForIdle()
     }

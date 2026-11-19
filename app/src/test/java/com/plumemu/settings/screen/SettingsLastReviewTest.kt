@@ -184,7 +184,7 @@ class SettingsLastReviewTest {
     fun aLabelTakesWhatItNeedsAt768() {
         val content = SettingsContent(secondScreen = SecondScreen(2, "Screen-2", ScreenKind.BuiltIn), isSecondScreenOn = true)
         val shown = stored.copy(secondScreen = SecondScreenSettings(enabled = true))
-        open(SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.SecondScreen), content, settings = shown)
+        open(optionsAt(SettingsOption.SecondScreen, content), content, settings = shown)
         assertEquals(1, textNode(string(R.string.settings_second_screen_in_game)).lines().lineCount)
     }
 
@@ -202,10 +202,10 @@ class SettingsLastReviewTest {
     @Test
     fun aRowOfTwoLinesKeepsARowsPadding() {
         val content = ShotContent.library
-        open(SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Emulators), content)
+        open(optionsAt(SettingsOption.RomFolders, content), content, TextSize.Largest)
         val pad = px(PlumDimens.settingsTwoLineRowPadding.value)
-        val tall = SettingsSection.Emulators.rowsIn(content).indices.mapNotNull { index ->
-            val tag = SettingsTags.system(index)
+        val tall = SettingsSection.Library.rowsIn(content).mapNotNull { option ->
+            val tag = SettingsTags.option(option)
             val row = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().firstOrNull()?.boundsInRoot ?: return@mapNotNull null
             val texts = compose.onAllNodes(hasAnyAncestor(hasTestTag(tag)) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), useUnmergedTree = true).fetchSemanticsNodes().map { it.boundsInRoot }
             val top = texts.minOf { it.top }

@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.Composer
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.CompositionTracer
 import androidx.compose.runtime.InternalComposeTracingApi
 import androidx.compose.runtime.remember
@@ -60,7 +61,7 @@ class GameMenuAchievementsRecompositionTest {
         compose.setContent {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
-            PlumTheme(PlumThemeSettings.Graphite) { HomeScreen(FakeHomeContent.board(), router, HomeCallbacks(games = games)) }
+            PlumTheme(PlumThemeSettings.Graphite) { HomeScreen(FakeHomeContent.board(), router, HomeCallbacks(games = games), initialFocus = StripFocus()) }
         }
         compose.waitForIdle()
         repeat(FakeHomeContent.BOARD_SNES_INDEX) { send(Action.Move(Direction.Down)) }

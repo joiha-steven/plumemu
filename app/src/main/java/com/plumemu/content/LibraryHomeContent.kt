@@ -1,10 +1,15 @@
 package com.plumemu.content
 
 import android.util.Log
+import com.plumemu.collections.BuiltInFolder
+import com.plumemu.collections.Folder
 import com.plumemu.coredata.db.GameDao
+import com.plumemu.coredata.db.PlumDatabase
 import com.plumemu.coredata.db.GameListRow
 import com.plumemu.coredata.db.SystemGameCount
 import com.plumemu.coredata.settings.SortGamesSetting
+import com.plumemu.graph.GraphCollections
+import com.plumemu.home.FolderRows
 import com.plumemu.home.GameRowModel
 import com.plumemu.home.HomeContent
 import com.plumemu.home.LetterKey
@@ -14,7 +19,9 @@ import com.plumemu.home.withVariantTags
 import com.plumemu.launcher.apps.LaunchableApp
 import com.plumemu.platforms.GameSystem
 import com.plumemu.platforms.PlatformCatalog
+import java.util.Calendar
 import java.util.Locale
+import java.util.TimeZone
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -83,18 +90,29 @@ class LibraryHomeContent(
     private val appGames: Flow<Map<String, String>?> = flowOf(null),
     /** Game id to package of the app games (`AppGameDao.observePackages`): their rows carry the package (`GameRowModel.appPackage`). */
     private val appPackages: Flow<Map<Long, String>> = flowOf(emptyMap()),
+    /**
+     * The database the Collections folders read (Most played, Recently added, the own collections). Null: Most played and Recently added are
+     * still listed, with no games, and there are no own collections. Built into [GraphCollections] here, so the graph passes one value.
+     */
+    private val database: PlumDatabase? = null,
+    /** Epoch milliseconds now; the Recently added window and the day change follow it (a fake in tests). */
+    private val clock: () -> Long = System::currentTimeMillis,
+    /** Emits when the date changes (and once at the start), so Recently added's window is asked again; default: local midnights by [clock]. */
+    private val dayChanges: Flow<Long> = dayStarts(clock),
 ) {
+    private val collections: GraphCollections? = database?.let { GraphCollections(it, clock) }
+
     val content: Flow<HomeContent> =
         flow { emit(SystemNames(catalog(), extraAbbrs)) }
             .flatMapLatest { names ->
                 sort.distinctUntilChanged().flatMapLatest { order ->
                     combine(
                         arranged(names, order),
-                        recent(names),
+                        folders(names, order),
                         favorites(names, order),
                         appRows(),
                         combine(showApps.distinctUntilChanged(), hasBoxArt.distinctUntilChanged(), appPackages.distinctUntilChanged()) { show, art, packages -> HomeFlags(show, art, packages) },
-                    ) { (systems, hidden), recent, favorites, apps, flags -> assemble(systems, hidden, recent, favorites, apps, flags.showApps, flags.hasBoxArt, order, flags.packages) }
+                    ) { (systems, hidden), folders, favorites, apps, flags -> assemble(systems, hidden, folders, favorites, apps, flags.showApps, flags.hasBoxArt, order, flags.packages) }
                 }
             }
             .flowOn(mapping)
@@ -118,7 +136,7 @@ class LibraryHomeContent(
     private fun assemble(
         systems: List<SystemGames>,
         hiddenSystems: List<SystemGames>,
-        recent: List<GameRowModel>,
+        folders: List<FolderRows>,
         favorites: List<GameRowModel>,
         apps: List<GameRowModel>,
         showApps: Boolean,
@@ -127,7 +145,8 @@ class LibraryHomeContent(
         packages: Map<Long, String>,
     ): HomeContent =
         HomeContent.of(
-            recent = withPackages(recent, packages),
+            recent = withPackages(folders.first().rows, packages),
+            otherFolders = folders.drop(1).map { it.copy(rows = withPackages(it.rows, packages)) },
             favorites = withPackages(favorites, packages),
             apps = apps,
             systems = if (packages.isEmpty()) systems else systems.map { it.copy(games = withPackages(it.games, packages)) },
@@ -195,9 +214,50 @@ class LibraryHomeContent(
         order: SortGamesSetting,
     ): Flow<SystemGames> = games.observeSystemGames(id, order).map { rows -> SystemGames(id, name, withVariantTags(rows.map { toRow(it, names.abbrOf(it.systemId)) })) }
 
-    private fun recent(names: SystemNames): Flow<List<GameRowModel>> =
-        games.observeRecent(RECENT_GAMES)
-            .map { rows -> withVariantTags(rows.map { toRow(it, names.abbrOf(it.systemId)) }) }
+    /**
+     * Recent first, then the folders of [GraphCollections.folders] (Most played, Recently added, the own collections), each with its games.
+     * The structure is asked again when the date changes ([dayChanges]); a folder's games are its own flow, so a play restarts none of the others.
+     */
+    private fun folders(
+        names: SystemNames,
+        order: SortGamesSetting,
+    ): Flow<List<FolderRows>> {
+        fun rowsOf(rows: List<GameListRow>) = withVariantTags(rows.map { toRow(it, names.abbrOf(it.systemId)) })
+        val recent = games.observeRecent(RECENT_GAMES).map { FolderRows(Folder.BuiltIn(BuiltInFolder.Recent, it.size), rowsOf(it)) }
+        val source = collections
+        val db = database
+        if (source == null || db == null) return recent.map { listOf(it) + HomeContent.DEFAULT_FOLDERS }
+        return dayChanges.distinctUntilChanged().flatMapLatest { now ->
+            source.folders(now)
+                // Only which folders there are and their names: a count that moves is read from the games, so no query restarts for it.
+                .map { list -> list.mapNotNull(::withoutCount).filterNot { it is Folder.BuiltIn && it.kind == BuiltInFolder.Recent } }
+                .distinctUntilChanged()
+                .flatMapLatest { structure ->
+                    val others =
+                        structure.map { folder ->
+                            when (folder) {
+                                is Folder.BuiltIn ->
+                                    if (folder.kind == BuiltInFolder.MostPlayed) {
+                                        db.smartListDao().observeMostPlayed().map { FolderRows(Folder.BuiltIn(BuiltInFolder.MostPlayed, it.size), rowsOf(it)) }
+                                    } else {
+                                        db.smartListDao().observeRecentlyAdded(now).map { FolderRows(Folder.BuiltIn(BuiltInFolder.RecentlyAdded, it.size), rowsOf(it)) }
+                                    }
+                                is Folder.Own -> db.collectionDao().observeCollectionGames(folder.id, order).map { FolderRows(folder.copy(count = it.size), rowsOf(it)) }
+                                Folder.NewCollection -> error("New collection is not a folder with games")
+                            }
+                        }
+                    combine(listOf(recent) + others) { it.toList() }
+                }
+        }
+    }
+
+    /** [folder] with its count zeroed (its identity and name only); null for New collection…, which has no games. */
+    private fun withoutCount(folder: Folder): Folder? =
+        when (folder) {
+            is Folder.BuiltIn -> folder.copy(count = 0)
+            is Folder.Own -> folder.copy(count = 0)
+            Folder.NewCollection -> null
+        }
 
     private fun favorites(
         names: SystemNames,
@@ -245,6 +305,40 @@ class LibraryHomeContent(
 
     companion object {
         private const val TAG = "PlumHome"
+
+        /**
+         * [clock] now, then again whenever the local date has changed. The date is checked at each midnight and at least every
+         * [MAX_DAY_WAIT_MS]: a wait does not run while the device sleeps and a clock or time-zone change moves midnight, so the
+         * wake-up looks at the clock again. A new collection (the screen started again) starts with a fresh reading.
+         */
+        fun dayStarts(
+            clock: () -> Long,
+            zone: () -> TimeZone = { TimeZone.getDefault() },
+        ): Flow<Long> =
+            flow {
+                var lastDay = Long.MIN_VALUE
+                while (true) {
+                    val now = clock()
+                    val calendar = Calendar.getInstance(zone()).apply { timeInMillis = now }
+                    val day = calendar.get(Calendar.YEAR) * DAY_KEY + calendar.get(Calendar.DAY_OF_YEAR).toLong()
+                    if (day != lastDay) {
+                        lastDay = day
+                        emit(now)
+                    }
+                    calendar.apply {
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                        add(Calendar.DAY_OF_MONTH, 1)
+                    }
+                    delay((calendar.timeInMillis - now).coerceIn(MIN_DAY_WAIT_MS, MAX_DAY_WAIT_MS))
+                }
+            }
+
+        private const val MIN_DAY_WAIT_MS = 1_000L
+        private const val MAX_DAY_WAIT_MS = 3_600_000L
+        private const val DAY_KEY = 1_000L
         private const val MAX_CAUSES = 4
 
         /** How many games Recent shows, newest first; the play history itself is never trimmed. */

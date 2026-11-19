@@ -33,7 +33,7 @@ class HomeTextDetailsScreenshotTest {
 
     @Test
     fun textOnlyColumnInRecent() =
-        ReferenceShots.capture("home_details_text_recent") { WithFacts { HomeAt(LibraryLikeContent.of(), listOf(Action.TapItem(Column.Systems, 0), Action.Enter)) } }
+        ReferenceShots.capture("home_details_text_recent") { WithFacts { HomeAt(LibraryLikeContent.of(), OpenRecentFolderByTap) } }
 
     @Test
     fun boxArtColumnWithReadFacts() =

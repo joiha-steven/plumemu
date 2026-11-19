@@ -29,7 +29,7 @@ import com.plumemu.setup.bringIntoViewWhen
 import kotlin.math.roundToInt
 
 /*
- * Settings › Accounts › RetroAchievements: the row's panel. Signed out it is the sign-in form shared
+ * Settings › Library › RetroAchievements: the row's panel. Signed out it is the sign-in form shared
  * with ScreenScraper (a user name and the Web API key, masked), with the lines on where the key is and
  * what is sent under the buttons; signed in it says who and how many points, then Sign out. The form's
  * keyboard and touch rules are SignInForm's; the graph's side is GraphAchievements.signIn.

@@ -23,34 +23,26 @@ import com.plumemu.settings.withColors
 /*
  * What Settings lists, in the alpha only what works: sections in
  * SPEC order, their options, how each option reacts and what its side panel holds. Hidden until
- * they work: artwork options; Switch system and Jump by letter (core-input has no setting for them); Start
+ * they work: artwork options; Switch list and Jump by letter (core-input has no setting for them); Start
  * on, Return here after playing (launching does not read it) and Show Wi-Fi; Sound.
  */
 
 /**
- * A section of the left column, in SPEC order. Sound has nothing that works and is not listed.
- * [options] are the fixed rows; Emulators has none, only one row per system ([rowsIn]). Second
- * screen is listed only on a device with one, Emulators only while a system has games ([shownIn]).
+ * A section of the left column, in SPEC order (six). [options] are the fixed rows; Library and
+ * Home screen build theirs from the content ([rowsIn]). Home screen holds the second screen's rows while
+ * Plumemu finds one, and is then named Screens ([titleIn]).
  */
 internal enum class SettingsSection(
     @StringRes val title: Int,
     val options: List<SettingsOption>,
 ) {
-    Library(
-        R.string.settings_section_library,
-        listOf(SettingsOption.RomFolders, SettingsOption.Rescan),
-    ),
+    Library(R.string.settings_section_library, listOf(SettingsOption.RomFolders, SettingsOption.Rescan)),
     Appearance(
         R.string.settings_section_appearance,
-        listOf(SettingsOption.Language, SettingsOption.Colors, SettingsOption.PageGrain, SettingsOption.TextSize),
+        listOf(SettingsOption.Language, SettingsOption.Colors, SettingsOption.PageGrain, SettingsOption.TextSize, SettingsOption.Animations),
     ),
-    HomeScreen(
-        R.string.settings_section_home_screen,
-        listOf(SettingsOption.UseAsHome, SettingsOption.ShowApps),
-    ),
-    /** Listed only while there is a second screen; In game only while it is in use (Settings has no dimmed rows). */
-    SecondScreen(R.string.settings_section_second_screen, listOf(SettingsOption.SecondScreen)),
-    Emulators(R.string.settings_section_emulators, emptyList()),
+    /** Listed always; the second screen's rows only while there is one, In game and Open apps on only while it is in use (Settings has no dimmed rows). */
+    HomeScreen(R.string.settings_section_home_screen, listOf(SettingsOption.UseAsHome, SettingsOption.ShowApps)),
     Controls(
         R.string.settings_section_controls,
         listOf(
@@ -64,74 +56,78 @@ internal enum class SettingsSection(
     ),
     /** Read-only figures from the play history, the library and the stored box art, on one page ([StatisticsPage]). */
     Statistics(R.string.settings_section_statistics, emptyList()),
-    /** ScreenScraper (box art, with its region inside its panel) and RetroAchievements: the person's accounts with outside services ([accountRowsIn]). */
-    Accounts(R.string.settings_section_accounts, listOf(SettingsOption.RetroAchievementsAccount)),
-    Advanced(
-        R.string.settings_section_advanced,
-        listOf(
-            SettingsOption.Animations,
-            SettingsOption.BackupAndRestore,
-            SettingsOption.Reset,
-            SettingsOption.ExportLogs,
-        ),
-    ),
     About(
         R.string.settings_section_about,
         listOf(
             SettingsOption.Version,
-            SettingsOption.UsageStatistics,
-            SettingsOption.Licenses,
-            SettingsOption.Privacy,
+            SettingsOption.CheckUpdatesDaily,
             SettingsOption.ReportProblem,
+            SettingsOption.BackupAndRestore,
+            SettingsOption.Reset,
+            SettingsOption.UsageStatistics,
+            SettingsOption.Privacy,
+            SettingsOption.Licenses,
+            SettingsOption.ExportLogs,
         ),
     ),
     ;
 
+    /** The name in the sections column and the top bar: Home screen is Screens while it holds the second screen's rows. */
+    @StringRes
+    fun titleIn(content: SettingsContent): Int = if (this == HomeScreen && content.secondScreen != null) R.string.settings_section_screens else title
+
     /**
-     * The rows shown for [content]: in Emulators one [SettingsOption.SystemEmulator] per system with
-     * games; in Controls Vibration only on a device with a vibrator; in Library "Folder could not be read" after Rescan library (only while a scan could not read a sub-folder), Systems after Rescan library (only while a system has games), Files not added, then "Unidentified games (n)"
-     * and "Hidden games (n)", each only while it has games; in Second screen In
-     * game after the switch only while it is on (Settings has no dimmed rows); nothing in a section that is not [shownIn]. A build from source has
+     * The rows shown for [content]: in Library the fixed rows, then [libraryRowsIn]'s; in Controls Vibration only on a
+     * device with a vibrator; in Home screen the second screen's after Show Android apps. A build from source has
      * no statistics server and no update manifest: none of the rows that need them is listed, and Export logs,
      * which Report a problem's form holds elsewhere, is listed only there ([SettingsContent.isInThisBuild]).
      */
     fun rowsIn(content: SettingsContent): List<SettingsOption> = listedIn(content).filter { content.isInThisBuild(it) }
 
     private fun listedIn(content: SettingsContent): List<SettingsOption> =
-        when {
-            this == Emulators -> List(content.systems.size) { SettingsOption.SystemEmulator }
-            this == Controls && !content.hasVibrator -> options - SettingsOption.Vibration
-            this == Statistics -> statisticsStopsIn(content)
-            // ScreenScraper (its status line only in a build without credentials), then RetroAchievements.
-            this == Accounts -> accountRowsIn(content) + options
-            this == Library ->
-                listOf(SettingsOption.RomFolders, SettingsOption.Rescan) +
-                    // Right under Rescan library, whose Scan again it offers: only while a scan could not read a sub-folder.
-                    listOfNotNull(SettingsOption.UnreadableFolders.takeIf { unreadableFolders(content).isNotEmpty() }) +
-                    (options - SettingsOption.RomFolders - SettingsOption.Rescan) +
-                    listOfNotNull(SettingsOption.Systems.takeIf { content.librarySystems.isNotEmpty() }) +
-                    SettingsOption.FilesNotAdded +
-                    listOfNotNull(
-                        SettingsOption.UnidentifiedGames.takeIf { content.unidentifiedGames.isNotEmpty() },
-                        SettingsOption.HiddenGames.takeIf { content.hiddenGames.isNotEmpty() },
-                    )
-            this == SettingsSection.SecondScreen ->
-                if (content.secondScreen == null) emptyList() else options + listOfNotNull(SettingsOption.SecondScreenInGame, SettingsOption.SecondScreenAppsOn).filter { content.isSecondScreenOn }
+        when (this) {
+            Library -> libraryRowsIn(content)
+            Controls -> if (content.hasVibrator) options else options - SettingsOption.Vibration
+            Statistics -> statisticsStopsIn(content)
+            HomeScreen -> options + secondScreenRowsIn(content)
             else -> options
         }
 
-    companion object {
-        /** The sections of the left column for [content], in order: Second screen only on a device that has one, Emulators only while it has rows. */
-        fun shownIn(content: SettingsContent): List<SettingsSection> =
-            entries.filter {
-                when (it) {
-                    SettingsSection.SecondScreen -> content.secondScreen != null
-                    Emulators -> content.systems.isNotEmpty()
-                    else -> true
-                }
-            }
-    }
 }
+
+/**
+ * Library's rows, in groups by what a person asks: are my folders read (Game folders, Rescan library, "Folder could
+ * not be read" while a scan could not read a sub-folder), why is a game missing or wrong (Files not added, Unidentified
+ * and Hidden games while they have games), how the list is arranged (Systems and Emulators while a system has games),
+ * Collections while the person has one of their own, then the pictures and accounts ([accountRowsIn], RetroAchievements). A new group of rows goes in as its own block.
+ */
+internal fun libraryRowsIn(content: SettingsContent): List<SettingsOption> {
+    val folders =
+        listOf(SettingsOption.RomFolders, SettingsOption.Rescan) +
+            listOfNotNull(SettingsOption.UnreadableFolders.takeIf { unreadableFolders(content).isNotEmpty() })
+    val missing =
+        listOf(SettingsOption.FilesNotAdded) +
+            listOfNotNull(
+                SettingsOption.UnidentifiedGames.takeIf { content.unidentifiedGames.isNotEmpty() },
+                SettingsOption.HiddenGames.takeIf { content.hiddenGames.isNotEmpty() },
+            )
+    val arranged =
+        listOfNotNull(
+            SettingsOption.Systems.takeIf { content.librarySystems.isNotEmpty() },
+            SettingsOption.Emulators.takeIf { content.systems.isNotEmpty() },
+        )
+    val collections = listOfNotNull(SettingsOption.Collections.takeIf { content.collections.isNotEmpty() })
+    val pictures = accountRowsIn(content) + SettingsOption.RetroAchievementsAccount
+    return folders + missing + arranged + collections + pictures
+}
+
+/** Home screen's rows for the second screen: none without one; In game and Open apps on only while it is in use. */
+private fun secondScreenRowsIn(content: SettingsContent): List<SettingsOption> =
+    if (content.secondScreen == null) {
+        emptyList()
+    } else {
+        listOf(SettingsOption.SecondScreen) + listOf(SettingsOption.SecondScreenInGame, SettingsOption.SecondScreenAppsOn).filter { content.isSecondScreenOn }
+    }
 
 /** How an option reacts to A, a tap and left / right. */
 internal enum class OptionKind {
@@ -189,7 +185,7 @@ internal enum class SettingsOption(
     Vibration(R.string.settings_vibration, OptionKind.Switch),
     UsageStatistics(R.string.settings_usage_statistics, OptionKind.Switch),
 
-    /** Advanced's row for the three below: its panel lists them; its value is [backupAndRestoreValue]. */
+    /** About's row for the three below: its panel lists them; its value is [backupAndRestoreValue]. */
     BackupAndRestore(R.string.settings_backup_and_restore, OptionKind.Opens),
 
     /** Never a row: an item of Back up and restore's panel. Its page chooses Settings or Everything, then Android's save picker. */
@@ -201,7 +197,7 @@ internal enum class SettingsOption(
     /** Never a row: an item of Back up and restore's panel while the way-back set exists; its word is the space the set keeps. */
     UndoRestore(R.string.settings_undo_restore, OptionKind.Opens),
 
-    /** Advanced's row for the two below: its panel lists them, each with what it does. */
+    /** About's row for the two below: its panel lists them, each with what it does. */
     Reset(R.string.settings_reset_row, OptionKind.Opens),
 
     /** Never a row: an item of Reset…'s panel, with its own confirm step. */
@@ -214,12 +210,12 @@ internal enum class SettingsOption(
     ExportLogs(R.string.settings_export_logs, OptionKind.Action),
     /**
      * The installed version with what the last check found ("0.1.5 · Up to date", "0.1.6 available"). Its panel
-     * ([UpdatePanel]) has the version, the platform data, the update, Check now and the daily switch. A build with no
+     * ([UpdatePanel]) has the version, the platform data, the update and Check now; the daily switch is the row under it. A build with no
      * update manifest ([SettingsContent.hasUpdates]) shows the version only, read only.
      */
     Version(R.string.settings_version, OptionKind.Opens),
 
-    /** Never a row: the switch of Version's panel; telemetry reports it by this name. */
+    /** About's switch under Version (only in a build with an update manifest); telemetry reports it by this name. */
     CheckUpdatesDaily(R.string.settings_check_updates_daily, OptionKind.Switch),
     Licenses(R.string.settings_licenses, OptionKind.Opens),
     Privacy(R.string.settings_privacy, OptionKind.Info),
@@ -235,7 +231,7 @@ internal enum class SettingsOption(
     RomFolders(R.string.settings_rom_folders, OptionKind.Opens),
     Rescan(R.string.settings_rescan, OptionKind.Action),
 
-    /** Never a row: the third item of Advanced › Reset…, with its own confirm ([ResetPanelItem.Recent]). */
+    /** Never a row: the third item of About › Reset…, with its own confirm ([ResetPanelItem.Recent]). */
     ClearRecent(R.string.settings_clear_recent, OptionKind.Opens),
 
     /** ‹ A–Z › / ‹ Maker & year › / ‹ Manual ›: how the main screen's system column is arranged. Never a row: the first item of the Systems panel. */
@@ -259,7 +255,13 @@ internal enum class SettingsOption(
     /** Listed only while games are hidden; its panel lists them, A or a tap shows one again. */
     HiddenGames(R.string.settings_hidden_games_title, OptionKind.Opens),
 
-    /** One per system with games (its name is the label); the row's index is the system's. */
+    /** Library's Emulators row ("7 systems »"): its panel lists every system with games ([PanelPage.EmulatorSystems]). */
+    Emulators(R.string.settings_section_emulators, OptionKind.Opens),
+
+    /** Library's Collections row ("3 collections »"): its panel lists the own collections ([PanelPage.Collections]). */
+    Collections(R.string.collections_entry, OptionKind.Opens),
+
+    /** Never a row: a system of the Emulators panel's list, whose page ([PanelPage.Emulators]) chooses its emulator; notices are said under it. */
     SystemEmulator(R.string.settings_section_emulators, OptionKind.Opens),
     PushRightToPlay(R.string.settings_push_right, OptionKind.Switch),
 
@@ -292,9 +294,6 @@ internal enum class SettingsOption(
      * the status and the box art actions.
      */
     ScraperAccount(R.string.settings_account_title, OptionKind.Opens),
-
-    /** "Box art: not available in this build" ([boxArtLineOf] is its label); the only row in a build without credentials. */
-    ScraperStatus(R.string.settings_account_title, OptionKind.Info),
 
     /**
      * "RetroAchievements", signed in or out (the label stays put): its value is "Sign in »" while signed
@@ -345,13 +344,13 @@ internal enum class PanelPage {
     TextPresets,
     TextCustom,
 
-    /** Advanced › Reset…: Reset all settings, Reset library and Clear Recent…, each with what it does ([ResetPanelItem]). */
+    /** About › Reset…: Reset all settings, Reset library and Clear Recent…, each with what it does ([ResetPanelItem]). */
     Reset,
 
     /** Reset all settings', Reset library's and Clear Recent…'s confirm: Cancel (focused first) and Reset (Clear). */
     ResetAllConfirm, ResetLibraryConfirm, ResetRecentConfirm,
 
-    /** Advanced › Back up and restore: Back up…, Restore…, and Undo restore while the way-back set exists ([backupRestoreItems]). */
+    /** About › Back up and restore: Back up…, Restore…, and Undo restore while the way-back set exists ([backupRestoreItems]). */
     BackupRestore,
 
     /** Appearance › Language: System default, then each language in its own name; A applies ([languagePanelIndex], [languagePanelTag]). */
@@ -366,7 +365,7 @@ internal enum class PanelPage {
     /** Back up and restore › Undo restore: Undo the restore and Forget the copy ([undoPanelItems]). */
     UndoRestore,
 
-    /** About › Version: the update's own buttons while one is found ([updatePanelItems]), Check now and the daily switch ([updatesPanelItems]). */
+    /** About › Version: the update's own buttons while one is found ([updatePanelItems]), then Check now ([updatesPanelItems]). */
     Update,
     Licenses,
 
@@ -388,8 +387,23 @@ internal enum class PanelPage {
     /** Cancel and Remove for the folder in [SettingsFocus.folderId]. */
     RemoveFolder,
 
-    /** A system's emulators: "Automatic", then each installed one. */
+    /** Library › Emulators: every system with games and the emulator it uses; A opens that system's [Emulators] page. */
+    EmulatorSystems,
+
+    /** A system's emulators (one step under [EmulatorSystems]): "Automatic", then each installed one. */
     Emulators,
+
+    /** Library › Collections: the own collections in their order; A or a tap opens one's [Collection] page. */
+    Collections,
+
+    /** A collection's page ([collectionPageItems]): Rename, Move up, Move down, Delete…; about [SettingsFocus.collectionId]. */
+    Collection,
+
+    /** Rename's keyboard page for the collection in [SettingsFocus.collectionId] ([SettingsCollectionRename.open]); its field takes the actions. */
+    CollectionRename,
+
+    /** Delete's confirm: Cancel (focused first) and Delete. */
+    CollectionDelete,
 
     /** Library › Hidden games: each hidden game; A or a tap shows it again. */
     HiddenGames,
@@ -400,7 +414,7 @@ internal enum class PanelPage {
     /** Fix name… for one unidentified game ([SettingsNameFix.open]); its field takes the actions. */
     FixName,
 
-    /** Accounts › ScreenScraper while signed out: the sign-in form ([SettingsSignIn.form]); it takes the actions. */
+    /** Library › ScreenScraper while signed out: the sign-in form ([SettingsSignIn.form]); it takes the actions. */
     ScraperSignIn,
 
     /** About › Report a problem: the form ([SettingsProblemReport.form]); it takes the actions. */
@@ -412,13 +426,13 @@ internal enum class PanelPage {
      */
     ScraperAccount,
 
-    /** Accounts › Box art: the choices of [boxArtSourceChoices], each with its line, then the work that needs no account ([boxArtPanelEntries]); on a choice A applies (ScreenScraper while signed out opens its sign-in form first). */
+    /** Library › Box art: the choices of [boxArtSourceChoices], each with its line, then the work that needs no account ([boxArtPanelEntries]); on a choice A applies (ScreenScraper while signed out opens its sign-in form first). */
     BoxArtSource,
 
-    /** Accounts › RetroAchievements while signed in: who is signed in, Sign in again (after a refusal) and Sign out ([raPageItems]). */
+    /** Library › RetroAchievements while signed in: who is signed in, Sign in again (after a refusal) and Sign out ([raPageItems]). */
     RaAccount,
 
-    /** Accounts › ScreenScraper › Choose systems…: each system (A checks it), then the two actions ([SettingsFocus.chosenSystems]). */
+    /** Library › ScreenScraper › Choose systems…: each system (A checks it), then the two actions ([SettingsFocus.chosenSystems]). */
     ScraperSystems,
 
     /** Re-download's confirm: Re-download, then Cancel (focused first); about [SettingsFocus.redownloadSystems]. */

@@ -15,7 +15,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Settings › Second screen and In game:
+ * Settings › Home screen's second screen rows (Screens while one is found):
  * the switch listed only while there is a second screen, In game only while the switch is on; the
  * switch shows the screen kind's default until the person flips it, then stores the other value; In
  * game steps through its two values.
@@ -23,7 +23,10 @@ import org.junit.Test
 internal class SettingsSecondScreenTest : SettingsModelHarness() {
     private val builtIn = SecondScreen(4, "Screen-2", ScreenKind.BuiltIn)
     private val unsure = SecondScreen(2, "Overlay #1", ScreenKind.Unsure)
-    private val section = SettingsSection.SecondScreen
+    private val section = SettingsSection.HomeScreen
+
+    /** Home screen's own rows, before the second screen's. */
+    private val own = listOf(SettingsOption.UseAsHome, SettingsOption.ShowApps)
 
     private var screen: SecondScreen? = null
 
@@ -46,18 +49,16 @@ internal class SettingsSecondScreenTest : SettingsModelHarness() {
     fun theRowsAreListedOnlyWhileThereIsASecondScreenAndInGameOnlyWhileItIsOn() {
         val undecided = SecondScreenSettings()
         val both = listOf(SettingsOption.SecondScreen, SettingsOption.SecondScreenInGame, SettingsOption.SecondScreenAppsOn)
-        assertEquals(emptyList<SettingsOption>(), section.rowsIn(SettingsContent().withSecondScreen(null, undecided)))
-        assertFalse("no section without a screen", section in SettingsSection.shownIn(SettingsContent().withSecondScreen(null, undecided)))
-        assertTrue(section in SettingsSection.shownIn(SettingsContent().withSecondScreen(unsure, undecided)))
-        assertEquals("built in, undecided: on", both, section.rowsIn(SettingsContent().withSecondScreen(builtIn, undecided)))
+        assertEquals("no screen: only Home screen's own rows", own, section.rowsIn(SettingsContent().withSecondScreen(null, undecided)))
+        assertEquals("built in, undecided: on", own + both, section.rowsIn(SettingsContent().withSecondScreen(builtIn, undecided)))
         assertEquals(
             "unsure, undecided: off, so no In game and no Open apps on",
-            listOf(SettingsOption.SecondScreen),
+            own + SettingsOption.SecondScreen,
             section.rowsIn(SettingsContent().withSecondScreen(unsure, undecided)),
         )
-        assertEquals(both, section.rowsIn(SettingsContent().withSecondScreen(unsure, SecondScreenSettings(enabled = true))))
+        assertEquals(own + both, section.rowsIn(SettingsContent().withSecondScreen(unsure, SecondScreenSettings(enabled = true))))
         assertEquals(
-            listOf(SettingsOption.SecondScreen),
+            own + SettingsOption.SecondScreen,
             section.rowsIn(SettingsContent().withSecondScreen(builtIn, SecondScreenSettings(enabled = false))),
         )
         assertTrue(
@@ -102,7 +103,7 @@ internal class SettingsSecondScreenTest : SettingsModelHarness() {
         val before = actions.settings
         model.onTapSection(section)
         model.onTapSection(section)
-        model.onTapOption(0, actions.settings, wide)
+        model.onTapOption(section.rowsIn(model.content).indexOf(SettingsOption.SecondScreen), actions.settings, wide)
         val after = actions.settings
         assertEquals(false, after.secondScreen.enabled)
         assertEquals("only the second screen changed", before.copy(secondScreen = after.secondScreen), after)
@@ -149,7 +150,7 @@ internal class SettingsSecondScreenTest : SettingsModelHarness() {
     fun aTapOnInGamesValueStepsIt() {
         withScreen(builtIn)
         focusSecondScreenRow(SettingsOption.SecondScreenInGame)
-        model.onTapValue(1, actions.settings, wide)
+        model.onTapValue(section.rowsIn(model.content).indexOf(SettingsOption.SecondScreenInGame), actions.settings, wide)
         assertEquals(InGameSetting.Black, actions.settings.secondScreen.inGame)
     }
 
@@ -177,7 +178,7 @@ internal class SettingsSecondScreenTest : SettingsModelHarness() {
     fun aTapOnOpenAppsOnsValueStepsIt() {
         withScreen(builtIn)
         focusSecondScreenRow(SettingsOption.SecondScreenAppsOn)
-        model.onTapValue(2, actions.settings, wide)
+        model.onTapValue(section.rowsIn(model.content).indexOf(SettingsOption.SecondScreenAppsOn), actions.settings, wide)
         assertEquals(AppsScreen.Bottom, actions.settings.secondScreen.appsOn)
     }
 
@@ -194,19 +195,16 @@ internal class SettingsSecondScreenTest : SettingsModelHarness() {
     }
 
     @Test
-    fun theScreenGoingAwayWhileItsRowIsFocusedTakesTheFocusToTheSectionAbove() {
+    fun theScreenGoingAwayWhileItsRowIsFocusedKeepsTheFocusOnARowOfHomeScreen() {
         withScreen(builtIn)
         focusSecondScreenRow(SettingsOption.SecondScreenInGame)
         withScreen(null)
         assertEquals(SettingsSection.HomeScreen, model.focus.section)
-        assertEquals(SettingsColumn.Sections, model.focus.column)
-        val before = actions.settings
-        press(Action.Enter)
-        assertEquals("A opens Home screen's rows and changes nothing", before, actions.settings)
         assertEquals(SettingsColumn.Options, model.focus.column)
+        assertTrue(model.focusedOption in own)
     }
 
-    /** From Home screen's rows, R1 goes to the next section shown: Second screen only while a screen is found. */
+    /** From Home screen's rows, R1 goes to Controls whether or not a screen is found. */
     private fun r1FromHomeScreen(found: SecondScreen?): SettingsSection {
         withScreen(found)
         openSection(SettingsSection.HomeScreen)
@@ -229,11 +227,11 @@ internal class SettingsSecondScreenTest : SettingsModelHarness() {
     fun r1FromHomeScreenWithoutAScreenOrGamesGoesToControls() = assertEquals(SettingsSection.Controls, r1FromHomeScreen(null))
 
     @Test
-    fun r1FromHomeScreenWithAScreenGoesToSecondScreen() = assertEquals(SettingsSection.SecondScreen, r1FromHomeScreen(builtIn))
+    fun r1FromHomeScreenWithAScreenGoesToControlsToo() = assertEquals(SettingsSection.Controls, r1FromHomeScreen(builtIn))
 
     @Test
     fun downFromHomeScreenWithoutAScreenOrGamesGoesToControls() = assertEquals(SettingsSection.Controls, downFromHomeScreen(null))
 
     @Test
-    fun downFromHomeScreenWithAScreenGoesToSecondScreen() = assertEquals(SettingsSection.SecondScreen, downFromHomeScreen(builtIn))
+    fun downFromHomeScreenWithAScreenGoesToControlsToo() = assertEquals(SettingsSection.Controls, downFromHomeScreen(builtIn))
 }

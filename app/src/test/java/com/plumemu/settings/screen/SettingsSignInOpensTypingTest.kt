@@ -41,9 +41,9 @@ internal class SettingsSignInOpensTypingTest : SettingsKeyboardPathHarness() {
     /** Settings › Accounts › [option] and A. */
     private fun openRow(option: SettingsOption) {
         show()
-        repeat(SettingsSection.Accounts.shownIndex) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.Library.shownIndex) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
-        repeat(SettingsSection.Accounts.rowsIn(content).indexOf(option)) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.Library.rowsIn(content).indexOf(option)) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
     }
 
@@ -117,9 +117,9 @@ internal class SettingsSignInOpensTypingTest : SettingsKeyboardPathHarness() {
     @Test
     fun androidsKeyboardStaysDownAsThePanelOpens() {
         show(androidKeyboard = true)
-        repeat(SettingsSection.Accounts.shownIndex) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.Library.shownIndex) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
-        repeat(SettingsSection.Accounts.rowsIn(content).indexOf(SettingsOption.RetroAchievementsAccount)) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.RetroAchievementsAccount)) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
         assertTrue(isFormOpen)
         assertFalse("no tray on Android's path", isTrayUp)

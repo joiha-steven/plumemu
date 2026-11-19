@@ -67,7 +67,7 @@ abstract class SettingsSectionsFitLabelsBase(private val isWide: Boolean) {
             for (each in sizes) {
                 size = each
                 for (column in listOf(SettingsColumn.Sections, SettingsColumn.Options)) {
-                    for (section in SettingsSection.shownIn(ShotContent.library)) {
+                    for (section in SettingsSection.entries) {
                         focus = SettingsFocus(column = column, section = section)
                         compose.waitForIdle()
                         val dp = with(density) { 1.dp.toPx() }
@@ -94,7 +94,7 @@ abstract class SettingsSectionsFitLabelsBase(private val isWide: Boolean) {
         var size by mutableStateOf(TextSize.Small)
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { SettingsAt(SettingsFocus(column = SettingsColumn.Sections, section = SettingsSection.Library), content = ShotContent.library) } }
         val problems = mutableListOf<String>()
-        val sections = SettingsSection.shownIn(ShotContent.library)
+        val sections = SettingsSection.entries
         for (eachFont in listOf(PlumFont.Jost)) {
             for (each in TextSize.entries) {
                 size = each

@@ -53,7 +53,7 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
 
     @Test
     fun aboutHasOneVersionRowWhetherOrNotAnUpdateIsFound() {
-        val rows = listOf(SettingsOption.Version, SettingsOption.UsageStatistics, SettingsOption.Licenses, SettingsOption.Privacy, SettingsOption.ReportProblem)
+        val rows = listOf(SettingsOption.Version, SettingsOption.CheckUpdatesDaily, SettingsOption.ReportProblem, SettingsOption.BackupAndRestore, SettingsOption.Reset, SettingsOption.UsageStatistics, SettingsOption.Privacy, SettingsOption.Licenses)
         assertEquals(rows, SettingsSection.About.rowsIn(SettingsContent(hasStatistics = true, hasUpdates = true)))
         assertEquals(rows, SettingsSection.About.rowsIn(SettingsContent(hasStatistics = true, hasUpdates = true, update = found)))
     }
@@ -70,10 +70,10 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
     @Test
     fun theSwitchIsOnByDefaultAndFlipsTheStoredValue() {
         assertTrue(SettingsOption.CheckUpdatesDaily.switchValue(actions.settings))
-        openPanel()
-        pressHere(Action.Move(Direction.Down))
-        assertEquals(UpdatePanelItem.CheckDaily, itemAtCursor())
+        openAbout()
+        focusHere(SettingsOption.CheckUpdatesDaily)
         pressHere(Action.Enter)
+        assertEquals("A on the row flips it in place", SettingsColumn.Options, about.focus.column)
         assertFalse(actions.settings.updates.checkDaily)
         pressHere(Action.Enter)
         assertTrue(actions.settings.updates.checkDaily)
@@ -155,7 +155,7 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
         for (notice in listOf(NoticeLine.None, NoticeLine.Reason)) {
             assertFalse("$notice", UpdatePanelItem.TurnOnNotifications in updatesPanelItems(found.copy(notice = notice)))
         }
-        assertEquals(listOf(UpdatePanelItem.Update, UpdatePanelItem.TurnOnNotifications, UpdatePanelItem.CheckNow, UpdatePanelItem.CheckDaily), updatesPanelItems(off))
+        assertEquals(listOf(UpdatePanelItem.Update, UpdatePanelItem.TurnOnNotifications, UpdatePanelItem.CheckNow), updatesPanelItems(off))
         assertEquals(listOf(UpdatePanelItem.Cancel, UpdatePanelItem.TurnOnNotifications), updateStepItems(off.copy(step = UpdateStep.Downloading(1, 2))))
         assertEquals("nothing found: no update line, no button", emptyList<UpdatePanelItem>(), updateStepItems(UpdateView(notice = NoticeLine.NotificationsOff)))
     }
@@ -219,46 +219,33 @@ internal class SettingsUpdatesTest : SettingsModelHarness() {
     }
 
     @Test
-    fun atTheNotesEndDownGoesOnToCheckNowAndTheSwitch() {
+    fun atTheNotesEndDownGoesOnToCheckNow() {
         about.content = about.content.copy(update = found)
         openPanel()
         about.updateNotes.canScroll = { false }
         val before = about.updateNotes.presses
         pressHere(Action.Move(Direction.Down))
         assertEquals(UpdatePanelItem.CheckNow, itemAtCursor())
-        pressHere(Action.Move(Direction.Down))
-        assertEquals(UpdatePanelItem.CheckDaily, itemAtCursor())
         assertEquals(before, about.updateNotes.presses)
     }
 
-    private val dailyIndex get() = updatesPanelItems(about.content.update).indexOf(UpdatePanelItem.CheckDaily)
-
     @Test
-    fun oneTapChangesTheDailySwitchInTheOpenPanel() {
-        openPanel()
+    fun oneTapOnTheRowUnderVersionChangesTheDailySwitch() {
+        openAbout()
+        val rows = SettingsSection.About.rowsIn(about.content)
+        assertEquals(rows.indexOf(SettingsOption.Version) + 1, rows.indexOf(SettingsOption.CheckUpdatesDaily))
         val before = actions.settings
-        about.onTapPanelItem(dailyIndex, actions.shown, wide)
-        assertEquals(UpdatePanelItem.CheckDaily, itemAtCursor())
+        about.onTapOption(rows.indexOf(SettingsOption.CheckUpdatesDaily), actions.shown, wide)
+        assertEquals(SettingsOption.CheckUpdatesDaily, about.focusedOption)
         assertFalse("the first tap flips it", SettingsOption.CheckUpdatesDaily.switchValue(actions.settings) == SettingsOption.CheckUpdatesDaily.switchValue(before))
     }
 
     @Test
-    fun oneTapChangesTheDailySwitchBesideItsRowAndBesideAnUpdate() {
-        about.content = about.content.copy(update = found)
-        openAbout()
-        focusHere(SettingsOption.Version)
-        assertEquals(SettingsColumn.Options, about.focus.column)
-        val before = actions.settings
-        about.onTapPanelItem(dailyIndex, actions.shown, wide)
-        assertEquals(PanelPage.Update, about.focus.page)
-        assertFalse(SettingsOption.CheckUpdatesDaily.switchValue(actions.settings) == SettingsOption.CheckUpdatesDaily.switchValue(before))
-    }
-
-    @Test
     fun aTapOnCheckNowStillTakesTwoLikeEveryButton() {
+        about.content = about.content.copy(update = found)
         openPanel()
         val checkNow = updatesPanelItems(about.content.update).indexOf(UpdatePanelItem.CheckNow)
-        about.onTapPanelItem(dailyIndex, actions.shown, wide)
+        assertFalse("the panel opens on Update, not Check now", itemAtCursor() == UpdatePanelItem.CheckNow)
         about.onTapPanelItem(checkNow, actions.shown, wide)
         assertTrue(updateCalls.isEmpty())
         about.onTapPanelItem(checkNow, actions.shown, wide)

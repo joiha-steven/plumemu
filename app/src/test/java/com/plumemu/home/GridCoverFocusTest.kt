@@ -85,7 +85,7 @@ class GridCoverFocusTest : GridCoverFocusBase() {
 
     @Test
     fun mixedSystemCoverGrowsAboutItsPivotToo() {
-        show(TableText.Graphite, entry = 0, id = "recent")
+        show(TableText.Graphite, entry = RECENT_FOLDER, id = "recent")
         assertOwnSize("640x480 recent", 1, 0)
     }
 

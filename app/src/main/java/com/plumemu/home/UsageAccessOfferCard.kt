@@ -22,7 +22,6 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.withFrameNanos
 import androidx.lifecycle.withStarted
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
@@ -143,10 +142,13 @@ internal fun rememberUsageAccessOffer(
         if (!due || blocked) return@LaunchedEffect
         snapshotFlow { isHomeIdle.value }.collectLatest { isIdle ->
             if (!isIdle || isOpen.value) return@collectLatest
-            // Settings opening leaves the home composed under it for a few frames; a card counted as shown there would be lost.
-            while (currentIsLeaving()) withFrameNanos { }
-            lifecycle.withStarted { }
-            if (!isHomeIdle.value || currentIsLeaving()) return@collectLatest
+            // The home stays composed under Settings; a card counted as shown there would be lost. Waits on the state, not on frames: a hidden home must cost no frame.
+            // Settings opening while it waits for the start sends it back to waiting, not to the next idle change.
+            do {
+                snapshotFlow { currentIsLeaving() }.first { !it }
+                lifecycle.withStarted { }
+            } while (currentIsLeaving())
+            if (!isHomeIdle.value) return@collectLatest
             offer = newState()
             isOpen.value = true
             currentOnShown()
@@ -161,12 +163,15 @@ internal fun UsageAccessOfferCard(
     state: UsageAccessOfferState,
     input: InputRouter,
     letters: ButtonLetters,
+    isLeaving: () -> Boolean = { false },
 ) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val currentIsLeaving by rememberUpdatedState(isLeaving)
     HearFeel(state.feel)
     LaunchedEffect(state, input, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            input.actions.collect(state::onAction)
+            // The main screen lies hidden under Settings: a press made there is Settings' own.
+            input.actions.collect { if (!currentIsLeaving()) state.onAction(it) }
         }
     }
     val send = remember(input) { { action: Action -> input.send(action) } }

@@ -33,10 +33,10 @@ class HomeD3ScreenshotTest {
             val live = FakeHomeContent.withFavorites()
             val marks = FavoriteMarks()
             // EarthBound (second in Favorites) taken out with Y while in the list; the library answered.
-            marks.requested("snes-2", false, live.entries[1].rows)
+            marks.requested("snes-2", false, live.favoriteRows)
             val answered = live.marked("snes-2", false)
             marks.settle(answered)
-            HomeAt(marks.shown(answered), listOf(Action.TapItem(Column.Systems, 1), Action.Enter, Action.TapItem(Column.Games, 1)))
+            HomeAt(marks.shown(answered), listOf(Action.TapItem(Column.Systems, 0), Action.Enter, Action.TapItem(Column.Games, 1)))
         }
 
     @Test

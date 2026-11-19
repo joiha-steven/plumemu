@@ -276,6 +276,7 @@ internal class FixNameState(
 internal class OwnNameState(
     initialName: String,
     override val keyboardKind: KeyboardChoice = KeyboardChoice.Plumemu,
+    override val maxLength: Int = Int.MAX_VALUE,
 ) : TypingState {
     var text: String by mutableStateOf(initialName)
         private set
@@ -291,7 +292,9 @@ internal class OwnNameState(
         private set
 
     fun onTextChange(value: String) {
-        text = value
+        // A field with a limit (a collection's name) refuses what would make it longer, whichever keyboard or paste typed it.
+        if (value.length > maxLength && value.length > text.length) return
+        text = value.take(maxLength)
         isRefused = false
     }
 

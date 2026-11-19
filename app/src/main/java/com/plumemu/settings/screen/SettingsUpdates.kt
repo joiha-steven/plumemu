@@ -27,14 +27,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.plumemu.R
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coreui.components.ListEdgeFade
 import com.plumemu.coreui.theme.FlatPartDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
-import com.plumemu.coreui.theme.WidthClass
 import com.plumemu.platforms.PlatformDataVersion
 import com.plumemu.settings.versionLine
 import com.plumemu.setup.SetupButton
@@ -56,8 +54,8 @@ import java.util.Locale
 
 /*
  * Settings › About › Version: the row (the installed version and the update found, or the last check) and its panel: the
- * version and the platform data; the status line; while an update is found its notes, size, Update and the steps after it; Check now; and the
- * daily switch with what it sends. The work is the graph's (`Updates`); this file only shows it.
+ * version and the platform data; the status line; while an update is found its notes, size, Update and the steps after it; and Check now
+ * (the daily switch is About's row under Version). The work is the graph's (`Updates`); this file only shows it.
  */
 
 /** What Settings asks of the updates. */
@@ -90,8 +88,8 @@ internal interface SettingsUpdateActions {
     }
 }
 
-/** What Version's panel can focus, top to bottom: the update's own buttons, Check now, the daily switch. */
-internal enum class UpdatePanelItem { Update, DownloadAnyway, AllowInstalls, Cancel, TurnOnNotifications, CheckNow, CheckDaily }
+/** What Version's panel can focus, top to bottom: the update's own buttons, then Check now. */
+internal enum class UpdatePanelItem { Update, DownloadAnyway, AllowInstalls, Cancel, TurnOnNotifications, CheckNow }
 
 /**
  * The buttons for where the update is: none while a check runs (the line says "Checking for
@@ -128,7 +126,7 @@ internal fun updateStepItems(view: UpdateView): List<UpdatePanelItem> =
     }
 
 /** Everything the panel can focus: Check now stays through an update, whose status then says why it does nothing. */
-internal fun updatesPanelItems(view: UpdateView): List<UpdatePanelItem> = updateStepItems(view) + UpdatePanelItem.CheckNow + UpdatePanelItem.CheckDaily
+internal fun updatesPanelItems(view: UpdateView): List<UpdatePanelItem> = updateStepItems(view) + UpdatePanelItem.CheckNow
 
 /**
  * Version's value: the update found ("0.1.6 available", or a word while it runs), else the installed version with the last check's
@@ -261,8 +259,7 @@ private fun failureText(failure: UpdateFailure): Int =
  * downloading) and the update's buttons (stacked, as wide as the widest, like Back up…'s) fill the first screen, so the buttons
  * stay in view while only the notes scroll, by touch or by Up and Down past the first and last button
  * ([SettingsPanelModel.updateNotes]); the last check and Check now follow below it. With nothing found: what Check now asks and of whom, the last
- * check and the button. Under either, the daily switch and what it sends: the IP address it shows is the person's choice to
- * make, so it stands in the panel.
+ * check and the button.
  */
 @Composable
 internal fun UpdatePanel(
@@ -284,7 +281,7 @@ internal fun UpdatePanel(
         var frameHeight by remember { mutableIntStateOf(Int.MAX_VALUE) }
         // Back on the update, the whole of it shows again; a frame taller than the panel keeps each button in view by itself.
         val frameFits = found != null && frameHeight <= constraints.maxHeight
-        val onUpdate = focused != null && focused != UpdatePanelItem.CheckNow && focused != UpdatePanelItem.CheckDaily
+        val onUpdate = focused != null && focused != UpdatePanelItem.CheckNow
         LaunchedEffect(onUpdate, frameFits) { if (onUpdate && frameFits) scroll.scrollTo(0) }
         val buttons =
             @Composable { shown: (UpdatePanelItem) -> Boolean ->
@@ -321,7 +318,6 @@ internal fun UpdatePanel(
             // What Plumemu is and what the platform data is, under the buttons: the update stays on the first screen.
             PanelBody(stringResource(R.string.settings_about_body))
             if (model.content.platformData != null) PanelBody(stringResource(R.string.settings_platform_data_body))
-            DailySwitch(settings, isFocused = focused == UpdatePanelItem.CheckDaily, items.indexOf(UpdatePanelItem.CheckDaily), touch)
         }
         if (scroll.canScrollBackward) ListEdgeFade(atBottom = false, Modifier.align(Alignment.TopCenter))
         if (scroll.canScrollForward) ListEdgeFade(atBottom = true, Modifier.align(Alignment.BottomCenter).testTag(SettingsTags.UPDATE_PANEL + FADE_BOTTOM_SUFFIX))
@@ -434,7 +430,7 @@ private fun UpdateButtons(
         verticalArrangement = Arrangement.spacedBy(PlumDimens.setupButtonGap),
     ) {
         items.forEachIndexed { index, item ->
-            if (item == UpdatePanelItem.CheckDaily || !shown(item)) return@forEachIndexed
+            if (!shown(item)) return@forEachIndexed
             val isFocused = item == focused && model.focus.panelIndex == index
             SetupButton(
                 text = stringResource(updateItemText(item)),
@@ -448,29 +444,6 @@ private fun UpdateButtons(
                         .testTag(SettingsTags.panelItem(index)),
             )
         }
-    }
-}
-
-/** Check for updates daily, as the row it is elsewhere, and what it sends; focused, both are brought into view. */
-@Composable
-private fun DailySwitch(
-    settings: PlumSettings,
-    isFocused: Boolean,
-    index: Int,
-    touch: SettingsTouch,
-) {
-    // The narrow column beside the options cannot hold the long label and the switch on one line.
-    val stacked = PlumTheme.layout.widthClass == WidthClass.Wide
-    Column(Modifier.bringIntoViewWhen(isFocused), verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
-        OptionRow(
-            option = SettingsOption.CheckUpdatesDaily,
-            value = OptionValue.Switch(SettingsOption.CheckUpdatesDaily.switchValue(settings)),
-            look = if (isFocused) OptionLook.Focused else OptionLook.Normal,
-            modifier = Modifier.tapTarget { touch.onPanelItem(index) }.testTag(SettingsTags.panelItem(index)),
-            verticalPadding = if (stacked) PlumDimens.settingsTwoLineRowPadding else 0.dp,
-            valueBelow = stacked,
-        )
-        PanelBody(stringResource(R.string.settings_check_updates_daily_body))
     }
 }
 
@@ -507,5 +480,4 @@ private fun updateItemText(item: UpdatePanelItem): Int =
         UpdatePanelItem.Cancel -> R.string.settings_cancel
         UpdatePanelItem.TurnOnNotifications -> R.string.settings_update_notifications_button
         UpdatePanelItem.CheckNow -> R.string.settings_updates_check_now
-        UpdatePanelItem.CheckDaily -> R.string.settings_check_updates_daily
     }

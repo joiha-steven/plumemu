@@ -68,14 +68,14 @@ class HomeMixedGridBoundsTest {
 
     private fun assertEveryGridSize(entryIndex: Int) {
         val source = mixedGridSource()
-        val entry = MixedGridLibrary.entries[entryIndex]
+        val entry = MixedGridLibrary.mixedEntry(entryIndex)
         var size by mutableStateOf(GridSize.Small)
         var layout: PlumLayout? = null
         compose.setContent {
             PlumTheme {
                 ProvideGridSize(size) {
                     layout = PlumTheme.layout
-                    key(size) { HomeWithArt(source, gridActions(entryIndex, 0), MixedGridLibrary, gridIds = setOf(entry.id)) }
+                    key(size) { HomeWithArt(source, mixedGridActions(entryIndex, 0), MixedGridLibrary, gridIds = setOf(entry.id)) }
                 }
             }
         }
@@ -163,7 +163,7 @@ class HomeMixedGridBoundsTest {
     /** The fixture mixes the three classes and keeps one game without pictures in the cells measured. */
     @Test
     fun theFixtureMixesShapesAndHasAGameWithoutPictures() {
-        val recent = MixedGridLibrary.entries[RECENT]
+        val recent = MixedGridLibrary.mixedEntry(RECENT)
         val classes = recent.rows.map { recent.shapeOf(it).coverClass }.toSet()
         assertEquals(CoverClass.entries.toSet(), classes)
         val source = mixedGridSource()

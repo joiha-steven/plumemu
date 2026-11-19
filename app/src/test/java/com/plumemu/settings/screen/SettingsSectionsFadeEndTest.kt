@@ -32,10 +32,11 @@ class SettingsSectionsFadeEndTest {
     @get:Rule
     val rules = rulesAround(compose)
 
-    private fun check() {
+    /** [scrolls]: whether the six sections do not fit this height at Largest, so a bottom fade shows at some focus. */
+    private fun check(scrolls: Boolean = true) {
         var at by mutableIntStateOf(0)
-        val sections = SettingsSection.shownIn(SettingsContent())
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Large)) { SettingsAt(SettingsFocus(section = sections[at])) } }
+        val sections = SettingsSection.entries
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) { SettingsAt(SettingsFocus(section = sections[at])) } }
         var faded = 0
         val problems = mutableListOf<String>()
         for (i in sections.indices) {
@@ -50,7 +51,7 @@ class SettingsSectionsFadeEndTest {
             if (fade.bottom.value > windowEnd + 0.5f) problems += "focus ${sections[i]}: the fade ends at ${fade.bottom.value} dp, below the clip of the rows at $windowEnd dp"
         }
         assertTrue(problems.joinToString("\n"), problems.isEmpty())
-        assertTrue("the sections scroll at Large (a bottom fade shows at some focus)", faded > 0)
+        if (scrolls) assertTrue("the sections scroll at Largest (a bottom fade shows at some focus)", faded > 0)
     }
 
     @Test
@@ -67,5 +68,5 @@ class SettingsSectionsFadeEndTest {
 
     @Test
     @Config(qualifiers = "w640dp-h480dp-land-xhdpi")
-    fun at640x480() = check()
+    fun at640x480() = check(scrolls = false) // 480 high: six sections fit even at Largest, nothing to fade
 }

@@ -49,13 +49,10 @@ class SettingsListFollowTest {
     private fun down() = compose.runOnIdle { model.onAction(Action.Move(Direction.Down), settings, geometry) }
 
     @Test
-    fun aHeldDownKeyInEmulatorsKeepsTheFocusedRowOnScreen() {
+    fun aHeldDownKeyInTheEmulatorsListKeepsTheFocusedRowOnScreen() {
         val systems = ShotContent.library.systems
         val content = ShotContent.library.copy(systems = List(40) { systems[it % systems.size].copy(systemId = "sys$it", name = "System $it") })
-        show(
-            SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Emulators, rememberedOption = mapOf(SettingsSection.Emulators to 0)),
-            content,
-        )
+        show(emulatorSystemsAt(content), content)
         compose.mainClock.autoAdvance = false
         // A key repeat every 30 ms, faster than the 180 ms scroll: the scroll must follow the newest focus, not queue.
         repeat(36) { step ->
@@ -63,13 +60,13 @@ class SettingsListFollowTest {
             compose.mainClock.advanceTimeBy(16)
             // Never trailing by more than a row while the scroll is in flight (queued scrolls lag more and more).
             if (step >= 12) {
-                val row = compose.onNodeWithTag(SettingsTags.system(step + 1)).getBoundsInRoot()
-                val list = compose.onNodeWithTag(SettingsTags.OPTION_LIST).getBoundsInRoot()
+                val row = compose.onNodeWithTag(SettingsTags.panelItem(step + 1)).getBoundsInRoot()
+                val list = compose.onNodeWithTag(SettingsTags.PANEL_LIST).getBoundsInRoot()
                 assertTrue("row ${step + 1} trails the list's end by ${row.top - list.bottom}", row.top < list.bottom + 42.dp)
             }
         }
         compose.mainClock.advanceTimeBy(400)
-        compose.onNodeWithTag(SettingsTags.system(36)).assertIsDisplayed()
+        compose.onNodeWithTag(SettingsTags.panelItem(36)).assertIsDisplayed()
     }
 
     @Test

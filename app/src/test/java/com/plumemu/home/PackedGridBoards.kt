@@ -44,7 +44,7 @@ internal val FAVORITE_PICKS =
         "snes" to 5, "megadrive" to 4, "gb" to 2, "snes" to 6, "gba" to 5, "snes" to 7, "megadrive" to 6, "gb" to 3,
     )
 
-/** Recent and Favorites over [FAVORITE_PICKS]; Favorites is entry 1. */
+/** Recent and Favorites over [FAVORITE_PICKS]; Favorites is entry 0 (the column's first). */
 internal val PackedFavoritesLibrary: HomeContent by lazy {
     val board = FakeHomeContent.withArtwork()
     val systems =
@@ -65,7 +65,7 @@ internal fun PackedFavoritesBoard(
 ) = ProvideGridSize(gridSize) {
     HomeWithArt(
         rememberSource { realCoverSource(PackedFavoritesLibrary) },
-        gridActions(1, focused),
+        gridActions(0, focused),
         PackedFavoritesLibrary,
         gridIds = setOf(HomeContent.FAVORITES_ID),
         onState = onState,

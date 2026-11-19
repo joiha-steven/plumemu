@@ -18,16 +18,25 @@ import org.junit.Test
 internal class SettingsInfoRowsTest : SettingsModelHarness() {
     private val reported = Reported().also { it.listenTo(model.feel) }
 
-    private fun focusBoxArtStatus() {
-        model.content = model.content.copy(account = AccountStatus.NotInThisBuild)
-        openSection(SettingsSection.Accounts)
-        focusOption(SettingsOption.ScraperStatus)
+    private fun focusPrivacy() {
+        openSection(SettingsSection.About)
+        focusOption(SettingsOption.Privacy)
         reported.drain()
     }
 
     @Test
-    fun aAndATapDoNothingAndMakeNoSoundOnTheBoxArtStatusRow() {
-        focusBoxArtStatus()
+    fun aBuildWithoutScreenScraperHasNoStatusRowAndBoxArtStillOpens() {
+        model.content = model.content.copy(account = AccountStatus.NotInThisBuild)
+        assertEquals(listOf(SettingsOption.BoxArtSource), accountRowsIn(model.content))
+        openSection(SettingsSection.Library)
+        focusOption(SettingsOption.BoxArtSource)
+        press(Action.Enter)
+        assertEquals(PanelPage.BoxArtSource, model.focus.page)
+    }
+
+    @Test
+    fun aAndATapDoNothingAndMakeNoSoundOnAReadOnlyRow() {
+        focusPrivacy()
         val at = model.optionIndex
         for (geometry in listOf(wide, narrow)) {
             press(Action.Enter, geometry)
@@ -39,7 +48,7 @@ internal class SettingsInfoRowsTest : SettingsModelHarness() {
             assertNull("no panel was entered", model.focus.page)
             assertEquals("tap on the value, $geometry", emptyList<Any>(), reported.drain())
         }
-        assertNull("no A hint", rowConfirmHint(SettingsOption.ScraperStatus))
+        assertNull("no A hint", rowConfirmHint(SettingsOption.Privacy))
     }
 
     @Test
@@ -85,7 +94,7 @@ internal class SettingsInfoRowsTest : SettingsModelHarness() {
 
     @Test
     fun rightStillOpensTheExplanationOnNarrowAndNotOnWide() {
-        focusBoxArtStatus()
+        focusPrivacy()
         move(Direction.Right, wide)
         assertNull("wide shows the panel beside the row already", model.focus.page)
         move(Direction.Right, narrow)

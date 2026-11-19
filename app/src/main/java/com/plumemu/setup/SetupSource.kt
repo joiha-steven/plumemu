@@ -71,7 +71,7 @@ internal interface SetupSource {
     /** The colour set in force when it is one of the sets; null for own colours. The look step opens on it. */
     val currentColorSet: Flow<ColorSet?>
 
-    /** Stores the box art source (what Settings › Accounts › Box art writes); throws when it could not. */
+    /** Stores the box art source (what Settings › Library › Box art writes); throws when it could not. */
     suspend fun setBoxArtSource(source: BoxArtSourceSetting)
 
     suspend fun setSecondScreenEnabled(isOn: Boolean)

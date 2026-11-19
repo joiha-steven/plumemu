@@ -39,12 +39,12 @@ class SettingsLongWordLabelTest {
     fun theRetroAchievementsLabelStaysOnOneLine() {
         var size by mutableStateOf(TextSize.Small)
         val content = AccountShotContent.of(AccountStatus.SignedOut).copy(raAccount = RaAccountStatus.SignedIn("plumtester", 1234))
-        val row = SettingsSection.Accounts.rowsIn(content).indexOf(SettingsOption.RetroAchievementsAccount)
+        val row = SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.RetroAchievementsAccount)
         val focus =
             SettingsFocus(
                 column = SettingsColumn.Options,
-                section = SettingsSection.Accounts,
-                rememberedOption = mapOf(SettingsSection.Accounts to row),
+                section = SettingsSection.Library,
+                rememberedOption = mapOf(SettingsSection.Library to row),
             )
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { SettingsAt(focus, content = content) } }
         val problems = mutableListOf<String>()

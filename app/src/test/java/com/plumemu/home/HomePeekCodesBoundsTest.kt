@@ -61,8 +61,9 @@ class HomePeekCodesBoundsTest {
             listOf("WWR", "MXR", "W3X", "G&W", "NGC", "X68", "WSC", "SGX").map { code -> SystemGames(code, "System $code", listOf(GameRowModel("$code-1", "Game", "USA")), code = code) },
         )
 
-    private val peekCodes = listOf("REC", "FAV", "APP", "SNS", "GBA", "PS1", "PSP", "NDS")
+    private val peekCodes = listOf("FAV", "COL", "APP", "SNS", "GBA", "PS1", "PSP", "NDS")
 
+    // The codes follow the new column order: Favorites, Collections, Apps (Recent is a folder).
     @Test
     fun theDefaultPeekShowsCodesWhereTheCountsStand() {
         show(FakeHomeContent.board())
@@ -75,6 +76,7 @@ class HomePeekCodesBoundsTest {
         }
     }
 
+    // The column's first entry is Favorites (FAV) since the Collections change; Recent is a folder.
     @Test
     fun aListSortedByLastPlayedStillShowsCodes() {
         val games = List(12) { i -> GameRowModel("g$i", "${'A' + i}ar game", "USA", systemAbbr = "SNES", systemId = "snes") }
@@ -83,15 +85,16 @@ class HomePeekCodesBoundsTest {
         assertFalse("no letters in this sort", content.entries[snes].hasLetterRail)
         show(content, actions = gamesFocused(snes))
         compose.waitForIdle()
-        edgeOf(0).assertTextEquals("REC")
+        edgeOf(0).assertTextEquals("FAV")
         edgeOf(snes).assertTextEquals("SNS")
     }
 
+    // Recent is no column entry since the Collections change: the first entry, Favorites, keeps its code with games focused there.
     @Test
-    fun recentShowsItsCodeWithGamesFocusedThere() {
+    fun favoritesShowsItsCodeWithGamesFocusedThere() {
         show(FakeHomeContent.board(), actions = listOf(Action.TapItem(Column.Systems, 0), Action.Enter, Action.TapItem(Column.Games, 0)))
         compose.waitForIdle()
-        edgeOf(0).assertTextEquals("REC")
+        edgeOf(0).assertTextEquals("FAV")
         edgeOf(FakeHomeContent.BOARD_SNES_INDEX).assertTextEquals("SNS")
     }
 
@@ -102,6 +105,7 @@ class HomePeekCodesBoundsTest {
         edgeOf(FakeHomeContent.BOARD_SNES_INDEX).assertTextEquals("248")
     }
 
+    // The codes follow the new column order: Favorites, Collections, Apps (Recent is a folder).
     @Test
     fun aStoredCountsOrLettersChoiceAndABackupHoldingItStillGiveCodes() {
         for (stored in listOf(LeftEdgeSetting.Counts, LeftEdgeSetting.Letters)) {

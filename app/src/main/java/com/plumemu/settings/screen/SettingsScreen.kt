@@ -268,7 +268,7 @@ internal fun SettingsLayout(
             modifier
                 .fillMaxSize()
                 .pageBackground()
-                // No tap passes through Settings (the main screen leaves the composition while it shows).
+                // The only thing that stops a tap from reaching the main screen hidden under Settings: its `isLeaving` blocks keys, not touches.
                 .pointerInput(Unit) {}
                 .padding(top = PlumDimens.stripMarginTop, bottom = PlumDimens.footerBelow)
                 .testTag(SettingsTags.SCREEN),
@@ -295,12 +295,12 @@ private fun SettingsTopBar(
 ) {
     val focus = model.focus
     val title = stringResource(R.string.settings_title)
-    val section = stringResource(focus.section.title)
+    val section = stringResource(focus.section.titleIn(model.content))
     val option =
         model.panelOption?.let {
             // The account rows' labels carry a name or a whole sentence: the crumb names the place only.
             when (it) {
-                SettingsOption.ScraperAccount, SettingsOption.ScraperStatus -> stringResource(R.string.settings_account_title)
+                SettingsOption.ScraperAccount -> stringResource(R.string.settings_account_title)
                 SettingsOption.RetroAchievementsAccount -> stringResource(R.string.settings_ra_title)
                 else -> optionLabel(it, model.content, model.optionIndex).withoutDots()
             }
@@ -309,9 +309,6 @@ private fun SettingsTopBar(
         when {
             // The sections are on screen in three columns: the bar names the screen only.
             focus.column == SettingsColumn.Sections || PlumTheme.layout.isSettingsThreeColumns -> title
-            // This section's name is too long to share the narrow bar with a panel's, and the panel's name alone says where it is.
-            focus.column == SettingsColumn.Panel && option != null && focus.section == SettingsSection.Accounts ->
-                stringResource(R.string.settings_crumb, title, option)
             focus.column == SettingsColumn.Panel && option != null ->
                 stringResource(R.string.settings_crumb, stringResource(R.string.settings_crumb, title, section), option)
             else -> stringResource(R.string.settings_crumb, title, section)
@@ -399,8 +396,8 @@ private fun SectionsColumn(
     model: SettingsModel,
     touch: SettingsTouch,
 ) {
-    // Scrolls to the focused section (the rows do not all fit the strip). Second screen and Emulators come and go.
-    val sections by remember(model) { derivedStateOf { SettingsSection.shownIn(model.content) } }
+    // Scrolls to the focused section where the rows do not all fit the strip (large text).
+    val sections = SettingsSection.entries
     KeepFocusedColumn(
         { sections.indexOf(model.focus.section) },
         sections.size,
@@ -425,6 +422,8 @@ private fun SectionRow(
     place: Modifier,
 ) {
     SideEffect { SettingsRecomposeProbe.sectionRows++ }
+    // Home screen is named Screens while the second screen's rows are in it: read through a derived state, so other content changes recompose no row.
+    val title by remember(model, section) { derivedStateOf { section.titleIn(model.content) } }
     val look by remember(model, section) {
         derivedStateOf {
             val focus = model.focus
@@ -440,7 +439,7 @@ private fun SectionRow(
     val colors = PlumTheme.colors
     val marked = three && look == SystemRowLook.Current
     SectionLabelRow(
-        name = stringResource(section.title),
+        name = stringResource(title),
         look = look,
         endPadding = if (three) 0.dp else PlumDimens.systemRowPadding + PlumDimens.rowTrailingGap,
         // As high as an option row (not the systems' 40): the two columns' text lines then share a centre row by row, where the

@@ -162,9 +162,9 @@ class HomeBoundsTest {
     @Test
     @Config(qualifiers = "w1024dp-h432dp-land-xhdpi")
     fun wideTwoKeyCapMatchesTheBoard() {
-        // A grid's bar has six hints (Favorite joined): at 768 Switch system gives way first (GRID_HINT_DROP_ORDER), so this is measured at 1024.
+        // A grid's bar has six hints (Favorite joined): at 768 Switch list gives way first (GRID_HINT_DROP_ORDER), so this is measured at 1024.
         compose.setContent { PlumTheme(TableText.Default) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, gridIds = setOf("snes")) } }
-        assertKeyCap(Action.JumpLetterNext, "Switch system", 45.33.dp)
+        assertKeyCap(Action.JumpLetterNext, "Switch list", 45.33.dp)
     }
 
     @Test

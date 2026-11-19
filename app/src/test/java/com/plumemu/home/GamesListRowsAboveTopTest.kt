@@ -46,7 +46,9 @@ abstract class GamesListRowsAboveTopBase {
     ) {
         entry = entryId
         val systemIndex = content.entries.indexOfFirst { it.id == entryId }
-        val actions = listOf(Action.TapItem(Column.Systems, systemIndex), Action.Enter, Action.TapItem(Column.Games, focusRow))
+        // Recent is a folder inside Collections since the Collections change: reached through it.
+        val open = if (entryId == HomeContent.RECENT_ID) OpenRecentFolderByTap else listOf(Action.TapItem(Column.Systems, systemIndex), Action.Enter)
+        val actions = open + Action.TapItem(Column.Games, focusRow)
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(edgeFadeOn = edgeFadeOn)) { HomeAt(content, actions, onAction = { state.dispatch(it) }, onState = { state = it }) } }
         compose.waitForIdle()
     }
@@ -56,7 +58,10 @@ abstract class GamesListRowsAboveTopBase {
         rows: (List<GameRowModel>) -> List<GameRowModel>,
     ) {
         compose.runOnIdle {
-            content = content.withEntries(content.entries.map { if (it.id == entryId) it.copy(rows = rows(it.rows)) else it })
+            content = content.withEntries(
+                content.entries.map { if (it.id == entryId) it.copy(rows = rows(it.rows)) else it },
+                folderEntries = content.folderEntries.map { if (it.id == entryId) it.copy(rows = rows(it.rows)) else it },
+            )
         }
         compose.waitForIdle()
     }

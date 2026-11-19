@@ -53,10 +53,11 @@ abstract class HomeEmptyFavoritesBase(
         compose.waitForIdle()
     }
 
+    // Favorites is the column's first entry since the Collections change.
     @Test
     fun emptyFavoritesNamesTheKeyThatAddsOne() {
         for (size in listOf(TextSize.Default, TextSize.Largest)) {
-            show(FakeHomeContent.noFavorites(), entry = 1, each = size)
+            show(FakeHomeContent.noFavorites(), entry = 0, each = size)
             val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
             val line = findTagged(root, HomeTags.EMPTY_FAVORITES)
             assertTrue("${size.name} ${widthDp}: no empty-Favorites line", line != null)
@@ -69,9 +70,10 @@ abstract class HomeEmptyFavoritesBase(
         }
     }
 
+    // Favorites is the column's first entry since the Collections change.
     @Test
     fun anEntryWithGamesShowsNoSuchLine() {
-        show(FakeHomeContent.board(), entry = 1, each = TextSize.Default)
+        show(FakeHomeContent.board(), entry = 0, each = TextSize.Default)
         val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
         assertTrue("Favorites with games shows the empty line", findTagged(root, HomeTags.EMPTY_FAVORITES) == null)
     }

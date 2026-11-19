@@ -52,6 +52,12 @@ sealed interface StripIntent {
 
     /** Open search (X); the strip's focus stays where it is, for when search closes. */
     data object OpenSearch : StripIntent
+
+    /** A (or a tap) on the row [rowId] of a folder list that opens no folder (New collection...): the screen decides. */
+    data class ActivateRow(
+        val systemId: String,
+        val rowId: String,
+    ) : StripIntent
 }
 
 internal data class Reduction(
@@ -86,7 +92,9 @@ internal object StripReducer {
     ): Reduction {
         val ctx = Ctx(content, isNarrow && content.hasBoxArt)
         val current = focus.reconciled(content, ctx.hasDetailsStop)
-        val entry = content.systems.getOrNull(current.systemIndex) ?: return Reduction(current)
+        val host = content.systems.getOrNull(current.systemIndex) ?: return Reduction(current)
+        // Inside an open folder every rule below works on the folder's own entry.
+        val entry = current.shownIn(host)
         return when (action) {
             is Action.Move ->
                 when {
@@ -104,21 +112,24 @@ internal object StripReducer {
             Action.Menu ->
                 if (current.column == Column.Systems) {
                     Reduction(current, listOf(StripIntent.OpenSettings))
+                } else if (entry.isFolderList || (entry.isFolder && entry.itemCount == 0)) {
+                    // The folders page has no game menu, and an empty folder has no game to open one on.
+                    Reduction(current)
                 } else {
                     Reduction(current, listOf(StripIntent.OpenGameMenu(entry.id, current.row)))
                 }
             // Every entry may have a grid, with or without box art; the screen decides (HomeContent.hasGridFor, an empty entry).
-            Action.ToggleView -> Reduction(current, listOf(StripIntent.ToggleView(entry.id)))
+            Action.ToggleView -> if (entry.isFolderList || (entry.isFolder && entry.itemCount == 0)) Reduction(current) else Reduction(current, listOf(StripIntent.ToggleView(entry.id)))
             Action.OpenSettings -> Reduction(current, listOf(StripIntent.OpenSettings))
             Action.ToggleFavorite ->
-                if (current.column == Column.Systems || entry.itemCount == 0) {
+                if (current.column == Column.Systems || entry.itemCount == 0 || entry.isFolderList) {
                     Reduction(current)
                 } else {
                     Reduction(current, listOf(StripIntent.ToggleFavorite(entry.id, current.row)))
                 }
             Action.Search -> Reduction(current, listOf(StripIntent.OpenSearch))
             Action.Sort ->
-                if (current.column == Column.Systems || entry.itemCount == 0) {
+                if (current.column == Column.Systems || entry.itemCount == 0 || entry.isFolderList) {
                     Reduction(current)
                 } else {
                     Reduction(current, listOf(StripIntent.OpenSortMenu(entry.id, current.row)))
@@ -151,7 +162,7 @@ internal object StripReducer {
         val hasDetailsStop = isNarrow && content.hasBoxArt
         val current = focus.reconciled(content, hasDetailsStop)
         val id = current.systemId ?: return current
-        val entry = content.systems.firstOrNull { it.id == id } ?: return current
+        val entry = content.systems.firstOrNull { it.id == id }?.let(current::shownIn) ?: return current
         return current.withRow(entry, index).reconciled(content, hasDetailsStop)
     }
 
@@ -192,7 +203,7 @@ internal object StripReducer {
                             val index = step(focus.systemIndex, content.systems.size, move.direction == Direction.Down, move.isRepeat)
                             selectSystem(focus, index, Column.Systems)
                         }
-                        Direction.Right -> if (entry.itemCount > 0) focus.copy(column = Column.Games) else focus
+                        Direction.Right -> if (entry.itemCount > 0 || entry.isFolder) focus.copy(column = Column.Games) else focus
                         Direction.Left -> focus
                     }
                 Column.Games -> if (entry.packed != null) moveInPacked(focus, entry, entry.packed, move.direction) else if (entry.gridColumns > 1) moveInGrid(focus, entry, move.direction) else moveInList(focus, entry, move)
@@ -209,7 +220,7 @@ internal object StripReducer {
             entry: SystemEntry,
             move: Action.Move,
         ): Boolean =
-            move.direction == Direction.Right && entry.gridColumns <= 1 && entry.packed == null && entry.itemCount > 0 &&
+            move.direction == Direction.Right && entry.gridColumns <= 1 && entry.packed == null && entry.itemCount > 0 && !entry.isFolderList &&
                 // With a details stop (narrow, box art) the list's Right goes to the stop and the rule applies there.
                 if (hasDetailsStop && entry.hasDetails) focus.column == Column.Details else focus.column == Column.Games
 
@@ -279,16 +290,42 @@ internal object StripReducer {
             entry: SystemEntry,
         ): Reduction =
             when (focus.column) {
-                Column.Systems -> Reduction(if (entry.itemCount > 0) focus.copy(column = Column.Games) else focus)
-                Column.Games, Column.Details -> Reduction(focus, listOf(StripIntent.Play(entry.id, focus.row)))
+                Column.Systems -> Reduction(if (entry.itemCount > 0 || entry.isFolder) focus.copy(column = Column.Games) else focus)
+                Column.Games, Column.Details ->
+                    when {
+                        entry.isFolderList -> activateFolderRow(focus, entry, focus.row)
+                        entry.itemCount == 0 -> Reduction(focus)
+                        else -> Reduction(focus, listOf(StripIntent.Play(entry.id, focus.row)))
+                    }
             }
 
-        fun back(focus: StripFocus): StripFocus =
-            when (focus.column) {
+        /** A on row [index] of the folder list [host]: the folder opens (its games column, its own remembered row), else the screen is told. */
+        private fun activateFolderRow(
+            focus: StripFocus,
+            host: SystemEntry,
+            index: Int,
+        ): Reduction {
+            val id = host.itemIds.getOrNull(index) ?: return Reduction(focus)
+            if (host.folders.none { it.id == id }) return Reduction(focus, listOf(StripIntent.ActivateRow(host.id, id)))
+            val opened = focus.copy(column = Column.Games, openFolder = OpenFolder(host.id, id)).withRow(host, index)
+            return Reduction(opened.reconciled(content, hasDetailsStop))
+        }
+
+        /** Back from an open folder's games shows the folder list again, the cursor on the folder just left; elsewhere one column to the left. */
+        fun back(focus: StripFocus): StripFocus {
+            val host = content.systems.getOrNull(focus.systemIndex)
+            val open = focus.openFolder?.takeIf { host != null && host.isFolderList && it.host == host.id }
+            return when (focus.column) {
                 Column.Systems -> focus
-                Column.Games -> focus.copy(column = Column.Systems)
+                Column.Games ->
+                    if (host != null && open != null) {
+                        focus.copy(openFolder = null).withRow(host, host.itemIds.indexOf(open.id).coerceAtLeast(0)).reconciled(content, hasDetailsStop)
+                    } else {
+                        focus.copy(column = Column.Systems)
+                    }
                 Column.Details -> focus.copy(column = Column.Games)
             }
+        }
 
         /**
          * L1 / R1, wrapping. On the system column every entry counts; with games focused, empty
@@ -312,7 +349,7 @@ internal object StripReducer {
             entry: SystemEntry,
             forward: Boolean,
         ): Reduction =
-            if (focus.column == Column.Systems) {
+            if (focus.column == Column.Systems || entry.isFolderList) {
                 Reduction(focus)
             } else {
                 Reduction(focus, listOf(StripIntent.JumpLetter(entry.id, focus.row, forward)))
@@ -339,6 +376,8 @@ internal object StripReducer {
                 Column.Games ->
                     when {
                         index !in 0 until entry.itemCount -> Reduction(focus)
+                        // A folder has nothing to preview: one tap opens it.
+                        entry.isFolderList -> activateFolderRow(withRow(focus, entry, index).copy(column = Column.Games), entry, index)
                         focus.column == Column.Games && index == focus.row ->
                             Reduction(focus, listOf(StripIntent.Play(entry.id, index)))
                         focus.column == Column.Details && index == focus.row -> Reduction(focus.copy(column = Column.Games))
@@ -362,9 +401,11 @@ internal object StripReducer {
             // On the system column: Settings, the touch path that works with the hint bar hidden (SPEC › Controls).
             if (press.column == Column.Systems) return Reduction(focus, listOf(StripIntent.OpenSettings))
             if (press.column != Column.Games) return Reduction(focus)
-            val entry = content.systems.getOrNull(focus.systemIndex) ?: return Reduction(focus)
+            val entry = content.systems.getOrNull(focus.systemIndex)?.let(focus::shownIn) ?: return Reduction(focus)
             if (press.index !in 0 until entry.itemCount) return Reduction(focus)
             val focused = withRow(focus, entry, press.index).copy(column = Column.Games)
+            // A folder row has no menu: the press only focuses it.
+            if (entry.isFolderList) return Reduction(focused)
             return Reduction(focused, listOf(StripIntent.OpenGameMenu(entry.id, press.index)))
         }
 

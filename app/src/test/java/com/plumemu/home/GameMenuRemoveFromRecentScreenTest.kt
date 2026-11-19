@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.getValue
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,7 +35,9 @@ import org.robolectric.annotation.Config
 
 /**
  * Remove from Recent through the real strip: START lists it only on a Recent row, and after
- * a removal the focus is on the next game, or on the Recent entry once Recent is empty.
+ * a removal the focus is on the next game, or on the (empty) Recent folder once Recent is empty.
+ * Requirement change (Collections): Recent is a folder inside Collections, a grid unless the list setting holds it, so the
+ * tests reach it through Collections and keep it a list (as they always read) unless they say a grid.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
@@ -48,11 +51,11 @@ class GameMenuRemoveFromRecentScreenTest {
     private lateinit var router: InputRouter
     private var content by mutableStateOf(FakeHomeContent.board())
 
-    private fun show(gridSystems: Set<String> = emptySet()) {
+    private fun show(asGrid: Boolean = false) {
         compose.setContent {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
-            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games), gridSystems = gridSystems) }
+            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games), listCollections = if (asGrid) emptySet() else setOf(HomeContent.RECENT_ID), initialFocus = StripFocus()) }
         }
         compose.waitForIdle()
     }
@@ -73,24 +76,19 @@ class GameMenuRemoveFromRecentScreenTest {
     /** Recent drops [key]; everything else as it was. */
     private fun dropFromRecent(key: String) {
         val board = content
-        content = HomeContent.of(
-            recent = board.entries[0].rows.filterNot { it.id == key },
-            favorites = board.entries[1].rows,
-            apps = board.entries[2].rows,
-            systems = board.entries.drop(FIRST_SYSTEM_INDEX).map { SystemGames(it.id, it.name.orEmpty(), it.rows) },
-        )
+        content = board.rebuilt(recent = board.recentRows.filterNot { it.id == key })
     }
 
     @Test
     fun startOnARecentRowListsItAndOnFavoritesOrASystemListDoesNot() {
         show()
-        send(Action.Enter, Action.Menu) // Recent is the first entry
+        send(*OpenRecentFolder.toTypedArray(), Action.Menu) // Recent is a folder inside Collections
         assertTrue("Recent: Remove from Recent is listed", hasRemoveRow())
-        send(Action.Back, Action.Back, Action.Move(Direction.Down), Action.Enter, Action.Menu)
+        send(Action.Back, Action.Back, Action.Back, Action.Move(Direction.Up), Action.Enter, Action.Menu) // out of the panel, the folder, the folder list; Favorites
         assertTrue("the menu opened on Favorites", isPanelOpen())
         assertFalse("Favorites: not listed", hasRemoveRow())
         send(Action.Back, Action.Back)
-        down(FakeHomeContent.BOARD_SNES_INDEX - 1)
+        down(FakeHomeContent.BOARD_SNES_INDEX)
         send(Action.Enter, Action.Menu)
         assertTrue("the menu opened on a system list", isPanelOpen())
         assertFalse("a system list: not listed", hasRemoveRow())
@@ -100,7 +98,7 @@ class GameMenuRemoveFromRecentScreenTest {
     fun removingAMiddleRowFocusesTheNextGame() {
         games.onRemoveFromRecent = ::dropFromRecent
         show()
-        send(Action.Enter, Action.Move(Direction.Down), Action.Menu)
+        send(*OpenRecentFolder.toTypedArray(), Action.Move(Direction.Down), Action.Menu)
         down(REMOVE_ROW) // Play, Play with, Favorite, Name, Info, Remove from Recent (Hide is last)
         send(Action.Enter)
         assertEquals(listOf("recent-1"), games.removedFromRecent)
@@ -109,30 +107,26 @@ class GameMenuRemoveFromRecentScreenTest {
         assertEquals("the next game took its place", listOf("recent-2"), games.launched)
     }
 
+    // Expectation changed with the requirement: the emptied Recent is a folder that stays open on its one line (no entry to fall back to).
     @Test
-    fun removingTheOnlyRowFocusesTheRecentEntry() {
-        content = HomeContent.of(
-            recent = content.entries[0].rows.take(1),
-            favorites = content.entries[1].rows,
-            apps = content.entries[2].rows,
-            systems = content.entries.drop(FIRST_SYSTEM_INDEX).map { SystemGames(it.id, it.name.orEmpty(), it.rows) },
-        )
+    fun removingTheOnlyRowLeavesTheEmptyRecentFolderFocused() {
+        content = content.rebuilt(recent = content.recentRows.take(1))
         games.onRemoveFromRecent = ::dropFromRecent
         show()
-        send(Action.Enter, Action.Menu)
+        send(*OpenRecentFolder.toTypedArray(), Action.Menu)
         down(REMOVE_ROW)
         send(Action.Enter)
         assertEquals(listOf("recent-0"), games.removedFromRecent)
         send(Action.Play)
-        assertTrue("no game is under the focus: the Recent entry is", games.launched.isEmpty())
+        assertTrue("no game is under the focus: the empty Recent folder is", games.launched.isEmpty())
         send(Action.Menu)
-        assertFalse("START on the systems column opens no game menu", isPanelOpen())
+        assertFalse("START on the empty folder opens no game menu", isPanelOpen())
     }
 
-    private fun removeFirstRecentGame(gridSystems: Set<String> = emptySet()) {
+    private fun removeFirstRecentGame(asGrid: Boolean = false) {
         games.onRemoveFromRecent = ::dropFromRecent
-        show(gridSystems)
-        send(Action.Enter, Action.Menu)
+        show(asGrid)
+        send(*OpenRecentFolder.toTypedArray(), Action.Menu)
         down(REMOVE_ROW)
         send(Action.Enter)
         assertEquals(listOf("recent-0"), games.removedFromRecent)
@@ -176,7 +170,7 @@ class GameMenuRemoveFromRecentScreenTest {
 
     @Test
     fun aCoverGridHasNoSearchHintSoUndoGetsItsOwnAndATapUndoes() {
-        removeFirstRecentGame(gridSystems = setOf(HomeContent.RECENT_ID))
+        removeFirstRecentGame(asGrid = true)
         compose.onNodeWithTag(HomeTags.hint(Action.Search), useUnmergedTree = true).assert(hasAnyDescendant(hasText(str(R.string.home_hint_undo), substring = true)))
         compose.onNodeWithTag(HomeTags.hint(Action.Search), useUnmergedTree = true).performClick()
         compose.waitForIdle()

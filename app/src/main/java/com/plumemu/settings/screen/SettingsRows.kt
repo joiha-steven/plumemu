@@ -161,11 +161,8 @@ internal fun OptionRow(
     val colors = PlumTheme.colors
     val type = PlumTheme.type
     val focused = look == OptionLook.Focused
-    val isStatusLine = option == SettingsOption.ScraperStatus && look != OptionLook.Current
     val labelColor: () -> Color =
         when {
-            // The box art status is information only: its sentence is the row's label, drawn like a value (secondary text colour).
-            isStatusLine -> if (focused) { { colors.meta } } else { { colors.muted } }
             look == OptionLook.Focused -> { { colors.strong } }
             look == OptionLook.Normal -> { { colors.text } }
             look == OptionLook.Current -> { { colors.accent } }
@@ -330,6 +327,11 @@ internal fun optionValue(
         SettingsOption.Systems -> OptionValue.Opens(systemsShownText(content, settings))
         SettingsOption.Rescan -> OptionValue.Text(if (content.isScanning) stringResource(R.string.settings_rescan_running) else "")
         SettingsOption.SystemEmulator -> OptionValue.Opens(emulatorValue(content.systems.getOrNull(index)))
+        SettingsOption.Emulators -> {
+            val count = content.systems.size
+            OptionValue.Opens(pluralStringResource(R.plurals.settings_emulators_systems, count, rememberCountFormat().format(count)))
+        }
+        SettingsOption.Collections -> OptionValue.Opens(collectionsValue(content.collections.size))
         SettingsOption.FilesNotAdded -> OptionValue.Opens(filesNotAddedValue(content))
         SettingsOption.UnreadableFolders -> OptionValue.Opens(unreadableRowValue(content))
         // Shown as the board's switch; A asks Android, which is the only one that can change it.
@@ -360,8 +362,6 @@ internal fun optionValue(
                     if (account.isKeyRefused) OptionValue.Opens(stringResource(R.string.settings_ra_value_refused)) else signedInValue(account.userName)
                 RaAccountStatus.SignedOut -> OptionValue.Opens(stringResource(R.string.settings_account_value_sign_in))
             }
-        // The line is the row's label (it may need two lines); nothing on the right.
-        SettingsOption.ScraperStatus -> OptionValue.Text("")
         // Statistics draws its own page (StatisticsPage); its stops have no row.
         SettingsOption.Statistic -> OptionValue.Text("")
         // The Statistics page draws this row itself.
@@ -417,7 +417,6 @@ internal fun optionLabel(
         SettingsOption.UnreadableFolders -> unreadableRowLabel(content)
         SettingsOption.HiddenGames -> stringResource(R.string.settings_hidden_games, rememberCountFormat().format(content.hiddenGames.size))
         SettingsOption.UnidentifiedGames -> stringResource(R.string.settings_unidentified_games, rememberCountFormat().format(content.unidentifiedGames.size))
-        SettingsOption.ScraperStatus -> boxArtLineOf(content.account, content.boxArt)?.let { boxArtLineText(it) }.orEmpty()
         else -> stringResource(option.label)
     }
 

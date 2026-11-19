@@ -12,6 +12,7 @@ import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.home.FakeHomeContent
+import com.plumemu.home.fromSystemColumn
 import com.plumemu.home.HomeCallbacks
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
@@ -62,7 +63,9 @@ class SettingsScreenSoundsTest {
             router = remember { InputRouter(scope, onDebug = {}) }
             MainScreen(settings.value, HomeState.Ready(FakeHomeContent.board()), router, HomeCallbacks(), onRetry = {}, settingsHost = host, sounds = heard.uiSounds)
         }
+        compose.fromSystemColumn(router) // the cold start is Favorites' games column since the Collections change
         compose.waitForIdle()
+        heard.drain() // the move to the system column is not under test
         assertEquals("opening Settings: the press's own confirm and nothing more", listOf(UiSound.Confirm), press(Action.Menu))
         val down = Action.Move(Direction.Down)
         press(down, down, down, Action.Enter, down, down, down, down) // Controls › Confirm with B … Keyboard, Sounds

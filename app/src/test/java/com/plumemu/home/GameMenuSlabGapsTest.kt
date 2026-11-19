@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.ui.graphics.toPixelMap
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onRoot
@@ -81,7 +82,7 @@ class GameMenuSlabGapsTest {
             compose.setContent {
                 val scope = rememberCoroutineScope()
                 router = remember { InputRouter(scope) }
-                PlumTheme(look.copy(textSize = size)) { HomeScreen(FakeHomeContent.board(), router, HomeCallbacks(games = games)) }
+                PlumTheme(look.copy(textSize = size)) { HomeScreen(FakeHomeContent.board(), router, HomeCallbacks(games = games), initialFocus = StripFocus()) }
             }
             compose.waitForIdle()
             send(*List(FakeHomeContent.BOARD_SNES_INDEX) { Action.Move(Direction.Down) }.toTypedArray(), Action.Enter, Action.Menu)

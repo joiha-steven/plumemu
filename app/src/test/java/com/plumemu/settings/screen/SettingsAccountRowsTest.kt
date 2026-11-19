@@ -29,7 +29,7 @@ internal class SettingsAccountRowsTest : SettingsModelHarness() {
     private fun rows(
         account: AccountStatus,
         source: BoxArtSourceSetting?,
-    ) = SettingsSection.Accounts.rowsIn(content(account, source))
+    ) = SettingsSection.Library.rowsIn(content(account, source)).filter { it in listOf(box, scraper, ra) }
 
     @Test
     fun signedOutTheRowIsListedOnlyWithScreenScraperAsTheSource() {
@@ -51,13 +51,13 @@ internal class SettingsAccountRowsTest : SettingsModelHarness() {
     }
 
     @Test
-    fun aBuildWithoutCredentialsKeepsItsStatusRowOnEverySource() {
-        for (source in sources) assertEquals("$source", listOf(box, SettingsOption.ScraperStatus, ra), rows(AccountStatus.NotInThisBuild, source))
+    fun aBuildWithoutCredentialsListsBoxArtAndNoStatusRowOnEverySource() {
+        for (source in sources) assertEquals("$source", listOf(box, ra), rows(AccountStatus.NotInThisBuild, source))
     }
 
     private fun onScraperRow(account: AccountStatus = usable) {
         model.content = content(account, BoxArtSourceSetting.LibretroOnly)
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(scraper)
     }
 
@@ -100,7 +100,7 @@ internal class SettingsAccountRowsTest : SettingsModelHarness() {
     @Test
     fun aSignInFormOpenOnTheRowLeavesWithIt() {
         model.content = content(AccountStatus.SignedOut, BoxArtSourceSetting.ScreenScraper)
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(scraper)
         press(Action.Enter)
         assertEquals(PanelPage.ScraperSignIn, model.focus.page)
@@ -112,7 +112,7 @@ internal class SettingsAccountRowsTest : SettingsModelHarness() {
     @Test
     fun aSignInFormOpenFromBoxArtStaysWhenTheRowComesAndGoes() {
         model.content = content(AccountStatus.SignedOut, BoxArtSourceSetting.OwnCovers)
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(box)
         press(Action.Enter)
         while (model.focus.panelIndex > 0) move(Direction.Up)
@@ -128,7 +128,7 @@ internal class SettingsAccountRowsTest : SettingsModelHarness() {
     @Test
     fun theCursorOnRetroAchievementsStaysThereWhenTheRowComesOrGoes() {
         model.content = content(usable, BoxArtSourceSetting.OwnCovers)
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(ra)
         model.content = content(AccountStatus.SignedOut, BoxArtSourceSetting.OwnCovers)
         assertEquals(ra, model.focusedOption)
@@ -139,7 +139,7 @@ internal class SettingsAccountRowsTest : SettingsModelHarness() {
     @Test
     fun anOpenPanelOfRetroAchievementsStaysOpenWhenTheRowGoes() {
         model.content = content(usable, BoxArtSourceSetting.OwnCovers).copy(raAccount = com.plumemu.account.RaAccountStatus.SignedIn("plumtester", 0))
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(ra)
         press(Action.Enter)
         assertEquals(PanelPage.RaAccount, model.focus.page)

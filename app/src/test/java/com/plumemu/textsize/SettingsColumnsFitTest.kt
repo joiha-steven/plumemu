@@ -69,7 +69,7 @@ abstract class SettingsColumnsFitBase {
         val content = ShotContent.library
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) { SettingsAt(focus, content = content) } }
         val stops = mutableListOf<SettingsFocus>()
-        for (section in SettingsSection.shownIn(content)) {
+        for (section in SettingsSection.entries) {
             stops += SettingsFocus(column = SettingsColumn.Sections, section = section)
             val rows = section.rowsIn(content)
             if (rows.isEmpty()) stops += SettingsFocus(column = SettingsColumn.Options, section = section)

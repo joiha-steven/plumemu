@@ -62,7 +62,8 @@ class SettingsAccountScreenshotTest {
     fun dailyLimit() =
         shot("settings_account_daily_limit", AccountStatus.SignedIn("plumtester", dailyLimitUntilMillis = AccountShots.RESUME_AT_MILLIS), SettingsOption.ScraperAccount)
 
-    @Test fun notAvailable() = shot("settings_account_not_available", AccountStatus.NotInThisBuild, SettingsOption.ScraperStatus)
+    /** A build with no ScreenScraper credentials: the Box art row, whose panel says so. */
+    @Test fun notAvailable() = shot("settings_account_not_available", AccountStatus.NotInThisBuild, SettingsOption.BoxArtSource)
 
     /** The region is an item of the ScreenScraper panel: the panel open with it focused. */
     @Test
@@ -99,7 +100,7 @@ internal object AccountShotContent {
         option: SettingsOption,
         page: PanelPage? = null,
     ): SettingsFocus {
-        val section = SettingsSection.Accounts
+        val section = SettingsSection.Library
         val row = section.rowsIn(content).indexOf(option)
         return SettingsFocus(
             column = if (page == null) SettingsColumn.Options else SettingsColumn.Panel,

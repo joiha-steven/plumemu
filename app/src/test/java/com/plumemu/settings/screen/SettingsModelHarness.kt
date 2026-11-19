@@ -225,7 +225,7 @@ internal abstract class SettingsModelHarness {
                 }
             }
 
-        /** Advanced › Export logs: each ask, answered with [canShareLogs]. */
+        /** About › Export logs: each ask, answered with [canShareLogs]. */
         var logExports = 0
         var canShareLogs = true
 
@@ -252,6 +252,10 @@ internal abstract class SettingsModelHarness {
         var nameActions: SettingsNameActions = SettingsNameActions.None
 
         override val names: SettingsNameActions get() = nameActions
+
+        /** Library › Collections: each rename, delete and reorder asked for, held back until a test answers. */
+        val collectionsFake = FakeCollectionActions()
+        override val collections: SettingsCollectionActions get() = collectionsFake
 
         /** Clear Recent…: calls made, and how many games it says left (null: the write failed). */
         var recentClears = 0
@@ -306,7 +310,7 @@ internal abstract class SettingsModelHarness {
                 }
             }
 
-        /** Advanced › Back up…: the kinds the save picker was opened for, Cancel and forget presses. */
+        /** About › Back up…: the kinds the save picker was opened for, Cancel and forget presses. */
         val backupPicks = mutableListOf<com.plumemu.coredata.backup.BackupKind>()
         var hasSavePicker = true
         var backupCancels = 0
@@ -328,7 +332,7 @@ internal abstract class SettingsModelHarness {
                 }
             }
 
-        /** Advanced › Restore… and Undo last restore: what Settings asked of the graph, in order. */
+        /** About › Restore… and Undo last restore: what Settings asked of the graph, in order. */
         val restoreCalls = mutableListOf<String>()
         var hasOpenPicker = true
 
@@ -418,7 +422,7 @@ internal abstract class SettingsModelHarness {
 
     protected fun openSection(section: SettingsSection) {
         // Bounded: a move that does nothing (a layout change) fails here instead of looping forever.
-        val shown = SettingsSection.shownIn(model.content)
+        val shown = SettingsSection.entries
         repeat(shown.size) { if (shown.indexOf(model.focus.section) < shown.indexOf(section)) move(Direction.Down) }
         assertEquals("the sections column did not reach $section", section, model.focus.section)
         press(Action.Enter)

@@ -20,6 +20,9 @@ import com.plumemu.settings.ButtonLetters
 /** Whether Remove from Recent's Undo is offered now (`RecentUndo.game`); provided by `HomeScreen`. */
 internal val LocalRecentUndoOffered = staticCompositionLocalOf<() -> Boolean> { { false } }
 
+/** The words of the offer's line (`RecentUndo.notice`): Recent's or a collection's; provided by `HomeScreen`. */
+internal val LocalRecentUndoNotice = staticCompositionLocalOf<() -> Int> { { R.string.home_notice_removed_from_recent } }
+
 /** The top bar's "Removed from Recent" and "Undo" ([line], null: the usual text) and the opacity of the place text. */
 internal class ShownUndo(val line: Pair<String, String>?, val alpha: () -> Float)
 
@@ -42,7 +45,7 @@ internal fun rememberShownUndo(): ShownUndo {
         isShown = offered
         fadeTo(1f)
     }
-    val lead = stringResource(R.string.home_notice_removed_from_recent)
+    val lead = stringResource(LocalRecentUndoNotice.current())
     val tail = stringResource(R.string.home_hint_undo)
     return remember(isShown, lead, tail) { ShownUndo(if (isShown) lead to tail else null) { alpha.value } }
 }

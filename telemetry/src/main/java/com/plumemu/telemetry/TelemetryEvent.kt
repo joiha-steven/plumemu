@@ -227,6 +227,11 @@ public sealed class TelemetryEvent(
         override fun props(): Map<String, JsonPrimitive> = mapOf("from_version" to JsonPrimitive(fromVersion))
     }
 
+    /** Plumemu ended its own process, screen off, to run the code Android compiled after it started; no fields. */
+    public object ProcessRestarted : TelemetryEvent("process_restarted") {
+        override fun props(): Map<String, JsonPrimitive> = emptyMap()
+    }
+
     public class BackupMade(
         public val kind: BackupKind,
         public val result: OkOrError,

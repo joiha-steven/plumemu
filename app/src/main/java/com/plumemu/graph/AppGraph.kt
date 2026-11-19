@@ -251,7 +251,7 @@ class AppGraph(
      */
     val homeContent: StateFlow<HomeState?> by lazy {
         val source = LibraryHomeContent(
-            games = database.gameDao(),
+            games = database.gameDao(), database = database,
             catalog = ::catalog,
             apps = apps,
             showApps = settings.filterNotNull().map { it.homeScreen.showApps }.distinctUntilChanged(),
@@ -304,14 +304,14 @@ class AppGraph(
     internal val settingsWriter: SettingsWriter by lazy { SettingsWriter(appScope, settingsStore::update, log) }
 
     /**
-     * Settings › Advanced › Reset library: the database forgets the games and what the person
+     * Settings › About › Reset library: the database forgets the games and what the person
      * attached to them, keeps the picked folders (and so the grants Android holds for them; nothing
      * here releases a grant), and every folder is scanned again ([StartupWork.resetLibrary]).
      */
     fun resetLibrary(): Job = startup.resetLibrary { withContext(io) { database.scanDao().forgetLibrary() }.also { appGames.requestSync() } }
 
     /**
-     * Settings › Advanced › Back up…: one backup at a
+     * Settings › About › Back up…: one backup at a
      * time in [appScope], so it goes on when Settings closes. Built on first use; reads nothing until then.
      */
     internal val backup: GraphBackup by lazy {
@@ -339,7 +339,7 @@ class AppGraph(
     }
 
     /**
-     * Settings › Advanced › Restore… and Undo last restore: one at a time in [appScope]. After a swap of the library the app restarts
+     * Settings › About › Restore… and Undo last restore: one at a time in [appScope]. After a swap of the library the app restarts
      * (relaunchApp, in RestoreWiring.kt): every part of the graph that holds the database then opens the new file.
      */
     internal val restore: GraphRestore by lazy {
@@ -406,7 +406,7 @@ class AppGraph(
             remembered = { rememberedSettingsContent },
             folderAdd = settingsLibrary.folderAdd,
             library = settingsLibrary,
-            names = settingsLibrary.names,
+            names = settingsLibrary.names, collections = settingsLibrary.collections,
             accounts = scraperAccounts,
             raAccounts = raAccounts,
             boxArt = scrapes.settingsActions,
@@ -478,7 +478,7 @@ class AppGraph(
     }
     /** RetroAchievements ([GraphAchievements]): nothing of it is built while signed out. */
     internal val achievements: GraphAchievements by lazy { graphAchievementsFor(app, this, io, log) }
-    /** Settings › Accounts › RetroAchievements: sign in and out over [achievements]. */
+    /** Settings › Library › RetroAchievements: sign in and out over [achievements]. */
     private val raAccounts: GraphRaAccounts by lazy { GraphRaAccounts(achievements, appScope, Dispatchers.Main, log) }
     /** Info's badge pictures; Coil's loader is made at the first badge drawn (signed in only). */
     internal val achievementBadges by lazy { achievementBadgesFor(app) }

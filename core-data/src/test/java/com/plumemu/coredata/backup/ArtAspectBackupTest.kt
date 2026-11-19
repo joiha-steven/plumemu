@@ -69,7 +69,7 @@ class ArtAspectBackupTest {
         source.openHelper.writableDatabase.execSQL("UPDATE game SET art_aspect = 0.75 WHERE id = ?", arrayOf<Any>(ids[0]))
         val snapshot = snapshotOffMain(source, File(tmp.root, "snap/plumemu.db"))
         source.close()
-        assertEquals(19, snapshot.schemaVersion)
+        assertEquals(20, snapshot.schemaVersion)
 
         val file = backUpAndRestore(snapshot.file, snapshot.schemaVersion, snapshot.gameCount)
 

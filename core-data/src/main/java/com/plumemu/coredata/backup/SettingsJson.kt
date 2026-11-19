@@ -56,6 +56,7 @@ object SettingsJson {
                     .put("gridSize", s.appearance.gridSize.name)
                     // Sorted: a set has no order, and the same settings should give the same file.
                     .put("gridSystems", JSONArray(s.appearance.gridSystems.sorted()))
+                    .put("listCollections", JSONArray(s.appearance.listCollections.sorted()))
                     // None yet is null, so a restore clears whatever the device had.
                     .put("ownColors", s.appearance.ownColors?.let(::ownColorsJson) ?: JSONObject.NULL)
                     .put("buttonSet", s.appearance.buttonSet ?: JSONObject.NULL)
@@ -175,6 +176,7 @@ object SettingsJson {
                             gridSize = enum(a, APPEARANCE, "gridSize", d.appearance.gridSize),
                             // Older backups have no key: every system reads as a list.
                             gridSystems = strings(a, APPEARANCE, "gridSystems")?.filter { it.isNotBlank() }?.toSet() ?: d.appearance.gridSystems,
+                            listCollections = strings(a, APPEARANCE, "listCollections")?.filter { it.isNotBlank() }?.toSet() ?: d.appearance.listCollections,
                             // Older backups have no key: no own colours kept.
                             ownColors = ownColors(a, APPEARANCE, "ownColors"),
                             // Older backups have no key: not decided, the app settles it from the colours.

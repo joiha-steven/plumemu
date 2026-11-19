@@ -17,6 +17,7 @@ import com.plumemu.graph.loggingHandler
 import com.plumemu.home.FakeHomeContent
 import com.plumemu.home.HomeCallbacks
 import com.plumemu.home.appComposeRule
+import com.plumemu.home.assertHomeLandedOnFavorites
 import com.plumemu.home.rulesAround
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CoroutineScope
@@ -77,7 +78,7 @@ class MainScreenTest {
         state.value = HomeState.Ready(FakeHomeContent.board())
         compose.waitForIdle()
         compose.onNodeWithTag(MainScreenTags.LIBRARY_ERROR).assertDoesNotExist()
-        compose.onNodeWithText("Super Nintendo").assertIsDisplayed()
+        compose.assertHomeLandedOnFavorites() // landing is Favorites' first game since the Collections change
         compose.runOnIdle { router.send(Action.Enter) }
         compose.waitForIdle()
         assertEquals("Enter belongs to the main screen once the library shows", 2, retries)

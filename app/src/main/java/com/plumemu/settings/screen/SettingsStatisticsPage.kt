@@ -546,7 +546,7 @@ private fun ExactPlayTime(
     }
 }
 
-/** Kept on the handheld: these figures are never the anonymous usage statistics (Advanced › Send usage statistics). */
+/** Kept on the handheld: these figures are never the anonymous usage statistics (About › Send usage statistics). */
 @Composable
 private fun Footer() {
     val colors = PlumTheme.colors

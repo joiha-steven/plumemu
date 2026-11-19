@@ -64,6 +64,8 @@ internal class SettingsUnknownFolderModelTest : SettingsModelHarness() {
                 SettingsOption.Rescan,
                 SettingsOption.FilesNotAdded,
                 SettingsOption.UnidentifiedGames,
+                SettingsOption.BoxArtSource,
+                SettingsOption.RetroAchievementsAccount,
             ),
             SettingsSection.Library.rowsIn(model.content),
         )

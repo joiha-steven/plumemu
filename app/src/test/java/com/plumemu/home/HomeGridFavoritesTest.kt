@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.remember
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.longClick
@@ -44,7 +45,7 @@ class HomeGridFavoritesTest {
         compose.setContent {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
-            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games), gridSystems = setOf(snes.id)) }
+            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games), gridSystems = setOf(snes.id), initialFocus = StripFocus()) }
         }
         compose.waitForIdle()
     }

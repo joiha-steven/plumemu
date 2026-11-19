@@ -85,9 +85,9 @@ internal class SettingsPasteTest : SettingsKeyboardPathHarness() {
     /** Accounts › ScreenScraper and A: the sign-in form opens with the keyboard down; A on the username brings the tray up. */
     private fun typeInTheUsername() {
         show()
-        repeat(SettingsSection.shownIn(content).indexOf(SettingsSection.Accounts)) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.entries.indexOf(SettingsSection.Library)) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
-        repeat(SettingsSection.Accounts.rowsIn(content).indexOf(SettingsOption.ScraperAccount)) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.ScraperAccount)) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
         send(Action.Enter)
         assertTrue("the tray is up", isTrayUp)

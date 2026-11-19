@@ -105,9 +105,10 @@ class HomePosterCoversTest {
     @Test
     fun aMixedRecentGridDrawsEachPosterInItsOwnSystemsShape() {
         val content = mixedSignedOutBoard()
-        show { HomeAt(content, gridActions(0, 1), gridIds = setOf("recent")) }
+        // Recent is a folder inside Collections since the Collections change.
+        show { HomeAt(content, recentGridActions(1), gridIds = setOf("recent")) }
         compose.waitForIdle()
-        val entry = content.entries[0]
+        val entry = content.recentEntry
         val ratios = mutableSetOf<Int>()
         for (index in 0 until CELLS) {
             val row = entry.rows[index]

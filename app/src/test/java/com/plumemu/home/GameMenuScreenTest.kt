@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.getValue
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -67,7 +68,7 @@ class GameMenuScreenTest {
         compose.setContent {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
-            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games)) }
+            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games), initialFocus = StripFocus()) }
         }
         compose.waitForIdle()
     }
@@ -172,9 +173,9 @@ class GameMenuScreenTest {
         games.onHide = { key ->
             val board = content
             content = HomeContent.of(
-                recent = board.entries[0].rows,
-                favorites = board.entries[1].rows,
-                apps = board.entries[2].rows,
+                recent = board.recentRows,
+                favorites = board.favoriteRows,
+                apps = board.appRows,
                 systems = board.entries.drop(FIRST_SYSTEM_INDEX).map { SystemGames(it.id, it.name.orEmpty(), it.rows.filterNot { row -> row.id == key }) },
             )
         }
@@ -210,7 +211,7 @@ class GameMenuScreenTest {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
             val notices = HomeNotices(closedAtOnce = closedAtOnce, onClosedAtOnceShown = { closedAtOnceShown += it.serial })
-            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games, notices = notices)) }
+            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games, notices = notices), initialFocus = StripFocus()) }
         }
         compose.waitForIdle()
     }
@@ -252,7 +253,7 @@ class GameMenuScreenTest {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
             val notices = HomeNotices(coreQuestion = coreQuestion, onCoreQuestionShown = { coreQuestionsShown += it.serial })
-            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games, notices = notices)) }
+            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games, notices = notices), initialFocus = StripFocus()) }
         }
         compose.waitForIdle()
         coreQuestion.value = question ?: CoreQuestion(1, "snes-0", "Super Mario World", Beetle.id, "RetroArch: Mesen", mesen, added)
@@ -420,9 +421,9 @@ class GameMenuScreenTest {
     private fun withSnesRows(rows: List<GameRowModel>): HomeContent {
         val board = content
         return HomeContent.of(
-            recent = board.entries[0].rows,
-            favorites = board.entries[1].rows,
-            apps = board.entries[2].rows,
+            recent = board.recentRows,
+            favorites = board.favoriteRows,
+            apps = board.appRows,
             systems = board.entries.drop(FIRST_SYSTEM_INDEX).map { SystemGames(it.id, it.name.orEmpty(), if (it.id == "snes") rows else it.rows) },
         )
     }

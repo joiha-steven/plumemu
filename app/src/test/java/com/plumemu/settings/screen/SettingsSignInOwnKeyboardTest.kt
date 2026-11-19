@@ -63,9 +63,9 @@ internal class SettingsSignInOwnKeyboardTest : SettingsKeyboardPathHarness() {
         androidKeyboard: Boolean = false,
     ) {
         show(swapAB, androidKeyboard)
-        repeat(SettingsSection.Accounts.shownIndex) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.Library.shownIndex) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
-        repeat(SettingsSection.Accounts.rowsIn(content).indexOf(SettingsOption.ScraperAccount)) { send(Action.Move(Direction.Down)) }
+        repeat(SettingsSection.Library.rowsIn(content).indexOf(SettingsOption.ScraperAccount)) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
         assertTrue("the sign-in panel is open", isFormOpen)
         assertFalse("the form opens with the tray down", isTrayUp)

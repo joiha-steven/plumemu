@@ -15,10 +15,10 @@ internal interface SettingsActions {
     /** One read-change-write of the store (two quick changes never lose each other). */
     fun update(transform: (PlumSettings) -> PlumSettings)
 
-    /** Advanced › Reset… › Reset all settings, after its confirm step. */
+    /** About › Reset… › Reset all settings, after its confirm step. */
     fun resetAllSettings()
 
-    /** Advanced › Reset… › Reset library, after its confirm step: forget games and person data, keep folders, rescan. */
+    /** About › Reset… › Reset library, after its confirm step: forget games and person data, keep folders, rescan. */
     fun resetLibrary()
 
     /** Back from the sections column: the main screen, with its focus where it was. */
@@ -84,7 +84,7 @@ internal interface SettingsActions {
     /** Statistics › Exact play time: Android's Usage access screen; false when this device has none. */
     fun openUsageAccess(): Boolean = false
 
-    /** Report a problem's Share log (Advanced › Export logs in a build with no report): Android's share sheet with the log file; [onDone] gets false when it could not open. */
+    /** Report a problem's Share log (About › Export logs in a build with no report): Android's share sheet with the log file; [onDone] gets false when it could not open. */
     fun exportLogs(onDone: (Boolean) -> Unit) = onDone(false)
 
     /** Opens [url] in the device's browser; false when none could. */
@@ -117,7 +117,7 @@ internal interface SettingsActions {
     /** About › Report a problem: the unsent words, kept while the process lives; null keeps nothing. */
     val reportDraft: ReportDraft? get() = null
 
-    /** Advanced › Reset… › Clear Recent…. */
+    /** About › Reset… › Clear Recent…. */
     val recent: SettingsRecentActions get() = SettingsRecentActions.None
 
     /** Library's box art: ask again, pause and resume. */
@@ -134,6 +134,9 @@ internal interface SettingsActions {
 
     /** About › Version: Check now, Update and its steps. */
     val updates: SettingsUpdateActions get() = SettingsUpdateActions.None
+
+    /** Library › Collections: rename, move, delete. */
+    val collections: SettingsCollectionActions get() = SettingsCollectionActions.None
 }
 
 internal enum class SettingsColumn { Sections, Options, Panel }
@@ -156,9 +159,11 @@ internal data class SettingsFocus(
     val folderId: Long? = null,
     /** The system whose emulators the panel lists, by id: a scan may add systems before it. */
     val systemId: String? = null,
+    /** The collection a page of Library › Collections is about, by id: the list changes while it is open. */
+    val collectionId: Long? = null,
     /** The unknown folder the panel answers, by id: the list reorders as folders get answered. */
     val folderKey: FolderKey? = null,
-    /** Accounts › ScreenScraper › Choose systems…: the systems checked, by id (none when it opens). */
+    /** Library › ScreenScraper › Choose systems…: the systems checked, by id (none when it opens). */
     val chosenSystems: Set<String> = emptySet(),
     /** What the Re-download confirm is about: these systems, or null for every game. */
     val redownloadSystems: Set<String>? = null,
@@ -229,7 +234,11 @@ internal data class PanelGrid(
                 PanelPage.Folder -> PanelGrid(folderPageItems(content, focus.folderId).size, 1)
                 PanelPage.UnreadableFolders -> PanelGrid(unreadablePanelItems(content).size, 1)
                 PanelPage.SkipSubfolder -> skipPickCount.takeIf { it > 0 }?.let { PanelGrid(it, 1) }
+                PanelPage.EmulatorSystems -> PanelGrid(content.systems.size, 1)
                 PanelPage.Emulators -> PanelGrid(1 + (content.system(focus.systemId)?.choices?.size ?: 0), 1)
+                PanelPage.Collections -> PanelGrid(content.collections.size, 1)
+                PanelPage.Collection -> PanelGrid(collectionPageItems(content, focus.collectionId).size, 1)
+                PanelPage.CollectionDelete -> PanelGrid(2, 2)
                 PanelPage.BackgroundPresets, PanelPage.AccentPresets, PanelPage.TextPresets -> PanelGrid(ColorPages.presetCount(page, ColorPages.backgroundOf(settings)), geometry.presetColumns)
                 PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom ->
                     PanelGrid(paletteSize + ColorSlider.entries.size + 1, ColorPages.PALETTE_COLUMNS)
@@ -250,7 +259,7 @@ internal data class PanelGrid(
                 PanelPage.ScraperClearConfirm -> PanelGrid(ClearConfirmItem.entries.size, 1)
                 PanelPage.Systems -> PanelGrid(FIRST_SYSTEM_ITEM + content.librarySystems.size, 1)
                 PanelPage.UnknownFolder -> PanelGrid(1 + content.folderSystemChoices.size, 1)
-                PanelPage.LicenseText, PanelPage.ReadOnly, PanelPage.FixName, PanelPage.ScraperSignIn, PanelPage.ProblemReport -> null
+                PanelPage.LicenseText, PanelPage.ReadOnly, PanelPage.FixName, PanelPage.CollectionRename, PanelPage.ScraperSignIn, PanelPage.ProblemReport -> null
             }
     }
 }

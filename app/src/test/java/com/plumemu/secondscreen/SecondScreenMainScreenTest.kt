@@ -14,6 +14,7 @@ import com.plumemu.coreinput.Direction
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.home.FakeHomeContent
+import com.plumemu.home.fromSystemColumn
 import com.plumemu.home.HomeCallbacks
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
@@ -54,6 +55,7 @@ class SecondScreenMainScreenTest {
             feed = remember { SecondScreenFeed(scope).also { it.setFollowing(true) } }
             MainScreen(settings, state, router, HomeCallbacks(), onRetry = {}, settingsHost = host, secondScreen = feed)
         }
+        compose.fromSystemColumn(router) // the cold start is Favorites' games column since the Collections change
         // The main screen's game index is built off the main thread before its first card.
         compose.waitUntil(WAIT_MS) { shown() is EntryContent }
     }
@@ -101,6 +103,7 @@ class SecondScreenMainScreenTest {
         settle()
         assertEquals(SecondScreenContent.Calm, shown())
         compose.runOnIdle { state = HomeState.Ready(FakeHomeContent.board()) }
+        compose.fromSystemColumn(router) // a new main screen lands in Favorites' games column since the Collections change
         compose.waitUntil(WAIT_MS) { shown() is EntryContent }
         compose.runOnIdle { state = null }
         settle()

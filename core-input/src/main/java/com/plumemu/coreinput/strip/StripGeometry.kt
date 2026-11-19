@@ -53,8 +53,8 @@ data class StripGeometry(
         focus: StripFocus,
         content: StripContent,
     ): List<Column> {
-        val entry = content.systems.getOrNull(focus.systemIndex)
-        if (entry == null || entry.itemCount == 0) return listOf(Column.Systems)
+        val entry = content.systems.getOrNull(focus.systemIndex)?.let(focus::shownIn)
+        if (entry == null || (entry.itemCount == 0 && !entry.isFolder)) return listOf(Column.Systems)
         return if (isNarrow && content.hasBoxArt && entry.hasDetails) Column.entries else listOf(Column.Systems, Column.Games)
     }
 }

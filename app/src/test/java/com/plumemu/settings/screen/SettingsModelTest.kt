@@ -27,7 +27,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
     fun opensOnTheSectionsInSpecOrderWithOnlyWorkingSections() {
         assertEquals(SettingsColumn.Sections, model.focus.column)
         assertEquals(
-            listOf("Library", "Appearance", "HomeScreen", "SecondScreen", "Emulators", "Controls", "Statistics", "Accounts", "Advanced", "About"),
+            listOf("Library", "Appearance", "HomeScreen", "Controls", "Statistics", "About"),
             SettingsSection.entries.map { it.name },
         )
     }
@@ -66,18 +66,14 @@ internal class SettingsModelTest : SettingsModelHarness() {
         assertEquals(SettingsColumn.Options, model.focus.column)
         assertEquals(SettingsOption.UseAsHome, model.focusedOption)
         press(Action.NextSystem)
-        assertEquals("no second screen and no games: both sections are skipped", SettingsSection.Controls, model.focus.section)
+        assertEquals("Home screen is followed by Controls", SettingsSection.Controls, model.focus.section)
         assertEquals(SettingsOption.ConfirmBottom, model.focusedOption)
         press(Action.NextSystem)
-        assertEquals("Statistics has no rows yet: Accounts comes next", SettingsSection.Accounts, model.focus.section)
-        assertEquals(SettingsOption.BoxArtSource, model.focusedOption)
-        press(Action.NextSystem)
-        assertEquals(SettingsOption.Animations, model.focusedOption)
-        press(Action.NextSystem)
-        assertEquals(SettingsSection.About, model.focus.section)
+        assertEquals("Statistics has no rows yet: About comes next", SettingsSection.About, model.focus.section)
+        assertEquals(SettingsOption.Version, model.focusedOption)
         press(Action.NextSystem)
         assertEquals("the last section stays", SettingsSection.About, model.focus.section)
-        repeat(5) { press(Action.PreviousSystem) }
+        repeat(3) { press(Action.PreviousSystem) }
         assertEquals(SettingsSection.Appearance, model.focus.section)
         assertEquals("each section remembers its option", SettingsOption.TextSize, model.focusedOption)
     }
@@ -246,9 +242,13 @@ internal class SettingsModelTest : SettingsModelHarness() {
         assertFalse(actions.settings.advanced.vibration)
 
         press(Action.Back)
-        openSection(SettingsSection.Advanced)
+        repeat(SettingsSection.entries.size) { if (model.focus.section != SettingsSection.Appearance) move(Direction.Up) }
+        press(Action.Enter)
+        focusOption(SettingsOption.Animations)
         press(Action.Enter)
         assertFalse(actions.settings.advanced.animations)
+        press(Action.Back)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.ResetLibrary)
         press(Action.Enter)
         assertEquals(PanelPage.ResetLibraryConfirm, model.focus.page)
@@ -262,7 +262,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
     @Test
     fun resetAllNeedsAConfirmAndKeepsSetupFlags() {
         actions.settings = actions.settings.copy(appearance = AppearanceSettings(textSize = TextSizeSetting.Huge, leftEdge = LeftEdgeSetting.Letters))
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.ResetAll)
         press(Action.Enter)
         assertEquals(PanelPage.ResetAllConfirm, model.focus.page)
@@ -290,7 +290,7 @@ internal class SettingsModelTest : SettingsModelHarness() {
 
     @Test
     fun resetLibraryNeedsAConfirm() {
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.ResetLibrary)
         press(Action.Enter)
         press(Action.Enter) // Cancel
@@ -349,14 +349,17 @@ internal class SettingsModelTest : SettingsModelHarness() {
 
     @Test
     fun touchFocusesFirstThenActsAndSwitchesFlipOnTheFirstTap() {
-        model.onTapSection(SettingsSection.Advanced)
+        model.onTapSection(SettingsSection.Appearance)
         assertEquals(SettingsColumn.Sections, model.focus.column)
-        model.onTapSection(SettingsSection.Advanced)
+        model.onTapSection(SettingsSection.Appearance)
         assertEquals("a second tap opens it", SettingsColumn.Options, model.focus.column)
 
-        model.onTapOption(0, actions.settings, wide) // Animations: a switch flips on the first tap
+        model.onTapOption(SettingsSection.Appearance.options.indexOf(SettingsOption.Animations), actions.settings, wide) // a switch flips on the first tap
         assertFalse(actions.settings.advanced.animations)
-        val reset = SettingsSection.Advanced.options.indexOf(SettingsOption.Reset)
+        model.onTapSection(SettingsSection.About)
+        model.onTapSection(SettingsSection.About)
+        assertEquals(SettingsSection.About, model.focus.section)
+        val reset = SettingsSection.About.options.indexOf(SettingsOption.Reset)
         model.onTapOption(reset, actions.settings, wide) // Reset…: first tap focuses
         assertEquals(SettingsOption.Reset, model.focusedOption)
         assertEquals(SettingsColumn.Options, model.focus.column)

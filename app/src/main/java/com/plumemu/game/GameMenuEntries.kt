@@ -1,11 +1,15 @@
 package com.plumemu.game
 
 import com.plumemu.R
+import com.plumemu.collections.MenuValue
+import com.plumemu.collections.PickerRow
+import com.plumemu.collections.PickerState
+import com.plumemu.collections.menuValue
 import com.plumemu.coredata.db.AppKind
 import com.plumemu.coredata.settings.AppsScreen
 
 /** Stable ids of the game menu's entries (row keys, tests). */
-internal enum class GameMenuEntryId { Play, PlayWith, OtherVersions, Favorite, SortBy, Name, FixBoxArt, Achievements, Info, RemoveFromRecent, Hide }
+internal enum class GameMenuEntryId { Play, PlayWith, OtherVersions, Favorite, SortBy, AddToCollection, Name, FixBoxArt, Achievements, Info, RemoveFromRecent, RemoveFromCollection, Hide }
 
 /** Stable ids of the app-only entries, in an installed app's game menu and the Apps entry's menu. */
 internal enum class AppKindEntryId { ShowAsGame, ShowAsPort, NotAGame }
@@ -42,6 +46,16 @@ internal fun gameMenuEntries(facts: GameFacts): List<PanelRow> {
         },
         // Only a menu opened from a system's list or Favorites: the one sort every list follows.
         if (facts.canSort) PanelRow(GameMenuEntryId.SortBy.name, UiText.Res(R.string.game_menu_sort_by), PanelCommand.OpenSortMenu, value = facts.sort?.let { UiText.Res(it.nameRes()) }) else null,
+        // Only while collections are wired: its value is where the game is now (none, the name, "2 collections").
+        facts.collections?.let { picker ->
+            val value =
+                when (val held = menuValue(picker.holding, picker.collections)) {
+                    MenuValue.None -> null
+                    is MenuValue.One -> UiText.Plain(held.name)
+                    is MenuValue.Many -> UiText.Plural(R.plurals.collections_count, held.count)
+                }
+            PanelRow(GameMenuEntryId.AddToCollection.name, UiText.Res(R.string.collections_add_to), PanelCommand.OpenCollectionPicker, value = value)
+        },
         // An app game keeps Name… for Use my own name (nameMenuEntries); a pinned shortcut has none.
         if (facts.isShortcut) null else PanelRow(GameMenuEntryId.Name.name, UiText.Res(R.string.game_menu_name), PanelCommand.OpenNameMenu),
         if (facts.canFixBoxArt && !hasNoFile) PanelRow(GameMenuEntryId.FixBoxArt.name, UiText.Res(R.string.game_menu_fix_box_art), PanelCommand.OpenFixBoxArt) else null,
@@ -56,9 +70,30 @@ internal fun gameMenuEntries(facts: GameFacts): List<PanelRow> {
         PanelRow(GameMenuEntryId.Info.name, UiText.Res(R.string.game_menu_info), PanelCommand.OpenInfo),
         // Only a menu opened from Recent; right before Hide, the other way to take a game off a list.
         if (facts.canRemoveFromRecent) PanelRow(GameMenuEntryId.RemoveFromRecent.name, UiText.Res(R.string.game_menu_remove_from_recent), PanelCommand.RemoveFromRecent) else null,
+        // Only a menu opened inside an own collection (the built-in folders have none).
+        facts.ownCollection?.let { PanelRow(GameMenuEntryId.RemoveFromCollection.name, UiText.Res(R.string.collections_remove_from, listOf(it.name)), PanelCommand.RemoveFromCollection) },
         PanelRow(GameMenuEntryId.Hide.name, UiText.Res(R.string.game_menu_hide), PanelCommand.Hide),
     )
 }
+
+/** Add to collection…: a row per own collection (ticked where the game is), then New collection…. */
+internal fun pickerContent(state: PickerState, gameTitle: String): PanelContent =
+    PanelContent(
+        title = UiText.Res(R.string.collections_picker_title),
+        subtitle = UiText.Plain(gameTitle),
+        items =
+            state.rows.map { row ->
+                PanelItem.Row(
+                    when (row) {
+                        is PickerRow.Collection -> PanelRow(COLLECTION_KEY_PREFIX + row.id, UiText.Plain(row.name), PanelCommand.ToggleCollection(row.id), isTicked = row.ticked)
+                        PickerRow.NewCollection -> PanelRow(NEW_COLLECTION_KEY, UiText.Res(R.string.collections_new), PanelCommand.OpenNewCollection)
+                    },
+                )
+            },
+    )
+
+internal const val COLLECTION_KEY_PREFIX = "collection:"
+internal const val NEW_COLLECTION_KEY = "new_collection"
 
 /** Stable ids of the app menu's entries (row keys, tests). */
 internal enum class AppMenuEntryId { Info, OpenOtherScreen, Uninstall }

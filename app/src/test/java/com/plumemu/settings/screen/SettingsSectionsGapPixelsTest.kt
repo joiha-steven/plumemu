@@ -56,8 +56,8 @@ class SettingsSectionsGapPixelsTest {
                 background = PlumTheme.colors.bg
                 SettingsAt(
                     when (cursor) {
-                        "First" -> SettingsFocus(section = SettingsSection.shownIn(SettingsContent()).first())
-                        "Last" -> SettingsFocus(section = SettingsSection.shownIn(SettingsContent()).last())
+                        "First" -> SettingsFocus(section = SettingsSection.entries.first())
+                        "Last" -> SettingsFocus(section = SettingsSection.entries.last())
                         else -> optionsAt(SettingsOption.Colors)
                     },
                 )

@@ -9,7 +9,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Settings' grouping: the sections in order and every section's fixed
+ * Settings' grouping: the six sections in order and every section's fixed
  * rows in order, on a device without a second screen and on one with a built-in second screen.
  * Rows shown only sometimes (Systems, unknown folders, Undo last restore, Update available, …)
  * are left out by the content used here; their own tests cover them.
@@ -21,7 +21,7 @@ internal class SettingsSectionRowsTest {
         SettingsContent(hasStatistics = true, hasUpdates = true, account = AccountStatus.SignedOut, chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper).withSecondScreen(screen, SecondScreenSettings())
 
     private fun rowsBySection(content: SettingsContent): Map<SettingsSection, List<SettingsOption>> =
-        SettingsSection.shownIn(content).associateWith { it.rowsIn(content) }
+        SettingsSection.entries.associateWith { it.rowsIn(content) }
 
     private val withoutSecondScreen: Map<SettingsSection, List<SettingsOption>> =
         linkedMapOf(
@@ -30,6 +30,9 @@ internal class SettingsSectionRowsTest {
                     SettingsOption.RomFolders,
                     SettingsOption.Rescan,
                     SettingsOption.FilesNotAdded,
+                    SettingsOption.BoxArtSource,
+                    SettingsOption.ScraperAccount,
+                    SettingsOption.RetroAchievementsAccount,
                 ),
             SettingsSection.Appearance to
                 listOf(
@@ -37,6 +40,7 @@ internal class SettingsSectionRowsTest {
                     SettingsOption.Colors,
                     SettingsOption.PageGrain,
                     SettingsOption.TextSize,
+                    SettingsOption.Animations,
                 ),
             SettingsSection.HomeScreen to
                 listOf(
@@ -53,20 +57,16 @@ internal class SettingsSectionRowsTest {
                     SettingsOption.Vibration,
                 ),
             SettingsSection.Statistics to emptyList(),
-            SettingsSection.Accounts to listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount),
-            SettingsSection.Advanced to
-                listOf(
-                    SettingsOption.Animations,
-                    SettingsOption.BackupAndRestore,
-                    SettingsOption.Reset,
-                ),
             SettingsSection.About to
                 listOf(
                     SettingsOption.Version,
-                    SettingsOption.UsageStatistics,
-                    SettingsOption.Licenses,
-                    SettingsOption.Privacy,
+                    SettingsOption.CheckUpdatesDaily,
                     SettingsOption.ReportProblem,
+                    SettingsOption.BackupAndRestore,
+                    SettingsOption.Reset,
+                    SettingsOption.UsageStatistics,
+                    SettingsOption.Privacy,
+                    SettingsOption.Licenses,
                 ),
         )
 
@@ -78,15 +78,13 @@ internal class SettingsSectionRowsTest {
     }
 
     @Test
-    fun withABuiltInSecondScreenItsSectionFollowsHomeScreen() {
+    fun withABuiltInSecondScreenItsRowsFollowShowAndroidAppsInHomeScreen() {
         val shown = rowsBySection(content(builtIn))
-        val expected =
-            withoutSecondScreen.entries.flatMap { (section, rows) ->
-                listOf(section to rows) +
-                    if (section == SettingsSection.HomeScreen) listOf(SettingsSection.SecondScreen to listOf(SettingsOption.SecondScreen, SettingsOption.SecondScreenInGame, SettingsOption.SecondScreenAppsOn)) else emptyList()
-            }
-        assertEquals(expected.map { it.first }, shown.keys.toList())
-        expected.forEach { (section, rows) -> assertEquals("$section", rows, shown[section]) }
+        assertEquals("the same six sections", withoutSecondScreen.keys.toList(), shown.keys.toList())
+        withoutSecondScreen.forEach { (section, rows) ->
+            val expected = if (section == SettingsSection.HomeScreen) rows + listOf(SettingsOption.SecondScreen, SettingsOption.SecondScreenInGame, SettingsOption.SecondScreenAppsOn) else rows
+            assertEquals("$section", expected, shown[section])
+        }
     }
 
     @Test

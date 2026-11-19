@@ -32,6 +32,7 @@ import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.game.GamePanelTags
 import com.plumemu.home.FakeHomeContent
+import com.plumemu.home.fromSystemColumn
 import com.plumemu.home.HomeCallbacks
 import com.plumemu.home.HomeTags
 import com.plumemu.home.appComposeRule
@@ -78,6 +79,7 @@ class SettingsScreenTest {
             router = remember { InputRouter(scope, onDebug = {}) }
             MainScreen(settings.value, HomeState.Ready(FakeHomeContent.board()), router, HomeCallbacks(), onRetry = {}, settingsHost = host)
         }
+        compose.fromSystemColumn(router) // the cold start is Favorites' games column since the Collections change
     }
 
     private fun send(vararg actions: Action) {
@@ -219,20 +221,20 @@ class SettingsScreenTest {
         showMainScreen()
         send(Action.Menu)
         // The sections column scrolls at the default size: bring the row on screen first.
-        compose.onNodeWithTag(SettingsTags.section(SettingsSection.Advanced)).performScrollTo().performClick()
+        compose.onNodeWithTag(SettingsTags.section(SettingsSection.Appearance)).performScrollTo().performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(SettingsTags.section(SettingsSection.Advanced)).performScrollTo().performClick()
+        compose.onNodeWithTag(SettingsTags.section(SettingsSection.Appearance)).performScrollTo().performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(SettingsTags.option(SettingsOption.Animations)).performClick()
+        compose.onNodeWithTag(SettingsTags.option(SettingsOption.Animations)).performScrollTo().performClick()
         compose.waitForIdle()
         assertFalse("a switch flips on a tap", settings.value.advanced.animations)
 
-        compose.onNodeWithTag(SettingsTags.HINT_SECTION).performClick() // "L1 R1 Section" → About
+        compose.onNodeWithTag(SettingsTags.HINT_SECTION).performClick() // "L1 R1 Section" → Home screen
         compose.waitForIdle()
-        compose.onNodeWithTag(SettingsTags.option(SettingsOption.Version)).assertIsDisplayed()
+        compose.onNodeWithTag(SettingsTags.option(SettingsOption.UseAsHome)).assertIsDisplayed()
         compose.onNodeWithTag(SettingsTags.HINT_BACK).performClick()
         compose.waitForIdle()
-        // Statistics and Accounts sit between Controls and Advanced: the hint walks through them.
+        // Statistics sits between Controls and About: the hint walks through it.
         compose.onNodeWithTag(SettingsTags.section(SettingsSection.Controls)).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(SettingsTags.section(SettingsSection.Controls)).performClick()
@@ -242,10 +244,7 @@ class SettingsScreenTest {
         compose.onNodeWithTag(StatisticsTags.PAGE).assertIsDisplayed()
         compose.onNodeWithTag(SettingsTags.HINT_SECTION).performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(SettingsTags.option(SettingsOption.RetroAchievementsAccount)).assertIsDisplayed()
-        compose.onNodeWithTag(SettingsTags.HINT_SECTION).performClick()
-        compose.waitForIdle()
-        compose.onNodeWithTag(SettingsTags.option(SettingsOption.Animations)).assertIsDisplayed()
+        compose.onNodeWithTag(SettingsTags.option(SettingsOption.Version)).assertIsDisplayed()
         compose.onNodeWithTag(SettingsTags.HINT_BACK).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(SettingsTags.section(SettingsSection.Appearance)).performScrollTo().performClick()
@@ -273,10 +272,10 @@ class SettingsScreenTest {
     fun resetLibraryRunsOnlyAfterItsConfirmStep() {
         showMainScreen()
         send(Action.Menu)
-        down(SettingsSection.Advanced.shownIndex) // Advanced, after Statistics
+        down(SettingsSection.About.shownIndex) // About, after Statistics
         send(Action.Enter)
         // Reset…, then Reset library in its list.
-        down(SettingsSection.Advanced.options.indexOf(SettingsOption.Reset))
+        down(SettingsSection.About.options.indexOf(SettingsOption.Reset))
         send(Action.Enter, Action.Move(Direction.Down), Action.Enter, Action.Enter) // Cancel
         assertEquals(0, resetsLibrary)
         send(Action.Enter, Action.Move(Direction.Right), Action.Enter)

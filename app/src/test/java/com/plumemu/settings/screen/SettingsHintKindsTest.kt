@@ -40,12 +40,12 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
         model.content = model.content.copy(account = AccountStatus.SignedOut, chosenBoxArtSource = BoxArtSourceSetting.ScreenScraper)
         assertEquals(R.string.settings_hint_open, hintOn(SettingsSection.Library, SettingsOption.RomFolders))
         for (option in listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount, SettingsOption.RetroAchievementsAccount)) {
-            assertEquals(option.name, R.string.settings_hint_open, hintOn(SettingsSection.Accounts, option))
-        }
-        for (option in listOf(SettingsOption.BackupAndRestore, SettingsOption.Reset)) {
-            assertEquals(option.name, R.string.settings_hint_open, hintOn(SettingsSection.Advanced, option))
+            assertEquals(option.name, R.string.settings_hint_open, hintOn(SettingsSection.Library, option))
         }
         assertEquals("Version opens its panel", R.string.settings_hint_open, hintOn(SettingsSection.About, SettingsOption.Version))
+        for (option in listOf(SettingsOption.BackupAndRestore, SettingsOption.Reset)) {
+            assertEquals(option.name, R.string.settings_hint_open, hintOn(SettingsSection.About, option))
+        }
         assertEquals(R.string.settings_hint_open, hintOn(SettingsSection.About, SettingsOption.Licenses))
     }
 
@@ -58,21 +58,20 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
     @Test
     fun theSignedInAccountRowSaysOpenToo() {
         model.content = model.content.copy(account = AccountStatus.SignedIn("plumtester"))
-        assertEquals(R.string.settings_hint_open, hintOn(SettingsSection.Accounts, SettingsOption.ScraperAccount))
+        assertEquals(R.string.settings_hint_open, hintOn(SettingsSection.Library, SettingsOption.ScraperAccount))
     }
 
     @Test
     fun valuesSwitchesAndChoicePanelsSayChange() {
         assertEquals(R.string.settings_hint_change, hintOn(SettingsSection.Appearance, SettingsOption.Colors))
-        assertEquals(R.string.settings_hint_change, hintOn(SettingsSection.Advanced, SettingsOption.Animations))
+        assertEquals(R.string.settings_hint_change, hintOn(SettingsSection.Appearance, SettingsOption.Animations))
     }
 
     @Test
-    fun aSystemsEmulatorRowOpensAChoiceAndSaysChange() {
+    fun theEmulatorsRowOpensAListAndSaysOpenWhileASystemsChoiceSaysChange() {
         model.content = model.content.copy(systems = listOf(SystemEmulators("snes", "Super Nintendo", null, null, emptyList())))
-        openSection(SettingsSection.Emulators)
-        assertEquals(SettingsOption.SystemEmulator, model.focusedOption)
-        assertEquals(R.string.settings_hint_change, confirmHint(model))
+        assertEquals(R.string.settings_hint_open, hintOn(SettingsSection.Library, SettingsOption.Emulators))
+        assertEquals("a system's choice is like Colors' panel", R.string.settings_hint_change, rowConfirmHint(SettingsOption.SystemEmulator))
     }
 
     @Test
@@ -167,7 +166,8 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 SettingsOption.BoxArtSource to open,
                 SettingsOption.ScraperAccount to open,
                 SettingsOption.RetroAchievementsAccount to open,
-                SettingsOption.ScraperStatus to none,
+                SettingsOption.Emulators to open,
+                SettingsOption.Collections to open,
                 SettingsOption.BoxArtRegion to change,
                 SettingsOption.Statistic to none,
                 SettingsOption.ExactPlayTime to change,

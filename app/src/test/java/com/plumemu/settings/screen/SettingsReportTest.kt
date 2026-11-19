@@ -26,8 +26,8 @@ internal class SettingsReportTest : SettingsModelHarness() {
     private fun down() = press(Action.Move(Direction.Down))
 
     @Test
-    fun theRowIsLastInAboutAndOpensTheForm() {
-        assertEquals(SettingsOption.ReportProblem, SettingsSection.About.options.last())
+    fun theRowFollowsVersionAndItsDailySwitchInAboutAndOpensTheForm() {
+        assertEquals(SettingsOption.ReportProblem, SettingsSection.About.options[SettingsSection.About.options.indexOf(SettingsOption.CheckUpdatesDaily) + 1])
         assertEquals(OptionKind.Opens, SettingsOption.ReportProblem.kind)
         openForm()
         assertEquals(PanelPage.ProblemReport, model.focus.page)

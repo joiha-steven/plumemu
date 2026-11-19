@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.runtime.setValue
+import com.plumemu.graph.GraphCollections
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.Direction
@@ -46,6 +47,8 @@ internal class GameMenuController(
     private val sorts: SortActions = SortActions.None,
     /** How long a start may take before the person is told it did not start and A works again. */
     private val startLimit: Duration = GameStarts.START_LIMIT,
+    /** The own collections (Add to collection…, New collection…, Remove from "<name>"); null: none of them is offered. */
+    private val collections: GraphCollections? = null,
     private val log: (String) -> Unit = { Log.w(TAG, it) },
 ) {
     /**
@@ -58,6 +61,8 @@ internal class GameMenuController(
     val isOpen: Boolean get() = panel != null
 
     private val appMenus = AppMenuWork(apps, scope)
+
+    private val collectionWork = collections?.let { CollectionMenuWork(this, it, log) }
 
     /** Reading the menu's details: actions wait for it, Back or START cancels it. */
     private var opening: Job? = null
@@ -141,16 +146,27 @@ internal class GameMenuController(
     }
 
     /** Opens the menu of [game] once its details are read. Ignored while a panel is open or opening. */
-    fun openMenu(game: GameRef, fromRecent: Boolean = false, canSort: Boolean = false): Boolean {
+    fun openMenu(game: GameRef, fromRecent: Boolean = false, canSort: Boolean = false, ownCollection: OwnCollectionRef? = null): Boolean {
         if (isOpen || opening?.isActive == true) return false
         forgetVersions()
         opening =
             scope.launch {
                 val read = readOrFail("menu", game, origin = null) { actions.facts(game.key) } ?: return@launch
-                val facts = read.copy(canRemoveFromRecent = fromRecent, canSort = canSort, sort = if (canSort) readOrNull("sort", game) { sorts.choices().current } else null)
+                val picker = collectionWork?.read(game) // null: not wired, or not read
+                val sort = if (canSort) readOrNull("sort", game) { sorts.choices().current } else null
+                val facts = read.copy(canRemoveFromRecent = fromRecent, canSort = canSort, sort = sort, collections = picker, ownCollection = ownCollection.takeIf { picker != null })
                 showIfStill(null, OpenPanel(game, PanelScreen.Menu(facts)))
                 if (facts.versionsPending && panel != null) readVersions(game)
             }
+        return true
+    }
+
+    /** The folders page's New collection…: the keyboard for an empty collection's name; false (nothing) while collections are not wired or a panel is open. */
+    fun openNewCollection(): Boolean {
+        val work = collectionWork ?: return false
+        if (isOpen || opening?.isActive == true) return false
+        undo.end()
+        panel = work.nameKeyboard(GameRef(NO_GAME_KEY, ""), keyboardKind, withGame = false, parent = null)
         return true
     }
 
@@ -175,6 +191,9 @@ internal class GameMenuController(
                 if (updated !== open) panel = updated
             }
     }
+
+    /** Tests: returns when the menu's read and the row's write in flight have finished. */
+    internal suspend fun idle() = listOfNotNull(opening, work).forEach { it.join() }
 
     /** One action while a panel is open or opening; false (not consumed) when neither. */
     fun onAction(action: Action): Boolean = feel.act { handle(action) }
@@ -340,7 +359,7 @@ internal class GameMenuController(
             PanelCommand.OpenSortMenu -> work = readSort(game, open)
             is PanelCommand.SetSort -> work = keptWrite { write("sort", game, open) { sorts.set(command.sort) } }
             PanelCommand.OpenVersions -> (open.screen as? PanelScreen.Menu)?.facts?.versions?.let { panel = versionsPanel(game, it, open) }
-            is PanelCommand.PlayVersion -> playVersion(open, command.copyKey)
+            is PanelCommand.PlayVersion -> work = playVersion(this, scope, actions, log, open, command.copyKey)
             is PanelCommand.SetFavorite -> work = setFavorite(game, command.isFavorite, open)
             PanelCommand.Hide ->
                 work =
@@ -352,6 +371,7 @@ internal class GameMenuController(
                     }
             // Once asked, finished even if the person leaves the menu (as Favorite); the list follows the database.
             PanelCommand.RemoveFromRecent -> work = keptWrite { if (write("remove from recent", game, open) { actions.removeFromRecent(game.key) }) { if (panel == null) undo.offer(game) } }
+            PanelCommand.OpenCollectionPicker, is PanelCommand.ToggleCollection, PanelCommand.OpenNewCollection, PanelCommand.RemoveFromCollection -> collectionWork?.run(open, command)?.let { work = it }
             PanelCommand.OpenInfo -> {
                 val facts = (open.screen as? PanelScreen.Menu)?.facts
                 if (facts != null) {
@@ -400,32 +420,6 @@ internal class GameMenuController(
         }
     }
 
-    /**
-     * Other versions: stores [copyKey] as the copy A plays on this row, then plays it, like Play
-     * with. A copy gone since the list was read (a rescan removed or renamed its file) is not
-     * played: the list and the menu are read again and "That version is gone" shows over the new
-     * list (OK or B return to it).
-     */
-    private fun playVersion(
-        open: OpenPanel,
-        copyKey: String,
-    ) {
-        val game = open.game
-        work =
-            scope.launch {
-                var isCopy = true
-                val stored = write("version", game, open, closeAfter = false) { isCopy = actions.chooseVersion(game.key, copyKey) }
-                if (!stored || panel !== open) return@launch
-                if (isCopy) {
-                    play(game)
-                    return@launch
-                }
-                log("version: game ${game.key}: the chosen copy is no copy of it any more")
-                val listing = readOrNull("versions", game) { actions.versions(game.key) }
-                if (panel === open) panel = OpenPanel(game, PanelScreen.Message(versionGoneMessage()), parent = refreshedVersions(open, listing))
-            }
-    }
-
     /** The naming entries ; every write closes the panel, the list shows the new name. */
     private fun runNaming(
         open: OpenPanel,
@@ -456,7 +450,10 @@ internal class GameMenuController(
                 work = keptWrite { if (write("not a game", game, open) { actions.markNotAGame(game.key) }) favoriteListener?.hidden(game) }
             PanelCommand.BackToAutomatic -> work = keptWrite { write("back to automatic", game, open) { actions.backToAutomatic(game.key) } }
             is PanelCommand.PickTitle -> work = keptWrite { rename("fix name", game, open) { actions.setChosenTitle(game.key, command.choice) } }
-            is PanelCommand.SaveOwnName -> work = keptWrite { rename("own name", game, open) { actions.setOwnName(game.key, command.name) } }
+            is PanelCommand.SaveOwnName -> {
+                val naming = (open.screen as? PanelScreen.OwnName)?.collection
+                work = if (naming != null) collectionWork?.create(open, naming, command.name) else keptWrite { rename("own name", game, open) { actions.setOwnName(game.key, command.name) } }
+            }
             else -> log("panel: command ${command.javaClass.simpleName} has no handler")
         }
     }
@@ -529,7 +526,7 @@ internal class GameMenuController(
     }
 
     /** A slow answer for [origin]: shown only if the person is still on it. */
-    private fun showIfStill(
+    internal fun showIfStill(
         origin: OpenPanel?,
         next: OpenPanel?,
     ) {
@@ -594,7 +591,9 @@ internal class GameMenuController(
         block: suspend () -> T?,
     ): T? = readLogged(log, what, game, block)
 
-    private companion object {
-        const val TAG = "PlumGame"
+    companion object {
+        /** The key of [openNewCollection]'s panel: about no game, so the lists do not look for one. */
+        const val NO_GAME_KEY = ""
+        private const val TAG = "PlumGame"
     }
 }

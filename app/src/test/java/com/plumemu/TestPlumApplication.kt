@@ -6,6 +6,8 @@ import com.plumemu.telemetry.Telemetry
 class TestPlumApplication : PlumApplication() {
     override fun makeTelemetry(): Telemetry? = null
 
+    override val restartsForCompiledCode: Boolean get() = false
+
     override fun onCreate() {
         unstickMainChoreographer()
         resetComposeDispatcher()

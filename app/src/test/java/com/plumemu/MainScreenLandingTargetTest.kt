@@ -29,7 +29,8 @@ import org.robolectric.annotation.Config
 
 /**
  * A game chosen elsewhere (Statistics' most-played) is landed on like the Home button lands on
- * Recent: its system's list, its row, games column. A Home press afterwards lands on Recent again.
+ * Favorites' first game: its system's list, its row, games column. A Home press afterwards lands on Favorites' first game
+ * (the Collections rule: Home and a cold start land on Favorites, Recent is a folder).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
@@ -46,7 +47,7 @@ class MainScreenLandingTargetTest {
     private val content =
         HomeContent.of(
             List(5) { GameRowModel("recent-$it", "Played $it", "USA") },
-            emptyList(),
+            List(5) { GameRowModel("favorite-$it", "Loved $it", "USA") },
             emptyList(),
             listOf(systemOf("alpha", 5), systemOf("beta", 40)),
         )
@@ -98,16 +99,18 @@ class MainScreenLandingTargetTest {
         assertEquals(listOf("beta-0"), gamePlayedByA())
     }
 
+    // Expectation changed with the requirement: "as usual" is Favorites' first game, not Recent's.
     @Test
     fun aTargetWhoseSystemIsGoneLandsAsUsual() {
         show(HomeLandingTarget("gone", "gone-1"))
 
         assertEquals(0, shownSystem())
-        assertEquals(listOf("recent-0"), gamePlayedByA())
+        assertEquals(listOf("favorite-0"), gamePlayedByA())
     }
 
+    // Expectation changed with the requirement: a Home press lands on Favorites' first game, not Recent's.
     @Test
-    fun aHomePressAfterATargetLandsOnRecentAgain() {
+    fun aHomePressAfterATargetLandsOnFavoritesAgain() {
         show(HomeLandingTarget("beta", "beta-30"))
         assertEquals(listOf("beta-30"), gamePlayedByA())
 
@@ -115,7 +118,7 @@ class MainScreenLandingTargetTest {
         compose.waitForIdle()
 
         assertEquals(0, shownSystem())
-        assertEquals(listOf("recent-0"), gamePlayedByA())
+        assertEquals(listOf("favorite-0"), gamePlayedByA())
     }
 
     private fun systemOf(

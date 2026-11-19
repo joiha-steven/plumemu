@@ -1,5 +1,7 @@
 package com.plumemu.game
 
+import kotlinx.coroutines.launch
+
 import androidx.compose.runtime.Immutable
 import com.plumemu.R
 import com.plumemu.identify.name.Region
@@ -124,3 +126,31 @@ internal fun versionGoneMessage(): PanelContent =
     )
 
 internal const val VERSION_GONE_OK_KEY = "version_gone_ok"
+
+/**
+ * Other versions: stores [copyKey] as the copy A plays on this row, then plays it, like Play with. A copy gone since the list
+ * was read (a rescan removed or renamed its file) is not played: the list and the menu are read again and "That version is gone"
+ * shows over the new list (OK or B return to it).
+ */
+internal fun playVersion(
+    menu: GameMenuController,
+    scope: kotlinx.coroutines.CoroutineScope,
+    actions: GameActions,
+    log: (String) -> Unit,
+    open: OpenPanel,
+    copyKey: String,
+): kotlinx.coroutines.Job {
+    val game = open.game
+    return scope.launch {
+        var isCopy = true
+        val stored = menu.write("version", game, open, closeAfter = false) { isCopy = actions.chooseVersion(game.key, copyKey) }
+        if (!stored || menu.panel !== open) return@launch
+        if (isCopy) {
+            menu.play(game)
+            return@launch
+        }
+        log("version: game ${game.key}: the chosen copy is no copy of it any more")
+        val listing = readLogged(log, "versions", game) { actions.versions(game.key) }
+        if (menu.panel === open) menu.panel = OpenPanel(game, PanelScreen.Message(versionGoneMessage()), parent = refreshedVersions(open, listing))
+    }
+}

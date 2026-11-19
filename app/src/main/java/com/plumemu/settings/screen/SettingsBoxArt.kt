@@ -36,7 +36,7 @@ import kotlin.math.ceil
 import kotlin.math.roundToLong
 
 /*
- * Settings › Accounts › ScreenScraper's box art: the one place a run state
+ * Settings › Library › ScreenScraper's box art: the one place a run state
  * becomes words (the panel's status line, the account row's short form), the systems picker and
  * the Re-download confirm. The rows and the account panel are in SettingsAccount.kt; the run
  * itself is the graph's `GraphScrapes`.
@@ -570,7 +570,7 @@ internal fun BoxArtConfirmPage(
 
 /** The Box art row while its status is a failure or "none found": A and a tap say Try again ([confirmHint]) instead of opening the panel. */
 internal fun SettingsModel.canTryBoxArtAgain(option: SettingsOption): Boolean =
-    (option == SettingsOption.ScraperAccount || option == SettingsOption.ScraperStatus) &&
+    option == SettingsOption.ScraperAccount &&
         boxArtLineOf(content.account, content.boxArt).let { it is BoxArtLine.Failed || it == BoxArtLine.NoneFound }
 
 /** Asks a box art run for the games without a box front only. */

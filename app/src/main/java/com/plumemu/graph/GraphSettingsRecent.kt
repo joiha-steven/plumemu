@@ -9,7 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Settings › Advanced › Reset… › Clear Recent…. Runs in the process scope: leaving Settings does not stop a clear already asked for. */
+/** Settings › About › Reset… › Clear Recent…. Runs in the process scope: leaving Settings does not stop a clear already asked for. */
 internal fun AppGraph.settingsRecentActions(): SettingsRecentActions = GraphSettingsRecent(GraphRecent(database), appScope)
 
 internal class GraphSettingsRecent(

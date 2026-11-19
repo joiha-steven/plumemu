@@ -36,7 +36,7 @@ abstract class EmulatorsPanelLargestBase {
         val duck = EmulatorEntry("duckstation", "DuckStation", isLegalRisk = false)
         val system = psx.copy(installed = listOf(duck, EmulatorEntry("retroarch-swanstation", "SwanStation", isLegalRisk = false), EmulatorEntry("retroarch-mednafen-psx", "Beetle PSX", isLegalRisk = false)))
         val content = ShotContent.library.copy(systems = listOf(system))
-        val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Emulators, rememberedOption = mapOf(SettingsSection.Emulators to 0), page = PanelPage.Emulators, panelIndex = 0, systemId = "psx")
+        val focus = emulatorsPageAt(content)
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite.copy(textSize = TextSize.Largest)) { SettingsAt(focus, content = content) } }
         val failures = mutableListOf<String>()
         for (each in listOf(PlumFont.Jost)) {

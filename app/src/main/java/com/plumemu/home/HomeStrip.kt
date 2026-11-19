@@ -37,6 +37,9 @@ import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.plumemu.R
+import com.plumemu.collections.BuiltInFolder
+import com.plumemu.collections.Folder
+import com.plumemu.collections.entryIdOf
 import com.plumemu.coreinput.Action
 import com.plumemu.settings.LocalButtonLetters
 import com.plumemu.coreinput.Column
@@ -84,13 +87,13 @@ internal fun HomeStrip(
     val layout = PlumTheme.layout
     // Only what the strip's shape depends on, so a row move does not recompose it.
     val showsGrid by remember(state, content, gridIds) {
-        derivedStateOf { content.showsGrid(content.entries.getOrNull(state.focus.systemIndex), gridIds) }
+        derivedStateOf { content.showsGrid(content.shownEntry(state.focus), gridIds) }
     }
     // Apps shows details in its list only (the icon column); a wide grid takes the whole width; a narrow grid keeps its stop.
     // Without box art a list has the text-only column on wide screens only (listHasDetails).
     val showsDetails by remember(state, content, gridIds, layout) {
         derivedStateOf {
-            val entry = content.entries.getOrNull(state.focus.systemIndex)
+            val entry = content.shownEntry(state.focus)
             val hasColumn =
                 if (content.showsGrid(entry, gridIds)) layout.widthClass == WidthClass.Narrow else listHasDetails(layout, content.hasBoxArt)
             entry?.hasDetails == true && hasColumn && !(entry.kind == EntryKind.Apps && content.showsGrid(entry, gridIds))
@@ -101,7 +104,7 @@ internal fun HomeStrip(
     // Without box art an empty library keeps the no-details width (its message centred); its Apps list
     // shrinks like any list with a column, so the column shows (SPEC: Apps list). With box art it is unchanged.
     // Every entry has details now, so "no details" never holds: only the Apps list keeps its column.
-    val onApps by remember(state, content) { derivedStateOf { content.entries.getOrNull(state.focus.systemIndex)?.kind == EntryKind.Apps } }
+    val onApps by remember(state, content) { derivedStateOf { content.shownEntry(state.focus)?.kind == EntryKind.Apps } }
     val keepsFullWidth = content.isLibraryEmpty && !content.hasBoxArt && !(onApps && showsDetails)
     // With the systems focused and no room for the details, the list runs to the right margin (ListStretch.kt): the slot keeps the full width, nothing beside it moves.
     val fullWidth = if (keepsFullWidth) layout.listWidthWithoutArt else homeGamesWidth(layout, content.hasBoxArt, showsGrid)
@@ -111,13 +114,13 @@ internal fun HomeStrip(
     val stretch = if (showsGrid) null else listStretch
     // A grid's width, shown or built beside the shown list: the same, so showing one does not measure it again.
     val gridWidth = if (keepsFullWidth) layout.listWidthWithoutArt else homeGamesWidth(layout, content.hasBoxArt, showsGrid = true)
-    val anyGrid = remember(content, gridIds) { content.entries.any { content.showsGrid(it, gridIds) } }
+    val anyGrid = remember(content, gridIds) { (content.entries + content.folderEntries).any { content.showsGrid(it, gridIds) } }
     // No fade where nothing continues: a grid with its games focused ends at the margin, and the
     // narrow details stop ends at it too (Nova-3-details draws none).
     val hideFade by remember(state, content, gridIds, stretch) {
         derivedStateOf {
             val column = state.focus.column
-            val entry = content.entries.getOrNull(state.focus.systemIndex)
+            val entry = content.shownEntry(state.focus)
             val shown = content.showsGrid(entry, gridIds)
             // The Apps grid's preview shows whole columns only (AppsGridWindow.kt): nothing is cut, so no fade.
             (stretch != null && column == Column.Systems) || column == Column.Details || (shown && column != Column.Systems) || (shown && column == Column.Systems && entry?.let { it.kind == EntryKind.Apps || it.isAppGamesGrid } == true)
@@ -257,7 +260,8 @@ private fun GamesList(
     val entryIndex by remember(state) { derivedStateOf { state.focus.systemIndex } }
     // Read by each row's derived look, so opening the game panel recomposes only the focused row.
     val panelOpen = remember(isPanelOpen) { derivedStateOf { isPanelOpen() } }
-    val entry = content.entries.getOrNull(entryIndex) ?: return
+    val shownEntry by remember(state, content) { derivedStateOf { content.shownEntry(state.focus) } }
+    val entry = shownEntry ?: return
     if (entry.rows.isEmpty() && content.isLibraryEmpty) {
         EmptyLibraryMessage(modifier.inStrip(), onAction)
         return
@@ -269,6 +273,16 @@ private fun GamesList(
     }
     if (entry.rows.isEmpty() && entry.kind == EntryKind.Recent) {
         EmptyEntryLine(stringResource(R.string.home_recent_empty), HomeTags.EMPTY_RECENT, modifier.inStrip())
+        return
+    }
+    if (entry.rows.isEmpty() && entry.isFolder && entry.kind == EntryKind.Collections) {
+        val text =
+            when (entry.id) {
+                entryIdOf(Folder.BuiltIn(BuiltInFolder.MostPlayed, 0)) -> stringResource(R.string.collections_empty_most_played)
+                entryIdOf(Folder.BuiltIn(BuiltInFolder.RecentlyAdded, 0)) -> stringResource(R.string.collections_empty_recently_added)
+                else -> stringResource(R.string.collections_empty_own, stringResource(R.string.home_key_start))
+            }
+        EmptyEntryLine(text, HomeTags.EMPTY_FOLDER, modifier.inStrip())
         return
     }
     // L1/R1 with the games focused: the next system's games fade in instead of popping. Moves in

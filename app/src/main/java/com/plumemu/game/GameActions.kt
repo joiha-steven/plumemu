@@ -3,6 +3,7 @@ package com.plumemu.game
 import com.plumemu.telemetry.LaunchFrom
 import androidx.compose.runtime.Immutable
 import com.plumemu.battery.BatteryPace
+import com.plumemu.collections.PickerState
 import com.plumemu.coredata.db.AddedSession
 import com.plumemu.coredata.db.AppKind
 import com.plumemu.coredata.settings.SortGamesSetting
@@ -275,7 +276,15 @@ internal data class GameFacts(
     val canSort: Boolean = false,
     /** The sort the lists follow, shown after Sort by…; set by the controller with [canSort], null when it could not be read. */
     val sort: SortGamesSetting? = null,
+    /** The picker's rows and ticks for this game (Add to collection…); null while collections are not wired, which hides the entry. Set by the controller. */
+    val collections: PickerState? = null,
+    /** The menu was opened inside this own collection: it lists Remove from "<name>". Set by the controller. */
+    val ownCollection: OwnCollectionRef? = null,
 )
+
+/** An own collection the game menu was opened inside. */
+@Immutable
+internal data class OwnCollectionRef(val id: Long, val name: String)
 
 /**
  * The MAME set an arcade game's file holds, for Info: [shortName] the file's short name, and

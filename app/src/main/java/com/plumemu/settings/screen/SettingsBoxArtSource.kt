@@ -17,7 +17,7 @@ import com.plumemu.coredata.settings.effectiveBoxArtSource
 import com.plumemu.coreui.theme.PlumDimens
 
 /*
- * Settings › Accounts › Box art: where box art comes from. The row's panel lists the choices, each
+ * Settings › Library › Box art: where box art comes from. The row's panel lists the choices, each
  * with one line on what it brings; A applies. ScreenScraper while no usable account is signed in
  * opens the sign-in form first, and the choice is stored only once ScreenScraper accepted it (a
  * cancelled or failed sign-in leaves the setting as it was). Under the choices, for a person whose
@@ -117,8 +117,11 @@ internal fun BoxArtSourcePanel(
     PanelListColumn(Modifier.fillMaxHeight()) {
         PanelTitle(stringResource(R.string.settings_box_art_source))
         PanelBody(stringResource(R.string.settings_box_art_source_body))
+        // A build without ScreenScraper says so here, once, as plain words: no status line that reads like a failure.
+        if (content.account == AccountStatus.NotInThisBuild) PanelBody(stringResource(R.string.settings_box_art_no_screenscraper), Modifier.testTag(SettingsPanelTags.NO_SCREENSCRAPER))
         // With the work here, so is how it is going: ScreenScraper's panel says it for everyone else.
-        PanelLine(model, SettingsOption.BoxArtSource, boxArtPanelWork(content).takeIf { it.isNotEmpty() }?.let { boxArtLineOf(content.account, content.boxArt) }?.let { boxArtLineText(it) })
+        val line = boxArtPanelWork(content).takeIf { it.isNotEmpty() }?.let { boxArtLineOf(content.account, content.boxArt) }?.takeIf { it != BoxArtLine.NotInThisBuild }
+        PanelLine(model, SettingsOption.BoxArtSource, line?.let { boxArtLineText(it) })
         PanelLazyList(focused, Modifier) {
             itemsIndexed(entries, key = { index, _ -> index }, contentType = { _, entry -> entry.javaClass.simpleName }) { index, entry ->
                 val modifier = Modifier.tapTarget { touch.onPanelItem(index) }.testTag(SettingsTags.panelItem(index))

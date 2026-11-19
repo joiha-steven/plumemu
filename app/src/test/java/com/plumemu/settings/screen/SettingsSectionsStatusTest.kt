@@ -1,5 +1,6 @@
 package com.plumemu.settings.screen
 
+import com.plumemu.account.AccountStatus
 import android.content.Context
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -110,7 +111,7 @@ class SettingsSectionsStatusTest {
 
     @Test
     fun whenNothingCanBeReadEmulatorsLeavesAndLibrarySaysSo() {
-        assertFalse(SettingsSection.Emulators in SettingsSection.shownIn(SettingsContent(loadFailed = true)))
+        assertFalse(SettingsOption.Emulators in SettingsSection.Library.rowsIn(SettingsContent(loadFailed = true)))
     }
 
     @Test
@@ -127,18 +128,25 @@ class SettingsSectionsStatusTest {
     }
 
     @Test
-    fun withAnimationsOffALongSystemListJumpsToTheFocusedRow() {
-        val many = (1..14).map { SystemEmulators("s$it", "System $it", automatic = null, chosen = null, installed = emptyList()) }
-        val focus = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Emulators)
-        show(focus, SettingsContent(systems = many), PlumThemeSettings.Graphite.copy(animationsOn = false))
+    fun withAnimationsOffALongLibraryListJumpsToTheFocusedRow() {
+        val games = List(3) { SettingsGame(it + 1L, "Game $it", "Super Nintendo") }
+        val content =
+            ShotContent.library.copy(
+                hiddenGames = games,
+                unidentifiedGames = games,
+                librarySystems = List(3) { LibrarySystem("system$it", "System ${'A' + it}", gameCount = it + 1) },
+                account = AccountStatus.SignedIn("plumtester"),
+            )
+        val rows = SettingsSection.Library.rowsIn(content)
+        show(SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Library), content, PlumThemeSettings.Graphite.copy(animationsOn = false))
         assertTrue("the rows are longer than the column", scroll().maxValue() > 0f)
         compose.mainClock.autoAdvance = false
-        repeat(many.size - 1) { press(Action.Move(Direction.Down)) } // to the last system's row
+        repeat(rows.size - 1) { press(Action.Move(Direction.Down)) } // to the last row
         repeat(4) { frame() }
         val jumped = scroll().value()
         assertEquals("at the end of the list", scroll().maxValue(), jumped, 0f)
         compose.mainClock.advanceTimeBy(1_000)
         assertEquals("nothing left to animate", jumped, scroll().value(), 0f)
-        compose.onAllNodesWithText("System 14")[0].assertIsDisplayed()
+        compose.onNodeWithTag(SettingsTags.option(rows.last())).assertIsDisplayed()
     }
 }

@@ -8,7 +8,7 @@ import com.plumemu.coredata.settings.ConfirmButtonSetting
 
 /**
  * The letters hints print for confirm and back: "A" confirms and "B" goes back out
- * of the box (the button printed A sends BUTTON_A on the AYN Thor); with Settings › Advanced ›
+ * of the box (the button printed A sends BUTTON_A on the AYN Thor); with Settings › About ›
  * "Confirm with B" the button printed B confirms, so the letters swap.
  * X (search) and Y (favorite) never swap: they follow the printed letters whatever confirms.
  * The one place that decides them; screens take their key caps from here.

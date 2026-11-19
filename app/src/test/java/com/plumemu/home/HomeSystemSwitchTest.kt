@@ -186,28 +186,33 @@ class HomeSystemSwitchTest {
 
     /**
      * A kept page is built but not shown, and hides its rows from the (merged) semantics tree: a
-     * game in both Recent and Favorites is found once, in the shown list. (Compose keeps cleared
+     * game in both of two neighbouring lists is found once, in the shown list. (Compose keeps cleared
      * nodes in the unmerged tree; there only the row tags follow the shown page.)
+     * Requirement change: Recent and Favorites no longer sit side by side in the column (Recent is a folder inside Collections),
+     * so the same check runs on two neighbouring systems that list the same games.
      */
     @Test
-    fun aGameInRecentAndFavoritesIsFoundOnceWhileRecentIsKept() {
+    fun aGameInTwoNeighbouringListsIsFoundOnceWhileTheOtherIsKept() {
         val board = FakeHomeContent.board()
-        val recent = board.entries[0].rows.take(ROWS_BUILT).map { it.title }
-        val favorites = board.entries[1].rows.take(ROWS_BUILT).map { it.title }
-        val title = recent.first { it in favorites }
-        compose.setContent { PlumTheme { HomeAt(board, onState = { state = it }) } }
+        val first = board.entries[snes]
+        val firstRows = first.rows
+        val systems = listOf(SystemGames(first.id, first.name.orEmpty(), firstRows), SystemGames("twin", "Twin", firstRows.map { it.copy(id = "twin-${it.id}") }))
+        val twoLists = HomeContent.of(board.recentRows, board.favoriteRows, board.appRows, systems)
+        val title = firstRows.first().title
+        compose.setContent { PlumTheme { HomeAt(twoLists, onState = { state = it }) } }
         compose.waitForIdle()
+        act(Action.TapItem(Column.Systems, snes))
         act(Action.Move(Direction.Down))
-        assertEquals(1, state.focus.systemIndex)
-        assertTrue("Recent's page is kept beside Favorites", board.entries[0].id in probe().ahead())
+        assertEquals(snes + 1, state.focus.systemIndex)
+        assertTrue("the first list's page is kept beside the twin", first.id in probe().ahead())
         assertEquals("two pages built", 2, compose.onAllNodesWithTag(HomeTags.GAMES_PAGE, useUnmergedTree = true).fetchSemanticsNodes().size)
         assertEquals("\"$title\" found", 1, compose.onAllNodes(inAList(title)).fetchSemanticsNodes().size)
         compose.onNode(inAList(title)).assertExists()
         act(Action.Move(Direction.Up))
-        assertTrue("Favorites' page is kept beside Recent", board.entries[1].id in probe().ahead())
-        // Recent lists some games twice: found as often as Recent's rows in the tree have it.
-        val inRecent = board.entries[0].rows.indices.count { i -> board.entries[0].rows[i].title == title && compose.onAllNodesWithTag(HomeTags.game(i)).fetchSemanticsNodes().isNotEmpty() }
-        assertEquals("back on Recent, not in the kept Favorites", inRecent, compose.onAllNodes(inAList(title)).fetchSemanticsNodes().size)
+        assertTrue("the twin's page is kept beside the first list", "twin" in probe().ahead())
+        // A list may hold a title twice: found as often as its rows in the tree have it.
+        val inFirst = firstRows.indices.count { i -> firstRows[i].title == title && compose.onAllNodesWithTag(HomeTags.game(i)).fetchSemanticsNodes().isNotEmpty() }
+        assertEquals("back on the first list, not in the kept twin", inFirst, compose.onAllNodes(inAList(title)).fetchSemanticsNodes().size)
     }
 
     /** [title] in a games list, not in the text-only details column that names the focused game at 768. */

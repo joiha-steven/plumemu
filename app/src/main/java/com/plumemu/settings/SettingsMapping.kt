@@ -1,6 +1,8 @@
 package com.plumemu.settings
 
 import android.util.Log
+import com.plumemu.collections.opensAsGrid
+import com.plumemu.collections.toggledView
 import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.ConfirmButtonSetting
 import com.plumemu.coredata.settings.ColorSetting
@@ -32,7 +34,7 @@ import com.plumemu.keyboard.KeyboardChoice
  * preset, so a newer version's preset never breaks an older install.
  */
 
-/** Appearance plus Advanced › Animations: everything [PlumThemeSettings] holds. */
+/** Appearance's rows, Animations among them: everything [PlumThemeSettings] holds. */
 fun PlumSettings.toThemeSettings(): PlumThemeSettings = appearance.toThemeSettings(animationsOn = advanced.animations)
 
 fun AppearanceSettings.toThemeSettings(animationsOn: Boolean): PlumThemeSettings = toColorsAndLook(animationsOn).copy(buttonSet = effectiveButtonSet())
@@ -144,6 +146,15 @@ internal fun PlumSettings.withGridView(
 ): PlumSettings {
     val ids = appearance.gridSystems
     return copy(appearance = appearance.copy(gridSystems = if (isGrid) ids + systemId else ids - systemId))
+}
+
+/** These settings with Collections folder [id] a grid ([isGrid]) or a list (`appearance.list_collections` holds the lists); a repeated press changes nothing. */
+internal fun PlumSettings.withFolderView(
+    id: String,
+    isGrid: Boolean,
+): PlumSettings {
+    val lists = appearance.listCollections
+    return if (opensAsGrid(id, lists) == isGrid) this else copy(appearance = appearance.copy(listCollections = toggledView(id, lists)))
 }
 
 private const val TAG = "PlumSettingsMapping"

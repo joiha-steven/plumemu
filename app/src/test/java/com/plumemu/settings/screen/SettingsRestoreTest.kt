@@ -19,7 +19,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Settings › Advanced › Restore… and Undo last restore by gamepad and touch: Choose file…, Cancel while reading, the confirm opening on Cancel, Undo listed only
+ * Settings › About › Restore… and Undo last restore by gamepad and touch: Choose file…, Cancel while reading, the confirm opening on Cancel, Undo listed only
  * while its set exists, and the result kept until the focus leaves the row.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -30,7 +30,7 @@ internal class SettingsRestoreTest : SettingsModelHarness() {
 
     private fun openRestorePanel(content: SettingsContent = SettingsContent()) {
         model.content = content
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.Restore)
         press(Action.Enter)
         assertEquals(PanelPage.Restore, model.focus.page)
@@ -92,7 +92,7 @@ internal class SettingsRestoreTest : SettingsModelHarness() {
     @Test
     fun aTapOnRestoreAtTheConfirmReplaces() {
         model.content = SettingsContent(restore = RestoreState.Confirm(summary))
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.Restore)
         press(Action.Enter)
         val settings = actions.shown
@@ -105,7 +105,7 @@ internal class SettingsRestoreTest : SettingsModelHarness() {
     @Test
     fun theUndoPanelAsksAgainBeforeItUndoesWithTheCursorOnCancel() {
         model.content = SettingsContent(wayBack = wayBack)
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.UndoRestore)
         press(Action.Enter)
         assertEquals(PanelPage.UndoRestore, model.focus.page)
@@ -129,7 +129,7 @@ internal class SettingsRestoreTest : SettingsModelHarness() {
     @Test
     fun forgettingTheCopyAsksAgainWithTheCursorOnCancel() {
         model.content = SettingsContent(wayBack = wayBack)
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.UndoRestore)
         press(Action.Enter)
         actions.restoreCalls.clear()

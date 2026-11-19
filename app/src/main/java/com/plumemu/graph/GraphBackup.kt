@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Where Settings › Advanced › Back up… is. */
+/** Where Settings › About › Back up… is. */
 internal sealed interface BackupState {
     data object Idle : BackupState
 
@@ -114,7 +114,7 @@ internal interface BackupOutput {
 }
 
 /**
- * Settings › Advanced › Back up…: one backup at a time, in the process's
+ * Settings › About › Back up…: one backup at a time, in the process's
  * [scope], so closing Settings does not stop it. The zip is streamed into the picked document
  * ([BackupZip]); the database is copied under Room's write lock ([DatabaseSnapshot]), never on the
  * main thread. Cancel or a failure deletes the unfinished document and says so ([BackupState]); a
@@ -141,7 +141,7 @@ internal class GraphBackup(
     /** Told how each backup of [BackupKind] ended (saved, failed, cancelled), for the statistics (`backup_made`). */
     private val onEnded: (BackupKind, BackupState) -> Unit = { _, _ -> },
     private val log: (String) -> Unit,
-    /** False while a restore replaces the library (Settings › Advanced › Restore…): no backup starts then. */
+    /** False while a restore replaces the library (Settings › About › Restore…): no backup starts then. */
     private val mayStart: () -> Boolean = { true },
 ) {
     private val mutableState = MutableStateFlow<BackupState>(BackupState.Idle)
@@ -399,7 +399,7 @@ internal class GraphBackup(
     }
 }
 
-/** What Settings drives of [backup] (Settings › Advanced › Back up…): Cancel and forgetting the result. */
+/** What Settings drives of [backup] (Settings › About › Back up…): Cancel and forgetting the result. */
 internal fun backupWorkOf(backup: GraphBackup): SettingsHost.BackupWork =
     object : SettingsHost.BackupWork {
         override fun cancel() = backup.cancel()

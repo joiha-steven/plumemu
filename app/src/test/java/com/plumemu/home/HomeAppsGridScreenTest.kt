@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import android.view.InputDevice
+import com.plumemu.coreinput.strip.StripFocus
 import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.compose.runtime.CompositionLocalProvider
@@ -36,7 +37,7 @@ import org.robolectric.annotation.GraphicsMode
  * Apps as a grid of icons on the main screen through a real router: SELECT
  * switches and is written once per press, signed out of ScreenScraper too (the icons need no box art);
  * an Apps entry without apps is never a grid; the size is fixed, so L1 / R1 do nothing there and L2 / R2 (key or trigger) switch the entry,
- * the hint bar says "L2 R2 Switch system"; A opens the app as in the list, START and Y do nothing, as in the list.
+ * the hint bar says "L2 R2 Switch list"; A opens the app as in the list, START and Y do nothing, as in the list.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -58,7 +59,7 @@ class HomeAppsGridScreenTest {
     private var shownContent by mutableStateOf<HomeContent?>(null)
     private var layout: PlumLayout? = null
 
-    /** [content] on a fresh main screen (a new one for each call: the focus starts on Recent again). */
+    /** [content] on a fresh main screen (a new one for each call: the focus starts on Favorites again). */
     private fun show(content: HomeContent = appsGridLibrary()) {
         val first = shownContent == null
         shownContent = content
@@ -78,9 +79,11 @@ class HomeAppsGridScreenTest {
                                 HomeCallbacks(
                                     apps = apps,
                                     onGridView = { id, isGrid, _ -> writes += id to isGrid },
+                                    onFolderView = { id, isGrid, _ -> writes += id to isGrid },
                                     onGridSize = { size, _ -> sizes += size },
                                 ),
                                 gridSystems = stored,
+                                initialFocus = StripFocus(),
                             )
                         }
                     }
@@ -97,7 +100,7 @@ class HomeAppsGridScreenTest {
         }
     }
 
-    /** From the first frame (Recent focused): Apps' list or grid. */
+    /** From the first frame (the Favorites entry focused): Apps' list or grid. */
     private fun openApps() = send(Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Enter)
 
     private fun count(tag: String) = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().size
@@ -221,7 +224,7 @@ class HomeAppsGridScreenTest {
         openApps()
         assertEquals(1, count(HomeTags.GRID))
         assertTrue("A Open", hasText("Open"))
-        assertTrue("L2 R2 Switch system", hasText("Switch system"))
+        assertTrue("L2 R2 Switch list", hasText("Switch list"))
         assertTrue("SELECT List view", hasText("List view"))
         assertEquals("no Size hint in Apps' grid", false, hasText("Size"))
         assertTrue("the L2 R2 key cap", hasText("L2 R2"))
@@ -281,24 +284,27 @@ class HomeAppsGridScreenTest {
         assertEquals("still Apps' grid", 1, count(HomeTags.GRID))
     }
 
-    /** Signed out with Recent and Apps stored as grids: both are (the grid needs no box art); SELECT on Recent writes its switch back to a list. */
+    /**
+     * Signed out with Apps stored as a grid: Recent, a folder inside Collections since the Collections change, is a grid by
+     * default beside it (the grid needs no box art); SELECT on Recent writes its switch back to a list (as a folder's view).
+     */
     @Test
-    fun signedOutAStoredRecentIsAGridBesideAppsGrid() {
-        stored = setOf(HomeContent.RECENT_ID, HomeContent.APPS_ID)
+    fun signedOutRecentIsAGridByDefaultBesideAppsGrid() {
+        stored = setOf(HomeContent.APPS_ID)
         val content = appsGridLibrary(hasBoxArt = false)
         show(content)
-        assertTrue("Recent has games", content.entries[0].rows.isNotEmpty())
-        val strip = content.stripWith(stored, checkNotNull(layout))
-        assertEquals("Recent: the square class's columns", checkNotNull(layout).gridColumns(CoverClass.Square), strip.systems[0].gridColumns)
+        assertTrue("Recent has games", content.recentRows.isNotEmpty())
+        val strip = content.stripWith(setOf(HomeContent.RECENT_ID, HomeContent.APPS_ID), checkNotNull(layout))
+        assertEquals("Recent: the square class's columns", checkNotNull(layout).gridColumns(CoverClass.Square), strip.systems[1].folders.first { it.id == HomeContent.RECENT_ID }.gridColumns)
         assertEquals("Apps: its grid's columns", appsGridColumns(checkNotNull(layout)), strip.systems[APPS_ENTRY].gridColumns)
-        assertEquals(true, content.showsGrid(content.entries[0], stored))
-        send(Action.Enter) // Recent's games
+        assertEquals(true, content.showsGrid(content.recentEntry, setOf(HomeContent.RECENT_ID)))
+        send(*OpenRecentFolder.toTypedArray()) // Recent's games
         assertEquals("Recent is a grid", 1, count(HomeTags.GRID))
         assertEquals("the List view hint on Recent", true, hasText("List view"))
         send(Action.ToggleView)
         assertEquals("SELECT on Recent writes its switch to a list", listOf(HomeContent.RECENT_ID to false), writes.toList())
         assertEquals(0, count(HomeTags.GRID))
-        send(Action.Back, Action.Move(Direction.Down), Action.Move(Direction.Down), Action.Enter)
+        send(Action.Back, Action.Back, Action.Move(Direction.Down), Action.Enter) // the folder list, the column, Apps
         assertEquals("Apps is the stored grid", 1, count(HomeTags.GRID))
     }
 

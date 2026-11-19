@@ -6,7 +6,7 @@ import androidx.compose.ui.res.stringResource
 import com.plumemu.home.rememberCountFormat
 
 /**
- * Settings › Advanced › Reset… › Clear Recent…: what Settings asks of the library once the person confirmed.
+ * Settings › About › Reset… › Clear Recent…: what Settings asks of the library once the person confirmed.
  * Play time and statistics are not touched; only the list empties.
  */
 internal interface SettingsRecentActions {

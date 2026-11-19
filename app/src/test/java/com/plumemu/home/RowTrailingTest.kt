@@ -28,10 +28,10 @@ class RowTrailingTest {
 
     @Test
     fun theListKindDecides() {
-        assertEquals(listOf(EntryKind.Recent, EntryKind.Favorites), EntryKind.values().filter { it.mixesSystems })
+        assertEquals(listOf(EntryKind.Recent, EntryKind.Favorites, EntryKind.Collections), EntryKind.values().filter { it.mixesSystems })
         assertFalse(EntryKind.System.mixesSystems)
         assertFalse(EntryKind.Apps.mixesSystems)
-        assertTrue(FakeHomeContent.mixedSystems().entries.first { it.kind == EntryKind.Recent }.rows.all { it.systemAbbr.isNotEmpty() })
+        assertTrue(FakeHomeContent.mixedSystems().folderEntries.first { it.kind == EntryKind.Recent }.rows.all { it.systemAbbr.isNotEmpty() })
     }
 
     @Test

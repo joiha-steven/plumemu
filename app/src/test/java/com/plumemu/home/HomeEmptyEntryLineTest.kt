@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onRoot
@@ -45,14 +46,14 @@ abstract class HomeEmptyEntryLineBase(
 
     private fun checkLines(
         content: HomeContent,
-        entry: Int,
+        actions: List<Action>,
         tag: String,
     ) {
         compose.setContent {
             val context = LocalContext.current
             val configuration = android.content.res.Configuration(LocalConfiguration.current).apply { setLocale(locale) }
             CompositionLocalProvider(LocalContext provides context.createConfigurationContext(configuration), LocalConfiguration provides configuration) {
-                PlumTheme(PlumThemeSettings.Graphite) { HomeAt(content, listOf(Action.TapItem(Column.Systems, entry))) }
+                PlumTheme(PlumThemeSettings.Graphite) { HomeAt(content, actions) }
             }
         }
         for (each in LOCALES) {
@@ -66,24 +67,29 @@ abstract class HomeEmptyEntryLineBase(
             val problems = textProblems(line, FitAllowance(isLargest = false))
             assertTrue("$each $widthDp: '$text' is cut or overlapped: $problems", problems.isEmpty())
             val density = root.boundsInRoot.width / widthDp
-            assertTrue("$each: '$text' starts left of the list's start: ${line.boundsInRoot.left / density}", line.boundsInRoot.left / density >= 200f)
+            // An empty folder opens with the cursor in its games column, so the strip has slid left by the systems column's offset (0 with the cursor in the column).
+            val slide = findTagged(root, HomeTags.SYSTEMS)?.let { it.positionInRoot.x / density } ?: 0f
+            assertTrue("$each: '$text' starts left of the list's start: ${line.boundsInRoot.left / density}", line.boundsInRoot.left / density >= 200f + slide)
             assertTrue("$each: '$text' runs into the right margin: ${line.boundsInRoot.right / density} of $widthDp", line.boundsInRoot.right / density <= widthDp - 24f + 0.5f)
         }
     }
 
+    // Recent is a folder inside Collections since the Collections change: opened through it.
     @Test
     fun emptyRecentShowsItsLineInEveryLocale() {
-        checkLines(FakeHomeContent.noRecent(), entry = 0, tag = HomeTags.EMPTY_RECENT)
+        checkLines(FakeHomeContent.noRecent(), OpenRecentFolderByTap, tag = HomeTags.EMPTY_RECENT)
     }
 
+    // Favorites is the column's first entry since the Collections change.
     @Test
     fun emptyFavoritesShowsItsLineInEveryLocale() {
-        checkLines(FakeHomeContent.noFavorites(), entry = 1, tag = HomeTags.EMPTY_FAVORITES)
+        checkLines(FakeHomeContent.noFavorites(), listOf(Action.TapItem(Column.Systems, 0)), tag = HomeTags.EMPTY_FAVORITES)
     }
 
+    // Recent is a folder inside Collections since the Collections change: opened through it.
     @Test
     fun recentWithGamesShowsNoSuchLine() {
-        compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { HomeAt(FakeHomeContent.board(), listOf(Action.TapItem(Column.Systems, 0))) } }
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { HomeAt(FakeHomeContent.board(), OpenRecentFolderByTap) } }
         compose.waitForIdle()
         assertTrue("Recent with games shows the empty line", findTagged(compose.onRoot(useUnmergedTree = true).fetchSemanticsNode(), HomeTags.EMPTY_RECENT) == null)
     }
@@ -111,12 +117,12 @@ class HomeEmptyEntryHintsTest {
     fun anEmptyEntryOffersNoSelect_AndOneWithGamesDoes() {
         val noRecent = FakeHomeContent.noRecent()
         val noFavorites = FakeHomeContent.noFavorites()
-        val recent = noRecent.entries.single { it.kind == EntryKind.Recent }
+        val recent = noRecent.folderEntries.single { it.kind == EntryKind.Recent }
         val favorites = noFavorites.entries.single { it.kind == EntryKind.Favorites }
         assertTrue("an empty Recent offers A Select: it would do nothing", hintsFor(noRecent, Column.Systems, recent).none { it.action == Action.Enter })
         assertTrue("an empty Favorites offers A Select: it would do nothing", hintsFor(noFavorites, Column.Systems, favorites).none { it.action == Action.Enter })
         val full = FakeHomeContent.board()
-        val withGames = full.entries.single { it.kind == EntryKind.Recent }
+        val withGames = full.folderEntries.single { it.kind == EntryKind.Recent }
         assertEquals(R.string.home_hint_select, hintsFor(full, Column.Systems, withGames).first { it.action == Action.Enter }.label)
     }
 }

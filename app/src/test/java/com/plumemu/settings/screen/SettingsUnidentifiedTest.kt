@@ -93,7 +93,8 @@ internal class SettingsUnidentifiedTest : SettingsModelHarness() {
     fun unidentifiedGamesIsListedOnlyWhileThereAreSomeBeforeHiddenGames() {
         assertFalse(SettingsOption.UnidentifiedGames in SettingsSection.Library.rowsIn(SettingsContent()))
         val rows = SettingsSection.Library.rowsIn(SettingsContent(unidentifiedGames = unidentified, hiddenGames = unidentified.take(1)))
-        assertEquals(listOf(SettingsOption.UnidentifiedGames, SettingsOption.HiddenGames), rows.takeLast(2))
+        val after = rows.indexOf(SettingsOption.FilesNotAdded) + 1
+        assertEquals(listOf(SettingsOption.UnidentifiedGames, SettingsOption.HiddenGames), rows.subList(after, after + 2))
     }
 
     @Test

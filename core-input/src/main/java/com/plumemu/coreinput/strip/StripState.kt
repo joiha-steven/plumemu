@@ -126,7 +126,7 @@ class StripState internal constructor(
 
     /** Whether the focused system has the narrow details stop (narrow screen, box art, an entry with details): Right in its list goes there. */
     val hasDetailsStop: Boolean
-        get() = isNarrow && contentState.hasBoxArt && contentState.systems.getOrNull(focus.systemIndex)?.hasDetails == true
+        get() = isNarrow && contentState.hasBoxArt && contentState.systems.getOrNull(focus.systemIndex)?.let(focus::shownIn)?.hasDetails == true
 
     /** The game armed by a first Right while [pushRightPlays] is on; see [PushRightArm]. */
     var pushRightArm = PushRightArm()
@@ -137,8 +137,8 @@ class StripState internal constructor(
 
     /** The focused game by its id (the row only when the entry gives no ids), so a re-sort or a rescan never moves the arming to another game. */
     private fun focusKey(): String {
-        val entry = content.systems.getOrNull(focus.systemIndex)
-        return "${focus.systemId}/${entry?.itemIds?.getOrNull(focus.row) ?: "row${focus.row}"}"
+        val entry = content.systems.getOrNull(focus.systemIndex)?.let(focus::shownIn)
+        return "${focus.entryKey}/${entry?.itemIds?.getOrNull(focus.row) ?: "row${focus.row}"}"
     }
 
     private var packedSource: Triple<String, () -> PackedRows, Any>? = null
@@ -174,7 +174,17 @@ class StripState internal constructor(
     private fun withPacked(content: StripContent): StripContent {
         val (id, source) = packedSource ?: return content
         val at = content.systems.indexOfFirst { it.id == id }
-        val entry = content.systems.getOrNull(at) ?: return content
+        val entry = content.systems.getOrNull(at)
+        if (entry == null) {
+            // A folder's grid: its entry sits inside its host.
+            val hostAt = content.systems.indexOfFirst { host -> host.folders.any { it.id == id } }
+            val host = content.systems.getOrNull(hostAt) ?: return content
+            val folder = host.folders.first { it.id == id }
+            val folderRows = source()
+            if (!folderRows.covers(folder.itemCount, folder.itemIds)) return content
+            val folders = host.folders.map { if (it.id == id) folder.copy(packed = folderRows) else it }
+            return content.copy(systems = content.systems.toMutableList().also { it[hostAt] = host.copy(folders = folders) })
+        }
         val rows = source()
         if (!rows.covers(entry.itemCount, entry.itemIds)) return content
         return content.copy(systems = content.systems.toMutableList().also { it[at] = entry.copy(packed = rows) })
@@ -299,12 +309,14 @@ fun rememberStripState(
     geometry: StripGeometry,
     isMotionOn: Boolean,
     animationSpec: AnimationSpec<Float>,
+    /** Where a screen with no saved focus starts (the main screen: Favorites' first game). */
+    initialFocus: StripFocus = StripFocus(),
 ): StripState {
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val state =
         rememberSaveable(saver = stripStateSaver(content, geometry, density, isMotionOn, animationSpec, scope)) {
-            StripState(StripFocus(), content, geometry, density, isMotionOn, animationSpec, scope)
+            StripState(initialFocus, content, geometry, density, isMotionOn, animationSpec, scope)
         }
     // Assigned during composition, like rememberUpdatedState: a screen reading `state.focus` in
     // this same composition must see it reconciled against this content (a rescan that removes
@@ -336,6 +348,8 @@ internal object StripFocusBundle {
     private const val COLUMN = "column"
     private const val SYSTEM_INDEX = "systemIndex"
     private const val SYSTEM_ID = "systemId"
+    private const val OPEN_HOST = "openHost"
+    private const val OPEN_ID = "openId"
     private const val ROW_IDS = "rowIds"
     private const val ROW_VALUES = "rowValues"
     private const val ROW_ID_SYSTEMS = "rowIdSystems"
@@ -346,6 +360,10 @@ internal object StripFocusBundle {
             putString(COLUMN, focus.column.name)
             putInt(SYSTEM_INDEX, focus.systemIndex)
             putString(SYSTEM_ID, focus.systemId)
+            focus.openFolder?.let {
+                putString(OPEN_HOST, it.host)
+                putString(OPEN_ID, it.id)
+            }
             val entries = focus.rows.entries.toList()
             putStringArray(ROW_IDS, entries.map { it.key }.toTypedArray())
             putIntArray(ROW_VALUES, entries.map { it.value }.toIntArray())
@@ -365,6 +383,7 @@ internal object StripFocusBundle {
             systemId = bundle.getString(SYSTEM_ID),
             rows = ids.zip(values.toList()).toMap(),
             rowIds = idSystems.zip(idValues).toMap(),
+            openFolder = bundle.getString(OPEN_HOST)?.let { host -> bundle.getString(OPEN_ID)?.let { OpenFolder(host, it) } },
         )
     }
 }

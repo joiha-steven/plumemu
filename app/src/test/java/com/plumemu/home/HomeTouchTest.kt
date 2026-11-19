@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.rememberCoroutineScope
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -62,6 +63,7 @@ class HomeTouchTest {
                         games = games,
                         onSettings = { settingsOpened++ },
                     ),
+                    initialFocus = StripFocus(),
                 )
             }
         }
@@ -113,10 +115,10 @@ class HomeTouchTest {
         assertEquals(1, settingsOpened)
         compose.onNodeWithTag(HomeTags.hint(Action.Enter), useUnmergedTree = true).performClick()
         compose.waitForIdle()
-        // Now on the games of Recent: A plays its first row.
+        // Now on the games of Favorites (the cold start of this harness, the column's first entry since the Collections change): A plays its first row.
         compose.onNodeWithTag(HomeTags.hint(Action.Play), useUnmergedTree = true).performClick()
         compose.waitForIdle()
-        assertEquals(listOf("recent-0"), games.launched)
+        assertEquals(listOf("favorite-0"), games.launched)
     }
 
     @Test

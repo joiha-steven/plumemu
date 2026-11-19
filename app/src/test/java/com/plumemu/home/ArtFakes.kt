@@ -102,8 +102,11 @@ internal class FakeCoverImages(
 }
 
 /** The fakes' rows as the library gives them: a scrape key each, no fixed details (they come from the source). */
-internal fun HomeContent.asLibrary(): HomeContent =
-    withEntries(entries.map { entry -> entry.copy(rows = entry.rows.map { it.copy(details = null, scrapeKey = it.scrapeKey ?: artKey(it.id)) }) })
+internal fun HomeContent.asLibrary(): HomeContent {
+    fun HomeEntry.asLibraryRows() = copy(rows = rows.map { it.copy(details = null, scrapeKey = it.scrapeKey ?: artKey(it.id)) })
+    // The folders' games too (Recent is a folder): their covers are asked for by the same keys.
+    return withEntries(entries.map { it.asLibraryRows() }, folderEntries = folderEntries.map { it.asLibraryRows() })
+}
 
 internal fun artKey(rowId: String) = "crc:$rowId"
 

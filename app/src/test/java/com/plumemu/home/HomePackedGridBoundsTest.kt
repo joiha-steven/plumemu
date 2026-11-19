@@ -110,7 +110,7 @@ class HomePackedGridBoundsTest {
 
     private var packedLayout: PlumLayout? = null
 
-    private fun favorites() = assertPacked("favorites at ${packedLayout?.width}", PackedFavoritesLibrary.entries[1].count, checkNotNull(packedLayout), MixedGridShape) { i -> FAVORITE_PICKS[i].let { (id, at) -> realAspect(id, at) } }
+    private fun favorites() = assertPacked("favorites at ${packedLayout?.width}", PackedFavoritesLibrary.entries[0].count, checkNotNull(packedLayout), MixedGridShape) { i -> FAVORITE_PICKS[i].let { (id, at) -> realAspect(id, at) } }
 
     @Test
     @Config(qualifiers = WIDE)
@@ -203,7 +203,7 @@ class HomePackedGridBoundsTest {
                 state.dispatch(Action.Move(Direction.Down))
             }
             compose.waitForIdle()
-            val boxes = shown(PackedFavoritesLibrary.entries[1].count)
+            val boxes = shown(PackedFavoritesLibrary.entries[0].count)
             val rows = rowsOf(boxes)
             val from = boxes.getValue(start)
             val fromRow = rows.indexOfFirst { row -> row.any { it.first == start } }

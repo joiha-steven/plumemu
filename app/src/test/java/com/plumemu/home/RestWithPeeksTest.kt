@@ -53,6 +53,12 @@ class RestWithPeeksTest {
     }
 
     @Test
+    fun aListCloseToItsStartRestsAtTheStartNotWithTheFirstRowCut() {
+        // Row 1 fits from the top: row 0 is whole there, never cut across at 10.
+        assertEquals(0, rest(10, top(1), end(1), window = 110))
+    }
+
+    @Test
     fun aWindowTooShortForRowAndPeeksHasNoRest() {
         assertNull(rest(top(3), top(3), end(3), window = 60))
     }

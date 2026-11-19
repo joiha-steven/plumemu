@@ -13,7 +13,7 @@ import com.plumemu.sound.Outcome
 internal abstract class SettingsColorModel(
     protected val actions: SettingsActions,
     initialFocus: SettingsFocus,
-) : SettingsFolderModel(initialFocus, SettingsWork(actions)) {
+) : SettingsCollectionsModel(initialFocus, SettingsWork(actions), actions.collections) {
     protected val custom = SettingsCustomColor(actions)
 
     /** The "+" page's check: the colour it opened with, then the one chosen. */

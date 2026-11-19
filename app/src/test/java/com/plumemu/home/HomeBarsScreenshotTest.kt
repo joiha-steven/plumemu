@@ -43,8 +43,8 @@ class HomeBarsScreenshotTest {
 
     private fun withoutApps(board: HomeContent): HomeContent =
         HomeContent.of(
-            recent = board.entries[0].rows,
-            favorites = board.entries[1].rows,
+            recent = board.recentRows,
+            favorites = board.favoriteRows,
             apps = emptyList(),
             systems = board.entries.drop(FIRST_SYSTEM_INDEX).map { SystemGames(it.id, it.name.orEmpty(), it.rows, it.coverShape) },
             hasBoxArt = board.hasBoxArt,

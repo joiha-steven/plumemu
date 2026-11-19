@@ -89,8 +89,7 @@ internal fun SettingsPanel(
         SettingsOption.Restore -> RestorePanel(model, touch)
         SettingsOption.UndoRestore -> UndoRestorePanel(model, touch)
         SettingsOption.Version -> if (model.content.hasUpdates) UpdatePanel(model, touch, settings, installedLine = versionName) else AboutPanel(versionName, model)
-        // A switch inside Version's panel, which says what it does.
-        SettingsOption.CheckUpdatesDaily -> Unit
+        SettingsOption.CheckUpdatesDaily -> ExplainPanel(model, option.label, R.string.settings_check_updates_daily_body)
         SettingsOption.Licenses -> LicensesPanel(model, touch)
         SettingsOption.RomFolders -> FoldersPanel(model, touch)
         SettingsOption.Rescan -> RescanPanel(model)
@@ -112,6 +111,8 @@ internal fun SettingsPanel(
                 model.content.hiddenGames,
             )
         SettingsOption.SystemEmulator -> EmulatorsPanel(model, touch)
+        SettingsOption.Emulators -> if (model.focus.page == PanelPage.Emulators) EmulatorsPanel(model, touch) else EmulatorSystemsPanel(model, touch)
+        SettingsOption.Collections -> CollectionsPanel(model, touch)
         SettingsOption.FilesNotAdded -> if (model.focus.page == PanelPage.UnknownFolder) UnknownFolderPanel(model, touch) else FilesNotAddedPanel(model, touch)
         SettingsOption.PushRightToPlay -> ExplainPanel(model, option.label, R.string.settings_push_right_body)
         SettingsOption.UseAsHome -> ExplainPanel(model, option.label, R.string.settings_use_as_home_body) { PanelLine(model, option, null) }
@@ -123,7 +124,6 @@ internal fun SettingsPanel(
         SettingsOption.ReportProblem -> ReportProblemPanel(model, touch, settings)
         SettingsOption.BoxArtSource -> BoxArtSourcePanel(settings, model, touch)
         SettingsOption.ScraperAccount -> ScraperAccountPanel(settings, model, touch)
-        SettingsOption.ScraperStatus -> ScraperStatusPanel(model)
         SettingsOption.RetroAchievementsAccount -> RaAccountPanel(model, touch)
         SettingsOption.BoxArtRegion -> ExplainPanel(model, option.label, R.string.settings_box_art_region_body)
         // Statistics is a whole page with no side panel (StatisticsPage).
@@ -413,7 +413,7 @@ private fun ConfirmWords(
 
 /** Buttons side by side, the second under the first and as wide as it when both do not fit a line (Largest); one under the other in the 205 dp right column of three columns. */
 @Composable
-private fun ButtonsRow(
+internal fun ButtonsRow(
     modifier: Modifier,
     buttons: @Composable () -> Unit,
 ) {
@@ -474,6 +474,15 @@ internal fun PlatformDataLine(data: PlatformDataVersion) {
 }
 
 internal object SettingsPanelTags {
+    /** Library › Collections: the list, a collection's page, Rename's page and Delete's buttons. */
+    const val COLLECTIONS_PANEL = "settings_collections_panel"
+    const val COLLECTION_PAGE = "settings_collection_page"
+    const val COLLECTION_RENAME = "settings_collection_rename"
+    const val COLLECTION_DELETE = "settings_collection_delete"
+
+    /** Box art's line in a build without ScreenScraper. */
+    const val NO_SCREENSCRAPER = "settings_no_screenscraper"
+
     /** Version's panel, which scrolls where its lines run past the column. */
     const val ABOUT = "settings_about"
 
@@ -493,7 +502,7 @@ internal object SettingsPanelTags {
     const val BACKUP_PASSWORD = "settings_backup_password"
     const val DONE = "settings_done"
 
-    /** Accounts › RetroAchievements: the two help lines and the line on what is sent. */
+    /** Library › RetroAchievements: the two help lines and the line on what is sent. */
     const val RA_HELP = "settings_ra_help"
     const val RA_PRIVACY = "settings_ra_privacy"
 

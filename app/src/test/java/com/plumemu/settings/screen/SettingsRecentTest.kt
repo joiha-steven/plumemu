@@ -8,14 +8,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Settings › Advanced › Reset… › Clear Recent…: it asks first with Cancel focused, says play time and statistics stay, then reports the count or the failure on its item.
+ * Settings › About › Reset… › Clear Recent…: it asks first with Cancel focused, says play time and statistics stay, then reports the count or the failure on its item.
  */
 internal class SettingsRecentTest : SettingsModelHarness() {
     private val library = SettingsSection.Library.rowsIn(SettingsContent())
 
     private fun openList() {
         model.content = SettingsContent()
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.Reset)
         press(Action.Enter)
         assertEquals(PanelPage.Reset, model.focus.page)
@@ -34,7 +34,9 @@ internal class SettingsRecentTest : SettingsModelHarness() {
     fun libraryNoLongerListsClearRecent() {
         assertTrue(SettingsOption.ClearRecent !in SettingsSection.Library.rowsIn(SettingsContent()))
         val everyRow = SettingsContent(hiddenGames = listOf(SettingsGame(1, "x", "y")), unidentifiedGames = listOf(SettingsGame(2, "x", "y")))
-        assertEquals(SettingsOption.HiddenGames, SettingsSection.Library.rowsIn(everyRow).last())
+        val rows = SettingsSection.Library.rowsIn(everyRow)
+        val after = rows.indexOf(SettingsOption.FilesNotAdded) + 1
+        assertEquals(listOf(SettingsOption.UnidentifiedGames, SettingsOption.HiddenGames), rows.subList(after, after + 2))
         assertEquals(ResetPanelItem.Recent.option, SettingsOption.ClearRecent)
     }
 
@@ -100,7 +102,7 @@ internal class SettingsRecentTest : SettingsModelHarness() {
 
     @Test
     fun clearByTouchNeedsTheSecondTapOnTheItemAndOnTheButton() {
-        openSection(SettingsSection.Advanced)
+        openSection(SettingsSection.About)
         focusOption(SettingsOption.Reset)
         model.onTapPanelItem(ResetPanelItem.Recent.ordinal, actions.settings, wide)
         assertEquals(PanelPage.Reset, model.focus.page)

@@ -91,7 +91,7 @@ internal object SettingsListPages {
 
     /**
      * Library's rows after [before] became [after]: the cursor stays on the same option. Null when nothing moves. An option that
-     * left closes its panel.
+     * left closes its panel; ScreenScraper, which comes and goes with the source and the account, leaves the cursor on Box art.
      */
     fun libraryFocusKept(
         focus: SettingsFocus,
@@ -106,43 +106,14 @@ internal object SettingsListPages {
         val option = rowsBefore.getOrNull(at) ?: return null
         val now = rowsAfter.indexOf(option)
         if (now < 0) {
-            val moved = focus.rememberedOption + (library to at.coerceAtMost((rowsAfter.size - 1).coerceAtLeast(0)))
+            val boxArt = rowsAfter.indexOf(SettingsOption.BoxArtSource).takeIf { option == SettingsOption.ScraperAccount && it >= 0 }
+            val moved = focus.rememberedOption + (library to (boxArt ?: at.coerceAtMost((rowsAfter.size - 1).coerceAtLeast(0))))
             return focus.leavingPanel(moved)
         }
         return if (now == at) null else focus.copy(rememberedOption = focus.rememberedOption + (library to now))
     }
 
-    /**
-     * Accounts' rows after [before] became [after]: ScreenScraper comes and goes with the source and the account. The cursor
-     * stays on the same option; when ScreenScraper itself left it lands on Box art, and its panel closes.
-     */
-    fun accountsFocusKept(
-        focus: SettingsFocus,
-        before: SettingsContent,
-        after: SettingsContent,
-    ): SettingsFocus? {
-        val accounts = SettingsSection.Accounts
-        if (focus.section != accounts) return null
-        val at = (focus.rememberedOption[accounts] ?: 0).coerceAtLeast(0)
-        val rowsAfter = accounts.rowsIn(after)
-        val option = accounts.rowsIn(before).getOrNull(at) ?: return null
-        val now = rowsAfter.indexOf(option)
-        if (now < 0) return focus.leavingPanel(focus.rememberedOption + (accounts to rowsAfter.indexOf(SettingsOption.BoxArtSource).coerceAtLeast(0)))
-        return if (now == at) null else focus.copy(rememberedOption = focus.rememberedOption + (accounts to now))
-    }
-
     /** The row under an open panel left: [remembered] is the row the cursor lands on, in the options column if a panel was open. */
     private fun SettingsFocus.leavingPanel(remembered: Map<SettingsSection, Int>): SettingsFocus =
         if (column == SettingsColumn.Panel) copy(column = SettingsColumn.Options, page = null, panelIndex = 0, rememberedOption = remembered) else copy(rememberedOption = remembered)
-
-    /** The system of the focused Emulators row: system rows come first, in [SettingsContent.systems] order. */
-    fun systemAt(
-        focus: SettingsFocus,
-        content: SettingsContent,
-    ): SystemEmulators? =
-        if (focus.section == SettingsSection.Emulators && focus.optionIn(content) == SettingsOption.SystemEmulator) {
-            content.systems.getOrNull(focus.optionIndexIn(content))
-        } else {
-            null
-        }
 }

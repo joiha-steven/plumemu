@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.remember
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.rememberCoroutineScope
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
@@ -51,7 +52,7 @@ class HomePageJumpTest {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope, onDebug = {}) }
             page = PlumTheme.layout.listRowsThatFit
-            HomeScreen(content, router, HomeCallbacks(games = games))
+            HomeScreen(content, router, HomeCallbacks(games = games), listCollections = setOf(HomeContent.RECENT_ID), initialFocus = StripFocus())
         }
         compose.waitForIdle()
     }
@@ -69,13 +70,14 @@ class HomePageJumpTest {
         return games.launched.single().substringAfterLast('-').toInt()
     }
 
-    /** Recent is the first entry ([snesIndex] is the system's). */
+    /** Entry [index] of the column ([snesIndex] is the system's); Recent is a folder (a list here), opened through Collections. */
     private fun openEntry(index: Int) = send(*List(index) { Action.Move(Direction.Down) }.toTypedArray(), Action.Enter)
 
+    // Recent is a folder inside Collections since the Collections change, kept a list here by the list setting.
     @Test
     fun inRecentL1R1JumpAPage() {
         show(sortedByName = true)
-        openEntry(0)
+        send(*OpenRecentFolder.toTypedArray())
         assertEquals(0, focusedRow())
         send(Action.NextSystem) // R1
         assertEquals("R1 jumps one page", page, focusedRow())

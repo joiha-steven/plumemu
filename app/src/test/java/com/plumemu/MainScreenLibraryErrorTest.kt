@@ -18,6 +18,7 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.home.FakeHomeContent
 import com.plumemu.home.HomeCallbacks
 import com.plumemu.home.appComposeRule
+import com.plumemu.home.assertHomeLandedOnFavorites
 import com.plumemu.home.rulesAround
 import com.plumemu.settings.CachedAppearance
 import com.plumemu.settings.screen.SettingsContent
@@ -148,7 +149,7 @@ class MainScreenLibraryErrorTest {
         isFixed = true // what Reset library did while Settings was open
         press(Action.Back)
         compose.onNodeWithTag(MainScreenTags.LIBRARY_ERROR).assertDoesNotExist()
-        compose.onNodeWithText("Super Nintendo").assertIsDisplayed()
+        compose.assertHomeLandedOnFavorites() // landing is Favorites' first game since the Collections change
     }
 
     @Test
@@ -174,7 +175,7 @@ class MainScreenLibraryErrorTest {
         state.value = HomeState.Ready(FakeHomeContent.board())
         compose.waitForIdle()
         compose.onNodeWithTag(MainScreenTags.OPENING_LIBRARY).assertDoesNotExist()
-        compose.onNodeWithText("Super Nintendo").assertIsDisplayed()
+        compose.assertHomeLandedOnFavorites() // landing is Favorites' first game since the Collections change
     }
 
     @Test

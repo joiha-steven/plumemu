@@ -20,7 +20,8 @@ internal class SettingsHiddenGamesTest : SettingsModelHarness() {
     @Test
     fun hiddenGamesIsListedOnlyWhileSomeAreHidden() {
         assertFalse(SettingsOption.HiddenGames in SettingsSection.Library.rowsIn(SettingsContent()))
-        assertEquals(SettingsOption.HiddenGames, SettingsSection.Library.rowsIn(SettingsContent(hiddenGames = hidden)).last())
+        val rows = SettingsSection.Library.rowsIn(SettingsContent(hiddenGames = hidden))
+        assertEquals("right after Files not added", SettingsOption.HiddenGames, rows[rows.indexOf(SettingsOption.FilesNotAdded) + 1])
     }
 
     @Test

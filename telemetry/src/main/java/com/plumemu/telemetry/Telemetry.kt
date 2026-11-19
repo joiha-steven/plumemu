@@ -183,6 +183,9 @@ public class Telemetry internal constructor(
         inbox.trySend(Command.Unidentified(games, isoTime(clock())))
     }
 
+    /** Returns once every event tracked before this call is in the queue file (or dropped); the caller bounds the wait. */
+    public suspend fun recorded(): Unit = CompletableDeferred<Unit>().let { done -> inbox.trySend(Command.Barrier(done)); done.await() }
+
     /** This install's id once read (null before [start] has read it, and never sent while statistics are off). */
     public suspend fun installId(): String? {
         start()

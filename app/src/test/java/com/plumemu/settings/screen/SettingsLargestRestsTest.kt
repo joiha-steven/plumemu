@@ -70,7 +70,7 @@ class SettingsLargestRestsTest {
         option: SettingsOption,
         index: Int = -1,
     ) {
-        val section = SettingsSection.shownIn(largestContent).first { option in it.rowsIn(largestContent) }
+        val section = SettingsSection.entries.first { option in it.rowsIn(largestContent) }
         val row = if (index >= 0) index else section.rowsIn(largestContent).indexOf(option)
         model = SettingsModel(NoActions, SettingsFocus(column = SettingsColumn.Options, section = section, rememberedOption = mapOf(section to row))).also { it.content = largestContent }
         compose.waitForIdle()
@@ -164,7 +164,9 @@ class SettingsLargestRestsTest {
         inBothThemes {
             onRow(SettingsOption.FilesNotAdded)
             walksDownWithNoStrayLine("Files not added")
-            onRow(SettingsOption.SystemEmulator, index = PLAYSTATION_ROW)
+            onRow(SettingsOption.Emulators)
+            press(Action.Enter) // the systems list
+            repeat(PLAYSTATION_ROW) { press(Action.Move(Direction.Down)) }
             walksDownWithNoStrayLine("PlayStation")
         }
 
@@ -192,8 +194,9 @@ class SettingsLargestRestsTest {
     @Test
     fun noRowOfSystemsWrapsItsValue() =
         inBothThemes {
-            onRow(SettingsOption.SystemEmulator, index = 1)
-            val values = compose.onAllNodes(hasText("Ask on the first game"), useUnmergedTree = true).fetchSemanticsNodes().filter { it.positionInRoot.x / DENSITY < OPTIONS_END_DP }
+            onRow(SettingsOption.Emulators)
+            press(Action.Enter) // the systems list: a value on every system's card
+            val values = compose.onAllNodes(hasText("Ask on the first game"), useUnmergedTree = true).fetchSemanticsNodes()
             assertEquals(largestContent.systems.size, values.size)
             for (value in values) assertEquals("a value of one line", 1, lines(value).lineCount)
         }
@@ -205,6 +208,5 @@ class SettingsLargestRestsTest {
         const val MAX_ROWS = 8
         const val TALL_ROW_DP = 66f
         const val PLAYSTATION_ROW = 2
-        const val OPTIONS_END_DP = 480f
     }
 }

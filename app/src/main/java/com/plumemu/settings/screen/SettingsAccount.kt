@@ -60,7 +60,8 @@ import kotlin.math.roundToInt
  */
 internal fun accountRowsIn(content: SettingsContent): List<SettingsOption> =
     when (content.account) {
-        AccountStatus.NotInThisBuild -> listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperStatus)
+        // Without ScreenScraper in this build, the Box art panel says so ([BoxArtSourcePanel]); no row of its own.
+        AccountStatus.NotInThisBuild -> listOf(SettingsOption.BoxArtSource)
         is AccountStatus.SignedIn -> listOf(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount)
         AccountStatus.SignedOut ->
             listOfNotNull(SettingsOption.BoxArtSource, SettingsOption.ScraperAccount.takeIf { boxArtSourceIn(content) == BoxArtSourceSetting.ScreenScraper })
@@ -279,12 +280,3 @@ private fun Modifier.bleedSideways(by: Dp): Modifier =
         layout(placeable.width - px * 2, placeable.height) { placeable.place(-px, 0) }
     }
 
-/** The status row's panel (a build without credentials only): the line again and what it means (narrow screens open it as a stop). */
-@Composable
-internal fun ScraperStatusPanel(model: SettingsModel) {
-    Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.settingsPanelListGap)) {
-        WordPanelTitle(stringResource(R.string.settings_account_title))
-        boxArtLineOf(model.content.account, model.content.boxArt)?.let { PanelFact(boxArtLineText(it), Modifier.testTag(SettingsPanelTags.STATUS)) }
-        PanelBody(stringResource(R.string.settings_account_not_available_body))
-    }
-}

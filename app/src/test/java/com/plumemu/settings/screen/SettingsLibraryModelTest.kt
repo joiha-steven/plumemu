@@ -199,8 +199,10 @@ internal class SettingsLibraryModelTest : SettingsModelHarness() {
     @Test
     fun aSystemOpensOnItsCurrentChoiceAndStoresWhatIsPicked() {
         model.content = SettingsContent(systems = listOf(snes, psx))
-        openSection(SettingsSection.Emulators)
-        assertEquals(listOf(SettingsOption.SystemEmulator, SettingsOption.SystemEmulator), SettingsSection.Emulators.rowsIn(model.content))
+        openSection(SettingsSection.Library)
+        focusOption(SettingsOption.Emulators)
+        press(Action.Enter)
+        assertEquals(PanelPage.EmulatorSystems, model.focus.page)
         move(Direction.Down)
         press(Action.Enter)
         assertEquals(PanelPage.Emulators, model.focus.page)
@@ -209,7 +211,7 @@ internal class SettingsLibraryModelTest : SettingsModelHarness() {
         move(Direction.Up)
         press(Action.Enter)
         assertEquals(listOf("psx" to "duckstation"), actions.chosen)
-        assertEquals(SettingsColumn.Options, model.focus.column)
+        assertEquals("a choice goes back to the list, on its system", PanelPage.EmulatorSystems to 1, model.focus.page to model.focus.panelIndex)
         // Automatic (item 0) forgets the choice.
         press(Action.Enter)
         move(Direction.Up)
@@ -221,7 +223,9 @@ internal class SettingsLibraryModelTest : SettingsModelHarness() {
     @Test
     fun aLegalRiskEmulatorCanBeChosenAndAFailedWriteSaysSo() {
         model.content = SettingsContent(systems = listOf(switch))
-        openSection(SettingsSection.Emulators)
+        openSection(SettingsSection.Library)
+        focusOption(SettingsOption.Emulators)
+        press(Action.Enter)
         press(Action.Enter)
         assertEquals("no automatic choice: Automatic is current", 0, model.focus.panelIndex)
         move(Direction.Down)
@@ -234,9 +238,11 @@ internal class SettingsLibraryModelTest : SettingsModelHarness() {
     @Test
     fun theChoiceGoesToTheSystemThePanelOpenedForWhenSystemsArrive() {
         model.content = SettingsContent(systems = listOf(psx))
-        openSection(SettingsSection.Emulators)
+        openSection(SettingsSection.Library)
+        focusOption(SettingsOption.Emulators)
         press(Action.Enter)
-        // A scan finds Super Nintendo games: it comes first now, the panel stays on PlayStation.
+        press(Action.Enter)
+        // A scan finds Super Nintendo games: it comes first now, the page stays on PlayStation.
         model.content = SettingsContent(systems = listOf(snes, psx))
         press(Action.Enter)
         assertEquals("psx", actions.chosen.single().first)
@@ -269,9 +275,10 @@ internal class SettingsLibraryModelTest : SettingsModelHarness() {
     @Test
     fun narrowScreensOpenTheEmulatorsListAsAStop() {
         model.content = SettingsContent(systems = listOf(psx))
-        openSection(SettingsSection.Emulators)
+        openSection(SettingsSection.Library)
+        focusOption(SettingsOption.Emulators)
         move(Direction.Right, narrow)
-        assertEquals(PanelPage.Emulators, model.focus.page)
+        assertEquals(PanelPage.EmulatorSystems, model.focus.page)
     }
 
     @Test

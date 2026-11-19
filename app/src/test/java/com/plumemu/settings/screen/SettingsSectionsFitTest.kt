@@ -37,7 +37,7 @@ class SettingsSectionsFitTest {
 
     private fun check(wholeAtMedium: Boolean = true) {
         var size by mutableStateOf(TextSize.Small)
-        val sections = SettingsSection.shownIn(SettingsContent())
+        val sections = SettingsSection.entries
         compose.setContent {
             PlumTheme(PlumThemeSettings.Graphite.copy(textSize = size)) {
                 SettingsAt(SettingsFocus(section = sections.last()))

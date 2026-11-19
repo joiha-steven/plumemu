@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.CompositionLocalProvider
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.test.assertCountEquals
@@ -40,7 +41,7 @@ class HomeEmptyLibraryTest {
             val router = remember { InputRouter(scope) }
             PlumTheme {
                 CompositionLocalProvider(LocalHomeNotices provides notices) {
-                    HomeScreen(content, router, HomeCallbacks(onAddFolder = { folderAsked++ }, notices = notices))
+                    HomeScreen(content, router, HomeCallbacks(onAddFolder = { folderAsked++ }, notices = notices), initialFocus = StripFocus())
                 }
             }
         }

@@ -31,6 +31,18 @@ class SecondScreenMotionTest {
     }
 
     @Test
+    fun insideAnOpenFolderTheCardSlidesByTheFoldersRowNotTheHostsRow() {
+        val inFolder = { card: SecondScreenContent, row: Int ->
+            // The host (Collections) stays on row 0; the folder's own row moves.
+            SecondScreenMotion.noteOffered(card, StripFocus(Column.Games, 1, "collections", mapOf("collections" to 0, "most_played" to row), openFolder = com.plumemu.coreinput.strip.OpenFolder("collections", "most_played")), 12)
+        }
+        inFolder(card(1), 4)
+        inFolder(card(2), 5)
+        assertEquals(SwapStep(y = 1), SecondScreenMotion.stepBetween(card(1), card(2)))
+        assertEquals(SwapStep(y = -1), SecondScreenMotion.stepBetween(card(2), card(1)))
+    }
+
+    @Test
     fun intoTheGamesTheCardComesFromTheRightAndTheSystemsWrapTheShortWay() {
         val system = card(10)
         at(system, Column.Systems, 11)

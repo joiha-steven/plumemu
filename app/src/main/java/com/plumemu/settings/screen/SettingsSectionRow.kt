@@ -20,7 +20,7 @@ import com.plumemu.coreui.theme.LeftColumnDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.SlabDimens
 
-/** Lines a section's label may take: at the largest sizes "Box art & accounts" does not fit the column, and a section's name is never cut. Two fit the row's height. */
+/** Lines a section's label may take: at the largest sizes a long name in some languages does not fit the column, and a section's name is never cut. Two fit the row's height. */
 private const val SECTION_LABEL_LINES = 2
 
 /**

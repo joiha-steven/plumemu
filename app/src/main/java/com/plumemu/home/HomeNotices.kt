@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -20,10 +21,13 @@ import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.graph.ClosedAtOnce
 import com.plumemu.graph.CoreQuestion
 import com.plumemu.graph.LibraryNotice
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import java.text.NumberFormat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.mapLatest
 
 /**
  * What a change check found, for the top bar's notice and the dot on a system's row
@@ -75,6 +79,9 @@ internal enum class EmptyLibrary {
 
 internal val LocalHomeNotices = staticCompositionLocalOf { HomeNotices() }
 
+/** True while the main screen lies hidden under Settings (or is leaving for it): a timed notice waits for the front, or it runs out unseen. */
+internal val LocalHomeLeaving = staticCompositionLocalOf<() -> Boolean> { { false } }
+
 /** How long the top bar keeps the notice before it fades back to the usual text. */
 internal const val NOTICE_SHOWN_MS: Long = 4_000L
 
@@ -86,22 +93,27 @@ internal class ShownNotice(val notice: LibraryNotice?, val alpha: () -> Float)
  * the notice fades in and stays [NOTICE_SHOWN_MS], then it fades out and the usual text fades back.
  * With motion off the texts swap at once. Nothing takes focus and nothing is drawn over the screen.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 internal fun rememberShownNotice(): ShownNotice {
     val notices = LocalHomeNotices.current
     val incoming by notices.notice.collectAsState()
+    val isLeaving by rememberUpdatedState(LocalHomeLeaving.current)
     var shown by remember { mutableStateOf<LibraryNotice?>(null) }
     val alpha = remember { Animatable(1f) }
     // Read at each fade (not captured when the notice arrives), so Animations turned off mid-notice is honoured.
     val isMotionOn by rememberUpdatedState(PlumTheme.motion.isOn)
     LaunchedEffect(incoming?.serial) {
         val next = incoming ?: return@LaunchedEffect
+        // Waits on the state, not on frames: a hidden main screen runs no fade and burns none of the notice's seconds.
+        snapshotFlow { isLeaving() }.first { !it }
         val spec = tween<Float>(PlumMotion.FADE_IN_MS, easing = PlumMotion.Decelerate)
         suspend fun fadeTo(target: Float) = if (isMotionOn) { alpha.animateTo(target, spec); Unit } else alpha.snapTo(target)
         fadeTo(0f)
         shown = next
         fadeTo(1f)
-        delay(NOTICE_SHOWN_MS)
+        // The hold counts only time in front: Settings opening mid-notice starts it again once the home is back.
+        snapshotFlow { isLeaving() }.mapLatest { leaving -> if (!leaving) delay(NOTICE_SHOWN_MS); !leaving }.first { it }
         fadeTo(0f)
         shown = null
         fadeTo(1f)

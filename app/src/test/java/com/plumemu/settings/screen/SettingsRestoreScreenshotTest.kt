@@ -16,7 +16,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings › Advanced › Restore… and Undo last restore:
+ * Settings › About › Restore… and Undo last restore:
  * the row, the panel, the reading, the confirm of each kind, the swap, a refusal, how it ended,
  * and the Undo row with its panel.
  */
@@ -38,8 +38,8 @@ class SettingsRestoreScreenshotTest {
 
     /** The Undo row is listed only with a set, so its place comes from the rows shown. */
     private fun undoAt(content: SettingsContent): SettingsFocus {
-        val index = SettingsSection.Advanced.rowsIn(content).indexOf(SettingsOption.BackupAndRestore)
-        return SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.Advanced, rememberedOption = mapOf(SettingsSection.Advanced to index))
+        val index = SettingsSection.About.rowsIn(content).indexOf(SettingsOption.BackupAndRestore)
+        return SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to index))
     }
 
     @Test fun row() = shot("settings_restore_row", optionsAt(SettingsOption.Restore), signedIn)

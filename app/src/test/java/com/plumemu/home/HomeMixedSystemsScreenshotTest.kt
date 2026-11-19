@@ -19,7 +19,7 @@ class HomeMixedSystemsScreenshotTest {
     @Test
     fun recentWithGamesOfManySystems() =
         ReferenceShots.capture("home_mixed_recent") {
-            HomeAt(FakeHomeContent.mixedSystems(), listOf(Action.TapItem(Column.Systems, 0), Action.Enter))
+            HomeAt(FakeHomeContent.mixedSystems(), OpenRecentFolderByTap)
         }
 
     @Test
@@ -41,7 +41,7 @@ class HomeMixedSystemsScreenshotTest {
     fun recentWithBoxArtAtTheDetailsStop() =
         ReferenceShots.capture("home_mixed_recent_details") {
             val narrow = com.plumemu.coreui.theme.PlumTheme.layout.widthClass == com.plumemu.coreui.theme.WidthClass.Narrow
-            val toRecent = listOf(Action.TapItem(Column.Systems, 0), Action.Enter)
+            val toRecent = OpenRecentFolderByTap
             HomeAt(FakeHomeContent.mixedSystems(withBoxArt = true), if (narrow) toRecent + Action.Move(com.plumemu.coreinput.Direction.Right) else toRecent)
         }
 }

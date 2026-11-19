@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.remember
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.test.onAllNodesWithText
 import com.plumemu.coreinput.Action
@@ -40,7 +41,7 @@ class HomePushRightNarrowTest {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
             PlumTheme {
-                HomeScreen(FakeHomeContent.withArtwork(), router, HomeCallbacks(games = games), bars = HomeBars(pushRightToPlay = pushRight))
+                HomeScreen(FakeHomeContent.withArtwork(), router, HomeCallbacks(games = games), bars = HomeBars(pushRightToPlay = pushRight), initialFocus = StripFocus())
             }
         }
         compose.waitForIdle()

@@ -24,6 +24,7 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.LeftColumnDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.home.FakeHomeContent
+import com.plumemu.home.fromSystemColumn
 import com.plumemu.home.HomeCallbacks
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
@@ -58,6 +59,7 @@ class SettingsColumnsNavigationTest {
             router = remember { InputRouter(scope, onDebug = {}) }
             MainScreen(settings.value, HomeState.Ready(FakeHomeContent.board()), router, HomeCallbacks(), onRetry = {}, settingsHost = host)
         }
+        compose.fromSystemColumn(router) // the cold start is Favorites' games column since the Collections change
         send(Action.Menu)
     }
 
@@ -68,8 +70,8 @@ class SettingsColumnsNavigationTest {
         }
     }
 
-    private val first = SettingsSection.shownIn(SettingsContent())[0]
-    private val second = SettingsSection.shownIn(SettingsContent())[1]
+    private val first = SettingsSection.entries[0]
+    private val second = SettingsSection.entries[1]
 
     private fun tag(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true)
 
@@ -81,7 +83,7 @@ class SettingsColumnsNavigationTest {
         open: SettingsSection,
     ) {
         tag(SettingsTags.section(open)).assertIsDisplayed()
-        for (section in SettingsSection.shownIn(SettingsContent())) {
+        for (section in SettingsSection.entries) {
             // The open section's dot sits at the bar's place: every label starts at the same x, marked or not (`SectionDotTest`).
             assertEquals("$section's label start while $open is open", LeftColumnDimens.sectionLabelStart.value, labelLeft(section), 0.5f)
         }
@@ -124,13 +126,13 @@ class SettingsColumnsNavigationTest {
         tag(SettingsTags.section(SettingsSection.Appearance)).performClick() // the second tap enters its options
         tag(SettingsTags.option(SettingsOption.Colors)).performClick() // an option is focused
         assertSectionsVisible(SettingsSection.Appearance)
-        tag(SettingsTags.section(SettingsSection.Advanced)).performScrollTo().performClick() // the sections scroll at the default size
+        tag(SettingsTags.section(SettingsSection.About)).performScrollTo().performClick() // the sections scroll at the default size
         compose.waitForIdle()
-        assertSectionsVisible(SettingsSection.Advanced) // opened, the cursor on it (as a tap on a section does with two columns)
-        tag(SettingsTags.option(SettingsOption.Animations)).assertIsDisplayed()
-        tag(SettingsTags.section(SettingsSection.Advanced)).performClick() // the second tap enters it
+        assertSectionsVisible(SettingsSection.About) // opened, the cursor on it (as a tap on a section does with two columns)
+        tag(SettingsTags.option(SettingsOption.Version)).assertIsDisplayed()
+        tag(SettingsTags.section(SettingsSection.About)).performClick() // the second tap enters it
         compose.waitForIdle()
-        assertSectionsVisible(SettingsSection.Advanced)
+        assertSectionsVisible(SettingsSection.About)
     }
 
     @Test

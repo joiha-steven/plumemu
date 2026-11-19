@@ -28,7 +28,7 @@ internal class SettingsBoxArtTest : SettingsModelHarness() {
     }
 
     private fun openPanel() {
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(SettingsOption.ScraperAccount)
         press(Action.Enter)
         assertEquals(PanelPage.ScraperAccount, model.focus.page)

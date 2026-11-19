@@ -47,7 +47,7 @@ import org.robolectric.annotation.Config
  * Opening Settings is spread over frames ([SettingsOpening]): on the Nova it was one 62 ms frame that composed and measured
  * all of Settings, disposed the whole main screen and made a binder call. Counted here as composable calls per frame (the
  * composition tracer; measuring follows what is composed): the press's frame composes almost nothing, no later frame
- * composes the whole screen, the main screen leaves only once Settings is whole, and Android is not asked on the main
+ * composes the whole screen, the main screen stays composed (hidden) under Settings, and Android is not asked on the main
  * thread; the press shows in its own frame (the page colour over the main screen), the hidden main screen takes no press and
  * is not in the semantics tree, and ten openings keep one main screen. The counts are printed so a report can quote them.
  */
@@ -139,7 +139,7 @@ class MainScreenSettingsOpeningFramesTest {
     private fun PixelMap.colours(): Int = (0 until 24).flatMap { i -> (0 until 24).map { j -> this[(i * width) / 24, (j * height) / 24] } }.toSet().size
 
     @Test
-    fun theOpeningIsSpreadOverFramesAndTheMainScreenLeavesOnceSettingsIsWhole() {
+    fun theOpeningIsSpreadOverFramesAndTheMainScreenStaysComposedUnderIt() {
         show()
         assertEquals("the main screen is in the merged semantics tree while it shows", 1, compose.onAllNodesWithTag(HomeTags.STRIP).fetchSemanticsNodes().size)
         askedOnMain = 0
@@ -164,7 +164,7 @@ class MainScreenSettingsOpeningFramesTest {
         // frame is the options column alone (about 350).
         assertTrue("the press's frame composes almost nothing: $perFrame", perFrame[0] <= OPENING_FRAME_BUDGET)
         assertTrue("no frame composes all of Settings at once: $perFrame", perFrame.all { it <= LATER_FRAME_BUDGET })
-        assertEquals("the main screen stays until Settings is whole, then leaves: $homeAt", listOf(1, 1, 1, 1, 0, 0, 0), homeAt)
+        assertEquals("the main screen stays composed all through the opening and after it: $homeAt", List(homeAt.size) { 1 }, homeAt)
         assertEquals("the hidden main screen is not in the merged semantics tree accessibility reads: $homeNodesAt", List(homeNodesAt.size) { 0 }, homeNodesAt)
         assertEquals("the options column has a frame of its own: $optionsAt", listOf(0, 0, 0, 1, 1, 1, 1), optionsAt)
         assertEquals("nothing asks Android on the main thread while Settings opens", 0, askedOnMain)
@@ -233,7 +233,7 @@ class MainScreenSettingsOpeningFramesTest {
                 compose.mainClock.advanceTimeByFrame()
                 most = maxOf(most, HomeTreeProbe.live)
             }
-            assertEquals("the main screen left once Settings was whole", 0, HomeTreeProbe.live)
+            assertEquals("the main screen stays composed once Settings is whole (hidden, deaf)", 1, HomeTreeProbe.live)
             compose.runOnIdle { router.send(Action.Back) }
             repeat(4) {
                 compose.mainClock.advanceTimeByFrame()

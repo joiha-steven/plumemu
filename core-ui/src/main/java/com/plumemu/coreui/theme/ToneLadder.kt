@@ -1,5 +1,7 @@
 package com.plumemu.coreui.theme
 
+import java.util.concurrent.atomic.AtomicInteger
+
 /**
  * The tone ladder (docs/design/rules.md > Tone ladder): every tone a screen lays on its page is the page itself moved a fixed step of CIE L*,
  * keeping the page's OKLCH hue and chroma, on dark and light pages alike: [SUNKEN] wells and tracks, the page, [SURFACE] cards and trays,
@@ -37,10 +39,17 @@ object ToneLadder {
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Key, Rgb>) = size > REMEMBERED
         }
 
+    // Atomic: level runs on any thread, and a volatile ++ could lose a count.
+    private val searchCount = AtomicInteger()
+
+    /** How many tones were searched, not found remembered; for tests. */
+    val searches: Int get() = searchCount.get()
+
     private fun search(
         bg: Rgb,
         step: Double,
     ): Rgb {
+        searchCount.incrementAndGet()
         val target = (ColorMath.lightness(bg) + step).coerceIn(0.0, 100.0)
         val page = Oklch.of(bg)
         var lo = 0.0
@@ -59,5 +68,7 @@ object ToneLadder {
     ): Rgb = level(bg, if (ColorMath.lightness(text) > ColorMath.lightness(bg)) LINE else -LINE)
 
     private const val SEARCH_STEPS = 30
-    private const val REMEMBERED = 64
+    // Colors' panel draws every set's preview, each deriving its tones and the off and pressed steps: some hundreds of keys. 64, then
+    // 256, forgot them between draws, so each return to Colors searched about 990 tones again.
+    private const val REMEMBERED = 1024
 }

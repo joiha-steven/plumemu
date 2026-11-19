@@ -15,7 +15,7 @@ import com.plumemu.sound.Outcome
 
 /*
  * Setup's box art step: three choices (two in a build without ScreenScraper's developer
- * credentials) that write the same setting as Settings › Accounts › Box art. "Box art and game info"
+ * credentials) that write the same setting as Settings › Library › Box art. "Box art and game info"
  * shows the sign-in form (account/SignInForm.kt, shared with Settings) while no usable account is
  * stored; the form's Skip goes back to the choices.
  */

@@ -53,7 +53,7 @@ All durations are tokens in `PlumMotion` (`core-ui`); screens never type a numbe
   clipped by the grid's edge.
 - No dropped frames at the screen's refresh rate; when a frame budget and a motion conflict, the
   motion goes.
-- With the system animation scale at 0, or Settings › Advanced › Animations off, everything jumps.
+- With the system animation scale at 0, or Settings › About › Animations off, everything jumps.
 
 Details per screen: [../design/rules.md](../design/rules.md) › Shapes and motion. Budgets for the
 rest of the app: [performance.md](performance.md).

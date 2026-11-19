@@ -63,7 +63,7 @@ class SettingsSectionsBarGapTest {
         var size by mutableStateOf(TextSize.Small)
         // With a second screen the list has one more section.
         val content = if (secondScreen) SettingsContent().withSecondScreen(SecondScreen(4, "Screen-2", ScreenKind.BuiltIn), SecondScreenSettings()) else SettingsContent()
-        val sections = SettingsSection.shownIn(content)
+        val sections = SettingsSection.entries
         val last = sections.last()
         val lastOption = SettingsSection.Appearance.options.last()
         var density = Density(1f)

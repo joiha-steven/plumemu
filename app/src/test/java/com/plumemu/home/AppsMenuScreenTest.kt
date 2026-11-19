@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.remember
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.longClick
@@ -47,7 +48,7 @@ class AppsMenuScreenTest {
         compose.setContent {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
-            PlumTheme { HomeScreen(appsGridLibrary(), router, HomeCallbacks(games = FakeGameActions(), apps = apps)) }
+            PlumTheme { HomeScreen(appsGridLibrary(), router, HomeCallbacks(games = FakeGameActions(), apps = apps), initialFocus = StripFocus()) }
         }
         compose.waitForIdle()
     }

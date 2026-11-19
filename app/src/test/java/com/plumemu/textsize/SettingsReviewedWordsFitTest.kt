@@ -15,6 +15,7 @@ import com.plumemu.coreui.theme.TextSize
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
 import com.plumemu.settings.screen.TEST_VERSION
+import com.plumemu.settings.screen.emulatorsPageAt
 import com.plumemu.settings.screen.PanelPage
 import com.plumemu.settings.screen.SettingsAt
 import com.plumemu.settings.screen.SettingsContent
@@ -57,7 +58,7 @@ abstract class SettingsReviewedWordsFitBase {
     private val stops: List<Pair<SettingsFocus, SettingsContent>>
         get() {
             val library = ShotContent.library
-            val emulators = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Emulators, rememberedOption = mapOf(SettingsSection.Emulators to 0), page = PanelPage.Emulators, panelIndex = 0, systemId = "psx")
+            val emulators = emulatorsPageAt(library)
             return listOf(
                 optionsAt(SettingsOption.BackupAndRestore) to library,
                 panelAt(SettingsOption.BackupAndRestore, PanelPage.BackupRestore, 0) to library,

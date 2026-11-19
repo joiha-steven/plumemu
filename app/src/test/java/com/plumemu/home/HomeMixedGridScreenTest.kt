@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import androidx.compose.runtime.getValue
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,7 +35,8 @@ import org.robolectric.annotation.Config
 /**
  * Recent and Favorites as grids on the whole screen: the empty library keeps its
  * message, the bottom bar names the system only in these two grids, and Y in the Favorites grid dims the
- * cover of the game taken out until the list is left.
+ * cover of the game taken out until the list is left. Recent's grid is a folder inside Collections and Favorites is the column's
+ * first entry since the Collections change, so the tests reach and read them that way.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
@@ -73,7 +75,7 @@ class HomeMixedGridScreenTest {
     fun anEntryWithoutGamesIsNeverAGridSoTheStripAndTheHintsAgree() {
         val empty = withBoxArt(FakeHomeContent.noGames())
         val gridIds = setOf(HomeContent.RECENT_ID, HomeContent.FAVORITES_ID)
-        val recent = empty.entries[0]
+        val recent = empty.entries[0] // Favorites since the Collections change: the first entry
         assertFalse(empty.showsGrid(recent, gridIds))
         val strip = empty.stripWith(gridIds, PlumLayout(width = 768.dp, height = 432.dp))
         assertEquals("one column: the focus rules see a list", 1, strip.systems[0].gridColumns)
@@ -98,29 +100,28 @@ class HomeMixedGridScreenTest {
         )
 
     private fun showGrid(
-        entryIndex: Int,
-        focused: Int,
+        actions: List<Action>,
         id: String,
     ) {
-        compose.setContent { PlumTheme { HomeAt(mixed, gridActions(entryIndex, focused), gridIds = setOf(id)) } }
+        compose.setContent { PlumTheme { HomeAt(mixed, actions, gridIds = setOf(id)) } }
         compose.waitForIdle()
     }
 
     @Test
     fun theRecentGridsBarStartsWithTheSystemThenYearAndPublisher() {
-        showGrid(0, 0, HomeContent.RECENT_ID)
+        showGrid(recentGridActions(0), HomeContent.RECENT_ID)
         assertTrue(hasText("Chrono Trigger SNES · 1995 · Square"))
     }
 
     @Test
     fun theFavoritesGridsBarNamesTheSystemToo() {
-        showGrid(1, 0, HomeContent.FAVORITES_ID)
+        showGrid(gridActions(0, 0), HomeContent.FAVORITES_ID)
         assertTrue(hasText("Chrono Trigger SNES · 1995 · Square"))
     }
 
     @Test
     fun aMissingYearLeavesNoStrayDot() {
-        showGrid(0, 1, HomeContent.RECENT_ID)
+        showGrid(recentGridActions(1), HomeContent.RECENT_ID)
         assertTrue("system and publisher", hasText("Daxter PSP · Ready at Dawn"))
         assertFalse(hasText("PSP ·  ·"))
         assertFalse(hasText("· · "))
@@ -129,13 +130,13 @@ class HomeMixedGridScreenTest {
 
     @Test
     fun aGameWhoseSystemIsUnknownShowsYearAndPublisherOnly() {
-        showGrid(0, 2, HomeContent.RECENT_ID)
+        showGrid(recentGridActions(2), HomeContent.RECENT_ID)
         assertTrue(hasText("Link 2001 · Fan"))
     }
 
     @Test
     fun aSystemsOwnGridKeepsYearAndPublisherWithoutTheSystem() {
-        showGrid(3, 0, "snes")
+        showGrid(gridActions(FIRST_SYSTEM_INDEX, 0), "snes")
         assertTrue(hasText("Chrono Trigger 1995 · Square"))
         assertFalse(hasText("SNES"))
     }
@@ -147,8 +148,7 @@ class HomeMixedGridScreenTest {
     /** The board with Super Nintendo games 0, 2, 3 and 6 favorite and box art on, so Favorites can be a grid. */
     private fun boxed(): HomeContent {
         val plain = FakeHomeContent.withFavorites()
-        val systems = plain.entries.filter { it.kind == EntryKind.System }.map { SystemGames(it.id, it.name.orEmpty(), it.rows) }
-        return HomeContent.of(plain.entries[0].rows, plain.entries[1].rows, plain.entries[2].rows, systems, hasBoxArt = true)
+        return plain.rebuilt(hasBoxArt = true)
     }
 
     private fun showFavoritesGrid() {
@@ -156,7 +156,7 @@ class HomeMixedGridScreenTest {
         compose.setContent {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
-            PlumTheme { HomeScreen(library, router, HomeCallbacks(games = games), gridSystems = setOf(HomeContent.FAVORITES_ID)) }
+            PlumTheme { HomeScreen(library, router, HomeCallbacks(games = games), gridSystems = setOf(HomeContent.FAVORITES_ID), initialFocus = StripFocus()) }
         }
         compose.waitForIdle()
     }
@@ -180,9 +180,9 @@ class HomeMixedGridScreenTest {
     @Test
     fun yInTheFavoritesGridDimsTheCoverAndDropsTheCountThenLeavingRemovesIt() {
         showFavoritesGrid()
-        send(Action.Move(Direction.Down), Action.Enter)
+        send(Action.Enter) // the cold start of this harness is the Favorites entry
         assertTrue("Favorites is a grid", exists(HomeTags.GRID))
-        assertEquals(listOf("snes-0", "snes-2", "snes-3", "snes-6"), library.entries[1].rows.map { it.id })
+        assertEquals(listOf("snes-0", "snes-2", "snes-3", "snes-6"), library.favoriteRows.map { it.id })
         assertEquals("no cover is dimmed yet", 0, dimmedCovers())
         send(Action.Move(Direction.Right)) // snes-2
         send(Action.ToggleFavorite)
@@ -206,36 +206,36 @@ class HomeMixedGridScreenTest {
 
     @Test
     fun yInTheRecentGridDimsNothing() {
-        showGridWithY(entryIndex = 0, id = HomeContent.RECENT_ID)
+        showGridWithY(open = OpenRecentFolder, id = HomeContent.RECENT_ID)
         assertEquals("Recent's covers are never dimmed", 0, dimmedCovers())
     }
 
     @Test
     fun yInASystemsOwnGridDimsNothing() {
-        showGridWithY(entryIndex = FakeHomeContent.BOARD_SNES_INDEX, id = "snes")
+        showGridWithY(open = List(FakeHomeContent.BOARD_SNES_INDEX) { Action.Move(Direction.Down) } + Action.Enter, id = "snes")
         assertEquals("a system's covers are never dimmed", 0, dimmedCovers())
     }
 
     /** Opens [id]'s grid, takes the first game's mark out with Y (a favorite in a system's list: SNES row 0 is one) and leaves the cover. */
     private fun showGridWithY(
-        entryIndex: Int,
+        open: List<Action>,
         id: String,
     ) {
         games.onFavorite = { key, isFavorite -> library = library.marked(key, isFavorite) }
         compose.setContent {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
-            PlumTheme { HomeScreen(library, router, HomeCallbacks(games = games), gridSystems = setOf(id)) }
+            PlumTheme { HomeScreen(library, router, HomeCallbacks(games = games), gridSystems = setOf(id), initialFocus = StripFocus()) }
         }
         compose.waitForIdle()
-        send(*List(entryIndex) { Action.Move(Direction.Down) }.toTypedArray(), Action.Enter)
+        send(*open.toTypedArray())
         assertTrue("$id is a grid", exists(HomeTags.GRID))
         send(Action.ToggleFavorite)
         assertEquals("Y reached the library", 1, games.favorites.size)
     }
 
     private fun withBoxArt(content: HomeContent): HomeContent =
-        HomeContent.of(content.entries[0].rows, content.entries[1].rows, content.entries[2].rows, emptyList(), hasBoxArt = true)
+        content.rebuilt(hasBoxArt = true)
 
     private fun details(
         year: Int?,

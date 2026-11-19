@@ -19,7 +19,7 @@ internal class SettingsLanguageTest : SettingsModelHarness() {
     @Test
     fun languageIsTheFirstAppearanceRowAndNoLongerInAdvanced() {
         assertEquals(0, SettingsSection.Appearance.options.indexOf(SettingsOption.Language))
-        assertEquals(false, SettingsSection.Advanced.options.contains(SettingsOption.Language))
+        assertEquals(false, SettingsSection.About.options.contains(SettingsOption.Language))
         assertEquals("a row that opens a list, not a ‹ › choice", OptionKind.Opens, SettingsOption.Language.kind)
     }
 

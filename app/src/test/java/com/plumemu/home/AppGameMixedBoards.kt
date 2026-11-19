@@ -38,8 +38,8 @@ internal val AppGameMixedLibrary: HomeContent by lazy {
                 SystemGames("android", "Android games", AndroidGameRows, CoverShape(1f)),
                 SystemGames("ports", "Ports", PortsRows, CoverShape(1f)),
             )
-    val favorites = base.entries[1].rows.mapIndexed { i, row -> if (i in FavoriteAppGameIndexes) favoriteAppGame(i) else row }
-    HomeContent.of(base.entries[0].rows, favorites, emptyList(), systems, hasBoxArt = true, showApps = false).asLibrary()
+    val favorites = base.favoriteRows.mapIndexed { i, row -> if (i in FavoriteAppGameIndexes) favoriteAppGame(i) else row }
+    HomeContent.of(base.recentRows, favorites, emptyList(), systems, hasBoxArt = true, showApps = false).asLibrary()
 }
 
 /** Favorites as a grid, game [focused] focused, icons by package, one app without an icon. */
@@ -51,7 +51,7 @@ internal fun AppGameMixedBoard(
     val icons = remember { FakeAppIcons(missing = setOf("com.example.fav$FAVORITE_APP_WITHOUT_ICON")) }
     ProvideGridSize(gridSize) {
         CompositionLocalProvider(LocalHomeAppIcons provides icons) {
-            HomeWithArt(rememberSource { mixedGridSource() }, gridActions(1, focused), AppGameMixedLibrary, gridIds = setOf(AppGameMixedLibrary.entries[1].id))
+            HomeWithArt(rememberSource { mixedGridSource() }, gridActions(0, focused), AppGameMixedLibrary, gridIds = setOf(HomeContent.FAVORITES_ID))
         }
     }
 }

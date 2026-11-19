@@ -57,9 +57,9 @@ class HomeResortFocusTest {
         change: (List<GameRowModel>) -> List<GameRowModel>,
     ): HomeContent =
         HomeContent.of(
-            recent = from.entries[0].rows,
-            favorites = from.entries[1].rows,
-            apps = from.entries[2].rows,
+            recent = from.recentRows,
+            favorites = from.favoriteRows,
+            apps = from.appRows,
             systems = from.entries.drop(FIRST_SYSTEM_INDEX).mapIndexed { i, entry ->
                 val rows = if (i + FIRST_SYSTEM_INDEX == index) change(entry.rows) else entry.rows
                 SystemGames(entry.id, entry.name.orEmpty(), rows, entry.coverShape)

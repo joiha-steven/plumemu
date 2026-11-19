@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -95,7 +96,7 @@ internal fun GridPages(
     }
     DisposableEffect(handler) { onDispose { handler.removeCallbacks(restEnded) } }
     // L1/R1 with the games focused: the next system's grid fades in instead of popping; a grid after a list cuts in (this row stays composed while a list is shown).
-    val entry = content.entries.getOrNull(shownIndex)
+    val entry by remember(state, content) { derivedStateOf { content.shownEntry(state.focus) } }
     val gridWasShown = remember { BooleanArray(1) { content.showsGrid(entry, gridIds) } }
     val fade = rememberSlidingSwap(entry?.id, { state.focus.systemIndex }, wrapsAt = content.entries.size) { fadesSystemSwap(state) && gridWasShown[0] && content.showsGrid(entry, gridIds) }
     gridWasShown[0] = content.showsGrid(entry, gridIds)
@@ -106,7 +107,7 @@ internal fun GridPages(
             userScrollEnabled = false,
         ) {
             itemsIndexed(content.entries, key = { _, entry -> entry.id }, contentType = { _, _ -> GRID_PAGE }) { index, entry ->
-                GridPage(index, entry, prefetch, gridKeys, state, onAction, panelOpen, gridWidth)
+                GridPage(index, entry, content, gridIds, prefetch, gridKeys, state, pages, onAction, panelOpen, gridWidth)
             }
         }
     }
@@ -116,19 +117,26 @@ internal fun GridPages(
 @Composable
 private fun LazyItemScope.GridPage(
     index: Int,
-    entry: HomeEntry,
+    slot: HomeEntry,
+    content: HomeContent,
+    gridIds: Set<String>,
     prefetch: NeighbourPagesPrefetch,
     gridKeys: Set<String>,
     state: StripState,
+    pages: LazyListState,
     onAction: (Action) -> Unit,
     panelOpen: State<Boolean>,
     gridWidth: Dp,
 ) {
-    if (entry.id !in gridKeys) {
+    // The Collections slot draws the open folder's grid when that folder is a grid; other slots draw their own entry's.
+    val folder by remember(state, content, slot, gridIds) { derivedStateOf { content.openFolderIn(slot, state.focus)?.takeIf { content.showsGrid(it, gridIds) } } }
+    val entry = if (slot.isFolderList) folder else slot.takeIf { it.id in gridKeys }
+    if (entry == null) {
         Spacer(Modifier.fillParentMaxSize())
         return
     }
-    val pin = rememberPagePin(index, entry.id, prefetch, state)
+    val rowAt = remember(pages) { { pages.firstVisibleItemIndex } }
+    val pin = rememberPagePin(index, slot.id, prefetch, state, rowAt)
     val shown = pin.shown
     val page = remember(shown, pin) { Modifier.fillParentMaxSize().placedOnlyWhen(shown, pin.keepWhenMeasured).rowsInSemanticsOnlyWhen(shown, HomeTags.GRID_PAGE) }
     Box(page) {

@@ -31,7 +31,7 @@ internal class SettingsRemovedRowsBackupTest {
         // That the home list is then ordered by last played: LibraryHomeContentTest.aRestoredBackupHoldingLastPlayedOrdersTheListByLastPlayed.
         assertEquals("the games list's Sort by... lists it", true, sort in SortChoices(sort, hasYear = false, hasRating = false).options)
         val content = SettingsContent(librarySystems = emptyList())
-        assertEquals(listOf(SettingsOption.RomFolders, SettingsOption.Rescan, SettingsOption.FilesNotAdded), SettingsSection.Library.rowsIn(content))
+        assertEquals(listOf(SettingsOption.RomFolders, SettingsOption.Rescan, SettingsOption.FilesNotAdded, SettingsOption.BoxArtSource, SettingsOption.RetroAchievementsAccount), SettingsSection.Library.rowsIn(content))
     }
 
     @Test

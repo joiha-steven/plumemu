@@ -301,7 +301,7 @@ internal class SettingsWork(
         actions.boxArt.setPaused(isPaused) { stored -> if (!stored) notice = row to SettingsNotice.BoxArtPauseFailed }
     }
 
-    /** Accounts › Box art: store the choice; the graph makes the run follow it. A failure is said under the row. */
+    /** Library › Box art: store the choice; the graph makes the run follow it. A failure is said under the row. */
     fun setBoxArtSource(source: BoxArtSourceSetting) {
         actions.boxArt.setSource(source) { stored -> if (!stored) notice = SettingsOption.BoxArtSource to SettingsNotice.BoxArtSourceFailed }
     }

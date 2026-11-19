@@ -153,4 +153,15 @@ class SettingsMappingTest {
         assertEquals(setOf("gone-system", "snes"), grid.withGridView("psp", isGrid = false).appearance.gridSystems)
         assertEquals("a repeated press's write is harmless", grid, grid.withGridView("snes", isGrid = true))
     }
+
+    @Test
+    fun selectInsideACollectionsFolderAddsAndRemovesItFromTheListsAndKeepsTheRest() {
+        val stored = PlumSettings(appearance = AppearanceSettings(listCollections = setOf("most_played")))
+        val list = stored.withFolderView("collection:7", isGrid = false)
+        assertEquals(setOf("most_played", "collection:7"), list.appearance.listCollections)
+        assertEquals("nothing else changes", stored.copy(appearance = stored.appearance.copy(listCollections = list.appearance.listCollections)), list)
+        assertEquals(setOf("most_played"), list.withFolderView("collection:7", isGrid = true).appearance.listCollections)
+        assertEquals("a repeated press's write is harmless", list, list.withFolderView("collection:7", isGrid = false))
+        assertEquals("a grid folder asked to be a grid stays", stored, stored.withFolderView("recent", isGrid = true))
+    }
 }

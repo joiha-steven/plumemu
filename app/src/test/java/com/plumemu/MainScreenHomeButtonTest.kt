@@ -50,8 +50,8 @@ import org.robolectric.annotation.Config
 
 /**
  * The Home button pressed while Plumemu is in front (option A): everything
- * open closes and the strip returns to Recent's first game (else the first system's), so A plays
- * the last game again. A press is one [HomePresses.press], as MainActivity sends it.
+ * open closes and the strip returns to Favorites' first game (else the Favorites entry with its empty line: the
+ * rule since the Collections change, Recent being a folder). A press is one [HomePresses.press], as MainActivity sends it.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
@@ -112,21 +112,21 @@ class MainScreenHomeButtonTest {
         return games.launched.toList()
     }
 
-    private fun assertLandedOnRecentsFirstGame() {
+    private fun assertLandedOnFavoritesFirstGame() {
         compose.onNodeWithTag(HomeTags.SYSTEMS).assertIsDisplayed()
-        assertEquals("Recent", 0, shownSystem())
-        assertEquals(listOf("recent-0"), gamePlayedByA())
+        assertEquals("Favorites", 0, shownSystem())
+        assertEquals(listOf("favorite-0"), gamePlayedByA())
     }
 
     @Test
-    fun homeWhileSettingsIsOpenReturnsToRecentsFirstGame() {
+    fun homeWhileSettingsIsOpenReturnsToFavoritesFirstGame() {
         show()
         press(Action.TapItem(Column.Systems, fifthSystem), Action.OpenSettings)
         compose.onNodeWithTag(HomeTags.SYSTEMS).assertDoesNotExist()
 
         pressHome()
 
-        assertLandedOnRecentsFirstGame()
+        assertLandedOnFavoritesFirstGame()
     }
 
     @Test
@@ -138,7 +138,7 @@ class MainScreenHomeButtonTest {
         pressHome()
 
         compose.onNodeWithTag(SearchTags.TOP_BAR).assertDoesNotExist()
-        assertLandedOnRecentsFirstGame()
+        assertLandedOnFavoritesFirstGame()
     }
 
     @Test
@@ -150,11 +150,11 @@ class MainScreenHomeButtonTest {
         pressHome()
 
         compose.onNodeWithTag(GamePanelTags.PANEL).assertDoesNotExist()
-        assertLandedOnRecentsFirstGame()
+        assertLandedOnFavoritesFirstGame()
     }
 
     @Test
-    fun homeFromDeepInASystemListLandsOnRecentsFirstGame() {
+    fun homeFromDeepInASystemListLandsOnFavoritesFirstGame() {
         show()
         press(Action.TapItem(Column.Systems, fifthSystem), Action.Enter)
         repeat(30) { press(Action.Move(Direction.Down)) }
@@ -162,34 +162,47 @@ class MainScreenHomeButtonTest {
 
         pressHome()
 
-        assertLandedOnRecentsFirstGame()
+        assertLandedOnFavoritesFirstGame()
         compose.onNode(rowTitled("Nintendo DS title 31")).assertDoesNotExist()
     }
 
+    // The list that scrolls back is Favorites since the Collections change (the cold start's entry), not Recent.
     @Test
-    fun homeFromDeepInRecentScrollsBackToItsFirstGame() {
-        val recent = List(40) { GameRowModel("recent-$it", "Played $it", "USA") }
-        show(HomeContent.of(recent, emptyList(), emptyList(), listOf(systemOf("alpha", 3))))
+    fun homeFromDeepInFavoritesScrollsBackToItsFirstGame() {
+        val favorites = List(40) { GameRowModel("favorite-$it", "Loved $it", "USA") }
+        show(HomeContent.of(emptyList(), favorites, emptyList(), listOf(systemOf("alpha", 3))))
         press(Action.Enter)
         repeat(30) { press(Action.Move(Direction.Down)) }
-        compose.onNode(rowTitled("Played 30")).assertIsDisplayed()
+        compose.onNode(rowTitled("Loved 30")).assertIsDisplayed()
 
         pressHome()
 
-        compose.onNode(rowTitled("Played 0")).assertIsDisplayed()
-        assertEquals(listOf("recent-0"), gamePlayedByA())
+        compose.onNode(rowTitled("Loved 0")).assertIsDisplayed()
+        assertEquals(listOf("favorite-0"), gamePlayedByA())
     }
 
+    // New since the Collections change: Home from inside the Recent folder lands on Favorites, the folder is left.
     @Test
-    fun homeWithRecentEmptyLandsOnTheFirstSystem() {
+    fun homeFromInsideTheRecentFolderLandsOnFavoritesFirstGame() {
+        show()
+        press(Action.TapItem(Column.Systems, 1), Action.Enter, Action.Enter, Action.Move(Direction.Right))
+
+        pressHome()
+
+        assertLandedOnFavoritesFirstGame()
+    }
+
+    // Expectation changed with the requirement: with no favorites Home lands on the Favorites entry, which shows its empty line (not the first system).
+    @Test
+    fun homeWithNoFavoritesLandsOnTheFavoritesEntryAndItsEmptyLine() {
         show(HomeContent.of(emptyList(), emptyList(), emptyList(), listOf(systemOf("alpha", 5), systemOf("beta", 5))))
         press(Action.TapItem(Column.Systems, FIRST_SYSTEM_INDEX + 1), Action.Enter, Action.Move(Direction.Down))
 
         pressHome()
 
         compose.onNodeWithTag(HomeTags.SYSTEMS).assertIsDisplayed()
-        assertEquals(FIRST_SYSTEM_INDEX, shownSystem())
-        assertEquals(listOf("alpha-0"), gamePlayedByA())
+        compose.onNodeWithTag(HomeTags.EMPTY_FAVORITES).assertIsDisplayed() // the Favorites entry is focused: its empty line, no games list
+        assertEquals("A on the empty entry plays nothing", emptyList<String>(), gamePlayedByA())
     }
 
     @Test
@@ -208,15 +221,17 @@ class MainScreenHomeButtonTest {
         assertEquals(appsIndex, shownSystem())
     }
 
+    // Expectation changed with the requirement: setup ends on Favorites' first game, not Recent's.
     @Test
-    fun settingUpEndsOnRecentWhenItHasGames() {
-        assertSetupEndsOn(FakeHomeContent.large(), expectedGame = "recent-0", expectedSystem = 0)
+    fun settingUpEndsOnFavoritesFirstGameWhenItHasGames() {
+        assertSetupEndsOn(FakeHomeContent.large(), expectedGame = "favorite-0", expectedSystem = 0)
     }
 
+    // Expectation changed with the requirement: with no favorites setup ends on the Favorites entry, not the first system.
     @Test
-    fun settingUpEndsOnTheFirstSystemWhenRecentIsEmpty() {
+    fun settingUpEndsOnTheFavoritesEntryWhenThereAreNoFavorites() {
         val content = HomeContent.of(emptyList(), emptyList(), emptyList(), listOf(systemOf("alpha", 5), systemOf("beta", 5)))
-        assertSetupEndsOn(content, expectedGame = "alpha-0", expectedSystem = FIRST_SYSTEM_INDEX)
+        assertSetupEndsOn(content, expectedGame = null, expectedSystem = 0)
     }
 
     @Test
@@ -244,13 +259,14 @@ class MainScreenHomeButtonTest {
         content.value = HomeContent.of(emptyList(), emptyList(), emptyList(), listOf(systemOf("alpha", 5), systemOf("beta", 5)))
         compose.waitForIdle()
 
-        assertEquals(FIRST_SYSTEM_INDEX, shownSystem())
-        assertEquals(listOf("alpha-0"), gamePlayedByA())
+        // Expectation changed with the requirement: the final target is the Favorites entry (no favorites here), not the first system.
+        compose.onNodeWithTag(HomeTags.EMPTY_FAVORITES).assertIsDisplayed()
+        assertEquals(emptyList<String>(), gamePlayedByA())
     }
 
     private fun assertSetupEndsOn(
         content: HomeContent,
-        expectedGame: String,
+        expectedGame: String?,
         expectedSystem: Int,
     ) {
         val settings = mutableStateOf(PlumSettings.Defaults)
@@ -275,8 +291,8 @@ class MainScreenHomeButtonTest {
         compose.waitForIdle()
 
         compose.onNodeWithTag(HomeTags.SYSTEMS).assertIsDisplayed()
-        assertEquals(expectedSystem, shownSystem())
-        assertEquals(listOf(expectedGame), gamePlayedByA())
+        if (expectedGame == null) compose.onNodeWithTag(HomeTags.EMPTY_FAVORITES).assertIsDisplayed() else assertEquals(expectedSystem, shownSystem())
+        assertEquals(listOfNotNull(expectedGame), gamePlayedByA())
     }
 
     private fun systemOf(

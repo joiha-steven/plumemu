@@ -28,7 +28,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Settings › Advanced › Restore… and Undo last restore. One at a time, in the process's [scope]:
+ * Settings › About › Restore… and Undo last restore. One at a time, in the process's [scope]:
  *
  * 1. [read]: the picked file is extracted into a private folder and checked ([BackupUnpack]), its
  *    database migrated and its box-art paths moved to this device ([prepareDatabase]), its account

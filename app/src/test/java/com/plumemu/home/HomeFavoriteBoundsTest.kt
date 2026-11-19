@@ -137,7 +137,7 @@ class HomeFavoriteBoundsTest {
     @Config(qualifiers = WIDE)
     fun at768SelectAndSwitchSystemShow() {
         showGames()
-        // B Back is hidden on the games list, so "L2 R2 Switch system" fits at 768 now (HINT_DROP_ORDER); "R3 Sort" too.
+        // B Back is hidden on the games list, so "L2 R2 Switch list" fits at 768 now (HINT_DROP_ORDER); "R3 Sort" too.
         val order = listOf(Action.Play, Action.ToggleFavorite, Action.Search, Action.Sort, Action.Menu, Action.JumpLetterNext, Action.ToggleView)
         order.forEach { assertTrue("${it::class.simpleName} is shown", isShown(it)) }
         assertTrue("B Back is not on the games list", !isShown(Action.Back))

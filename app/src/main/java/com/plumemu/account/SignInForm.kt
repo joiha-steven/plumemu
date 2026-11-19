@@ -78,7 +78,7 @@ internal class SignInForm(
     /** Sign in over [SignInItem.Leave] (a narrow panel) instead of beside it: Down and Up move between them too. */
     val stackedButtons: Boolean = false,
     val keyboardKind: KeyboardChoice = KeyboardChoice.Android,
-    /** Settings › Accounts › RetroAchievements: the second field is the Web API key, not a password. */
+    /** Settings › Library › RetroAchievements: the second field is the Web API key, not a password. */
     val kind: SignInKind = SignInKind.ScreenScraper,
 ) {
     var username: String by mutableStateOf(initialUsername)

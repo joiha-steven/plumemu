@@ -32,7 +32,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings › Advanced › Back up…'s panel at every text size, the way `SettingsStatisticsFitTest`
+ * Settings › About › Back up…'s panel at every text size, the way `SettingsStatisticsFitTest`
  * checks Statistics: at the six sizes in Jost, no
  * text is ellipsized, clipped, too short or on top of another (the panel scrolls), and the focused
  * button is fully on screen: the choice with the password warning, the progress, a long file name.

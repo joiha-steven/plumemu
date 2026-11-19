@@ -21,7 +21,7 @@ internal class SettingsClearBoxArtTest : SettingsModelHarness() {
                 boxArt = ScrapeStatus.Idle(ScrapeCounts(300, 2_054, 0)),
                 boxArtBytes = 312L * 1_000_000,
             )
-        openSection(SettingsSection.Accounts)
+        openSection(SettingsSection.Library)
         focusOption(SettingsOption.ScraperAccount)
         press(Action.Enter)
         assertEquals(PanelPage.ScraperAccount, model.focus.page)

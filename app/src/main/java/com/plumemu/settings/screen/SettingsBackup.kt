@@ -29,7 +29,7 @@ import com.plumemu.setup.SetupButton
 import com.plumemu.setup.bringIntoViewWhen
 
 /*
- * Settings › Advanced › Back up and restore › Back up…: the choice between
+ * Settings › About › Back up and restore › Back up…: the choice between
  * Settings and Everything, Android's save picker, then the progress with Cancel and a plain line
  * for how it ended. The work itself is the graph's (GraphBackup); this file only shows it.
  */

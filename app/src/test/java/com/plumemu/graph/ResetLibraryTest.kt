@@ -22,7 +22,7 @@ import org.robolectric.annotation.Config
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
- * Settings › Advanced › Reset library on the real graph (real database file, real scanner): the
+ * Settings › About › Reset library on the real graph (real database file, real scanner): the
  * games and what the person attached to them go, the picked folders and Android's lasting grants
  * on them stay, and the folders are scanned again. Real data: this is the test that it never
  * touches a grant.

@@ -1,5 +1,6 @@
 package com.plumemu.game
 
+import com.plumemu.collections.PickerState
 import com.plumemu.coredata.db.AppKind
 import com.plumemu.coredata.settings.AppsScreen
 import com.plumemu.graph.CoreQuestion
@@ -8,6 +9,7 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import com.plumemu.coredata.settings.SortGamesSetting
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.plumemu.R
 import com.plumemu.account.clockTime
@@ -33,6 +35,9 @@ internal sealed interface UiText {
 
     /** A time of day as the device shows it ("until 9:00"), from epoch [millis] (Fix box art's daily limit). */
     data class ClockTime(val millis: Long) : UiText
+
+    /** A plural from strings.xml whose one argument is [count] ("2 collections"). */
+    data class Plural(@androidx.annotation.PluralsRes val id: Int, val count: Int) : UiText
 }
 
 @Composable
@@ -42,6 +47,7 @@ internal fun UiText.resolve(): String =
         is UiText.Plain -> text
         is UiText.Format -> stringResource(id, *parts.map { it.resolve() }.toTypedArray())
         is UiText.ClockTime -> clockTime(millis)
+        is UiText.Plural -> pluralStringResource(id, count, count.toString())
     }
 
 /** What a panel row does when chosen (A, or a tap). */
@@ -65,6 +71,18 @@ internal sealed interface PanelCommand {
     data object RemoveFromRecent : PanelCommand
 
     data object OpenInfo : PanelCommand
+
+    /** Add to collection…: the picker, in the menu's place. */
+    data object OpenCollectionPicker : PanelCommand
+
+    /** A row of the picker: ticks the collection [collectionId] for the game, or unticks it. */
+    data class ToggleCollection(val collectionId: Long) : PanelCommand
+
+    /** The picker's New collection…: the keyboard for a name; the collection will hold the game. */
+    data object OpenNewCollection : PanelCommand
+
+    /** Remove from "<name>": takes the game out of the own collection the menu was opened in (Undo for a few seconds). */
+    data object RemoveFromCollection : PanelCommand
 
     /** Back one step (the focused "Back" row of Info). */
     data object Back : PanelCommand
@@ -163,6 +181,8 @@ internal data class PanelRow(
     val value: UiText? = null,
     val isCurrent: Boolean = false,
     val note: UiText? = null,
+    /** The picker's tick: the game is in this collection. */
+    val isTicked: Boolean = false,
 )
 
 @Immutable
@@ -184,6 +204,8 @@ internal data class PanelContent(
      * move between them. Only the core question; every other panel lists its rows.
      */
     val isButtonRow: Boolean = false,
+    /** One line under the title, ellipsised: the game a picker is about, with the menu closed beneath it. */
+    val subtitle: UiText? = null,
 ) {
     /** The rows the cursor can stand on, in order; the panel's focus is an index into this. */
     val focusableRows: List<PanelRow> = items.mapNotNull { (it as? PanelItem.Row)?.row?.takeIf(PanelRow::isEnabled) }
@@ -193,7 +215,7 @@ internal data class PanelContent(
 internal val PanelCommand.opensSomething: Boolean
     get() = when (this) {
         PanelCommand.OpenPlayWith, PanelCommand.OpenVersions, PanelCommand.OpenSortMenu, PanelCommand.OpenNameMenu,
-        PanelCommand.OpenFixName, PanelCommand.OpenOwnName, PanelCommand.OpenFixBoxArt, PanelCommand.OpenInfo,
+        PanelCommand.OpenFixName, PanelCommand.OpenOwnName, PanelCommand.OpenFixBoxArt, PanelCommand.OpenInfo, PanelCommand.OpenCollectionPicker,
         -> true
         else -> false
     }
@@ -240,11 +262,18 @@ internal sealed interface PanelScreen {
     data class FixName(override val typing: FixNameState) : PanelScreen, TypingScreen
 
     /** Use my own name: a field and Save. */
-    data class OwnName(override val typing: OwnNameState) : PanelScreen, TypingScreen
+    data class OwnName(override val typing: OwnNameState, val collection: CollectionNaming? = null) : PanelScreen, TypingScreen
+
+    /** Add to collection…: the own collections with a tick on those holding the game, then New collection…. */
+    data class CollectionPicker(val state: PickerState) : PanelScreen
 
     /** Fix box art…: a field, Search, ScreenScraper's games, No box art. */
     data class FixBoxArt(override val typing: FixBoxArtState) : PanelScreen, TypingScreen
 }
+
+/** The keyboard names a new collection: one that will hold the game ([withGame], from the picker) or an empty one (the folders page). */
+@Immutable
+internal data class CollectionNaming(val withGame: Boolean)
 
 /** A panel with a text field: its state takes the actions first ([TypingState.onAction]). */
 internal interface TypingScreen {
@@ -288,7 +317,8 @@ internal fun contentOf(
         is PanelScreen.Message -> screen.content
         // The field and the rows come from the screen's state (FixNamePanel.kt).
         is PanelScreen.FixName -> PanelContent(UiText.Res(R.string.game_fix_name_title))
-        is PanelScreen.OwnName -> PanelContent(UiText.Res(R.string.game_own_name_title))
+        is PanelScreen.OwnName -> PanelContent(UiText.Res(if (screen.collection != null) R.string.collections_name_title else R.string.game_own_name_title))
+        is PanelScreen.CollectionPicker -> pickerContent(screen.state, game.title)
         is PanelScreen.FixBoxArt -> PanelContent(UiText.Res(R.string.game_fix_box_art_title))
     }
 

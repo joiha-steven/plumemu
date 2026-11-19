@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import android.net.ConnectivityManager
+import com.plumemu.coreinput.strip.StripFocus
 import android.net.NetworkCapabilities
 import android.net.NetworkInfo
 import androidx.compose.runtime.remember
@@ -64,7 +65,7 @@ class WifiBarsTest {
         compose.setContent {
             PlumTheme {
                 val scope = rememberCoroutineScope()
-                HomeScreen(FakeHomeContent.board(), remember { InputRouter(scope, onDebug = {}) }, HomeCallbacks())
+                HomeScreen(FakeHomeContent.board(), remember { InputRouter(scope, onDebug = {}) }, HomeCallbacks(), initialFocus = StripFocus())
             }
         }
         compose.waitForIdle()

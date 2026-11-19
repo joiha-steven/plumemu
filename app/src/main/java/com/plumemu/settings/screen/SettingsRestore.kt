@@ -33,7 +33,7 @@ import java.text.DateFormat
 import java.util.Date
 
 /*
- * Settings › Advanced › Restore… and Undo last restore: Choose file… opens Android's open picker, the file is read and checked, a confirm
+ * Settings › About › Restore… and Undo last restore: Choose file… opens Android's open picker, the file is read and checked, a confirm
  * panel says what it holds and what it replaces, then the graph replaces (GraphRestore). Undo last
  * restore is listed while the way-back set exists. This file only shows the graph's state.
  */

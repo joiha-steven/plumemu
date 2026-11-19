@@ -1,7 +1,10 @@
 package com.plumemu
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.onNodeWithTag
@@ -44,7 +47,8 @@ class MainScreenUsageOfferTest {
     private var allowed = 0
     private lateinit var router: InputRouter
 
-    private var isLeaving = false
+    // A state, as in MainScreen: the wait for the home to be here reads it with snapshotFlow, not frame by frame.
+    private var isLeaving by mutableStateOf(false)
 
     private fun show() = show { compose.setContent(it) }
 
@@ -182,7 +186,7 @@ class MainScreenUsageOfferTest {
 
     @Test
     fun theCardIsNeitherShownNorCountedWhileTheHomeIsLeavingForSettings() {
-        // The wait for the home to be here runs frame by frame, so the clock is stepped by hand while it lasts.
+        // The clock is stepped by hand while the card waits for the home.
         compose.mainClock.autoAdvance = false
         isLeaving = true
         due.value = true

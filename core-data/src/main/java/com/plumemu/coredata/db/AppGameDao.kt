@@ -50,7 +50,10 @@ enum class AppKind(
  * [PinnedShortcutDao]. The person's own answer per package ([AppKindChoiceEntity]) is kept here too.
  */
 @Dao
-abstract class AppGameDao {
+abstract class AppGameDao(
+    /** For the collections bound again in [sync]'s transaction ([CollectionDao.bindFolder]). */
+    private val database: PlumDatabase,
+) {
     /**
      * Makes the app games exactly [apps], in one transaction: a package not yet listed gets a game;
      * a package already listed keeps its game id, favourite, play time and hidden mark (a hidden app
@@ -108,6 +111,8 @@ abstract class AppGameDao {
         val gone = stored.values.filter { it.packageName !in wanted && it.packageName !in keep }.map { it.gameId }
         gone.chunked(MAX_IDS_PER_STATEMENT).forEach { deleteGames(it) }
         deleteGamesWithoutRecord()
+        // A reinstalled app (or every app after Reset library) takes back its collections.
+        reservedFolderId()?.let { database.collectionDao().bindFolder(it) }
         return AppGameSync(added = added, updated = updated, removed = gone.size)
     }
 

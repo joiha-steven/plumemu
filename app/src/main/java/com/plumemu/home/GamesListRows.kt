@@ -51,6 +51,8 @@ internal fun GamesListItem(
     state: StripState,
     onAction: (Action) -> Unit,
     panelOpen: State<Boolean>,
+    /** A row of the Collections folder list: a folder's name and its count, not a game. */
+    isFolderRow: Boolean = false,
 ) {
     val form = remember(forms, index) { forms.slot(index) }
     val drawn = remember(state, entryId, index) { derivedStateOf { gameLook(state.focus, entryId, index, panelOpen.value) } }
@@ -68,7 +70,8 @@ internal fun GamesListItem(
     // Year and region in the board's two columns where the list shows both (an unknown year leaves its cell empty);
     // otherwise one text: the year, or a region or system code in the region's caps.
     val columns = if (mixesSystems || !showsPlace) null else row.yearAndRegion(hasBoxArt, artSlot, showsSystem)
-    val trailing = columns?.first ?: row.trailing(hasBoxArt, artSlot, showsSystem, null)
+    val trailing = if (isFolderRow) row.region else columns?.first ?: row.trailing(hasBoxArt, artSlot, showsSystem, null)
+    val title = if (isFolderRow) folderTitle(row.id, row.title) else row.title
     val trailingIsCode = columns == null && !isYearText(trailing)
     // Only a row whose title another row of the list shares has tags (withVariantTags), so the others read no string.
     val subtitle = remember(resources, row.variantTags, row.variantRegion) { variantSubtitle(resources, row.variantTags, row.variantRegion) }
@@ -80,7 +83,7 @@ internal fun GamesListItem(
     val endHidden = remember(panelOpen, state, isNarrow, trailingIsCode) { { panelOpen.value || (isNarrow && trailingIsCode && state.focus.column == Column.Details) } }
     val peekEndPadding = if (PlumTheme.type.textSize == TextSize.Largest) PlumDimens.gameRowPeekEndPaddingLargest else PlumDimens.gameRowPeekEndPadding
     val endPadding = remember(state, peekEndPadding) { { if (state.focus.column == Column.Details) peekEndPadding else PlumDimens.gameRowEndPadding } }
-    GameRow(title = row.title, trailing = trailing, look = form.look, modifier = tap, isFavorite = row.isFavorite, drawnLook = drawnLook, subtitle = subtitle, masteredLabel = masteredLabel(row.id), region = columns?.second, endPadding = endPadding, trailingIsCode = trailingIsCode, endHidden = endHidden)
+    GameRow(title = title, trailing = trailing, look = form.look, modifier = tap, isFavorite = row.isFavorite, drawnLook = drawnLook, subtitle = subtitle, masteredLabel = masteredLabel(row.id), region = columns?.second, endPadding = endPadding, trailingIsCode = trailingIsCode, endHidden = endHidden)
 }
 
 /** Whether a row's one trailing text is its year ([GameRowModel.trailing] writes it in ASCII digits), not a region or system code. */

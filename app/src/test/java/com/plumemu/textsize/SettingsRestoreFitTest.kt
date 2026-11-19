@@ -40,7 +40,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings › Advanced › Restore… and Undo last restore's panels at every text size, the way
+ * Settings › About › Restore… and Undo last restore's panels at every text size, the way
  * `SettingsBackupFitTest` checks Back up…: at the six sizes in Plum Sans and at Large and Largest in
  * Serif and Mono, no text is ellipsized, clipped, too short or on top of another (the panels
  * scroll), and the focused button is fully on screen: the longest confirm, the progress, a
@@ -122,15 +122,15 @@ abstract class SettingsRestoreFitBase(
     @Test
     fun theUndoPanel() {
         val content = signedIn.copy(wayBack = wayBack)
-        val index = SettingsSection.Advanced.rowsIn(content).indexOf(SettingsOption.UndoRestore)
-        val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Advanced, rememberedOption = mapOf(SettingsSection.Advanced to index), page = PanelPage.UndoRestore, panelIndex = 1)
+        val index = SettingsSection.About.rowsIn(content).indexOf(SettingsOption.UndoRestore)
+        val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to index), page = PanelPage.UndoRestore, panelIndex = 1)
         check("undo_restore", 1, SettingsTags.UNDO_PANEL) { SettingsAt(focus, content = content) }
     }
 
     private fun checkUndoAsk(ask: UndoPanelItem) {
         val content = signedIn.copy(wayBack = wayBack)
-        val index = SettingsSection.Advanced.rowsIn(content).indexOf(SettingsOption.UndoRestore)
-        val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Advanced, rememberedOption = mapOf(SettingsSection.Advanced to index), page = PanelPage.UndoRestore, panelIndex = 1, undoAsk = ask)
+        val index = SettingsSection.About.rowsIn(content).indexOf(SettingsOption.UndoRestore)
+        val focus = SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to index), page = PanelPage.UndoRestore, panelIndex = 1, undoAsk = ask)
         check("undo_ask_${ask.name}", 1, SettingsTags.UNDO_PANEL) { SettingsAt(focus, content = content) }
     }
 

@@ -43,7 +43,7 @@ class SettingsJsonTest {
     /** Every field away from its default, so a field the JSON forgot cannot pass by being the default. */
     private val everyFieldChanged =
         PlumSettings(
-            appearance = AppearanceSettings(ColorSetting.Custom(0x123ABC), TextColorSetting.Dark, ColorSetting.Preset("Teal"), TextSizeSetting.Huge, GridSizeSetting.Large, gridSystems = setOf("snes", "psp", "My Hacks"), ownColors = OwnColors(ColorSetting.Custom(0x2B54B5), TextColorSetting.Light, ColorSetting.Preset("Blue"), buttonSet = "Charcoal"), buttonSet = "Ivory", leftEdge = LeftEdgeSetting.Letters, language = "vi", edgeFade = false, pageGrain = PageGrainSetting.Strong),
+            appearance = AppearanceSettings(ColorSetting.Custom(0x123ABC), TextColorSetting.Dark, ColorSetting.Preset("Teal"), TextSizeSetting.Huge, GridSizeSetting.Large, gridSystems = setOf("snes", "psp", "My Hacks"), listCollections = setOf("most_played", "collection:12"), ownColors = OwnColors(ColorSetting.Custom(0x2B54B5), TextColorSetting.Light, ColorSetting.Preset("Blue"), buttonSet = "Charcoal"), buttonSet = "Ivory", leftEdge = LeftEdgeSetting.Letters, language = "vi", edgeFade = false, pageGrain = PageGrainSetting.Strong),
             controls = ControlsSettings(ConfirmButtonSetting.Bottom, holdToScrollFaster = false, showButtonHints = false, keyboard = KeyboardSetting.Android, pushRightToPlay = true, switchSystemWith = SwitchSystemWithSetting.Bumpers),
             library =
                 LibrarySettings(
@@ -326,6 +326,16 @@ class SettingsJsonTest {
         assertEquals(emptySet<String>(), decoded.settings.appearance.gridSystems)
         assertEquals("a missing key is not an unknown value", emptyList<String>(), decoded.unknownKeys)
         assertEquals(everyFieldChanged.copy(appearance = everyFieldChanged.appearance.copy(gridSystems = emptySet())), decoded.settings)
+    }
+
+    /** Grid or list per column entry reuses this set with entry ids of its own (collections, smart lists): any id comes back. */
+    @Test
+    fun gridSystemsKeepEntryIdsThatAreNotSystems() {
+        val ids = setOf("snes", "favorites", "collection:7", "smart:never-played", "smart:region:JPN", "My Hacks: 2")
+        val settings = everyFieldChanged.copy(appearance = everyFieldChanged.appearance.copy(gridSystems = ids))
+        val decoded = roundTrip(settings)
+        assertEquals(ids, decoded.settings.appearance.gridSystems)
+        assertEquals(emptyList<String>(), decoded.unknownKeys)
     }
 
     @Test

@@ -40,6 +40,7 @@ internal fun confirmHint(model: SettingsModel): Int? {
         model.isEditingHex || (focus.column == SettingsColumn.Panel && focus.page != null && model.isHexRow(focus.page, focus.panelIndex)) -> R.string.account_hint_type
         // Fix name's and Use my own name's field.
         model.nameFix.open?.typing?.inField == true && focus.page == PanelPage.FixName -> R.string.account_hint_type
+        model.collectionRename.open?.typing?.inField == true && focus.page == PanelPage.CollectionRename -> R.string.account_hint_type
         focus.page == PanelPage.ScraperSignIn -> model.signIn.form?.let { signInConfirmHint(it, R.string.settings_cancel) }
         focus.page == PanelPage.ProblemReport -> model.report.form?.let(::reportConfirmHint)
         // Library › Systems: A picks the system up, and drops it while carried; on System order it changes the order.
@@ -52,7 +53,6 @@ internal fun confirmHint(model: SettingsModel): Int? {
         focus.column == SettingsColumn.Options && model.focusedStatisticGame != null -> R.string.settings_hint_go_to
         focus.column == SettingsColumn.Options -> model.focusedOption.let { if (it == null) R.string.settings_hint_change else if (model.canTryBoxArtAgain(it)) R.string.settings_hint_try_again else if (it == SettingsOption.Version && !model.content.hasUpdates) null else rowConfirmHint(it) }
         focus.page == PanelPage.LicenseText || focus.page == PanelPage.ReadOnly -> null
-        focus.page == PanelPage.Update && updatesPanelItems(model.content.update).getOrNull(focus.panelIndex) == UpdatePanelItem.CheckDaily -> R.string.settings_hint_change
         // Folder could not be read: A on a folder skips it at once.
         focus.page == PanelPage.UnreadableFolders && unreadablePanelItems(model.content).getOrNull(focus.panelIndex) is UnreadablePanelItem.Skip ->
             R.string.settings_hint_skip

@@ -24,6 +24,7 @@ import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.game.FakeGameActions
 import com.plumemu.home.FakeHomeContent
+import com.plumemu.home.fromSystemColumn
 import com.plumemu.home.HomeArtSource
 import com.plumemu.home.HomeCallbacks
 import com.plumemu.home.appComposeRule
@@ -84,6 +85,7 @@ class SettingsExactPlayTimeScreenTest {
             router = remember { InputRouter(scope, onDebug = {}) }
             MainScreen(settings.value, HomeState.Ready(FakeHomeContent.board()), router, HomeCallbacks(games = FakeGameActions()), onRetry = {}, settingsHost = host)
         }
+        compose.fromSystemColumn(router) // the cold start is Favorites' games column since the Collections change
         send(Action.Menu)
         repeat(SettingsSection.Statistics.shownIndex) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)

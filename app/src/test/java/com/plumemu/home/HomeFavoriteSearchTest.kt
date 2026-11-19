@@ -1,6 +1,7 @@
 package com.plumemu.home
 
 import android.view.KeyEvent
+import com.plumemu.coreinput.strip.StripFocus
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,7 +57,7 @@ class HomeFavoriteSearchTest {
         compose.setContent {
             val scope = rememberCoroutineScope()
             router = remember { InputRouter(scope) }
-            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games)) }
+            PlumTheme { HomeScreen(content, router, HomeCallbacks(games = games), initialFocus = StripFocus()) }
         }
         compose.waitForIdle()
     }
@@ -89,13 +90,14 @@ class HomeFavoriteSearchTest {
 
     private fun openSnes() = send(*List(FakeHomeContent.BOARD_SNES_INDEX) { Action.Move(Direction.Down) }.toTypedArray(), Action.Enter)
 
-    private fun openFavorites() = send(Action.Move(Direction.Down), Action.Enter)
+    // Favorites is the column's first entry since the Collections change.
+    private fun openFavorites() = send(Action.Enter)
 
     /** The count drawn beside Favorites in the opened system column (Back opens it, Enter goes back to the list). Not for a held row: Back drops the hold. */
     private fun favoritesCountShown(): String {
         send(Action.Back)
         val shown =
-            compose.onNodeWithTag(HomeTags.system(1), useUnmergedTree = true).fetchSemanticsNode().children
+            compose.onNodeWithTag(HomeTags.system(0), useUnmergedTree = true).fetchSemanticsNode().children
                 .mapNotNull { child -> child.config.getOrElseNullable(SemanticsProperties.Text) { null }?.joinToString { it.text } }
                 .last()
         send(Action.Enter)
@@ -188,12 +190,12 @@ class HomeFavoriteSearchTest {
     fun inTheFavoritesListATakenOutGameHoldsItsPlaceUntilTheListIsLeft() {
         show()
         openFavorites()
-        val favorites = content.entries[1].rows.map { it.id }
+        val favorites = content.favoriteRows.map { it.id }
         assertEquals(listOf("snes-0", "snes-2", "snes-3", "snes-6"), favorites)
         down(1)
         send(Action.ToggleFavorite) // EarthBound out
         assertEquals(listOf("snes-2" to false), games.favorites)
-        assertEquals("the library dropped it", 3, content.entries[1].rows.size)
+        assertEquals("the library dropped it", 3, content.favoriteRows.size)
         assertTrue("its row stays where it was", exists(HomeTags.game(3)))
         assertEquals("the count says three", "3", favoritesCountInTopBar())
         send(Action.Play)
@@ -375,16 +377,16 @@ internal fun HomeContent.marked(
     val systems = marked(entries.filter { it.kind == EntryKind.System })
     val hidden = marked(hiddenEntries)
     val favorites = (systems + hidden).flatMap { it.games }.filter { it.isFavorite }.sortedBy { it.title }
-    return HomeContent.of(entries[0].rows, favorites, entries.first { it.kind == EntryKind.Apps }.rows, systems, hasBoxArt = hasBoxArt, hiddenSystems = hidden)
+    return HomeContent.of(recentRows, favorites, entries.first { it.kind == EntryKind.Apps }.rows, systems, hasBoxArt = hasBoxArt, hiddenSystems = hidden)
 }
 
 /** [this] with system [id] hidden from the column (Settings › Library › Systems): still searched, still in Recent and Favorites. */
 internal fun HomeContent.withSystemHidden(id: String): HomeContent {
     val systems = entries.filter { it.kind == EntryKind.System }.map { SystemGames(it.id, it.name.orEmpty(), it.rows, it.coverShape) }
     return HomeContent.of(
-        entries[0].rows,
-        entries[1].rows,
-        entries.first { it.kind == EntryKind.Apps }.rows,
+        recentRows,
+        favoriteRows,
+        appRows,
         systems.filter { it.id != id },
         hasBoxArt = hasBoxArt,
         hiddenSystems = systems.filter { it.id == id },

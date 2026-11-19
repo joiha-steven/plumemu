@@ -87,20 +87,12 @@ class SettingsPanelListsShownTest {
     private fun status() = compose.onNodeWithTag(SettingsPanelTags.STATUS)
 
     @Test
-    fun withNothingFoundTheStatusCheckNowAndTheSwitchShowAndNoUpdateButton() {
+    fun withNothingFoundTheStatusAndCheckNowShowAndNoUpdateButton() {
         updatesAt(0, UpdateView(lastCheck = LastCheck(1, CheckOutcome.UpToDate)))
         status().assertIsDisplayed()
         inUpdates(context.getString(R.string.settings_updates_check_now)).assertIsDisplayed()
-        inUpdates(context.getString(R.string.settings_check_updates_daily)).assertExists()
+        inUpdates(context.getString(R.string.settings_check_updates_daily)).assertDoesNotExist()
         noUpdateButton()
-    }
-
-    @Test
-    fun theDailyExplanationNamesWhoSeesTheAddressAndIsOnScreenOnTheSwitchWithAnUpdateFound() {
-        updatesAt(2, found)
-        val body = context.getString(R.string.settings_check_updates_daily_body)
-        assertTrue(body.contains("Cloudflare"))
-        compose.onNodeWithText(body).assertIsDisplayed()
     }
 
     @Test
@@ -240,7 +232,7 @@ class SettingsPanelListsShownTest {
     @Test
     fun boxArtsPanelDrawsReDownloadsConfirm() {
         val games = SettingsContent(account = AccountStatus.SignedOut, chosenBoxArtSource = BoxArtSourceSetting.LibretroOnly, boxArt = ScrapeStatus.Idle(ScrapeCounts(300, 2_054, 0)))
-        show(SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Accounts, page = PanelPage.ScraperConfirm, panelIndex = BoxArtConfirmItem.Cancel.ordinal), games)
+        show(SettingsFocus(column = SettingsColumn.Panel, section = SettingsSection.Library, rememberedOption = mapOf(SettingsSection.Library to SettingsSection.Library.rowsIn(games.withGamesListed()).indexOf(SettingsOption.BoxArtSource)), page = PanelPage.ScraperConfirm, panelIndex = BoxArtConfirmItem.Cancel.ordinal), games)
         compose.onNodeWithText(context.getString(R.string.settings_box_art_confirm_title)).assertIsDisplayed()
     }
 }
