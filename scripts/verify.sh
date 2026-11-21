@@ -106,7 +106,7 @@ if [[ -f scripts/tests/test_publish_platforms.py ]]; then
 else
   skip_check "publish-platforms tests" "scripts/tests/test_publish_platforms.py is not in this checkout"
 fi
-for guard in english-only ui-text theme-literals module-direction code-length secrets android-regex coroutine-cancellation translations changelog-format public-boundary; do
+for guard in english-only ui-text theme-literals module-direction code-length secrets android-regex flat-surfaces coroutine-cancellation translations changelog-format public-boundary; do
   if [[ $guard == public-boundary && ! -f scripts/public-paths.txt ]]; then
     skip_check "$guard" "scripts/public-paths.txt is not in this checkout"
     continue

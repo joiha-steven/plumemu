@@ -6,21 +6,21 @@ home screen for Android retro handhelds.</p>
 
 
 <p align="center">
-  <img src="media/hero.png" width="100%" alt="Plumemu in Spice cube: the Super Nintendo list, 248 games, with Super Metroid selected in a soft pill; its cover, year, maker, genre, rating and description on the right (covers are posters Plumemu draws). Below, three smaller views: Super Nintendo as a grid of covers in Pocket with Final Fantasy VI lifted inside a thin rim, the Dreamcast list with its system band in Banana, and Search with "super" typed and its keyboard in Ivory">
+  <img src="media/hero.png" width="100%" alt="Plumemu in Spice cube: the Super Nintendo list, 248 games, with Super Metroid selected in a lifted card; its cover, year, maker, genre, rating and description on the right (covers are posters Plumemu draws). Below, three smaller views: Super Nintendo as a grid of covers in Daylight with Final Fantasy VI selected, the Dreamcast list with its system band in Banana, and Search with "super" typed and its keyboard in Pea green">
 </p>
 
 <p align="center">
-  <a href="https://plumemu.stevensdesk.com/assets/media/demo-v017.mp4"><img src="media/demo.jpg" width="100%" alt="Play the one-minute demo: Plumemu on a 4:3 handheld screen driven by its buttons, here the Super Nintendo games as a grid of covers"></a>
+  <a href="https://plumemu.stevensdesk.com/assets/media/demo-v018.mp4"><img src="media/demo.jpg" width="100%" alt="Play the one-minute demo: Plumemu on a 4:3 handheld screen driven by its buttons, here the Super Nintendo games as a grid of covers"></a>
   <br><sub>One minute with the buttons, on a 4:3 screen. The only sound is Plumemu's own clicks.</sub>
 </p>
 
 <p align="center">
-  <b>0.1.7</b> · Android 6.0 or later · tested on the AYN Thor (earlier versions also on the Retroid Pocket 6, Nova and Classic) ·
+  <b>0.1.8</b> · Android 6.0 or later · tested on the AYN Thor (earlier versions also on the Retroid Pocket 6, Nova and Classic) ·
   <a href="../../releases">Download</a> · <a href="https://plumemu.stevensdesk.com">Website</a>
 </p>
 
 <p align="center">
-  New in 0.1.7: collections for your own lists of games, Settings in six sections, and a launcher that stays quick after an update. The source is open: GPL-3.0, see <a href="#source">Source</a>.
+  New in 0.1.8: a calmer, more finished look with one lifted card for the focused row, a folder card on the Collections page and one shape for every app icon. The source is open: GPL-3.0, see <a href="#source">Source</a>.
 </p>
 
 ---
@@ -87,12 +87,14 @@ screen, say yes when it asks, or press Home and choose Plumemu. More in [Install
   Files not added, where you pick its system.
 - **Collections, made by you or for you.** Recent, Most played and Recently added fill themselves,
   between Favorites and Apps. Make your own from any game's menu, with games from any system, and
-  rename, move or delete them in Settings › Library › Collections.
+  rename, move or delete them in Settings › Library › Collections. On the folders page the focused
+  folder shows a row of its covers, its game and system counts and its first titles.
 - **Android games and Ports.** Installed Android games get a system of their own, and native port
-  apps join Ports. Show as game, Show as port and Not a game in the menus correct Plumemu's choice.
+  apps join Ports. Show as game, Show as port and Not a game in the menus correct Plumemu's choice,
+  and App info opens Android's own page for the app.
 - **A cover for every game.** A game without box art gets a card in its system's color with its
   title, so every system and collection can be a grid of covers with no account. Android games and
-  Ports show their app icon.
+  Ports show their app icon, every icon in the same rounded square.
 - **Real box art, if you want it.** Setup asks first, No by default. The default source fetches box
   fronts over Wi-Fi from libretro's public server with no account, or your own free
   [ScreenScraper](https://www.screenscraper.fr) account (Settings › Library › ScreenScraper) adds
@@ -157,17 +159,34 @@ screen, say yes when it asks, or press Home and choose Plumemu. More in [Install
   stay off until you switch them on in setup or in Settings › About › Send usage statistics.
 
 <p align="center">
+  <img src="media/color-strip.png" width="100%" alt="The same Super Nintendo screen in six color sets: Plumemu, Daylight, Ivory, Banana, Pea green and Ultramarine">
+  <br><sub>The same screen in six of the color sets</sub>
+</p>
+
+<p align="center">
   <img src="media/color-sets.png" width="100%" alt="The same Super Nintendo screen in all seventeen ready-made color sets, each named below: Plumemu, Daylight, Ultramarine, Magenta, Peach, Matcha, Mocha, Front loader, Spice cube, Pea green, Pocket, Lavender, Red and gold, Ivory, Clear grape, Cold grey and Banana">
 </p>
 
 <table>
   <tr>
     <td width="50%"><img src="media/collection-grid.png" alt="An own collection called RPG in Mocha, a grid of twelve covers from the Super Nintendo, PlayStation and Dreamcast, Final Fantasy VII selected (the covers are drawn posters)"></td>
-    <td width="50%"><img src="media/game-menu.png" alt="Super Metroid's game menu in Magenta over the Super Nintendo list: Play, Play with Snes9x, Add to Favorites, Add to collection, Name and Info"></td>
+    <td width="50%"><img src="media/game-menu.png" alt="Super Metroid's game menu in Magenta over the Super Nintendo list: Play, Play with Snes9x, Add to Favorites, Add to collection, Name, Info and Hide game"></td>
   </tr>
   <tr>
     <td align="center">Your own collections, mixing every system</td>
     <td align="center">START on any game opens its menu</td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="media/collections-folders.png" alt="Collections in Ivory: the folders page with the own collection RPG selected, one row of covers on the right with its name, 12 games in 3 systems and the games it holds (the covers are drawn posters)"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">Collections: the focused folder shows its covers, counts and first titles</td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="media/android-games.png" alt="Android games as a grid in Peach: twelve made-up apps, every icon in the same rounded shape under a one-line name"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">Android games, every icon in one shape</td>
   </tr>
   <tr>
     <td width="50%"><img src="media/battery-in-game.png" alt="The lower screen while a game runs: a large clock at 21:47, a ring at 38%, \"45 min left\" and \"empty at about 22:32\", a chart of the session with a dotted line for the usual pace, and \"Played 0:40 · Used 32% · 48% an hour · usually 40%\""></td>
@@ -178,15 +197,15 @@ screen, say yes when it asks, or press Home and choose Plumemu. More in [Install
     <td align="center">Each system's facts on the second screen</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/grid.png" alt="Super Nintendo as a grid of covers in the dark Plumemu colors, F-Zero lifted a little inside a thin light rim (the covers are drawn posters)"></td>
-    <td width="50%"><img src="media/grid-light.png" alt="PlayStation as a smaller grid of covers, five to a row, in the light Daylight colors, Final Fantasy VII selected in the top-right corner inside a thin dark rim"></td>
+    <td width="50%"><img src="media/grid.png" alt="Super Nintendo as a grid of covers in the dark Plumemu colors, F-Zero selected inside a thin white outline (the covers are drawn posters)"></td>
+    <td width="50%"><img src="media/grid-light.png" alt="PlayStation as a smaller grid of covers, five to a row, in the light Daylight colors, Final Fantasy VII selected in the top-right corner inside a thin dark outline"></td>
   </tr>
   <tr>
     <td align="center">Any system as a grid of covers</td>
     <td align="center">In three sizes, light or dark</td>
   </tr>
   <tr>
-    <td colspan="2"><img src="media/apps-grid.png" alt="Apps in Cold grey as a grid of larger icons with one-line names, Gallery lifted inside a thin light rim; the left strip shows a code for each system"></td>
+    <td colspan="2"><img src="media/apps-grid.png" alt="Apps in Cold grey as a grid of larger icons with one-line names, Gallery selected inside a thin white outline; every icon is the same rounded square; the left strip shows a code for each system"></td>
   </tr>
   <tr>
     <td colspan="2" align="center">Apps as a grid of larger icons</td>
@@ -200,7 +219,7 @@ screen, say yes when it asks, or press Home and choose Plumemu. More in [Install
     <td align="center">A keyboard made for the D-pad</td>
   </tr>
   <tr>
-    <td width="50%"><img src="media/four-three.png" alt="Plumemu on the Retroid Pocket Nova's 4:3 screen in a custom wine color: the Super Nintendo list with Super Metroid selected, and its details peeking in from the right edge"></td>
+    <td width="50%"><img src="media/four-three.png" alt="Plumemu on the Retroid Pocket Nova's 4:3 screen in a custom wine color: the Super Nintendo list with Super Metroid selected, and its cover and details on the right"></td>
     <td width="50%"><img src="media/system-codes.png" alt="Super Nintendo's games with a short code for each system in the strip on the left: REC, FAV, APP, SNS, GBA, PS1, PSP and NDS"></td>
   </tr>
   <tr>
@@ -217,7 +236,7 @@ screen, say yes when it asks, or press Home and choose Plumemu. More in [Install
   </tr>
   <tr>
     <td width="50%"><img src="media/settings.png" alt="Settings › Library in Pea green, a green screen: the six sections on the left, then Game folders, Rescan library, Files not added, Emulators, Box art and both accounts; the Game folders panel on the right lists Internal storage and SD card with their game counts"></td>
-    <td width="50%"><img src="media/update.png" alt="Settings › About in Daylight with the update panel: Plumemu 0.1.6 → 0.1.7, a short list of release notes and an Update button (an example screen)"></td>
+    <td width="50%"><img src="media/update.png" alt="Settings › About in Daylight with the update panel: Plumemu 0.1.7 → 0.1.8, a short list of release notes and an Update button (an example screen)"></td>
   </tr>
   <tr>
     <td align="center">Settings that say what they do</td>

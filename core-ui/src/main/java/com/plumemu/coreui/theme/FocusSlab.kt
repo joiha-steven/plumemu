@@ -1,42 +1,26 @@
 package com.plumemu.coreui.theme
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * The focused row's slab (docs/design/rules.md > Focus and current, the focused row): one glass recipe for every colour set, each layer a step of perceived lightness
- * (CIE L*) from what lies under it, so a dark and a light theme draw the same object at the same strength:
- *  - fill: the page or card lit toward white, keeping its hue. On a dark theme [FILL_TOP_L] at the top to [FILL_BOTTOM_L] at the foot above it, [DARK_GAIN] more on
- *    black (the eye takes a step on a dark page for less). On a light theme only [LIGHT_TOP_L] to [LIGHT_BOTTOM_L]: the pane stays below white, so the white rim shows;
- *  - rim: a white hairline, [RIM_SIDE_L] above the fill along the sides on a dark theme and white itself on a light one, and white at two opposite corners, [RIM_LIT_L]
- *    above the fill or as far as white goes;
- *  - lift: two soft shadows [LIFT_NEAR_L] and [LIFT_FAR_L] off the page, black on a dark theme and the brown [shadowTint] on a light one; never a glow.
- * Dark and light draw the same rimmed pane over the same shadow. A pure white page leaves the white rim nothing to show against: there only the shadow carries the slab
- * (the sets keep their light pages at most about L* 93). Derived from the background only, so every colour set and custom colour has one; the accent paints the bar.
+ * The focused row's slab, "lifted card" (docs/design/rules.md > Focus and current, the focused row): one recipe for every colour set.
+ *  - face: one flat colour ([FlatSurface]), clearly lighter than the page or card it lifts off. On a light theme the page under [LIGHT_WHITE_SHARE] of white
+ *    (it keeps a hint of the page's hue; a yellow page reads cream); on a dark one the page lifted [DARK_LIFT_L] of CIE L*, in its own hue;
+ *  - depth: one soft real drop shadow ([DROP_DP] down, Gaussian [SIGMA_DP]), black at [SHADOW_LIGHT_ALPHA] / [SHADOW_DARK_ALPHA]. No outline, no top line, no foot, no
+ *    stroke of any kind: the face and the shadow are all the edge there is.
+ * Derived from the background only, so every colour set and custom colour has one; the accent paints the bar (and its glow).
  */
 object FocusSlab {
-    /** The gradient's three stops over [under] (the page, or the card under it): top, [MID_AT], bottom. */
-    fun stops(
-        under: Rgb,
-        dark: Boolean,
-    ): List<Rgb> =
-        steps(dark).map { lit(under, it) }
-
-    private fun steps(dark: Boolean) = if (dark) listOf(FILL_TOP_L, FILL_MID_L, FILL_BOTTOM_L) else listOf(LIGHT_TOP_L, LIGHT_MID_L, LIGHT_BOTTOM_L)
-
-    /** The gradient's mean over its height (for contrast checks and flat samples). */
+    /** The slab's one flat face over [bg] (see the class). */
     fun fill(
         bg: Rgb,
         text: Rgb,
         dark: Boolean,
-    ): Rgb {
-        val (top, mid, bottom) = steps(dark)
-        return lit(bg, MID_AT * (top + mid) / 2 + (1 - MID_AT) * (mid + bottom) / 2)
-    }
+    ): Rgb =
+        if (dark) ColorMath.mix(bg, WHITE, ColorMath.shareForLightness(bg, WHITE, DARK_LIFT_L)) else ColorMath.mix(bg, WHITE, LIGHT_WHITE_SHARE)
 
     /** [fill] where the slab sits on a raised card. */
     fun fillOnCard(
@@ -44,35 +28,6 @@ object FocusSlab {
         bg: Rgb,
         dark: Boolean,
     ): Rgb = fill(card, bg, dark)
-
-    /** [under] moved [step] of L* toward white. */
-    private fun lit(
-        under: Rgb,
-        step: Double,
-    ) = ColorMath.mix(under, WHITE, ColorMath.shareForLightness(under, WHITE, step * (1 + DARK_GAIN * (1 - ColorMath.lightness(under) / 100))))
-
-    /** The rim's lit corners as a white overlay over [fill]. */
-    fun topAlpha(fill: Rgb) = ColorMath.shareForLightness(fill, WHITE, RIM_LIT_L)
-
-    /** The rim's strength along the sides, as a white overlay over [fill]: [RIM_SIDE_L] above it on a dark theme, white itself on a light one. */
-    fun edgeAlpha(
-        fill: Rgb,
-        bg: Rgb,
-        dark: Boolean,
-    ): Double = if (dark) ColorMath.shareForLightness(fill, WHITE, RIM_SIDE_L) else 1.0
-
-    /** The rim's colour along the sides: white on every theme. */
-    fun edgeInk(dark: Boolean): Rgb = WHITE
-
-    /** What lifts the slab off [bg]: a shadow on every theme ([shadowTint]), never a glow. */
-    fun liftInk(dark: Boolean): Rgb = shadowTint(dark)
-
-    /** A lift layer's strength over [bg], for a step of [step] L*. */
-    fun liftAlpha(
-        bg: Rgb,
-        dark: Boolean,
-        step: Double,
-    ) = ColorMath.shareForLightness(bg, liftInk(dark), step).toFloat()
 
     /**
      * The year (and the single trailing text) on a focused row: [fill] moved [YEAR_DARK] / [YEAR_LIGHT] toward the text (the board's #D6D2C8 on Graphite,
@@ -107,38 +62,15 @@ object FocusSlab {
     const val SHADOW_DARK = 1.0f
     const val SHADOW_LIGHT = 0.45f
 
-    /** The rim's side as it reads over the slab's fill. */
-    fun edgeOver(
-        fill: Rgb,
-        bg: Rgb,
-        dark: Boolean,
-    ): Rgb = ColorMath.mix(fill, edgeInk(dark), edgeAlpha(fill, bg, dark))
+    /** The face: a light page under this share of white; a dark page lifted this much L*. */
+    const val LIGHT_WHITE_SHARE = 0.70
+    const val DARK_LIFT_L = 15.0
 
-    /** Steps of L*, from what lies under each layer. See the class. */
-    const val FILL_TOP_L = 7.5
-    const val FILL_MID_L = 5.5
-    const val FILL_BOTTOM_L = 4.0
-    const val DARK_GAIN = 0.33
-    const val LIGHT_TOP_L = 3.5
-    const val LIGHT_MID_L = 3.0
-    const val LIGHT_BOTTOM_L = 2.5
-    const val RIM_LIT_L = 30.0 * Depth.RAISE
-    const val RIM_SIDE_L = RIM_LIT_L * 2 / 3
-    const val LIFT_NEAR_L = 10.0 / 3.0 * Depth.SHADOW
-    const val LIFT_FAR_L = 35.0 / 6.0 * Depth.SHADOW
-
-    /** Where the gradient's middle stop sits. */
-    const val MID_AT = 0.46f
-
-    /** The lift layers in dp, at [Depth.SHADOW_REACH] of the board's `0 3px 6px` and `0 16px 32px`. */
-    const val NEAR_DROP_DP = 2f * Depth.SHADOW_REACH
-    const val NEAR_SIGMA_DP = 2f * Depth.SHADOW_REACH
-    const val FAR_DROP_DP = 10.67f * Depth.SHADOW_REACH
-    const val FAR_SIGMA_DP = 10.67f * Depth.SHADOW_REACH
-
-    /** The dark `0 0 0 1px` ring (black at 0.4; a light theme draws none), and its width in dp (1 board px). */
-    const val RING_DARK = 0.0
-    const val RING_WIDTH_DP = 0.667f
+    /** The drop shadow: black at this alpha, moved [DROP_DP] down, Gaussian sigma [SIGMA_DP] (3 dp down, sigma 6 dp). */
+    const val SHADOW_LIGHT_ALPHA = 0.18f
+    const val SHADOW_DARK_ALPHA = 0.45f
+    const val DROP_DP = 3f
+    const val SIGMA_DP = 6f
 
     /** Focused trailing text: shares of the way from the fill to the text, and weights (the board's year 500, region 600 dark / 700 light). */
     const val YEAR_DARK = 0.89
@@ -163,35 +95,21 @@ class SlabShadow(
 )
 
 /**
- * [FocusSlab] as Compose colours, one field per CSS layer: the gradient [stops] (on a card [stopsOnCard]), the border [edge] with its [top],
- * the inset shadows [insetTop] / [insetBottom] (none on glass), the dark [ring], the drops [near] / [far].
- * [fill] / [onCard] are the gradients' means (contrast checks, flat samples).
+ * [FocusSlab] as Compose colours: the flat face [fill] (on a card [onCard]) and the one drop [near] ([far] is the same layer at no strength: the cached
+ * image takes two). No ring, no top line, no foot: the face is the whole plate.
  */
 @Immutable
 class SlabLook(
     val fill: Color,
-    val edge: Color,
-    val ring: Color = Color.Transparent,
     val onCard: Color = fill,
-    val top: Color = edge,
-    val year: Color = edge,
-    val region: Color = edge,
+    val year: Color = fill,
+    val region: Color = fill,
     val regionWeight: Int = FocusSlab.REGION_WEIGHT_DARK,
-    val stops: List<Color> = listOf(fill, fill, fill),
-    val stopsOnCard: List<Color> = stops,
-    val insetTop: SlabShadow? = null,
-    val insetBottom: SlabShadow? = null,
     val near: SlabShadow? = null,
     val far: SlabShadow? = null,
     /** The shadows' tint, alpha = their strength ([FocusSlab.shadowAlpha]), for parts that take the slab's shadows (the badge frame). */
     val shadow: Color = Color.Black,
 ) {
-    /** The glass rim from [start] to [end], a box's opposite corners: [top] at both and [edge] between them. */
-    fun rim(
-        start: Offset,
-        end: Offset,
-    ): Brush = Brush.linearGradient(0f to top, RIM_FADE to edge, 1f - RIM_FADE to edge, 1f to top, start = start, end = end)
-
     internal companion object {
         fun of(
             bg: Rgb,
@@ -199,28 +117,20 @@ class SlabLook(
             dark: Boolean,
         ): SlabLook {
             val fill = FocusSlab.fill(bg, text, dark)
-            val floor = ColorMath.reach(bg, text, fill, 6.0)
             val card = RaisedCard.fill(bg, text, dark)
+            val floor = ColorMath.reach(bg, text, fill, 6.0)
             val tint = FocusSlab.shadowTint(dark).toComposeColor()
-            val lift = FocusSlab.liftInk(dark).toComposeColor()
+            val drop = SlabShadow(Color.Black.copy(alpha = if (dark) FocusSlab.SHADOW_DARK_ALPHA else FocusSlab.SHADOW_LIGHT_ALPHA), FocusSlab.DROP_DP.dp, FocusSlab.SIGMA_DP.dp)
             return SlabLook(
                 fill = fill.toComposeColor(),
-                edge = FocusSlab.edgeInk(dark).toComposeColor().copy(alpha = FocusSlab.edgeAlpha(fill, bg, dark).toFloat()),
-                ring = if (dark) Color.Black.copy(alpha = FocusSlab.RING_DARK.toFloat()) else Color.Transparent,
                 onCard = FocusSlab.fillOnCard(card, bg, dark).toComposeColor(),
-                top = Color.White.copy(alpha = FocusSlab.topAlpha(fill).toFloat()),
                 year = FocusSlab.yearInk(fill, text, floor, dark).toComposeColor(),
                 region = FocusSlab.regionInk(fill, text, floor, dark).toComposeColor(),
                 regionWeight = if (dark) FocusSlab.REGION_WEIGHT_DARK else FocusSlab.REGION_WEIGHT_LIGHT,
-                stops = FocusSlab.stops(bg, dark).map { it.toComposeColor() },
-                stopsOnCard = FocusSlab.stops(card, dark).map { it.toComposeColor() },
-                near = SlabShadow(lift.copy(alpha = FocusSlab.liftAlpha(bg, dark, FocusSlab.LIFT_NEAR_L)), FocusSlab.NEAR_DROP_DP.dp, FocusSlab.NEAR_SIGMA_DP.dp),
-                far = SlabShadow(lift.copy(alpha = FocusSlab.liftAlpha(bg, dark, FocusSlab.LIFT_FAR_L)), FocusSlab.FAR_DROP_DP.dp, FocusSlab.FAR_SIGMA_DP.dp),
+                near = drop,
+                far = SlabShadow(drop.color.copy(alpha = 0f), drop.drop, drop.sigma),
                 shadow = tint.copy(alpha = FocusSlab.shadowAlpha(dark)),
             )
         }
     }
 }
-
-/** Share of the rim's diagonal, from each lit corner, over which its light fades out. */
-private const val RIM_FADE = 0.16f

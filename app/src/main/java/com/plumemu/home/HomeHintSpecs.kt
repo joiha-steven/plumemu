@@ -12,14 +12,13 @@ import com.plumemu.settings.ButtonLetters
 import com.plumemu.settings.ShoulderKeys
 
 /**
- * The hints for where the focus is (the board's RP5-1, RP5-2, RP5-3 and Nova-3). SELECT shows for an
- * entry that can be a grid ([HomeContent.hasGridFor]): a system, Recent, Favorites and Apps, with or without box art. "A Select" only where there is something to open
- * (an empty Recent has nothing), "L1 R1" only when there is another list to switch to (with no
- * games only Apps), "X Search" only when there are games to find, "Y Favorite" (or "Y Unfavorite"
- * for a favorite, [focusedIsFavorite]) only on a game. A grid shows A, B and "SELECT List view"
- * (RP5-3) and "L1 R1 Size" (they change the grid size); Apps' grid has none (its
- * size is fixed and L1 / R1 do nothing there); every list and grid with another
- * entry to go to also shows "L2 R2 Switch list" (L2 / R2 switch the entry everywhere, L1 / R1 jump a letter in a list); the narrow details stop A, B, Y and "START More" (Nova-3).
+ * The hints for where the focus is. One order on every bar:
+ * A · → · B · Y · X · L1 R1 · START · L2 R2 · SELECT, leaving out what does not apply, never reordering.
+ * A key's hint shows wherever the key acts: "A Select" only where there is something to open, "X Search"
+ * only with games to find, "Y Favorite" (or "Y Unfavorite", [focusedIsFavorite]) only on a game,
+ * "L1 R1 Size" on a cover grid only, "L2 R2 Switch list" only with another entry to go to, SELECT where
+ * the entry can be a grid ([HomeContent.hasGridFor]). START is the game menu on the games side and
+ * Settings on the system column. R3 has no hint (it still sorts; Sort by… is in the START menu).
  * The pair names here are the default's: with Switch list with = L1 / R1 ([shoulders]) the two pairs trade places in these hints.
  */
 internal fun hintsFor(
@@ -83,7 +82,9 @@ internal fun hintsFor(
                     play,
                     back,
                     favorite,
+                    search,
                     HintSpec(shoulders.sizeCap, R.string.home_hint_grid_size, Action.NextSystem, cyclesGridSize = true),
+                    HintSpec(R.string.home_key_start, R.string.home_hint_menu, Action.Menu),
                     switchSystem(content, shoulders),
                     HintSpec(R.string.home_key_select, R.string.home_hint_list_view, Action.ToggleView),
                 )
@@ -92,13 +93,10 @@ internal fun hintsFor(
                     play,
                     // With a details stop Right goes there first, so the hint waits for the stop.
                     pushRight.takeIf { !hasDetailsStop },
-                    // B leaves a folder for the folders page: its list says so, as its grid does.
-                    back.takeIf { entry?.isFolder == true },
-                    // No "B Back" here: the key still goes back, the games list's bar leaves it out.
+                    back,
                     favorite,
                     search,
-                    // "R3 Sort" on a list the sort orders (a system's, Favorites); it gives way after Switch list.
-                    if (hasItems && entry?.kind?.followsSort == true) HintSpec(R.string.home_key_r3, R.string.home_hint_sort, Action.Sort) else null,
+                    // No R3 hint: R3 still sorts, and Sort by… is in the START game menu.
                     HintSpec(R.string.home_key_start, R.string.home_hint_menu, Action.Menu),
                     switchSystem(content, shoulders),
                     if (entry != null && content.hasGridFor(entry)) HintSpec(R.string.home_key_select, R.string.home_hint_grid_view, Action.ToggleView) else null,

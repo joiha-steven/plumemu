@@ -68,7 +68,8 @@ internal class SettingsHexOwnKeyboardTest : SettingsKeyboardPathHarness() {
         assertTrue(textOf(SettingsTags.HEX_PLACEHOLDER).startsWith("#"))
         // The typing hints, "Done" for the action; the tray opens on the digits ("Y ABC"), no shift.
         assertTrue(hintText(Action.Enter).endsWith("Type"))
-        assertTrue(hintText(Action.Erase()).endsWith("Delete"))
+        // The field starts empty: B would put the tray away, so its hint says Back until there is text.
+        assertTrue(hintText(Action.Erase()).endsWith("Back"))
         assertTrue(hintText(Action.Search).endsWith("Space"))
         assertTrue(hintText(Action.Menu).endsWith("Done"))
         assertTrue(hintText(Action.ToggleFavorite).endsWith("ABC"))
@@ -77,6 +78,7 @@ internal class SettingsHexOwnKeyboardTest : SettingsKeyboardPathHarness() {
         // A types the focused key (1); the D-pad moves on the keys; B deletes; X types a space.
         press(confirm, KeyEvent.KEYCODE_DPAD_RIGHT, confirm)
         assertEquals("12", text())
+        assertTrue(hintText(Action.Erase()).endsWith("Delete"))
         press(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_UP)
         assertTrue("Up from the top row stays on the keys", isTrayUp)
         press(back)

@@ -299,15 +299,16 @@ internal object StripReducer {
                     }
             }
 
-        /** A on row [index] of the folder list [host]: the folder opens (its games column, its own remembered row), else the screen is told. */
+        /** A on row [index] of the folder list [host]: the folder opens on its first game, else the screen is told. */
         private fun activateFolderRow(
             focus: StripFocus,
             host: SystemEntry,
             index: Int,
         ): Reduction {
             val id = host.itemIds.getOrNull(index) ?: return Reduction(focus)
-            if (host.folders.none { it.id == id }) return Reduction(focus, listOf(StripIntent.ActivateRow(host.id, id)))
-            val opened = focus.copy(column = Column.Games, openFolder = OpenFolder(host.id, id)).withRow(host, index)
+            val folder = host.folders.firstOrNull { it.id == id } ?: return Reduction(focus, listOf(StripIntent.ActivateRow(host.id, id)))
+            // Opened from its row, a folder starts at its first game; only coming back (L2/R2, a game left) finds the row left.
+            val opened = focus.copy(column = Column.Games, openFolder = OpenFolder(host.id, id)).withRow(host, index).withRow(folder, 0)
             return Reduction(opened.reconciled(content, hasDetailsStop))
         }
 

@@ -28,7 +28,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
@@ -68,13 +67,16 @@ internal fun DetailsColumn(
 ) {
     val shownEntry by remember(state, content) { derivedStateOf { content.shownEntry(state.focus) } }
     val entry = shownEntry ?: return
-    // The folder list has nothing to detail: its rows are folders, not games.
-    if (entry.isFolderList) return
     val row by remember(state, entry.id) { derivedStateOf { state.focus.rowOf(entry.id) } }
     val game = entry.rows.getOrNull(row) ?: return
     // With the systems focused the strip rests at its start and the column sits under the screen's right
     // edge: its text would be cut mid-word, so none is composed (wide: only the cover shows; narrow: the layout keeps its places).
     val textHidden by remember(state) { derivedStateOf { state.focus.column == Column.Systems } }
+    // The folders page: its rows are folders, so the column is the focused folder's card (no stop, a tap here does nothing).
+    if (entry.isFolderList) {
+        FolderDetails(content, game, textHidden, modifier, width)
+        return
+    }
     if (entry.kind == EntryKind.Apps) {
         // An app has no art: its icon and package, wide or narrow, with or without box art elsewhere.
         // Narrow: a tap at the games stop opens the details stop, a tap in it opens the app (core-input), as for a game.
@@ -142,7 +144,8 @@ private fun WideDetails(
             if (!textHidden) {
                 // Beside a tall box the title takes up to 3 lines and the publisher and year may wrap to 2; under a wide one 2 and 1.
                 TitleBlock(PlumDimens.detailsSubtitleGap) {
-                    DetailsTitle(game.title, maxLines = if (sideTitle) SIDE_TITLE_LINES else TITLE_LINES)
+                    // Under a wide box the title's subtitle is one line, so it and the publisher's line keep their place under a long title.
+                    DetailsTitle(game.title, maxLines = if (sideTitle) SIDE_TITLE_LINES else TITLE_LINES, subtitleLines = if (sideTitle) TITLE_SUBTITLE_LINES else 1)
                     // The line is held (empty until the result is read) so the cover below does not change height when it arrives.
                     DetailsSubtitle(details?.let { publisherAndYear(it) }.orEmpty(), maxLines = if (sideTitle) SIDE_SUBTITLE_LINES else 1)
                 }
@@ -186,7 +189,7 @@ private fun NarrowDetails(
             // Text first, the cover on the right: the peek shows the text, cut by the screen's edge.
             if (!textHidden) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PlumDimens.detailsStopLineGap)) {
-                    DetailsTitle(game.title)
+                    NarrowTitle(game.title, PlumDimens.detailsStopLineGap)
                     // Both lines and the facts' room are held (blank until the data arrives), so nothing below or beside them moves.
                     FactLines(details)
                     Spacer(Modifier.height(PlumDimens.detailsStopFactsSpacer))
@@ -359,21 +362,6 @@ internal fun DetailsCover(
             )
         }
     if (isFramed) Box(Modifier.collar(CollarSize.Cover, corner, halo = false) { 0f }) { art() } else art()
-}
-
-@Composable
-internal fun DetailsTitle(
-    title: String,
-    maxLines: Int = TITLE_LINES,
-) {
-    val layout = PlumTheme.layout
-    BasicText(
-        text = title,
-        style = PlumTheme.type.detailsTitle(layout.widthClass).copy(color = PlumTheme.colors.text, lineBreak = LineBreak.Heading),
-        maxLines = maxLines,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.testTag(HomeTags.DETAILS_TITLE),
-    )
 }
 
 /** The line under the wide details title ("1994 · Nintendo"): small and dim, as the board's "Nintendo, 1994". */
@@ -565,5 +553,6 @@ private const val DETAILS_SETTLE_MS = 150L
 private const val REVEAL_LATE_MS = 400L
 /** A no-break space: not shown, holds a line's height (an empty text takes none). */
 internal const val HELD_LINE = "\u00A0"
-private const val TITLE_LINES = 2
+internal const val TITLE_LINES = 2
+internal const val TITLE_SUBTITLE_LINES = 2
 private const val FACT_LINES = 2

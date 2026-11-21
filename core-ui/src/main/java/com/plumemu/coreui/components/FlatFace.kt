@@ -172,7 +172,7 @@ fun Modifier.sunkenField(
             // The well: `#0A0B0D` (Paper `#E0DBD0`) with `inset 0 3px 6px .55`; an error tints it toward the danger colour.
             val seat = colors.collar.seat
             val well = if (error) FieldDimens.tint(seat.fieldWell, colors.danger) else seat.fieldWell
-            drawCssFace(CssFace(listOf(well), listOf(seat.fieldShade)), Offset.Zero, size, corner)
+            drawCssFace(CssFace(listOf(well), listOf(seat.sunkenEdge, seat.fieldShade)), Offset.Zero, size, corner)
         }
     }
 }
@@ -211,7 +211,7 @@ fun Modifier.fieldCollar(
         )
         val seat = colors.collar.seat
         val well = if (error) FieldDimens.tint(seat.fieldWell, colors.danger) else seat.fieldWell
-        inset(l, t, l, b) { drawCssFace(CssFace(listOf(well), listOf(seat.fieldShade)), Offset.Zero, size, corner) }
+        inset(l, t, l, b) { drawCssFace(CssFace(listOf(well), listOf(seat.sunkenEdge, seat.fieldShade)), Offset.Zero, size, corner) }
     }
 }
 

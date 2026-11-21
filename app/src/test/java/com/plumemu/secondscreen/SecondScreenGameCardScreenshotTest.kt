@@ -45,6 +45,8 @@ abstract class SecondScreenGameCardShots(
             "no_ra" to BOARD_GAME_NO_RA,
             "no_points" to BOARD_GAME.copy(ra = com.plumemu.graph.StoredAchievements(earned = 3, total = 12)),
             "never_played" to BOARD_GAME_NO_RA.copy(lastPlayedDaysAgo = null, weeks = PlayWeeks(List(8) { 0L }, 0, 0)),
+            // Achievements stored, nothing played in the last 8 weeks: the achievements tile alone takes the row.
+            "achievements_only" to BOARD_GAME.copy(weeks = PlayWeeks(List(8) { 0L }, 0, 0)),
             "long_title" to BOARD_GAME.copy(title = LONG_TITLE),
             "no_description" to BOARD_GAME.copy(details = null),
             // The battery line in the foot, above the file name (the battery at 60 %, 30 % an hour).

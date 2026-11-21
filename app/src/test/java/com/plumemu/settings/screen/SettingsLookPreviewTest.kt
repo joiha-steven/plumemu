@@ -28,6 +28,7 @@ import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.SettingsPreviewDimens
+import com.plumemu.coreui.theme.FlatSurface
 import com.plumemu.coreui.theme.SettingsPreviewLook
 import com.plumemu.coreui.theme.TextSize
 import com.plumemu.coreui.theme.toComposeColor
@@ -247,9 +248,12 @@ class SettingsLookPreviewTest {
 
     private fun lum(c: Color) = c.red + c.green + c.blue
 
-    /** The board's cover tile (`radial-gradient(circle at 28% 18%, #3470D8, #1F4FA8 45%, #143677)` on the blue accent): its stops stay within 14 per channel of the board's, and it is drawn as the gradient: lightest at its centre, darker toward the far corner. */
+    /** The tile's one flat face in [accent]: the mean of the board's radial stops. */
+    private fun tileFace(accent: Color) = FlatSurface.mean(SettingsPreviewLook.tileStops(accent), SettingsPreviewLook.TILE_STOPS)
+
+    /** The board's cover tile (`radial-gradient(circle at 28% 18%, #3470D8, #1F4FA8 45%, #143677)` on the blue accent): its stops stay within 14 per channel of the board's, and it is drawn flat in their mean: one colour at its centre, middle and far corner. */
     @Test
-    fun theCoverTileIsTheBoardsRadialGradient() {
+    fun theCoverTileIsTheBoardsGradientsMeanFlat() {
         val d = SettingsPreviewDimens
         assertEquals(61.33f, d.tileWidth.value, 0.01f)
         assertEquals(46.67f, d.tileHeight.value, 0.01f)
@@ -268,7 +272,8 @@ class SettingsLookPreviewTest {
         val centre = pixel(SettingsTags.LOOK_PREVIEW, 149f, 23f)
         val middle = pixel(SettingsTags.LOOK_PREVIEW, 162f, 40f)
         val corner = pixel(SettingsTags.LOOK_PREVIEW, 189f, 58f)
-        assertTrue("lightest at the gradient's centre: $centre $middle $corner", lum(centre) > lum(middle) && lum(middle) > lum(corner))
+        // One colour across the tile (the theme's own accent; [tileFace] is checked against an accent in the tests below).
+        for ((what, px) in listOf("middle" to middle, "corner" to corner)) near(centre, px, "flat tile at its $what")
     }
 
     /** The tile's drop shadow (`0 8px 18px` black .5) darkens the well under its bottom edge; far from it the well is plain. */
@@ -307,7 +312,7 @@ class SettingsLookPreviewTest {
         compose.runOnIdle { preview.show(stored.appearance.copy(accent = ColorSetting.Custom(0x2E9E5B), background = ColorSetting.Custom(0x203040)), fingerDown = true) }
         compose.waitForIdle()
         val after = pixel(SettingsTags.LOOK_PREVIEW, 149f, 23f)
-        near(SettingsPreviewLook.tileStops(Color(0xFF2E9E5B))[0], after, "tile in the previewed accent")
+        near(tileFace(Color(0xFF2E9E5B)), after, "tile in the previewed accent")
         assertTrue("the tile changed colour", before != after)
         near(SettingsPreviewLook.well(Color(0xFF203040), Color(0xFFEDE8DD)).let { it }, pixel(SettingsTags.LOOK_PREVIEW, 100f, 108f), "well on the previewed background")
     }
@@ -320,7 +325,7 @@ class SettingsLookPreviewTest {
         compose.waitForIdle()
         compose.runOnIdle { stored = stored.copy(appearance = stored.appearance.copy(accent = ColorSetting.Custom(0xD0502A))) }
         compose.waitForIdle()
-        near(SettingsPreviewLook.tileStops(Color(0xFFD0502A))[0], pixel(SettingsTags.LOOK_PREVIEW, 149f, 23f), "tile after a stored accent")
+        near(tileFace(Color(0xFFD0502A)), pixel(SettingsTags.LOOK_PREVIEW, 149f, 23f), "tile after a stored accent")
     }
 
     /** Whether the chevron node at [tag] has anything drawn in it, against the screen's background. */

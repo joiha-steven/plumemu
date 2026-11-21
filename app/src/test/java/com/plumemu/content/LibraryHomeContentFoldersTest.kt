@@ -90,7 +90,7 @@ class LibraryHomeContentFoldersTest {
         assertEquals("Most played is listed though empty", 0, content.folder("most_played").count)
         val list = content.entries.first { it.kind == EntryKind.Collections }
         assertEquals("every folder row then New collection…", listOf("recent", "most_played", "recently_added", "collection:$own", HomeContent.NEW_COLLECTION_ID), list.rows.map { it.id })
-        assertEquals(listOf("0", "0", "2", "1", ""), list.rows.map { it.region })
+        assertEquals("an empty built-in shows no count; New collection… none", listOf("", "", "2", "1", ""), list.rows.map { it.region })
     }
 
     @Test
@@ -103,7 +103,7 @@ class LibraryHomeContentFoldersTest {
         now = NOW + SmartListDao.RECENTLY_ADDED_MS + DAY_MS
         days.emit(now)
         val later = contentWhere(source) { it.folderEntries.first { f -> f.id == "recently_added" }.count == 0 }
-        assertEquals(0, later.entries.first { it.kind == EntryKind.Collections }.rows.first { it.id == "recently_added" }.region.toInt())
+        assertEquals("emptied: no bare 0 on its row", "", later.entries.first { it.kind == EntryKind.Collections }.rows.first { it.id == "recently_added" }.region)
     }
 
     @Test

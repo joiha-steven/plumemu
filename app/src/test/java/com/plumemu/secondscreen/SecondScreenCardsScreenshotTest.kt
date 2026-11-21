@@ -62,6 +62,7 @@ abstract class SecondScreenCardsScreenshotBase(
             shoot("second_screen_system_played_largest_${label}_$look", largest, SYSTEM_WITH_LAST, mismatches)
             shoot("second_screen_recent_full_largest_${label}_$look", largest, RECENT_FULL, mismatches)
             shoot("second_screen_favorites_many_largest_${label}_$look", largest, FAVORITES_MANY, mismatches)
+            shoot("second_screen_apps_largest_${label}_$look", largest, APPS_WITH_ICONS, mismatches)
         }
         if (mismatches.isNotEmpty()) fail("${mismatches.size} screenshot(s) differ:\n" + mismatches.joinToString("\n"))
     }

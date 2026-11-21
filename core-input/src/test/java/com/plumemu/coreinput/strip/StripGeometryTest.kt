@@ -75,13 +75,13 @@ class StripGeometryTest {
     }
 
     @Test
-    fun narrowDetailsStopShows56DpOfTheListAndGivesDetailsWidthMinus104() {
+    fun narrowDetailsStopShowsNoListAndGivesDetailsWidthMinus48() {
         val g = geometryOf(nova)
-        assertEquals((-592).dp, g.offsetOf(Column.Details))
+        assertEquals((-648).dp, g.offsetOf(Column.Details))
         val screen = Screen(g, Column.Details)
-        assertEquals("56 dp of the list from the screen edge", 56.dp, screen.listRight)
-        assertEquals(80.dp, screen.detailsLeft)
-        assertEquals("details width − 104 up to the right margin", 472.dp, 576.dp - screen.detailsLeft - PlumDimens.stripMarginSide)
+        assertEquals("no part of the list on screen", 0.dp, screen.listRight)
+        assertEquals(24.dp, screen.detailsLeft)
+        assertEquals("details width − 48 up to the right margin", 528.dp, 576.dp - screen.detailsLeft - PlumDimens.stripMarginSide)
         assertEquals(nova.detailsStopWidth, 576.dp - screen.detailsLeft - PlumDimens.stripMarginSide)
         assertEquals(Column.entries, g.stops(onGames, content))
     }

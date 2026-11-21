@@ -117,7 +117,7 @@ abstract class HomeFourThreeBoundsBase(
     @Test
     fun withArtTheDetailsStopSitsInsideTheMargins() {
         show(FakeHomeContent.withArtwork(), BoardGamesFocused + Action.Move(Direction.Right))
-        assertDp("details 24 after the list's peek", 80.dp, bounds(HomeTags.DETAILS).left)
+        assertDp("details start at the 24 margin", 24.dp, bounds(HomeTags.DETAILS).left)
         assertDp("details end at the right margin", rightMargin, bounds(HomeTags.DETAILS).right)
         assertTextLeftAndCoverRight()
         assertEquals("no text past the margin", emptyList<String>(), textsPast(rightMargin))

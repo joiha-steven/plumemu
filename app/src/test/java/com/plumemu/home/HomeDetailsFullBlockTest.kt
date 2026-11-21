@@ -31,7 +31,8 @@ import org.robolectric.annotation.GraphicsMode
  * (coordinates measured, not the existence of a node); a cell with nothing to say takes no place (no hole); and an emulator's name is
  * never cut. Prints the cover's size (dp) for the work log.
  */
-private const val LONG_TITLE = "The Legend of Zelda: A Link to the Past Four Swords Anniversary Edition"
+// No subtitle mark: a long title that only wraps (a title with one reads as a main line and a subtitle, HomeDetailsTitleFitTest).
+private const val LONG_TITLE = "The Legend of Zelda A Link to the Past Four Swords Anniversary Edition"
 
 abstract class HomeDetailsFullBlockBase {
     private val compose = appComposeRule()
@@ -167,16 +168,12 @@ abstract class HomeDetailsFullBlockBase {
     @Test
     fun cellsWithNothingToSayLeaveNoHole() {
         val shown = settle(GamePlay(2, 252, null, hasOwnEmulator = true), genre = "", rating = false, pace = false)
-        // The emulator always has a value ("Asked on Play" with none installed); it goes under the two, on the second row.
+        // The emulator always has a value ("Asked on Play" with none installed); the three stand one to a line, in order, from the top, at the one pitch.
         assertEquals(setOf("Played", "Last played", "Emulator"), shown.cells.keys)
-        val played = shown.cells.getValue("Played")
-        val last = shown.cells.getValue("Last played")
-        assertEquals("PLAYED starts the first row", shown.box.left, played.labelBox.left, 1f)
-        assertTrue("PLAYED is on the first row: ${played.labelBox} in ${shown.box}", played.labelBox.top - shown.box.top < played.labelBox.height * 2)
-        assertEquals("LAST PLAYED shares the first row", played.labelBox.top, last.labelBox.top, 1f)
-        assertTrue("LAST PLAYED follows PLAYED", last.labelBox.left > played.labelBox.left)
-        // Every row starts at the box's left edge: no cell stands alone further right with nothing before it.
-        shown.cells.values.groupBy { it.labelBox.top }.forEach { (top, row) -> assertEquals("the row at $top starts at the left edge", shown.box.left, row.minOf { it.labelBox.left }, 1f) }
+        val lines = listOf("Played", "Last played", "Emulator").map { shown.cells.getValue(it).let { c -> FactLine(c.label, c.labelBox, c.valueBox, 1) } }
+        assertEquals("the contract", emptyList<String>(), factLineProblems(shown.box, lines))
+        val played = lines.first()
+        assertTrue("PLAYED is the first line, no hole above it: ${played.label} in ${shown.box}", played.label.top - shown.box.top < played.label.height)
         assertInside(shown)
     }
 }

@@ -128,9 +128,12 @@ class DemoVideoFrames {
         compose.mainClock.autoAdvance = false
     }
 
-    private val library: HomeContent by lazy { withRealGames(CoverArtLibrary) }
+    private val library: HomeContent by lazy { withReadmeCollections(withRealGames(CoverArtLibrary)) }
 
     private fun entryIndex(id: String) = library.entries.indexOfFirst { it.id == id }
+
+    /** The own collection "RPG" of [withReadmeCollections], shown as a grid. */
+    private val RPG_COLLECTION = "collection:7"
 
     /** Shortest key presses on Plumemu's keyboard to a key whose press makes [wanted]. */
     private fun keyPath(from: KeyboardModel, wanted: (KeyboardEvent?) -> Boolean): List<KeyboardDirection> {
@@ -150,7 +153,7 @@ class DemoVideoFrames {
     fun home() {
         val take = Take("home")
         begin()
-        val grids = mutableStateOf(emptySet<String>())
+        val grids = mutableStateOf(setOf(RPG_COLLECTION))
         val panelState = mutableStateOf<OpenPanel?>(null)
         val search = SearchState()
         var searchOn by mutableStateOf(false)
@@ -252,15 +255,16 @@ class DemoVideoFrames {
         take.press("DOWN", "move", 0.35) { search.onAction(Action.Move(Direction.Down)) }
         take.press("DOWN", "move", 0.35) { search.onAction(Action.Move(Direction.Down)) }
         take.press("B", "back", 0.5) { search.close(); searchOn = false }
-        // Scene 5: Recent and Favorites.
-        take.note("Recent and Favorites")
+        // Scene 5: Collections, an own collection of three systems opened as a grid of covers.
+        take.note("Collections")
         strip("B", "back", 0.5)
-        strip("UP", "move", 0.55); strip("UP", "move", 0.55); strip("UP", "move", 0.8)
-        strip("A", "confirm", 0.6)
-        burst("DOWN", 3, 0.35); strip("B", "back", 0.5)
-        strip("DOWN", "move", 0.5)
+        burst("UP", entryIndex("snes") - entryIndex(HomeContent.COLLECTIONS_ID), 0.45)
+        take.seconds(0.3)
         strip("A", "confirm", 0.6)
         burst("DOWN", 3, 0.35)
+        take.seconds(0.2)
+        strip("A", "confirm", 0.8)
+        strip("RIGHT", "move", 0.32); strip("RIGHT", "move", 0.32); strip("DOWN", "move", 0.32); strip("LEFT", "move", 0.5)
         take.seconds(0.4)
         take.finish()
     }
@@ -326,7 +330,7 @@ class DemoVideoFrames {
         compose.waitForIdle()
         take.note("Settings: browse")
         take.seconds(0.8)
-        val browse = listOf(SettingsOption.Accent, SettingsOption.TextSize)
+        val browse = listOf(SettingsOption.PageGrain, SettingsOption.TextSize)
         for (o in browse) take.press("DOWN", "move", 0.45) { focus = optionsAt(o) }
         for (o in browse.dropLast(1).reversed() + SettingsOption.Colors) take.press("UP", "move", 0.3) { focus = optionsAt(o) }
         take.seconds(0.2)

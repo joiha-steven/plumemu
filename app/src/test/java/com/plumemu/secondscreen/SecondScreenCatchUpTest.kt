@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.unit.Dp
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.AppsGridDimens
+import com.plumemu.coreui.theme.EntryCardDimens
 import com.plumemu.coreui.theme.SecondScreenGameCardDimens
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
@@ -77,32 +78,29 @@ abstract class SecondScreenCatchUpBase(
     private fun assertInsideGameMargins(
         label: String,
         tags: List<String>,
-    ) {
-        val card = bounds(SecondScreenTags.CARD)
-        for (tag in tags) {
-            for (node in all(tag)) {
-                val b = node.boundsInRoot
-                assertTrue("$label: $tag left ${b.left}", b.left >= card.left + px(SecondScreenGameCardDimens.marginSide) - 0.5f)
-                assertTrue("$label: $tag top ${b.top}", b.top >= card.top + px(SecondScreenGameCardDimens.marginTop) - 0.5f)
-                assertTrue("$label: $tag right ${b.right}", b.right <= card.right - px(SecondScreenGameCardDimens.marginSide) + 0.5f)
-                assertTrue("$label: $tag bottom ${b.bottom}", b.bottom <= card.bottom - px(SecondScreenGameCardDimens.marginBottom) + 0.5f)
-            }
-        }
-    }
+    ) = assertInsideMargins(label, tags, SecondScreenGameCardDimens.marginSide, SecondScreenGameCardDimens.marginTop, SecondScreenGameCardDimens.marginBottom)
 
-    private fun assertInside(
+    /** The Apps card keeps the entry cards' margins. */
+    private fun assertInsideEntryMargins(
         label: String,
         tags: List<String>,
+    ) = assertInsideMargins(label, tags, EntryCardDimens.marginSide, EntryCardDimens.marginTop, EntryCardDimens.marginBottom)
+
+    private fun assertInsideMargins(
+        label: String,
+        tags: List<String>,
+        side: Dp,
+        top: Dp,
+        bottom: Dp,
     ) {
         val card = bounds(SecondScreenTags.CARD)
-        val margin = px(dimens.margin)
         for (tag in tags) {
             for (node in all(tag)) {
                 val b = node.boundsInRoot
-                assertTrue("$label: $tag left ${b.left}", b.left >= card.left + margin - 0.5f)
-                assertTrue("$label: $tag top ${b.top}", b.top >= card.top + margin - 0.5f)
-                assertTrue("$label: $tag right ${b.right}", b.right <= card.right - margin + 0.5f)
-                assertTrue("$label: $tag bottom ${b.bottom}", b.bottom <= card.bottom - margin + 0.5f)
+                assertTrue("$label: $tag left ${b.left}", b.left >= card.left + px(side) - 0.5f)
+                assertTrue("$label: $tag top ${b.top}", b.top >= card.top + px(top) - 0.5f)
+                assertTrue("$label: $tag right ${b.right}", b.right <= card.right - px(side) + 0.5f)
+                assertTrue("$label: $tag bottom ${b.bottom}", b.bottom <= card.bottom - px(bottom) + 0.5f)
             }
         }
     }
@@ -162,6 +160,34 @@ abstract class SecondScreenCatchUpBase(
         assertEquals(0, all(GameCardTags.FILE).size)
     }
 
+    // ---- the game card without a tile to show
+
+    @Test
+    fun aGameCardWithNothingForATileHasNoEmptyBoxAndStaysInsideItsMarginsAtEveryTextSize() {
+        val never = BOARD_GAME_NO_RA.copy(lastPlayedDaysAgo = null, playTimeMinutes = null, weeks = PlayWeeks(List(8) { 0L }, 0, 0))
+        val cases =
+            listOf(
+                "never played" to never,
+                "not in 8 weeks" to BOARD_GAME_NO_RA.copy(weeks = PlayWeeks(List(8) { 0L }, 0, 0)),
+                "reading" to BOARD_GAME_NO_RA.copy(isPlayKnown = false, weeks = null, fileName = null, batteryPace = null),
+                "no library id" to BOARD_GAME_NO_RA.copy(gameId = null, isPlayKnown = false, weeks = null, fileName = null, batteryPace = null),
+                "achievements only" to BOARD_GAME.copy(weeks = PlayWeeks(List(8) { 0L }, 0, 0)),
+            )
+        for (textSize in TextSize.entries) {
+            for ((name, card) in cases) {
+                show(card, textSize)
+                val label = "$size $textSize $name"
+                assertEquals("$label: no play tile", 0, all(GameCardTags.PLAY).size)
+                assertEquals("$label: tile row only with achievements", if (card.ra != null) 1 else 0, all(GameCardTags.TILES).size)
+                assertInsideGameMargins(label, listOf(GameCardTags.TITLE, GameCardTags.SYSTEM, GameCardTags.TILES, GameCardTags.FILE))
+                val above = maxOf(bounds(GameCardTags.TITLE).bottom, if (card.ra != null) bounds(GameCardTags.TILES).bottom else 0f)
+                for (node in all(GameCardTags.DESCRIPTION_BOX)) {
+                    assertTrue("$label: the description under what is above it", node.boundsInRoot.top + px(SecondScreenGameCardDimens.descriptionInkTop) >= above - 0.5f)
+                }
+            }
+        }
+    }
+
     // ---- the Apps card
 
     private fun apps(count: Int) = SecondScreenContent.Apps(count, (0 until count).map { AppIconRef(if (it == 3) NO_ICON_KEY else "app.$it", "App $it") })
@@ -172,9 +198,9 @@ abstract class SecondScreenCatchUpBase(
             show(apps(MAX_APP_ICONS), textSize)
             val label = "$size $textSize"
             val grid = bounds(SecondScreenTags.APPS_GRID)
-            val title = bounds(SecondScreenTags.TITLE)
+            val title = bounds(EntryTags.TITLE)
             val shown = all(SecondScreenTags.APPS_ICON)
-            assertInside(label, listOf(SecondScreenTags.TOP, SecondScreenTags.TITLE, SecondScreenTags.APPS_ICON))
+            assertInsideEntryMargins(label, listOf(EntryTags.TITLE, EntryTags.COUNT, SecondScreenTags.APPS_ICON))
             assertTrue("$label: the grid is under the title", grid.top >= title.bottom)
             val icon = px(AppsGridDimens.appsGridIcon)
             val gap = px(PlumDimens.gridGapPortrait)
@@ -182,7 +208,27 @@ abstract class SecondScreenCatchUpBase(
             val rows = ((grid.height + gap) / (icon + gap)).toInt()
             assertEquals("$label: as many as fit", minOf(MAX_APP_ICONS, columns * rows), shown.size)
             shown.forEach { assertEquals("$label: icon size", icon, it.boundsInRoot.width, 0.5f) }
-            if (shown.isNotEmpty()) assertEquals("$label: left on the margin", bounds(SecondScreenTags.CARD).left + px(dimens.margin), shown.minOf { it.boundsInRoot.left }, 0.5f)
+            // The entry cards' margin (Recent, Favorites, a system), the title's left edge too.
+            if (shown.isNotEmpty()) assertEquals("$label: left on the margin", bounds(SecondScreenTags.CARD).left + px(EntryCardDimens.marginSide), shown.minOf { it.boundsInRoot.left }, 0.5f)
+            if (shown.size >= columns) assertEquals("$label: a whole row reaches the right margin", bounds(SecondScreenTags.CARD).right - px(EntryCardDimens.marginSide), shown.take(columns).maxOf { it.boundsInRoot.right }, 0.5f)
+            assertEquals("$label: title on the margin", bounds(SecondScreenTags.CARD).left + px(EntryCardDimens.marginSide), title.left, 0.5f)
+        }
+    }
+
+    @Test
+    fun theAppsCardLastRowKeepsTheColumnsOfTheRowsAbove() {
+        show(apps(MAX_APP_ICONS))
+        val grid = bounds(SecondScreenTags.APPS_GRID)
+        val icon = px(AppsGridDimens.appsGridIcon)
+        val gap = px(PlumDimens.gridGapPortrait)
+        val columns = ((grid.width + gap) / (icon + gap)).toInt()
+        val rows = ((grid.height + gap) / (icon + gap)).toInt()
+        assertTrue("$size: room for a second row ($rows rows, $columns columns)", rows >= 2 && columns >= 3)
+        show(apps(columns + columns - 1))
+        val shown = all(SecondScreenTags.APPS_ICON).sortedWith(compareBy({ it.boundsInRoot.top }, { it.boundsInRoot.left }))
+        assertEquals("$size: a whole row and a short one", columns + columns - 1, shown.size)
+        for (column in 0 until columns - 1) {
+            assertEquals("$size: column $column of the last row", shown[column].boundsInRoot.left, shown[columns + column].boundsInRoot.left, 0.5f)
         }
     }
 

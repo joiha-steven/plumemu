@@ -29,8 +29,8 @@ object PlumDimens {
     val peekWidthMin = 0.dp
     val peekWidthMax = 120.dp
 
-    /** How much of the list shows in the narrow details stop. */
-    val detailsStopListPeek = 56.dp
+    /** How much of the list shows in the narrow details stop: none, the list is wholly slid out. */
+    val detailsStopListPeek = 0.dp
 
     /** The years in that peek, from the screen edge. */
     val detailsStopYearInset = 12.dp
@@ -86,9 +86,15 @@ object PlumDimens {
     /** Between game rows (the board's list `gap: 2px`) and part of the row above's tap area: rows sit 40 apart at the minimum. */
     val listRowGap = 2.dp
 
-    /** A wide single-system list, right-aligned columns: the year (the board's 64 px), then the region (the board's 48 px, 6 dp wider for the raised tag). */
-    val rowYearColumn = 42.67.dp
-    val rowRegionColumn = 38.dp
+    /** A wide single-system list: between the year column and the region column (each as wide as its text, `GameRow`). */
+    val rowColumnGap = 10.dp
+
+    /** Added to a measured year or region column so a rounded width never wraps its text. */
+    val rowColumnSlack = 1.dp
+
+    /** The details facts' room between two lines: the least before facts leave (the largest text sizes), the most where the box has more. */
+    val factsLineGapMin = 2.dp
+    val factsLineGapMax = 6.dp
 
     /**
      * How far the games list reaches left into the gap beside the systems (and is wider by): the board's list starts 64 dp from the
@@ -109,13 +115,7 @@ object PlumDimens {
     val detailsDividerGapTight = 3.dp
     val detailsSubtitleGap = 2.67.dp
 
-    /** The least width the value of a facts cell drawn on one line (label, then value) keeps; the label gives way to an ellipsis first. */
-    val factsInlineValueMin = 48.dp
 
-    /** The rating's five dots (6 px = 4 dp, 3 px apart) and the gap from the number (8 px). */
-    val ratingDotSize = 4.dp
-    val ratingDotGap = 2.dp
-    val ratingNumberGap = 5.33.dp
 
     /** Between the top bar's place name and its count (the Covers bar's 16 px). */
     val placeCountGap = 10.67.dp
@@ -123,13 +123,6 @@ object PlumDimens {
     /** Inside a game row, left and right: the board's text start, 35 px (23.33 dp) in from the slab's left edge. */
     /** A game row's right inset: its year and region end here; only the text start moved to [gameRowPadding] (the slab's bar is inset from the left). */
     val gameRowEndPadding = 14.dp
-
-    /**
-     * The game row's right inset at the narrow details stop, where the list is slid out to its last 56 dp and the year is all that shows:
-     * 5 keeps a year whole inside the 56 dp that show, up to Huge; at Largest it is 3 (a Jost year at Bold is 52 dp there).
-     */
-    val gameRowPeekEndPadding = 5.dp
-    val gameRowPeekEndPaddingLargest = 3.dp
 
     val gameRowPadding = 23.33.dp
 

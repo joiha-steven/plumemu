@@ -19,6 +19,12 @@ class CollectionsScreenshotTest {
 
     @Test fun folders() = shot("collections_folders", CollectionsShotsBase.folders)
 
+    @Test fun foldersBuiltIn() = shot("collections_folders_built_in", CollectionsShotsBase.foldersBuiltIn)
+
+    @Test fun foldersEmpty() = shot("collections_folders_empty", CollectionsShotsBase.foldersEmpty)
+
+    @Test fun foldersNew() = shot("collections_folders_new", CollectionsShotsBase.foldersNew)
+
     @Test fun folderGrid() = shot("collections_folder_grid", CollectionsShotsBase.rpg, grid = true)
 
     @Test fun folderList() = shot("collections_folder_list", CollectionsShotsBase.rpg)

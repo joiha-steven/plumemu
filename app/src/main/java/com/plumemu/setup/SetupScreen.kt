@@ -475,7 +475,8 @@ private fun SetupHints(
         val onLetters = keys.page == KeyboardPage.Letters
         val actionWord = signInActionWord(form)
         val canPaste = PasteBoard.hasText
-        val hints = remember(onLetters, actionWord, letters, canPaste) { typingHints(onLetters, actionWord, hasShift = true, letters, canPaste) }
+        val fieldEmpty = form.typing?.fieldText?.isEmpty() == true
+        val hints = remember(onLetters, actionWord, letters, canPaste, fieldEmpty) { typingHints(onLetters, actionWord, hasShift = true, letters, canPaste, fieldEmpty) }
         TypingHintBar(hints, onAction, Modifier.testTag(SetupTags.TYPING_HINTS))
         return
     }

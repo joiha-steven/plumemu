@@ -44,10 +44,11 @@ abstract class GridHintBarBaselineBase {
             size = each
             compose.waitForIdle()
             val title = compose.onNodeWithTag(HomeTags.GRID_FOCUS_TITLE, useUnmergedTree = true).fetchSemanticsNode()
-            val back = compose.onNode(hasTestTag(HomeTags.hint(Action.Back)), useUnmergedTree = true)
-            val labelNode = compose.onNode(hasAnyAncestor(hasTestTag(HomeTags.hint(Action.Back))) and hasText("Back"), useUnmergedTree = true).fetchSemanticsNode()
-            back.assertExists()
-            assertEquals("$label $each: title baseline against the Back label's", firstBaseline(labelNode), firstBaseline(title), 0.5f)
+            // SELECT is the last hint to give way, so it is on every grid bar (B Back leaves first at 576).
+            val select = compose.onNode(hasTestTag(HomeTags.hint(Action.ToggleView)), useUnmergedTree = true)
+            val labelNode = compose.onNode(hasAnyAncestor(hasTestTag(HomeTags.hint(Action.ToggleView))) and hasText("List view"), useUnmergedTree = true).fetchSemanticsNode()
+            select.assertExists()
+            assertEquals("$label $each: title baseline against the SELECT label's", firstBaseline(labelNode), firstBaseline(title), 0.5f)
         }
     }
 }

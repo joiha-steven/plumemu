@@ -431,6 +431,8 @@ internal class AppGameActions(
         return outcome is AppGamesSyncOutcome.Synced
     }
 
+    override suspend fun showAppInfo(gameKey: String): AppToolResult = appInfoOf(graph, io, gameKey)
+
     override suspend fun backToAutomatic(gameKey: String) {
         graph.nameFixes.backToAutomatic(requireId(gameKey))
     }

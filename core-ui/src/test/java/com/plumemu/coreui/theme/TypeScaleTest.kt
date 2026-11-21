@@ -43,7 +43,7 @@ class TypeScaleTest {
                 TypeRole.PlaceCount to (11f to 500), // Jost, tabular figures
                 TypeRole.PlaceWords to (11f to 500),
                 TypeRole.DetailsLabel to (13f to 500), // sentence case, 11 / 600 tracked caps before the mono step
-                TypeRole.DetailsSubtitle to (11f to 500),
+                TypeRole.DetailsSubtitle to (13f to 500),
                 // The focused title on the grid's bar (RP5-3-grid-snes: 14, weight 600).
                 TypeRole.GridFocusTitle to (13f to 700),
                 // The grid's info line from the Covers board (24 px and 17 px over 1.5).

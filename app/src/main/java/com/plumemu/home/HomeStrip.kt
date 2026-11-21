@@ -37,9 +37,6 @@ import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.plumemu.R
-import com.plumemu.collections.BuiltInFolder
-import com.plumemu.collections.Folder
-import com.plumemu.collections.entryIdOf
 import com.plumemu.coreinput.Action
 import com.plumemu.settings.LocalButtonLetters
 import com.plumemu.coreinput.Column
@@ -96,7 +93,8 @@ internal fun HomeStrip(
             val entry = content.shownEntry(state.focus)
             val hasColumn =
                 if (content.showsGrid(entry, gridIds)) layout.widthClass == WidthClass.Narrow else listHasDetails(layout, content.hasBoxArt)
-            entry?.hasDetails == true && hasColumn && !(entry.kind == EntryKind.Apps && content.showsGrid(entry, gridIds))
+            // The folders page has no details stop, but its column shows the focused folder's card (FolderDetails).
+            (entry?.hasDetails == true || entry?.isFolderList == true) && hasColumn && !(entry.kind == EntryKind.Apps && content.showsGrid(entry, gridIds))
         }
     }
     // A wide screen's column never runs past the right margin: it takes the room left at this stop (homeDetailsFit).
@@ -232,7 +230,8 @@ private fun SystemsColumn(
                     val look by remember(state, index) { derivedStateOf { systemLook(state.focus, index, notices.emptyFocus.inButtons) } }
                     val tap = remember(index, onAction) { Modifier.tapItem(Column.Systems, index, onAction).testTag(HomeTags.system(index)) }
                     // The system's code stays in the peek as the names fade, in every sort; the open column keeps its counts.
-                    val edgeText = if (!systemsOpen) entryCode(entry) else numbers.formatSystemCount(entry.shownCount)
+                    // Collections with no collection made shows no number (it counts only the person's own; a bare 0 says nothing).
+                    val edgeText = if (!systemsOpen) entryCode(entry) else if (entry.isFolderList && entry.shownCount == 0) "" else numbers.formatSystemCount(entry.shownCount)
                     SystemRow(name = entryName(entry), count = edgeText, look = look, nameAlpha = nameAlpha, modifier = tap, bleedStart = LeftColumnDimens.systemLabelStart, hasDot = entry.id in newGameSystems, fadeCount = false, countHidden = countHidden)
                 }
             }
@@ -276,12 +275,7 @@ private fun GamesList(
         return
     }
     if (entry.rows.isEmpty() && entry.isFolder && entry.kind == EntryKind.Collections) {
-        val text =
-            when (entry.id) {
-                entryIdOf(Folder.BuiltIn(BuiltInFolder.MostPlayed, 0)) -> stringResource(R.string.collections_empty_most_played)
-                entryIdOf(Folder.BuiltIn(BuiltInFolder.RecentlyAdded, 0)) -> stringResource(R.string.collections_empty_recently_added)
-                else -> stringResource(R.string.collections_empty_own, stringResource(R.string.home_key_start))
-            }
+        val text = folderEmptyText(folderKindOf(entry.id) ?: FolderKind.Own)
         EmptyEntryLine(text, HomeTags.EMPTY_FOLDER, modifier.inStrip())
         return
     }

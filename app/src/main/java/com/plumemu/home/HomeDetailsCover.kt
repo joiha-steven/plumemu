@@ -29,6 +29,8 @@ internal fun CollaredDetailsCover(
     posterAspect: Float?,
     appPackage: String?,
     storedAspect: Float? = null,
+    /** Where the box stands in [size]: the mosaic puts a column at its own edge. */
+    alignment: Alignment = Alignment.BottomStart,
 ) {
     val tagged = Modifier.testTag(HomeTags.DETAILS_COVER)
     if (appPackage != null) {
@@ -45,8 +47,8 @@ internal fun CollaredDetailsCover(
     val box = if (aspect != null) fitInside(aspect, inner) else inner
     val corner = CollarDimens.coverBoxCorner
     val whole = DpSize(box.width + CollarSize.Cover.sidePadding * 2, box.height + CollarSize.Cover.topPadding + CollarSize.Cover.bottomPadding)
-    Box(tagged.size(size), contentAlignment = Alignment.BottomStart) {
-        Box(Modifier.shrinkInto(whole)) {
+    Box(tagged.size(size), contentAlignment = alignment) {
+        Box(Modifier.shrinkInto(whole).testTag(HomeTags.DETAILS_COVER_WHOLE)) {
             Box(Modifier.collar(CollarSize.Cover, corner, halo = false) { 0f }) {
                 CoverArt(
                     title = null,

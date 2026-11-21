@@ -889,5 +889,32 @@ class VersionRecordTests(unittest.TestCase):
             self.assertIsNone(convert.version_record(data, handle.read(), self.LATER))
 
 
+class EmulatorNameTests(unittest.TestCase):
+    """Play with lists these names: never a core file name, a package or one name twice in a system."""
+
+    def emulator(self, emulator_id, name, package="org.example.emu"):
+        return {"id": emulator_id, "name": name, "package": package}
+
+    def test_a_core_file_name_or_a_package_fails(self):
+        for record in (self.emulator("a", "RetroArch: bsnes2014_balanced"), self.emulator("b", "org.example.emu")):
+            with self.assertRaises(ConvertError):
+                convert.check_emulator_names([record], [])
+
+    def test_one_name_twice_in_a_system_fails_and_in_two_systems_passes(self):
+        emulators = [self.emulator("a", "Quake"), self.emulator("b", "Quake")]
+        convert.check_emulator_names(emulators, [{"id": "x", "emulators": ["a"]}, {"id": "y", "emulators": ["b"]}])
+        with self.assertRaises(ConvertError):
+            convert.check_emulator_names(emulators, [{"id": "x", "emulators": ["a", "b"]}])
+
+    def test_a_name_for_no_emulator_fails(self):
+        with self.assertRaises(ConvertError):
+            convert.apply_emulator_names([self.emulator("a", "A")], {"gone": "Gone"})
+
+    def test_the_shipped_names_are_clean(self):
+        with open(convert.DEFAULT_OUT, encoding="utf-8") as handle:
+            data = json.load(handle)
+        convert.check_emulator_names(data["emulators"], data["systems"])
+
+
 if __name__ == "__main__":
     unittest.main()

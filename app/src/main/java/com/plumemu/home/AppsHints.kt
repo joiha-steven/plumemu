@@ -21,6 +21,3 @@ internal fun appsGridHints(
         switchSystem,
         HintSpec(R.string.home_key_select, R.string.home_hint_list_view, Action.ToggleView),
     )
-
-/** When the bar is too narrow: Switch list gives way first (the system column is a tap away), then X Search, then START Menu, then B Back; SELECT and A stay. */
-internal val APPS_GRID_HINT_DROP_ORDER = listOf(Action.JumpLetterNext, Action.NextSystem, Action.Search, Action.Menu, Action.Back, Action.ToggleView)

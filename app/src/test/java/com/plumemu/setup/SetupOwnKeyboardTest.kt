@@ -86,10 +86,12 @@ internal class SetupOwnKeyboardTest : SetupKeyboardPathHarness() {
         assertTrue("the form opens with the tray up", isTrayUp)
         assertEquals(TextEntry.Keyboard, textEntry())
         assertTrue(hintText(Action.Menu).endsWith("Next"))
-        assertTrue(hintText(Action.Erase()).endsWith("Delete"))
+        // The username starts empty: B would put the tray away, so its hint says Back until there is text.
+        assertTrue(hintText(Action.Erase()).endsWith("Back"))
         // A types the focused key (q), Right then A the next (w); SELECT shifts one letter.
         press(confirm, KeyEvent.KEYCODE_DPAD_RIGHT, confirm, KeyEvent.KEYCODE_BUTTON_SELECT, confirm)
         assertEquals("qwW", form.username)
+        assertTrue(hintText(Action.Erase()).endsWith("Delete"))
         // L2 / R2 to the start and the end, L1 / R1 one character.
         press(KeyEvent.KEYCODE_BUTTON_L2, confirm, KeyEvent.KEYCODE_BUTTON_R2, KeyEvent.KEYCODE_BUTTON_L1, confirm, KeyEvent.KEYCODE_BUTTON_R1)
         assertEquals("wqwwW", form.username)

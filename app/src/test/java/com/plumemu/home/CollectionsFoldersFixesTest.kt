@@ -148,16 +148,30 @@ class CollectionsFoldersFixesTest {
     fun theFoldersHeaderCountsCollectionsNotRowsAndAFolderKeepsItsNameAndGames() {
         show(content())
         intoFolders(0)
-        assertTrue("4 collections (New collection… is not one)", hasText("4 collections", substring = true))
+        assertTrue("1 collection: only the own one counts", hasText("1 collection", substring = true))
         send(Action.Enter)
         assertTrue("the folder's name and its games", hasText("3 games", substring = true))
         assertFalse(hasText("collections", substring = true))
     }
 
     @Test
+    fun withNoCollectionMadeTheHeaderSaysSoNotZeroOrTheBuiltIns() {
+        show(HomeContent.of(rows("r", 3), rows("f", 1), emptyList(), listOf(SystemGames("snes", "Super Nintendo", rows("s", 1)))))
+        intoFolders(0)
+        assertTrue(hasText("No collections yet"))
+        assertFalse("not the built-ins' 3", hasText("3 collections", substring = true))
+    }
+
+    @Test
+    fun anEmptyFolderRowShowsNoCountBuiltInOrOwn() {
+        val rows = content(mostPlayed = 0, own = 0).entries.first { it.kind == EntryKind.Collections }.rows
+        assertEquals("Recent 3, Most played and the empty RPG blank, Recently added 2, New collection… none", listOf("3", "", "2", "", ""), rows.map { it.region })
+    }
+
+    @Test
     fun theEntrysCountIsTheFoldersNotNewCollection() {
         val one = HomeContent.of(rows("r", 1), rows("f", 1), emptyList(), listOf(SystemGames("snes", "Super Nintendo", rows("s", 1))), otherFolders = emptyList())
-        assertEquals(1, one.entries.first { it.kind == EntryKind.Collections }.shownCount)
+        assertEquals("Recent is not counted, nor New collection…", 0, one.entries.first { it.kind == EntryKind.Collections }.shownCount)
     }
 
     @Test
@@ -205,7 +219,7 @@ class CollectionsFoldersFixesTest {
     fun anEmptyMostPlayedShowsItsLine() = assertEmptyLine(content(), 1, HomeTags.EMPTY_FOLDER, "Games you play the longest show up here")
 
     @Test
-    fun anEmptyRecentlyAddedShowsItsLine() = assertEmptyLine(content(recentlyAdded = 0), 2, HomeTags.EMPTY_FOLDER, "Games added in the last 30 days show up here")
+    fun anEmptyRecentlyAddedShowsItsLine() = assertEmptyLine(content(recentlyAdded = 0), 2, HomeTags.EMPTY_FOLDER, "Games found after setup show up here for 30 days")
 
     @Test
     fun anEmptyOwnCollectionNamesTheStartKey() = assertEmptyLine(content(own = 0), 3, HomeTags.EMPTY_FOLDER, "Add games with START › Add to collection…")

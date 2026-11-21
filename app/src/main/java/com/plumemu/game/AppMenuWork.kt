@@ -12,6 +12,8 @@ import kotlinx.coroutines.launch
 internal class AppMenuWork(
     private val apps: AppActions,
     private val scope: CoroutineScope,
+    /** App info for an app game's row of the game menu (its key is a game id, not an Apps row id). */
+    private val gameInfo: suspend (gameKey: String) -> AppToolResult = { AppToolResult.Failed },
 ) {
     private var tool: Job? = null
 
@@ -36,7 +38,12 @@ internal class AppMenuWork(
         if (tool?.isActive == true) return // a quick second A must not start a second uninstall
         val app = open.game
         tool = scope.launch {
-            val result = if (command == PanelCommand.AppInfo) apps.showInfo(app.key) else apps.uninstall(app.key)
+            val result =
+                when {
+                    command != PanelCommand.AppInfo -> apps.uninstall(app.key)
+                    open.screen is PanelScreen.AppMenu -> apps.showInfo(app.key)
+                    else -> gameInfo(app.key)
+                }
             val message = appToolMessage(result, app.title)
             done(message?.let { OpenPanel(app, PanelScreen.Message(it), parent = open) })
         }

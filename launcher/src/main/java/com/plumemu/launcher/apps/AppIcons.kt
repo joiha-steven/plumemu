@@ -5,7 +5,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.util.LruCache
 import com.plumemu.launcher.AndroidLauncherLog
@@ -34,7 +33,7 @@ sealed interface AppIcon {
  * [load] suspends while the work runs on an I/O thread.
  */
 interface AppIcons {
-    /** [app]'s icon as a [sizePx] by [sizePx] bitmap; adaptive icons are drawn as Android shows them. */
+    /** [app]'s icon as a [sizePx] by [sizePx] bitmap; every icon wears Plumemu's one rounded-square shape ([AppIconShape]). */
     suspend fun load(app: LaunchableApp, sizePx: Int): AppIcon
 
     /**
@@ -184,13 +183,7 @@ internal class PackageManagerAppIcons(
         changes.update { it + 1 }
     }
 
-    private fun draw(drawable: Drawable, sizePx: Int): Bitmap {
-        val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
-        // An AdaptiveIconDrawable paints its background and foreground under the system mask itself.
-        drawable.setBounds(0, 0, sizePx, sizePx)
-        drawable.draw(Canvas(bitmap))
-        return bitmap
-    }
+    private fun draw(drawable: Drawable, sizePx: Int): Bitmap = AppIconShape.draw(drawable, sizePx)
 
     private fun failed(app: LaunchableApp, e: Exception): AppIcon {
         if (logged.add(app.packageName)) log.warn("apps: no icon for ${app.packageName} (${e.kind()})")

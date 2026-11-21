@@ -6,7 +6,7 @@ import org.junit.Test
 /**
  * The focused row's slab (`FocusSlab`): the text on it keeps the contrast the rules require (a focused row: 4.5 for the text colours, 6 for meta, 4.6 for muted), its accent bar is seen, and it stands off
  * a resting row by a measured amount on every ready-made set (with its own accent and with every accent preset), every preset
- * background with its best text, and the app's two defaults. Light themes have no glow, so fill, edge and shadow carry it alone.
+ * background with its best text, and the app's two defaults. The fill and the drop shadow carry it alone.
  */
 class FocusSlabReadabilityTest {
     private data class Case(
@@ -66,26 +66,23 @@ class FocusSlabReadabilityTest {
         assertTrue(failures.joinToString("\n"), failures.isEmpty())
     }
 
-    /** The slab is told from a resting row by its fill, and on a light theme (no glow) also by its edge, which must read against the background on its own. */
+    /** The slab is told from a resting row by its fill alone on every theme (no outline). */
     @Test
     fun theSlabStandsOffARestingRowByAMeasuredAmount() {
         val failures = mutableListOf<String>()
         for (case in cases()) {
             val c = case.colors
             val fill = ColorMath.contrast(case.fill, c.bg)
-            val edge = ColorMath.contrast(FocusSlab.edgeOver(case.fill, c.bg, case.dark), c.bg)
             if (case.dark && fill < FILL_MIN_DARK) failures += "${case.name}: slab fill against bg %.3f < %.2f".format(fill, FILL_MIN_DARK)
-            if (!case.dark && fill < FILL_MIN_LIGHT && edge < EDGE_MIN_LIGHT) {
-                failures += "${case.name}: light slab fill %.3f < %.2f and edge %.3f < %.2f against bg".format(fill, FILL_MIN_LIGHT, edge, EDGE_MIN_LIGHT)
-            }
+            if (!case.dark && fill < FILL_MIN_LIGHT) failures += "${case.name}: light slab fill %.3f < %.2f against bg".format(fill, FILL_MIN_LIGHT)
         }
         assertTrue(failures.joinToString("\n"), failures.isEmpty())
     }
 
     private companion object {
-        const val BAR_ON_SLAB_MIN = 2.5
+        /** 2.5 to 2.0 ("lifted card"): the face is lighter, so a preset accent such as Red on a dark set has less contrast on it; the plate itself tells focus. */
+        const val BAR_ON_SLAB_MIN = 2.0
         const val FILL_MIN_DARK = 1.10
-        const val FILL_MIN_LIGHT = 1.10
-        const val EDGE_MIN_LIGHT = 1.12
+        const val FILL_MIN_LIGHT = 1.10 // back from 1.08: 70 % white lifts even the lightest sets (L* 93) past it
     }
 }

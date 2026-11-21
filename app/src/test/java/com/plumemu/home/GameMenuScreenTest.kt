@@ -223,7 +223,7 @@ class GameMenuScreenTest {
         closedAtOnce.value = ClosedAtOnce(1, "snes-0", "Super Mario World", "Snes9x")
         compose.waitForIdle()
         assertTrue("names the emulator", isPanelOpen() && hasText("Snes9x closed right away"))
-        assertTrue("points to the game menu's Play with…", hasText("Play with…", substring = true))
+        assertTrue("offers another emulator itself", hasText("Play with…"))
         assertEquals("told once, then forgotten", listOf(1L), closedAtOnceShown)
         tap(GamePanelTags.row("ok"))
         assertEquals("a tap on OK closes it", false, isPanelOpen())

@@ -1,9 +1,6 @@
 package com.plumemu.coreui.components
 
 import android.graphics.Bitmap
-import android.graphics.Matrix
-import android.graphics.RadialGradient
-import android.graphics.Shader
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -11,10 +8,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -48,12 +43,8 @@ internal fun DrawScope.drawCssFace(
     val topLeft = Offset(topLeft0.x.roundToInt().toFloat(), topLeft0.y.roundToInt().toFloat())
     val size = Size(size0.width.roundToInt().toFloat(), size0.height.roundToInt().toFloat())
     val r = min(corner, min(size.width, size.height) / 2)
-    val brush = fill ?: if (face.stops.size > 1) Brush.verticalGradient(face.stops, startY = topLeft.y, endY = topLeft.y + size.height) else null
-    if (brush != null) {
-        drawRoundRect(brush, topLeft, size, CornerRadius(r), alpha = alpha)
-    } else if (face.stops.isNotEmpty()) {
-        drawRoundRect(face.stops[0], topLeft, size, CornerRadius(r), alpha = alpha)
-    }
+    // One flat face ([CssFace.fill], FlatSurface); [fill] is only for a track that shows a value (the hue slider's spectrum), never a surface.
+    if (fill != null) drawRoundRect(fill, topLeft, size, CornerRadius(r), alpha = alpha) else drawRoundRect(face.fill, topLeft, size, CornerRadius(r), alpha = alpha)
     drawCssShadows(face.shadows, topLeft, size, r, alpha)
 }
 
@@ -85,17 +76,16 @@ internal fun DrawScope.drawCssCap(
     corner: Float = min(size.width, size.height) / 2,
     press: Float = 0f,
     moveFace: Boolean = true,
-    restFill: Brush? = null,
 ) {
     val y = if (moveFace) cap.travel.toPx() * press else 0f
     val at = Offset(topLeft.x, topLeft.y + y)
-    if (press < 1f) drawCssFace(cap.rest, at, size, corner, 1f - press, restFill)
+    if (press < 1f) drawCssFace(cap.rest, at, size, corner, 1f - press)
     if (press > 0f) drawCssFace(cap.down, at, size, corner, press)
 }
 
 /**
- * The LIP of [seat] in the box at [topLeft] of [size]: `radial-gradient(ellipse 120% H at 50% 0%, ...)` (H = [SeatLook.lipEllipseHeight]) and
- * its six (Paper five) layers, on the whole-pixel box its layers are made for.
+ * The LIP of [seat] in the box at [topLeft] of [size]: one flat colour ([SeatLook.lipFill], the mean of the board's radial gradient) and its
+ * layers, on the whole-pixel box its layers are made for.
  */
 internal fun DrawScope.drawLip(
     seat: SeatLook,
@@ -105,8 +95,7 @@ internal fun DrawScope.drawLip(
 ) {
     val at = Offset(topLeft.x.roundToInt().toFloat(), topLeft.y.roundToInt().toFloat())
     val box = Size(size.width.roundToInt().toFloat(), size.height.roundToInt().toFloat())
-    val brush = CssImages.lipBrush(seat, box)
-    translate(at.x, at.y) { drawRoundRect(brush, Offset.Zero, box, CornerRadius(min(corner, min(box.width, box.height) / 2))) }
+    drawRoundRect(seat.lipFill, at, box, CornerRadius(min(corner, min(box.width, box.height) / 2)))
     drawCssShadows(seat.lipShadows, at, box, corner)
 }
 
@@ -378,57 +367,6 @@ internal object CssImages {
         return (0.5f - d).coerceIn(0f, 1f)
     }
 
-    private data class BrushKey(val w: Int, val h: Int, val stops: List<Int>, val ellipse: Int)
-
-    private val brushes = object : LinkedHashMap<BrushKey, ShaderBrush>(8, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<BrushKey, ShaderBrush>?) = size > MAX_IMAGES
-    }
-
-    /** The LIP's elliptical radial gradient for a box of [size] at 0: centre at the top middle, 120 % wide and [SeatLook.lipEllipseHeight] high. */
-    fun lipBrush(
-        seat: SeatLook,
-        size: Size,
-    ): ShaderBrush {
-        val key = BrushKey(size.width.roundToInt(), size.height.roundToInt(), seat.lipStops.map { it.toArgb() }, (seat.lipEllipseHeight * 100).roundToInt())
-        synchronized(brushes) {
-            brushes[key]?.let { return it }
-            val rx = max(1f, size.width * LIP_ELLIPSE_WIDTH)
-            val ry = max(1f, size.height * seat.lipEllipseHeight)
-            val shader = RadialGradient(size.width / 2f, 0f, rx, seat.lipStops.map { it.toArgb() }.toIntArray(), LIP_STOPS, Shader.TileMode.CLAMP)
-            shader.setLocalMatrix(Matrix().apply { setScale(1f, ry / rx, size.width / 2f, 0f) })
-            return ShaderBrush(shader).also { brushes[key] = it }
-        }
-    }
-
-    /**
-     * The RAISED chip's `radial-gradient(ellipse at 50% 18%, top 0%, bottom 85%)` for a box of [size] at 0: the default farthest-corner ellipse
-     * (radii sqrt(2) times the distances to the far sides), clamped past 85 %.
-     */
-    fun chipBrush(
-        top: Color,
-        bottom: Color,
-        size: Size,
-    ): ShaderBrush {
-        val key = BrushKey(size.width.roundToInt(), size.height.roundToInt(), listOf(top.toArgb(), bottom.toArgb()), CHIP_ELLIPSE)
-        synchronized(brushes) {
-            brushes[key]?.let { return it }
-            val cx = size.width / 2f
-            val cy = size.height * CHIP_CENTRE_Y
-            val rx = max(1f, cx * SQRT2)
-            val ry = max(1f, (size.height - cy) * SQRT2)
-            val shader = RadialGradient(cx, cy, rx, intArrayOf(top.toArgb(), bottom.toArgb()), CHIP_STOPS, Shader.TileMode.CLAMP)
-            shader.setLocalMatrix(Matrix().apply { setScale(1f, ry / rx, cx, cy) })
-            return ShaderBrush(shader).also { brushes[key] = it }
-        }
-    }
-
-    private const val CHIP_ELLIPSE = -1
-    private const val CHIP_CENTRE_Y = 0.18f
-    private const val SQRT2 = 1.4142135f
-    private val CHIP_STOPS = floatArrayOf(0f, 0.85f)
-    private val LIP_STOPS = floatArrayOf(0f, 0.45f, 1f)
-    private const val LIP_ELLIPSE_WIDTH = 1.2f
-    private const val MAX_IMAGES = 48
     private const val MAX_LOOKS = 8
     private const val REACH = 3f
     private const val STRETCH_MARGIN = 4

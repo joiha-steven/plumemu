@@ -16,6 +16,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.DpRect
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.CardDimens
+import com.plumemu.coreui.theme.FlatSurface
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
@@ -205,10 +206,10 @@ class GamePanelV2Test {
     private fun lum(c: androidx.compose.ui.graphics.Color) = 0.299f * c.red + 0.587f * c.green + 0.114f * c.blue
 
     /**
-     * Opening the panel changes nothing of the page except the card's own shadow, which depends on the distance from the card alone: left of
-     * the card, down its height, each column changes smoothly (the shadow's own slope; the list's year and region are not drawn under a card, so no glyph
-     * is cut and no band or tint crosses the page), and 44 dp out the page is as it was before the card opened (no fade or scrim over it). The focused
-     * row changes its own look when a panel opens: its band is left out.
+     * Opening the panel lays one flat scrim over the page (the page's colour at [FlatSurface.SCRIM_ALPHA]): left of the card,
+     * past its shadow's reach, every pixel is what was there moved that share toward the page, evenly (no band, tint or fade crosses
+     * it), so the bare page stays the page. The focused row changes its own look when a panel opens: its band is left out, and it is
+     * one row high.
      */
     private fun assertEvenBehindTheCard(paper: Boolean) {
         show(null, settings(TextSize.Large, paper))
@@ -217,21 +218,18 @@ class GamePanelV2Test {
         val after = compose.onRoot().captureToImage().toPixelMap()
         compose.saveShot(if (paper) "scrim_paper" else "scrim_graphite")
         val card = node(GamePanelTags.CARD).boundsInRoot
-        val page = before[2, (card.top + card.height / 2).toInt()]
-        val changed = (0 until before.height).filter { y -> (200 until 700).any { x -> abs(lum(before[x, y]) - lum(after[x, y])) > 0.03f } }
-        val bandTop = changed.min() - 4 * d.toInt()
-        val bandBottom = changed.max() + 4 * d.toInt()
+        val bg = before[2, (card.top + card.height / 2).toInt()]
+        val share = FlatSurface.SCRIM_ALPHA
+        fun expected(c: androidx.compose.ui.graphics.Color) = androidx.compose.ui.graphics.Color(c.red + (bg.red - c.red) * share, c.green + (bg.green - c.green) * share, c.blue + (bg.blue - c.blue) * share)
+        val right = (card.left - 16 * d).toInt()
+        val rows = (card.top + 4 * d).toInt().until((card.bottom - 4 * d).toInt())
+        val off = rows.filter { y -> (0 until right step 3).any { x -> abs(lum(expected(before[x, y])) - lum(after[x, y])) > 0.03f } }
         val worst = StringBuilder()
-        for (away in (1..44)) {
-            val x = (card.left - away * d).toInt()
-            val column = (card.top + 30 * d).toInt().until((card.bottom - 30 * d).toInt()).filter { it !in bandTop..bandBottom }.map { lum(after[x, it]) }
-            val step = column.zipWithNext { a, b -> abs(a - b) }.max()
-            if (step > 0.01f) worst.append(" ${away}dp: the column jumps by $step between neighbours (a glyph, band or tint);")
-        }
+        if (off.isNotEmpty() && off.max() - off.min() > 60 * d) worst.append(" rows ${off.min()}..${off.max()} are not the scrim over what was there (more than the focused row);")
         val far = (card.left - 44 * d).toInt()
         val pageNow = lum(after[far, (card.top + card.height / 2).toInt()])
-        if (abs(pageNow - lum(page)) > 0.02f) worst.append(" 44dp out the page is $pageNow, it was ${lum(page)} (a fade or scrim);")
-        assertTrue("the page beside the card is not as it was apart from the card's own shadow:$worst", worst.isEmpty())
+        if (abs(pageNow - lum(bg)) > 0.02f) worst.append(" 44dp out the bare page is $pageNow, it was ${lum(bg)} (the scrim is the page's own colour);")
+        assertTrue("the page beside the card is not evenly dimmed by the one scrim:$worst", worst.isEmpty())
     }
 
     @Test

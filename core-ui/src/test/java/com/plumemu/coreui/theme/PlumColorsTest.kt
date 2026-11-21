@@ -19,10 +19,11 @@ class PlumColorsTest {
 
     @Test
     fun graphiteMatchesTheDesignTable() {
+        // Dark sets: meta and muted read on the slab's lifted face (was #AAA7A1 / #94928D on sel; "lifted card").
         val expected =
             mapOf(
                 "bg" to "#111214", "text" to "#EBE7DD", "strong" to "#FFFFFF", "sel" to "#272728",
-                "sel2" to ToneLadder.level(Rgb(0x111214), ToneLadder.SURFACE).toHex(), "text2" to "#CCC9C1", "meta" to "#AAA7A1", "muted" to "#94928D",
+                "sel2" to ToneLadder.level(Rgb(0x111214), ToneLadder.SURFACE).toHex(), "text2" to "#CCC9C1", "meta" to "#B7B4AD", "muted" to "#A19F99",
                 "chip" to "#646360", "accent" to "#DA4655", "onAccent" to "#000000",
             )
         assertEquals(expected, hexes(graphite))
@@ -167,7 +168,8 @@ class PlumColorsTest {
         // Values from the board's reference code with bg #1A1020.
         assertEquals("#2F2633", plum.sel.toHex())
         assertEquals("#CEC9C3", plum.text2.toHex())
-        assertEquals("#979191", plum.muted.toHex())
+        // Requirement change ("lifted card"): meta and muted are reached on the slab's lifted face where that is the harder (dark sets), so they sit lighter (Plum muted was #979191).
+        assertEquals("#A49E9D", plum.muted.toHex())
         // Tinted: red and blue above green, like the plum background.
         assertTrue(plum.sel.red > plum.sel.green && plum.sel.blue > plum.sel.green)
     }

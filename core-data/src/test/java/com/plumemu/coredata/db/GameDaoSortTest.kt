@@ -72,15 +72,39 @@ class GameDaoSortTest {
     }
 
     @Test
-    fun recentlyAddedPutsTheNewestEntryFirstAndALaterBatchAboveTheEarlier() = runTest {
-        // The setUp batch entered z, a, m: newest is Mario, then Actraiser, then Zelda.
-        assertEquals(listOf("Mario", "Actraiser", "Zelda"), snes(SortGamesSetting.RecentlyAdded))
-        db.scanDao().applyBatch(ScanBatch(folderId, systems = emptyList(), newGames = listOf(game(folderId, "b", title = "Bubble"))))
-        assertEquals(listOf("Bubble", "Mario", "Actraiser", "Zelda"), snes(SortGamesSetting.RecentlyAdded))
+    fun recentlyAddedPutsTheNewestBatchFirstAndOneBatchByName() = runTest {
+        // The setUp batch is one scan: its games tie on added_at and read by name, never in the
+        // order the scan happened to insert them (z, a, m).
+        assertEquals(listOf("Actraiser", "Mario", "Zelda"), snes(SortGamesSetting.RecentlyAdded))
+        db.scanDao().applyBatch(ScanBatch(folderId, newGames = listOf(game(folderId, "b", title = "Bubble")), addedAt = Long.MAX_VALUE / 2))
+        assertEquals(listOf("Bubble", "Actraiser", "Mario", "Zelda"), snes(SortGamesSetting.RecentlyAdded))
         // Hiding and showing again keeps the entry's place (rows are updated in place).
         db.gameDao().setHidden(idOf("m"), true)
         db.gameDao().setHidden(idOf("m"), false)
-        assertEquals(listOf("Bubble", "Mario", "Actraiser", "Zelda"), snes(SortGamesSetting.RecentlyAdded))
+        assertEquals(listOf("Bubble", "Actraiser", "Mario", "Zelda"), snes(SortGamesSetting.RecentlyAdded))
+    }
+
+    @Test
+    fun recentlyAddedListsTheSetupLibraryByNameAfterLaterAdditions() = runTest {
+        // Setup's scan stamps no added_at and inserts in file name order: "newest entry first" by
+        // row id read the whole library Z to A.
+        db.close()
+        db = inMemoryDatabase()
+        folderId = db.scanDao().insertFolder(RomFolderEntity(treeUri = "t", displayName = "ROMs", addedAt = 0))
+        db.scanDao().applyBatch(
+            ScanBatch(
+                folderId,
+                systems = listOf(SystemEntity("snes", "Super Nintendo")),
+                newGames = listOf(game(folderId, "a", title = "Actraiser"), game(folderId, "m", title = "Mario"), game(folderId, "z", title = "Zelda")),
+                addedAt = null,
+            ),
+        )
+        assertEquals(listOf("Actraiser", "Mario", "Zelda"), snes(SortGamesSetting.RecentlyAdded))
+        db.scanDao().applyBatch(ScanBatch(folderId, newGames = listOf(game(folderId, "c", title = "Contra")), addedAt = 1_000))
+        db.scanDao().applyBatch(
+            ScanBatch(folderId, newGames = listOf(game(folderId, "y", title = "Yoshi"), game(folderId, "b", title = "Bubble")), addedAt = 2_000),
+        )
+        assertEquals(listOf("Bubble", "Yoshi", "Contra", "Actraiser", "Mario", "Zelda"), snes(SortGamesSetting.RecentlyAdded))
     }
 
     @Test

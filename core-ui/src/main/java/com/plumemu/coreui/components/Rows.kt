@@ -108,11 +108,8 @@ fun GameRowLook.composedAs(): GameRowLook =
  * (and the star), in `meta`, [PlumDimens.masteredMarkSize] square; like the star, a long title is cut before it.
  *
  * [region] given (maybe empty; a wide single system's list) puts [trailing], the year, and the region in the board's two right-aligned
- * columns ([PlumDimens.rowYearColumn], [PlumDimens.rowRegionColumn], growing with the text size so a region keeps its line); null keeps the one trailing text.
+ * columns, each as wide as its Mono text (four digits; the list's longest code, [LocalRowColumns]), [PlumDimens.rowColumnGap] apart; null keeps the one trailing text.
  * Either way a year is set in `rowYear` and a region or system code in `tag` (tracked caps); [trailingIsCode] says the one text is a code.
- *
- * [endPadding] is the right inset, read while laying out (the narrow details stop shows only the year of a slid-out row and passes
- * [PlumDimens.gameRowPeekEndPadding]): a change of stop re-lays out the rows and recomposes none.
  *
  * [endHidden] is read while drawing: true leaves the year and region (the right-hand text) undrawn and out of semantics, so a card over
  * the list's right part never cuts them; it takes no room back (nothing is laid out again) and recomposes nothing.
@@ -132,7 +129,6 @@ fun GameRow(
     subtitle: String = "",
     masteredLabel: String? = null,
     region: String? = null,
-    endPadding: () -> Dp = DefaultRowEndPadding,
     trailingIsCode: Boolean = false,
     endHidden: () -> Boolean = NeverHidden,
 ) {
@@ -150,7 +146,7 @@ fun GameRow(
                     .testTag(GAME_ROW_DRAWN_TAG)
                     .focusPill(focused)
                     .padding(start = PlumDimens.gameRowPadding)
-                    .endInset(endPadding),
+                    .endInset(DefaultRowEndPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
                 // The title and the year share one baseline (the year is smaller, so centring each on its own put
@@ -185,12 +181,14 @@ private inline fun RowScope.RowEnd(
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
-    val scale = PlumTheme.layout.textScale
     val gone = Modifier.hiddenWhile(hidden).shiftedBy(LocalRowEndShift.current)
     if (region != null) {
+        // Each column is as wide as its Mono text needs (a year's four digits, the list's longest region code), so the title keeps the rest.
+        val columns = LocalRowColumns.current ?: rememberRowColumns(region)
         Spacer(Modifier.width(PlumDimens.rowTrailingGap))
-        BasicText(text = trailing, style = yearStyle(look, colors, type).copy(textAlign = TextAlign.End), maxLines = 1, modifier = gone.width(PlumDimens.rowYearColumn * scale).alignBy(LastBaseline))
-        BasicText(text = region, style = codeStyle(look, colors, type).copy(textAlign = TextAlign.End), maxLines = 1, modifier = gone.width(PlumDimens.rowRegionColumn * scale).alignBy(LastBaseline))
+        BasicText(text = trailing, style = yearStyle(look, colors, type).copy(textAlign = TextAlign.End), maxLines = 1, modifier = gone.width(columns.year).alignBy(LastBaseline))
+        Spacer(Modifier.width(PlumDimens.rowColumnGap))
+        BasicText(text = region, style = codeStyle(look, colors, type).copy(textAlign = TextAlign.End), maxLines = 1, modifier = gone.width(columns.region).alignBy(LastBaseline))
     } else if (trailing.isNotEmpty()) {
         Spacer(Modifier.width(PlumDimens.rowTrailingGap))
         BasicText(text = trailing, style = if (isCode) codeStyle(look, colors, type) else yearStyle(look, colors, type), maxLines = 1, modifier = gone.alignBy(LastBaseline))

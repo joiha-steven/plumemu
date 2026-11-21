@@ -19,8 +19,7 @@ import com.plumemu.coreinput.Column as CoreColumn
 
 /**
  * Recent, Favorites and Search rows show the system's short name at every stop; only the narrow
- * details stop (list slid out to 56 dp) swaps it for the year or region (docs/design/rules.md,
- * right-hand column). On a wide screen the details sit beside the list at full width, so focus on
+ * details stop slides the list out wholly, so none of its text is on screen. On a wide screen the details sit beside the list at full width, so focus on
  * them must not hide the tag (AYN Thor).
  */
 abstract class RecentSystemTagStopBase {
@@ -44,6 +43,14 @@ abstract class RecentSystemTagStopBase {
         // The row must be there, or a count of 0 would pass at the details stop without a hidden tag.
         compose.onNodeWithTag(HomeTags.game(1), useUnmergedTree = true).assertExists()
         return compose.onAllNodes(hasText("GBA") and hasAnyAncestor(hasTestTag(HomeTags.game(1))), useUnmergedTree = true).fetchSemanticsNodes().size
+    }
+
+    /** At the narrow details stop the list is wholly off screen: every tag node of the row, if composed, ends at the screen edge. */
+    protected fun checkNoTagOnScreenAtDetailsStop() {
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { HomeAt(FakeHomeContent.mixedSystems(true), toDetails) } }
+        compose.waitForIdle()
+        val nodes = compose.onAllNodes(hasText("GBA") and hasAnyAncestor(hasTestTag(HomeTags.game(1))), useUnmergedTree = true).fetchSemanticsNodes()
+        check(nodes.all { it.boundsInRoot.right <= 2f }) { "a system tag is on screen at the details stop: ${nodes.map { it.boundsInRoot }}" }
     }
 
     protected fun gamesFocusedShowsTags(withBoxArt: Boolean) {
@@ -83,5 +90,5 @@ class RecentSystemTagStop768Test : RecentSystemTagStopBase() {
 class RecentSystemTagStop576Test : RecentSystemTagStopBase() {
     @Test fun gamesFocusedBoxArt() = gamesFocusedShowsTags(true)
 
-    @Test fun detailsStopHidesTheTag() = detailsFocusedShowsTags(true, 0)
+    @Test fun detailsStopShowsNoTagOnScreen() = checkNoTagOnScreenAtDetailsStop()
 }

@@ -640,6 +640,39 @@ NOT_DOWNLOAD_HOSTS = {
 FIRST_ORDER = ["snes", "gba", "psx", "psp", "nds", "gc", "megadrive", "nes", "gb", "gbc", "n64", "ps2",
                "arcade"]
 
+# The name shown for an emulator where the sources give none fit to show: a package name, a
+# libretro core file name ("bsnes2014_balanced"), a release channel ("Snes9x - Current"), a slip
+# ("emir" for Ymir) or one name for several cores of a system (the vitaQuake 2 mission packs). By
+# emulator id; an id no emulator has fails. Only names the app or core's own project uses
+# (com.androidemu.gens is Gensoid, the Genesis emulator of the androidemu series): the androidemu
+# Atari and Game Gear builds keep their package (no source names them; check_emulator_names lets
+# exactly those two through).
+EMULATOR_NAMES = {
+    "com-androidemu-gens": "Gensoid",
+    "com-fastemulator-gbafree": "My Boy! Free",
+    "com-fastemulator-gbcfree": "My OldBoy! Free",
+    "com-reicast-emulator": "Reicast",
+    "paulscode-android-mupen64plusae": "Mupen64Plus AE (Paulscode)",
+    "retroarch-bsnes-cplusplus98": "RetroArch: bsnes C++98",
+    "retroarch-bsnes-mercury-balanced": "RetroArch: bsnes-mercury Balanced",
+    "retroarch-bsnes-mercury-performance": "RetroArch: bsnes-mercury Performance",
+    "retroarch-bsnes2014-accuracy": "RetroArch: bsnes 2014 Accuracy",
+    "retroarch-bsnes2014-balanced": "RetroArch: bsnes 2014 Balanced",
+    "retroarch-bsnes2014-performance": "RetroArch: bsnes 2014 Performance",
+    "retroarch-higan-sfc": "RetroArch: higan Accuracy",
+    "retroarch-higan-sfc-balanced": "RetroArch: higan Balanced",
+    "retroarch-mame2003-midway": "RetroArch: MAME 2003 Midway",
+    "retroarch-mamearcade": "RetroArch: MAME",
+    "retroarch-mednafen-gba": "RetroArch: Beetle GBA",
+    "retroarch-mednafen-snes": "RetroArch: Beetle bsnes",
+    "retroarch-mupen64plus-next-gles2": "RetroArch: Mupen64Plus-Next GLES2",
+    "retroarch-snes9x": "RetroArch: Snes9x",
+    "retroarch-ymir": "RetroArch: Ymir",
+    "retroarch-vitaquake2-rogue": "RetroArch: vitaQuake 2 Ground Zero",
+    "retroarch-vitaquake2-xatrix": "RetroArch: vitaQuake 2 The Reckoning",
+    "retroarch-vitaquake2-zaero": "RetroArch: vitaQuake 2 Zaero",
+}
+
 # Builds of an ES-DE emulator under another package name that ES-DE's find rules do not list, by
 # find-rule key (lowercase): (package, activity), added after ES-DE's own entries as variants. Each
 # keeps the emulator's launch, so only builds that start games the same way belong here. The

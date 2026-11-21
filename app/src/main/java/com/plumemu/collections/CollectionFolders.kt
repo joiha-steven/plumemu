@@ -26,8 +26,8 @@ fun foldersOf(recentCount: Int, mostPlayedCount: Int, recentlyAddedCount: Int, o
         Folder.BuiltIn(BuiltInFolder.RecentlyAdded, recentlyAddedCount),
     ) + own.sortedWith(compareBy({ it.position }, { it.id })).map { Folder.Own(it.id, it.name, it.gameCount) } + Folder.NewCollection
 
-/** The number in the header ("5 collections"): every folder but New collection. */
-fun collectionCount(folders: List<Folder>): Int = folders.count { it !is Folder.NewCollection }
+/** The number in the header ("2 collections", "No collections yet"): the person's own collections only, never the built-ins or New collection. */
+fun collectionCount(folders: List<Folder>): Int = folders.count { it is Folder.Own }
 
 /** The id a folder's list or grid choice is remembered under (and telemetry never sees a name); null for New collection. */
 fun entryIdOf(folder: Folder): String? =

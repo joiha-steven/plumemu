@@ -76,7 +76,8 @@ internal fun SettingsHints(
         val onLetters = field.typing.fieldKeys.keys.page == KeyboardPage.Letters
         val hasShift = field.typing.fieldKeys.keys.hasShift
         val canPaste = PasteBoard.hasText
-        val hints = remember(onLetters, field.actionWord, hasShift, letters, canPaste) { typingHints(onLetters, field.actionWord, hasShift, letters, canPaste) }
+        val fieldEmpty = field.typing.fieldText.isEmpty()
+        val hints = remember(onLetters, field.actionWord, hasShift, letters, canPaste, fieldEmpty) { typingHints(onLetters, field.actionWord, hasShift, letters, canPaste, fieldEmpty) }
         TypingHintBar(hints, onHint, Modifier.testTag(SettingsTags.TYPING_HINTS))
         return
     }

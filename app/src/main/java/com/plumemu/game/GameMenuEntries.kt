@@ -12,7 +12,7 @@ import com.plumemu.coredata.settings.AppsScreen
 internal enum class GameMenuEntryId { Play, PlayWith, OtherVersions, Favorite, SortBy, AddToCollection, Name, FixBoxArt, Achievements, Info, RemoveFromRecent, RemoveFromCollection, Hide }
 
 /** Stable ids of the app-only entries, in an installed app's game menu and the Apps entry's menu. */
-internal enum class AppKindEntryId { ShowAsGame, ShowAsPort, NotAGame }
+internal enum class AppKindEntryId { AppInfo, ShowAsGame, ShowAsPort, NotAGame }
 
 /** Stable ids of the Name… sub-panel's entries. */
 internal enum class NameEntryId { FixName, OwnName, NotAGame, BackToAutomatic }
@@ -67,7 +67,12 @@ internal fun gameMenuEntries(facts: GameFacts): List<PanelRow> {
         if (facts.isAppGame && facts.isPortApp) PanelRow(AppKindEntryId.ShowAsGame.name, UiText.Res(R.string.app_menu_show_as_game), PanelCommand.SetAppKind(AppKind.GAME)) else null,
         if (facts.isAppGame && !facts.isPortApp) PanelRow(AppKindEntryId.ShowAsPort.name, UiText.Res(R.string.app_menu_show_as_port), PanelCommand.SetAppKind(AppKind.PORT)) else null,
         if (facts.isAppGame) PanelRow(AppKindEntryId.NotAGame.name, UiText.Res(R.string.game_menu_not_a_game), PanelCommand.AskAppNotAGame) else null,
-        PanelRow(GameMenuEntryId.Info.name, UiText.Res(R.string.game_menu_info), PanelCommand.OpenInfo),
+        // An app game's details are Android's own page (uninstall, clear cache); Plumemu's Info panel is for files.
+        if (facts.isAppGame) {
+            PanelRow(AppKindEntryId.AppInfo.name, UiText.Res(R.string.app_menu_info), PanelCommand.AppInfo)
+        } else {
+            PanelRow(GameMenuEntryId.Info.name, UiText.Res(R.string.game_menu_info), PanelCommand.OpenInfo)
+        },
         // Only a menu opened from Recent; right before Hide, the other way to take a game off a list.
         if (facts.canRemoveFromRecent) PanelRow(GameMenuEntryId.RemoveFromRecent.name, UiText.Res(R.string.game_menu_remove_from_recent), PanelCommand.RemoveFromRecent) else null,
         // Only a menu opened inside an own collection (the built-in folders have none).

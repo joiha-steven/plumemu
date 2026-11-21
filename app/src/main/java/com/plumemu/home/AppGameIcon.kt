@@ -19,7 +19,7 @@ import com.plumemu.coreui.theme.AppsGridDimens
 /**
  * An app game's Android icon, centred in [size] (the details column's cover slot, the second screen's art slot), at
  * [AppsGridDimens.appGameDetailsIcon] but never larger than the slot's shorter side. While it loads the place stays empty;
- * an app without a usable icon shows the round first-letter stand-in, as the Apps grid does.
+ * an app without a usable icon shows the rounded-square first-letter stand-in, as the Apps grid does.
  */
 @Composable
 internal fun AppGameIcon(
@@ -45,5 +45,5 @@ internal fun AppGameIcon(
     }
 }
 
-/** A large stand-in disc carries its letter at this share of its diameter. */
+/** A large stand-in tile carries its letter at this share of its side. */
 internal const val STAND_IN_LETTER_SHARE = 0.45f

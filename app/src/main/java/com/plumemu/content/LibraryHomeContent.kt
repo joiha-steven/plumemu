@@ -154,6 +154,7 @@ class LibraryHomeContent(
             showApps = showApps,
             hiddenSystems = hiddenSystems,
             sortedByName = order == SortGamesSetting.Name,
+            otherSort = order.takeIf { it != SortGamesSetting.Name },
         )
 
     /**

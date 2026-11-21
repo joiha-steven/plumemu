@@ -76,11 +76,11 @@ class PlumComposeColors private constructor(
     /** The focused row's slab: every CSS layer ([FocusSlab]); the accent bar and the glow are drawn from [accent] and [slabGlow]. */
     val slab: SlabLook get() = tokens.value.slab
 
+    /** The flat scrim behind a raised overlay card: the page at [FlatSurface.SCRIM_ALPHA]. */
+    val scrim: Color get() = bg.copy(alpha = FlatSurface.SCRIM_ALPHA)
+
     /** The raised card of the game panel and its questions: fill, edge and shadow ([RaisedCard]). */
     val card: CardLook get() = tokens.value.card
-
-    /** The glass tile of the second screen (gradient, edge, foot shade; [GlassTile]). */
-    val glass: GlassLook get() = tokens.value.glass
 
     /** The rule between a card's parts and the stub of an empty column ([ToneLadder.line]): [ToneLadder.LINE] of L* off the page toward the text. */
     val line: Color get() = tokens.value.line
@@ -196,7 +196,6 @@ class PlumComposeColors private constructor(
         val slab: SlabLook,
         val card: CardLook,
         val dark: Boolean = true,
-        val glass: GlassLook,
         val line: Color,
         val meterTrack: Color,
         val playedBar: Color,
@@ -279,7 +278,6 @@ class PlumComposeColors private constructor(
                     slab = SlabLook.of(tokens.bg, tokens.text, dark),
                     card = CardLook.of(tokens.bg, tokens.text, dark),
                     dark = dark,
-                    glass = GlassLook.of(tokens.bg, dark),
                     line = ToneLadder.line(tokens.bg, tokens.text).toComposeColor(),
                     meterTrack = MeterTrackToken.of(tokens.bg, dark),
                     playedBar = PlayedBarToken.of(tokens.bg, dark),

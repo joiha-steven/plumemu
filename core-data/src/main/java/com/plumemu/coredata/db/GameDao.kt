@@ -19,7 +19,7 @@ abstract class GameDao {
      * last played puts the games never played after the others, by sort name. By year puts the
      * oldest first (the year ScreenScraper gave, [YEAR_ORDER]) and the games with no year after, by sort name.
      * Most played puts the most play time first, games with none after, by sort name. Recently
-     * added puts the newest library entry first ([ADDED_ORDER]). By rating puts the highest
+     * added puts the newest scan batch first, the setup library last, by name ([ADDED_ORDER]). By rating puts the highest
      * ScreenScraper rating first ([RATING_ORDER]) and the games with none after. Every order ends
      * on sort name, then id.
      */
@@ -277,12 +277,12 @@ abstract class GameDao {
         const val PLAYED_ORDER = "CASE WHEN play.total_seconds > 0 THEN -play.total_seconds ELSE 0 END"
 
         /**
-         * Newest library entry first. `game.id` is the order rows entered the library (rows are
-         * updated in place by rescans; a moved file gets a temporary pending row until finishScan
-         * merges it back to the old id, so during a scan a moved game can briefly come first),
-         * so it stands for "added" without a stored time; the games of one scan batch are told apart by it too, so there are no ties.
+         * Newest scan batch first, by the time it stamped (`added_at`); the games one batch added
+         * tie and the caller's `game.sort_name` orders them. The first scan's games (setup, Reset
+         * library) carry no time and come last, by name: ordering by row id instead read a whole
+         * library Z to A, because the first scan inserts files in name order.
          */
-        const val ADDED_ORDER = "game.id DESC"
+        const val ADDED_ORDER = "game.added_at IS NULL, game.added_at DESC"
 
         const val LIST_SCRAPE_KEY = ScrapedGameDao.SCRAPE_KEY + " AS scrape_key"
     }

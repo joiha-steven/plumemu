@@ -6,8 +6,7 @@ import org.junit.Test
 
 /**
  * The slab's values and the raised card's measured V2 board values (Parts sheets, 1 board px = 1/1.5 dp), so a change to one is a decision. The slab
- * is one even glass pane (docs/design/rules.md > Depth): its gradient, rim and missing insets and ring are the design's, its shadows the boards'
- * at [Depth] (and a further 0.6 of strength on the near drop and the dark far drop, the glass design's).
+ * is the "lifted card" (docs/design/rules.md > Depth): a lighter flat face and one soft drop; the face's and the drop's values are in `FocusSlabSameObjectTest`.
  */
 class SlabBoardValuesTest {
     private fun within(
@@ -42,47 +41,10 @@ class SlabBoardValuesTest {
         assertEquals(17.33f, SlabDimens.barHeight.value, 0.01f)
     }
 
-    /** The gradient over the page: a gentle fall from the top to the foot, Graphite #2B2C2E to #222325-ish and Paper near white to #F5F3EE-ish. `FocusSlabSameObjectTest` holds the steps. */
+    /** Requirement change ("lifted card"): the slab's fade and its stops are gone; the glow keeps its strength. */
     @Test
-    fun theSlabGradientFallsGentlyOverThePage() {
-        for ((bg, dark) in listOf(Rgb(0x111214) to true, Rgb(0xECE8DF) to false)) {
-            val g = FocusSlab.stops(bg, dark)
-            assertEquals(true, ColorMath.luminance(g[0]) > ColorMath.luminance(g[1]))
-            assertEquals(true, ColorMath.luminance(g[1]) > ColorMath.luminance(g[2]))
-            assertEquals(true, ColorMath.luminance(g[2]) > ColorMath.luminance(bg))
-        }
-        assertEquals(0.46f, FocusSlab.MID_AT, 0f)
+    fun theSlabGlowKeepsItsStrength() {
         assertEquals("the glow keeps its strength", 0.18, FocusHalo.SLAB_GLOW, 1e-6)
-    }
-
-    /** A light page's slab: neither end is white, both stay lighter than the page, the bottom is the page-ward end, and the flat fill is the true mean. */
-    @Test
-    fun aLightSlabFollowsThePageAndStaysRaised() {
-        for (bg in listOf(Rgb(0xECE8DF), Rgb(0xE3EBF5))) {
-            val g = FocusSlab.stops(bg, dark = false)
-            assertEquals("top is not white", true, g[0] != Rgb(0xFFFFFF))
-            assertEquals("bottom is not white", true, g[2] != Rgb(0xFFFFFF))
-            for (stop in g) assertEquals("lighter than the page", true, ColorMath.luminance(stop) > ColorMath.luminance(bg))
-            assertEquals("darker toward the bottom", true, ColorMath.luminance(g[2]) < ColorMath.luminance(g[0]))
-            val fill = FocusSlab.fill(bg, Rgb(0x1D1D1F), dark = false)
-            val mean = Rgb.fromChannels((g[0].red + g[2].red) / 2.0, (g[0].green + g[2].green) / 2.0, (g[0].blue + g[2].blue) / 2.0)
-            assertEquals(mean.red.toDouble(), fill.red.toDouble(), 1.0)
-            assertEquals(mean.green.toDouble(), fill.green.toDouble(), 1.0)
-            assertEquals(mean.blue.toDouble(), fill.blue.toDouble(), 1.0)
-        }
-    }
-
-    /** The rim: a thin white hairline on dark and light alike (full white on light), lit white at two corners. */
-    @Test
-    fun theSlabRimIsThinAndLitAtItsCorners() {
-        val g = SlabLook.of(Rgb(0x111214), Rgb(0xEBE7DD), dark = true)
-        assertEquals(Color.White, g.edge.copy(alpha = 1f))
-        assertEquals(Color.White, g.top.copy(alpha = 1f))
-        assertEquals(true, g.top.alpha > g.edge.alpha)
-        val p = SlabLook.of(Rgb(0xECE8DF), Rgb(0x1D1D1F), dark = false)
-        assertEquals(Color.White, p.edge.copy(alpha = 1f))
-        assertEquals("the light rim is white itself", 1f, p.edge.alpha, 0f)
-        assertEquals(Color.White, p.top.copy(alpha = 1f))
         assertEquals(0.667f, SlabDimens.edge.value, 0.001f)
     }
 
@@ -130,14 +92,6 @@ class SlabBoardValuesTest {
         assertEquals(20f * Depth.SHADOW_REACH * 0.45f, CardDimens.shadowFarDrop.value, 0.01f)
     }
 
-    /** The glass pane has no dark ring (the board's was black at 40 % on dark themes). */
-    @Test
-    fun theSlabHasNoRingOnAnyTheme() {
-        assertEquals(0.0, FocusSlab.RING_DARK, 0.0)
-        assertEquals(0f, SlabLook.of(Rgb(0xECE8DF), Rgb(0x1D1D1F), dark = false).ring.alpha, 0f)
-        assertEquals(0f, SlabLook.of(Rgb(0x0E0F11), Rgb(0xF2F2F2), dark = true).ring.alpha, 0f)
-    }
-
     @Test
     fun theSlabIs46Point7DpTallWithTheBarInsetAs8Point7() {
         assertEquals(46.67f, SlabDimens.height.value, 0.01f)
@@ -145,57 +99,31 @@ class SlabBoardValuesTest {
         assertEquals(23.33f, PlumDimens.gameRowPadding.value, 0.01f)
     }
 
-    /** On a raised card the gradient is taken over the card, on every theme. */
+    /** On a raised card the flat face is taken over the card, on every theme, the same recipe as on the page. */
     @Test
     fun theSlabOnACardIsTakenOverTheCard() {
         for ((bg, text, dark) in listOf(Triple(Rgb(0x0E0F11), Rgb(0xF2F2F2), true), Triple(Rgb(0xECE8DF), Rgb(0x1D1D1F), false))) {
             val card = RaisedCard.fill(bg, text, dark)
             val look = SlabLook.of(bg, text, dark)
-            assertEquals(FocusSlab.stops(card, dark).map { it.toComposeColor() }, look.stopsOnCard)
+            assertEquals(FocusSlab.fill(card, bg, dark).toComposeColor(), look.onCard)
         }
     }
 
-    /** The lift's two layers (a shadow on every theme), the same on every theme: the board's `0 3px 6px` and `0 16px 32px` at [Depth.SHADOW_REACH] of their reach; the insets are gone (alpha 0). */
+    /** The glow's sigmas (`0 0 22px` as Chrome renders it); the drop is pinned in `FocusSlabSameObjectTest`. */
     @Test
-    fun theSlabLiftLayersAreTheSameOnEveryTheme() {
-        fun check(
-            name: String,
-            s: SlabShadow?,
-            color: Color,
-            drop: Float,
-            sigma: Float,
-        ) {
-            requireNotNull(s) { "$name missing" }
-            assertEquals("$name colour", color, s.color.copy(alpha = 1f))
-            assertEquals("$name drop", drop, s.drop.value, 0.01f)
-            assertEquals("$name sigma", sigma, s.sigma.value, 0.01f)
-        }
-        val brown = Color(0x3C, 0x28, 0x14)
-        val g = SlabLook.of(Rgb(0x111214), Rgb(0xEBE7DD), dark = true)
-        assertEquals("graphite inset top", 0f, g.insetTop?.color?.alpha ?: 0f, 0f)
-        assertEquals("graphite inset bottom", 0f, g.insetBottom?.color?.alpha ?: 0f, 0f)
-        check("graphite near", g.near, Color.Black, 2f * Depth.SHADOW_REACH, 2f * Depth.SHADOW_REACH)
-        check("graphite far", g.far, Color.Black, 10.667f * Depth.SHADOW_REACH, 10.667f * Depth.SHADOW_REACH)
-        val p = SlabLook.of(Rgb(0xECE8DF), Rgb(0x1D1D1F), dark = false)
-        assertEquals(null, p.insetTop)
-        assertEquals("paper inset bottom", 0f, p.insetBottom?.color?.alpha ?: 0f, 0f)
-        check("paper near", p.near, brown, 2f * Depth.SHADOW_REACH, 2f * Depth.SHADOW_REACH)
-        check("paper far", p.far, brown, 10.667f * Depth.SHADOW_REACH, 10.667f * Depth.SHADOW_REACH)
-        // `0 0 22px` (CSS sigma 7.33) as Chrome renders it, fitted with the far drop to the board's pixels.
+    fun theGlowSigmasAreTheBoards() {
         assertEquals(7f * Depth.GLOW_REACH, SlabDimens.glowSigma.value, 0.01f)
         assertEquals(4f * Depth.GLOW_REACH, SlabDimens.barGlowSigma.value, 0.01f)
     }
 
-    /** A custom dark purple page (the Nova's kind) derives the same recipe: white rim over its own colour, a shadow beneath. */
+    /** A custom dark purple page (the Nova's kind) derives the same recipe: its own colour, a shadow beneath. */
     @Test
     fun aCustomDarkPurpleThemeDerivesTheRecipe() {
         val bg = Rgb(0x1E1030)
         val look = SlabLook.of(bg, Rgb(0xEDE6F5), dark = true)
-        val top = look.stops[0]
+        val top = look.fill
         assertEquals("lighter than the page", true, top.red > 0x1E / 255f)
         assertEquals("still purple", true, top.blue > top.green)
-        assertEquals(Color.White, look.edge.copy(alpha = 1f))
-        assertEquals("the lift is a shadow", Color.Black, look.far?.color?.copy(alpha = 1f))
-        assertEquals(0f, look.ring.alpha, 0f)
+        assertEquals("the lift is a shadow", Color.Black, look.near?.color?.copy(alpha = 1f))
     }
 }

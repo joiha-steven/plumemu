@@ -79,7 +79,6 @@
     <string name="home_hint_search">Chercher</string>
     <string name="home_hint_undo">Annuler</string>
     <string name="home_notice_removed_from_recent">Retiré des Récents</string>
-    <string name="home_hint_sort">Trier</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
          shown when no title matches. -->
@@ -439,7 +438,6 @@
 
     <!-- Launch errors: a title, one or two plain sentences, then what the person can do. -->
     <string name="game_action_rescan">Relire la bibliothèque</string>
-    <string name="game_action_play_with_another">Jouer avec un autre émulateur</string>
     <string name="game_action_ok">OK</string>
     <!-- The last row of Info: back to the menu. -->
     <!-- The last row of the Info panel: a verb, back to the game menu. -->
@@ -506,7 +504,7 @@
     <string name="game_error_internal_body">Les données d\'émulateurs de Plumemu sont inutilisables pour ce jeu.</string>
     <!-- %1$s is an emulator's name. Shown when it came back within ten seconds of its start. -->
     <string name="game_closed_at_once_title">%1$s s\'est fermé aussitôt</string>
-    <string name="game_closed_at_once_body">Si le jeu n\'a pas démarré, choisissez un autre émulateur avec Jouer avec… dans le menu du jeu.</string>
+    <string name="game_closed_at_once_body">Si le jeu n\'a pas démarré, essayez un autre émulateur.</string>
     <!-- %1$s is the game's title. Asked on return from a game started with a RetroArch core nobody has said works; %1$s in the body is the emulator ("RetroArch: Mesen"). -->
     <string name="game_core_question_title">%1$s a-t-il démarré ?</string>
     <string name="game_core_question_body">Il a été ouvert avec %1$s. Plumemu ne peut pas voir quels cœurs RetroArch possède : il pose donc la question une fois pour chaque cœur.</string>
@@ -706,14 +704,11 @@
     <!-- Hint bar label: a verb, show the focused system again. -->
     <string name="settings_hint_show">Afficher</string>
     <string name="settings_hint_go_to">Aller à</string>
-    <!-- %1$s is the number of hidden games, already formatted for the locale. -->
-    <string name="settings_hidden_games">Jeux masqués (%1$s)</string>
     <string name="settings_hidden_games_title">Jeux masqués</string>
     <string name="settings_hidden_games_body">Les jeux que vous avez masqués ou marqués comme n\'étant pas des jeux. Choisissez-en un pour l\'afficher à nouveau.</string>
     <string name="settings_unhide_failed">Le jeu n\'a pas pu être affiché à nouveau. Rien n\'a été modifié.</string>
     <!-- A game the person marked "Not a game" in Hidden games: "Not a game · SNES". -->
     <string name="settings_hidden_not_a_game">Pas un jeu · %1$s</string>
-    <string name="settings_unidentified_games">Jeux non identifiés (%1$s)</string>
     <string name="settings_unidentified_games_title">Jeux non identifiés</string>
     <string name="settings_unidentified_games_body">Les jeux que Plumemu n\'a pu nommer que d\'après leur fichier. Choisissez-en un pour corriger son nom.</string>
     <string name="settings_name_fix_failed">Ce nom n\'a pas pu être enregistré. Rien n\'a été modifié.</string>
@@ -1663,8 +1658,12 @@
     <string name="collections_notice_removed">Retiré de la collection</string>
     <string name="collections_name_title">Nom de la collection</string>
     <string name="collections_empty_most_played">Les jeux auxquels vous jouez le plus apparaissent ici</string>
-    <string name="collections_empty_recently_added">Les jeux ajoutés ces 30 derniers jours apparaissent ici</string>
+    <string name="collections_empty_recently_added">Les jeux trouvés après la configuration apparaissent ici pendant 30 jours</string>
     <string name="collections_empty_own">Ajoutez des jeux avec %1$s › Ajouter à une collection…</string>
+    <string name="collections_about_recent">Les derniers jeux joués, du plus récent au plus ancien</string>
+    <string name="collections_about_most_played">Les jeux auxquels vous avez le plus joué, jusqu’à 50</string>
+    <string name="collections_about_recently_added">Jeux ajoutés ces 30 derniers jours, du plus récent au plus ancien</string>
+    <string name="collections_new_about">Votre propre liste de jeux, tous systèmes confondus. Nommez-la ici, puis ajoutez des jeux avec %1$s\u00A0› Ajouter à une collection…</string>
     <string name="collections_rename">Renommer</string>
     <string name="collections_delete">Supprimer…</string>
     <string name="collections_delete_title">Supprimer %1$s ?</string>
@@ -1675,6 +1674,7 @@
     <string name="collections_move_down">Descendre</string>
     <string name="collections_delete_confirm">Supprimer</string>
     <string name="collections_settings_failed">Impossible d\'enregistrer ce changement. Réessayez.</string>
+    <string name="collections_none">Aucune collection pour l’instant</string>
     <plurals name="collections_count">
         <item quantity="one">%1$s collection</item>
         <item quantity="other">%1$s collections</item>

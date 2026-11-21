@@ -10,10 +10,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import com.plumemu.coreui.theme.EntryCardDimens
+import com.plumemu.home.rememberCountFormat
 import com.plumemu.R
 import com.plumemu.home.AppIconStandIn
 import com.plumemu.home.STAND_IN_LETTER_SHARE
@@ -64,26 +68,38 @@ internal fun BoxScope.AppCard(
     }
 }
 
-/** The Apps entry: the count and title as everywhere, then as many of the first icons as the height left holds. */
+/**
+ * The Apps entry, as the other entry cards of the system column (Recent, Favorites, a system): the name and the app count on one
+ * header line inside the boards' margins, then as many of the first icons as the height left holds.
+ */
 @Composable
 internal fun BoxScope.AppsCard(
     content: SecondScreenContent.Apps,
-    dimens: SecondScreenDimens,
 ) {
-    val texts = cardTexts(content) ?: return
-    Column(Modifier.fillMaxSize().padding(dimens.margin).testTag(SecondScreenTags.DETAILS)) {
-        Column { HeadLines(texts, dimens) }
-        Spacer(Modifier.height(SecondScreenDimens.artToDescriptionGap))
+    val styles = rememberEntryStyles()
+    val numbers = rememberCountFormat()
+    Column(Modifier.align(Alignment.TopStart).entryCardPlace().testTag(SecondScreenTags.DETAILS)) {
+        EntryHeader(
+            stringResource(R.string.home_entry_apps),
+            pluralStringResource(R.plurals.home_apps_count, content.appCount, numbers.format(content.appCount)),
+            styles,
+        )
+        Spacer(Modifier.height(EntryCardDimens.headerBottom))
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().testTag(SecondScreenTags.APPS_GRID)) {
             val icon = AppsGridDimens.appsGridIcon
             val gap = PlumDimens.gridGapPortrait
             val columns = ((maxWidth + gap) / (icon + gap)).toInt().coerceAtLeast(1)
             val rows = ((maxHeight + gap) / (icon + gap)).toInt()
             val shown = content.icons.take(columns * rows)
+            // One column step for every row: the columns spread to the right margin, and a short last row sits on the same columns.
+            val step = if (columns > 1) (maxWidth - icon * columns) / (columns - 1) else gap
             Column(verticalArrangement = Arrangement.spacedBy(gap)) {
                 shown.chunked(columns).forEach { line ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        line.forEach { app -> AppGameIcon(app.key, app.name, DpSize(icon, icon), Modifier.testTag(SecondScreenTags.APPS_ICON)) }
+                    // Placed by offset: a spaced Row would round every gap up and squeeze the last icon.
+                    Box(Modifier.height(icon)) {
+                        line.forEachIndexed { column, app ->
+                            AppGameIcon(app.key, app.name, DpSize(icon, icon), Modifier.offset(x = (icon + step) * column).testTag(SecondScreenTags.APPS_ICON))
+                        }
                     }
                 }
             }

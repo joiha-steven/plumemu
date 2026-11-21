@@ -18,7 +18,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -69,6 +69,8 @@ import com.plumemu.coreui.components.listEdgeFadeMask
 import com.plumemu.coreui.theme.CoverClass
 import com.plumemu.coreui.theme.ListGlide
 import com.plumemu.coreui.theme.AppsGridDimens
+import com.plumemu.launcher.apps.AppIconShape
+import kotlin.math.roundToInt
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumLayout
 import com.plumemu.coreui.theme.PlumTheme
@@ -355,19 +357,19 @@ private fun AppName(
 
 /**
  * An app without a usable icon: Android's default robot (the app ships none; the launcher's `AppIcons` answers
- * None for it), an app uninstalled since the list was read, or one Android could not draw. A round tile in the
+ * None for it), an app uninstalled since the list was read, or one Android could not draw. A rounded-square tile (the shape of every app icon) in the
  * tiles' `sel` with the name's first letter in the chosen font (Plum Sans by default), so the tile keeps its size and is
- * still told apart. One letter, not two: two would read as initials of a multi-word name and crowd the circle.
+ * still told apart. One letter, not two: two would read as initials of a multi-word name and crowd the tile.
  */
 @Composable
 internal fun AppIconStandIn(
     title: String,
     modifier: Modifier,
-    /** The letter's size in dp (a large disc); null keeps the message title's. */
+    /** The letter's size in dp (a large tile); null keeps the message title's. */
     letterSize: Float? = null,
 ) {
     val colors = PlumTheme.colors
-    val shape = CircleShape
+    val shape = RoundedCornerShape(percent = (AppIconShape.CORNER_SHARE * 100).roundToInt())
     Box(modifier.background(colors.sel, shape).gridTag(HomeTags.APP_ICON_STAND_IN), contentAlignment = Alignment.Center) {
         val base = PlumTheme.type.messageTitle.copy(color = colors.text2)
         BasicText(text = firstLetterOf(title), style = if (letterSize == null) base else base.copy(fontSize = letterSize.sp, lineHeight = letterSize.sp), maxLines = 1)

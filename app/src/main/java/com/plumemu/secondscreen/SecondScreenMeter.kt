@@ -8,7 +8,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawOutline
@@ -17,14 +16,15 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import com.plumemu.coreui.components.drawFocusHalo
 import com.plumemu.coreui.components.drawInsetShadow
 import com.plumemu.coreui.theme.BackdropGlowDimens
+import com.plumemu.coreui.theme.FlatSurface
 import com.plumemu.coreui.theme.INSET_ALPHA_LIGHT
 import com.plumemu.coreui.theme.MeterTrackToken
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumTheme
 
 /**
- * A meter: a sunken track with [share] (0..1) of it filled from the accent to `accentLight` and lit by `partGlow` at its end
- * (the boards' `linear-gradient(90deg, accent, accentLight)` with `0 0 8px glow`, clipped to the track). Draws the whole thing in one block.
+ * A meter: a sunken track with [share] (0..1) of it filled flat in `accentFill` (the mean of the boards' accent-to-accentLight fade: no
+ * surface is a gradient, FlatSurface) and lit by `partGlow` at its end (`0 0 8px glow`, clipped to the track). Draws the whole thing in one block.
  */
 internal fun DrawScope.drawMeter(
     colors: PlumComposeColors,
@@ -37,7 +37,7 @@ internal fun DrawScope.drawMeter(
     val track = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(size.height / 2))) }
     clipPath(track) {
         drawFocusHalo(Offset.Zero, fill, size.height / 2, 0f, glow, BackdropGlowDimens.meterGlow.toPx())
-        drawRoundRect(Brush.horizontalGradient(listOf(colors.accent, colors.accentLight), startX = 0f, endX = fill.width), size = fill, cornerRadius = CornerRadius(size.height / 2))
+        drawRoundRect(colors.accentFill, size = fill, cornerRadius = CornerRadius(size.height / 2))
     }
 }
 
@@ -55,13 +55,15 @@ private fun DrawScope.drawTrack(colors: PlumComposeColors) {
     // CSS draws the first shadow of a list on top: the shade lies over the lit line.
     drawInsetShadow(Offset.Zero, size, radius, -line, 0f, MeterTrackToken.bottomLine)
     drawInsetShadow(Offset.Zero, size, radius, BackdropGlowDimens.meterShadeDrop.toPx(), BackdropGlowDimens.meterShadeSigma.toPx(), MeterTrackToken.shade(dark))
+    // The crisp dark inner top edge of every sunken part.
+    drawInsetShadow(Offset.Zero, size, radius, FlatSurface.sunkenEdge.toPx(), 0f, MeterTrackToken.shade(dark))
 }
 
-/** A bar of the latest period: the accent at its foot, `accentLight` at its head (the boards' `linear-gradient(180deg, accentLight, accent)`). */
+/** A bar of the latest period: flat `accentFill`, the mean of the boards' `linear-gradient(180deg, accentLight, accent)` (FlatSurface). */
 @Composable
 internal fun Modifier.latestBarFill(shape: RoundedCornerShape): Modifier {
     val colors = PlumTheme.colors
-    return drawBehind { drawOutline(shape.createOutline(size, layoutDirection, this), Brush.verticalGradient(listOf(colors.accentLight, colors.accent))) }
+    return drawBehind { drawOutline(shape.createOutline(size, layoutDirection, this), colors.accentFill) }
 }
 
 /** The boards show the glow about half as strong as the glow colour at its peak (measured), so a meter's end is lit, not blazing. */

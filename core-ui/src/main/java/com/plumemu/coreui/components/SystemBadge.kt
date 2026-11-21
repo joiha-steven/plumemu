@@ -25,7 +25,7 @@ fun systemBadgeTextStyle(): TextStyle = PlumTheme.type.systemTag.copy(color = Pl
 
 /**
  * A system's tag: its short name ([abbr]: "SNES", "PS1") in tracked capitals on the V2 board's RAISED chip
- * (a radial-gradient surface with its inset lights, ring and drop, all derived from the theme: `SeatLook.raisedChip`).
+ * (a flat surface with its lit top line, ring and drop, all derived from the theme: `SeatLook.raisedChip`).
  * [PlumDimens.systemBadgeHeight] tall (grown with the text size), wider with a longer name or larger text,
  * never cut: one line, no ellipsis. Theme colours only, so it suits every colour set.
  */
@@ -41,10 +41,7 @@ fun SystemBadge(
             modifier
                 .defaultMinSize(minHeight = PlumDimens.systemBadgeHeight * PlumTheme.layout.textScale)
                 .testTag(SYSTEM_BADGE_TAG)
-                .drawBehind {
-                    val fill = CssImages.chipBrush(face.stops[0], face.stops[1], size)
-                    drawCssFace(face, Offset.Zero, size, corner.toPx(), fill = fill)
-                }.padding(horizontal = PlumDimens.systemBadgePaddingHorizontal),
+                .drawBehind { drawCssFace(face, Offset.Zero, size, corner.toPx()) }.padding(horizontal = PlumDimens.systemBadgePaddingHorizontal),
         contentAlignment = Alignment.Center,
     ) {
         BasicText(

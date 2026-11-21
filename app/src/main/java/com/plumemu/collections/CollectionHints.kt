@@ -11,7 +11,7 @@ enum class FolderHint { Open, NewCollection, Search, SwitchEntry, Back }
 fun hintsFor(focused: Folder?, hasOtherEntries: Boolean): List<FolderHint> =
     buildList {
         add(if (focused is Folder.NewCollection) FolderHint.NewCollection else FolderHint.Open)
+        add(FolderHint.Back)
         add(FolderHint.Search)
         if (hasOtherEntries) add(FolderHint.SwitchEntry)
-        add(FolderHint.Back)
     }

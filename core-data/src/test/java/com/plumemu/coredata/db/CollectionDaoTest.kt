@@ -203,7 +203,7 @@ class CollectionDaoTest {
         assertEquals(listOf("Alpha", "Bravo", "Charlie"), dao.observeCollectionGames(rpgs, SortGamesSetting.Name).first().map { it.title })
         assertEquals(listOf("Alpha", "Charlie", "Bravo"), dao.observeCollectionGames(rpgs, SortGamesSetting.LastPlayed).first().map { it.title })
         assertEquals(listOf("Alpha", "Charlie", "Bravo"), dao.observeCollectionGames(rpgs, SortGamesSetting.MostPlayed).first().map { it.title })
-        assertEquals("newest library entry first", listOf("Charlie", "Alpha", "Bravo"), dao.observeCollectionGames(rpgs, SortGamesSetting.RecentlyAdded).first().map { it.title })
+        assertEquals("one scan batch reads by name", listOf("Alpha", "Bravo", "Charlie"), dao.observeCollectionGames(rpgs, SortGamesSetting.RecentlyAdded).first().map { it.title })
         for (sort in SortGamesSetting.entries) {
             assertEquals("same rows as Favorites for $sort", db.gameDao().observeFavorites(sort).first(), dao.observeCollectionGames(rpgs, sort).first())
         }

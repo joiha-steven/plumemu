@@ -99,6 +99,8 @@ fun TopBar(
     /** Search's query field and count: given, the place text keeps its own width (at least [placeMinWidth]) and this fills the room after it. */
     middle: (@Composable RowScope.() -> Unit)? = null,
     placeMinWidth: Dp = 0.dp,
+    /** [place] with words after it that are left out, never cut, when the line has no room (a list's sort); null for none. */
+    placeWithTail: String? = null,
 ) {
     val colors = PlumTheme.colors
     val compact = typing()
@@ -112,7 +114,7 @@ fun TopBar(
         horizontalArrangement = Arrangement.spacedBy(PlumDimens.topBarItemGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PlaceText(place, emphasis, placeAlpha, if (middle == null) Modifier.weight(1f) else Modifier.widthIn(min = placeMinWidth), compact)
+        PlaceText(place, emphasis, placeAlpha, if (middle == null) Modifier.weight(1f) else Modifier.widthIn(min = placeMinWidth), compact, placeWithTail)
         middle?.invoke(this)
         if (pill != null) TopBarPill(pill, PlumTheme.type.meta, barHeight, onPill)
         StatusText(clock, status, ink)
@@ -555,5 +557,5 @@ private fun BarTitle(
     style: TextStyle,
     modifier: Modifier,
 ) {
-    if (withMeta) BasicText(text = line, style = style, maxLines = 1, modifier = modifier) else EllipsisText(title, style, modifier)
+    if (withMeta) BasicText(text = line, style = style, maxLines = 1, modifier = modifier) else EllipsisText(title, style, modifier, wholeWords = true)
 }

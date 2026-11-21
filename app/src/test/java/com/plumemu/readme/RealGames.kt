@@ -133,3 +133,32 @@ internal fun limitedTo(
     id: String,
     count: Int,
 ): HomeContent = content.withEntries(content.entries.map { if (it.id == id) it.copy(rows = it.rows.take(count)) else it })
+
+/**
+ * [library] with Collections filled from the README's own games: Recent, Most played and Recently
+ * added, an own "RPG" of three systems (entry id `collection:7`) and an own "Couch co-op".
+ */
+internal fun withReadmeCollections(library: HomeContent): HomeContent {
+    val systems = library.entries.filter { it.kind == EntryKind.System }
+    val rows = systems.flatMap { e -> e.rows.map { it.copy(systemId = e.id, systemAbbr = e.code) } }
+    fun pick(vararg titles: String) = titles.map { t -> rows.first { it.title == t } }
+    val rpg = pick("Chrono Trigger", "Final Fantasy VII", "Skies of Arcadia", "Final Fantasy VI", "Xenogears", "EarthBound", "Suikoden II", "Secret of Mana", "Vagrant Story", "Super Mario RPG", "Chrono Cross", "Phantasy Star Online")
+    val couch = pick("Super Mario Kart", "Soulcalibur", "Tekken 3", "Street Fighter II Turbo", "Marvel vs. Capcom 2", "Power Stone")
+    val folders =
+        listOf(
+            com.plumemu.home.FolderRows(com.plumemu.collections.Folder.BuiltIn(com.plumemu.collections.BuiltInFolder.MostPlayed, 6), pick("Super Metroid", "Final Fantasy VII", "Soulcalibur", "Chrono Trigger", "Metal Gear Solid", "Super Mario World")),
+            com.plumemu.home.FolderRows(com.plumemu.collections.Folder.BuiltIn(com.plumemu.collections.BuiltInFolder.RecentlyAdded, 4), pick("Ikaruga", "Rez", "Jet Set Radio", "Silent Hill")),
+            com.plumemu.home.FolderRows(com.plumemu.collections.Folder.Own(7, "RPG", rpg.size), rpg),
+            com.plumemu.home.FolderRows(com.plumemu.collections.Folder.Own(8, "Couch co-op", couch.size), couch),
+        )
+    val made =
+        HomeContent.of(
+            recent = pick("Super Metroid", "Crazy Taxi", "Final Fantasy VII"),
+            favorites = emptyList(),
+            apps = emptyList(),
+            systems = systems.map { com.plumemu.home.SystemGames(it.id, it.name ?: it.id, it.rows, it.coverShape, code = it.code) },
+            otherFolders = folders,
+        )
+    val collections = made.entries.first { it.id == HomeContent.COLLECTIONS_ID }
+    return library.withEntries(library.entries.map { if (it.id == HomeContent.COLLECTIONS_ID) collections else it }, folderEntries = made.folderEntries)
+}

@@ -180,7 +180,7 @@ internal class BoxFrontLayout private constructor(
                 if (!hasSize || titlePx < titleFloor || title.isBlank()) {
                     null
                 } else {
-                    fitTitle(measurer, density, title, titlePx, titleFloor, (size.width - left * 2).toInt().coerceAtLeast(1), room, look.title)
+                    fitTitle(measurer, density, posterTitleText(title), titlePx, titleFloor, (size.width - left * 2).toInt().coerceAtLeast(1), room, look.title)
                 }
             val titleTopLeft = Offset(left, size.height - TITLE_BOTTOM * u - (titleLayout?.size?.height ?: 0))
             val mark =
@@ -285,6 +285,17 @@ internal class BoxFrontLayout private constructor(
                 px = max(px * 0.93f, floorPx)
             }
             return null
+        }
+
+        /**
+         * The title as the card sets it: a subtitle after a dash ("Zone of the Enders - The Fist of Mars") starts its own line without the dash,
+         * so no line ever starts with a dangling "- ". A colon stays (it reads right at a line's end).
+         */
+        internal fun posterTitleText(title: String): String {
+            val split = splitTitle(title)
+            if (split.subtitle.isEmpty()) return title
+            val mark = title.substring(split.main.length).trimStart()
+            return if (mark.startsWith(":")) title else split.main + "\n" + split.subtitle
         }
 
         /** [text]'s first letter or digit in capitals, after a leading "The ": the card's big letter; null when it has none. */

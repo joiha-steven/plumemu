@@ -45,6 +45,15 @@ internal object CollectionsShotsBase {
     /** Inside the folders page, the cursor on the own collection "RPG" (row 3). */
     val folders = listOf(Action.TapItem(Column.Systems, 1), Action.Enter, down, down, down)
 
+    /** The folders page on Most played (a built-in folder: its line says what it holds). */
+    val foldersBuiltIn = listOf(Action.TapItem(Column.Systems, 1), Action.Enter, down)
+
+    /** The folders page on the empty own collection "Couch co-op". */
+    val foldersEmpty = folders + down
+
+    /** The folders page on New collection…. */
+    val foldersNew = folders + down + down
+
     /** "RPG" opened (a grid, or a list when it is not in the grid ids). */
     val rpg = folders + Action.Enter
 

@@ -118,13 +118,12 @@ class HomeContentTest {
         assertEquals("the board's RP5-1 and SELECT, which switches the focused system's games view as in the list", listOf(R.string.home_hint_select, R.string.home_hint_search, R.string.home_hint_settings, R.string.home_hint_grid_view), systems)
         val games = hintsFor(board, Column.Games, snes).map { it.label }
         assertEquals(
-            // B Back is hidden on the games list
-            "SELECT without box art too (the grid needs no account); Y Favorite and X Search (D3); R3 Sort (0.1.2); START opens the game menu; no B Back",
+            "SELECT without box art too (the grid needs no account); B Back as on the grid; Y Favorite and X Search (D3); START opens the game menu; no R3 hint",
             listOf(
                 R.string.home_hint_play,
+                R.string.home_hint_back,
                 R.string.home_hint_favorite,
                 R.string.home_hint_search,
-                R.string.home_hint_sort,
                 R.string.home_hint_menu,
                 R.string.home_hint_switch_system,
                 R.string.home_hint_grid_view,
@@ -156,15 +155,38 @@ class HomeContentTest {
     }
 
     @Test
-    fun sortIsAHintOnlyOnAListTheSortOrders() {
+    fun r3HasNoHintAnywhere_SortLivesInTheStartMenu() {
         val snes = board.entries[FakeHomeContent.BOARD_SNES_INDEX]
-        val sort = hintsFor(board, Column.Games, snes).single { it.action == Action.Sort }
-        assertEquals(R.string.home_key_r3, sort.key)
-        assertEquals(R.string.home_hint_sort, sort.label)
-        board.entries.filter { !it.kind.followsSort }.forEach { other ->
-            assertEquals("no Sort on ${other.kind}", false, hintsFor(board, Column.Games, other).any { it.action == Action.Sort })
+        listOf(Column.Systems, Column.Games, Column.Details).forEach { column ->
+            board.entries.forEach { entry ->
+                listOf(false, true).forEach { grid ->
+                    assertEquals("no R3 hint on $column ${entry.kind} grid=$grid", false, hintsFor(board, column, entry, showsGrid = grid).any { it.action == Action.Sort })
+                }
+            }
         }
-        assertEquals("nothing to sort on the system column", false, hintsFor(board, Column.Systems, snes).any { it.action == Action.Sort })
+        assertEquals("START still opens the menu that holds Sort by…", true, hintsFor(board, Column.Games, snes).any { it.action == Action.Menu })
+    }
+
+    @Test
+    fun everyBarDrawsItsKeysInTheOneOrder() {
+        // A · → · B · Y · X · L1 R1 · START · L2 R2 · SELECT.
+        val order = listOf(Action.Play, Action.Enter, Action.Back, Action.ToggleFavorite, Action.Search, Action.NextSystem, Action.Menu, Action.OpenSettings, Action.JumpLetterNext, Action.ToggleView)
+        listOf(Column.Systems, Column.Games, Column.Details).forEach { column ->
+            board.entries.forEach { entry ->
+                listOf(false, true).forEach { grid ->
+                    // "→ Twice to play" shares A's action and stands right after it.
+                    val ranks = hintsFor(board, column, entry, showsGrid = grid, pushRightPlays = true).map { order.indexOf(it.action) }
+                    assertEquals("$column ${entry.kind} grid=$grid: $ranks", ranks.sorted(), ranks)
+                }
+            }
+        }
+        val snes = board.entries[FakeHomeContent.BOARD_SNES_INDEX]
+        val grid = hintsFor(board, Column.Games, snes, showsGrid = true).map { it.action }
+        assertEquals(
+            "a cover grid shows X Search and START Menu, as the list does",
+            listOf(Action.Play, Action.Back, Action.ToggleFavorite, Action.Search, Action.NextSystem, Action.Menu, Action.JumpLetterNext, Action.ToggleView),
+            grid,
+        )
     }
 
     @Test
@@ -210,9 +232,8 @@ class HomeContentTest {
         assertEquals(listOf(R.string.home_hint_select, R.string.home_hint_settings, R.string.home_hint_grid_view), hintsFor(noGames, Column.Systems, apps).map { it.label })
         // Apps' grid of icons needs no box art: SELECT is offered on the Apps list too.
         assertEquals(
-            // B Back is hidden on the games list
-            "Collections is always another list to switch to; no B Back",
-            listOf(R.string.home_hint_open, R.string.home_hint_menu, R.string.home_hint_switch_system, R.string.home_hint_grid_view),
+            "Collections is always another list to switch to; B Back as on every games bar",
+            listOf(R.string.home_hint_open, R.string.home_hint_back, R.string.home_hint_menu, R.string.home_hint_switch_system, R.string.home_hint_grid_view),
             hintsFor(noGames, Column.Games, apps).map { it.label },
         )
         assertTrue(noGames.isLibraryEmpty)

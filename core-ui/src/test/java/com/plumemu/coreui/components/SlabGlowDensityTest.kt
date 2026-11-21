@@ -57,7 +57,7 @@ class SlabGlowDensityTest {
         CanvasDrawScope().draw(Density(density), LayoutDirection.Ltr, Canvas(image), Size(w.toFloat(), h.toFloat())) {
             drawRect(page)
             val rect = RoundRect(left, top, left + slabWidthDp * density, top + slabHeightDp * density, 13f * density, 13f * density)
-            drawSlabOutside(Outline.Rounded(rect), SlabLook(c.slab.fill, c.slab.edge), c.focusGlow, blob = if (blob) c.slabBlob else Color.Transparent)
+            drawSlabOutside(Outline.Rounded(rect), SlabLook(c.slab.fill), c.focusGlow, blob = if (blob) c.slabBlob else Color.Transparent)
         }
         val x = (left + slabWidthDp * density / 2).toInt()
         val y = (top + (slabHeightDp + belowDp) * density).toInt().coerceIn(0, h - 1)

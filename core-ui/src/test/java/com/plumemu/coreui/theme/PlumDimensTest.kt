@@ -78,13 +78,12 @@ class PlumDimensTest {
 
     @Test
     fun listColumnsDividerAndDetailsBlockMatchTheBoardMarkup() {
-        // The board's px / 1.5: year column 64 px, region 48 px; the list reaches 8 dp left of its box (64 dp from the edge, 408 wide).
-        assertEquals(listOf(42.67.dp, 38.dp, 8.dp), listOf(PlumDimens.rowYearColumn, PlumDimens.rowRegionColumn, PlumDimens.gamesListBleed))
+        // Year and region columns are as wide as their text (MonoColumnTest), 10 apart; the list reaches 8 dp left of its box (64 dp from the edge, 408 wide).
+        assertEquals(listOf(10.dp, 8.dp), listOf(PlumDimens.rowColumnGap, PlumDimens.gamesListBleed))
         // Hairline: 1 px wide, 16 dp left of the list box (x 56), inset 5.33 from the strip's top and bottom.
         assertEquals(listOf(16.dp, 0.67.dp, 5.33.dp), listOf(PlumDimens.listDividerOffset, PlumDimens.listDividerWidth, PlumDimens.listDividerInset))
-        // Details block: label to value 4 px, hairline to block 14 px, title to its line 4 px; dots 6 px, 3 px apart, 8 px from the number.
+        // Details block: label to value 4 px, hairline to block 14 px, title to its line 4 px.
         assertEquals(listOf(2.67.dp, 9.33.dp, 2.67.dp), listOf(PlumDimens.detailsLabelGap, PlumDimens.detailsDividerGap, PlumDimens.detailsSubtitleGap))
-        assertEquals(listOf(4.dp, 2.dp, 5.33.dp), listOf(PlumDimens.ratingDotSize, PlumDimens.ratingDotGap, PlumDimens.ratingNumberGap))
         // Top bar: name to count 16 px (the Covers bar).
         assertEquals(10.67.dp, PlumDimens.placeCountGap)
     }

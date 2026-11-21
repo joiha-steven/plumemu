@@ -330,16 +330,8 @@ private fun DrawScope.drawTray(colors: PlumComposeColors) {
             fraction to colors.trayShadow.copy(alpha = colors.trayShadow.alpha * share)
         }
     drawRect(Brush.verticalGradient(*stops, startY = top, endY = 0f), Offset(0f, top), Size(size.width, -top))
-    // The board's tray: lighter at the top, darker toward the bottom.
-    drawRect(
-        Brush.verticalGradient(
-            0f to KeyboardCollarDimens.trayTop(colors.tray),
-            KeyboardCollarDimens.TRAY_MID to colors.tray,
-            1f to KeyboardCollarDimens.trayBottom(colors.tray),
-            startY = 0f,
-            endY = size.height,
-        ),
-    )
+    // The tray is flat (FlatSurface): its own colour, the board's lighter top and darker foot dropped.
+    drawRect(colors.tray)
     drawRect(colors.trayEdge, size = Size(size.width, KeyboardDimens.keyboardEdge.toPx()))
 }
 

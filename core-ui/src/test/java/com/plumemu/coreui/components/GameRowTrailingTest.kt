@@ -21,6 +21,7 @@ import com.plumemu.coreui.theme.PlumFonts
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
+import com.plumemu.coreui.theme.PlumDimens
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -28,13 +29,15 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * A game row's right-hand text in the list styles (the year at the 13 step, the region at the 11.33 step, 600 spaced 0.1 em, in columns
- * of 42.67 and 38 dp; both raised over the board's 10 and 8 dp on the Thor): the region is tracked caps 600 wherever it shows, alone or in its column, as is a system's
+ * as wide as their text, 10 apart; both raised over the board's 10 and 8 dp on the Thor): the region is tracked caps 600 wherever it shows, alone or in its column, as is a system's
  * short name; a year alone is the column's year style; a row without a year keeps its region where a row with one has it.
  */
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-mdpi")
 class GameRowTrailingTest {
     // Small text: the board's sizes, at the one weight scale.
@@ -140,9 +143,9 @@ class GameRowTrailingTest {
         val without = node("EUR").boundsInRoot
         assertEquals("region column, same box", withYear.left, without.left, 0.5f)
         assertEquals(withYear.right, without.right, 0.5f)
-        // The year's right edge one region column (38 dp, wide enough for the Mono 11 caps) before the region's (mdpi: 1 px per dp).
-        assertEquals(38f, withYear.right - node("1994").boundsInRoot.right, 0.5f)
-        assertTrue("the region box is the 38 dp column", withYear.width in 37.5f..38.5f)
+        // The year's right edge the column gap and one region column (as wide as "USA" in Mono 11, plus 1 dp) before the region's (mdpi: 1 px per dp).
+        assertEquals(PlumDimens.rowColumnGap.value + withYear.width, withYear.right - node("1994").boundsInRoot.right, 0.5f)
+        assertTrue("the region box is as wide as three letters of Mono 11 and little more: ${withYear.width}", withYear.width in 19f..23f)
     }
 
     @Test

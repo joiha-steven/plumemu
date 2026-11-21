@@ -168,7 +168,8 @@ private fun withCheck(
                     is CheckOutcome.Failed -> R.string.settings_check_updates_value_failed
                 }
         }
-    return stringResource(R.string.settings_check_updates_value, installed, stringResource(word))
+    // The build number ("0.1.7 (2087)") stays in the panel: beside the result it wrapped the row.
+    return stringResource(R.string.settings_check_updates_value, installed.substringBefore(" ("), stringResource(word))
 }
 
 /** A time today ("10:15 AM"), else a date ("Oct 22, 2026"), in the device's formats. */

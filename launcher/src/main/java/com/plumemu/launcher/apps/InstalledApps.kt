@@ -227,7 +227,10 @@ class InstalledApps internal constructor(
     fun canShowAsGame(packageName: String): Boolean = packageName != ownPackage && packageName != settingsPackage()
 
     /** Opens Android's App info page for [app]. */
-    fun showInfo(app: LaunchableApp): AppToolOutcome = startTool(app, "info", appInfoIntent(app.packageName))
+    fun showInfo(app: LaunchableApp): AppToolOutcome = showInfo(app.packageName)
+
+    /** Opens Android's App info page for [packageName] (an app game is known by its package alone). */
+    fun showInfo(packageName: String): AppToolOutcome = startTool(packageName, "info", appInfoIntent(packageName))
 
     /** Asks Android to uninstall [app]; Android asks the person to confirm. Never for Plumemu itself. */
     fun uninstall(app: LaunchableApp): AppToolOutcome =
@@ -235,18 +238,18 @@ class InstalledApps internal constructor(
             log.warn("apps: uninstall refused for Plumemu itself")
             AppToolOutcome.Failed
         } else {
-            startTool(app, "uninstall", uninstallIntent(app.packageName))
+            startTool(app.packageName, "uninstall", uninstallIntent(app.packageName))
         }
 
-    private fun startTool(app: LaunchableApp, what: String, intent: Intent): AppToolOutcome = try {
+    private fun startTool(packageName: String, what: String, intent: Intent): AppToolOutcome = try {
         plainStarter(intent)
-        log.info("apps: $what ${app.packageName}")
+        log.info("apps: $what $packageName")
         AppToolOutcome.Started
     } catch (e: ActivityNotFoundException) {
-        log.warn("apps: $what ${app.packageName} has no screen to open (${e.kind()})")
+        log.warn("apps: $what $packageName has no screen to open (${e.kind()})")
         AppToolOutcome.Failed
     } catch (e: RuntimeException) {
-        log.warn("apps: $what ${app.packageName} could not start (${e.kind()})")
+        log.warn("apps: $what $packageName could not start (${e.kind()})")
         AppToolOutcome.Failed
     }
 

@@ -25,6 +25,9 @@ import com.plumemu.coreui.components.CollarSize
 import com.plumemu.coreui.theme.EntryCardDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.home.CoverImages
+import com.plumemu.home.FolderKind
+import com.plumemu.home.folderAbout
+import com.plumemu.home.folderEmptyText
 import com.plumemu.home.rememberCountFormat
 import com.plumemu.settings.LocalButtonLetters
 
@@ -46,13 +49,19 @@ internal fun BoxScope.FavoritesCard(
     val systemsText = pluralStringResource(R.plurals.second_screen_on_systems, content.systemCount, numbers.format(content.systemCount))
     val allText = pluralStringResource(R.plurals.home_games_count, content.gameCount, numbers.format(content.gameCount))
     val shownOf = stringResource(R.string.second_screen_shown_of, "%1\$s", numbers.format(content.gameCount))
-    val emptyText = stringResource(R.string.home_favorites_empty, stringResource(LocalButtonLetters.current.favorite))
+    val folder = content.folder
+    val about = folder?.let { folderAbout(it) }
+    val emptyText = emptyLineOf(folder)
     val ready = content.isArtRead && content.games.isNotEmpty()
     SubcomposeLayout(Modifier.align(Alignment.TopStart).entryCardPlace()) { constraints ->
         val width = constraints.maxWidth
         val height = constraints.maxHeight
-        val header = subcompose("header") { EntryHeader(content.name, content.gameCount, styles) }.map { it.measure(Constraints(maxWidth = width)) }
-        val headerHeight = header.maxOfOrNull { it.height } ?: 0
+        val headerOnly = subcompose("header") { EntryHeader(content.name, content.gameCount, styles, showsCount = folder != FolderKind.New) }.map { it.measure(Constraints(maxWidth = width)) }
+        val nameHeight = headerOnly.maxOfOrNull { it.height } ?: 0
+        val aboutParts = if (about != null) subcompose("about") { EntryEmptyLine(about, styles, EntryTags.ABOUT) }.map { it.measure(Constraints(maxWidth = width)) } else emptyList()
+        val aboutGap = if (aboutParts.isEmpty()) 0 else EntryCardDimens.headerBottom.roundToPx()
+        // The header block is the name with its count, then the folder's line: everything below starts under it.
+        val headerHeight = nameHeight + aboutGap + (aboutParts.maxOfOrNull { it.height } ?: 0)
         var used = headerHeight
         var shownCount = 0
         var rows: List<FavoritesRow> = emptyList()
@@ -110,9 +119,10 @@ internal fun BoxScope.FavoritesCard(
             }
         }
         val isEmpty = content.isArtRead && content.games.isEmpty()
-        val emptyLine = if (isEmpty) subcompose("empty") { EntryEmptyLine(emptyText, styles) }.map { it.measure(Constraints(maxWidth = width)) } else emptyList()
+        val emptyLine = if (isEmpty && emptyText != null) subcompose("empty") { EntryEmptyLine(emptyText, styles) }.map { it.measure(Constraints(maxWidth = width)) } else emptyList()
         layout(width, height) {
-            header.forEach { it.place(0, 0) }
+            headerOnly.forEach { it.place(0, 0) }
+            aboutParts.forEach { it.place(0, nameHeight + aboutGap) }
             emptyLine.forEach { it.place(0, headerHeight + EntryCardDimens.headerBottom.roundToPx()) }
             if (shownCount > 0) {
                 val rowGap = EntryCardDimens.favoritesRowGap.roundToPx()
@@ -126,6 +136,18 @@ internal fun BoxScope.FavoritesCard(
         }
     }
 }
+
+/**
+ * The line of a card with no game: Favorites' names the key that adds one; a Collections folder says why it is empty; New collection…
+ * has none (its line under the name says what a collection is).
+ */
+@Composable
+private fun emptyLineOf(folder: FolderKind?): String? =
+    when (folder) {
+        null -> stringResource(R.string.home_favorites_empty, stringResource(LocalButtonLetters.current.favorite))
+        FolderKind.New -> null
+        else -> folderEmptyText(folder)
+    }
 
 @Composable
 private fun StatusText(

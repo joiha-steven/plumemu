@@ -57,14 +57,12 @@ class SpecCardPixelTest {
     ) = assertTrue("$what: board ${expected.toList()} ours ${actual.toList()}", expected.indices.all { kotlin.math.abs(expected[it] - actual[it]) <= tolerance })
 
     /** The card's gradient at [y] (card top 40, 600 px tall): the ladder's raised step one L* above the page at the top to one below at the foot. */
-    private fun ladderAt(
-        settings: PlumThemeSettings,
-        y: Int,
-    ): IntArray {
+    /** The card's one flat face: the mean of the board's fade from the ladder's raised step +1 to -1 (FlatSurface). */
+    private fun flatFace(settings: PlumThemeSettings): IntArray {
         val bg = settings.backgroundColor
         val top = com.plumemu.coreui.theme.ToneLadder.level(bg, com.plumemu.coreui.theme.ToneLadder.RAISED + 1)
         val bottom = com.plumemu.coreui.theme.ToneLadder.level(bg, com.plumemu.coreui.theme.ToneLadder.RAISED - 1)
-        val t = (y - 40) / 600.0
+        val t = 0.5
         fun mix(
             a: Int,
             b: Int,
@@ -74,10 +72,10 @@ class SpecCardPixelTest {
 
     /** The card is the tone ladder's raised step (a design change from the board's greys); the border's top side is white .22. */
     @Test
-    fun theGraphiteCardIsTheBoardsBlueGreyGradient() {
+    fun theGraphiteCardIsTheBoardsBlueGreyFlat() {
         val px = shot(PlumThemeSettings.Graphite) { drawRaisedCard(it.card, 50f, 40f, 440f, 600f) }
-        near("near the top", ladderAt(PlumThemeSettings.Graphite, 50), px(270, 50))
-        near("near the bottom", ladderAt(PlumThemeSettings.Graphite, 620), px(270, 620))
+        near("near the top", flatFace(PlumThemeSettings.Graphite), px(270, 50))
+        near("near the bottom", flatFace(PlumThemeSettings.Graphite), px(270, 620))
         val top = px(270, 40)
         val side = px(50, 340)
         assertTrue("the top side is lit: ${top.toList()} vs side ${side.toList()}", top[0] > side[0] + 15)
@@ -87,10 +85,10 @@ class SpecCardPixelTest {
 
     /** The card is the ladder's raised step of the warm page; its top side is white. */
     @Test
-    fun thePaperCardIsTheBoardsWarmWhiteGradient() {
+    fun thePaperCardIsTheBoardsWarmWhiteFlat() {
         val px = shot(PlumThemeSettings.Paper) { drawRaisedCard(it.card, 50f, 40f, 440f, 600f) }
-        near("near the top", ladderAt(PlumThemeSettings.Paper, 50), px(270, 50))
-        near("near the bottom", ladderAt(PlumThemeSettings.Paper, 620), px(270, 620))
+        near("near the top", flatFace(PlumThemeSettings.Paper), px(270, 50))
+        near("near the bottom", flatFace(PlumThemeSettings.Paper), px(270, 620))
         assertEquals(listOf(255, 255, 255), px(270, 40).toList())
     }
 

@@ -93,11 +93,11 @@ class AppsDetailsBoundsTest {
 
     @Test
     @Config(qualifiers = "w576dp-h432dp-land-xhdpi")
-    fun narrowThirdStopTakesWidthMinus104() {
+    fun narrowThirdStopTakesWidthMinus48() {
         show(onApps + Action.Enter + Action.Move(Direction.Right))
         assertContent()
         val details = bounds(HomeTags.DETAILS)
-        assertDp("details 24 after the list peek", 80.dp, details.left)
+        assertDp("details start at the 24 margin", 24.dp, details.left)
         assertDp("details end at the right margin", 552.dp, details.right)
     }
 

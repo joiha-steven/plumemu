@@ -25,8 +25,8 @@ class ButtonLettersTest {
 
         val games = hintsFor(content, Column.Games, snes, letters = swapped).associate { it.action to it.key }
         assertEquals(R.string.home_key_b, games[Action.Play])
-        // B Back is hidden on the games list; the grid's bar still says Back, with the swapped letter
-        assertEquals(null, games[Action.Back])
+        // B Back on the games list and the grid, with the swapped letter
+        assertEquals(R.string.home_key_a, games[Action.Back])
         val grid = hintsFor(content, Column.Games, snes, letters = swapped, showsGrid = true).associate { it.action to it.key }
         assertEquals(R.string.home_key_a, grid[Action.Back])
         val systems = hintsFor(content, Column.Systems, snes, letters = swapped).associate { it.action to it.key }
@@ -34,7 +34,7 @@ class ButtonLettersTest {
 
         val byDefault = hintsFor(content, Column.Games, snes).associate { it.action to it.key }
         assertEquals(R.string.home_key_a, byDefault[Action.Play])
-        assertEquals(null, byDefault[Action.Back])
+        assertEquals(R.string.home_key_b, byDefault[Action.Back])
         assertEquals(R.string.home_key_b, hintsFor(content, Column.Games, snes, showsGrid = true).associate { it.action to it.key }[Action.Back])
     }
 }

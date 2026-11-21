@@ -22,6 +22,9 @@ internal class ScanFixture(parent: File, fileIdsByName: Boolean = false, copyFix
     val permissions = FakeFolderPermissions().apply { held += TREE_URI }
     var now = 42L
 
+    /** Added to [now] after every read of the scanner's clock (0: a clock that stands still). */
+    var clockStep = 0L
+
     /** First-run setup finished (the app's `setupCompleted`): until then no scan writes `added_at`. */
     var setupDone = true
     val folderId: Long
@@ -41,7 +44,7 @@ internal class ScanFixture(parent: File, fileIdsByName: Boolean = false, copyFix
         naming: GameNaming? = null,
         rules: List<SystemRule> = TestRules.ALL,
         namingReaders: Int = NAMING_READERS,
-    ) = LibraryScanner(db, permissions, { tree }, rules, settings, batchSize, clock = { now }, naming = naming, namingReaders = namingReaders, isSetupDone = { setupDone })
+    ) = LibraryScanner(db, permissions, { tree }, rules, settings, batchSize, clock = { now.also { now += clockStep } }, naming = naming, namingReaders = namingReaders, isSetupDone = { setupDone })
 
     suspend fun scan(scanner: LibraryScanner = scanner()): ScanStats {
         tree.listed.clear()

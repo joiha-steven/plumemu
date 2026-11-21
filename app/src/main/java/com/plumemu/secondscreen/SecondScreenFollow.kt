@@ -15,6 +15,8 @@ import com.plumemu.coreinput.strip.StripFocus
 import com.plumemu.coreinput.strip.StripState
 import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.game.GameMenuController
+import com.plumemu.home.FolderKind
+import com.plumemu.home.folderKindOf
 import com.plumemu.home.EntryKind
 import com.plumemu.home.GameRowModel
 import com.plumemu.home.HomeContent
@@ -57,6 +59,8 @@ internal data class EntryNames(
     /** The built-in folders' names, for the card of a folder (Favorites' card, the nearest one). */
     val mostPlayed: String = "",
     val recentlyAdded: String = "",
+    /** The folders page's last row, "New collection…". */
+    val newCollection: String = "",
 )
 
 /**
@@ -99,6 +103,8 @@ internal fun secondScreenContentOf(
     look.menuGameKey?.let { key -> systems.rowOf(key)?.let { return gameCard(it, systems, content.hasBoxArt) } }
     if (look.isSearchOpen) return look.searchHit?.let { gameCard(it.row, systems, content.hasBoxArt) } ?: SecondScreenContent.Calm
     val entry = content.shownEntry(look.focus) ?: return SecondScreenContent.Calm
+    // The folders page, or its entry focused in the system column: the card of the folder its cursor stands on.
+    if (entry.isFolderList) return folderCard(content, entry.rows.getOrNull(look.focus.rowOf(entry.id)), names)
     if (look.focus.column == Column.Systems) return entryCard(entry, names, content.hasBoxArt)
     val row = entry.rows.getOrNull(look.focus.rowOf(entry.id)) ?: return entryCard(entry, names, content.hasBoxArt)
     return if (entry.kind == EntryKind.Apps) SecondScreenContent.App(row.title, row.iconKey) else gameCard(row, systems, content.hasBoxArt)
@@ -133,8 +139,8 @@ private fun entryCard(
         EntryKind.Apps -> SecondScreenContent.Apps(entry.shownCount, entry.rows.take(MAX_APP_ICONS).map { AppIconRef(it.iconKey, it.title) })
         // Their figures are read after the settle (SecondScreenEntryReads); until then the card is its header.
         EntryKind.Recent -> RecentEntry(names.recent, entry.shownCount, systemLooksOf(entry), hasBoxArt)
-        // The folder list has no card of its own: calm. A folder other than Recent shows Favorites' card under its own name (no new card).
-        EntryKind.Collections -> if (entry.isFolderList) SecondScreenContent.Calm else favoritesCard(entry, folderName(entry, names), hasBoxArt, entry.rows)
+        // A folder other than Recent shows Favorites' card under its own name, with the line saying what it holds (the folder list itself: [folderCard]).
+        EntryKind.Collections -> if (entry.isFolderList) SecondScreenContent.Calm else favoritesCard(entry, folderName(entry, names), hasBoxArt, entry.rows, folderKindOf(entry.id))
         EntryKind.Favorites -> favoritesCard(entry, names.favorites, hasBoxArt, entry.rows.filter { it.isFavorite })
         else ->
             SystemEntry(
@@ -153,6 +159,7 @@ private fun favoritesCard(
     name: String,
     hasBoxArt: Boolean,
     games: List<GameRowModel>,
+    folder: FolderKind? = null,
 ): FavoritesEntry =
     FavoritesEntry(
         name = name,
@@ -161,7 +168,24 @@ private fun favoritesCard(
         games = games.take(FAVORITES_CARRIED).mapNotNull { row -> row.id.toLongOrNull()?.let { EntryGame(it, row.title, row.systemId, row.scrapeKey.takeIf { hasBoxArt }) } },
         systems = systemLooksOf(entry),
         hasBoxArt = hasBoxArt,
+        folder = folder,
     )
+
+/**
+ * The folders page's card for its row [row]: the folder's own card (Recent's, else Favorites' under the folder's name, as when the folder
+ * is open and the system column focused), and for New collection… its name and the line saying what a collection is. Never a game card:
+ * a folder row is not a game (2087 showed "Zelda" with an empty play-time tile).
+ */
+private fun folderCard(
+    content: HomeContent,
+    row: GameRowModel?,
+    names: EntryNames,
+): SecondScreenContent {
+    if (row == null) return SecondScreenContent.Calm
+    if (row.id == HomeContent.NEW_COLLECTION_ID) return FavoritesEntry(names.newCollection, 0, 0, emptyList(), folder = FolderKind.New)
+    val folder = content.folderEntry(row.id) ?: return SecondScreenContent.Calm
+    return entryCard(folder, names, content.hasBoxArt)
+}
 
 /** A folder's name for its card: an own collection's, else the built-in's from [names]. */
 private fun folderName(
@@ -208,7 +232,7 @@ internal fun FollowHomeOnSecondScreen(
     menu: GameMenuController,
     buildSystems: (HomeContent) -> GameSystems = GameSystems::of,
 ) {
-    val names = EntryNames(stringResource(R.string.home_entry_recent), stringResource(R.string.home_entry_favorites), stringResource(R.string.collections_most_played), stringResource(R.string.collections_recently_added))
+    val names = EntryNames(stringResource(R.string.home_entry_recent), stringResource(R.string.home_entry_favorites), stringResource(R.string.collections_most_played), stringResource(R.string.collections_recently_added), stringResource(R.string.collections_new))
     val origin = LocalLaunchOrigin.current
     LaunchedEffect(feed, content, state, search, menu, names) {
         feed.isFollowing.collectLatest { following ->

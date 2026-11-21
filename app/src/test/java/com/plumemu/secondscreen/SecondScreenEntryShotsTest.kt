@@ -83,6 +83,11 @@ private val FAVORITE_TITLES =
 /** The boards' `SecondFavorites`: 18 favourites on 6 systems, as many shown as three rows hold. */
 internal val BOARD_FAVORITES = FavoritesEntry("Favorites", 18, 6, FAVORITE_TITLES.mapIndexed { at, (title, system) -> EntryGame(at + 1L, title, system, null) }, LOOKS)
 
+/** The Collections folders page's cards: a built-in folder with its line, an empty own collection, New collection…. */
+internal val BOARD_FOLDER = BOARD_FAVORITES.copy(name = "Most played", folder = com.plumemu.home.FolderKind.MostPlayed)
+internal val BOARD_FOLDER_EMPTY = FavoritesEntry("Couch co-op", 0, 0, emptyList(), folder = com.plumemu.home.FolderKind.Own)
+internal val BOARD_FOLDER_NEW = FavoritesEntry("New collection…", 0, 0, emptyList(), folder = com.plumemu.home.FolderKind.New)
+
 /**
  * The three system column cards at the Thor's bottom screen (538x468 dp, 369 dpi) on Graphite and Paper, and at 4:3 (480x360): the
  * PNGs compared with the design boards (`SecondSystem`, `SecondRecent`, `SecondFavorites` and their Paper versions).
@@ -106,7 +111,7 @@ abstract class SecondScreenEntryShotsBase(
         hostTheCard()
         val mismatches = mutableListOf<String>()
         for ((look, base) in looks) {
-            for ((name, card) in listOf("system" to BOARD_SYSTEM, "recent" to BOARD_RECENT, "favorites" to BOARD_FAVORITES)) {
+            for ((name, card) in listOf("system" to BOARD_SYSTEM, "recent" to BOARD_RECENT, "favorites" to BOARD_FAVORITES, "folder" to BOARD_FOLDER, "folder_empty" to BOARD_FOLDER_EMPTY, "folder_new" to BOARD_FOLDER_NEW)) {
                 settings = base
                 content = card
                 compose.waitForIdle()

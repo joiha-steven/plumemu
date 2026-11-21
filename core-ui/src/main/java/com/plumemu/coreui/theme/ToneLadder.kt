@@ -10,6 +10,9 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 object ToneLadder {
     const val SUNKEN = -4.0
+
+    /** A dark theme's key cap base (its solid edge): below the sunken step, so the base reads under a flat face. */
+    const val BASE = -8.0
     const val SURFACE = 3.0
     const val RAISED = 6.0
     const val TOP = 8.0

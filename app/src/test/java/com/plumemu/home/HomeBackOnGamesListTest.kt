@@ -26,12 +26,12 @@ class HomeBackOnGamesListTest {
     val rules = rulesAround(compose)
 
     @Test
-    fun backOnTheGamesListReturnsToTheSystemsColumnWithoutAHintForIt() {
+    fun backOnTheGamesListShowsItsHintAndReturnsToTheSystemsColumn() {
         var state: StripState? = null
         compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, onState = { state = it }) } }
         compose.waitForIdle()
         assertEquals(Column.Games, compose.runOnIdle { state!!.focus.column })
-        assertEquals("no B Back hint on the games list", 0, compose.onAllNodesWithTag(HomeTags.hint(Action.Back), useUnmergedTree = true).fetchSemanticsNodes().size)
+        assertEquals("B Back shows on the games list, as on the grid", 1, compose.onAllNodesWithTag(HomeTags.hint(Action.Back), useUnmergedTree = true).fetchSemanticsNodes().size)
         compose.runOnIdle { state!!.dispatch(Action.Back) }
         compose.waitForIdle()
         assertEquals(Column.Systems, compose.runOnIdle { state!!.focus.column })

@@ -281,6 +281,44 @@ class ReadmeMediaShots {
     fun systemCodes() =
         shoot("system-codes", stored(ColorSet.Plumemu)) { HomeOf(metroidFocused, library) }
 
+    private val withCollections: HomeContent by lazy { withReadmeCollections(library) }
+
+    private val down = Action.Move(com.plumemu.coreinput.Direction.Down)
+
+    // Collections is the column's second entry; inside it Recent, Most played, Recently added, RPG, Couch co-op.
+    private val collectionsRpg = listOf(Action.TapItem(com.plumemu.coreinput.Column.Systems, 1), Action.Enter, down, down, down)
+
+    @Test
+    fun collectionGrid() =
+        shoot("collection-grid", stored(ColorSet.Mocha)) {
+            ProvideGridSize(GridSize.Medium) {
+                ProvideHomeArt(rememberSource { posterCoverSource(withCollections) }, withCollections.hasBoxArt) {
+                    HomeAt(withCollections, collectionsRpg + Action.Enter + Action.Move(com.plumemu.coreinput.Direction.Right), gridIds = setOf("collection:7"))
+                }
+            }
+        }
+
+    /** START on Super Metroid: the game menu over the list. */
+    @Test
+    fun gameMenu() {
+        val metroid = library.entries.first { it.id == "snes" }.rows.first { it.title == "Super Metroid" }
+        shoot("game-menu", stored(ColorSet.Magenta)) {
+            val panel = remember { OpenPanel(GameRef(metroid.id, metroid.title), PanelScreen.Menu(com.plumemu.game.sampleFacts(title = "Super Metroid").copy(systemName = "Super Nintendo", emulator = com.plumemu.game.EmulatorToStart("Snes9x", isInstalled = true), collections = com.plumemu.collections.PickerState(listOf(com.plumemu.collections.PickerCollection(7, "RPG"), com.plumemu.collections.PickerCollection(8, "Couch co-op")), holding = emptySet())))) }
+            ProvideGridSize(GridSize.Medium) {
+                ProvideHomeArt(rememberSource { posterCoverSource(library) }, library.hasBoxArt) { HomeAt(library, metroidFocused, panel = panel) }
+            }
+        }
+    }
+
+    /** Settings › Statistics: play time, the most played games and systems. */
+    @Test
+    fun statistics() =
+        shoot("statistics", stored(ColorSet.ClearGrape)) { s ->
+            com.plumemu.settings.screen.StatisticsShots.WithCovers {
+                SettingsAt(com.plumemu.settings.screen.StatisticsShots.focusAt(0), s, com.plumemu.settings.screen.StatisticsShots.contentOf(com.plumemu.settings.screen.StatisticsShots.played))
+            }
+        }
+
     @Test
     fun colors() =
         shoot("colors", stored(ColorSet.Ultramarine)) { s -> SettingsAt(panelAt(SettingsOption.Colors, PanelPage.ColorSets, ColorSet.Ultramarine.ordinal), s) }
@@ -299,19 +337,19 @@ class ReadmeMediaShots {
     fun update() {
         val release =
             UpdateManifest(
-                versionCode = 2017,
-                versionName = "0.1.6",
+                versionCode = 2087,
+                versionName = "0.1.7",
                 apkUrl = "https://example.invalid/plumemu.apk",
-                size = 9_465_889,
+                size = 9_533_587,
                 sha256 = "ab".repeat(32),
                 minSdk = 23,
-                released = "2026-11-15",
-                notes = listOf("Switching to another system for the first time is much faster.", "The left strip always shows each system's short code.", "Play time counts only the time a game is on screen."),
+                released = "2026-11-19",
+                notes = listOf("Collections sit between Favorites and Apps, beside the ones you make.", "Add a game to a collection from its game menu.", "Settings has six sections instead of ten."),
                 notesUrl = null,
             )
         val content = SettingsContent(update = UpdateView(lastCheck = LastCheck(1_794_216_600_000L, CheckOutcome.Found), found = release))
         val row = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 0))
-        shoot("update", stored(ColorSet.Daylight)) { s -> SettingsAt(row.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0), s, content, version = "0.1.5") }
+        shoot("update", stored(ColorSet.Daylight)) { s -> SettingsAt(row.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0), s, content, version = "0.1.6") }
     }
 
     @Test

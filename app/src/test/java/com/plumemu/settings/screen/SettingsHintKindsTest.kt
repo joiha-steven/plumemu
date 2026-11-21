@@ -12,7 +12,7 @@ import org.junit.Test
 /**
  * What the hint bar says A does on each kind of row: "Open" on a row
  * that opens a page or the sign-in form, "Change" on a value, a switch, a colour dot and a system's
- * emulator (their panels are choices), "Select" on an action, nothing on read-only rows (Privacy,
+ * emulator (their panels are choices), "Select" on an action not drawn as a switch, nothing on read-only rows (Privacy,
  * the box art status) at any width. Version opens its panel.
  */
 internal class SettingsHintKindsTest : SettingsModelHarness() {
@@ -158,7 +158,8 @@ internal class SettingsHintKindsTest : SettingsModelHarness() {
                 SettingsOption.PushRightToPlay to change,
                 SettingsOption.Keyboard to change,
                 SettingsOption.SwitchSystemWith to change,
-                SettingsOption.UseAsHome to select,
+                // An action, but drawn as a switch like Show Android apps below it: the same word.
+                SettingsOption.UseAsHome to change,
                 SettingsOption.ShowApps to change,
                 SettingsOption.SecondScreen to change,
                 SettingsOption.SecondScreenInGame to change,

@@ -58,12 +58,22 @@ import kotlin.math.ceil
 
 /* The game card's two tiles (achievements, play time) and their parts. */
 
+/**
+ * The play tile's weeks, only when they hold a play: never a tile with nothing in it (still reading, never played, played
+ * before the last 8 weeks, or a card with no library game whose facts are never read). The top screen says when it was played.
+ */
+internal fun shownWeeks(content: SecondScreenContent.Game): PlayWeeks? = content.weeks?.takeIf { content.isPlayKnown && it.sessions > 0 }
+
+/** Whether the game card has a tile to draw; with none the row is left out with its gaps. */
+internal fun hasTiles(content: SecondScreenContent.Game): Boolean = content.ra != null || shownWeeks(content) != null
+
 @Composable
 internal fun Tiles(content: SecondScreenContent.Game) {
     val stored = content.ra
+    val weeks = shownWeeks(content)
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max).testTag(GameCardTags.TILES), horizontalArrangement = Arrangement.spacedBy(D.tileGap)) {
         if (stored != null) AchievementsTile(content, Modifier.weight(D.ACHIEVEMENTS_WEIGHT).fillMaxHeight())
-        PlayTile(content, Modifier.weight(D.PLAY_WEIGHT).fillMaxHeight())
+        if (weeks != null) PlayTile(weeks, Modifier.weight(D.PLAY_WEIGHT).fillMaxHeight())
     }
 }
 
@@ -239,41 +249,31 @@ private const val GHOST_GRID = 11
 
 @Composable
 private fun PlayTile(
-    content: SecondScreenContent.Game,
+    weeks: PlayWeeks,
     modifier: Modifier,
 ) {
     val colors = PlumTheme.colors
     val numbers = rememberCountFormat()
-    val weeks = content.weeks?.takeIf { content.isPlayKnown }
     val isJost = isJost()
     val big = gameStyle(TypeRole.SecondTitleRoomy, D.bigSize).copy(color = colors.strong).onBoardLine(EntryCardDimens.LINE_BIG, isJost)
-    val neverPlayed = weeks != null && content.lastPlayedDaysAgo == null
     Tile(modifier.testTag(GameCardTags.PLAY)) {
         TileLabel(stringResource(R.string.second_game_play_label))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            // Until the play facts are read, and for a game never played, the figures are blank text of the same style: the tile keeps the height of a played one.
-            val total = if (weeks == null || neverPlayed) "" else playTime((weeks.totalSeconds / SECONDS_PER_MINUTE).toInt())
-            BasicText(total, style = big, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).boardLine(big, isJost).alignByBaseline().then(if (neverPlayed) Modifier else Modifier.testTag(GameCardTags.PLAY_TOTAL)))
-            if (weeks != null && weeks.sessions > 0) {
-                BasicText(
-                    pluralStringResource(R.plurals.second_game_sessions, weeks.sessions, numbers.format(weeks.sessions)),
-                    style = small(colors.text2),
-                    maxLines = 1,
-                    softWrap = false,
-                    modifier = Modifier.boardLine(small(colors.text2), isJost).alignByBaseline().testTag(GameCardTags.SESSIONS),
-                )
-            }
+            val total = playTime((weeks.totalSeconds / SECONDS_PER_MINUTE).toInt())
+            BasicText(total, style = big, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).boardLine(big, isJost).alignByBaseline().testTag(GameCardTags.PLAY_TOTAL))
+            BasicText(
+                pluralStringResource(R.plurals.second_game_sessions, weeks.sessions, numbers.format(weeks.sessions)),
+                style = small(colors.text2),
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.boardLine(small(colors.text2), isJost).alignByBaseline().testTag(GameCardTags.SESSIONS),
+            )
         }
-        // No chart to draw until there is a play to show: blank, so nothing flashes and nothing jumps.
-        WeekBars(weeks?.weekSeconds ?: List(D.WEEKS_SHOWN) { 0L }, drawn = weeks != null && !neverPlayed)
-        val about = weeks?.averageMinutes
-        // The last line is always there, blank when there is nothing to say, so the tile is as tall as with it.
+        WeekBars(weeks.weekSeconds)
+        val about = weeks.averageMinutes
         LastLine {
-            if (neverPlayed) {
-                val line = small(colors.text2)
-                BasicText(stringResource(R.string.second_screen_not_played), style = line, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.boardLine(line, isJost).testTag(GameCardTags.PLAY_TOTAL))
-            } else {
-                BasicText(if (about != null) stringResource(R.string.second_game_about_session, playTime(about)) else "", style = small(colors.meta), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.boardLine(small(colors.meta), isJost).testTag(GameCardTags.ABOUT))
+            if (about != null) {
+                BasicText(stringResource(R.string.second_game_about_session, playTime(about)), style = small(colors.meta), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.boardLine(small(colors.meta), isJost).testTag(GameCardTags.ABOUT))
             }
         }
     }
@@ -283,21 +283,17 @@ private const val SECONDS_PER_MINUTE = 60L
 
 /** The last eight weeks as columns against the busiest one, the current week in the accent and labelled under it. */
 @Composable
-private fun WeekBars(
-    seconds: List<Long>,
-    drawn: Boolean,
-) {
+private fun WeekBars(seconds: List<Long>) {
     val colors = PlumTheme.colors
     val isJost = isJost()
     val label = gameStyle(TypeRole.SecondFactsRoomy, D.barsLabelSize).onBoardLine(EntryCardDimens.JOST_OWN_LINE, isJost)
     val most = seconds.maxOrNull()?.coerceAtLeast(1L) ?: 1L
     val last = seconds.lastIndex
-    EvenColumns(D.barsGap, if (drawn) Modifier.testTag(GameCardTags.BARS) else Modifier) {
+    EvenColumns(D.barsGap, Modifier.testTag(GameCardTags.BARS)) {
         seconds.forEachIndexed { index, value ->
-            val isNow = drawn && index == last
+            val isNow = index == last
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(D.barsLabelGap)) {
                 Box(Modifier.fillMaxWidth().height(D.barsHeight), contentAlignment = Alignment.BottomCenter) {
-                    if (!drawn) return@Box
                     val barHeight = if (value <= 0) D.barEmpty else maxOf(D.barMin, D.barsHeight * (value.toFloat() / most))
                     val shape = RoundedCornerShape(D.barCornerTop, D.barCornerTop, D.barCornerBottom, D.barCornerBottom)
                     val bar = Modifier.fillMaxWidth(D.BAR_WIDTH_SHARE).height(barHeight)

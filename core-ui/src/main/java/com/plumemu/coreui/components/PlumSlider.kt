@@ -130,9 +130,9 @@ fun PlumSlider(
                     val a = if (enabled) 1f else 0.5f
                     drawCssFace(CssFace(D.hueStops, listOf(seat.hueShade)), trackAt, Size(trackW, trackH), trackR, a, Brush.horizontalGradient(D.hueStops, startX = trackAt.x, endX = trackAt.x + trackW))
                 } else {
-                    drawCssFace(CssFace(listOf(seat.well), listOf(seat.wellShade)), trackAt, Size(trackW, trackH), trackR)
+                    drawCssFace(CssFace(listOf(seat.well), listOf(seat.sunkenEdge, seat.wellShade)), trackAt, Size(trackW, trackH), trackR)
                     if (enabled) {
-                        // The fill runs to the knob's centre: `linear-gradient(accent, accentLight)`, `inset 0 1px 2px .35`, `0 0 10px` glow.
+                        // The fill runs to the knob's centre: flat, the mean of the board's accent-to-accentLight fade, `inset 0 1px 2px .35`, `0 0 10px` glow.
                         val fillW = (cx - trackAt.x).coerceIn(trackH, trackW)
                         val fillSize = Size(fillW, trackH)
                         drawCssShadows(listOf(CssShadow(colors.partGlow, 0.dp, D.fillGlowBlur, glow = true)), trackAt, fillSize, trackR)

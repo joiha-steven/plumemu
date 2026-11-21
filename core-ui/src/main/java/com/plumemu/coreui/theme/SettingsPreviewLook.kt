@@ -3,7 +3,6 @@ package com.plumemu.coreui.theme
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.geometry.RoundRect
@@ -66,14 +65,6 @@ object SettingsPreviewDimens {
     val ballRight = 4.dp
     val ballTop = 9.33.dp
     val ballDiameter = 30.67.dp
-
-    /** The tile's radial gradient: centre as shares of its box; the radius is to the far corner. */
-    const val TILE_CENTRE_X = 0.28f
-    const val TILE_CENTRE_Y = 0.18f
-
-    /** The ball's radial gradient: centre as shares of its box; the radius is to the far corner. */
-    const val BALL_CENTRE_X = 0.34f
-    const val BALL_CENTRE_Y = 0.30f
 
     /** The tile's shadows (`0 8px 18px` black and `0 0 30px` glow, blur / 2 = sigma) and the card's (`inset 0 2px 6px`, `0 1px 0` white). */
     val tileShadowDrop = 5.33.dp
@@ -155,8 +146,8 @@ fun DrawScope.drawPreviewInset(corner: Float, light: Boolean) {
 }
 
 /**
- * The cover tile and the ball on its corner as the board draws them: the tile's glow under its drop shadow under its radial gradient
- * (the box-shadow list's first layer is on top), then the ball's gradient.
+ * The cover tile and the ball on its corner as the board draws them, each flat in the mean of the board's radial gradient: the tile's glow
+ * under its drop shadow under its face (the box-shadow list's first layer is on top), then the ball.
  */
 fun DrawScope.drawPreviewCover(accent: Color, light: Boolean) {
     val d = SettingsPreviewDimens
@@ -165,28 +156,19 @@ fun DrawScope.drawPreviewCover(accent: Color, light: Boolean) {
     val corner = d.tileCorner.toPx()
     drawSoft(tileTopLeft, tileSize, corner, 0f, d.tileGlowSigma.toPx(), SettingsPreviewLook.tileGlow(accent), false)
     drawSoft(tileTopLeft, tileSize, corner, d.tileShadowDrop.toPx(), d.tileShadowSigma.toPx(), SettingsPreviewLook.tileShadow(light), false)
-    val cx = tileSize.width * SettingsPreviewDimens.TILE_CENTRE_X
-    val cy = tileSize.height * SettingsPreviewDimens.TILE_CENTRE_Y
-    val tileCentre = tileTopLeft + Offset(cx, cy)
-    // CSS `circle` sizes to the farthest corner.
-    val far = kotlin.math.hypot(maxOf(cx, tileSize.width - cx), maxOf(cy, tileSize.height - cy))
-    drawRoundRect(
-        Brush.radialGradient(*SettingsPreviewLook.TILE_STOPS.zip(SettingsPreviewLook.tileStops(accent)).toTypedArray(), center = tileCentre, radius = far),
-        tileTopLeft, tileSize, CornerRadius(corner),
-    )
+    // Flat, as every surface ([FlatSurface]): the mean of the board's radial fade.
+    drawRoundRect(FlatSurface.mean(SettingsPreviewLook.tileStops(accent), SettingsPreviewLook.TILE_STOPS), tileTopLeft, tileSize, CornerRadius(corner))
     val ball = d.ballDiameter.toPx()
     val ballTopLeft = Offset(size.width - (d.ballRight.toPx() + ball), d.ballTop.toPx())
-    val ballCentre = ballTopLeft + Offset(ball * SettingsPreviewDimens.BALL_CENTRE_X, ball * SettingsPreviewDimens.BALL_CENTRE_Y)
-    val ballFar = ball * kotlin.math.hypot(1f - SettingsPreviewDimens.BALL_CENTRE_X, 1f - SettingsPreviewDimens.BALL_CENTRE_Y)
     drawCircle(
-        Brush.radialGradient(*SettingsPreviewLook.BALL_STOPS.zip(SettingsPreviewLook.ballStops(accent)).toTypedArray(), center = ballCentre, radius = ballFar),
+        FlatSurface.mean(SettingsPreviewLook.ballStops(accent), SettingsPreviewLook.BALL_STOPS),
         radius = ball / 2,
         center = ballTopLeft + Offset(ball / 2, ball / 2),
     )
 }
 
 /**
- * The mini focused row as the board's `Settings.png` card draws it: the slab's gradient and border (the theme's own, [PlumComposeColors.slab]) in the
+ * The mini focused row as the board's `Settings.png` card draws it: the slab's flat face and border (the theme's own, [PlumComposeColors.slab]) in the
  * box exactly, no overhang; its drop shadow and glow are clipped out of the box first (the slab is translucent on the board), the glow under the drop.
  */
 fun DrawScope.drawPreviewSlab(colors: PlumComposeColors) {
@@ -198,11 +180,8 @@ fun DrawScope.drawPreviewSlab(colors: PlumComposeColors) {
         drawSoft(Offset.Zero, size, corner, 0f, d.slabGlowSigma.toPx(), colors.slabGlow, false)
         look.near?.let { drawSoft(Offset.Zero, size, corner, d.slabDrop.toPx(), d.slabSigma.toPx(), it.color.copy(alpha = it.color.alpha * SLAB_DROP_SCALE), false) }
     }
-    val stops = look.stops
-    drawRoundRect(Brush.verticalGradient(0f to stops[0], FocusSlab.MID_AT to stops[1], 1f to stops[2], startY = 0f, endY = size.height), cornerRadius = CornerRadius(corner))
-    val edge = d.slabEdge.toPx()
-    // The real slab's rim: lit at two opposite corners.
-    drawRoundRect(look.rim(Offset.Zero, Offset(size.width, size.height)), topLeft = Offset(edge / 2, edge / 2), size = Size(size.width - edge, size.height - edge), cornerRadius = CornerRadius(corner - edge / 2), style = Stroke(edge))
+    drawRoundRect(look.fill, cornerRadius = CornerRadius(corner))
+    // No outline: the real slab's only edge light is its faint top line, too fine for a mini tile.
 }
 
 /** The mini slab's lift against the theme's near layer: a small slab needs it a little stronger to read. */

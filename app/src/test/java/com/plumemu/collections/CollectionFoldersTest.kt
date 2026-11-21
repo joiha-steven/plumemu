@@ -22,7 +22,7 @@ class CollectionFoldersTest {
             ),
             folders,
         )
-        assertEquals("empty folders are never hidden; New collection is not counted", 3, collectionCount(folders))
+        assertEquals("empty folders are never hidden; only the person's own collections are counted", 0, collectionCount(folders))
     }
 
     @Test
@@ -39,7 +39,7 @@ class CollectionFoldersTest {
             ),
             folders,
         )
-        assertEquals(5, collectionCount(folders))
+        assertEquals("the two own collections; built-ins and New collection are not counted", 2, collectionCount(folders))
     }
 
     @Test

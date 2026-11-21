@@ -5,6 +5,7 @@ import com.plumemu.collections.BuiltInFolder
 import com.plumemu.collections.Folder
 import com.plumemu.collections.collectionCount
 import com.plumemu.collections.entryIdOf
+import com.plumemu.coredata.settings.SortGamesSetting
 import com.plumemu.coreinput.strip.OpenFolder
 import com.plumemu.coreinput.strip.StripContent
 import com.plumemu.coreinput.strip.StripFocus
@@ -227,6 +228,8 @@ data class HomeEntry(
     val info: SystemInfo? = null,
     /** The rows are in name order; false for a list sorted by last played (the stored sort). */
     val sortedByName: Boolean = true,
+    /** The stored sort this list follows when it is not by name (the top bar names it); null by name, and for lists in their own order (Recent, Most played, Recently added, Apps). */
+    val otherSort: SortGamesSetting? = null,
     /** The system's three-character code (platform data `code`) for the peek's System codes; empty where the data has none ([entryCode] then spells one from the name). */
     val code: String = "",
     /** A folder inside Collections (Recent, Most played, Recently added, an own collection): not in the column, reached by [HomeContent.folderEntries]. */
@@ -418,6 +421,8 @@ class HomeContent private constructor(
             sortedByName: Boolean = true,
             /** The folders after Recent (Most played, Recently added, then the own collections) with their games; the default has the two built-ins empty. */
             otherFolders: List<FolderRows> = DEFAULT_FOLDERS,
+            /** The stored sort when it is not by name: the system lists, Favorites and the own collections follow it. */
+            otherSort: SortGamesSetting? = null,
         ): HomeContent {
             val shapes = (systems + hiddenSystems).associate { it.id to it.coverShape }
             val names = (systems + hiddenSystems).associate { it.id to it.name }
@@ -427,22 +432,23 @@ class HomeContent private constructor(
                 val own = folder as? Folder.Own
                 val smart = folder is Folder.BuiltIn && folder.kind != BuiltInFolder.Recent
                 val kind = if (folder is Folder.BuiltIn && folder.kind == BuiltInFolder.Recent) EntryKind.Recent else EntryKind.Collections
-                return HomeEntry(id, kind, own?.name, rows, MixedGridShape, systemShapes = shapes, systemNames = names, systemShortNames = shortNames, sortedByName = sortedByName && !smart && kind != EntryKind.Recent, isFolder = true)
+                return HomeEntry(id, kind, own?.name, rows, MixedGridShape, systemShapes = shapes, systemNames = names, systemShortNames = shortNames, sortedByName = sortedByName && !smart && kind != EntryKind.Recent, otherSort = otherSort.takeIf { own != null }, isFolder = true)
             }
             val recentFolder = FolderRows(Folder.BuiltIn(BuiltInFolder.Recent, recent.size), recent)
             val folders = (listOf(recentFolder) + otherFolders.map { it.copy(folder = withCount(it.folder, it.rows.size)) })
             val folderEntries = folders.mapNotNull { folderEntryOf(it.folder, it.rows) }
             val folderRows =
-                folders.map { (folder, rows) -> GameRowModel(entryIdOf(folder) ?: NEW_COLLECTION_ID, (folder as? Folder.Own)?.name.orEmpty(), rows.size.toString()) } +
+                // An empty folder shows no count (a bare 0 says nothing; its card says why it is empty and how it fills).
+                folders.map { (folder, rows) -> GameRowModel(entryIdOf(folder) ?: NEW_COLLECTION_ID, (folder as? Folder.Own)?.name.orEmpty(), if (rows.isEmpty()) "" else rows.size.toString()) } +
                     GameRowModel(NEW_COLLECTION_ID, "", "")
             val fixed =
                 listOfNotNull(
-                    HomeEntry(FAVORITES_ID, EntryKind.Favorites, null, favorites, MixedGridShape, systemShapes = shapes, systemNames = names, systemShortNames = shortNames, sortedByName = sortedByName),
+                    HomeEntry(FAVORITES_ID, EntryKind.Favorites, null, favorites, MixedGridShape, systemShapes = shapes, systemNames = names, systemShortNames = shortNames, sortedByName = sortedByName, otherSort = otherSort),
                     HomeEntry(COLLECTIONS_ID, EntryKind.Collections, null, folderRows, shownCount = collectionCount(folders.map { it.folder }), sortedByName = false),
                     if (showApps) HomeEntry(APPS_ID, EntryKind.Apps, null, apps) else null,
                 )
             fun entriesOf(list: List<SystemGames>) =
-                list.filter { it.games.isNotEmpty() }.map { HomeEntry(it.id, EntryKind.System, it.name, it.games, it.coverShape, info = it.info, sortedByName = sortedByName, code = it.code) }
+                list.filter { it.games.isNotEmpty() }.map { HomeEntry(it.id, EntryKind.System, it.name, it.games, it.coverShape, info = it.info, sortedByName = sortedByName, otherSort = otherSort, code = it.code) }
             return HomeContent(fixed + entriesOf(systems), hasBoxArt, entriesOf(hiddenSystems), folderEntries)
         }
 

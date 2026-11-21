@@ -47,7 +47,7 @@ object CollarDimens {
     val coverFrameCorner = coverBoxCorner + coverGroove + coverLip
 
     /** The box's own drop shadow in its collar (the board's `0 2px 0` hard one, `0 3px 4px` soft one: sigma 1.33 dp). */
-    val boxShadowHardDrop = (4f / 3f).dp * Depth.THICKNESS
+    val boxShadowHardDrop = (4f / 3f).dp * Depth.COVER_THICKNESS
     val boxShadowSoftDrop = 2.dp * Depth.SHADOW_REACH
     val boxShadowSoftSigma = (4f / 3f).dp * Depth.SHADOW_REACH
 

@@ -34,6 +34,7 @@ import com.plumemu.game.OpenPanel
 import com.plumemu.game.PanelScreen
 import com.plumemu.game.TypingScreen
 import com.plumemu.game.isTrayUp
+import com.plumemu.game.nameRes
 import com.plumemu.game.typingActionWord
 import com.plumemu.home.search.SearchState
 import com.plumemu.settings.ButtonLetters
@@ -81,8 +82,11 @@ internal fun HomeTopBar(
                     entry.kind == EntryKind.Apps -> R.plurals.home_apps_count
                     else -> R.plurals.home_games_count
                 }
-            entryName(entry) to pluralStringResource(countRes, entry.shownCount, numbers.format(entry.shownCount))
+            // No collection made yet: say so, never "0 collections" (the built-ins are not counted).
+            entryName(entry) to if (entry.isFolderList && entry.shownCount == 0) stringResource(R.string.collections_none) else pluralStringResource(countRes, entry.shownCount, numbers.format(entry.shownCount))
         }
+    // A list in another order than by name says which ("· Recently added"): nothing else on screen does. Left out, never cut, when the line is full.
+    val sortName = entry?.otherSort?.takeIf { !isAsking && column != Column.Systems }?.let { stringResource(it.nameRes()) }
     val shown = rememberShownNotice()
     val notice = shown.notice
     // After a game: "+3 achievements · Super Metroid", a few seconds, in the notice's place (it wins while it shows).
@@ -103,6 +107,7 @@ internal fun HomeTopBar(
                 lead
             },
         emphasis = noticeLead ?: lead,
+        placeWithTail = if (noticeLead == null && count != null && sortName != null) stringResource(R.string.home_place, lead, stringResource(R.string.home_place, count, sortName)) else null,
         clock = clock,
         battery = battery,
         wifi = wifi,
@@ -205,10 +210,12 @@ internal fun searchTypingHints(
     onLetters: Boolean,
     letters: ButtonLetters = ButtonLetters.Default,
     canPaste: Boolean = false,
-): List<HintSpec> = typingHints(onLetters, R.string.home_hint_search, hasShift = false, letters, canPaste)
+    fieldEmpty: Boolean = false,
+): List<HintSpec> = typingHints(onLetters, R.string.home_hint_search, hasShift = false, letters, canPaste, fieldEmpty)
 
 /**
- * Any field while Plumemu's keyboard is up: "A Type", "B Delete", "X Space", "START <[actionWord]>",
+ * Any field while Plumemu's keyboard is up: "A Type", "B Delete" ("B Back" while the field is empty
+ * ([fieldEmpty]): B then closes Search or puts the keyboard away), "X Space", "START <[actionWord]>",
  * "R3 Paste" while the clipboard holds text ([canPaste]; every other button is taken while typing),
  * "Y 123" / "Y ABC", "SELECT Shift" when the keys have shift ([hasShift]: not Search) and "L1 R1 Cursor".
  * Short of room they give way in [TYPING_HINT_DROP_ORDER]: L1 R1, SELECT, Y.
@@ -219,10 +226,12 @@ internal fun typingHints(
     hasShift: Boolean,
     letters: ButtonLetters = ButtonLetters.Default,
     canPaste: Boolean = false,
+    fieldEmpty: Boolean = false,
 ): List<HintSpec> =
     listOfNotNull(
         HintSpec(letters.confirm, R.string.account_hint_type, Action.Enter),
-        HintSpec(letters.back, R.string.home_hint_delete, Action.Erase()),
+        // The tap still sends B's own action, so it does what the key does in either case.
+        HintSpec(letters.back, if (fieldEmpty) R.string.home_hint_back else R.string.home_hint_delete, Action.Erase()),
         HintSpec(letters.search, R.string.home_hint_space, Action.Search),
         HintSpec(R.string.home_key_start, actionWord, Action.Menu),
         if (canPaste) HintSpec(R.string.home_key_r3, R.string.keyboard_paste, Action.Paste) else null,
@@ -307,8 +316,9 @@ internal fun HomeHints(
         val onLetters = isTyping && open.keys.page == KeyboardPage.Letters
         val xTypes = open.usesOwnKeyboard
         val searchArmed = open.isPushRightArmed
-        remember(inField, isTyping, onLetters, onFavorite, letters, xTypes, pushRightToPlay, searchArmed, canPaste) {
-            if (isTyping) searchTypingHints(onLetters, letters, canPaste) else searchHints(inField, onFavorite, letters, xTypes, pushRightToPlay, searchArmed)
+        val queryEmpty = isTyping && open.query.isEmpty()
+        remember(inField, isTyping, onLetters, onFavorite, letters, xTypes, pushRightToPlay, searchArmed, canPaste, queryEmpty) {
+            if (isTyping) searchTypingHints(onLetters, letters, canPaste, queryEmpty) else searchHints(inField, onFavorite, letters, xTypes, pushRightToPlay, searchArmed)
         }
     }
     // A panel with a text field changes what A does without a new panel: read its state here.
@@ -320,8 +330,9 @@ internal fun HomeHints(
         val chooseLabel = panelChooseLabel(open)
         val onLetters = isPanelTrayUp && typingScreen?.typing?.fieldKeys?.keys?.page == KeyboardPage.Letters
         val actionWord = typingScreen?.let(::typingActionWord) ?: R.string.home_hint_search
-        remember(open, canChoose, onField, chooseLabel, letters, isPanelTrayUp, onLetters, actionWord, canPaste) {
-            if (isPanelTrayUp) typingHints(onLetters, actionWord, hasShift = true, letters, canPaste) else panelHints(open, letters)
+        val fieldEmpty = isPanelTrayUp && typingScreen?.typing?.fieldText?.isEmpty() == true
+        remember(open, canChoose, onField, chooseLabel, letters, isPanelTrayUp, onLetters, actionWord, canPaste, fieldEmpty) {
+            if (isPanelTrayUp) typingHints(onLetters, actionWord, hasShift = true, letters, canPaste, fieldEmpty) else panelHints(open, letters)
         }
     }
     // A on the empty state does what its focused button says; the reason is collected only while that message is up.
@@ -332,16 +343,20 @@ internal fun HomeHints(
             panel?.let { panelHints(it, letters) } ?: hintsFor(content, column, entry, showsGrid, letters, focusedIsFavorite, pushRightToPlay, stripArmed, updateWaiting, shoulders, hasDetailsStop, emptyButton, focusedFolderIsNew).withUndo(undoOffered, letters)
         }
     // While Undo is offered X stays on every bar that has it (Search is dropped last), or its key would work with no hint drawn.
-    val drops = (if (isTyping || isPanelTrayUp) TYPING_HINT_DROP_ORDER else if (showsGrid && entry?.isIconGrid == true) APPS_GRID_HINT_DROP_ORDER else if (showsGrid) GRID_HINT_DROP_ORDER else HINT_DROP_ORDER).let { if (undoOffered && panel == null && searchHintsShown == null) it - Action.Search else it }
-    val dropOrder = remember(hints, drops) { drops.flatMap { action -> hints.indices.filter { hints[it].action == action } } }
+    val keepsUndo = undoOffered && panel == null && searchHintsShown == null
+    val drops = (if (isTyping || isPanelTrayUp) TYPING_HINT_DROP_ORDER else HINT_DROP_ORDER).let { if (keepsUndo) it - Action.Search else it }
+    val isGridBar = searchHintsShown == null && showsGrid && column == Column.Games && entry != null
+    // "L2 R2 Switch list" gives way before the game's year and publisher; on a cover grid X Search and START Menu
+    // too, and they leave first, so they show only where they cost the grid nothing it showed before. The keys still work.
+    val beforeMeta = (if (entry?.isIconGrid == true) setOf(Action.JumpLetterNext) else COVER_GRID_KEYS_BEFORE_META).let { if (keepsUndo) it - Action.Search else it }
+    val barDrops = if (isGridBar) drops.filter { it in beforeMeta } + drops.filterNot { it in beforeMeta } else drops
+    val dropOrder = remember(hints, barDrops) { barDrops.flatMap { action -> hints.indices.filter { hints[it].action == action } } }
     val views: @Composable () -> Unit = remember(hints, onAction, onCycleGridSize) { { hints.forEach { HintView(it, onAction, onCycleGridSize) } } }
-    if (searchHintsShown == null && showsGrid && column == Column.Games && entry != null) {
-        // "L2 R2 Switch list" gives way before the game's year and publisher; the keys still work.
-        val beforeMeta = hints.indices.filter { hints[it].action == Action.JumpLetterNext }
-        GridHintBar(entry, state, dropOrder, beforeMeta, views)
+    if (isGridBar && entry != null) {
+        val beforeMetaIndices = hints.indices.filter { hints[it].action in beforeMeta }
+        GridHintBar(entry, state, dropOrder, beforeMetaIndices, views)
     } else {
-        // On a narrow screen in a wide font the games hints do not all fit: L2 R2 Switch list goes first (the
-        // system column's edge is a tap away), then L1 R1 Size, then B Back, SELECT last (HINT_DROP_ORDER); never cut or overlapped.
+        // Short of room the hints give way in HINT_DROP_ORDER; never cut or overlapped.
         FittingHintBar(modifier = Modifier.testTag(HomeTags.HINT_BAR), dropOrder = dropOrder, content = views)
     }
 }
@@ -380,16 +395,18 @@ private fun HintView(
 }
 
 /**
- * Which hints give way first when the bar is too narrow for all of them (see [HomeHints]): L2 R2 Switch list, then
- * L1 R1 Size, R3 Sort, B Back, and SELECT last; START Menu and Y Favorite are not in the order (only a bar still too
- * narrow after those would drop hints from its end). By touch SELECT's hint is the only way
- * between a list and its grid, while B has the system's back gesture;
+ * Which hints give way first when a main-screen bar is too narrow (see [HomeHints]); one order for the
+ * games list, the cover and Apps grids, the details stop and the folders page:
+ * L2 R2 Switch list (the system column is a Left away), X Search, Y Favorite (also in the START menu),
+ * B Back (also the back gesture), START, then L1 R1 Size and SELECT last: by touch they are the only way
+ * to the grid size and between a list and its grid. A is never in it.
  * `HomeViewToggleHintTest` checks SELECT stays at 576 x 432 at Largest.
  */
-private val HINT_DROP_ORDER = listOf(Action.JumpLetterNext, Action.NextSystem, Action.Sort, Action.Back, Action.ToggleView)
+internal val HINT_DROP_ORDER =
+    listOf(Action.JumpLetterNext, Action.Search, Action.ToggleFavorite, Action.Back, Action.Menu, Action.NextSystem, Action.ToggleView)
 
-/** A grid's hints give way as a list's do, with Y Favorite going right after Switch list (L1 R1 Size stays at 576). */
-private val GRID_HINT_DROP_ORDER = listOf(Action.JumpLetterNext, Action.ToggleFavorite, Action.NextSystem, Action.Back, Action.ToggleView)
+/** A cover grid's hints that give way before the focused game's year and publisher (the rest only once the title is at its minimum). */
+private val COVER_GRID_KEYS_BEFORE_META = setOf(Action.JumpLetterNext, Action.Search, Action.Menu)
 
 /** The typing hints (Search's and a panel field's) give way in this order: L1 R1 Cursor, then SELECT Shift, then Y 123; A, B, X and START always stay. */
 private val TYPING_HINT_DROP_ORDER = listOf(Action.NextSystem, Action.ToggleView, Action.ToggleFavorite)
@@ -426,10 +443,12 @@ internal object HomeTags {
 
     /** The wide details cover's box, inside its collar: the picture's or the tile's bounds. */
     const val DETAILS_COVER_BOX = "home_details_cover_box"
+    const val DETAILS_COVER_WHOLE = "home_details_cover_whole"
 
     /** The narrow stop's cover slot: its width is fixed from the first frame; the picture only fits inside it. */
     const val DETAILS_COVER_SLOT = "home_details_cover_slot"
     const val DETAILS_TITLE = "home_details_title"
+    const val DETAILS_TITLE_SUBTITLE = "home_details_title_subtitle"
     const val DETAILS_FACTS = "home_details_facts"
     const val DETAILS_BATTERY = "home_details_battery"
 
@@ -442,7 +461,7 @@ internal object HomeTags {
     const val DETAILS_APP_PACKAGE = "home_details_app_package"
 
     /** The five rating dots in the details block. */
-    const val DETAILS_RATING_DOTS = "home_details_rating_dots"
+    const val DETAILS_RATING = "home_details_rating"
 
     /** The facts table's room kept empty while the play facts are read. */
     const val DETAILS_FACTS_PENDING = "home_details_facts_pending"

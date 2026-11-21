@@ -180,12 +180,12 @@ class HomeDetailsSynopsis768Test : HomeDetailsSynopsisBase(narrow = false, lines
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w832dp-h468dp-land-xhdpi")
-class HomeDetailsSynopsis832Test : HomeDetailsSynopsisBase(narrow = false, lines = 0..0, coverHeight = 171f) // 178 before the facts' labels grew from 11 to 13 (a taller block, re-measured)
+class HomeDetailsSynopsis832Test : HomeDetailsSynopsisBase(narrow = false, lines = 0..0, coverHeight = 168f) // 171 before the publisher line grew from 11 to 13 (a taller title block, re-measured); 178 before the labels grew
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w837dp-h471dp-land-367dpi")
-class HomeDetailsSynopsisThorTest : HomeDetailsSynopsisBase(narrow = false, lines = 0..0, coverHeight = 171.34f) // 177.87 before the facts' labels grew from 11 to 13 (re-measured)
+class HomeDetailsSynopsisThorTest : HomeDetailsSynopsisBase(narrow = false, lines = 0..0, coverHeight = 168.28f) // 171.34 before the publisher line grew from 11 to 13 (re-measured); 177.87 before the labels grew
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)

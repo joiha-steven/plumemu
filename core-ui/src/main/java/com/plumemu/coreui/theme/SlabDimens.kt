@@ -31,6 +31,12 @@ object SlabDimens {
      */
     val glowSigma = 7.dp * Depth.GLOW_REACH
 
+    /**
+     * How far the drop shadow shows below the slab: its drop and 2.4 sigmas. Longer than [glowReach] (the room lists keep), so at a list's end the
+     * shadow fades out inside that room by the existing tail fade; raising the room moved every list's layout and the top-edge fades.
+     */
+    val shadowReach = (FocusSlab.DROP_DP + 2.4f * FocusSlab.SIGMA_DP).dp
+
     /** How far a list's side clip lets the glow reach past the slab: where it is under 2 of 255. */
     val glowReach = 13.dp * Depth.GLOW_REACH
 

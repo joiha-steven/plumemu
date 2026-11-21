@@ -58,4 +58,24 @@ class EllipsizeTest {
         assertEquals("Zelda", "Zelda :- ".trimBeforeEllipsis())
         assertEquals("Mr.", "Mr.".trimBeforeEllipsis())
     }
+
+    @Test
+    fun wholeWordsEndsOnTheLastWholeWord() {
+        // "The Legend of Zelda: Echoes of Wis…" fits 35; the cut goes back to "Echoes of".
+        val text = "The Legend of Zelda: Echoes of Wisdom"
+        assertEquals("The Legend of Zelda: Echoes of\u2026", ellipsize(text, wholeWords = true) { it.length <= 35 })
+        assertEquals("The Legend of Zelda: Echoes of Wis\u2026", ellipsize(text) { it.length <= 35 })
+    }
+
+    @Test
+    fun wholeWordsStillCutsOneLongWord() {
+        assertEquals("Supercalifragi\u2026", ellipsize("Supercalifragilistic", wholeWords = true) { it.length <= 15 })
+        // Going back to the word's start would give up more than the limit: cut inside.
+        assertEquals("A Supercalifra\u2026", ellipsize("A Supercalifragilistic", wholeWords = true) { it.length <= 15 })
+    }
+
+    @Test
+    fun wholeWordsLeavesATitleThatFits() {
+        assertEquals("Mega Man X", ellipsize("Mega Man X", wholeWords = true) { it.length <= 15 })
+    }
 }

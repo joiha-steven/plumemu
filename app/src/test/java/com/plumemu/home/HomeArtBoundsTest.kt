@@ -38,7 +38,7 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * Where the box-art parts land, measured against the boards'
  * own numbers: RP5-2-games (details 248 beside the 400 list, cover 248×178, gap 12),
- * Nova-3-details (strip at `56 − 648`, details `width − 104` = 472, cover 228×164, text 20 to its
+ * Nova-3-details (strip at `−648`, details `width − 48` = 528, cover 228×164, text 20 to its
  * right), RP5-3 / RP5-4 and their Nova versions (grid `width − 96` less the 4 dp padding;
  * columns 3 / 5 and 2 / 4; gaps between collars are the grid tokens (PlumDimens.gridGapAcross / gridGapDown); the bar's title at 72).
  */
@@ -87,13 +87,13 @@ class HomeArtBoundsTest {
 
     @Test
     @Config(qualifiers = NARROW)
-    fun narrowDetailsStopTakesWidthMinus104() {
+    fun narrowDetailsStopTakesWidthMinus48() {
         show { ArtDetailsBoard() }
         val row = bounds(HomeTags.game(0))
-        assertDp("the list slid out until 56 show", 56.dp, row.right)
+        assertDp("the list slid out wholly", 0.dp, row.right)
         val details = bounds(HomeTags.DETAILS)
-        assertDp("details 24 after the list peek", 80.dp, details.left)
-        assertDp("details width − 104 = 472", 472.dp, details.right - details.left)
+        assertDp("details start at the 24 margin", 24.dp, details.left)
+        assertDp("details width − 48 = 528", 528.dp, details.right - details.left)
         // The cover wears the glass frame: the frame (the box and the collar's padding round it) is the 228 x 164 slot.
         val box = bounds(HomeTags.DETAILS_COVER)
         val side = CollarSize.Cover.sidePadding
@@ -117,7 +117,7 @@ class HomeArtBoundsTest {
         assertEquals("the box at its own shape", 1.4f, (box.right - box.left).value / (box.bottom - box.top).value, 0.01f)
         assertTrue("the frame no wider than the 228 slot", (coverRight - coverLeft).value <= 228f + TOLERANCE)
         val title = bounds(HomeTags.DETAILS_TITLE)
-        assertDp("title at the column's left, text first", 80.dp, title.left)
+        assertDp("title at the column's left, text first", 24.dp, title.left)
         assertTrue("20 between the text and the cover", title.right <= coverLeft - 20.dp + TOLERANCE.dp)
         assertDp("title level with the cover", TableText.StripTop, title.top)
     }

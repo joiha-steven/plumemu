@@ -115,8 +115,9 @@ enum class TypeRole(
     /** A details fact's value or a count phrase beside words (play time, last played, the battery time, "N games"): Jost 13, tabular figures; the labels above stay Jost ([DetailsLabel]). */
     FactNumber(13f, 500, tabular = true),
 
-    /** The rating's figure ("8.5"), alone in its cell beside the dots: Mono 13. */
+    /** The rating in the details ("8.5/10"), a figure alone on its line: Mono 13. */
     RatingNumber(13f, 500, mono = true),
+
 
     /**
      * A Statistics tile's figure, a number alone ("73%") or with words ("3 h 40 min", "38 of 412"): Jost 20, tabular figures. A row
@@ -138,8 +139,8 @@ enum class TypeRole(
     /** The details block's labels (Genre, Rating, Played, Last played …): sentence case, 13, drawn `muted` by the caller; no letter spacing. */
     DetailsLabel(13f, 500),
 
-    /** The line under the details title ("Nintendo, 1994"): 15 board px = 10 dp, the ramp's 11. */
-    DetailsSubtitle(11f, 500),
+    /** The line under the details title ("Nintendo, 1994"): 13 like the facts under it, drawn `muted` (11 read as a footnote under a 20 title). */
+    DetailsSubtitle(13f, 500),
 
     /** A titled grid tile's title (the board's 14 / 600; 13 on the ramp). */
     GridFocusTitle(13f, 700),

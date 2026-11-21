@@ -102,7 +102,6 @@
     <string name="home_hint_undo">Undo</string>
     <!-- The top bar's line for 4 seconds after Remove from Recent, followed by " · " and Undo. Past tense, short: both parts stay whole before the clock at the Largest text size on 576 wide (measured: 19 characters in English, 9 in Japanese fit). -->
     <string name="home_notice_removed_from_recent">Removed from Recent</string>
-    <string name="home_hint_sort">Sort</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
          shown when no title matches. -->
@@ -464,7 +463,6 @@
 
     <!-- Launch errors: a title, one or two plain sentences, then what the person can do. -->
     <string name="game_action_rescan">Rescan library</string>
-    <string name="game_action_play_with_another">Play with another emulator</string>
     <string name="game_action_ok">OK</string>
     <!-- The last row of Info: back to the menu. -->
     <!-- The last row of the Info panel: a verb, back to the game menu. -->
@@ -531,7 +529,7 @@
     <string name="game_error_internal_body">Plumemu\'s emulator data could not be used for this game.</string>
     <!-- %1$s is an emulator's name. Shown when it came back within ten seconds of its start. -->
     <string name="game_closed_at_once_title">%1$s closed right away</string>
-    <string name="game_closed_at_once_body">If the game did not start, choose another emulator with Play with… in the game menu.</string>
+    <string name="game_closed_at_once_body">If the game did not start, try another emulator.</string>
     <!-- %1$s is the game's title. Asked on return from a game started with a RetroArch core nobody has said works; %1$s in the body is the emulator ("RetroArch: Mesen"). -->
     <string name="game_core_question_title">Did %1$s start?</string>
     <string name="game_core_question_body">It was opened with %1$s. Plumemu cannot see which cores RetroArch has, so it asks once for each core.</string>
@@ -739,14 +737,11 @@
     <!-- Hint bar on a most-played game of Settings › Statistics: A closes Settings with the main screen's cursor on that game. -->
     <string name="settings_hint_go_to">Go to</string>
     <string name="settings_key_up_down" translatable="false">↑↓</string>
-    <!-- %1$s is the number of hidden games, already formatted for the locale. -->
-    <string name="settings_hidden_games">Hidden games (%1$s)</string>
     <string name="settings_hidden_games_title">Hidden games</string>
     <string name="settings_hidden_games_body">Games you hid, or said are not games. Choose one to show it again.</string>
     <string name="settings_unhide_failed">The game could not be shown again. Nothing was changed.</string>
     <!-- A game the person marked "Not a game" in Hidden games: "Not a game · SNES". -->
     <string name="settings_hidden_not_a_game">Not a game · %1$s</string>
-    <string name="settings_unidentified_games">Unidentified games (%1$s)</string>
     <string name="settings_unidentified_games_title">Unidentified games</string>
     <string name="settings_unidentified_games_body">Games Plumemu could name only from their file. Choose one to fix its name.</string>
     <string name="settings_name_fix_failed">That name could not be saved. Nothing was changed.</string>
@@ -1749,8 +1744,13 @@
     <string name="collections_notice_removed">Removed from collection</string>
     <string name="collections_name_title">Collection name</string>
     <string name="collections_empty_most_played">Games you play the longest show up here</string>
-    <string name="collections_empty_recently_added">Games added in the last 30 days show up here</string>
+    <!-- Setup's games are the library, not news (they never show here): say which games do. -->
+    <string name="collections_empty_recently_added">Games found after setup show up here for 30 days</string>
     <string name="collections_empty_own">Add games with %1$s › Add to collection…</string>
+    <string name="collections_about_recent">The games you played last, newest first</string>
+    <string name="collections_about_most_played">The games you played longest, up to 50</string>
+    <string name="collections_about_recently_added">Games added in the last 30 days, newest first</string>
+    <string name="collections_new_about">Your own list of games from any system. Name it here, then add games with %1$s\u00A0› Add to collection…</string>
     <string name="collections_rename">Rename</string>
     <string name="collections_delete">Delete…</string>
     <string name="collections_delete_title">Delete %1$s?</string>
@@ -1761,6 +1761,7 @@
     <string name="collections_move_down">Move down</string>
     <string name="collections_delete_confirm">Delete</string>
     <string name="collections_settings_failed">That change could not be saved. Try again.</string>
+    <string name="collections_none">No collections yet</string>
     <plurals name="collections_count">
         <item quantity="one">%1$s collection</item>
         <item quantity="other">%1$s collections</item>

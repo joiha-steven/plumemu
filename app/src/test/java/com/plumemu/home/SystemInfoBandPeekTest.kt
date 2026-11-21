@@ -22,8 +22,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The band's line is whole or absent: at the narrow details stop only 56 dp of the list shows, and the right end of the facts line
- * ("-2003") must not show there as a cut fragment. At the games stop the line is drawn.
+ * The band's line is whole or absent: at the narrow details stop the list is wholly slid out, so no piece of the facts line is on screen. At the games stop the line is drawn.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -55,7 +54,10 @@ class SystemInfoBandPeekTest {
     @Test
     fun theDetailsStopShowsNoPieceOfTheFactsLine() {
         val atDetails = BoardGamesFocused + Action.Move(Direction.Right)
-        assertEquals("only the background in the 56 dp the list leaves", 1, coloursInFacts(atDetails, onlyLeftOf = 56))
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { HomeAt(FakeHomeContent.withArtwork().withSystemInfo(), atDetails) } }
+        compose.waitForIdle()
+        val right = compose.onNodeWithTag(HomeTags.SYSTEM_BAND_FACTS, useUnmergedTree = true).getUnclippedBoundsInRoot().right
+        assertTrue("the facts line ends at or left of the screen edge, right = $right", right <= 1.dp)
     }
 
     @Test

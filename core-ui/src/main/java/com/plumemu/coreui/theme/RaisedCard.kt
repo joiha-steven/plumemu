@@ -5,9 +5,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
- * The raised card the game panel and its questions stand on (docs/design/rules.md > Cards): the board's PANEL. Its fill is the
- * CSS gradient from [top] to [bottom], the tone ladder's raised step one L* above and below ([ToneLadder.RAISED]), so it keeps the
- * page's hue on every set; [fill] is their mean, for what is drawn over the card as a flat colour (the slab's under-colour).
+ * The raised card the game panel and its questions stand on (docs/design/rules.md > Cards): the board's PANEL. Its face is flat
+ * ([FlatSurface]): [fill], the mean of the board's gradient from [top] to [bottom] (the tone ladder's raised step one L* above and below,
+ * [ToneLadder.RAISED]), so it keeps the page's hue on every set; it stands up by its lit top edge and its shadows.
  * The edge and shadow shares are the board's.
  */
 object RaisedCard {
@@ -44,7 +44,7 @@ object RaisedCard {
 }
 
 /**
- * [RaisedCard] as Compose colours: the gradient [top] to [bottom] and its opaque mean [fill], the border sides [edge] with its top side
+ * [RaisedCard] as Compose colours: the flat [fill], the border sides [edge] with its top side
  * [edgeTop], and the [shadow] (its tint; alpha = the strength both shadows are scaled by).
  */
 @Immutable
@@ -52,9 +52,9 @@ class CardLook(
     val fill: Color,
     val edge: Color,
     val shadow: Color,
-    val top: Color = fill,
-    val bottom: Color = fill,
     val edgeTop: Color = edge,
+    /** The card's solid lower edge ([FlatSurface.raisedEdge]). */
+    val base: Color = fill,
 ) {
     internal companion object {
         fun of(
@@ -65,9 +65,8 @@ class CardLook(
             fill = RaisedCard.fill(bg, text, dark).toComposeColor(),
             edge = if (dark) Color.White.copy(alpha = RaisedCard.EDGE_DARK) else CollarLook.SHADE_BROWN.toComposeColor().copy(alpha = RaisedCard.EDGE_LIGHT),
             shadow = FocusSlab.shadowTint(dark).toComposeColor().copy(alpha = RaisedCard.shadowAlpha(dark).toFloat()),
-            top = RaisedCard.top(bg, text, dark).toComposeColor(),
-            bottom = RaisedCard.bottom(bg, text, dark).toComposeColor(),
             edgeTop = if (dark) Color.White.copy(alpha = RaisedCard.EDGE_TOP_DARK) else Color.White,
+            base = FlatSurface.base(RaisedCard.fill(bg, text, dark), FocusSlab.shadowTint(dark), if (dark) FlatSurface.BASE_DARK_L else FlatSurface.BASE_LIGHT_L).toComposeColor(),
         )
     }
 }

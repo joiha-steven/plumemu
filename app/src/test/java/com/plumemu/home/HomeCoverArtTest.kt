@@ -254,10 +254,9 @@ class HomeCoverArtTest {
         // The rating (17 of 20) is not in the result: it is read with the synopsis, once the focus has rested.
         compose.mainClock.advanceTimeBy(SETTLE_MS)
         compose.waitForIdle()
-        // The details block: the genre under GENRE (first genre alone when the list does not fit one line), the number and five dots under RATING (spoken as one "Rating, 8.5/10").
+        // The details block: the genre on the Genre line, the rating on its own line as "8.5/10" (spoken as one "Rating, 8.5/10").
         compose.onNodeWithText("Action", substring = true, useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("8.5", useUnmergedTree = true).assertExists()
-        compose.onNodeWithTag(HomeTags.DETAILS_RATING_DOTS, useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag(HomeTags.DETAILS_RATING, useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("Rating, 8.5/10", useUnmergedTree = true).assertExists()
     }
 

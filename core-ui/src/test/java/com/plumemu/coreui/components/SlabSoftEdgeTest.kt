@@ -31,8 +31,8 @@ import kotlin.math.abs
 import kotlin.math.exp
 
 /**
- * The slab's lift and glow as drawn, against the Gaussians they are: each layer is the slab's rounded box moved down by its drop ([FocusSlab.NEAR_DROP_DP],
- * [FocusSlab.FAR_DROP_DP]) and blurred by its sigma, at the strength the look carries ([FocusSlab.liftAlpha]); the glow is the box blurred by
+ * The slab's lift and glow as drawn, against the Gaussians they are: each layer is the slab's rounded box moved down by its drop ([FocusSlab.DROP_DP],
+ * [FocusSlab.DROP_DP]) and blurred by its sigma, at the strength the look carries ([FocusSlab.liftAlpha]); the glow is the box blurred by
  * [SlabDimens.glowSigma]. The lift is a shadow on every page: black on a dark one, brown on a light one, so its share is read as how far a pixel
  * moved from the page toward the layer's ink. The measurements are taken on the row's middle, where the profile is that of a straight edge.
  */
@@ -92,8 +92,8 @@ class SlabSoftEdgeTest {
     ): Double {
         val px = Math.round(dp * density)
         val u = if (above) -(px + 0.5) else height + px + 0.5
-        val near = layerAt(look.near!!.color.alpha, FocusSlab.NEAR_DROP_DP * density.toDouble(), FocusSlab.NEAR_SIGMA_DP * density.toDouble(), u)
-        val far = layerAt(look.far!!.color.alpha, FocusSlab.FAR_DROP_DP * density.toDouble(), FocusSlab.FAR_SIGMA_DP * density.toDouble(), u)
+        val near = layerAt(look.near!!.color.alpha, FocusSlab.DROP_DP * density.toDouble(), FocusSlab.SIGMA_DP * density.toDouble(), u)
+        val far = layerAt(look.far!!.color.alpha, FocusSlab.DROP_DP * density.toDouble(), FocusSlab.SIGMA_DP * density.toDouble(), u)
         return 1 - (1 - near) * (1 - far)
     }
 
@@ -134,9 +134,10 @@ class SlabSoftEdgeTest {
         }
     }
 
+    /** Requirement change ("lifted card"): the shadow is black on a light page too (it was the warm brown). */
     @Test
     fun theLiftIsAShadowOnADarkPageAndOnALightOne() {
-        for ((theme, ink) in listOf(graphite to 0f, paper to 0.2f)) {
+        for ((theme, ink) in listOf(graphite to 0f, paper to 0f)) {
             val look = theme.colors.slab
             assertEquals(ink, look.near!!.color.red, 0.15f)
             val image = draw(theme, look, Color.Transparent)
@@ -170,20 +171,21 @@ class SlabSoftEdgeTest {
     @Test
     fun theLiftEndsWithinItsReach() {
         for (theme in listOf(graphite, paper)) {
-            val far = FocusSlab.FAR_DROP_DP + 3 * FocusSlab.FAR_SIGMA_DP
+            val far = FocusSlab.DROP_DP + 3 * FocusSlab.SIGMA_DP
             assertTrue("${theme.settings.backgroundColor}: ${lift(theme, far, above = false)} left $far dp below", lift(theme, far, above = false) < 0.01)
         }
     }
 
+    /** Requirement change ("lifted card"): the strength is the recipe's 18 % on a light page and 45 % on a dark one, no longer two lightness steps. */
     @Test
-    fun theLiftStrengthIsTheLiftAlphaOfItsSteps() {
+    fun theLiftStrengthIsTheRecipes() {
         for (theme in listOf(graphite, paper)) {
-            val bg = Rgb(theme.settings.backgroundColor.toArgb() and 0xFFFFFF)
             val look = theme.colors.slab
-            assertEquals(FocusSlab.liftAlpha(bg, theme.dark, FocusSlab.LIFT_NEAR_L), look.near!!.color.alpha, 0.003f)
-            assertEquals(FocusSlab.liftAlpha(bg, theme.dark, FocusSlab.LIFT_FAR_L), look.far!!.color.alpha, 0.003f)
-            assertEquals(look.near.drop.value, FocusSlab.NEAR_DROP_DP, 0.001f)
-            assertEquals(look.far.sigma.value, FocusSlab.FAR_SIGMA_DP, 0.001f)
+            val want = if (theme.dark) FocusSlab.SHADOW_DARK_ALPHA else FocusSlab.SHADOW_LIGHT_ALPHA
+            assertEquals(want, look.near!!.color.alpha, 0.003f)
+            assertEquals(0f, look.far!!.color.alpha, 0f)
+            assertEquals(look.near.drop.value, FocusSlab.DROP_DP, 0.001f)
+            assertEquals(look.far.sigma.value, FocusSlab.SIGMA_DP, 0.001f)
         }
     }
 
@@ -191,7 +193,7 @@ class SlabSoftEdgeTest {
     private fun glowOnly(theme: Theme): SlabLook {
         val real = theme.colors.slab
         fun none(s: SlabShadow?) = s?.let { SlabShadow(it.color.copy(alpha = 0f), it.drop, it.sigma) }
-        return SlabLook(fill = real.fill, edge = real.edge, near = none(real.near), far = none(real.far))
+        return SlabLook(fill = real.fill, near = none(real.near), far = none(real.far))
     }
 
     /** The share of [glow] [dp] left of the slab's left edge, on the row's middle. */

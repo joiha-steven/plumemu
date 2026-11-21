@@ -120,7 +120,8 @@ class CollectionsFoldersScreenTest {
         show()
         intoFolders()
         listOf("Recent", "Most played", "Recently added", "RPG", "New collection…").forEach { assertTrue("$it is a row", hasText(it)) }
-        listOf("3", "0", "2").forEach { assertTrue("count $it", hasText(it)) }
+        listOf("3", "2").forEach { assertTrue("count $it", hasText(it)) }
+        assertFalse("an empty folder (Most played) shows no bare 0", hasText("0"))
     }
 
     @Test
@@ -219,6 +220,15 @@ class CollectionsFoldersScreenTest {
         send(Action.JumpLetterNext)
         send(Action.JumpLetterPrevious)
         assertEquals("Recent reopened on its second game", listOf("r1"), playedByA())
+    }
+
+    @Test
+    fun aFolderOpenedWithAStandsOnItsFirstGameEvenAfterAnEarlierVisit() {
+        show()
+        intoFolder(3)
+        assertEquals("first visit: the first game", listOf("c0"), playedByA())
+        send(right, Action.Back, Action.Enter)
+        assertEquals("opened again from its row: the first game, not the one left", listOf("c0"), playedByA())
     }
 
     @Test

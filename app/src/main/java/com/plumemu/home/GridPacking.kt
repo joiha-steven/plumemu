@@ -101,6 +101,21 @@ private fun evenColumns(
 }
 
 /**
+ * The picture height at which [count] boxes whose aspects sum to [aspectSum] span [maxWidth] exactly (boxes [gap] apart, each
+ * collar [chromeX] wider than its picture); NaN when even the collars do not fit across. The one formula of a justified row.
+ */
+internal fun justifiedPictureHeight(
+    aspectSum: Double,
+    count: Int,
+    gap: Float,
+    maxWidth: Float,
+    chromeX: Float,
+): Double {
+    val room = maxWidth - (count - 1) * gap - count * chromeX
+    return if (room <= 0f) Double.NaN else room / aspectSum
+}
+
+/**
  * Mixed shapes: rows justified to [maxWidth]. A row of boxes `start until end` spans it exactly at the picture height
  * `chromeY + (maxWidth - (n - 1) * gap - n * chromeX) / sum of aspects`, every box scaled by the same factor (its collar's thin
  * padding unchanged). The row breaks are the ones that keep every row's height near [rowHeight], the Size step's target: a dynamic
@@ -120,10 +135,7 @@ private fun justifiedRows(
     val prefix = DoubleArray(count + 1)
     for (i in 0 until count) prefix[i + 1] = prefix[i] + aspects[i]
     // The height of a row of boxes from..to, or NaN when even their collars do not fit across.
-    fun heightOf(from: Int, to: Int): Double {
-        val room = maxWidth - (to - from - 1) * gap - (to - from) * chromeX
-        return if (room <= 0f) Double.NaN else chromeY + room / (prefix[to] - prefix[from])
-    }
+    fun heightOf(from: Int, to: Int): Double = chromeY + justifiedPictureHeight(prefix[to] - prefix[from], to - from, gap, maxWidth, chromeX)
     fun cost(height: Double): Double = ln(height / rowHeight).let { it * it }
     val best = DoubleArray(count + 1)
     val next = IntArray(count + 1)

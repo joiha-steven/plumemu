@@ -32,6 +32,8 @@ internal val EMULATOR_NONE = EmulatorFact(null)
 internal val GAME_WITH_STAR =
     SecondScreenContent.Game("Super Metroid", "Super Nintendo", "USA", isFavorite = true, lastPlayedDaysAgo = 1, playTimeMinutes = 200, emulator = emulatorNamed("Snes9x"))
 internal val GAME_NEVER_PLAYED = SecondScreenContent.Game("Chrono Trigger", "Super Nintendo", "USA", emulator = EMULATOR_NOT_CHOSEN)
+/** A row with no library game (no id): its play facts are never read, so it has no tile. */
+internal val GAME_NO_LIBRARY_ID = SecondScreenContent.Game("Arcade Classics", "Arcade", null, gameId = null, isPlayKnown = false)
 internal val GAME_LONG_TITLE =
     SecondScreenContent.Game(LONG_TITLE, "PlayStation", "Japan", isFavorite = true, lastPlayedDaysAgo = 9, playTimeMinutes = 45, emulator = emulatorNamed("DuckStation"))
 internal val GAME_NO_REGION = SecondScreenContent.Game("Tetris", "Game Boy", null, lastPlayedDaysAgo = 0, playTimeMinutes = 20, emulator = EMULATOR_NONE)
@@ -120,6 +122,10 @@ internal val RECENT_ONE = RecentEntry("Recent", 1, recentSystems(), figures = Re
 internal val RECENT_NOTHING_THIS_WEEK =
     RecentEntry("Recent", 5, recentSystems(), figures = RecentFigures(recentGames(5), WeekFigures(List(7) { 0L }, 3, 0, 3_600L * 3, java.util.Calendar.MONDAY), ENTRY_NOW))
 
+/** Played, but neither this week nor last: no week tile (a tile of zeros says nothing). */
+internal val RECENT_NOTHING_FOR_TWO_WEEKS =
+    RecentEntry("Recent", 5, recentSystems(), figures = RecentFigures(recentGames(5), WeekFigures(List(7) { 0L }, 3, 0, 0, java.util.Calendar.MONDAY), ENTRY_NOW))
+
 /** Nothing played yet: the header only. */
 internal val RECENT_EMPTY = RecentEntry("Recent", 0, recentSystems(), figures = RecentFigures(emptyList(), WeekFigures(List(7) { 0L }, 3, 0, 0, java.util.Calendar.MONDAY), ENTRY_NOW))
 
@@ -146,6 +152,7 @@ internal val ALL_SAMPLES: List<Pair<String, SecondScreenContent>> =
         "game_never_played" to GAME_NEVER_PLAYED,
         "game_long_title" to GAME_LONG_TITLE,
         "game_no_region" to GAME_NO_REGION,
+        "game_no_library_id" to GAME_NO_LIBRARY_ID,
         "system_played" to SYSTEM_WITH_LAST,
         "system_ra_no_points" to SYSTEM_RA_NO_POINTS,
         "system_no_ra" to SYSTEM_NO_RA,
@@ -158,6 +165,7 @@ internal val ALL_SAMPLES: List<Pair<String, SecondScreenContent>> =
         "recent_full" to RECENT_FULL,
         "recent_one" to RECENT_ONE,
         "recent_nothing_this_week" to RECENT_NOTHING_THIS_WEEK,
+        "recent_nothing_for_two_weeks" to RECENT_NOTHING_FOR_TWO_WEEKS,
         "recent_empty" to RECENT_EMPTY,
         "favorites_many" to FAVORITES_MANY,
         "favorites_few" to FAVORITES_FEW,

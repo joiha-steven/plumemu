@@ -74,6 +74,23 @@ class AddedAtScanTest {
     }
 
     @Test
+    fun oneScanStampsOneTimeOnEveryGameItAddsWhateverItsBatches() = runTest {
+        // Each batch read the clock: a scan of more than 500 new games stamped two times, and
+        // Recently added (newest first, then by name) split one scan into two A to Z runs.
+        f.scan()
+        f.now = 5_000
+        f.clockStep = 1
+        val names = (0..LibraryScanner.DEFAULT_BATCH_SIZE).map { "Zork %04d (USA).sfc".format(it) }
+        addSnesFiles(*names.toTypedArray())
+
+        f.scan()
+
+        val stamped = addedTimes().filterKeys { it in names }
+        assertEquals(names.size, stamped.size)
+        assertEquals("one time for the whole scan", 1, stamped.values.toSet().size)
+    }
+
+    @Test
     fun theScanAfterResetLibraryIsAFirstScanAgain() = runTest {
         f.scan()
         f.now = 5_000

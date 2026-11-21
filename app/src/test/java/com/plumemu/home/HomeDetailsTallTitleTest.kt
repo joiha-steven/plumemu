@@ -51,16 +51,24 @@ abstract class TallTitleCases {
         aspect: Float,
     ) {
         show(title, aspect)
-        val node = compose.onNodeWithTag(HomeTags.DETAILS_TITLE, useUnmergedTree = true).fetchSemanticsNode()
+        // The title is two nodes: the main part ("Castlevania III") and the subtitle after the ": "; each is whole beside the box, or the title is under it.
+        val split = splitTitle(title)
+        assertPartWhole(HomeTags.DETAILS_TITLE, split.main, "'$title' box $aspect: main")
+        if (split.subtitle.isNotEmpty()) assertPartWhole(HomeTags.DETAILS_TITLE_SUBTITLE, split.subtitle, "'$title' box $aspect: subtitle")
+    }
+
+    private fun assertPartWhole(tag: String, part: String, name: String) {
+        val node = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode()
         val layouts = mutableListOf<TextLayoutResult>()
         node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
         val layout = layouts.first()
+        assertEquals("$name: every word of the part is drawn", part, layout.layoutInput.text.text)
         for (line in 0 until layout.lineCount) {
             val end = layout.getLineEnd(line)
-            assertTrue("'$title' box $aspect: line $line is not ellipsised", !layout.isLineEllipsized(line))
-            assertTrue("'$title' box $aspect: line $line does not break inside a word (ends at $end)", end >= title.length || title[end - 1].isWhitespace() || title[end - 1] == '-' || title[end].isWhitespace())
+            assertTrue("$name: line $line is not ellipsised", !layout.isLineEllipsized(line))
+            assertTrue("$name: line $line does not break inside a word (ends at $end)", end >= part.length || part[end - 1].isWhitespace() || part[end - 1] == '-' || part[end].isWhitespace())
         }
-        assertEquals("'$title' box $aspect: the node holds every line", layout.getLineBottom(layout.lineCount - 1), node.size.height.toFloat(), 1f)
+        assertEquals("$name: the node holds every line", layout.getLineBottom(layout.lineCount - 1), node.size.height.toFloat(), 1f)
     }
 
     @Test

@@ -74,6 +74,7 @@ import com.plumemu.coreui.components.LocalSlabOnCard
 import com.plumemu.coreui.components.OptionRow
 import com.plumemu.coreui.components.OptionRowLook
 import com.plumemu.coreui.components.PlumButton
+import com.plumemu.coreui.components.overlayScrim
 import com.plumemu.coreui.components.raisedCard
 import com.plumemu.coreui.components.slabOverhang
 import com.plumemu.coreui.theme.CardDimens
@@ -98,8 +99,9 @@ internal fun rememberPanelSlide(isOpen: Boolean): Animatable<Float, AnimationVec
 
 /**
  * The game panel: a raised card on the page's right margin, between the top bar's gap and the hint
- * bar's gap, drawn over the page with no scrim or fade (the page keeps its own look up to the
- * card's shadow; only the wide details column fades out as the card slides in and back as it leaves, on [progress], the card's own slide, read while drawing). Width: [CardDimens.menuWidth] (or [CardDimens.pickerWidth] for the emulator
+ * bar's gap, over the one flat scrim of every overlay card (`overlayScrim`, the page at `FlatSurface.SCRIM_ALPHA` over the whole
+ * screen, the hint bar above it), which comes and goes with [progress], the card's own slide, read while drawing; the wide details
+ * column also fades out as the card slides in and back as it leaves. Width: [CardDimens.menuWidth] (or [CardDimens.pickerWidth] for the emulator
  * lists) on wide screens, `width − 48` on narrow ones. Everything inside is `panelInset` from the
  * card's edge on both sides. It slides in and out with the strip's 180 ms ease-out
  * (`graphicsLayer` only), and jumps when motion is off. While open, a tap outside it is Back.
@@ -145,8 +147,8 @@ internal fun GamePanelOverlay(
     // This box is the area between the top bar's gap and the hint bar's gap: the card sits on the page's outer margin at its right.
     val cardWidth = if (isWide) panelCardWidth(shown.screen, layout.textScale, layout.width) else layout.width - PlumDimens.stripMarginSide * 2
     val slide = with(LocalDensity.current) { (cardWidth + PlumDimens.stripMarginSide).toPx() }
-    // Nothing dims or fades the page behind the card: the list and the grid keep their own look right up to its shadow.
-    Box(modifier.fillMaxSize()) {
+    // The page behind the card recedes under one flat scrim, faded with the slide, so the list or grid does not fight the card.
+    Box(modifier.fillMaxSize().overlayScrim { progress.value }) {
         if (isOpen) {
             Box(Modifier.fillMaxSize().pointerInput(onAction) { detectTapGestures(onTap = { onAction(Action.Back) }) }.testTag(GamePanelTags.OUTSIDE))
         }
@@ -160,7 +162,7 @@ internal fun GamePanelOverlay(
                 .width(cardWidth)
                 .then(if (hugs) Modifier else Modifier.fillMaxHeight())
                 .testTag(GamePanelTags.CARD)
-                // The panel's raised card (the board's game menu card): gradient fill, hairline edge, soft shadows. Drawn before
+                // The panel's raised card (the board's game menu card): flat fill, hairline edge, soft shadows. Drawn before
                 // the clip below so a typing panel does not cut it; it reads colours only while drawing.
                 .pageBehindCard(footGap = if (hugs) 0.dp else PlumDimens.stripMarginBottom)
                 .raisedCard()
@@ -181,7 +183,7 @@ internal fun GamePanelOverlay(
 }
 
 /**
- * The page behind the card is not dimmed or covered, so what lies under its rounded corners would show as a sliver (the cover's corner at the
+ * The page behind the card is only dimmed by the scrim, not covered, so what lies under its rounded corners would show as a sliver (the cover's corner at the
  * top right): the gap between the card's box and its rounded shape is filled with the page colour, drawn before the card's shadows. So is the
  * [footGap] under a card that fills the height, where home's rows run on towards the hint bar and only the tops of their text would show.
  */

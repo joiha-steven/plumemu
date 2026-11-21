@@ -1,94 +1,74 @@
 package com.plumemu.coreui.theme
 
+import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
 
-/** The slab is one object on every background: each layer's step in perceived lightness, whatever the colour set. */
+/**
+ * The slab is one object on every background ("lifted card"): a flat face lighter than the page by one rule, one soft black drop shadow, nothing else.
+ * Requirement change from the glass recipe: the stepped fill and its fade, the two lift layers and the top line are gone, so their tests are replaced by these.
+ */
 class FocusSlabSameObjectTest {
     private val light = Rgb(0xECE8DF)
     private val dark = Rgb(0x111214)
 
     /** Presets, and custom backgrounds on either side of the middle. */
-    private val backgrounds = listOf(dark to true, light to false, Rgb(0x1238B0) to true, Rgb(0x5A5F6B) to true, Rgb(0x8C93A0) to false, Rgb(0xE8B84B) to false)
+    private val backgrounds = listOf(dark to true, light to false, Rgb(0x1238B0) to true, Rgb(0x5A5F6B) to true, Rgb(0x8C93A0) to false, Rgb(0xE8B84B) to false, Rgb(0xFFFFFF) to false)
 
-    private fun step(
-        a: Rgb,
-        b: Rgb,
-    ) = abs(ColorMath.lightness(a) - ColorMath.lightness(b))
-
-    private fun gain(bg: Rgb) = 1 + FocusSlab.DARK_GAIN * (1 - ColorMath.lightness(bg) / 100)
-
-    /** Dark pages are lit by the gained dark steps; light pages by the three small light steps (the pane stays below white so the white rim shows). */
+    /** A light page's face is the page under [FocusSlab.LIGHT_WHITE_SHARE] of white, so it keeps a hint of the page's hue. */
     @Test
-    fun theFillStandsOffEveryPageByItsThemesSteps() {
+    fun aLightFaceIsThePageUnderSeventyPercentWhite() {
+        for ((bg, isDark) in backgrounds.filter { !it.second }) {
+            val want = ColorMath.mix(bg, Rgb(0xFFFFFF), 0.70)
+            assertEquals("face on $bg", want, FocusSlab.fill(bg, bg, isDark))
+        }
+        val cream = FocusSlab.fill(Rgb(0xE8B84B), Rgb(0x1D1D1F), false)
+        assertTrue("a yellow page keeps its warmth: ${cream}", cream.red >= cream.green && cream.green > cream.blue)
+    }
+
+    /** A dark page's face is the page lifted [FocusSlab.DARK_LIFT_L] of L*, in its own hue. */
+    @Test
+    fun aDarkFaceIsThePageLiftedFifteenLStar() {
+        for ((bg, isDark) in backgrounds.filter { it.second }) {
+            val face = FocusSlab.fill(bg, Rgb(0xEBE7DD), isDark)
+            assertEquals("lift on $bg", FocusSlab.DARK_LIFT_L, ColorMath.lightness(face) - ColorMath.lightness(bg), STEP_ROOM)
+        }
+        val purple = FocusSlab.fill(Rgb(0x1E1030), Rgb(0xEDE6F5), true)
+        assertTrue("still purple", purple.blue > purple.green)
+    }
+
+    /** One drop on every page: black, 3 dp down, sigma 6 dp, at 18 % on a light page and 45 % on a dark one; the second layer is the same at no strength. */
+    @Test
+    fun theDepthIsOneSoftBlackDropOnEveryPage() {
         for ((bg, isDark) in backgrounds) {
-            val (top, mid, bottom) = FocusSlab.stops(bg, isDark)
-            val wantTop = if (isDark) FocusSlab.FILL_TOP_L * gain(bg) else FocusSlab.LIGHT_TOP_L
-            val wantMid = if (isDark) FocusSlab.FILL_MID_L * gain(bg) else FocusSlab.LIGHT_MID_L
-            val wantBottom = if (isDark) FocusSlab.FILL_BOTTOM_L * gain(bg) else FocusSlab.LIGHT_BOTTOM_L
-            assertEquals("top on $bg", wantTop, step(top, bg), STEP_ROOM)
-            assertEquals("mid on $bg", wantMid, step(mid, bg), STEP_ROOM)
-            assertEquals("foot on $bg", wantBottom, step(bottom, bg), STEP_ROOM)
+            val look = SlabLook.of(bg, bg, isDark)
+            val near = look.near!!
+            assertEquals("colour on $bg", Color.Black, near.color.copy(alpha = 1f))
+            assertEquals("strength on $bg", if (isDark) 0.45f else 0.18f, near.color.alpha, 0.002f)
+            assertEquals("drop on $bg", 3f, near.drop.value, 0f)
+            assertEquals("sigma on $bg", 6f, near.sigma.value, 0f)
+            assertEquals("no second layer on $bg", 0f, look.far!!.color.alpha, 0f)
         }
     }
 
+    /** No outline of any kind: the look carries a face, text inks and the shadow, no ring, top line, foot or inset. */
     @Test
-    fun aMidTonePageIsLitByTheSameLightStepsAsAPaleOne() {
-        for (bg in listOf(Rgb(0x8C93A0), Rgb(0xE8B84B))) {
-            val (top, _, bottom) = FocusSlab.stops(bg, dark = false)
-            assertEquals("top on $bg", FocusSlab.LIGHT_TOP_L, step(top, bg), STEP_ROOM)
-            assertEquals("foot on $bg", FocusSlab.LIGHT_BOTTOM_L, step(bottom, bg), STEP_ROOM)
-            assertTrue("top on $bg is lighter than the page", ColorMath.lightness(top) > ColorMath.lightness(bg))
-        }
+    fun thereIsNoOutlineValueInTheLook() {
+        val members = SlabLook::class.java.declaredFields.map { it.name }.toSet()
+        for (gone in listOf("ring", "topLine", "base", "baseOnCard", "insetTop", "insetBottom")) assertTrue("$gone is gone from the look", gone !in members)
+        assertNull(null)
     }
 
-    /** A shadow on every page, dark or light: black on dark, the brown tint on light; never a glow. */
+    /** A light face stays under white even on a white page, and still reaches 70 % of the way. */
     @Test
-    fun theLiftIsAShadowOnEveryPage() {
-        assertEquals(Rgb(0x000000), FocusSlab.liftInk(true))
-        assertEquals(FocusSlab.shadowTint(false), FocusSlab.liftInk(false))
-        for ((bg, isDark) in backgrounds) {
-            val ink = FocusSlab.liftInk(isDark)
-            val far = ColorMath.mix(bg, ink, FocusSlab.liftAlpha(bg, isDark, FocusSlab.LIFT_FAR_L).toDouble())
-            assertEquals("far on $bg", FocusSlab.LIFT_FAR_L, step(far, bg), STEP_ROOM)
-            assertTrue("the lift darkens $bg", ColorMath.lightness(far) < ColorMath.lightness(bg))
-        }
-    }
-
-    /** The rim is white on every page: [FocusSlab.RIM_SIDE_L] above the fill on a dark page, white itself on a light one. */
-    @Test
-    fun theRimIsWhiteAndSitsItsStepAboveTheFillOnDarkPages() {
-        for ((bg, isDark) in backgrounds) {
+    fun aLightFaceNeverPassesWhite() {
+        for ((bg, isDark) in backgrounds.filter { !it.second }) {
             val fill = FocusSlab.fill(bg, bg, isDark)
-            assertEquals(Rgb(0xFFFFFF), FocusSlab.edgeInk(isDark))
-            val rim = FocusSlab.edgeOver(fill, bg, isDark)
-            if (isDark) {
-                assertEquals("rim above the fill on $bg", FocusSlab.RIM_SIDE_L, ColorMath.lightness(rim) - ColorMath.lightness(fill), STEP_ROOM)
-            } else {
-                assertEquals("rim on light $bg is white", Rgb(0xFFFFFF), rim)
-            }
+            assertTrue("not darker than the page on $bg", ColorMath.lightness(fill) >= ColorMath.lightness(bg) - STEP_ROOM)
+            assertTrue("not past white on $bg", ColorMath.lightness(fill) <= 100.0 + STEP_ROOM)
         }
-    }
-
-    @Test
-    fun theRimIsLitAtItsCornersAsFarAsWhiteGoes() {
-        val fill = FocusSlab.fill(dark, dark, true)
-        assertEquals(FocusSlab.RIM_LIT_L, step(ColorMath.mix(fill, Rgb(0xFFFFFF), FocusSlab.topAlpha(fill)), fill), STEP_ROOM)
-        val paper = FocusSlab.fill(light, light, false)
-        assertTrue("Paper's corners reach white or its L* step", FocusSlab.topAlpha(paper) > 0.5)
-        val look = SlabLook.of(dark, Rgb(0xFFFFFF), true)
-        assertTrue("dark sides weaker than the lit corners", look.edge.alpha < look.top.alpha)
-        assertEquals("light sides are full white", 1f, SlabLook.of(light, Rgb(0x1C1C1E), false).edge.alpha, 0f)
-    }
-
-    /** White leaves a white page no fill to show: the white rim has nothing to show against, so only the shadow carries the slab. */
-    @Test
-    fun aWhitePageKeepsTheShadow() {
-        val white = Rgb(0xFFFFFF)
-        assertEquals("rim is white", white, FocusSlab.edgeOver(FocusSlab.fill(white, white, false), white, false))
-        assertTrue("lift", FocusSlab.liftAlpha(white, false, FocusSlab.LIFT_FAR_L) > 0f)
     }
 
     private companion object {

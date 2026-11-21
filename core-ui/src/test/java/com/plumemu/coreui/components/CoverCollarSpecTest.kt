@@ -147,8 +147,8 @@ class CoverCollarSpecTest {
         val px = shot(PlumThemeSettings.Graphite)
         val page = intArrayOf(0x11, 0x12, 0x14)
         near("focused lip above the groove", glowedOver(px(80, 20), intArrayOf(62, 65, 70), intArrayOf(61, 71, 88), 1.17, 4.0), px(266, 20), 5)
-        // The cover's lip is glass, its top the recipe's first step above the page (`SeatLook.coverGlass`), not the board's tone.
-        val glassTop = SeatLook.of(Rgb(0x111214), Rgb(0xF2F0EA), true).coverGlass.lipStops[0]
+        // The cover's lip is glass, one flat face: the mean of the recipe's steps above the page (`SeatLook.coverGlass.lipFill`), not the board's tone.
+        val glassTop = SeatLook.of(Rgb(0x111214), Rgb(0xF2F0EA), true).coverGlass.lipFill
         near("resting lip above the groove", intArrayOf((glassTop.red * 255).roundToInt(), (glassTop.green * 255).roundToInt(), (glassTop.blue * 255).roundToInt()), px(80, 20), 4)
         near("focused lip beside the groove", glowedOver(px(20, 100), intArrayOf(31, 33, 37), intArrayOf(34, 43, 59), 1.17, 4.0), px(156, 100), 4)
     }

@@ -55,8 +55,11 @@ internal class ContentResolverDocumentProbe(private val resolver: ContentResolve
     } catch (e: SecurityException) {
         DocumentState.Unreachable(e)
     } catch (e: IllegalArgumentException) {
-        // ExternalStorageProvider reports a missing file, or a missing root, this way.
-        if (e.cause is FileNotFoundException) DocumentState.Missing else DocumentState.Unreachable(e)
+        // ExternalStorageProvider reports a missing file, or a missing root, this way. Its
+        // FileNotFoundException is only in the message (FileSystemProvider.isChildDocument), and a
+        // cause never crosses processes: reading only the cause called every deleted file an
+        // unreachable folder. The root query in probe() still tells a removed card apart.
+        if (e.cause is FileNotFoundException || e.message?.contains(FILE_NOT_FOUND) == true) DocumentState.Missing else DocumentState.Unreachable(e)
     } catch (e: IllegalStateException) {
         DocumentState.Unreachable(e)
     } catch (e: UnsupportedOperationException) {
@@ -64,6 +67,7 @@ internal class ContentResolverDocumentProbe(private val resolver: ContentResolve
     }
 
     private companion object {
+        val FILE_NOT_FOUND: String = FileNotFoundException::class.java.name
         val COLUMNS = arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_MIME_TYPE)
     }
 }

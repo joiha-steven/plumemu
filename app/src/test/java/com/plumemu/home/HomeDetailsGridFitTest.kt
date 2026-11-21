@@ -30,7 +30,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The details column's facts for a game with 26 h 31 min played, a battery estimate and a long emulator name: no label wraps, no duration
- * breaks, and every cell stands in an equal column (the grid is measured from the text, HomeDetailsShares.kt).
+ * breaks, and every fact stands on its own line in order, labels at the left, values at one x, at one pitch.
  */
 abstract class HomeDetailsGridFitBase {
     private val compose = appComposeRule()
@@ -77,19 +77,15 @@ abstract class HomeDetailsGridFitBase {
         durations.forEach { assertEquals("${text(it)} breaks", 1, lines(it)) }
     }
 
-    // Requirement changed: six cells in three rows (HomeDetailsShares.kt); a row of cells that fit equal parts has them, else each has what its text needs.
+    // Requirement changed: one fact to a line (was six cells in three rows). The whole class stays: its point is still that the long values and
+    // the long emulator name fit; the share/column measurement is now the line contract (FactLines.kt).
     @Test
-    fun everyRowStartsAtTheLeftInOrderWithoutOverlap() {
+    fun everyFactStandsOnItsOwnLineInOrderAtOnePitch() {
         show()
-        val panel = compose.onNodeWithTag(PANEL, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-        val labels = texts(compose.onNodeWithTag(PANEL, useUnmergedTree = true).fetchSemanticsNode()).filter { text(it) in LABELS }
-        val rows = labels.groupBy { Math.round(it.boundsInRoot.top) }.toSortedMap().values.map { row -> row.sortedBy { it.boundsInRoot.left } }
-        assertEquals("the labels: ${labels.map(::text)}", LABELS.size, labels.size)
-        assertTrue("at most three rows: ${rows.map { r -> r.map(::text) }}", rows.size <= 3)
-        rows.forEach { row ->
-            assertEquals("${row.map(::text)} starts at the left edge", panel.left, row.first().boundsInRoot.left, 1f)
-            row.zipWithNext().forEach { (a, b) -> assertTrue("${text(a)} ends before ${text(b)}", a.boundsInRoot.right <= b.boundsInRoot.left) }
-        }
+        val box = compose.onNodeWithTag(HomeTags.DETAILS_FACTS, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val lines = readFactLines(compose.onNodeWithTag(PANEL, useUnmergedTree = true).fetchSemanticsNode())
+        assertEquals("every fact is on show", FACT_ORDER, lines.map { it.name })
+        assertEquals("no problems", emptyList<String>(), factLineProblems(box, lines))
     }
 
     /** The details column as a golden (`home_details_grid_<size>_graphite.png`). */

@@ -118,7 +118,7 @@ Install emulators from their own developers. Plumemu finds the ones installed (i
 
 - The first time you play a game of a system, it asks which emulator to use, the recommended one
   first, and remembers the answer.
-- Settings › Emulators changes the emulator of a system.
+- Settings › Library › Emulators changes the emulator of a system.
 - Game menu › Play with picks one for a single game; that choice wins.
 - Emulators that come with legal risk are listed but never recommended. Plumemu ships no keys or
   firmware.
@@ -131,7 +131,8 @@ Install emulators from their own developers. Plumemu finds the ones installed (i
 - **Source builds** have no name packs, so games are named from their cleaned file names; Fix name
   still works.
 - **Covers**: a game without box art gets a card in its system's color with its title, so the
-  grid view works for every system with no account. Android games and Ports show their app icon.
+  grid view works for every system with no account. Android games and Ports show their app icon, all in one rounded shape; their game menu has App info,
+  which opens Android's own page for the app.
 - **Box art** is optional. Setup asks "Download box art?" (No to begin with). Default source
   fetches box fronts from libretro's public server with no account; or sign in with your own free
   [ScreenScraper](https://www.screenscraper.fr) account for box art and game details. Change it
@@ -159,6 +160,8 @@ none. Settings › Library › RetroAchievements › Sign out removes your name,
 - **Collections**: Recent, Most played and Recently added fill themselves. Make your own from a
   game's menu › Add to collection…, with games from any system; Settings › Library › Collections
   renames, moves and deletes them. SELECT switches a collection between covers and a list.
+  On the folders page, the focused folder shows a row of its covers, its game and system counts and its
+  first titles.
 - **Recent** keeps the last 50 games. In a
   game's menu, "Remove from Recent" takes one out (Undo brings it back for four seconds);
   Settings › About › Reset… › Clear Recent… empties it.
@@ -184,9 +187,9 @@ field. Settings › Controls › Keyboard switches to Android's keyboard.
 ## Look
 
 Settings › Appearance: seventeen ready-made [color sets](COLORS.md) or your own colors, text size and
-Language. Every screen uses Jost in one weight. The focused cover or app lifts a
-little inside its own space with a thin light rim; buttons and switches are flat, and a switch that
-is off is outlined. Settings › Home screen: Use as home screen and Show Android apps. The hints, clock and battery always show.
+Language. Every screen uses Jost in one weight. The focused row is a lighter card with a soft
+shadow, and a focused cover or app icon gets a thin outline; buttons and switches are flat, and a switch that
+is off is outlined. Every app icon is the same rounded square. Settings › Home screen: Use as home screen and Show Android apps. The hints, clock and battery always show.
 Settings › Controls: Confirm with B, sounds and vibration. List or grid is SELECT on the main
 screen.
 

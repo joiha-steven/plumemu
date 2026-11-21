@@ -21,8 +21,6 @@ import com.plumemu.coreui.components.GameRowLook
 import com.plumemu.coreui.components.composedAs
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
-import com.plumemu.coreui.theme.WidthClass
-import com.plumemu.coreui.theme.TextSize
 import com.plumemu.identify.name.VariantTag
 
 /*
@@ -60,11 +58,8 @@ internal fun GamesListItem(
     val tap = remember(index, onAction, isShown) { Modifier.tapItem(Column.Games, index, onAction).gameRowTag(index, isShown) }
     // The year from the game's ScreenScraper result: its own state, so a result that lands
     // recomposes this row alone.
-    // Not at the narrow details stop: the list is slid out to 56 dp there, the right-hand text has 42 dp, and a
-    // wide short name (SCUMM, WASM4) would be cut at the left. A derived state, so only a change of stop recomposes.
-    val showsSystem by remember(state, mixesSystems) { derivedStateOf { mixesSystems && state.focus.column != Column.Details } }
-    // Year and region (two columns) only in a single system's list that has the room (listShowsPlace); the narrow details stop needs
-    // no case of its own there: a narrow list never shows it beside the details, so no row reads the stop.
+    val showsSystem = mixesSystems
+    // Year and region (two columns) only in a single system's list that has the room (listShowsPlace); no row reads the stop.
     val resources = LocalContext.current.resources
     val artSlot = LocalHomeArt.current.slot(row.scrapeKey)
     // Year and region in the board's two columns where the list shows both (an unknown year leaves its cell empty);
@@ -75,15 +70,9 @@ internal fun GamesListItem(
     val trailingIsCode = columns == null && !isYearText(trailing)
     // Only a row whose title another row of the list shares has tags (withVariantTags), so the others read no string.
     val subtitle = remember(resources, row.variantTags, row.variantRegion) { variantSubtitle(resources, row.variantTags, row.variantRegion) }
-    // At the narrow details stop only the year of a slid-out row shows: a smaller right inset keeps it whole at every text size.
     // A game card open over the list would cut the year and region by its edge: they are not drawn while it is open (read while drawing).
-    // At the narrow details stop the strip shows years only: a region code (a game without a year) is not drawn there. Read while
-    // drawing, so a change of stop recomposes no row.
-    val isNarrow = PlumTheme.layout.widthClass == WidthClass.Narrow
-    val endHidden = remember(panelOpen, state, isNarrow, trailingIsCode) { { panelOpen.value || (isNarrow && trailingIsCode && state.focus.column == Column.Details) } }
-    val peekEndPadding = if (PlumTheme.type.textSize == TextSize.Largest) PlumDimens.gameRowPeekEndPaddingLargest else PlumDimens.gameRowPeekEndPadding
-    val endPadding = remember(state, peekEndPadding) { { if (state.focus.column == Column.Details) peekEndPadding else PlumDimens.gameRowEndPadding } }
-    GameRow(title = title, trailing = trailing, look = form.look, modifier = tap, isFavorite = row.isFavorite, drawnLook = drawnLook, subtitle = subtitle, masteredLabel = masteredLabel(row.id), region = columns?.second, endPadding = endPadding, trailingIsCode = trailingIsCode, endHidden = endHidden)
+    val endHidden = remember(panelOpen) { { panelOpen.value } }
+    GameRow(title = title, trailing = trailing, look = form.look, modifier = tap, isFavorite = row.isFavorite, drawnLook = drawnLook, subtitle = subtitle, masteredLabel = masteredLabel(row.id), region = columns?.second, trailingIsCode = trailingIsCode, endHidden = endHidden)
 }
 
 /** Whether a row's one trailing text is its year ([GameRowModel.trailing] writes it in ASCII digits), not a region or system code. */

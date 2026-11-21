@@ -48,7 +48,7 @@ internal fun TextDetails(
         titleBlock = {
             if (!textHidden) {
                 TitleBlock(PlumDimens.titleLineGap) {
-                    DetailsTitle(game.title, maxLines = if (sideTitle) 3 else 2)
+                    DetailsTitle(game.title, maxLines = if (sideTitle) 3 else 2, subtitleLines = if (sideTitle) TITLE_SUBTITLE_LINES else 1)
                     SystemLine(system?.let { systemAndRegion(it, game.region) })
                 }
             }

@@ -1,15 +1,9 @@
 package com.plumemu.home
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -17,7 +11,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.IntrinsicMeasurable
 import androidx.compose.ui.layout.IntrinsicMeasureScope
 import androidx.compose.ui.layout.Layout
@@ -26,56 +19,41 @@ import androidx.compose.ui.layout.MeasurePolicy
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.ParentDataModifier
-import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.plumemu.R
 import com.plumemu.battery.BatteryPace
 import com.plumemu.battery.pickingBatteryCellText
+import com.plumemu.coreui.components.EllipsisText
 import com.plumemu.coreui.theme.PlumDimens
-import com.plumemu.game.emulatorLabel
 import com.plumemu.coreui.theme.PlumTheme
 import kotlin.math.ceil
-import kotlin.math.roundToInt
 
 /*
- * The wide details column's block under the title, as the board draws it: a hairline, then small capital labels over their values in
- * [HELD_ROWS] rows: GENRE + RATING (five dots), PLAYED + LAST PLAYED, EMULATOR + BATTERY (the game's usual time on a charge). A cell with nothing to say
- * takes no place (the real cells pack with no holes); the hairline is always drawn. Which cells share a row is [arrangeCells]'s call.
+ * The wide details column's block under the title: a hairline, then one fact per line, a label column (`muted`, as wide as the widest label shown)
+ * and the value after it: Genre, Rating ("8.5/10"), Played, Last played, Emulator, Battery (the game's usual time on a charge), in that order,
+ * at one even pitch. A fact with nothing to say takes no line; the hairline is always drawn.
  */
 
-/**
- * Dots filled out of [RATING_DOTS] for a rating out of 10: halved, to the nearest half dot; a tie goes down (the board draws 8.5 as four
- * dots). Under 0 and over 10 give 0, so does 0 (no rating).
- */
-internal fun ratingDots(outOfTen: Double?): Float {
-    if (outOfTen == null || outOfTen <= 0.0 || outOfTen > 10.0) return 0f
-    return (ceil(outOfTen - 0.5) / 2.0).toFloat()
-}
-
-internal const val RATING_DOTS = 5
+/** The facts of the block, in the order they are read. */
+internal enum class DetailsCell { GENRE, RATING, PLAYED, LAST, EMULATOR, BATTERY }
 
 /**
- * The block for [details] and the play facts [shown], in one box of a height that depends only on the column's width and the text size
- * (never on a game's data): [HELD_ROWS] rows at the tightest gaps. Until [revealed] the box is empty; from the reveal the cells stand where
- * [arrangeCells] puts the values in hand, and a value that comes later (a slow read, a changed emulator) gets the place it would have had
- * on time: the arrangement is a function of the values, so the same game looks the same whenever its values arrive. The box never changes
- * height, so nothing outside it moves.
+ * The block for [details] and the play facts [shown], in one box of a height that depends only on the text size (never on a game's data): the
+ * height of [HELD_ROWS] label-over-value rows at the tightest gaps, as before the facts went one to a line. Until [revealed] the box is empty;
+ * from the reveal the facts in hand stand in their order, and a value that comes later gets the line it would have had on time. The box never
+ * changes height, so nothing outside it moves.
  */
 @Composable
 internal fun ColumnScope.DetailsBlock(
@@ -94,56 +72,40 @@ internal fun ColumnScope.DetailsBlock(
     val locale = currentLocale()
     val numbers = rememberCountFormat()
     val shownDetails = details.takeIf { revealed }
-    val fullGenre = shownDetails?.genre.orEmpty()
-    val dots = ratingDots(shownDetails?.rating?.takeIf { it in 1..MAX_RATING }?.let { it / 2.0 })
+    val genre = shownDetails?.genre.orEmpty()
     val ratingValue = shownDetails?.rating?.takeIf { it in 1..MAX_RATING }
-    val ratingNumber = if (dots > 0f && ratingValue != null) ratingNumberOf(ratingValue, locale, numbers) else ""
-    val rating = if (ratingNumber.isEmpty()) "" else stringResource(R.string.home_details_rating, ratingNumber)
-    // A game never played says so once, in the Played cell; there is no Last played cell for it.
+    val rating = if (ratingValue != null) stringResource(R.string.home_details_rating, ratingNumberOf(ratingValue, locale, numbers)) else ""
+    // A game never played says so once, in the Played line; there is no Last played line for it.
     val never = facts?.neverPlayed() == true
     val playTimeText = facts?.let { if (never) stringResource(R.string.second_screen_not_played) else playTime(it.playTimeMinutes, numbers) }.orEmpty()
     val lastPlayedText = facts?.let { if (never) "" else lastPlayed(it.lastPlayedDaysAgo, numbers) }.orEmpty()
     val emulator = facts?.emulator.orEmpty()
-    val pace = paceOf(shown)
-    val battery = pace?.let { pickingBatteryCellText(it) }
-    val batteryFull = battery?.full.orEmpty()
-    // Placed for the widest time it can say: a time that changes while the game rests moves nothing.
-    val widestFull = battery?.widestFull.orEmpty()
-    val widestShort = battery?.widestShort.orEmpty()
+    val battery = paceOf(shown)?.let { pickingBatteryCellText(it) }?.full.orEmpty()
     val labels = factLabels()
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val columnWidth = LocalDetailsColumnWidth.current
-    val fit = remember(measurer, density, columnWidth) { LabelFit(measurer, density, columnWidth) }
     val meta = PlumTheme.type.meta
-    val number = PlumTheme.type.factNumber
-    val ratingStyle = PlumTheme.type.ratingNumber
     val labelStyle = PlumTheme.type.detailsLabel
-    val dotsPx = with(density) { (PlumDimens.ratingNumberGap + PlumDimens.ratingDotSize * RATING_DOTS + PlumDimens.ratingDotGap * (RATING_DOTS - 1)).roundToPx() }
     val cellHeight = remember(measurer, density, meta, labelStyle) { cellHeightPx(measurer, density, meta, labelStyle) }
-    // The arrangement follows the values in hand (a pure function of them), from the reveal on.
-    val arrangement =
-        remember(fit, meta, number, labelStyle, locale, revealed, fullGenre, ratingNumber, playTimeText, lastPlayedText, emulator, batteryFull, widestFull, widestShort, battery?.short, dotsPx) {
-            if (!revealed) {
-                null
-            } else {
-                fun need(label: String, value: String, extra: Int = 0, valueStyle: TextStyle = meta) = fit.cellShareNeeded(label, labelStyle, value, valueStyle, extra)
-                val needs =
-                    buildMap {
-                        if (fullGenre.isNotEmpty()) put(DetailsCell.GENRE, need(labels.genre, fullGenre))
-                        if (rating.isNotEmpty()) put(DetailsCell.RATING, need(labels.rating, ratingNumber, dotsPx, ratingStyle))
-                        if (playTimeText.isNotEmpty()) put(DetailsCell.PLAYED, need(labels.played, playTimeText, valueStyle = number))
-                        if (lastPlayedText.isNotEmpty()) put(DetailsCell.LAST, need(labels.last, lastPlayedText, valueStyle = number))
-                        if (emulator.isNotEmpty()) put(DetailsCell.EMULATOR, need(labels.emulator, emulator))
-                        if (batteryFull.isNotEmpty()) put(DetailsCell.BATTERY, maxOf(need(labels.battery, widestFull, valueStyle = number), need(labels.battery, batteryFull, valueStyle = number)))
-                    }
-                // GENRE, then EMULATOR, give way in their row down to a floor: the label and a few letters.
-                val floors = mapOf(DetailsCell.GENRE to maxOf(need(labels.genre, FLOOR_TEXT), MIN_SHRUNK_SHARE), DetailsCell.EMULATOR to maxOf(need(labels.emulator, FLOOR_TEXT), MIN_SHRUNK_SHARE))
-                arrangeCells(needs, if (batteryFull.isEmpty()) null else maxOf(need(labels.battery, widestShort, valueStyle = number), need(labels.battery, battery?.short.orEmpty(), valueStyle = number)), HELD_ROWS, floors)
-            }
-        }
-    val batteryText = if (arrangement?.batteryShort == true) battery?.short.orEmpty() else batteryFull
     val lineHeight = remember(measurer, density, meta, labelStyle) { lineHeightPx(measurer, meta, labelStyle) }
+    val values =
+        if (!revealed) {
+            emptyList()
+        } else {
+            listOf(
+                DetailsCell.GENRE to genre,
+                DetailsCell.RATING to rating,
+                DetailsCell.PLAYED to playTimeText,
+                DetailsCell.LAST to lastPlayedText,
+                DetailsCell.EMULATOR to emulator,
+                DetailsCell.BATTERY to battery,
+            ).filter { it.second.isNotEmpty() }
+        }
+    // The label column is as wide as the widest label shown, so every value starts on one line down the block.
+    val labelWidth =
+        remember(measurer, labelStyle, values.map { it.first }, labels) {
+            values.maxOfOrNull { (cell, _) -> ceil(measurer.measure(labels.of(cell), labelStyle, softWrap = false, maxLines = 1).multiParagraph.maxIntrinsicWidth).toInt() } ?: 0
+        }
     val policy = remember(cellHeight, lineHeight) { FactsPolicy(cellHeight, lineHeight) }
     // The hairline is drawn in the column's top padding so the facts' own room is unchanged.
     FactsLayout(
@@ -157,11 +119,26 @@ internal fun ColumnScope.DetailsBlock(
                     drawRect(colors.text.copy(alpha = DIVIDER_ALPHA), Offset.Zero, Size(size.width, PlumDimens.listDividerWidth.toPx()))
                 },
     ) {
-        if (arrangement != null) FactsCells(arrangement, FactTexts(fullGenre, ratingNumber, rating, dots, playTimeText, lastPlayedText, emulator, batteryText), labels)
+        val labelDp = with(density) { labelWidth.toDp() }
+        values.forEach { (cell, value) -> FactRow(cell, labels.of(cell), value, labelDp) }
     }
 }
 
-private class FactLabels(val genre: String, val rating: String, val played: String, val last: String, val emulator: String, val battery: String)
+private class FactLabels(val genre: String, val rating: String, val played: String, val last: String, val emulator: String, val battery: String) {
+    fun of(cell: DetailsCell): String =
+        when (cell) {
+            DetailsCell.GENRE -> genre
+            DetailsCell.RATING -> rating
+            DetailsCell.PLAYED -> played
+            DetailsCell.LAST -> last
+            DetailsCell.EMULATOR -> emulator
+            DetailsCell.BATTERY -> battery
+        }
+
+    override fun equals(other: Any?) = other is FactLabels && DetailsCell.entries.all { of(it) == other.of(it) }
+
+    override fun hashCode() = DetailsCell.entries.fold(0) { h, c -> h * 31 + of(c).hashCode() }
+}
 
 @Composable
 private fun factLabels() =
@@ -174,35 +151,45 @@ private fun factLabels() =
         stringResource(R.string.home_details_battery),
     )
 
-/** The values of the cells, "" for a cell with nothing to say. */
-private class FactTexts(val genre: String, val ratingNumber: String, val rating: String, val dots: Float, val played: String, val last: String, val emulator: String, val battery: String)
-
-/** The cells with a value, row by row as [arrangement] has them. */
+/**
+ * One fact on one line: the label in `muted` in a column [labelWidth] wide, the gutter, then the value in `text` (words in `meta`, figures in
+ * `factNumber`, the rating Mono `ratingNumber`), cut at the end with an ellipsis when the column is too narrow. The rating is spoken as "Rating, 8.5/10".
+ */
 @Composable
-private fun FactsCells(arrangement: DetailsArrangement, t: FactTexts, l: FactLabels) {
-    fun need(cell: DetailsCell) = arrangement.needs.getValue(cell)
-    arrangement.rows.forEachIndexed { row, cells ->
-        for (cell in cells) {
-            val share = arrangement.shares.getValue(cell)
-            when (cell) {
-                DetailsCell.GENRE -> Cell(l.genre, t.genre, CellId(DropRank.GENRE, share, row, need(DetailsCell.GENRE)), VALUE_LINES)
-                DetailsCell.RATING -> RatingCell(l.rating, t.ratingNumber, t.rating, t.dots, CellId(DropRank.RATING, share, row, need(DetailsCell.RATING)))
-                DetailsCell.PLAYED -> Cell(l.played, t.played, CellId(DropRank.PLAYED, share, row, need(DetailsCell.PLAYED)), VALUE_LINES, mono = true)
-                DetailsCell.LAST -> Cell(l.last, t.last, CellId(DropRank.LAST_PLAYED, share, row, need(DetailsCell.LAST)), VALUE_LINES, mono = true)
-                DetailsCell.EMULATOR ->
-                    if (cells.size == 1) {
-                        // Alone in its row: one line, label and value side by side, so the row is as high as one line and the table ends sooner.
-                        InlineCell(l.emulator, t.emulator, CellId(DropRank.EMULATOR, share, row, need(DetailsCell.EMULATOR), isInline = true), HomeTags.DETAILS_EMULATOR)
-                    } else {
-                        Cell(l.emulator, t.emulator, CellId(DropRank.EMULATOR, share, row, need(DetailsCell.EMULATOR)), VALUE_LINES, testTag = HomeTags.DETAILS_EMULATOR)
-                    }
-                DetailsCell.BATTERY -> Cell(l.battery, t.battery, CellId(DropRank.BATTERY, share, row, need(DetailsCell.BATTERY)), VALUE_LINES, mono = true, testTag = HomeTags.DETAILS_BATTERY)
-            }
+private fun FactRow(
+    cell: DetailsCell,
+    label: String,
+    value: String,
+    labelWidth: Dp,
+) {
+    val colors = PlumTheme.colors
+    val type = PlumTheme.type
+    val isFigure = cell == DetailsCell.PLAYED || cell == DetailsCell.LAST || cell == DetailsCell.BATTERY
+    val tag =
+        when (cell) {
+            DetailsCell.EMULATOR -> Modifier.testTag(HomeTags.DETAILS_EMULATOR)
+            DetailsCell.BATTERY -> Modifier.testTag(HomeTags.DETAILS_BATTERY)
+            DetailsCell.RATING -> Modifier.testTag(HomeTags.DETAILS_RATING).clearAndSetSemantics { contentDescription = "$label, $value" }
+            else -> Modifier
         }
+    Row(Modifier.cellId(CellId(dropRankOf(cell))).then(tag), verticalAlignment = Alignment.CenterVertically) {
+        BasicText(text = label, style = type.detailsLabel.copy(color = colors.muted), maxLines = 1, modifier = Modifier.width(labelWidth))
+        Spacer(Modifier.width(PlumDimens.factsColumnGap))
+        EllipsisText(text = value, style = when { cell == DetailsCell.RATING -> type.ratingNumber; isFigure -> type.factNumber; else -> type.meta }, color = { colors.text }, maxLines = 1)
     }
 }
 
-/** One cell's height in px: its label line, the gap, and a value line (or the rating dots if taller). The same for every cell. */
+private fun dropRankOf(cell: DetailsCell): Int =
+    when (cell) {
+        DetailsCell.GENRE -> DropRank.GENRE
+        DetailsCell.RATING -> DropRank.RATING
+        DetailsCell.PLAYED -> DropRank.PLAYED
+        DetailsCell.LAST -> DropRank.LAST_PLAYED
+        DetailsCell.EMULATOR -> DropRank.EMULATOR
+        DetailsCell.BATTERY -> DropRank.BATTERY
+    }
+
+/** The height in px of one label-over-value row (the box's unit): its label line, the gap, and a value line. */
 private fun cellHeightPx(
     measurer: androidx.compose.ui.text.TextMeasurer,
     density: Density,
@@ -211,10 +198,10 @@ private fun cellHeightPx(
 ): Int {
     val labelHeight = measurer.measure(HELD_LINE, label, maxLines = 1).size.height
     val valueHeight = measurer.measure(HELD_LINE, meta, maxLines = 1).size.height
-    return with(density) { labelHeight + PlumDimens.detailsLabelGap.roundToPx() + maxOf(valueHeight, PlumDimens.ratingDotSize.roundToPx()) }
+    return with(density) { labelHeight + PlumDimens.detailsLabelGap.roundToPx() + valueHeight }
 }
 
-/** One line of an inline cell in px: the taller of the label's line and the value's. */
+/** One fact's line in px: the taller of the label's line and the value's. */
 private fun lineHeightPx(
     measurer: androidx.compose.ui.text.TextMeasurer,
     meta: TextStyle,
@@ -229,7 +216,7 @@ private fun paceOf(shown: ShownPlay): BatteryPace? =
     }
 
 /**
- * Drop order of the cells when the box really cannot hold them (Largest): a smaller rank leaves first. [LAST_PLAYED] and [PLAYED] never do.
+ * Drop order of the facts when the box really cannot hold them (Largest): a smaller rank leaves first. [LAST_PLAYED] and [PLAYED] never do.
  * The battery goes first, then the emulator (both in Info or a menu), so the cover keeps its height.
  */
 private object DropRank {
@@ -241,8 +228,8 @@ private object DropRank {
     const val LAST_PLAYED = 0
 }
 
-/** A cell's place in [FactsPolicy]: its drop rank, its share of the column's width, its row and the share it needs to stand whole. */
-private data class CellId(val dropRank: Int, val share: Float, val row: Int, val need: Float, val isInline: Boolean = false)
+/** A fact's place in [FactsPolicy]: its drop rank. */
+private data class CellId(val dropRank: Int)
 
 // Parent data (not a layout id) so the intrinsic measurables can read it too.
 private fun Modifier.cellId(id: CellId): Modifier =
@@ -260,69 +247,50 @@ private fun FactsLayout(
 ) = Layout(content = content, modifier = modifier, measurePolicy = policy)
 
 /**
- * The facts box: [HELD_ROWS] rows of cells of [cellHeight] at the tightest gaps, whatever the cells are, and so also when it has none (before
- * the reveal): the height is never read from the data and never grows with the room (what is left below it is the synopsis's). Cells stand in
- * the rows [arrangeCells] gave them. When the box cannot hold them (the cover is at its floor and the text is large), cells leave whole in rank
- * order (BATTERY, EMULATOR, GENRE, then RATING; PLAYED and LAST PLAYED stay) and the rest keep their rows; a cell is never cut. Intrinsic heights
- * are the box's, so the cover is sized from it before any value is in.
+ * The facts box: as high as [HELD_ROWS] label-over-value rows of [cellHeight] at the tightest gaps, whatever the facts are, and so also when it
+ * has none (before the reveal): the height is never read from the data. The facts stand one to a line of [lineHeight] at one pitch, the same for
+ * every game at a text size: the room of [HELD_LINES] lines shared out, between [PlumDimens.factsLineGapMin] and [PlumDimens.factsLineGapMax]. When the
+ * box cannot hold them (the text is large), facts leave whole in rank order (BATTERY, EMULATOR, GENRE, then RATING; PLAYED and LAST PLAYED stay)
+ * and the rest keep their order; a fact is never cut. Intrinsic heights are the box's, so the cover is sized from it before any value is in.
  */
-private class FactsPolicy(private val cellHeight: Int, private val lineHeight: Int = cellHeight) : MeasurePolicy {
-    private class Measured(val id: CellId, val width: Int, val placeable: Placeable)
-
+private class FactsPolicy(private val cellHeight: Int, private val lineHeight: Int) : MeasurePolicy {
     private fun held(rows: Int, gap: Int) = rows * (cellHeight + gap)
+
+    private fun Density.tight() = PlumDimens.detailsDividerGapTight.roundToPx().coerceAtMost(PlumDimens.detailsDividerGap.roundToPx())
 
     override fun MeasureScope.measure(
         measurables: List<Measurable>,
         constraints: Constraints,
     ): MeasureResult {
         val width = constraints.maxWidth
-        val gap = PlumDimens.detailsDividerGapTight.roundToPx().coerceAtMost(PlumDimens.detailsDividerGap.roundToPx())
-        val box = minOf(constraints.maxHeight, held(HELD_ROWS, gap))
+        val tight = tight()
+        val box = minOf(constraints.maxHeight, held(HELD_ROWS, tight))
+        // The six lines share the room the three held rows had (their two inner label gaps and three row gaps), so all six always fit.
+        val gap = ((box - HELD_LINES * lineHeight) / HELD_LINES).coerceIn(PlumDimens.factsLineGapMin.roundToPx(), PlumDimens.factsLineGapMax.roundToPx())
         val ids = measurables.map { it.parentData as CellId }
-
-        fun rowsWithout(dropped: Int) = measurables.indices.filter { ids[it].dropRank !in DROP_ORDER.take(dropped) }.groupBy { ids[it].row }.toSortedMap().values.toList()
-
-        // Every cell is as high as [cellHeight], a row of one inline cell one line ([lineHeight]), so what leaves is known before anything is measured.
-        fun rowsHeight(rows: List<List<Int>>) = rows.sumOf { row -> (if (row.all { ids[it].isInline }) lineHeight else cellHeight) + gap }
+        fun keptWithout(dropped: Int) = measurables.indices.filter { ids[it].dropRank !in DROP_ORDER.take(dropped) }
         var dropped = 0
-        var kept = rowsWithout(0)
-        while (rowsHeight(kept) > box && dropped < DROP_ORDER.size) {
+        var kept = keptWithout(0)
+        while (kept.size * (lineHeight + gap) > box && dropped < DROP_ORDER.size) {
             dropped++
-            kept = rowsWithout(dropped)
+            kept = keptWithout(dropped)
         }
-        // A cell that was cut to an ellipsis for a neighbour that has left takes back the room, up to its need. Each cell is measured once.
-        val rows =
-            kept.map { row ->
-                var slack = 1f - row.sumOf { ids[it].share.toDouble() }.toFloat()
-                row.map { i ->
-                    val id = ids[i]
-                    val back = if (slack > 0f && id.need > id.share) minOf(slack, id.need - id.share) else 0f
-                    slack -= back
-                    val w = if (id.isInline) width else ((id.share + back) * width).roundToInt().coerceAtMost(width)
-                    Measured(id, w, measurables[i].measure(Constraints(minWidth = w, maxWidth = w)))
-                }
-            }
+        val placeables = kept.map { measurables[it].measure(Constraints(minWidth = 0, maxWidth = width)) }
         return layout(width, box.coerceIn(constraints.minHeight, constraints.maxHeight.coerceAtLeast(constraints.minHeight))) {
             var y = 0
-            rows.forEach { row ->
+            placeables.forEach {
                 y += gap
-                var x = 0
-                row.forEach {
-                    it.placeable.place(x, y)
-                    x += it.width
-                }
-                y += row.maxOf { it.placeable.height }
+                it.place(0, y + (lineHeight - it.height) / 2)
+                y += lineHeight
             }
         }
     }
 
-    /** The least the box can take (the cover never gives up more): PLAYED and LAST PLAYED, a row each, at the tightest gaps. */
-    override fun IntrinsicMeasureScope.minIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int) =
-        held(MIN_ROWS, PlumDimens.detailsDividerGapTight.roundToPx().coerceAtMost(PlumDimens.detailsDividerGap.roundToPx()))
+    /** The least the box can take (the cover never gives up more): [MIN_ROWS] rows at the tightest gaps. */
+    override fun IntrinsicMeasureScope.minIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int) = held(MIN_ROWS, tight())
 
     /** The cover is sized from [HELD_ROWS] rows at the tightest gaps. */
-    override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int) =
-        held(HELD_ROWS, PlumDimens.detailsDividerGapTight.roundToPx().coerceAtMost(PlumDimens.detailsDividerGap.roundToPx()))
+    override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int) = held(HELD_ROWS, tight())
 
     override fun IntrinsicMeasureScope.minIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int) = measurables.maxOfOrNull { it.minIntrinsicWidth(height) } ?: 0
 
@@ -335,174 +303,14 @@ private class FactsPolicy(private val cellHeight: Int, private val lineHeight: I
     }
 }
 
-/**
- * The rows the box holds: GENRE + RATING; PLAYED + LAST PLAYED; EMULATOR + BATTERY (or a long emulator name on its own row with the battery
- * a third cell of another row). All six cells at Medium in Jost fit three rows (`HomeDetailsFullBlockTest`).
- */
+/** The box is as high as this many label-over-value rows were (the cover and the synopsis are sized from it). */
 private const val HELD_ROWS = 3
 
-/** A label (one line) over its value (at most [valueLines], one); only cells with a value are composed. */
-@Composable
-private fun Cell(
-    label: String,
-    value: String,
-    id: CellId,
-    valueLines: Int,
-    mono: Boolean = false,
-    testTag: String? = null,
-) {
-    val colors = PlumTheme.colors
-    val type = PlumTheme.type
-    Column(Modifier.cellId(id).padding(end = PlumDimens.factsColumnGap).then(if (testTag != null) Modifier.testTag(testTag) else Modifier), verticalArrangement = Arrangement.spacedBy(PlumDimens.detailsLabelGap)) {
-        BasicText(text = label, style = type.detailsLabel.copy(color = colors.muted), maxLines = LABEL_LINES)
-        BasicText(text = value, style = (if (mono) type.factNumber else type.meta).copy(color = colors.text), maxLines = valueLines, overflow = TextOverflow.Ellipsis)
-    }
-}
+/** The facts the box's pitch is shared out for: all six. */
+private const val HELD_LINES = 6
 
-/** A cell alone in its row on one line: the label, then the value (one line, an ellipsis at the column's edge), on one baseline. */
-@Composable
-private fun InlineCell(
-    label: String,
-    value: String,
-    id: CellId,
-    testTag: String,
-) {
-    val colors = PlumTheme.colors
-    val type = PlumTheme.type
-    val gap = PlumDimens.factsColumnGap
-    Layout(
-        content = {
-            BasicText(text = label, style = type.detailsLabel.copy(color = colors.muted), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            BasicText(text = value, style = type.meta.copy(color = colors.text), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        },
-        modifier = Modifier.cellId(id).testTag(testTag),
-    ) { (labelPart, valuePart), constraints ->
-        val gapPx = gap.roundToPx()
-        val minValue = PlumDimens.factsInlineValueMin.roundToPx()
-        // The value keeps at least a minimum width: the label ellipsises first (it needs the room only when the column is very narrow).
-        val label = labelPart.measure(Constraints(maxWidth = (constraints.maxWidth - gapPx - minValue).coerceAtLeast(0)))
-        val value = valuePart.measure(Constraints(maxWidth = (constraints.maxWidth - label.width - gapPx).coerceAtLeast(0)))
-        val base = maxOf(label[FirstBaseline], value[FirstBaseline])
-        val labelY = base - label[FirstBaseline]
-        val valueY = base - value[FirstBaseline]
-        layout((label.width + gapPx + value.width).coerceIn(constraints.minWidth, constraints.maxWidth), maxOf(labelY + label.height, valueY + value.height)) {
-            label.place(0, labelY)
-            value.place(label.width + gapPx, valueY)
-        }
-    }
-}
-
-/** The rating cell: the number, then five dots; spoken as one "Rating, 8.5/10". */
-@Composable
-private fun RatingCell(
-    label: String,
-    number: String,
-    spoken: String,
-    dots: Float,
-    id: CellId,
-) {
-    val colors = PlumTheme.colors
-    val type = PlumTheme.type
-    val description = "${stringResource(R.string.home_details_rating_label)}, $spoken"
-    Column(
-        Modifier.cellId(id).padding(end = PlumDimens.factsColumnGap).clearAndSetSemantics { contentDescription = description },
-        verticalArrangement = Arrangement.spacedBy(PlumDimens.detailsLabelGap),
-    ) {
-        BasicText(text = label, style = type.detailsLabel.copy(color = colors.muted), maxLines = LABEL_LINES)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            BasicText(text = number, style = type.ratingNumber.copy(color = colors.text), maxLines = 1)
-            if (dots > 0f) {
-                Spacer(Modifier.width(PlumDimens.ratingNumberGap))
-                RatingDots(dots)
-            }
-        }
-    }
-}
-
-/** [RATING_DOTS] dots, [filled] of them in the accent (a half dot is filled on its left half), the rest faint. */
-@Composable
-internal fun RatingDots(filled: Float) {
-    val colors = PlumTheme.colors
-    val size = PlumDimens.ratingDotSize
-    val gap = PlumDimens.ratingDotGap
-    Canvas(Modifier.size(size * RATING_DOTS + gap * (RATING_DOTS - 1), size).testTag(HomeTags.DETAILS_RATING_DOTS)) {
-        val diameter = size.toPx()
-        val radius = diameter / 2
-        val step = diameter + gap.toPx()
-        for (i in 0 until RATING_DOTS) {
-            val centre = Offset(i * step + radius, radius)
-            drawCircle(colors.text.copy(alpha = EMPTY_DOT_ALPHA), radius, centre)
-            val share = (filled - i).coerceIn(0f, 1f)
-            if (share >= 1f) {
-                drawCircle(colors.accent, radius, centre)
-            } else if (share > 0f) {
-                clipRect(left = i * step, right = i * step + diameter * share) { drawCircle(colors.accent, radius, centre) }
-            }
-        }
-    }
-}
-
-/**
- * Measures the facts' texts against the wide details column: how much of it a cell's label and value need, and whether a value fits.
- * Labels are plain sentence case with no tracking, so there is one way to set them.
- */
-internal class LabelFit(
-    private val measurer: androidx.compose.ui.text.TextMeasurer,
-    private val density: androidx.compose.ui.unit.Density,
-    /** The column the cells divide: 248 beside the list, less on a narrow screen's games stop. */
-    private val columnWidth: Dp = PlumDimens.detailsColumnWidth,
-) {
-    /** The width of [text] in [style] on one line, in px. */
-    fun naturalWidth(
-        text: String,
-        style: TextStyle,
-    ): Int = ceil(measurer.measure(text, style, softWrap = false, maxLines = 1, constraints = Constraints(maxWidth = Int.MAX_VALUE)).multiParagraph.intrinsics.maxIntrinsicWidth).toInt()
-
-    /** The room between one cell's text and the next cell's, in px: a cell's text is this much narrower than its share of the column. */
-    val gutterPx: Int = with(density) { PlumDimens.factsColumnGap.roundToPx() }
-
-    /** The share of the column [text] in [style] needs to stand on one line, with the gutter. */
-    fun shareNeeded(
-        text: String,
-        style: TextStyle,
-    ): Float = (naturalWidth(text, style) + gutterPx).toFloat() / columnPx()
-
-    /** The share of the column a cell of [label] over a value of [valuePx] (a text and what stands beside it) needs, with the gutter. */
-    fun cellShareNeeded(
-        label: String,
-        labelStyle: TextStyle,
-        value: String,
-        valueStyle: TextStyle,
-        extraPx: Int,
-    ): Float {
-        val labelWidth = naturalWidth(label, labelStyle)
-        return (maxOf(labelWidth, naturalWidth(value, valueStyle) + extraPx) + gutterPx).toFloat() / columnPx()
-    }
-
-    /** The details column's width in px. */
-    fun columnPx(): Int = with(density) { columnWidth.roundToPx() }
-
-    /** Whether [value] in [style] sets in [maxLines] lines of a cell [share] of the column wide, without an ellipsis. */
-    fun valueFits(
-        value: String,
-        style: TextStyle,
-        share: Float,
-        maxLines: Int,
-    ): Boolean {
-        val width = with(density) { (columnWidth * share).roundToPx() } - gutterPx
-        return !measurer.measure(value, style, overflow = TextOverflow.Ellipsis, maxLines = maxLines, constraints = Constraints(maxWidth = width)).hasVisualOverflow
-    }
-}
 
 /** The width of the details column the facts block is set in: [PlumDimens.detailsColumnWidth] unless a narrow screen's games stop gives less. */
 internal val LocalDetailsColumnWidth = androidx.compose.runtime.staticCompositionLocalOf { PlumDimens.detailsColumnWidth }
 
-private const val LABEL_LINES = 1
-
-/** Every value is one line that ends in an ellipsis when its cell is too narrow. */
-private const val VALUE_LINES = 1
-private const val FLOOR_TEXT = "Wwwwww…"
-private const val MIN_SHRUNK_SHARE = 0.3f
-
 private const val DIVIDER_ALPHA = 0.10f
-private const val EMPTY_DOT_ALPHA = 0.22f

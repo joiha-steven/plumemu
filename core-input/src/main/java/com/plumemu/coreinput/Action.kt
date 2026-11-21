@@ -82,7 +82,7 @@ sealed interface Action {
     ) : Action
 
     /**
-     * R3 (the right stick pressed in) outside a text field, or the "R3 Sort" hint: the sort choices
+     * R3 (the right stick pressed in) outside a text field (no hint; Sort by… is in the game menu): the sort choices
      * of the games list (the main screen only; other screens ignore it).
      */
     data object Sort : Action

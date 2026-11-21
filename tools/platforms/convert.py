@@ -544,6 +544,8 @@ def finish(systems, registry, skipped, dj_players=None):
             record["legalRisk"] = True
         emulators.append(record)
     add_download_pages(emulators, tables.DOWNLOAD_PAGES)
+    apply_emulator_names(emulators, tables.EMULATOR_NAMES)
+    check_emulator_names(emulators, out_systems)
     package_name = re.compile(r"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$")
     emulator_packages = {e["package"] for e in emulators}
     emulator_packages |= {v["package"] for e in emulators for v in e.get("variants", ())}
@@ -570,6 +572,34 @@ def check_download_page(package, url):
     for banned in tables.NOT_DOWNLOAD_HOSTS:
         if host == banned or host.endswith("." + banned):
             raise ConvertError(f"DOWNLOAD_PAGES {package}: {url!r} is on {banned}, not the project's own page")
+
+
+def apply_emulator_names(emulators, names):
+    """Writes tables.EMULATOR_NAMES over the sources' names; a name for no emulator fails."""
+    by_id = {e["id"]: e for e in emulators}
+    stale = sorted(set(names) - set(by_id))
+    if stale:
+        raise ConvertError(f"EMULATOR_NAMES names no emulator: {stale}")
+    for emulator_id, name in names.items():
+        by_id[emulator_id]["name"] = name
+
+
+# Package names the sources give no name for and no project page names (EMULATOR_NAMES says why).
+UNNAMED_PACKAGES = {"com.androidemu.atari", "com.androidemu.gg"}
+
+
+def check_emulator_names(emulators, systems):
+    """The names Play with lists: no core file name, no package name, never one name twice in a system."""
+    names = {e["id"]: e["name"] for e in emulators}
+    for e in emulators:
+        name = e["name"]
+        if "_" in name or (name == e["package"] and name not in UNNAMED_PACKAGES):
+            raise ConvertError(f"emulator {e['id']} is named {name!r}: give it a name in tables.EMULATOR_NAMES")
+    for s in systems:
+        shown = [names[i] for i in s["emulators"] if i in names]
+        twice = sorted({n for n in shown if shown.count(n) > 1})
+        if twice:
+            raise ConvertError(f"{s['id']} lists two emulators named {twice}: tell them apart in tables.EMULATOR_NAMES")
 
 
 def add_download_pages(emulators, pages):

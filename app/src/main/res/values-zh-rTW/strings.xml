@@ -74,7 +74,6 @@
     <string name="home_hint_search">搜尋</string>
     <string name="home_hint_undo">復原</string>
     <string name="home_notice_removed_from_recent">已從最近中移除</string>
-    <string name="home_hint_sort">排序</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
          shown when no title matches. -->
@@ -426,7 +425,6 @@
 
     <!-- Launch errors: a title, one or two plain sentences, then what the person can do. -->
     <string name="game_action_rescan">重新掃描遊戲庫</string>
-    <string name="game_action_play_with_another">改用其他模擬器</string>
     <string name="game_action_ok">確定</string>
     <!-- The last row of Info: back to the menu. -->
     <!-- The last row of the Info panel: a verb, back to the game menu. -->
@@ -493,7 +491,7 @@
     <string name="game_error_internal_body">Plumemu 的模擬器資料無法用於這款遊戲。</string>
     <!-- %1$s is an emulator's name. Shown when it came back within ten seconds of its start. -->
     <string name="game_closed_at_once_title">%1$s 立即關閉了</string>
-    <string name="game_closed_at_once_body">如果遊戲沒有啟動，請在遊戲選單中透過「指定模擬器…」選擇其他模擬器。</string>
+    <string name="game_closed_at_once_body">如果遊戲沒有啟動，請試試其他模擬器。</string>
     <string name="game_core_question_title">%1$s 啟動了嗎？</string>
     <string name="game_core_question_body">已使用 %1$s 開啟。Plumemu 無法查看 RetroArch 中有哪些核心，所以每個核心只詢問一次。</string>
     <string name="game_action_yes">是</string>
@@ -679,14 +677,11 @@
     <!-- Hint bar label: a verb, show the focused system again. -->
     <string name="settings_hint_show">顯示</string>
     <string name="settings_hint_go_to">前往</string>
-    <!-- %1$s is the number of hidden games, already formatted for the locale. -->
-    <string name="settings_hidden_games">隱藏的遊戲（%1$s）</string>
     <string name="settings_hidden_games_title">隱藏的遊戲</string>
     <string name="settings_hidden_games_body">你隱藏的遊戲，以及標示為「不是遊戲」的項目。選擇一項即可重新顯示。</string>
     <string name="settings_unhide_failed">無法重新顯示這款遊戲，沒有變更任何內容。</string>
     <!-- A game the person marked "Not a game" in Hidden games: "Not a game · SNES". -->
     <string name="settings_hidden_not_a_game">不是遊戲 · %1$s</string>
-    <string name="settings_unidentified_games">未辨識的遊戲（%1$s）</string>
     <string name="settings_unidentified_games_title">未辨識的遊戲</string>
     <string name="settings_unidentified_games_body">這些遊戲 Plumemu 只能依檔案命名。選擇一項即可修正名稱。</string>
     <string name="settings_name_fix_failed">無法儲存這個名稱，沒有變更任何內容。</string>
@@ -1606,8 +1601,12 @@
     <string name="collections_notice_removed">已從合集中移除</string>
     <string name="collections_name_title">收藏集名稱</string>
     <string name="collections_empty_most_played">玩得最久的遊戲會顯示在這裡</string>
-    <string name="collections_empty_recently_added">最近 30 天新增的遊戲會顯示在這裡</string>
+    <string name="collections_empty_recently_added">設定後找到的遊戲會在這裡顯示 30 天</string>
     <string name="collections_empty_own">用 %1$s › 加入收藏集… 加入遊戲</string>
+    <string name="collections_about_recent">最近玩過的遊戲，最新的在前</string>
+    <string name="collections_about_most_played">玩得最久的遊戲，最多 50 款</string>
+    <string name="collections_about_recently_added">最近 30 天新增的遊戲，最新的在前</string>
+    <string name="collections_new_about">你自己的遊戲清單，可包含任何系統的遊戲。在這裡命名，然後用 %1$s\u00A0› 加入收藏集… 加入遊戲</string>
     <string name="collections_rename">重新命名</string>
     <string name="collections_delete">刪除…</string>
     <string name="collections_delete_title">刪除%1$s？</string>
@@ -1618,6 +1617,7 @@
     <string name="collections_move_down">下移</string>
     <string name="collections_delete_confirm">刪除</string>
     <string name="collections_settings_failed">無法儲存此變更。請再試一次。</string>
+    <string name="collections_none">還沒有收藏集</string>
     <plurals name="collections_count">
         <item quantity="other">%1$s 個收藏集</item>
     </plurals>

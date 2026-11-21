@@ -101,7 +101,7 @@ class SoftShadowStepTest {
 
     private fun DrawScope.slabBlobOnly(c: PlumComposeColors) {
         val rect = RoundRect(px(60), px(150), px(360), px(197), px(13), px(13))
-        drawSlabOutside(Outline.Rounded(rect), SlabLook(c.slab.fill, c.slab.edge), Color.Transparent, blob = c.slabBlob)
+        drawSlabOutside(Outline.Rounded(rect), SlabLook(c.slab.fill), Color.Transparent, blob = c.slabBlob)
     }
 
     private fun DrawScope.collarShadow(c: PlumComposeColors) {

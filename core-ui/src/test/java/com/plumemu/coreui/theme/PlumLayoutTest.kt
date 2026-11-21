@@ -111,10 +111,10 @@ class PlumLayoutTest {
     }
 
     @Test
-    fun detailsStopIsWidthMinus104() {
-        assertEquals(472.dp, nova.detailsStopWidth)
-        assertEquals(563.dp, rp4Pro.detailsStopWidth)
-        assertEquals(664.dp, rp5.detailsStopWidth)
+    fun detailsStopIsWidthMinus48() {
+        assertEquals(528.dp, nova.detailsStopWidth)
+        assertEquals(619.dp, rp4Pro.detailsStopWidth)
+        assertEquals(720.dp, rp5.detailsStopWidth)
     }
 
     @Test

@@ -14,7 +14,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Sort by… (the game menu's entry, its choices, and the "R3 Sort" hint on the games list) at both sizes, Graphite and Paper. */
+/** Sort by… (the game menu's entry and its choices) at both sizes, Graphite and Paper. R3 has no hint: START › Sort by… is the way shown. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK])
@@ -28,10 +28,6 @@ class GameSortScreenshotTest {
         )
 
     private fun shot(name: String, panel: OpenPanel?) = ReferenceShots.capture(name) { HomeAt(FakeHomeContent.board(), BoardGamesFocused, panel = panel) }
-
-    /** The games list's hint bar: "R3 Sort" beside X Search and START Menu. */
-    @Test
-    fun hintBar() = shot("games_sort_hint", null)
 
     /** START on a game of a system list: Sort by… after Hide, focused. */
     @Test

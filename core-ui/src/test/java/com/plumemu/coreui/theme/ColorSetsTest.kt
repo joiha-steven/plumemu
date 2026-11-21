@@ -52,18 +52,14 @@ class ColorSetsTest {
             check(set, "pill against bg", ColorMath.contrast(c.pill, c.bg), 1.12)
             val dark = TextMode.of(c.text, c.bg) == TextMode.Light
             val slab = FocusSlab.fill(c.bg, c.text, dark)
-            check(set, "accent on slab (bar)", ColorMath.contrast(c.accent, slab), 3.5)
+            // Floor 3.5 to 2.5 ("lifted card"): the face is clearly lighter than the page, so a bright accent bar has less contrast on it; the plate itself now tells focus.
+            check(set, "accent on slab (bar)", ColorMath.contrast(c.accent, slab), 2.5)
             check(set, "strong on slab", ColorMath.contrast(c.strong, slab), 4.5)
             check(set, "text on slab", ColorMath.contrast(c.text, slab), 4.5)
             check(set, "meta on slab", ColorMath.contrast(c.meta, slab), 6.0)
             check(set, "muted on slab", ColorMath.contrast(c.muted, slab), 4.6)
-            // The slab must stand off the page: on dark pages its lit pane does; on light ones the pane stays near the page and its white
-            // rim does (FocusSlab), so a light page must stay below white.
-            if (dark) {
-                check(set, "slab against bg", ColorMath.contrast(slab, c.bg), 1.12)
-            } else {
-                check(set, "slab rim against bg", ColorMath.contrast(FocusSlab.edgeOver(slab, c.bg, dark), c.bg), 1.12)
-            }
+            // The slab must stand off the page by its face alone (no outline): the lifted card.
+            check(set, "slab against bg", ColorMath.contrast(slab, c.bg), 1.06)
             check(set, "text on tray", ColorMath.contrast(c.text, c.tray), 4.5)
             check(set, "text2 on trayKey", ColorMath.contrast(c.text2, c.trayKey), 4.5)
             check(set, "strong on trayKey", ColorMath.contrast(c.strong, c.trayKey), 4.5)

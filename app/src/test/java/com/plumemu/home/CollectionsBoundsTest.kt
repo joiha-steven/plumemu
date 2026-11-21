@@ -52,6 +52,12 @@ abstract class CollectionsBoundsBase(
 
     @Test fun folders() = measure("folders", CollectionsShotsBase.folders)
 
+    @Test fun foldersBuiltIn() = measure("folders built-in", CollectionsShotsBase.foldersBuiltIn)
+
+    @Test fun foldersEmpty() = measure("folders empty", CollectionsShotsBase.foldersEmpty)
+
+    @Test fun foldersNew() = measure("folders new", CollectionsShotsBase.foldersNew)
+
     @Test fun folderGrid() = measure("grid", CollectionsShotsBase.rpg, grid = true)
 
     @Test fun folderList() = measure("list", CollectionsShotsBase.rpg)

@@ -18,6 +18,7 @@ import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
+import com.plumemu.home.FACT_ORDER
 import com.plumemu.home.FakePlayFacts
 import com.plumemu.home.GameDetails
 import com.plumemu.home.HomeAt
@@ -25,6 +26,8 @@ import com.plumemu.home.HomeTags
 import com.plumemu.home.LibraryLikeContent
 import com.plumemu.home.LocalHomePlayFacts
 import com.plumemu.home.appComposeRule
+import com.plumemu.home.factLineProblems
+import com.plumemu.home.readFactLines
 import com.plumemu.home.rulesAround
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -38,8 +41,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The wide details block's second row, LAST PLAYED | EMULATOR | BATTERY, at 768 x 432 and 832 x 468: the battery cell shows the time on a
- * charge at all six text sizes, whole (never left out, never cut); with no estimate the cell is left out and the other two keep their columns; the old line under
+ * The wide details block's lower facts: last played, emulator and battery lines, at 768 x 432 and 832 x 468: the battery cell shows the time on a
+ * charge at all six text sizes, whole (never left out, never cut); with no estimate the cell is left out and the others keep their order and pitch; the old line under
  * the block is gone.
  */
 abstract class HomeDetailsBatteryCellBase {
@@ -103,7 +106,7 @@ abstract class HomeDetailsBatteryCellBase {
     }
 
     @Test
-    fun withNoEstimateTheCellIsLeftOutAndTheOthersKeepTheirColumns() {
+    fun withNoEstimateTheLineIsLeftOutAndTheOthersKeepTheirOrder() {
         show(null)
         val block = findTagged(details(), HomeTags.DETAILS_FACTS)!!
         assertNull("a cell with no estimate", findTagged(details(), HomeTags.DETAILS_BATTERY))
@@ -111,26 +114,25 @@ abstract class HomeDetailsBatteryCellBase {
         assertTrue("no BATTERY label", all.none { it.first == "Battery" })
         assertTrue("five labels", all.count { it.first in LABELS } == 5)
         assertTrue("no dash", all.none { it.first.trim() in setOf("-", "\u2013", "\u2014") })
-        // Five cells in the rows the arrangement gives them (HomeDetailsShares.kt): every row starts at the box's left edge.
-        assertRowsStartAtTheLeft(block, all.filter { it.first in LABELS })
+        // Five facts, one to a line in order, at one pitch: the missing one leaves no hole and the others keep their order.
+        assertFactLines(block, FACT_ORDER - "Battery")
     }
 
     @Test
-    fun withAnEstimateTheThreeCellsStandInThreeColumns() {
+    fun withAnEstimateAllSixFactsStandOnTheirOwnLines() {
         show(BATTERY_LINE_SAMPLES[1].pace)
         val block = findTagged(details(), HomeTags.DETAILS_FACTS)!!
         val all = texts(block)
-        // Requirement changed: six cells in three rows (genre + rating, played + last played, emulator + battery; a long emulator name on a row of
-        // its own and the battery a third cell of another row).
+        // Requirement changed: one fact to a line (was six cells in three rows, with the battery a third cell of the emulator's row).
         val labels = all.filter { it.first in LABELS }
-        assertEquals("all six cells", LABELS, labels.map { it.first }.toSet())
-        assertRowsStartAtTheLeft(block, labels)
+        assertEquals("all six facts", LABELS, labels.map { it.first }.toSet())
+        assertFactLines(block, FACT_ORDER)
     }
 
-    private fun assertRowsStartAtTheLeft(block: SemanticsNode, labels: List<Pair<String, SemanticsNode>>) {
-        val rows = labels.groupBy { Math.round(it.second.boundsInRoot.top) }
-        assertTrue("at most three rows: ${rows.mapValues { e -> e.value.map { it.first } }}", rows.size <= 3)
-        rows.forEach { (top, row) -> assertEquals("the row at $top starts at the left edge", block.boundsInRoot.left, row.minOf { it.second.boundsInRoot.left }, 1f) }
+    private fun assertFactLines(block: SemanticsNode, expected: List<String>) {
+        val lines = readFactLines(block)
+        assertEquals("the facts on show, in order", expected, lines.map { it.name })
+        assertEquals("the contract", emptyList<String>(), factLineProblems(block.boundsInRoot, lines))
     }
 
     private companion object {

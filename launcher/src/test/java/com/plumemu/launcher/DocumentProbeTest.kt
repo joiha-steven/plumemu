@@ -29,6 +29,14 @@ class ScriptedDocumentsProvider : ContentProvider() {
             "empty" -> MatrixCursor(projection)
             "null" -> null
             "gone" -> throw IllegalArgumentException("Failed to determine", FileNotFoundException("Missing file"))
+            // FileSystemProvider.isChildDocument as Android writes it: the FileNotFoundException is
+            // only in the message, never the cause (and a cause would not cross processes anyway).
+            "gone-real" -> throw IllegalArgumentException(
+                "Failed to determine if primary:ROMs/psx/a.chd is child of primary:ROMs: java.io.FileNotFoundException: Missing file for primary:ROMs/psx/a.chd at /storage/emulated/0/ROMs/psx/a.chd",
+            )
+            "root-gone-real" -> throw IllegalArgumentException(
+                "Failed to determine if 1234-ABCD:ROMs is child of 1234-ABCD:ROMs: java.io.FileNotFoundException: No root for 1234-ABCD",
+            )
             "revoked" -> throw SecurityException("Permission Denial")
             else -> throw IllegalArgumentException("broken provider")
         }
@@ -62,6 +70,13 @@ class DocumentProbeTest {
 
     @Test
     fun theStorageProvidersWayOfSayingGoneIsMissing() = assertEquals(DocumentState.Missing, probe("gone"))
+
+    @Test
+    fun aGoneFileAsARealProviderSaysItIsMissing() = assertEquals(DocumentState.Missing, probe("gone-real"))
+
+    @Test
+    fun aGoneFileOnARealRemovedCardIsUnreachable() =
+        assertTrue(probe("gone-real", root = "root-gone-real") is DocumentState.Unreachable)
 
     @Test
     fun aGoneFileOnARemovedCardIsUnreachableNotGone() {

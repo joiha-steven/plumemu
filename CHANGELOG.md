@@ -3,6 +3,42 @@
 What changed in each version of Plumemu, newest first. Downloads are under
 [Releases](../../releases).
 
+## 0.1.8 (2026-11-21, tag `v0.1.8`)
+
+A calmer, more finished look: one clear focus card, covers that stand off the page, a fuller Collections page and tidier controls.
+
+### New
+
+- Collections shows the focused folder on the right: a row of its covers, how many games and systems, and its first titles.
+- The second screen shows the same folder card on Collections instead of an empty play time box.
+- An Android game's menu has App info, which opens Android's own page to clear its cache or uninstall it.
+
+### Improved
+
+- The focused row is one lifted card with a soft shadow on every colour set, with no outline or lines around it.
+- Buttons, keys and cards are flat and read as clearly raised or sunken, with no gradients on any surface.
+- Box covers have a soft shadow under them, so they stand off the page.
+- Every app icon has the same rounded square shape, in Apps, Android games, Ports and on the second screen.
+- The hint bar follows one order on every home screen, shows B Back on the games list and drops the R3 Sort hint.
+- The header names the sort, long titles split into two lines, details show one fact per line and ratings read 8.5/10.
+- On a small screen the details stop no longer shows a strip of the list beside it.
+- The game menu and its panels open over a dimmed list.
+
+### Fixed
+
+- Recently added now lists games by the date they were added, newest first.
+- A game whose file is gone says so instead of a general error.
+- When an emulator closes at once, Play with... offers another emulator.
+- The second screen no longer shows an empty play time box or a stale folder name.
+- The Apps card on the second screen keeps its last row in line with the rows above.
+
+### Known issues
+
+- Wii games in RVZ or WIA are not checked for achievements, and 3DS, MS-DOS and Arduboy games show none yet.
+- The second screen is tested on the AYN Thor only, and most translations other than French have not been read by a native speaker.
+- Android's own folder picker cannot be finished with a gamepad on some handhelds: use touch for that step.
+- A game released very recently may have no box art until ScreenScraper adds it; Plumemu asks again after 30 days.
+
 ## 0.1.7 (19 November 2026)
 
 Collections for your own lists of games, Settings in six sections, and a launcher that stays quick after an update.

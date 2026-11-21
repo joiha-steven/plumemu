@@ -29,7 +29,7 @@ JVM test `ConverterTest` runs the converter and compares with the committed asse
 | `esde.py` | Reads ES-DE `es_systems.xml` and `es_find_rules.xml`; parses one command |
 | `daijisho.py` | Reads Daijishō `platforms/*.json`; parses one `amStartArguments` |
 | `gen_folder_names.py` | Writes `library/.../matching/DatFolderNames.kt` (folder names like `Sony - PlayStation 2`) from the name tool's system list; `--check` fails when it is stale (run by `scripts/verify.sh`) |
-| `tables.py` | Hand-kept decisions: tested systems, `SYSTEM_COLORS` (each system's own colour, `#RRGGBB`, written as `color`; adding a system means adding its colour, or leaving it out when it has none: engines, frontends, stores and generic folders), aliases, extra folders, excluded and extra extensions, short names, hand-kept emulators (the Steam apps), extra package names of a source's emulator (`EXTRA_VARIANTS`), packages dropped from every emulator's variants (`DROPPED_VARIANT_PACKAGES`), known installed apps (`KNOWN_APPS`) |
+| `tables.py` | Hand-kept decisions: tested systems, `SYSTEM_COLORS` (each system's own colour, `#RRGGBB`, written as `color`; adding a system means adding its colour, or leaving it out when it has none: engines, frontends, stores and generic folders), aliases, extra folders, excluded and extra extensions, short names, hand-kept emulators (the Steam apps), extra package names of a source's emulator (`EXTRA_VARIANTS`), packages dropped from every emulator's variants (`DROPPED_VARIANT_PACKAGES`), known installed apps (`KNOWN_APPS`), shown emulator names (`EMULATOR_NAMES`) |
 | `common.py` | Errors, package-name check, shape of the launch part, the check of a hand-kept emulator's launch |
 | `test_convert.py` | Converter unit tests |
 | `sources/daijisho/`, `sources/esde/` | The snapshots, each with `LICENSE` and `SOURCE.md` (URL, commit, date) |
@@ -168,6 +168,12 @@ JVM test `ConverterTest` runs the converter and compares with the committed asse
    on a row whose package no emulator lists. Without a row an emulator has no page and the app does not list it to get.
 18. **Whole order.** `SYSTEM_EMULATOR_ORDER` replaces a system's emulator order and must name exactly
    its emulators (steam: GameNative, GameHub Lite, DroidDeck, WinNative; epic and windows: GameNative first; atari7800 and dos: Omnidroid last, so RetroArch stays the default).
+19. **Shown names.** `EMULATOR_NAMES` in `tables.py` replaces the name of an emulator by id where the
+   sources give none fit to show (a package name, a libretro core file name, "- Current", one name for
+   several cores of a system); an id no emulator has fails. Then `check_emulator_names` fails on any
+   name with `_`, any name equal to its package (except the two androidemu builds no source names,
+   `convert.UNNAMED_PACKAGES`) and two emulators of one system with the same name. Stored choices
+   keep working: they hold the emulator id, never its name.
 
 ## What is skipped (never guessed)
 

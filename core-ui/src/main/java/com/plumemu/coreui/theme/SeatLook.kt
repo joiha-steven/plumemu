@@ -25,11 +25,16 @@ class CssShadow(
     val blur: Dp = if (isSoft) blur * Depth.SHADOW_REACH else blur
 }
 
-/** A box's fill and shadows: [stops] top to bottom, evenly spaced (one stop is a solid fill), [shadows] in CSS order (the first is on top). */
+/**
+ * A box's fill and shadows: [stops] are the board's gradient top to bottom, evenly spaced, kept only to derive [fill], the one flat colour
+ * drawn ([FlatSurface]: no surface is a gradient); [shadows] in CSS order (the first is on top).
+ */
 class CssFace(
     val stops: List<Color>,
     val shadows: List<CssShadow>,
-)
+) {
+    val fill: Color = if (stops.isEmpty()) Color.Transparent else FlatSurface.mean(stops)
+}
 
 /** A raised cap: [rest], and [down] (pressed or off) drawn [travel] lower; the collar around it stays. */
 class CssCap(
@@ -55,7 +60,10 @@ class CssCap(
  */
 class SeatLook(
     val dark: Boolean,
-    /** The LIP's radial stops at 0 %, 45 % and 100 %, and the ellipse's height as a share of the box (Graphite 100 %, Paper 90 %; 120 % wide). */
+    /**
+     * The board's LIP radial stops at 0 %, 45 % and 100 % and its ellipse's height (Graphite 100 %, Paper 90 %): the lip is drawn flat in their
+     * mean ([lipFill], [FlatSurface]); its board foot shade (`inset 0 -3px 4px`) is not drawn either.
+     */
     val lipStops: List<Color>,
     val lipEllipseHeight: Float,
     val lipShadows: List<CssShadow>,
@@ -78,6 +86,9 @@ class SeatLook(
 ) {
     private fun s(a: Float) = shade.copy(alpha = a)
 
+    /** The lip's one flat colour: the mean of [lipStops] at their places. */
+    val lipFill: Color by lazy { FlatSurface.mean(lipStops, LIP_AT) }
+
     /**
      * The cover's frame as glass: the lip is steps of lightness above the page ([Depth.COVER_FRAME_TOP_L] and on), as the slab's fill is, with a lit
      * crest along its top and a fine edge that parts it from the page. A near-white page has little room above it, so there the edge carries it.
@@ -94,7 +105,7 @@ class SeatLook(
                 listOf(
                     CssShadow(Color.White.copy(alpha = Depth.COVER_FRAME_CREST), (2f / 3f).dp, (1f / 3f).dp, inset = true),
                     CssShadow(edge, 0.dp, 0.dp, (1f / 3f).dp, inset = true),
-                ) + lipShadows.filter { !it.inset },
+                ) + lipShadows.filter { !it.inset && it.color.red > 0.5f } + coverDrops(),
             well = well,
             wellShade = wellShade,
             capStops = capStops,
@@ -109,17 +120,26 @@ class SeatLook(
         )
     }
 
+    /** The soft layers under a resting cover's frame ([Depth.COVER_DROP_NEAR_DY] and on): the page's shadow colour, a tight contact layer and a soft one, which replace the lip's own dark outer layers (its white top light stays). */
+    private fun coverDrops(): List<CssShadow> =
+        listOf(
+            CssShadow(shade.copy(alpha = if (dark) Depth.COVER_DROP_NEAR_DARK else Depth.COVER_DROP_NEAR_LIGHT), Depth.COVER_DROP_NEAR_DY.dp, Depth.COVER_DROP_NEAR_BLUR.dp, glow = true),
+            CssShadow(shade.copy(alpha = if (dark) Depth.COVER_DROP_FAR_DARK else Depth.COVER_DROP_FAR_LIGHT), Depth.COVER_DROP_FAR_DY.dp, Depth.COVER_DROP_FAR_BLUR.dp, glow = true),
+        )
+
     /**
-     * The V2 board's RAISED surface (a chip, depth level 1): the radial [chipStops] under `inset 0 1px 0` (white .16, Paper #FFFFFF), `inset 0 -3px 4px`
-     * (black .35, Paper brown .158), the ring `0 0 0 1px` (black .1, Paper brown .045) and the drop `0 2px 3px` (black .55, Paper brown .248).
+     * The V2 board's RAISED surface (a chip, depth level 1), flat ([FlatSurface]): the mean of the board's radial [chipStops] under `inset 0 1px 0`
+     * (white .16, Paper #FFFFFF), the ring `0 0 0 1px` (black .1, Paper brown .045) and the drop `0 2px 3px` (black .55, Paper brown .248). The board's
+     * `inset 0 -3px 4px` foot shade is gone: it domed the chip.
      */
     val raisedChip: CssFace by lazy {
         CssFace(
             chipStops,
             listOf(
                 CssShadow(if (dark) Color.White.copy(alpha = 0.16f) else Color.White, (2f / 3f).dp, inset = true),
-                CssShadow(s(if (dark) 0.35f else 0.158f), (-2f).dp, (8f / 3f).dp, inset = true),
                 CssShadow(s(if (dark) 0.10f else 0.045f), 0.dp, 0.dp, (2f / 3f).dp),
+                // Its solid base, as a cap's thickness.
+                CssShadow(side, (4f / 3f).dp),
                 CssShadow(s(if (dark) 0.55f else 0.248f), (4f / 3f).dp, (4f / 3f).dp),
             ),
         )
@@ -194,6 +214,14 @@ class SeatLook(
     val lockedKnobShade = CssShadow(Color.Black.copy(alpha = 0.25f), (2f / 3f).dp, (4f / 3f).dp, inset = true)
     val hueShade = CssShadow(Color.Black.copy(alpha = 0.45f), (2f / 3f).dp, 2.dp, inset = true)
 
+    /**
+     * A sunken part's crisp dark inner top edge: drawn over the well's and field's soft inset, so a
+     * well, a slider's track and a text field read as cut into the page.
+     */
+    val sunkenEdge: CssShadow by lazy {
+        CssShadow(shade.copy(alpha = if (dark) FlatSurface.SUNKEN_EDGE_DARK else FlatSurface.SUNKEN_EDGE_LIGHT), FlatSurface.sunkenEdge, inset = true)
+    }
+
     /** The lit groove: `inset 0 1px 2px rgba(0,0,0,.35)` (all themes). */
     val focusShade = CssShadow(Color.Black.copy(alpha = 0.35f), (2f / 3f).dp, (4f / 3f).dp, inset = true)
 
@@ -243,6 +271,9 @@ class SeatLook(
 
     companion object {
         const val CAP_LIGHT = 0.5f
+
+        /** Where the board's lip stops sit. */
+        val LIP_AT = listOf(0f, 0.45f, 1f)
         const val WORD_LIFT = 0.04f
 
         /** Graphite's, for a [CollarLook] built by hand (tests). */
@@ -277,7 +308,6 @@ class SeatLook(
                     lipShadows =
                         listOf(
                             CssShadow(Color.White.copy(alpha = 0.16f), (4f / 3f).dp * Depth.LIP, (2f / 3f).dp, inset = true),
-                            CssShadow(black.copy(alpha = 0.40f), (-2f).dp * Depth.LIP, (8f / 3f).dp * Depth.LIP, inset = true),
                             CssShadow(Color.White.copy(alpha = 0.03f), 0.dp, 0.dp, (2f / 3f).dp, inset = true),
                             CssShadow(Color.White.copy(alpha = 0.03f), (-2f / 3f).dp, 2.dp),
                             CssShadow(black.copy(alpha = 0.45f), 2.dp, (8f / 3f).dp),
@@ -288,7 +318,8 @@ class SeatLook(
                     capStops = listOf(up(0.10), up(0.085)),
                     capDownStops = listOf(up(0.075), up(0.062)),
                     capOff = up(0.033),
-                    side = up(0.006),
+                    // The base under a flat cap: below the page, so the cap reads as a button standing on it.
+                    side = c(ToneLadder.level(bg, ToneLadder.BASE)),
                     shade = black,
                     fieldWell = c(ToneLadder.level(bg, ToneLadder.SUNKEN)),
                     fieldShade = CssShadow(black.copy(alpha = 0.55f), 2.dp, 4.dp, inset = true),
@@ -306,7 +337,6 @@ class SeatLook(
                 lipShadows =
                     listOf(
                         CssShadow(Color.White, (4f / 3f).dp * Depth.LIP, (2f / 3f).dp, inset = true),
-                        CssShadow(brown.copy(alpha = 0.08f), (-2f).dp * Depth.LIP, 2.dp * Depth.LIP, inset = true),
                         CssShadow(Color.White.copy(alpha = 0.8f), (-4f / 3f).dp, (8f / 3f).dp),
                         CssShadow(brown.copy(alpha = 0.14f), 2.dp, (8f / 3f).dp),
                         CssShadow(brown.copy(alpha = 0.14f), (20f / 3f).dp, (44f / 3f).dp),

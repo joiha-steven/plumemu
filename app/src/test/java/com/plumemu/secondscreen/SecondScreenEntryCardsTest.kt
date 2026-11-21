@@ -179,6 +179,13 @@ abstract class SecondScreenEntryCardsBase(
     }
 
     @Test
+    fun recentWithNothingThisWeekOrLastHasNoWeekTile() {
+        show(RECENT_NOTHING_FOR_TWO_WEEKS)
+        assertTrue(has(EntryTags.COVER))
+        assertFalse("a tile of zeros is left out", has(EntryTags.WEEK))
+    }
+
+    @Test
     fun anEmptyRecentIsItsHeader() {
         show(RECENT_EMPTY)
         assertEquals("0 games", textOf(EntryTags.COUNT))

@@ -322,13 +322,14 @@ internal val SettingsOption.opensPage: Boolean
 /**
  * What A does on [option]'s row, for the hint bar: read-only rows (Version, Privacy, Statistics,
  * the box art status) do nothing, on a narrow screen too, where "› More" (the Right key) opens
- * their explanation and A does not; an action "Select"; a page "Open"; anything else "Change".
+ * their explanation and A does not; an action "Select" (Use as home screen is an action drawn as a
+ * switch, and a switch says "Change" wherever it is); a page "Open"; anything else "Change".
  */
 @StringRes
 internal fun rowConfirmHint(option: SettingsOption): Int? =
     when {
         option.kind == OptionKind.Info -> null
-        option.kind == OptionKind.Action -> R.string.settings_hint_select
+        option.kind == OptionKind.Action && option != SettingsOption.UseAsHome -> R.string.settings_hint_select
         option.opensPage -> R.string.settings_hint_open
         else -> R.string.settings_hint_change
     }

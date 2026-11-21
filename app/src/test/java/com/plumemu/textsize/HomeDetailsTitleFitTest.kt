@@ -56,7 +56,7 @@ abstract class HomeDetailsTitleFitBase {
         return layouts.first()
     }
 
-    protected class Shown(val coverDp: Float, val titleLines: Int, val titleEllipsis: Boolean, val hasSubline: Boolean, val rows: List<String>, val problems: List<String>)
+    protected class Shown(val coverDp: Float, val titleLines: Int, val titleEllipsis: Boolean, val hasSubline: Boolean, val subtitleLines: Int, val subtitleEllipsis: Boolean, val rows: List<String>, val problems: List<String>)
 
     private var fontNow by mutableStateOf(PlumFont.Jost)
     private var sizeNow by mutableStateOf(TextSize.Small)
@@ -111,11 +111,15 @@ abstract class HomeDetailsTitleFitBase {
         val titleShort = shownHeight - titleNode.size.height
         if (titleShort > 1f) problems += "the title is clipped: its node is ${titleNode.size.height} px high for ${titleLayout.lineCount} line(s) of ${shownHeight} px ($titleShort px short, ${titleShort / DENSITY} dp)"
         val facts = findTagged(column, HomeTags.DETAILS_FACTS)!!
+        // The subtitle may be left out whole when the room is short (no layout then); EllipsisText cuts the text itself and ends it with "…".
+        val subtitleLayout = findTagged(column, HomeTags.DETAILS_TITLE_SUBTITLE)?.let { n -> mutableListOf<TextLayoutResult>().also { n.config[SemanticsActions.GetTextLayoutResult].action?.invoke(it) }.firstOrNull() }
         return Shown(
             coverDp = cover.height / DENSITY,
             titleLines = titleLayout.lineCount,
             titleEllipsis = (0 until titleLayout.lineCount).any { titleLayout.isLineEllipsized(it) },
             hasSubline = all.any { text(it).contains("Nintendo") },
+            subtitleLines = subtitleLayout?.lineCount ?: 0,
+            subtitleEllipsis = subtitleLayout?.let { l -> l.layoutInput.text.text.endsWith("\u2026") || (0 until l.lineCount).any { l.isLineEllipsized(it) } } ?: false,
             rows = texts(facts).map(::text),
             problems = problems.map { "${font.name} ${size.name}: $it" },
         )
@@ -137,7 +141,7 @@ abstract class HomeDetailsTitleFitBase {
         val failures = mutableListOf<String>()
         run {
             for (size in TextSize.entries) {
-                val shown = show(PlumFont.Jost, size, LONG_DETAILS_TITLE)
+                val shown = show(PlumFont.Jost, size, LONG_PLAIN_TITLE)
                 val label = size.name
                 // Requirement changed: under a title of two lines the cover may go to 0.77 of its floor so the facts keep their three rows.
                 if (shown.coverDp < PlumDimens.detailsCoverMinWide.value * SQUEEZED_COVER_SHARE - 0.5f) failures += "$label: cover ${shown.coverDp} dp"
@@ -151,7 +155,35 @@ abstract class HomeDetailsTitleFitBase {
         assertTrue(failures.joinToString("\n"), failures.isEmpty())
     }
 
+    // A title with a subtitle mark reads as a main title and a subtitle line (TitleSplit.kt): the main one stays on one line and the subtitle takes at
+    // most two, cut with an ellipsis, or leaves whole when the room is short; at every size nothing is cut or overlapping and the time row stays.
+    @Test
+    fun aSplitTitleKeepsItsMainLineAndCutsOnlyItsSubtitle() {
+        val failures = mutableListOf<String>()
+        var shownAtSmall = false
+        for (size in TextSize.entries) {
+            val shown = show(PlumFont.Jost, size, LONG_SPLIT_TITLE)
+            if (shown.titleLines != 1) failures += "${size.name}: the main title takes ${shown.titleLines} lines"
+            if (shown.subtitleLines > 1) failures += "${size.name}: subtitle ${shown.subtitleLines} lines under a wide box"
+            if (shown.subtitleLines > 0 && !shown.subtitleEllipsis) failures += "${size.name}: a subtitle too long for its line is not cut with an ellipsis"
+            if (size == TextSize.Small && shown.subtitleLines > 0) shownAtSmall = true
+            if ("Played" !in shown.rows || "Last played" !in shown.rows) failures += "${size.name}: time row missing ${shown.rows}"
+            if (shown.coverDp < PlumDimens.detailsCoverMinWide.value * SQUEEZED_COVER_SHARE - 0.5f) failures += "${size.name}: cover ${shown.coverDp} dp"
+            failures += shown.problems
+        }
+        if (subtitleShowsAtSmall) assertTrue("the subtitle shows at Small", shownAtSmall) else assertTrue("the subtitle leaves whole at Small (no room under the cover's floor)", !shownAtSmall)
+        assertTrue(failures.joinToString("\n"), failures.isEmpty())
+    }
+
+    /** Whether the column has room for the subtitle line at Small (one line under a wide box, so it does on 768 x 432 and the Thor). */
+    protected open val subtitleShowsAtSmall = true
+
     protected companion object {
+        /** A split title whose subtitle is too long for two lines at any size. */
+        val LONG_SPLIT_TITLE = "$LONG_DETAILS_TITLE and the Hidden Depths of Planet Zebes Revisited Once More"
+
+        /** [LONG_DETAILS_TITLE] without its subtitle mark: one long title that only wraps (the cases of two lines and an ellipsis). */
+        val LONG_PLAIN_TITLE = LONG_DETAILS_TITLE.replace(":", "")
         const val DENSITY = 2f
         const val SQUEEZED_COVER_SHARE = 0.77f
     }
@@ -163,7 +195,7 @@ abstract class HomeDetailsTitleFitBase {
 class HomeDetailsTitleFit768Test : HomeDetailsTitleFitBase() {
     @Test
     fun largestKeepsTheCoverAndTheTimeRowAndLosesTheLineUnderTheTitleFirst() {
-        val shown = show(PlumFont.Jost, TextSize.Largest, LONG_DETAILS_TITLE)
+        val shown = show(PlumFont.Jost, TextSize.Largest, LONG_PLAIN_TITLE)
         assertTrue("the cover keeps ${PlumDimens.detailsCoverMinWide} dp: ${shown.coverDp}", shown.coverDp >= PlumDimens.detailsCoverMinWide.value - 0.5f)
         assertTimeRowWhole(shown, "Largest")
         assertTrue("the line under the title left", !shown.hasSubline)
@@ -172,7 +204,7 @@ class HomeDetailsTitleFit768Test : HomeDetailsTitleFitBase() {
 
     @Test
     fun aTitleThatFitsKeepsItsSecondLine() {
-        val shown = show(PlumFont.Jost, TextSize.Small, LONG_DETAILS_TITLE)
+        val shown = show(PlumFont.Jost, TextSize.Small, LONG_PLAIN_TITLE)
         // Measured for Jost (128 dp at 768x432): two title lines in Jost's taller line box take the squeezed floor, not the full one, to keep the facts' three rows.
         assertTrue("the cover keeps its squeezed floor: ${shown.coverDp}", shown.coverDp >= PlumDimens.detailsCoverMinWide.value * SQUEEZED_COVER_SHARE - 0.5f)
         assertTimeRowWhole(shown, "Small")

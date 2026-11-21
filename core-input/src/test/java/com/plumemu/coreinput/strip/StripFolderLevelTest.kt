@@ -100,16 +100,17 @@ class StripFolderLevelTest {
     }
 
     @Test
-    fun theFolderKeepsItsOwnRowAndAnotherFolderOpenedLaterHasItsOwn() {
+    fun aFolderOpenedFromItsRowAlwaysStartsAtItsFirstGame() {
         val inside = reduce(onFolders(0), enter).focus
         val moved = reduce(inside, move(Direction.Down)).focus
         assertEquals(1, moved.row)
         val back = reduce(reduce(moved, back).focus, move(Direction.Down)).focus
         val second = reduce(back, enter).focus
         assertEquals(0, second.row)
+        // A on a folder left on its second game opens it on the first again (it used to open on the row left, the second cover).
         val again = reduce(reduce(reduce(second, this.back).focus, move(Direction.Up)).focus, enter).focus
         assertEquals("recent", again.openFolder?.id)
-        assertEquals(1, again.row)
+        assertEquals(0, again.row)
     }
 
     @Test

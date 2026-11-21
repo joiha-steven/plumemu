@@ -48,7 +48,7 @@ class SlabBlobTest {
         CanvasDrawScope().draw(Density(density), LayoutDirection.Ltr, Canvas(image), androidx.compose.ui.geometry.Size(1800f, 1000f)) {
             drawRect(page)
             val rect = RoundRect(left.toFloat(), top.toFloat(), (left + width).toFloat(), (top + height).toFloat(), 26f, 26f)
-            drawSlabOutside(Outline.Rounded(rect), SlabLook(c.slab.fill, c.slab.edge), c.slabGlow, blob = c.slabBlob)
+            drawSlabOutside(Outline.Rounded(rect), SlabLook(c.slab.fill), c.slabGlow, blob = c.slabBlob)
         }
         val map = image.toPixelMap()
         val cx = left + width / 2

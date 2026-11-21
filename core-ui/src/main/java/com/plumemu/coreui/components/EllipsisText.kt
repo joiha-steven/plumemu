@@ -43,10 +43,12 @@ fun EllipsisText(
     color: (() -> Color)? = null,
     maxLines: Int = 1,
     onTextLayout: (TextLayoutResult) -> Unit = {},
+    /** Cut after a whole word ("Echoes of…", not "Echoes of Wis…") when that keeps most of the room ([ellipsize]). */
+    wholeWords: Boolean = false,
 ) {
     val measurer = rememberTextMeasurer()
     val cache = remember { CutCache() }
-    val policy = EllipsisPolicy(measurer, cache, text, style, maxLines, onTextLayout)
+    val policy = EllipsisPolicy(measurer, cache, text, style, maxLines, onTextLayout, wholeWords)
     val semanticsOfText =
         Modifier.semantics {
             this.text = AnnotatedString(text)
@@ -63,9 +65,10 @@ private class EllipsisPolicy(
     private val style: TextStyle,
     private val maxLines: Int,
     private val onTextLayout: (TextLayoutResult) -> Unit,
+    private val wholeWords: Boolean,
 ) : MeasurePolicy {
     override fun MeasureScope.measure(measurables: List<Measurable>, constraints: Constraints): MeasureResult {
-        val laidOut = cache.layoutAt(measurer, text, style, constraints.maxWidth, maxLines, onTextLayout)
+        val laidOut = cache.layoutAt(measurer, text, style, constraints.maxWidth, maxLines, onTextLayout, wholeWords)
         val width = laidOut.size.width.coerceIn(constraints.minWidth, constraints.maxWidth)
         val height = laidOut.size.height.coerceIn(constraints.minHeight, constraints.maxHeight)
         val baselines: Map<AlignmentLine, Int> = mapOf(FirstBaseline to ceil(laidOut.firstBaseline).toInt(), LastBaseline to ceil(laidOut.getLineBaseline(laidOut.lineCount - 1)).toInt())
@@ -94,14 +97,14 @@ private class CutCache {
     var layout: TextLayoutResult? = null
         private set
 
-    fun layoutAt(measurer: TextMeasurer, text: String, style: TextStyle, width: Int, maxLines: Int, report: (TextLayoutResult) -> Unit): TextLayoutResult {
+    fun layoutAt(measurer: TextMeasurer, text: String, style: TextStyle, width: Int, maxLines: Int, report: (TextLayoutResult) -> Unit, wholeWords: Boolean = false): TextLayoutResult {
         layout?.let { if (text == this.text && style == this.style && width == this.width && maxLines == this.maxLines) return it }
         val room = Constraints(maxWidth = width)
         val shown =
             if (width == Constraints.Infinity) {
                 text
             } else {
-                ellipsize(text) { !measurer.measure(it, style, overflow = TextOverflow.Clip, maxLines = maxLines, constraints = room).hasVisualOverflow }
+                ellipsize(text, wholeWords) { !measurer.measure(it, style, overflow = TextOverflow.Clip, maxLines = maxLines, constraints = room).hasVisualOverflow }
             }
         val made = measurer.measure(shown, style, overflow = TextOverflow.Ellipsis, maxLines = maxLines, constraints = room)
         this.text = text
@@ -125,9 +128,10 @@ fun String.trimBeforeEllipsis(): String = trimEnd(::isTrailingJunk)
 /**
  * [text] when [fits] says it does, else its longest prefix that fits with "…" after it; the prefix loses its trailing spaces
  * and dangling punctuation first, and a width that holds only the mark gives the mark alone. [fits] must be monotone: a
- * shorter prefix fits whenever a longer one does.
+ * shorter prefix fits whenever a longer one does. With [wholeWords] the cut moves back to the end of the last whole word, unless that
+ * would give up more than [WORD_GIVE_UP] of the prefix (one long word is still cut inside).
  */
-fun ellipsize(text: String, fits: (String) -> Boolean): String {
+fun ellipsize(text: String, wholeWords: Boolean = false, fits: (String) -> Boolean): String {
     if (fits(text)) return text
     fun candidate(length: Int): String {
         var end = length
@@ -140,5 +144,12 @@ fun ellipsize(text: String, fits: (String) -> Boolean): String {
         val mid = (low + high + 1) / 2
         if (fits(candidate(mid))) low = mid else high = mid - 1
     }
+    if (wholeWords && low < text.length && !text[low].isWhitespace()) {
+        val wordEnd = text.lastIndexOf(' ', low)
+        if (wordEnd > 0 && wordEnd >= low * (1f - WORD_GIVE_UP)) return candidate(wordEnd)
+    }
     return candidate(low)
 }
+
+/** The most of a cut prefix a whole-word cut may give up. */
+private const val WORD_GIVE_UP = 0.4f

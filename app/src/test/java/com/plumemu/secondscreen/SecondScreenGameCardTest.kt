@@ -125,30 +125,46 @@ abstract class SecondScreenGameCardBase(
     }
 
     @Test
-    fun neverPlayed() {
+    fun aGameNeverPlayedHasNoPlayTile() {
         show(BOARD_GAME_NO_RA.copy(lastPlayedDaysAgo = null, playTimeMinutes = null, weeks = PlayWeeks(List(8) { 0L }, 0, 0)))
-        assertEquals("Not played yet", textOf(GameCardTags.PLAY_TOTAL))
-        assertEquals(0, all(GameCardTags.SESSIONS).size)
-        // Never played: the label and one line, no empty chart or about line.
-        assertEquals(0, all(GameCardTags.ABOUT).size)
-        assertEquals(0, all(GameCardTags.BARS).size)
+        // Nothing to say: no tile at all (the top screen says "Not played yet"), and no empty tile row.
+        assertEquals(0, all(GameCardTags.PLAY).size)
+        assertEquals(0, all(GameCardTags.TILES).size)
+        assertEquals(1, all(GameCardTags.DESCRIPTION).size)
     }
 
     @Test
-    fun playedButNotInTheLastEightWeeks() {
+    fun aGamePlayedOnlyBeforeTheLastEightWeeksHasNoPlayTile() {
         show(BOARD_GAME_NO_RA.copy(weeks = PlayWeeks(List(8) { 0L }, 0, 0)))
-        assertEquals("0 min", textOf(GameCardTags.PLAY_TOTAL))
+        assertEquals(0, all(GameCardTags.PLAY).size)
+        assertEquals(0, all(GameCardTags.TILES).size)
     }
 
     @Test
-    fun theFiguresAreBlankUntilThePlayFactsAreRead() {
-        show(BOARD_GAME.copy(isPlayKnown = false, weeks = null, fileName = null))
-        assertEquals("", textOf(GameCardTags.PLAY_TOTAL))
+    fun noTileIsDrawnUntilThePlayFactsAreRead() {
+        show(BOARD_GAME_NO_RA.copy(isPlayKnown = false, weeks = null, fileName = null))
+        assertEquals(0, all(GameCardTags.TILES).size)
         assertEquals(0, all(GameCardTags.FILE).size)
-        assertEquals(bounds(GameCardTags.PLAY).height, run {
-            show(BOARD_GAME_NO_RA.copy(weeks = PlayWeeks(List(8) { 0L }, 0, 0)))
-            bounds(GameCardTags.PLAY).height
-        }, 1f)
+        // The description moves up into the row's place, a header gap under the title.
+        val withoutTiles = bounds(GameCardTags.DESCRIPTION_BOX).top
+        val titleBottom = maxOf(bounds(GameCardTags.TITLE).bottom, bounds(GameCardTags.SYSTEM).bottom)
+        assertTrue("description at $withoutTiles under the title at $titleBottom", withoutTiles + px(SecondScreenGameCardDimens.descriptionInkTop) >= titleBottom - 0.5f)
+        show(BOARD_GAME_NO_RA)
+        assertTrue("higher than under a tile", withoutTiles < bounds(GameCardTags.DESCRIPTION_BOX).top)
+    }
+
+    @Test
+    fun aCardWithNoLibraryGameNeverShowsAPlayTile() {
+        // A row the database does not hold (no game id) is never read: it must not wait with an empty box.
+        show(BOARD_GAME.copy(gameId = null, isPlayKnown = false, weeks = null, ra = null))
+        assertEquals(0, all(GameCardTags.TILES).size)
+    }
+
+    @Test
+    fun achievementsWithNoRecentPlayTakeTheWholeRow() {
+        show(BOARD_GAME.copy(weeks = PlayWeeks(List(8) { 0L }, 0, 0)))
+        assertEquals(0, all(GameCardTags.PLAY).size)
+        assertEquals(bounds(GameCardTags.TILES).width, bounds(GameCardTags.ACHIEVEMENTS).width, 1f)
     }
 
     @Test

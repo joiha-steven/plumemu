@@ -17,9 +17,9 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.asAndroidBitmap
 import com.plumemu.coreui.theme.FocusSlab
+import com.plumemu.coreui.theme.FlatSurface
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.SlabLook
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.lerp
 import com.plumemu.coreui.theme.SlabDimens
@@ -29,10 +29,8 @@ import kotlin.math.min
 
 /**
  * What the focused row's slab draws outside its fill (docs/design/rules.md > The focus slab), the CSS's outer box-shadows bottom to top: the glow
- * `0 0 glowBlur` ([glow], `PlumComposeColors.slabGlow`), the far and the near drop ([SlabLook.far] / [SlabLook.near]) and the dark `0 0 0 1px`
- * [SlabLook.ring]. [blob] is the light games list's floor glow under it all. Each soft layer is the exact Gaussian of the rounded shape ([drawSoft]),
- * never a blur or a stroke stack. CSS paints no outer shadow under the box; here the fill drawn after it is opaque (the gradient already composited
- * over the page or card, [drawSlabFill]), so it covers that part. A non-rounded outline draws none.
+ * `0 0 glowBlur` ([glow], `PlumComposeColors.slabGlow`) and the drop shadow ([SlabLook.near]; [SlabLook.far] is the same at no strength). [blob] is the light games list's floor glow under it all. Each soft layer is the exact Gaussian of the rounded shape ([drawSoft]),
+ * never a blur or a stroke stack. CSS paints no outer shadow under the box; here the fill drawn after it is opaque ([drawSlabFill]), so it covers that part. A non-rounded outline draws none.
  */
 internal fun DrawScope.drawSlabOutside(
     outline: Outline,
@@ -51,12 +49,11 @@ internal fun DrawScope.drawSlabOutside(
     if (blob.alpha > 0f && !noGlow) drawBlob(box, blob)
     // The blob was fitted to the light list board's blue around the slab, its own glow included: drawn with it, the glow would count twice.
     drawDrops(topLeft, size, corner, look, if (blob.alpha > 0f || noGlow) Color.Transparent else glow, under)
-    if (look.ring.alpha > 0f) drawBand(topLeft, size, corner, FocusSlab.RING_WIDTH_DP.dp.toPx() / 2f, FocusSlab.RING_WIDTH_DP.dp.toPx(), look.ring)
 }
 
 /**
- * The slab's own face under its text: the CSS `linear-gradient` ([SlabLook.stops], on a card [SlabLook.stopsOnCard]; each stop moved [press] of the way to
- * [pressInk] while pressed) and its inset shadows ([SlabLook.insetTop] over [SlabLook.insetBottom], one cached bitmap inside the border).
+ * The slab's own face under its text: one flat colour ([SlabLook.fill], on a card [SlabLook.onCard]; moved [press] of the way to [pressInk] while
+ * pressed; no gradient, no edge band, no inner shadow: [com.plumemu.coreui.theme.FlatSurface]).
  */
 internal fun DrawScope.drawSlabFill(
     outline: Outline,
@@ -65,18 +62,8 @@ internal fun DrawScope.drawSlabFill(
     press: Float = 0f,
     pressInk: Color = Color.Transparent,
 ) {
-    val stops = if (onCard) look.stopsOnCard else look.stops
-    val colors = if (press == 0f) stops else stops.map { lerp(it, pressInk, press) }
-    val bounds = outline.bounds
-    val brush = Brush.verticalGradient(0f to colors[0], FocusSlab.MID_AT to colors[1], 1f to colors[2], startY = bounds.top, endY = bounds.bottom)
-    drawOutline(outline, brush)
-    if (outline !is Outline.Rounded) return
-    val w = Math.round(bounds.width)
-    val h = Math.round(bounds.height)
-    fun px(l: com.plumemu.coreui.theme.SlabShadow?) = l?.let { SoftImages.Inset(it.color, it.drop.toPx(), it.sigma.toPx()) }
-    val placed = SoftImages.inset(w, h, outline.roundRect.topLeftCornerRadius.x, SlabDimens.edge.toPx(), px(look.insetTop), px(look.insetBottom)) ?: return
-    // Placed at the outline's own (fractional) corner, so it sits on the gradient and border exactly wherever the slab is drawn.
-    translate(bounds.left, bounds.top) { drawPlaced(placed, IntOffset.Zero, w, h) }
+    val face = if (onCard) look.onCard else look.fill
+    drawOutline(outline, if (press == 0f) face else lerp(face, pressInk, press))
 }
 
 /** The glow, [SlabLook.far] and [SlabLook.near] as one cached image ([SoftImages.drops]), placed at the shape's corner rounded to whole pixels. */
@@ -202,8 +189,7 @@ private fun DrawScope.drawBand(
 
 
 /**
- * What the slab draws over its fill: the CSS border, 1 board px inside [outline], in [SlabLook.edge] with its top side in [SlabLook.top] (the colours meet
- * half way round each top corner, as a CSS border's do), and the short accent bar at its left with its `0 0 12px` glow ([glow]). No ring, no dot.
+ * What the slab draws over its fill: the short accent bar at its left with its `0 0 12px` glow ([glow]). No ring, no dot.
  */
 internal fun DrawScope.drawSlabFace(
     outline: Outline,
@@ -214,19 +200,8 @@ internal fun DrawScope.drawSlabFace(
     /** The bar's distance from the slab's left edge. */
     barInset: Dp = SlabDimens.barInset,
 ) {
-    val look = colors.slab
     val bounds = outline.bounds
     val edge = SlabDimens.edge.toPx()
-    val corner = (outline as? Outline.Rounded)?.roundRect?.topLeftCornerRadius?.x ?: 0f
-    // Glass: a thin rim, lit at two opposite corners and nearly gone between them.
-    val rim = look.rim(bounds.topLeft, bounds.bottomRight)
-    drawRoundRect(
-        rim,
-        Offset(bounds.left + edge / 2f, bounds.top + edge / 2f),
-        Size(bounds.width - edge, bounds.height - edge),
-        CornerRadius(corner - edge / 2f),
-        style = Stroke(edge),
-    )
     val barHeight = min(SlabDimens.barHeight.toPx(), bounds.height * SlabDimens.BAR_HEIGHT_SHARE)
     val barWidth = SlabDimens.barWidth.toPx()
     val left = bounds.left + barInset.toPx()
@@ -235,4 +210,3 @@ internal fun DrawScope.drawSlabFace(
     if (glow.alpha > 0f) drawSoft(Offset(left, top), Size(barWidth, barHeight), barWidth / 2f, 0f, SlabDimens.barGlowSigma.toPx(), glow, false)
     drawRoundRect(colors.accent, Offset(left, top), Size(barWidth, barHeight), CornerRadius(barWidth / 2f))
 }
-

@@ -114,12 +114,13 @@ class HomeFavoriteBoundsTest {
     @Test
     @Config(qualifiers = NARROW)
     fun theGamesHintsFitAt576InEveryFont() {
-        val order = listOf(Action.Play, Action.ToggleFavorite, Action.Search, Action.Menu, Action.JumpLetterNext)
+        val order = listOf(Action.Play, Action.Back, Action.ToggleFavorite, Action.Search, Action.Menu, Action.JumpLetterNext, Action.ToggleView)
         val report = StringBuilder()
         showGames()
         for (each in listOf(PlumFont.Jost)) {
             compose.waitForIdle()
-            for (required in listOf(Action.Play, Action.ToggleFavorite, Action.Search, Action.Menu)) {
+            // X Search gives way before Y (HINT_DROP_ORDER): the longer "Unfavorite" leaves no room for it here.
+            for (required in listOf(Action.Play, Action.ToggleFavorite, Action.Menu, Action.ToggleView)) {
                 assertTrue("$each: ${required::class.simpleName} is shown", isShown(required))
             }
             val hints = shownHints(order)
@@ -137,10 +138,9 @@ class HomeFavoriteBoundsTest {
     @Config(qualifiers = WIDE)
     fun at768SelectAndSwitchSystemShow() {
         showGames()
-        // B Back is hidden on the games list, so "L2 R2 Switch list" fits at 768 now (HINT_DROP_ORDER); "R3 Sort" too.
-        val order = listOf(Action.Play, Action.ToggleFavorite, Action.Search, Action.Sort, Action.Menu, Action.JumpLetterNext, Action.ToggleView)
+        // B Back took R3 Sort's place (no R3 hint), so "L2 R2 Switch list" still fits at 768 (HINT_DROP_ORDER).
+        val order = listOf(Action.Play, Action.Back, Action.ToggleFavorite, Action.Search, Action.Menu, Action.JumpLetterNext, Action.ToggleView)
         order.forEach { assertTrue("${it::class.simpleName} is shown", isShown(it)) }
-        assertTrue("B Back is not on the games list", !isShown(Action.Back))
         val hints = shownHints(order)
         // The seven do not fit with the board's 17.33 gap, so it shrinks (never under 9) just enough for them to: one gap between all of them.
         val gaps = hints.zipWithNext().map { (a, b) -> b.left.value - a.right.value }

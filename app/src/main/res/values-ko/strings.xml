@@ -74,7 +74,6 @@
     <string name="home_hint_search">검색</string>
     <string name="home_hint_undo">실행 취소</string>
     <string name="home_notice_removed_from_recent">최근 플레이에서 제거됨</string>
-    <string name="home_hint_sort">정렬</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
          shown when no title matches. -->
@@ -426,7 +425,6 @@
 
     <!-- Launch errors: a title, one or two plain sentences, then what the person can do. -->
     <string name="game_action_rescan">라이브러리 다시 스캔</string>
-    <string name="game_action_play_with_another">다른 에뮬레이터로 플레이</string>
     <string name="game_action_ok">확인</string>
     <!-- The last row of Info: back to the menu. -->
     <!-- The last row of the Info panel: a verb, back to the game menu. -->
@@ -493,7 +491,7 @@
     <string name="game_error_internal_body">이 게임에는 Plumemu의 에뮬레이터 데이터를 쓸 수 없었어요.</string>
     <!-- %1$s is an emulator's name. Shown when it came back within ten seconds of its start. -->
     <string name="game_closed_at_once_title">%1$s이(가) 바로 종료됐어요</string>
-    <string name="game_closed_at_once_body">게임이 시작되지 않았다면 게임 메뉴의 에뮬레이터 지정…에서 다른 에뮬레이터를 고르세요.</string>
+    <string name="game_closed_at_once_body">게임이 시작되지 않았다면 다른 에뮬레이터를 사용해 보세요.</string>
     <string name="game_core_question_title">%1$s이(가) 시작됐나요?</string>
     <string name="game_core_question_body">%1$s(으)로 열었어요. Plumemu는 RetroArch에 있는 코어를 볼 수 없어서 코어마다 한 번 물어봐요.</string>
     <string name="game_action_yes">예</string>
@@ -679,14 +677,11 @@
     <!-- Hint bar label: a verb, show the focused system again. -->
     <string name="settings_hint_show">표시</string>
     <string name="settings_hint_go_to">이동</string>
-    <!-- %1$s is the number of hidden games, already formatted for the locale. -->
-    <string name="settings_hidden_games">숨긴 게임(%1$s)</string>
     <string name="settings_hidden_games_title">숨긴 게임</string>
     <string name="settings_hidden_games_body">직접 숨겼거나 게임이 아니라고 표시한 게임이에요. 다시 표시하려면 선택하세요.</string>
     <string name="settings_unhide_failed">게임을 다시 표시하지 못했어요. 아무것도 바뀌지 않았어요.</string>
     <!-- A game the person marked "Not a game" in Hidden games: "Not a game · SNES". -->
     <string name="settings_hidden_not_a_game">게임 아님 · %1$s</string>
-    <string name="settings_unidentified_games">판별되지 않은 게임(%1$s)</string>
     <string name="settings_unidentified_games_title">판별되지 않은 게임</string>
     <string name="settings_unidentified_games_body">파일 이름으로만 이름을 정한 게임이에요. 선택해서 이름을 수정하세요.</string>
     <string name="settings_name_fix_failed">이름을 저장하지 못했어요. 아무것도 바뀌지 않았어요.</string>
@@ -1606,8 +1601,12 @@
     <string name="collections_notice_removed">컬렉션에서 제거됨</string>
     <string name="collections_name_title">컬렉션 이름</string>
     <string name="collections_empty_most_played">오래 플레이한 게임이 여기에 표시됩니다</string>
-    <string name="collections_empty_recently_added">최근 30일 동안 추가한 게임이 여기에 표시됩니다</string>
+    <string name="collections_empty_recently_added">설정 후에 찾은 게임이 30일 동안 여기에 표시됩니다</string>
     <string name="collections_empty_own">%1$s › 컬렉션에 추가…로 게임을 추가하세요</string>
+    <string name="collections_about_recent">최근에 플레이한 게임, 최신순</string>
+    <string name="collections_about_most_played">가장 오래 플레이한 게임, 최대 50개</string>
+    <string name="collections_about_recently_added">최근 30일 동안 추가된 게임, 최신순</string>
+    <string name="collections_new_about">어떤 시스템의 게임이든 담을 수 있는 나만의 목록입니다. 여기서 이름을 정한 뒤 %1$s\u00A0› 컬렉션에 추가…로 게임을 추가하세요</string>
     <string name="collections_rename">이름 바꾸기</string>
     <string name="collections_delete">삭제…</string>
     <string name="collections_delete_title">%1$s을(를) 삭제할까요?</string>
@@ -1618,6 +1617,7 @@
     <string name="collections_move_down">아래로</string>
     <string name="collections_delete_confirm">삭제</string>
     <string name="collections_settings_failed">변경 사항을 저장하지 못했습니다. 다시 시도하세요.</string>
+    <string name="collections_none">아직 컬렉션이 없습니다</string>
     <plurals name="collections_count">
         <item quantity="other">컬렉션 %1$s개</item>
     </plurals>

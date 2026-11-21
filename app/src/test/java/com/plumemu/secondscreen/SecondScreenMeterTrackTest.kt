@@ -80,6 +80,11 @@ class SecondScreenMeterTrackTest {
                 val v = ((pair.first shr shift) and 0xFF).toDouble()
                 val want = shadeColour + (v - shadeColour) * (wellNew - shadeColour) / (wellOld - shadeColour)
                 val o = (pair.second shr shift) and 0xFF
+                // The rows of the crisp dark inner top edge are darker than the board's, not equal.
+                if (row < SUNKEN_EDGE_ROWS) {
+                    assertTrue("$what: row $row channel ${shift / 8}: the dark top edge $o is not darker than the board's ${"%.1f".format(want)}", o <= Math.round(want).toInt() + 2)
+                    continue
+                }
                 assertTrue(
                     "$what: row $row channel ${shift / 8}: wanted ${"%.1f".format(want)} (board shade over the sunken well #%06X), got $o".format(newWell.value),
                     kotlin.math.abs(o - Math.round(want).toInt()) <= 2,
@@ -156,3 +161,6 @@ class SecondScreenMeterTrackTest {
         val WARM_SHADOW = Rgb(0x3C2814)
     }
 }
+
+/** The track's rows under its crisp dark inner top edge (FlatSurface.sunkenEdge, 1 dp at 1.5 px per dp). */
+private const val SUNKEN_EDGE_ROWS = 2

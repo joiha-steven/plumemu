@@ -3,6 +3,7 @@ package com.plumemu.secondscreen
 import androidx.compose.runtime.Immutable
 import com.plumemu.coreui.theme.CoverShape
 import com.plumemu.game.EmulatorToStart
+import com.plumemu.home.FolderKind
 import com.plumemu.home.ArtPicture
 import com.plumemu.home.SystemInfo
 
@@ -139,6 +140,8 @@ internal data class FavoritesEntry(
     val hasBoxArt: Boolean = false,
     /** The pictures have been read (or none are to be). */
     val isArtRead: Boolean = !hasBoxArt,
+    /** A Collections folder shown on this card (the folders page, or its systems entry): its line says what it holds and why it is empty; null for Favorites. */
+    val folder: FolderKind? = null,
 ) : EntryContent {
     override fun keepingFiguresOf(previous: SecondScreenContent): SecondScreenContent =
         if (!isArtRead && previous is FavoritesEntry && previous.isArtRead && previous.games.map { it.id } == games.map { it.id }) copy(games = previous.games, isArtRead = true) else this

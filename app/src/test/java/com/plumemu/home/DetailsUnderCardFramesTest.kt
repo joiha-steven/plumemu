@@ -17,6 +17,7 @@ import androidx.compose.ui.test.onRoot
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.FlatSurface
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
@@ -41,7 +42,7 @@ import kotlin.math.abs
 
 /**
  * With animations on, the card slides in and out over 180 ms. At every frame of both slides no details text is cut by the card's
- * edge, and the column's alpha is one minus the card's own progress (the progress comes from the card's place; the alpha is
+ * edge, and the column's alpha is one minus the card's own progress, under the scrim that comes in with it (the progress comes from the card's place; the alpha is
  * measured on the pixels: frame = alpha * closed + (1 - alpha) * page). Before, the column vanished on the first frame of the open
  * (half the screen blank) and came back whole on the first frame of the close, under a short card still sliding out.
  */
@@ -137,7 +138,9 @@ abstract class DetailsUnderCardFramesBase {
             // A column fading with the card still shows a ghost of its text under the card's edge while it slides; it is
             // asserted where the column is nearly whole (alpha over CUT_VISIBLE), and the semantics hide it while the card is open.
             if (s.cut.isNotEmpty() && alpha > CUT_VISIBLE) problems += "${s.label}: alpha %.2f, the card $card cuts ${s.cut.take(3)}".format(alpha)
-            if (abs(alpha - (1f - progress)) > 0.08f) problems += "${s.label}: card progress %.2f, column alpha %.2f, wanted %.2f".format(progress, alpha, 1f - progress)
+            // The column fades by 1 - progress, and the overlay card's scrim (the page at SCRIM_ALPHA, faded in with the same progress) lies over it.
+            val wanted = (1f - progress) * (1f - FlatSurface.SCRIM_ALPHA * progress)
+            if (abs(alpha - wanted) > 0.08f) problems += "${s.label}: card progress %.2f, column alpha %.2f, wanted %.2f".format(progress, alpha, wanted)
         }
         assertTrue("$name: the alpha was measured on at least two frames ($measured)", measured >= 2)
         assertEquals("$name:\n" + problems.take(8).joinToString("\n"), emptyList<String>(), problems)

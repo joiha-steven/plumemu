@@ -3,6 +3,8 @@ package com.plumemu.secondscreen
 import com.plumemu.coreinput.Column
 import com.plumemu.coreinput.strip.OpenFolder
 import com.plumemu.coreinput.strip.StripFocus
+import com.plumemu.collections.Folder
+import com.plumemu.home.FolderRows
 import com.plumemu.home.GameDetails
 import com.plumemu.home.PlayFacts
 import com.plumemu.home.SnesInfo
@@ -11,6 +13,7 @@ import com.plumemu.home.HomeContent
 import com.plumemu.home.SystemGames
 import com.plumemu.home.search.SearchHit
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Every row of the design's "What fills it" table, derived from the main screen's state. */
@@ -182,5 +185,48 @@ class SecondScreenFollowTest {
         val captions = listOf("Super Nintendo" to "SNES", "Game Boy Advance" to "GBA", "Mega Drive" to "Mega Drive", "PlayStation" to "PS1", "Game Boy" to "GB").map { (name, short) -> coverCaptionOf(name, short) }
         assertEquals(listOf("SNES", "GBA", "Mega Drive", "PlayStation", "Game Boy"), captions)
         assertEquals("a long name without a short one keeps its name", "Game Boy Advance", coverCaptionOf("Game Boy Advance", ""))
+    }
+
+    // The folders page (Collections, folders as rows): 0 Recent, 1 Most played, 2 Recently added, 3 "RPG", 4 New collection….
+    private val withRpg =
+        HomeContent.of(
+            recent = listOf(sonic, metroid),
+            favorites = listOf(metroid),
+            apps = emptyList(),
+            systems = listOf(SystemGames("snes", "Super Nintendo", listOf(metroid, zelda)), SystemGames("md", "Mega Drive", listOf(sonic))),
+            otherFolders = HomeContent.DEFAULT_FOLDERS + FolderRows(Folder.Own(7, "RPG", 2), listOf(metroid, sonic)),
+        )
+
+    private fun onFolderRow(row: Int, column: Column = Column.Games) =
+        HomeLook(StripFocus(column = column, systemIndex = 1, systemId = HomeContent.COLLECTIONS_ID, rows = mapOf(HomeContent.COLLECTIONS_ID to row)))
+
+    /** 2087 showed a folder row as a game card ("Zelda", an empty play-time tile): a folder row is never a game. */
+    @Test
+    fun aFolderRowShowsItsFolderCardNeverAGameCard() {
+        val card = derive(onFolderRow(3), withRpg)
+        assertTrue("not a game card: $card", card is FavoritesEntry)
+        card as FavoritesEntry
+        assertEquals("RPG", card.name)
+        assertEquals(2, card.gameCount)
+        assertEquals(listOf(1L, 3L), card.games.map { it.id })
+    }
+
+    @Test
+    fun theRecentRowShowsRecentsCardAndAnEmptyBuiltInItsOwn() {
+        assertTrue(derive(onFolderRow(0), withRpg) is RecentEntry)
+        val empty = derive(onFolderRow(1), withRpg)
+        assertTrue("Most played, empty: $empty", empty is FavoritesEntry && empty.gameCount == 0)
+    }
+
+    @Test
+    fun newCollectionShowsNoGameCard() {
+        val card = derive(onFolderRow(4), withRpg)
+        assertTrue("New collection… is not a game: $card", card !is SecondScreenContent.Game)
+    }
+
+    @Test
+    fun theCollectionsEntryFocusedInTheSystemColumnShowsTheFolderAtItsRow() {
+        val card = derive(onFolderRow(3, Column.Systems), withRpg)
+        assertTrue("$card", card is FavoritesEntry && card.name == "RPG")
     }
 }

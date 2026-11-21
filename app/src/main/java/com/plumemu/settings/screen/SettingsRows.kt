@@ -341,8 +341,11 @@ internal fun optionValue(
         SettingsOption.Backup -> opensUnlessBusy(backupRowValue(content.backup), content.backup is BackupState.Running)
         SettingsOption.Restore -> opensUnlessBusy(restoreRowValue(content.restore), content.restore.isRunning())
         SettingsOption.UndoRestore -> opensUnlessBusy(undoRowValue(content), content.restore.let { it is RestoreState.Replacing && it.isUndo })
-        SettingsOption.Reset, SettingsOption.ResetAll, SettingsOption.ResetLibrary, SettingsOption.ClearRecent, SettingsOption.Licenses, SettingsOption.HiddenGames,
-        SettingsOption.UnidentifiedGames, SettingsOption.ReportProblem,
+        // Counts stand in the value, as Game folders' and Systems' do (in the label they wrapped the row).
+        SettingsOption.HiddenGames -> OptionValue.Opens(rememberCountFormat().format(content.hiddenGames.size))
+        SettingsOption.UnidentifiedGames -> OptionValue.Opens(rememberCountFormat().format(content.unidentifiedGames.size))
+        SettingsOption.Reset, SettingsOption.ResetAll, SettingsOption.ResetLibrary, SettingsOption.ClearRecent, SettingsOption.Licenses,
+        SettingsOption.ReportProblem,
         ->
             OptionValue.Opens("")
         // A page to read beside the row: A opens nothing, so no "»".
@@ -415,8 +418,6 @@ internal fun optionLabel(
     when (option) {
         SettingsOption.SystemEmulator -> content.systems.getOrNull(index)?.name.orEmpty()
         SettingsOption.UnreadableFolders -> unreadableRowLabel(content)
-        SettingsOption.HiddenGames -> stringResource(R.string.settings_hidden_games, rememberCountFormat().format(content.hiddenGames.size))
-        SettingsOption.UnidentifiedGames -> stringResource(R.string.settings_unidentified_games, rememberCountFormat().format(content.unidentifiedGames.size))
         else -> stringResource(option.label)
     }
 

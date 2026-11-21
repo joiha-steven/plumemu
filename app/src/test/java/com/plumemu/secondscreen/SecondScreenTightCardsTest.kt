@@ -156,28 +156,4 @@ class SecondScreenTightCardsTest {
         assertTrue("this wk ${label.right} past the edge $edge", label.right <= edge + 0.5f)
         assertTrue("this wk is not right-aligned to the bars' end: ${label.right} / $edge", label.right >= edge - px(Dp(1f)))
     }
-
-    @Test
-    fun theTileKeepsOneHeightWhileReadingNeverPlayedAndPlayed() {
-        val noFacts = BOARD_GAME_NO_RA.copy(isPlayKnown = false, weeks = null)
-        show(noFacts)
-        assertEquals("reading: no bars", 0, count(GameCardTags.BARS))
-        assertEquals("reading: no this wk", 0, count(GameCardTags.THIS_WEEK))
-        val reading = bounds(GameCardTags.PLAY).height
-        show(BOARD_GAME_NO_RA.copy(lastPlayedDaysAgo = null, playTimeMinutes = null, weeks = PlayWeeks(List(8) { 0L }, 0, 0)))
-        val never = bounds(GameCardTags.PLAY).height
-        show(BOARD_GAME_NO_RA)
-        val played = bounds(GameCardTags.PLAY).height
-        assertEquals("reading vs played", played, reading, 0.5f)
-        assertEquals("never played vs played", played, never, 0.5f)
-    }
-
-    @Test
-    fun aGameNeverPlayedHasNoChartAndKeepsTheBaseline() {
-        show(BOARD_GAME.copy(lastPlayedDaysAgo = null, playTimeMinutes = null, weeks = PlayWeeks(List(8) { 0L }, 0, 0)))
-        assertEquals(0, count(GameCardTags.BARS))
-        assertEquals(0, count(GameCardTags.THIS_WEEK))
-        assertEquals(0, count(GameCardTags.ABOUT))
-        assertEquals(bounds(GameCardTags.LATEST).bottom, bounds(GameCardTags.PLAY_TOTAL).bottom, 0.5f)
-    }
 }

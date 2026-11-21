@@ -23,9 +23,6 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.up
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.PlumMotion
-import com.plumemu.coreui.theme.FocusSlab
-import com.plumemu.coreui.theme.PlumDimens
-import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.PlumColors
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumTheme
@@ -67,18 +64,10 @@ class PressFeelTest {
     private val settings = PlumThemeSettings.Graphite
     private val colors = PlumComposeColors.from(PlumColors.derive(settings.backgroundColor, settings.textMode, settings.accentColor))
 
-    /** The slab's gradient ([com.plumemu.coreui.theme.SlabLook.stops]) at pixel row [y] of the focused row (the slab starts its overhang above the row). */
-    private fun restFill(y: Int = FILL_Y): Color {
-        val density = compose.density.density
-        val slab = SlabDimens.height.value * density
-        val over = (slab - PlumDimens.gameRowHeight.value * density) / 2f
-        val t = (y + 0.5f + over) / slab
-        val stops = colors.slab.stops
-        val mid = FocusSlab.MID_AT
-        return if (t <= mid) lerp(stops[0], stops[1], t / mid) else lerp(stops[1], stops[2], (t - mid) / (1f - mid))
-    }
+    /** The slab's one flat face ([com.plumemu.coreui.theme.SlabLook.fill]), the same at every pixel row of the focused row. */
+    private fun restFill(): Color = colors.slab.fill
 
-    private fun pressedFill(y: Int = FILL_Y) = lerp(restFill(y), colors.text, PlumMotion.PRESS_FILL_MIX)
+    private fun pressedFill() = lerp(restFill(), colors.text, PlumMotion.PRESS_FILL_MIX)
 
     private fun show(confirmCap: String = "A", themeSettings: PlumThemeSettings = settings) {
         compose.setContent {
@@ -222,7 +211,7 @@ class PressFeelTest {
         hold("A")
         assertTrue("the fill changed", fillAt(FOCUSED, FILL_Y).near(pressedFill()))
         // The slab's top edge lies above the row (it overhangs by [slabOverhang]): the row's own top pixel is inside the fill and stays there.
-        assertTrue("and the row did not shrink: the top pixel is still the fill", fillAt(FOCUSED, 0).near(pressedFill(0)))
+        assertTrue("and the row did not shrink: the top pixel is still the fill", fillAt(FOCUSED, 0).near(pressedFill()))
     }
 
     @Test

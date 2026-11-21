@@ -105,6 +105,9 @@ internal interface GameActions {
      */
     suspend fun setAppKind(gameKey: String, kind: AppKind): Boolean
 
+    /** The game menu's App info for an app game: Android's details page of its package, as the Apps entry's menu opens it; never throws. */
+    suspend fun showAppInfo(gameKey: String): AppToolResult = AppToolResult.Failed
+
     /** Deletes the person's fix under every key and names the game again now (off the main thread). */
     suspend fun backToAutomatic(gameKey: String)
 

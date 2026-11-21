@@ -66,7 +66,8 @@ class SeatLookTest {
         near("capDown top", 0x212327, g.capDownStops[0])
         near("capDown bottom", 0x1E2024, g.capDownStops[1])
         near("capOff", 0x18191C, g.capOff)
-        near("side", 0x121316, g.side)
+        // The base under a flat cap is the tone ladder's BASE step, not the board's #121316.
+        near("side", ToneLadder.level(Rgb(0x111214), ToneLadder.BASE).let { (it.red shl 16) or (it.green shl 8) or it.blue }, g.side)
         near("field well", sunken(0x111214), g.fieldWell)
         // The word key is the letter cap a step (4 %) lighter.
         near("word key top", lighter(raised(0x111214, 0x2A2C31, 0.10f / 0.12f)), g.wordCap.rest.stops[0], 3)
@@ -94,18 +95,19 @@ class SeatLookTest {
     @Test
     fun lipAndWellLayersAreTheCss() {
         val l = graphite.lipShadows
-        assertEquals(6, l.size)
+        // The board's foot shade (`inset 0 -3px 4px`) is gone: a raised part is a flat face, a lit top and a drop (FlatSurface).
+        assertEquals(5, l.size)
         layer("lip 1", l[0], 1.333f * Depth.LIP, 0.667f, 0.16f, true)
-        layer("lip 2", l[1], -2f * Depth.LIP, 2.667f * Depth.LIP, 0.40f, true)
-        layer("lip 3", l[2], 0f, 0f, 0.03f, true, 0.667f)
-        layer("lip 4", l[3], -0.667f, 2f, 0.03f, false)
-        layer("lip 5", l[4], 2f, 2.667f, 0.45f, false)
-        layer("lip 6", l[5], 6.667f, 14.667f, 0.45f, false)
+        layer("lip 3", l[1], 0f, 0f, 0.03f, true, 0.667f)
+        layer("lip 4", l[2], -0.667f, 2f, 0.03f, false)
+        layer("lip 5", l[3], 2f, 2.667f, 0.45f, false)
+        layer("lip 6", l[4], 6.667f, 14.667f, 0.45f, false)
+        assertTrue("no inset shade from the foot", l.none { it.inset && it.y.value < 0f })
         val p = paper.lipShadows
-        assertEquals(5, p.size)
-        layer("paper lip 2", p[1], -2f * Depth.LIP, 2f * Depth.LIP, 0.08f, true)
-        layer("paper lip 4", p[2], -1.333f, 2.667f, 0.8f, false)
-        layer("paper lip 6", p[4], 6.667f, 14.667f, 0.14f, false)
+        assertEquals(4, p.size)
+        assertTrue("no inset shade from the foot on Paper", p.none { it.inset && it.y.value < 0f })
+        layer("paper lip 4", p[1], -1.333f, 2.667f, 0.8f, false)
+        layer("paper lip 6", p[3], 6.667f, 14.667f, 0.14f, false)
         layer("well", graphite.wellShade, 0.667f, 1.333f, 0.6f, true)
         layer("paper well", paper.wellShade, 0.667f, 1.333f, 0.25f, true)
         layer("lit groove", graphite.focusShade, 0.667f, 1.333f, 0.35f, true)

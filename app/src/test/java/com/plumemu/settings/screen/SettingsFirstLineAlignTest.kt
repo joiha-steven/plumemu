@@ -16,12 +16,15 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import com.plumemu.coreui.components.SystemRowTags
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.PlumColors
+import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import kotlin.math.abs
 import com.plumemu.coreui.theme.TextSize
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
+import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -140,7 +143,7 @@ class SettingsSectionsScrollCueTest {
         assertTrue("at the last row the top fades", shown(FADE_TOP_SUFFIX))
     }
 
-    /** A fade never dims the focused row: the second-last row of Controls (Appearance has five rows and no longer scrolls at Largest on 576) at the largest text, with a row past it, and its slab edge is as bright at its bottom as at its top. */
+    /** A fade never dims the focused row: the second-last row of Controls (Appearance has five rows and no longer scrolls at Largest on 576) at the largest text, with a row past it, and its slab's face is drawn whole to its bottom (the slab has no foot band now: "lifted card"). */
     @Test
     fun aFadeStopsShortOfTheFocusedRow() {
         val rows = SettingsSection.Controls.rowsIn(ShotContent.library)
@@ -157,17 +160,21 @@ class SettingsSectionsScrollCueTest {
         val d = compose.density.density
         val box = compose.onNodeWithTag(SettingsTags.option(focused), useUnmergedTree = true).getUnclippedBoundsInRoot()
         val x = ((box.left.value + (box.right.value - box.left.value) * 0.4f) * d).toInt()
-        // The slab's border: the bottom side is a lighter line over the fill's dark end, a little past the row's bounds (the slab may bleed).
+        // The slab's lower rows (its face; no foot band) are a little past the row's bounds (the slab may bleed).
         val xs = (x - 5)..(x + 5)
         val from = ((box.top.value - 8) * d).toInt().coerceAtLeast(0)
         val until = ((box.bottom.value + 8) * d).toInt().coerceAtMost(image.height - 1)
         val top = box.top.value * d
         assertTrue("the focused row's slab is drawn", compose.onRoot().captureToImage().slabMiddle(compose.barColumns(box.left.value * d), top.toInt(), until) >= 0)
-        fun lum(y: Int) = image.getPixel(x, y).let { android.graphics.Color.red(it) + android.graphics.Color.green(it) + android.graphics.Color.blue(it) }
-        val bottom = ((top + 2 * d).toInt()..until - 2).any { y -> lum(y) - lum(y - 2) > BOTTOM_EDGE_STEP && lum(y) - lum(y + 2) > BOTTOM_EDGE_STEP }
-        assertTrue("the focused row's slab edge is drawn at its bottom (the fade does not dim it)", bottom)
+        val settings = PlumThemeSettings.Graphite
+        val foot = PlumComposeColors.from(PlumColors.derive(settings.backgroundColor, settings.textMode, settings.accentColor)).slab.fill
+        val wanted = intArrayOf((foot.red * 255f).roundToInt(), (foot.green * 255f).roundToInt(), (foot.blue * 255f).roundToInt())
+        fun isFoot(y: Int) = image.getPixel(x, y).let { intArrayOf(android.graphics.Color.red(it), android.graphics.Color.green(it), android.graphics.Color.blue(it)) }
+            .let { got -> (0..2).all { kotlin.math.abs(got[it] - wanted[it]) <= FOOT_TOLERANCE } }
+        val bottom = ((top + 2 * d).toInt()..until - 2).any { y -> isFoot(y) && isFoot(y + 1) }
+        assertTrue("the focused row's slab face is drawn down to its bottom, undimmed (the fade does not reach it)", bottom)
     }
 }
 
-/** How much lighter (summed channels, 0..765) the slab's bottom border is than the fill above and the shadow under it, at the least. */
-private const val BOTTOM_EDGE_STEP = 12
+/** How far a channel may be from the slab's face colour (0..255) for the pixel to count as the foot. */
+private const val FOOT_TOLERANCE = 3

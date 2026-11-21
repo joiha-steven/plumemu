@@ -10,26 +10,26 @@ import org.junit.Test
 
 class CollectionHintsTest {
     @Test
-    fun aFolderRowShowsOpenSearchSwitchBack() {
+    fun aFolderRowShowsOpenBackSearchSwitch() {
         for (folder in listOf(Folder.BuiltIn(BuiltInFolder.Recent, 0), Folder.Own(1, "x", 3))) {
-            assertEquals(listOf(Open, Search, SwitchEntry, Back), hintsFor(folder, hasOtherEntries = true))
+            assertEquals(listOf(Open, Back, Search, SwitchEntry), hintsFor(folder, hasOtherEntries = true))
         }
     }
 
     @Test
     fun theSwitchIsLeftOutWithNoOtherEntry() {
-        assertEquals(listOf(Open, Search, Back), hintsFor(Folder.Own(1, "x", 0), hasOtherEntries = false))
+        assertEquals(listOf(Open, Back, Search), hintsFor(Folder.Own(1, "x", 0), hasOtherEntries = false))
     }
 
     @Test
     fun newCollectionTakesOpensPlace() {
-        assertEquals(listOf(NewCollection, Search, SwitchEntry, Back), hintsFor(Folder.NewCollection, true))
-        assertEquals(listOf(NewCollection, Search, Back), hintsFor(Folder.NewCollection, false))
+        assertEquals(listOf(NewCollection, Back, Search, SwitchEntry), hintsFor(Folder.NewCollection, true))
+        assertEquals(listOf(NewCollection, Back, Search), hintsFor(Folder.NewCollection, false))
     }
 
     @Test
     fun noFocusStillGivesOnlyFolderHints() {
-        assertEquals(listOf(Open, Search, Back), hintsFor(null, false))
+        assertEquals(listOf(Open, Back, Search), hintsFor(null, false))
     }
 
     @Test

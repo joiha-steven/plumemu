@@ -19,7 +19,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Home with the details column at the sizes people have (832x468 and the Thor's 837x471), Medium Jost, Graphite and Paper: a game with
- * every fact, a game with two rows only, each with and without a synopsis (it shows only where the cover leaves room).
+ * every fact, a game with two rows only, each with and without a synopsis (it shows only where the cover leaves room), and a title with a subtitle part.
  */
 abstract class HomeDetailsNormalSizeBase(private val label: String) {
     private val compose = appComposeRule()
@@ -36,10 +36,13 @@ abstract class HomeDetailsNormalSizeBase(private val label: String) {
         preset: ReferenceShots.Preset,
         twoRows: Boolean,
         synopsis: Boolean,
+        title: String? = null,
     ) {
         val id = LibraryLikeContent.idAt(LibraryLikeContent.SUPER_METROID).toString()
         val details = GameDetails(year = 1994, publisher = "Nintendo", genre = if (twoRows) "" else "Action", players = "1", description = "", rating = if (twoRows) null else SUPER_METROID_RATING)
-        val base = LibraryLikeContent.of(hasBoxArt = true, metroidDetails = details)
+        val plain = LibraryLikeContent.of(hasBoxArt = true, metroidDetails = details)
+        // A title with a subtitle mark, split into the main title and its subtitle line.
+        val base = if (title == null) plain else plain.withEntries(plain.entries.map { e -> e.copy(rows = e.rows.map { if (it.id == id) it.copy(title = title) else it }) })
         val source = coverArtSource(content = base, synopses = if (synopsis) mapOf(artKey(id) to SUPER_METROID_SYNOPSIS) else emptyMap(), ratings = if (twoRows) emptyMap() else mapOf(artKey(id) to SUPER_METROID_RATING))
         if (!twoRows) {
             @Suppress("DEPRECATION")
@@ -67,7 +70,14 @@ abstract class HomeDetailsNormalSizeBase(private val label: String) {
     @Test fun noSynopsisGraphite() = shoot("no_synopsis", ReferenceShots.Preset.Graphite, twoRows = false, synopsis = false)
 
     @Test fun noSynopsisPaper() = shoot("no_synopsis", ReferenceShots.Preset.Paper, twoRows = false, synopsis = false)
+
+    @Test fun splitTitleGraphite() = shoot("split_title", ReferenceShots.Preset.Graphite, twoRows = false, synopsis = false, title = SPLIT_TITLE)
+
+    @Test fun splitTitlePaper() = shoot("split_title", ReferenceShots.Preset.Paper, twoRows = false, synopsis = false, title = SPLIT_TITLE)
 }
+
+/** The Thor case: a main title and a subtitle line, never a line starting with "- The Fist of Mars". */
+private const val SPLIT_TITLE = "Zone of the Enders - The Fist of Mars"
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)

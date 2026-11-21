@@ -43,6 +43,8 @@ internal fun WideDetailsLayout(
      * and does not count in the cover's room. The cover is the band's whole height. If no cover is left (the text-first floor) the title goes under, as always.
      */
     sideTitle: Boolean = false,
+    /** The cover takes only the height it needs, up to what is left (the folder card's row), and the text follows directly under it. */
+    coverHugs: Boolean = false,
 ) {
     // Kept as the same object while [rest] is: a new lambda would compose its slot again.
     val restContent: @Composable () -> Unit =
@@ -71,9 +73,9 @@ internal fun WideDetailsLayout(
         val titleHeightForCover = titleStacked.sumOf { it.height }
         // Text first: the whole rest is measured before the cover is sized.
         val wholeRest = if (minCover != null) restParts.map { it.measure(loose.copy(maxHeight = if (bounded) constraints.maxHeight else Constraints.Infinity)) } else null
-        val wholeRestHeight = wholeRest?.sumOf { it.height } ?: 0
-        val coverPx = coverHeight(constraints, minCover, gap, full, titleHeightForCover, factsHeight, wholeRestHeight)
-        val cover = coverParts.map { it.measure(loose.copy(minHeight = coverPx, maxHeight = coverPx)) }
+        val coverPxLeft = coverHeight(constraints, minCover, gap, full, titleHeightForCover, factsHeight, wholeRest?.sumOf { it.height } ?: 0)
+        val cover = coverParts.map { it.measure(loose.copy(minHeight = if (coverHugs) 0 else coverPxLeft, maxHeight = coverPxLeft)) }
+        val coverPx = if (coverHugs) cover.maxOfOrNull { it.height } ?: 0 else coverPxLeft
         val besideTitle = sideTitle && coverPx > 0
         val coverWidth = cover.maxOfOrNull { it.width } ?: 0
         val topPad = CollarSize.Cover.topPadding.roundToPx()
@@ -167,7 +169,7 @@ private fun MeasureScope.coverHeight(
 
 /**
  * The title and the lines under it, [gap] apart, as a Column while they fit the height given. When they do not, the lines under the title leave
- * first (left out, not measured), then the title takes fewer lines (an ellipsis ends the last): measured, never by font or size.
+ * one at a time from the last (left out, not measured), then the title takes fewer lines (an ellipsis ends the last): measured, never by font or size.
  */
 @Composable
 internal fun TitleBlock(
@@ -178,10 +180,12 @@ internal fun TitleBlock(
         val g = gap.roundToPx()
         val loose = constraints.copy(minWidth = 0, minHeight = 0, maxHeight = Constraints.Infinity)
         // Read from the intrinsics first: a measurable is measured once.
-        val wholeHeight = measurables.sumOf { it.maxIntrinsicHeight(loose.maxWidth) } + g * (measurables.size - 1).coerceAtLeast(0)
-        val fits = !constraints.hasBoundedHeight || wholeHeight <= constraints.maxHeight
-        // When they do not fit, the title alone, in the height given: it keeps its second line only if that fits.
-        val all = (if (fits) measurables else measurables.take(1)).map { it.measure(if (fits) loose else loose.copy(maxHeight = constraints.maxHeight)) }
+        val heights = measurables.map { it.maxIntrinsicHeight(loose.maxWidth) }
+        fun heightOf(n: Int) = heights.take(n).sum() + g * (n - 1).coerceAtLeast(0)
+        // The most lines from the top that fit (the title's subtitle before the publisher's line, as they are given).
+        val kept = if (!constraints.hasBoundedHeight) measurables.size else (measurables.size downTo 1).firstOrNull { heightOf(it) <= constraints.maxHeight } ?: 0
+        // When not even the title fits whole, the title alone, in the height given: it keeps its second line only if that fits.
+        val all = if (kept > 0) measurables.take(kept).map { it.measure(loose) } else measurables.take(1).map { it.measure(loose.copy(maxHeight = constraints.maxHeight)) }
         layout(all.maxOfOrNull { it.width } ?: 0, all.sumOf { it.height } + g * (all.size - 1).coerceAtLeast(0)) {
             var y = 0
             all.forEach {

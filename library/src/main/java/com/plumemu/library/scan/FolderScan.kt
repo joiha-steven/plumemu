@@ -64,6 +64,12 @@ internal class FolderScan(
     private class FolderUnavailable(val reason: UnavailableReason) : Exception()
 
     private val newGames = ArrayList<GameEntity>()
+
+    /**
+     * The one added time of every game this scan inserts, read once: a time per batch split a scan of more than
+     * one batch into several, and Recently added (newest first, ties by name) into runs that each start at A.
+     */
+    private val addedAt: Long? by lazy { if (stampAddedAt) clock() else null }
     private val changedGames = ArrayList<StoredGame>()
     private val insertedThisScan = ArrayList<StoredGame>()
 
@@ -369,7 +375,7 @@ internal class FolderScan(
                     .map { SystemEntity(it, it) },
                 newGames = chunk,
                 changedGames = changed,
-                addedAt = if (stampAddedAt) clock() else null,
+                addedAt = addedAt,
             )
             val inserted = timedWrite { dao.applyBatch(batch) }
             insertedThisScan += inserted

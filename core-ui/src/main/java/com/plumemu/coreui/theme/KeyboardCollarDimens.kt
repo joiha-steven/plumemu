@@ -14,15 +14,6 @@ object KeyboardCollarDimens {
     /** The cap's corner; with the well round it the key's corner is 8.67 dp (the board's 13 px). */
     val capCorner = 7.33.dp
 
-    /** Where the tray's gradient reaches its own colour (0 top, 1 bottom). */
-    const val TRAY_MID = 0.6f
-
-    /** The tray's top: the board's #2A2C31 over a #1C1D21 middle. */
-    fun trayTop(tray: Color): Color = lerp(tray, Color.White, 0.03f)
-
-    /** The tray's bottom: the board's #17181B. */
-    fun trayBottom(tray: Color): Color = lerp(tray, Color.Black, 0.04f)
-
     /** The height of the inset shadow along the well's top. */
     val WELL_INSET_BAND = 1.dp
 

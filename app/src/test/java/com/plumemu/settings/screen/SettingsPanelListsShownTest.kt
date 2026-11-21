@@ -156,6 +156,8 @@ class SettingsPanelListsShownTest {
                         versionRowValue("0.0.2-alpha", UpdateView(isChecking = true)),
                         versionRowValue("0.0.2-alpha", UpdateView()),
                         versionRowValue("0.0.2-alpha", UpdateView(lastCheck = LastCheck(1, CheckOutcome.UpToDate))),
+                        versionRowValue("0.1.7 (2087)", UpdateView(lastCheck = LastCheck(1, CheckOutcome.UpToDate))),
+                        versionRowValue("0.1.7 (2087)", UpdateView()),
                     )
             }
         }
@@ -165,6 +167,9 @@ class SettingsPanelListsShownTest {
         assertEquals(OptionValue.Opens("0.0.2-alpha · " + context.getString(R.string.settings_check_updates_checking)), values[2])
         assertEquals(OptionValue.Opens("0.0.2-alpha"), values[3])
         assertEquals(OptionValue.Opens("0.0.2-alpha · Up to date"), values[4])
+        // The build number is the panel's ("Version 0.1.7 (2087)"): beside a result it wrapped the row.
+        assertEquals(OptionValue.Opens("0.1.7 · Up to date"), values[5])
+        assertEquals("alone it fits and stays", OptionValue.Opens("0.1.7 (2087)"), values[6])
     }
 
     private fun versionOf(view: UpdateView) = "${checkNotNull(view.found).versionName} available"

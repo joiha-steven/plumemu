@@ -106,12 +106,16 @@ internal fun renameBoxArtMessage(notice: RenameBoxArtNotice): PanelContent =
         items = listOf(okRow()),
     )
 
-/** The emulator came back in under ten seconds: it crashed, showed its own error or could not open the game. */
+/**
+ * The emulator came back in under ten seconds: it crashed, showed its own error or could not open
+ * the game. The text says to choose another emulator, so its first button opens Play with… (Back
+ * there returns here); OK closes.
+ */
 internal fun closedAtOnceMessage(emulatorName: String): PanelContent =
     PanelContent(
         title = UiText.Res(R.string.game_closed_at_once_title, listOf(emulatorName)),
         body = listOf(UiText.Res(R.string.game_closed_at_once_body)),
-        items = listOf(okRow()),
+        items = listOf(playWithAnotherRow(), okRow()),
     )
 
 /**
@@ -426,7 +430,7 @@ private fun nameOf(offer: EmulatorOffer): String = offer.name ?: offer.emulatorI
 private fun rescanRow() = PanelItem.Row(PanelRow("rescan", UiText.Res(R.string.game_action_rescan), PanelCommand.RescanLibrary))
 
 private fun playWithAnotherRow() =
-    PanelItem.Row(PanelRow("play_with_another", UiText.Res(R.string.game_action_play_with_another), PanelCommand.OpenPlayWith))
+    PanelItem.Row(PanelRow("play_with_another", UiText.Res(R.string.game_menu_play_with), PanelCommand.OpenPlayWith))
 
 /** The answer for an app is stored, but the library could not follow yet (a skipped sync): the app moves at the next read. */
 internal fun appKindLaterMessage(): PanelContent =

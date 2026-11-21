@@ -73,6 +73,7 @@ internal object EntryTags {
     const val WEEK_GAMES = "second_screen_entry_week_games"
     const val WEEK_LAST = "second_screen_entry_week_last"
     const val EMPTY = "second_screen_entry_empty"
+    const val ABOUT = "second_screen_entry_about"
 
     fun weekBar(day: Int) = "second_screen_entry_week_bar_$day"
 
@@ -205,12 +206,25 @@ internal fun EntryHeader(
     name: String,
     gameCount: Int,
     styles: EntryStyles,
+    /** False for a row that holds no games (New collection…): the name alone. */
+    showsCount: Boolean = true,
 ) {
     val numbers = rememberCountFormat()
+    EntryHeader(name, if (showsCount) pluralStringResource(R.plurals.home_games_count, gameCount, numbers.format(gameCount)) else "", styles)
+}
+
+/** The name at the left and [count] ("12 games", "40 apps") at the right, on one baseline: every entry card's header. */
+@Composable
+internal fun EntryHeader(
+    name: String,
+    count: String,
+    styles: EntryStyles,
+) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         EllipsisText(name, style = styles.title, maxLines = 1, modifier = Modifier.weight(1f, fill = false).alignByBaseline().testTag(EntryTags.TITLE))
-        BasicText(
-            pluralStringResource(R.plurals.home_games_count, gameCount, numbers.format(gameCount)),
+        // An empty count (New collection…) leaves the name alone.
+        if (count.isNotEmpty()) BasicText(
+            count,
             style = styles.count,
             maxLines = 1,
             softWrap = false,
@@ -224,8 +238,9 @@ internal fun EntryHeader(
 internal fun EntryEmptyLine(
     text: String,
     styles: EntryStyles,
+    tag: String = EntryTags.EMPTY,
 ) {
-    BasicText(text, style = styles.status.copy(color = PlumTheme.colors.meta), modifier = Modifier.fillMaxWidth().boardLine(styles.status, styles).testTag(EntryTags.EMPTY))
+    BasicText(text, style = styles.status.copy(color = PlumTheme.colors.meta), modifier = Modifier.fillMaxWidth().boardLine(styles.status, styles).testTag(tag))
 }
 
 /** A small capital label ("LAST PLAYED"): one line; a label wider than its room steps down in size (in thirds of a sp) instead of breaking mid-word. */

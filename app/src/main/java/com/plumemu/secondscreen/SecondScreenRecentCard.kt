@@ -29,7 +29,7 @@ import java.text.DateFormatSymbols
 
 /**
  * The Recent card (board `SecondRecent`): the name and game count, the last games played with when and their systems, and under them,
- * on the bottom edge, this week's play time with a bar per day and last week's. Until its figures are read only the header shows;
+ * on the bottom edge, this week's play time with a bar per day and last week's (left out when both are nothing). Until its figures are read only the header shows;
  * when the height runs out the week goes first, whole.
  */
 @Composable
@@ -55,7 +55,10 @@ internal fun BoxScope.RecentCard(
                     )
                 }
             }
-            EntryPartBox(EntryPart(priority = 2, atBottom = true)) { WeekTile(figures.week, styles) }
+            // A week tile of zeros (nothing this week or last) says nothing: left out.
+            if (figures.week.totalSeconds > 0 || figures.week.lastWeekSeconds > 0) {
+                EntryPartBox(EntryPart(priority = 2, atBottom = true)) { WeekTile(figures.week, styles) }
+            }
         }
     }
 }

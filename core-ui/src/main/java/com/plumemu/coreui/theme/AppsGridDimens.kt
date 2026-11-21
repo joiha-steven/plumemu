@@ -19,8 +19,8 @@ object AppsGridDimens {
     /** Between two rows of tiles; the gap across stays the cover grid's. */
     val appsGridRowGap = 2.dp
 
-    /** The focus mark's corner over the tile icon's side: most launcher masks are close to this. */
-    const val APPS_ICON_CORNER_SHARE = 0.23f
+    /** The focus mark's corner over the tile icon's side: the launcher's `AppIconShape.CORNER_SHARE`, the one shape every app icon wears. */
+    const val APPS_ICON_CORNER_SHARE = 0.22f
 
     /** An app game's icon in the details column and on the second screen's card (it has no cover; Apps has no details column). */
     val appGameDetailsIcon = 96.dp

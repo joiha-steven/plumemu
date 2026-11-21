@@ -60,7 +60,7 @@ internal class GameMenuController(
 
     val isOpen: Boolean get() = panel != null
 
-    private val appMenus = AppMenuWork(apps, scope)
+    private val appMenus = AppMenuWork(apps, scope, actions::showAppInfo)
 
     private val collectionWork = collections?.let { CollectionMenuWork(this, it, log) }
 

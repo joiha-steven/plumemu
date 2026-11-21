@@ -39,6 +39,8 @@ class CoverGlassFrameTest {
         val look = SeatLook.of(red, Rgb(0xF2F0EA), true)
         assertEquals(look.well, look.coverGlass.well)
         assertEquals(look.capStops, look.coverGlass.capStops)
-        assertTrue("its soft drops stay", look.coverGlass.lipShadows.count { !it.inset } == look.lipShadows.count { !it.inset })
+        val drops = look.coverGlass.lipShadows.filter { !it.inset && it.color.red < 0.5f }
+        assertEquals("a contact layer and a soft one", 2, drops.size)
+        assertTrue("in the page's shadow colour, stronger than the lip's own", drops.all { it.color.red == look.shade.red && it.color.alpha > 0.2f })
     }
 }

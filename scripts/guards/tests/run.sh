@@ -255,6 +255,8 @@ expect_pass   "translations passes reordered keys, swapped placeholders, other-o
 expect_marked "coroutine-cancellation catches a broad catch in suspend code that lets CancellationException in" "$F/coroutine-cancellation/bad" coroutine-cancellation .
 expect_pass   "coroutine-cancellation passes rethrow, earlier catch, ensureActive, specific types, plain functions, tests" "$F/coroutine-cancellation/good" coroutine-cancellation .
 
+expect_marked "flat-surfaces catches a gradient on a surface" "$F/flat-surfaces/bad" flat-surfaces .
+expect_pass   "flat-surfaces passes flat fills, allowed fades, comments, tests" "$F/flat-surfaces/good" flat-surfaces .
 expect_marked "android-regex catches an unescaped } outside a class" "$F/android-regex/bad" android-regex .
 if [[ "$(warnings)" == 6 ]]; then ok "android-regex warns on an unescaped ] outside a class"
 else bad "android-regex warns on an unescaped ] outside a class (got $(warnings) warnings, want 6)"; fi

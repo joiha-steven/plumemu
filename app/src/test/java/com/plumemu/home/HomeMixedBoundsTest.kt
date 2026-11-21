@@ -20,9 +20,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Recent with box art on Nova 576 at the narrow details stop the list is
- * slid out until 56 dp of it show, the right-hand text sits in 0 to 42 dp and a wide short name
- * (SCUMM, 47.6 dp) would be cut at the left. There the rows show the year as before; everywhere else
- * the short name stays.
+ * slid out wholly, so none of its text is on screen; everywhere else the short name stays.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -38,14 +36,12 @@ class HomeMixedBoundsTest {
     private fun showRecent(extra: List<Action>) = compose.setContent { PlumTheme { HomeAt(FakeHomeContent.mixedSystems(withBoxArt = true), toRecent + extra) } }
 
     @Test
-    fun atTheNarrowDetailsStopTheRecentRowsShowTheYearNotAClippedShortName() {
+    fun atTheNarrowDetailsStopNoRecentRowTextIsOnScreen() {
         showRecent(listOf(Action.Move(Direction.Right)))
-        assertEquals("no short name in the peek", 0, compose.onAllNodesWithText("SCUMM", useUnmergedTree = true).fetchSemanticsNodes().size)
-        // Chrono Trigger's year (1995) is the right-hand text, fully inside the 56 dp peek.
-        val year = compose.onAllNodesWithText("1995", useUnmergedTree = true).fetchSemanticsNodes()
-        assertTrue("the year is shown in place of the short name", year.isNotEmpty())
-        val left = compose.onAllNodesWithText("1995", useUnmergedTree = true)[0].getUnclippedBoundsInRoot().left
-        assertTrue("the right-hand text starts at or after the left edge ($left)", left >= 0.dp)
+        for (text in listOf("SCUMM", "1995")) {
+            val nodes = compose.onAllNodesWithText(text, useUnmergedTree = true)
+            for (i in 0 until nodes.fetchSemanticsNodes().size) assertTrue("$text is left of the screen edge", nodes[i].getUnclippedBoundsInRoot().right <= 1.dp)
+        }
     }
 
     @Test

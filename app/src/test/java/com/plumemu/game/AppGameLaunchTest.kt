@@ -161,11 +161,29 @@ class AppGameLaunchTest {
         assertEquals(
             listOf(
                 GameMenuEntryId.Play, GameMenuEntryId.Favorite, GameMenuEntryId.Name,
-                AppKindEntryId.ShowAsPort, AppKindEntryId.NotAGame, GameMenuEntryId.Info, GameMenuEntryId.Hide,
+                AppKindEntryId.ShowAsPort, AppKindEntryId.NotAGame, AppKindEntryId.AppInfo, GameMenuEntryId.Hide,
             ).map { it.name },
             entries,
         )
         assertEquals("Name… holds only Use my own name", listOf(NameEntryId.OwnName.name), nameMenuEntries(facts).map { it.key })
+    }
+
+    @Test
+    fun appInfoOfAnAppGameFiresAndroidsDetailsPageOfItsPackage() = runBlocking {
+        val id = addCeleste()
+
+        val result = actions().showAppInfo(id.toString())
+
+        assertEquals(AppToolResult.Started, result)
+        val started = org.robolectric.Shadows.shadowOf(context as android.app.Application).nextStartedActivity
+        assertEquals(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, started.action)
+        assertEquals("package:com.celeste", started.data.toString())
+    }
+
+    @Test
+    fun appInfoOfARowThatIsNoAppGameFailsWithoutStartingAnything() = runBlocking {
+        assertEquals(AppToolResult.Failed, actions().showAppInfo("4242"))
+        assertNull(org.robolectric.Shadows.shadowOf(context as android.app.Application).nextStartedActivity)
     }
 
     @Test

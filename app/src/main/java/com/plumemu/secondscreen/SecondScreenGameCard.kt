@@ -113,7 +113,8 @@ internal fun BoxScope.GameCard(content: SecondScreenContent.Game) {
         val height = constraints.maxHeight
         val loose = Constraints(maxWidth = width)
         val header = cardTrace("SS:header") { subcompose("header") { Header(content) }.map { it.measure(loose) } }
-        val tiles = cardTrace("SS:tiles") { subcompose("tiles") { Tiles(content) }.map { it.measure(loose) } }
+        // No tile to draw (no stored achievements, no play in the last 8 weeks): the row and its gap are left out, never an empty box.
+        val tiles = if (hasTiles(content)) cardTrace("SS:tiles") { subcompose("tiles") { Tiles(content) }.map { it.measure(loose) } } else emptyList()
         val hasBattery = content.batteryPace != null && content.isPlayKnown
         val sizeKey = Pair(width, height)
         val gone = goneBefore.let { if (it.key == sizeKey) it.parts else emptySet() }
@@ -125,10 +126,10 @@ internal fun BoxScope.GameCard(content: SecondScreenContent.Game) {
         val batteryH = batteryParts.sumOf { it.height }
         val fileH = fileParts.sumOf { it.height }
         val gapHeader = D.headerGap.roundToPx()
-        val gapTiles = D.tilesBottomGap.roundToPx()
+        val gapTiles = (if (tiles.isEmpty()) D.headerGap else D.tilesBottomGap).roundToPx()
         val footTop = D.footTop.roundToPx()
         val footGap = D.footGap.roundToPx()
-        val upToTiles = headerH + gapHeader + tilesH
+        val upToTiles = if (tilesH > 0) headerH + gapHeader + tilesH else headerH
         // The text layout rounds a line up to a whole pixel; one line is that tall.
         val oneLine = if (description.isEmpty()) 0 else ceil(descriptionStyle.lineHeight.toPx()).toInt()
 

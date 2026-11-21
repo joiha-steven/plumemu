@@ -79,7 +79,6 @@
     <string name="home_hint_search">Buscar</string>
     <string name="home_hint_undo">Deshacer</string>
     <string name="home_notice_removed_from_recent">Quitado de Recientes</string>
-    <string name="home_hint_sort">Ordenar</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
          shown when no title matches. -->
@@ -434,7 +433,6 @@
 
     <!-- Launch errors: a title, one or two plain sentences, then what the person can do. -->
     <string name="game_action_rescan">Volver a escanear</string>
-    <string name="game_action_play_with_another">Jugar con otro emulador</string>
     <string name="game_action_ok">Aceptar</string>
     <!-- The last row of Info: back to the menu. -->
     <!-- The last row of the Info panel: a verb, back to the game menu. -->
@@ -501,7 +499,7 @@
     <string name="game_error_internal_body">No se pudieron usar los datos de emuladores de Plumemu para este juego.</string>
     <!-- %1$s is an emulator's name. Shown when it came back within ten seconds of its start. -->
     <string name="game_closed_at_once_title">%1$s se cerró enseguida</string>
-    <string name="game_closed_at_once_body">Si el juego no se inició, elige otro emulador con Jugar con… en el menú del juego.</string>
+    <string name="game_closed_at_once_body">Si el juego no se inició, prueba con otro emulador.</string>
     <string name="game_core_question_title">¿Se inició %1$s?</string>
     <string name="game_core_question_body">Se abrió con %1$s. Plumemu no puede ver qué núcleos tiene RetroArch, así que lo pregunta una vez por núcleo.</string>
     <string name="game_action_yes">Sí</string>
@@ -696,14 +694,11 @@
     <!-- Hint bar label: a verb, show the focused system again. -->
     <string name="settings_hint_show">Mostrar</string>
     <string name="settings_hint_go_to">Ir a</string>
-    <!-- %1$s is the number of hidden games, already formatted for the locale. -->
-    <string name="settings_hidden_games">Juegos ocultos (%1$s)</string>
     <string name="settings_hidden_games_title">Juegos ocultos</string>
     <string name="settings_hidden_games_body">Juegos que ocultaste o marcaste como “No es un juego”. Elige uno para volver a mostrarlo.</string>
     <string name="settings_unhide_failed">No se pudo volver a mostrar el juego. No se ha cambiado nada.</string>
     <!-- A game the person marked "Not a game" in Hidden games: "Not a game · SNES". -->
     <string name="settings_hidden_not_a_game">No es un juego · %1$s</string>
-    <string name="settings_unidentified_games">Sin identificar (%1$s)</string>
     <string name="settings_unidentified_games_title">Juegos sin identificar</string>
     <string name="settings_unidentified_games_body">Juegos que Plumemu solo pudo identificar por el nombre del archivo. Elige uno para corregir su nombre.</string>
     <string name="settings_name_fix_failed">No se pudo guardar ese nombre. No se ha cambiado nada.</string>
@@ -1652,8 +1647,12 @@
     <string name="collections_notice_removed">Quitado de la colección</string>
     <string name="collections_name_title">Nombre de la colección</string>
     <string name="collections_empty_most_played">Aquí aparecen los juegos a los que más juegas</string>
-    <string name="collections_empty_recently_added">Aquí aparecen los juegos añadidos en los últimos 30 días</string>
+    <string name="collections_empty_recently_added">Aquí aparecen durante 30 días los juegos encontrados después de la configuración</string>
     <string name="collections_empty_own">Añade juegos con %1$s › Añadir a colección…</string>
+    <string name="collections_about_recent">Los juegos que jugaste por última vez, el más reciente primero</string>
+    <string name="collections_about_most_played">Los juegos a los que más has jugado, hasta 50</string>
+    <string name="collections_about_recently_added">Juegos añadidos en los últimos 30 días, el más reciente primero</string>
+    <string name="collections_new_about">Tu propia lista de juegos de cualquier sistema. Ponle nombre aquí y añade juegos con %1$s\u00A0› Añadir a colección…</string>
     <string name="collections_rename">Cambiar nombre</string>
     <string name="collections_delete">Eliminar…</string>
     <string name="collections_delete_title">¿Eliminar %1$s?</string>
@@ -1664,6 +1663,7 @@
     <string name="collections_move_down">Bajar</string>
     <string name="collections_delete_confirm">Eliminar</string>
     <string name="collections_settings_failed">No se pudo guardar el cambio. Inténtalo de nuevo.</string>
+    <string name="collections_none">Aún no hay colecciones</string>
     <plurals name="collections_count">
         <item quantity="one">%1$s colección</item>
         <item quantity="other">%1$s colecciones</item>

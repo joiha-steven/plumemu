@@ -59,7 +59,14 @@ class HomeRecompositionTest {
                     dirty2: Int,
                     info: String,
                 ) {
-                    calls += if (info.startsWith("com.plumemu.coreui.components.EllipsisText ") && stack.any { it.startsWith("com.plumemu.coreui.components.BarTitle ") }) info + IN_BAR_TITLE else info
+                    val isEllipsis = info.startsWith("com.plumemu.coreui.components.EllipsisText ")
+                    calls +=
+                        when {
+                            isEllipsis && stack.any { it.startsWith("com.plumemu.coreui.components.BarTitle ") } -> info + IN_BAR_TITLE
+                            // The details column's own texts (the subtitle line, the facts' values) run inside its pass.
+                            isEllipsis && stack.any { it.isDetailsPart() } -> info + IN_DETAILS
+                            else -> info
+                        }
                     stack += info
                     callTimes += info to compose.mainClock.currentTime
                 }
@@ -99,6 +106,8 @@ class HomeRecompositionTest {
             .filterNot { info -> rowParts.any { info.startsWith(it) } }
             .filterNot { info -> ours.any { info.startsWith(it) } }
             .filterNot { info -> DETAILS_FILES.any { "($it:" in info } }
+            // An EllipsisText the details column's own pass runs (its subtitle line and fact values) belongs to that pass, not to "others".
+            .filterNot { info -> info.endsWith(IN_DETAILS) }
             .filterNot { info -> detailsPoster && POSTER_FILES.any { "($it:" in info } }
             // The details cover's collar and shadow run with the cover, once for the new game.
             .filterNot { info -> detailsPoster && "(Collar.kt:" in info }
@@ -206,7 +215,7 @@ class HomeRecompositionTest {
     fun aMoveBetweenOneAndTwoTitleLinesRunsTheColumnOnceInOneFrame() = movesBetweenTitleLines("768")
 
     private fun movesBetweenTitleLines(where: String) {
-        val state = showAt(listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX), Action.Enter), snesTitled(ONE_LINE_TITLE, TWO_LINE_TITLE))
+        val state = showAt(listOf(Action.TapItem(Column.Systems, FakeHomeContent.BOARD_SNES_INDEX), Action.Enter), snesTitled(ONE_LINE_TITLE, TWO_LINE_PLAIN_TITLE))
         val oneLine = titleHeight()
         moveDownAndCount(state)
         assertTrue("$where: the second title takes more lines (${titleHeight()} vs $oneLine px)", titleHeight() > oneLine * 1.5f)
@@ -551,7 +560,7 @@ private val POSTER_FILES = listOf("HomeCovers.kt", "PosterCover.kt", "BoxFrontLa
  * them) and the number format its facts call (`CountFormat.kt`: the rating, days and minutes; the top
  * bar and the system column, its other callers, would show up as themselves, which the tests forbid).
  */
-internal val DETAILS_FILES = listOf("HomeDetails.kt", "WideDetailsLayout.kt", "HomeDetailsText.kt", "HomePlayFacts.kt", "HomeDetailsBlock.kt", "HomeDetailsCover.kt", "CountFormat.kt", "PickingBatteryLine.kt")
+internal val DETAILS_FILES = listOf("HomeDetails.kt", "HomeDetailsTitle.kt", "WideDetailsLayout.kt", "HomeDetailsText.kt", "HomePlayFacts.kt", "HomeDetailsBlock.kt", "HomeDetailsCover.kt", "CountFormat.kt", "PickingBatteryLine.kt")
 
 /** A traced call of the details column: in one of [DETAILS_FILES], of the home screen or the battery line. */
 internal fun String.isDetailsPart(): Boolean = (startsWith("com.plumemu.home.") || startsWith("com.plumemu.battery.")) && DETAILS_FILES.any { "($it:" in this }
@@ -569,8 +578,12 @@ internal const val ONE_LINE_TITLE = "Contra III"
 /** More than one line at Largest in the 248 details column. */
 internal const val TWO_LINE_TITLE = "Super Mario World 2: Yoshi's Island"
 
+/** More than one line in the 248 details column, with no subtitle mark (a title with one reads as a main line and a subtitle line). */
+private const val TWO_LINE_PLAIN_TITLE = "Super Mario World 2 Yoshi's Island"
+
 /** Where Super Nintendo sits in [numberedSnes]'s column: after Recent and Favorites (no Apps given, the entry stays). */
 private const val FIRST_SYSTEM = 3
 private const val IN_BAR_TITLE = " [in BarTitle]"
+private const val IN_DETAILS = " [in details]"
 private const val ROWS = 12
 private const val IDLE_MS = 10_000L

@@ -12,15 +12,16 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.theme.Depth
-import com.plumemu.coreui.theme.FocusSlab
+import com.plumemu.coreui.theme.ColorMath
+import com.plumemu.coreui.theme.ColorSet
+import com.plumemu.coreui.theme.Rgb
 import com.plumemu.coreui.theme.PlumColors
 import com.plumemu.coreui.theme.PlumComposeColors
 import com.plumemu.coreui.theme.PlumThemeSettings
-import com.plumemu.coreui.theme.SlabDimens
 import com.plumemu.coreui.theme.SlabLook
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import kotlin.math.abs
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -28,9 +29,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * A focused slab drawn at 1.5 px per dp, checked against what its look says, composited by hand: the glass gradient at the top, middle and bottom
- * ([SlabLook.stops] at 0, [FocusSlab.MID_AT] and 1; no inset shadow marks the bottom), the thin rim lit at two corners ([SlabLook.top]) and weak between
- * them ([SlabLook.edge]), and the lift (light on a dark page, shade on a light one) longer and stronger below the slab than above it.
+ * A focused slab ("lifted card") drawn at 1.5 px per dp, checked against what its look says: one flat face at the top, middle and bottom
+ * ([SlabLook.fill]: no gradient, no inset shadow, no foot band), no line of any kind round it (every pixel of its top, sides and foot is the face), the face clearly lighter than the page
+ * on Banana, Paper and Graphite, and the soft drop shadow under it darker than the page, longer and stronger below than above.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -44,14 +45,14 @@ class SlabCssRowTest {
 
     private class Shot(val page: IntArray, val look: SlabLook, val px: (Int, Int) -> IntArray)
 
-    private fun shot(settings: PlumThemeSettings): Shot {
+    private fun shot(settings: PlumThemeSettings, glow: Boolean = true): Shot {
         val c = PlumComposeColors.from(PlumColors.derive(settings.backgroundColor, settings.textMode, settings.accentColor))
         val page = Color(settings.backgroundColor.toArgb() or 0xFF000000.toInt())
         val image = ImageBitmap(760, 320)
         CanvasDrawScope().draw(Density(density), LayoutDirection.Ltr, Canvas(image), Size(760f, 320f)) {
             drawRect(page)
             val outline = Outline.Rounded(RoundRect(left.toFloat(), top.toFloat(), (left + width).toFloat(), (top + height).toFloat(), 20f, 20f))
-            drawSlabOutside(outline, c.slab, c.slabGlow, under = c.bg)
+            drawSlabOutside(outline, c.slab, if (glow) c.slabGlow else Color.Transparent, under = c.bg)
             drawSlabFill(outline, c.slab, onCard = false)
             drawSlabFace(outline, c)
         }
@@ -61,16 +62,8 @@ class SlabCssRowTest {
 
     private fun rgb(c: Color) = IntArray(3) { (c.toArgb() shr (16 - 8 * it)) and 0xFF }
 
-    /** The look's gradient (stops at 0, [FocusSlab.MID_AT], 1) at board row [y] of the slab: opaque stops, so the page does not show through. */
-    private fun gradientAt(
-        look: SlabLook,
-        y: Int,
-    ): DoubleArray {
-        val t = (y + 0.5) / height
-        val mid = FocusSlab.MID_AT.toDouble()
-        val (from, to, share) = if (t <= mid) Triple(look.stops[0], look.stops[1], t / mid) else Triple(look.stops[1], look.stops[2], (t - mid) / (1 - mid))
-        return doubleArrayOf(from.red + (to.red - from.red) * share, from.green + (to.green - from.green) * share, from.blue + (to.blue - from.blue) * share).map { it * 255.0 }.toDoubleArray()
-    }
+    /** The look's flat face: opaque, so the page does not show through, the same on every row. */
+    private fun faceOf(look: SlabLook): DoubleArray = doubleArrayOf(look.fill.red * 255.0, look.fill.green * 255.0, look.fill.blue * 255.0)
 
     private fun assertNear(
         what: String,
@@ -85,93 +78,75 @@ class SlabCssRowTest {
         val s = shot(settings)
         val x = left + width / 2
         // The foot included: glass has no inset shadow darkening it.
-        for (row in listOf(5, 35, height - 5)) assertNear("row $row", gradientAt(s.look, row), s.px(x, top + row))
+        for (row in listOf(5, 35, height - 5)) assertNear("row $row", faceOf(s.look), s.px(x, top + row))
     }
 
     @Test
-    fun graphiteFillIsTheLooksGradient() = checkFill(PlumThemeSettings.Graphite)
+    fun graphiteFillIsTheLooksFace() = checkFill(PlumThemeSettings.Graphite)
 
     @Test
-    fun paperFillIsTheLooksGradient() = checkFill(PlumThemeSettings.Paper)
-
-    /** The rim's ink over the fill at [t] along the diagonal (0 at the top left, 1 at the bottom right): [SlabLook.top] at the lit corners to [SlabLook.edge] a sixth of the way in. */
-    private fun rimOver(
-        look: SlabLook,
-        fill: DoubleArray,
-        t: Double,
-    ): DoubleArray {
-        val share = (minOf(t, 1 - t).coerceIn(0.0, RIM_FADE) / RIM_FADE)
-        // Android gradients blend premultiplied: the lit corner's strong white outweighs the side's faint brown near it.
-        fun premul(of: (Color) -> Float) = of(look.top) * look.top.alpha + (of(look.edge) * look.edge.alpha - of(look.top) * look.top.alpha) * share
-        val alpha = look.top.alpha + (look.edge.alpha - look.top.alpha) * share
-        return DoubleArray(3) { fill[it] * (1 - alpha) + 255.0 * premul { c -> arrayOf(c.red, c.green, c.blue)[it] } }
-    }
-
-    private fun rimAt(
-        s: Shot,
-        x: Int,
-        y: Int,
-        row: Int,
-    ) {
-        val t = ((x + 0.5 - left) * width + (y + 0.5 - top) * height) / (width.toDouble() * width + height.toDouble() * height)
-        assertNear("rim at $x,$y (t %.3f)".format(t), rimOver(s.look, gradientAt(s.look, row), t), s.px(x, y), 3.0)
-    }
+    fun paperFillIsTheLooksFace() = checkFill(PlumThemeSettings.Paper)
 
     @Test
-    fun theRimIsLitAtTwoCornersAndWeakBetweenOnGraphite() = checkRim(PlumThemeSettings.Graphite)
+    fun bananaFillIsTheLooksFace() = checkFill(banana)
+
+    private val banana: PlumThemeSettings get() = ColorSet.Banana.let { PlumThemeSettings(background = it.background, text = it.textMode.color, accent = it.accent) }
 
     @Test
-    fun theRimIsLitAtTwoCornersAndWeakBetweenOnPaper() = checkRim(PlumThemeSettings.Paper)
+    fun theSlabHasNoOutlineOnGraphite() = checkNoOutline(PlumThemeSettings.Graphite)
 
-    private fun checkRim(settings: PlumThemeSettings) {
+    @Test
+    fun theSlabHasNoOutlineOnPaper() = checkNoOutline(PlumThemeSettings.Paper)
+
+    @Test
+    fun theSlabHasNoOutlineOnBanana() = checkNoOutline(banana)
+
+    /**
+     * No ring along the top, the sides or the foot: every pixel there, an inch inside the rounded corners, is the face (not a lit line, not a
+     * dark foot, not a white side). Below the foot only the shadow is, and it is darker than the page.
+     */
+    private fun checkNoOutline(settings: PlumThemeSettings) {
         val s = shot(settings)
-        // Dark: the corners are RIM_LIT_L above the fill, the sides RIM_SIDE_L, so the corners are stronger. Light: the sides are full white already.
-        if (settings.backgroundColor == PlumThemeSettings.Graphite.backgroundColor) {
-            assertTrue("lit corners are stronger than the sides", s.look.top.alpha > s.look.edge.alpha)
-        } else {
-            assertEquals("light sides are white itself", 1f, s.look.edge.alpha, 0f)
+        val face = faceOf(s.look)
+        val mid = top + height / 2
+        val cx = left + width / 2
+        for (y in top..top + 3) assertNear("top rows at $y", face, s.px(cx, y))
+        for (y in top + height - 4 until top + height) assertNear("foot rows at $y", face, s.px(cx, y))
+        for (y in top + 25..top + height - 25) {
+            for (x in listOf(left, left + 1, left + width - 2, left + width - 1)) assertNear("side at ($x, $y)", face, s.px(x, y))
         }
-        // Between the lit corners: the top edge's middle and the bottom edge's middle are the faint rim.
-        rimAt(s, left + width / 2, top, 0)
-        rimAt(s, left + width / 2, top + height - 1, height - 1)
-        // Near the top left and bottom right, where the rim is lit.
-        rimAt(s, left + 40, top, 0)
-        rimAt(s, left + width - 40, top + height - 1, height - 1)
-        // A wide row's two ends are at the diagonal's ends: the sides are lit.
-        rimAt(s, left, top + height / 2, height / 2)
-        rimAt(s, left + width - 1, top + height / 2, height / 2)
+        // The accent glow lights the page a little round a dark slab; the shadow alone is darker than the page.
+        val shadowRow = shot(settings, glow = false).px(cx, top + height + 3)
+        assertTrue("the shadow under the foot is darker than the page: ${shadowRow.toList()} vs ${s.page.toList()}", lightness(shadowRow) < lightness(s.page) - 0.2)
+        assertTrue("mid row is the face", s.px(cx, mid).let { p -> (0..2).all { abs(p[it] - face[it]) <= 2.0 } })
     }
 
-    /** The lift moves the page toward its ink: lighter on a dark page, darker on a light one. This is how far it moved, in the direction the ink goes. */
-    private fun lifted(
-        look: SlabLook,
-        page: Int,
-        p: IntArray,
-    ): Int {
-        val ink = look.near!!.color
-        val darker = ink.red < 0.5f
-        return if (darker) page - p.sum() else p.sum() - page
-    }
+    private fun lightness(p: IntArray) = ColorMath.lightness(Rgb(p[0] shl 16 or (p[1] shl 8) or p[2]))
 
+    /** The face reads at a glance, as drawn: 12 L* over a dark page, 8 over the yellow one, 5 over Paper (a page at L* 92 has only 8 L* below white; 70 % white gives it 5.5). */
     @Test
-    fun theLiftIsStrongerAndLongerBelowThanAbove() {
-        for (settings in listOf(PlumThemeSettings.Graphite, PlumThemeSettings.Paper)) {
+    fun theFaceStandsClearOfThePageOnBananaPaperAndGraphite() {
+        for ((name, settings, min) in listOf(Triple("banana", banana, 8.0), Triple("paper", PlumThemeSettings.Paper, 5.0), Triple("graphite", PlumThemeSettings.Graphite, 12.0))) {
             val s = shot(settings)
+            val gap = lightness(s.px(left + width / 2, top + height / 2)) - lightness(s.page)
+            assertTrue("$name: the face is $gap L* over the page, wanted at least $min", gap >= min)
+        }
+    }
+
+    /** The shadow (the glow left out, which lights a dark page) moves the page toward black: darker (in L*) 1, 3 and 6 dp under the foot, and below more than above the slab. */
+    @Test
+    fun theShadowIsDarkerThanThePageBelowMoreThanAbove() {
+        for (settings in listOf(PlumThemeSettings.Graphite, PlumThemeSettings.Paper, banana)) {
+            val s = shot(settings, glow = false)
             val x = left + width / 2
-            val page = s.page.sum()
-            // The distances of the board (4, 12 and 24 px) at the drops' reach.
-            for (d in listOf(4, 12, 24).map { (it * Depth.SHADOW_REACH).toInt() }) {
-                val below = lifted(s.look, page, s.px(x, top + height + d))
-                val above = lifted(s.look, page, s.px(x, top - 1 - d))
-                assertTrue("${settings.backgroundColor} $d px: lift below $below stronger than above $above", below > above + 2)
-                // Within the glow's reach the accent light outweighs the thin lift; past it the page below is moved toward the lift's ink.
-                if (d > SlabDimens.glowReach.value * density) assertTrue("${settings.backgroundColor} $d px: page below moved $below", below > 0)
+            val page = lightness(s.page)
+            for (dp in listOf(1, 3, 6)) {
+                val d = Math.round(dp * density)
+                val below = page - lightness(s.px(x, top + height + d))
+                val above = page - lightness(s.px(x, top - 1 - d))
+                assertTrue("${settings.backgroundColor} $dp dp: shadow below ($below L*) darkens the page", below > 0.3)
+                assertTrue("${settings.backgroundColor} $dp dp: below $below stronger than above $above", below > above + 0.2)
             }
         }
-    }
-
-    private companion object {
-        /** The share of the rim's diagonal, from each lit corner, over which its light fades out (`SlabLook.rim`). */
-        const val RIM_FADE = 0.16
     }
 }

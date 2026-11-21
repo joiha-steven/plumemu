@@ -91,7 +91,7 @@ class LibraryHomeContentTest {
         assertEquals(listOf(0, 0), content.folderEntries.drop(1).map { it.count })
         val list = content.entries.first { it.kind == EntryKind.Collections }
         assertEquals(listOf("recent", "most_played", "recently_added", HomeContent.NEW_COLLECTION_ID), list.rows.map { it.id })
-        assertEquals("New collection… is not counted", 3, list.shownCount)
+        assertEquals("only own collections are counted: none here", 0, list.shownCount)
     }
 
     /** the apps listed as games leave the Apps entry (grid and list share its rows); null (no sync yet) shows all; unmarking brings one back. */

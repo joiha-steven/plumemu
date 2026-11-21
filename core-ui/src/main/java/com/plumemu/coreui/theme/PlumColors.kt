@@ -88,12 +88,15 @@ data class PlumColors(
             accent: Rgb,
         ): PlumColors {
             val isDarkText = textMode == TextMode.Dark
-            // Small text also sits on the focused row's fill, so meta and muted are measured on sel.
+            // Small text also sits on the focused row's fill, so meta and muted are measured on sel and on the slab's face.
             val sel = ColorMath.mix(background, text, if (isDarkText) 0.09 else 0.10)
             // Dark themes lift their keyboard surfaces toward the board's cooler ink, not the warm text (CollarLook.surfaceInk).
             val surface = if (isDarkText) text else CollarLook.surfaceInk(text)
-            val meta = ColorMath.reach(background, text, sel, 6.0)
-            val muted = ColorMath.reach(background, text, sel, 4.6)
+            // The slab's lifted face (FocusSlab) is lighter than sel on a dark theme: small text must read on whichever of the two is harder.
+            val face = FocusSlab.fill(background, text, !isDarkText)
+            val hard = if (ColorMath.contrast(text, face) < ColorMath.contrast(text, sel)) face else sel
+            val meta = ColorMath.reach(background, text, hard, 6.0)
+            val muted = ColorMath.reach(background, text, hard, 4.6)
             return PlumColors(
                 bg = background,
                 text = text,

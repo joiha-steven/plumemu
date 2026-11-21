@@ -51,7 +51,7 @@ abstract class PolishAuditShotsBase(
 
     private fun settingsOf(set: ColorSet) = PlumSettings(appearance = AppearanceSettings().withColors(set), flags = SetupFlags(setupCompleted = true))
 
-    private val sets = listOf("plumemu" to ColorSet.Plumemu, "daylight" to ColorSet.Daylight)
+    private val sets = listOf("plumemu" to ColorSet.Plumemu, "daylight" to ColorSet.Daylight, "banana" to ColorSet.Banana)
     private var set by mutableStateOf(ColorSet.Plumemu)
 
     private fun texts(node: SemanticsNode): List<SemanticsNode> = (if (SemanticsProperties.Text in node.config || SemanticsProperties.TestTag in node.config) listOf(node) else emptyList()) + node.children.flatMap(::texts)
@@ -209,6 +209,10 @@ abstract class PolishAuditShotsBase(
     @Test
     fun detailsLongTitle() = shoot("details_long") { Details(played, title = LONG) }
 
+    /** A title with a subtitle mark: the main title, then its subtitle on a line of its own. */
+    @Test
+    fun detailsSplitTitle() = shoot("details_split") { Details(played, title = SPLIT) }
+
     @Test
     fun detailsNoSynopsis() = shoot("details_nosynopsis") { Details(played, synopsis = false) }
 
@@ -266,6 +270,7 @@ abstract class PolishAuditShotsBase(
 
     private companion object {
         const val LONG = "The Legend of Zelda: A Link to the Past Four Swords Anniversary Edition"
+        const val SPLIT = "Zone of the Enders - The Fist of Mars"
     }
 }
 

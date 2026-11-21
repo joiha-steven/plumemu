@@ -247,6 +247,14 @@ internal class FakeGameActions(
     /** What setAppKind answers: false when the library could not follow yet (a skipped sync). */
     var kindFollowed = true
 
+    val appInfos = mutableListOf<String>()
+    var appInfoResult = AppToolResult.Started
+
+    override suspend fun showAppInfo(gameKey: String): AppToolResult {
+        appInfos += gameKey
+        return appInfoResult
+    }
+
     override suspend fun setAppKind(gameKey: String, kind: com.plumemu.coredata.db.AppKind): Boolean {
         writeError?.let { throw it }
         appKinds += gameKey to kind
@@ -344,6 +352,7 @@ internal fun sampleFacts(
     canRemoveFromRecent: Boolean = false,
     canSort: Boolean = false,
     achievementCount: AchievementCount? = null,
+    isAppGame: Boolean = false,
 ) = GameFacts(
     title = title,
     systemName = "PlayStation",
@@ -364,6 +373,7 @@ internal fun sampleFacts(
     canRemoveFromRecent = canRemoveFromRecent,
     canSort = canSort,
     achievementCount = achievementCount,
+    isAppGame = isAppGame,
 )
 
 /** Two regional copies of a console game, the first one current ("USA", "Europe"; made-up files). */

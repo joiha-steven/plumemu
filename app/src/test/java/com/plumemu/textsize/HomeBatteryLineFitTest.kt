@@ -243,15 +243,11 @@ private val HOME_WORDS_GIVE_WAY: Map<Pair<String, String>, Set<String>> = emptyM
 private val HOME_LINE_LEFT_OUT: Map<Pair<String, String>, Set<String>> = emptyMap()
 
 /**
- * Where the battery cell is left out of the facts box because three rows cannot hold the cells (by place, "Size Font"), re-measured
- * for Jost alone. The cells are placed for the widest time the cell can say, so this is the same for every time: a time that changes
- * while a game rests moves nothing.
+ * Where the battery line is left out of the facts box because it cannot hold all six facts (by place, "Size Font"), re-measured for Jost
+ * alone. Since the facts stand one per line the six lines share the room of the three old rows, so the battery stays at every
+ * size on 768 and the Thor (it left at Larger and up on 768, Largest on the Thor, before).
  */
-private val HOME_BATTERY_CELL_LEFT_OUT: Map<String, Set<String>> =
-    mapOf(
-        "cover 768" to setOf("Larger Jost", "Huge Jost", "Largest Jost"),
-        "cover Thor" to setOf("Largest Jost"),
-    )
+private val HOME_BATTERY_CELL_LEFT_OUT: Map<String, Set<String>> = emptyMap()
 
 /**
  * Where the facts table's own rows are cut by the column, by place ("Size Font"), re-measured for Jost alone: on 768 and the Thor
@@ -267,5 +263,5 @@ private val HOME_TABLE_CUT: Map<String, Set<String>> =
         // text is in Info), so nothing moves when the values arrive. That is cut at the largest sizes.
         "text 768" to setOf("Largest Jost"),
         "text Thor" to setOf("Largest Jost"),
-        "cover 576" to setOf("Larger Jost", "Huge Jost", "Largest Jost"),
+        "cover 576" to emptySet(),
     )

@@ -7,7 +7,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -16,6 +15,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.plumemu.coreui.theme.CardDimens
 import com.plumemu.coreui.theme.CardLook
+import com.plumemu.coreui.theme.FlatSurface
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.RaisedCard
 
@@ -45,7 +45,7 @@ fun Modifier.raisedCard(
     }
 }
 
-/** The card's layers at [left], [top], [width] x [height] px with [corner] px corners: the far and near shadows, the gradient fill, the border. */
+/** The card's layers at [left], [top], [width] x [height] px with [corner] px corners: the far and near shadows, the solid lower edge, the flat fill, the border. */
 internal fun DrawScope.drawRaisedCard(
     card: CardLook,
     left: Float,
@@ -58,7 +58,9 @@ internal fun DrawScope.drawRaisedCard(
     val box = Size(width, height)
     drawSoft(topLeft, box, corner, CardDimens.shadowFarDrop.toPx(), CardDimens.shadowFarSigma.toPx(), card.shadow.copy(alpha = card.shadow.alpha * RaisedCard.SHADOW_FAR.toFloat()), true)
     drawSoft(topLeft, box, corner, CardDimens.shadowNearDrop.toPx(), CardDimens.shadowNearSigma.toPx(), card.shadow.copy(alpha = card.shadow.alpha * RaisedCard.SHADOW_NEAR.toFloat()), true)
-    drawRoundRect(Brush.verticalGradient(listOf(card.top, card.bottom), startY = top, endY = top + height), topLeft, box, CornerRadius(corner))
+    // The solid lower edge (FlatSurface.raisedEdge), then the flat face over all of it but that band.
+    drawRoundRect(card.base, Offset(left, top + FlatSurface.raisedEdge.toPx()), box, CornerRadius(corner))
+    drawRoundRect(card.fill, topLeft, box, CornerRadius(corner))
     drawCardBorder(Outline.Rounded(RoundRect(left, top, left + width, top + height, CornerRadius(corner))), card.edge, card.edgeTop, CardDimens.edge.toPx())
 }
 

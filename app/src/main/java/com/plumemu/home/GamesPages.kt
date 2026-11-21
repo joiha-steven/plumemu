@@ -14,6 +14,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState
 import androidx.compose.foundation.lazy.layout.NestedPrefetchScope
 import androidx.compose.foundation.lazy.rememberLazyListState
+import com.plumemu.coreui.components.LocalRowColumns
+import com.plumemu.coreui.components.rememberRowColumns
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -317,16 +320,21 @@ private fun EntryGames(
     val bandRule = remember { BandRule() }
     val colors = PlumTheme.colors
     val ruleBehind = if (info == null) Modifier else Modifier.drawsBandRule(bandRule, listState, glide, isBand = { it.key == SYSTEM_BAND_KEY }, clearTop = clips::clearTop) { colors.sel }
+    // The year and region columns as wide as their text: the list's longest region code (most are three letters), the same for every row.
+    val widestRegion = remember(entry.rows) { entry.rows.maxByOrNull { it.region.length }?.region.orEmpty() }
+    val rowColumns = rememberRowColumns(widestRegion)
     pill.Provide {
-        LazyColumn(
-            state = listState,
-            modifier = modifier.backToSlot(stretch).then(ruleBehind).then(pill.modifier).overflowingSlot(stretch).then(glide.withFadeMask(clips, isOn = false, hidesCutRows = true)),
-            contentPadding = stretch.listPadding(top = glide.extra + barRoom.top, bottom = glide.extra + with(density) { rest.below.toDp() }),
-            // No spacing: each game row carries its own gap (its tap area).
-        ) {
-            if (info != null) item(key = SYSTEM_BAND_KEY, contentType = SYSTEM_BAND_KEY) { SystemInfoBand(info, visibleWidth, isPeeking = { state.focus.column == com.plumemu.coreinput.Column.Details }, rule = bandRule) }
-            itemsIndexed(entry.rows, key = { _, row -> row.id }) { index, row ->
-                GamesListItem(index, row, entry.id, hasBoxArt, entry.kind.mixesSystems, showsPlace, isShown, forms, state, onAction, panelOpen, isFolderRow = entry.isFolderList)
+        CompositionLocalProvider(LocalRowColumns provides rowColumns) {
+            LazyColumn(
+                state = listState,
+                modifier = modifier.backToSlot(stretch).then(ruleBehind).then(pill.modifier).overflowingSlot(stretch).then(glide.withFadeMask(clips, isOn = false, hidesCutRows = true)),
+                contentPadding = stretch.listPadding(top = glide.extra + barRoom.top, bottom = glide.extra + with(density) { rest.below.toDp() }),
+                // No spacing: each game row carries its own gap (its tap area).
+            ) {
+                if (info != null) item(key = SYSTEM_BAND_KEY, contentType = SYSTEM_BAND_KEY) { SystemInfoBand(info, visibleWidth, isPeeking = { state.focus.column == com.plumemu.coreinput.Column.Details }, rule = bandRule) }
+                itemsIndexed(entry.rows, key = { _, row -> row.id }) { index, row ->
+                    GamesListItem(index, row, entry.id, hasBoxArt, entry.kind.mixesSystems, showsPlace, isShown, forms, state, onAction, panelOpen, isFolderRow = entry.isFolderList)
+                }
             }
         }
     }

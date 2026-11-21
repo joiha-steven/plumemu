@@ -168,7 +168,7 @@ internal fun DrawScope.drawSeatCollarLayers(
     val fill = grooveOverride ?: if (focus > 0f) lerp(seat.well, accent, focus) else seat.well
     drawRoundRect(fill, at, grooveSize, CornerRadius(grooveCorner))
     val shown = if (grooveOverride != null) 0f else focus
-    if (shown < 1f) drawCssShadows(listOf(seat.wellShade), at, grooveSize, grooveCorner, 1f - shown)
+    if (shown < 1f) drawCssShadows(listOf(seat.sunkenEdge, seat.wellShade), at, grooveSize, grooveCorner, 1f - shown)
     if (shown > 0f) drawCssShadows(listOf(seat.focusShade), at, grooveSize, grooveCorner, shown)
 }
 

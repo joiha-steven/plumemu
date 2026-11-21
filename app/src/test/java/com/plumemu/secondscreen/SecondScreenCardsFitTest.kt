@@ -73,8 +73,8 @@ abstract class SecondScreenCardsFitBase(
         run {
             val margin = dimens.margin.value
             for (textSize in listOf(TextSize.Medium, TextSize.Largest)) {
-                // A game, an Android app and the entry cards have their own cards and tests (SecondScreenGameCardTest, SecondScreenCatchUpTest, SecondScreenEntryCardsTest).
-                for ((name, content) in ALL_SAMPLES.filter { it.second != SecondScreenContent.Calm && it.second !is EntryContent && it.second !is SecondScreenContent.Game && it.second !is SecondScreenContent.App }) {
+                // A game, an Android app, the Apps entry and the entry cards have their own cards and tests (SecondScreenGameCardTest, SecondScreenCatchUpTest, SecondScreenEntryCardsTest).
+                for ((name, content) in ALL_SAMPLES.filter { it.second != SecondScreenContent.Calm && it.second !is EntryContent && it.second !is SecondScreenContent.Game && it.second !is SecondScreenContent.App && it.second !is SecondScreenContent.Apps }) {
                     show(PlumThemeSettings.Default.copy(textSize = textSize), content)
                     val card = compose.onNodeWithTag(SecondScreenTags.CARD).fetchSemanticsNode().boundsInRoot
                     // The App and Apps cards are fit-checked in SecondScreenCatchUpTest.

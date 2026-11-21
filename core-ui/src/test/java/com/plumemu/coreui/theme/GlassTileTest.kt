@@ -7,7 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The second screen's glass tile, `line` and accent-light tokens against the V2 boards' values. */
+/** The second screen's `line`, meter, played-bar and accent-light tokens against the V2 boards' values (its tiles are the slab plate: GlassTilePlateTest). */
 class GlassTileTest {
     private fun colorsOf(set: ColorSet) = PlumColors.derive(set.backgroundColor, set.textMode, set.accentColor)
 
@@ -28,39 +28,6 @@ class GlassTileTest {
         for (i in 0..2) assertTrue("$what: channel $i is ${channels[i]}, board ${want[i]}", kotlin.math.abs(channels[i] - want[i]) <= slack)
     }
 
-    @Test
-    fun graphiteGlassIsTheBoardsWhiteAtItsThreeAlphas() {
-        val colors = colorsOf(ColorSet.Plumemu)
-        val glass = GlassLook.of(colors.bg, isDark(colors))
-        assertEquals(0.17f, glass.top.alpha, 0.003f)
-        assertEquals(0.07f, glass.mid.alpha, 0.003f)
-        assertEquals(0.045f, glass.foot.alpha, 0.003f)
-        assertEquals(0.14f, glass.edge.alpha, 0.003f)
-        assertEquals(0.42f, glass.edgeTop.alpha, 0.003f)
-        assertEquals(0xFFFFFF, glass.top.toArgb() and 0xFFFFFF)
-        // The board's `inset 0 1px 1px rgba(255,255,255,0.30)` and `inset 0 -10px 18px rgba(0,0,0,0.20)`.
-        assertEquals(0.30f, glass.highlight.alpha, 0.003f)
-        assertEquals(0.20f, glass.shade.alpha, 0.003f)
-        assertEquals(0x000000, glass.shade.toArgb() and 0xFFFFFF)
-    }
-
-    @Test
-    fun paperGlassRunsFromWhiteToTheBoardsFoot() {
-        val colors = paperColors()
-        val glass = GlassLook.of(colors.bg, isDark(colors))
-        assertNear("top", 0xFFFFFF, glass.top, slack = 0)
-        assertNear("foot", 0xFAF8F3, glass.foot, slack = 0)
-        // The board's `border: 1px solid rgba(60,40,20,0.06); border-top-color: #FFFFFF`.
-        assertEquals(0.06f, glass.edge.alpha, 0.003f)
-        assertEquals(0x3C2814, glass.edge.toArgb() and 0xFFFFFF)
-        assertEquals(Color.White, glass.edgeTop)
-        assertEquals(1f, glass.foot.alpha, 0f)
-        // The board's `inset 0 -4px 8px rgba(60,40,20,0.04)`, and no lit line.
-        assertEquals(0.04f, glass.shade.alpha, 0.003f)
-        assertEquals(0x3C2814, glass.shade.toArgb() and 0xFFFFFF)
-        assertEquals(0f, glass.highlight.alpha, 0f)
-    }
-
     /** The rule between a card's parts is the tone ladder's line: the page moved [ToneLadder.LINE] L* toward the text, on dark and light pages. */
     @Test
     fun lineIsThePageMovedTowardTheText() {
@@ -69,18 +36,6 @@ class GlassTileTest {
             val sign = if (set.textMode == TextMode.Light) 1 else -1
             assertEquals("$set line", ColorMath.lightness(set.backgroundColor) + sign * ToneLadder.LINE, ColorMath.lightness(line), 0.5) // 8-bit steps on a dark page are about 0.4 L*
         }
-    }
-
-    @Test
-    fun everySetHasAGlassBetweenItsBackgroundAndWhite() {
-        val failures = mutableListOf<String>()
-        for (set in ColorSet.entries) {
-            val colors = colorsOf(set)
-            val glass = GlassLook.of(colors.bg, isDark(colors))
-            if (glass.top.alpha < glass.foot.alpha) failures += "$set: top fainter than foot"
-            if (!isDark(colors) && ColorMath.luminance(Rgb(glass.foot.toArgb() and 0xFFFFFF)) < ColorMath.luminance(colors.bg)) failures += "$set: foot darker than the page"
-        }
-        assertTrue(failures.joinToString("\n"), failures.isEmpty())
     }
 
     /** The meter's well is the tone ladder's sunken step: [ToneLadder.SUNKEN] L* off the page, the page's own hue, on dark and light pages. */

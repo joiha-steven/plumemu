@@ -39,7 +39,7 @@ internal fun SideTitleCover(
 
 /**
  * Whether the title stands whole beside a box of [aspect]: in the room the box leaves (at the band's full height, the widest the box gets) it takes at
- * most [SIDE_TITLE_LINES] lines, none ends in an ellipsis and none breaks inside a word. Measured with the title's own style, not guessed; when it does not
+ * most [SIDE_TITLE_LINES] lines (its subtitle part, [splitTitle], at most [TITLE_SUBTITLE_LINES] more), none ends in an ellipsis and none breaks inside a word. Measured with the title's own style, not guessed; when it does not
  * fit, the title stays under the box as for a wide one.
  */
 @Composable
@@ -55,22 +55,28 @@ internal fun titleFitsBeside(
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val style = PlumTheme.type.detailsTitle(PlumTheme.layout.widthClass).copy(lineBreak = LineBreak.Heading)
-    return remember(title, aspect, columnWidth, style, density, measurer, subtitleStyle, subtitleLines, subtitleGap) {
+    val partStyle = PlumTheme.type.gameTitle.copy(lineBreak = LineBreak.Heading)
+    return remember(title, aspect, columnWidth, style, partStyle, density, measurer, subtitleStyle, subtitleLines, subtitleGap) {
+        val split = splitTitle(title)
+        val main = split.main
         val boxHeight = PlumDimens.detailsCoverHeightWide - CollarSize.Cover.topPadding - CollarSize.Cover.bottomPadding
         val room = columnWidth - (boxHeight * aspect + CollarSize.Cover.sidePadding * 2) - PlumDimens.detailsBlockGapWide
         val roomPx = with(density) { room.roundToPx() }
         if (roomPx <= 0) {
             false
         } else {
-            val result = measurer.measure(AnnotatedString(title), style, overflow = TextOverflow.Ellipsis, maxLines = SIDE_TITLE_LINES, constraints = Constraints(maxWidth = roomPx))
+            val result = measurer.measure(AnnotatedString(main), style, overflow = TextOverflow.Ellipsis, maxLines = SIDE_TITLE_LINES, constraints = Constraints(maxWidth = roomPx))
+            // The title's own subtitle line(s) ([DetailsTitle]) must stand whole too.
+            val part = split.subtitle.takeIf { it.isNotEmpty() }?.let { measurer.measure(AnnotatedString(it), partStyle, overflow = TextOverflow.Ellipsis, maxLines = TITLE_SUBTITLE_LINES, constraints = Constraints(maxWidth = roomPx)) }
+            val partPx = part?.let { it.size.height + with(density) { subtitleGap.roundToPx() } } ?: 0
             // The title and its line(s) under it must stand whole in the band at its least height (the cover's floor), else the block would lose a line.
             val subtitleHeight = measurer.measure(HELD_LINE, subtitleStyle, maxLines = 1).size.height * subtitleLines
             val bandPx = with(density) { (PlumDimens.detailsCoverMinWide - CollarSize.Cover.topPadding).roundToPx() }
-            val blockPx = result.size.height + with(density) { subtitleGap.roundToPx() } + subtitleHeight
-            !result.didOverflowHeight && !result.didOverflowWidth && blockPx <= bandPx &&
+            val blockPx = result.size.height + partPx + with(density) { subtitleGap.roundToPx() } + subtitleHeight
+            !result.didOverflowHeight && !result.didOverflowWidth && part?.hasVisualOverflow != true && blockPx <= bandPx &&
                 (0 until result.lineCount).all { line ->
                     val end = result.getLineEnd(line)
-                    !result.isLineEllipsized(line) && (end >= title.length || title[end - 1].isWhitespace() || title[end - 1] == '-' || title[end].isWhitespace())
+                    !result.isLineEllipsized(line) && (end >= main.length || main[end - 1].isWhitespace() || main[end - 1] == '-' || main[end].isWhitespace())
                 }
         }
     }

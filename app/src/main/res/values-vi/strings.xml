@@ -74,7 +74,6 @@
     <string name="home_hint_search">Tìm kiếm</string>
     <string name="home_hint_undo">Hoàn tác</string>
     <string name="home_notice_removed_from_recent">Đã xóa khỏi Gần đây</string>
-    <string name="home_hint_sort">Sắp xếp</string>
 
     <!-- Main screen, search (X): the top bar's place name, the empty field's prompt, and the line
          shown when no title matches. -->
@@ -426,7 +425,6 @@
 
     <!-- Launch errors: a title, one or two plain sentences, then what the person can do. -->
     <string name="game_action_rescan">Quét lại thư viện</string>
-    <string name="game_action_play_with_another">Chơi bằng trình giả lập khác</string>
     <string name="game_action_ok">OK</string>
     <!-- The last row of Info: back to the menu. -->
     <!-- The last row of the Info panel: a verb, back to the game menu. -->
@@ -493,7 +491,7 @@
     <string name="game_error_internal_body">Không dùng được dữ liệu trình giả lập của Plumemu cho trò chơi này.</string>
     <!-- %1$s is an emulator's name. Shown when it came back within ten seconds of its start. -->
     <string name="game_closed_at_once_title">%1$s đã đóng ngay</string>
-    <string name="game_closed_at_once_body">Nếu trò chơi không chạy, hãy chọn trình giả lập khác bằng Chơi bằng… trong menu trò chơi.</string>
+    <string name="game_closed_at_once_body">Nếu trò chơi không chạy, hãy thử trình giả lập khác.</string>
     <string name="game_core_question_title">%1$s đã chạy chưa?</string>
     <string name="game_core_question_body">Trò chơi được mở bằng %1$s. Plumemu không xem được RetroArch có những lõi nào, nên hỏi một lần cho mỗi lõi.</string>
     <string name="game_action_yes">Có</string>
@@ -679,14 +677,11 @@
     <!-- Hint bar label: a verb, show the focused system again. -->
     <string name="settings_hint_show">Hiện</string>
     <string name="settings_hint_go_to">Đến</string>
-    <!-- %1$s is the number of hidden games, already formatted for the locale. -->
-    <string name="settings_hidden_games">Trò chơi đã ẩn (%1$s)</string>
     <string name="settings_hidden_games_title">Trò chơi đã ẩn</string>
     <string name="settings_hidden_games_body">Những trò chơi bạn đã ẩn, hoặc đã đánh dấu là không phải trò chơi. Chọn một trò chơi để hiện lại.</string>
     <string name="settings_unhide_failed">Không hiện lại được trò chơi. Chưa có gì thay đổi.</string>
     <!-- A game the person marked "Not a game" in Hidden games: "Not a game · SNES". -->
     <string name="settings_hidden_not_a_game">Không phải trò chơi · %1$s</string>
-    <string name="settings_unidentified_games">Chưa nhận diện (%1$s)</string>
     <string name="settings_unidentified_games_title">Trò chơi chưa nhận diện</string>
     <string name="settings_unidentified_games_body">Những trò chơi Plumemu chỉ đặt tên được theo tên tệp. Chọn một trò chơi để sửa tên.</string>
     <string name="settings_name_fix_failed">Không lưu được tên đó. Chưa có gì thay đổi.</string>
@@ -1606,8 +1601,12 @@
     <string name="collections_notice_removed">Đã bỏ khỏi bộ sưu tập</string>
     <string name="collections_name_title">Tên bộ sưu tập</string>
     <string name="collections_empty_most_played">Game bạn chơi lâu nhất sẽ hiện ở đây</string>
-    <string name="collections_empty_recently_added">Game thêm trong 30 ngày qua sẽ hiện ở đây</string>
+    <string name="collections_empty_recently_added">Game tìm thấy sau lúc thiết lập sẽ hiện ở đây trong 30 ngày</string>
     <string name="collections_empty_own">Thêm game bằng %1$s › Thêm vào bộ sưu tập…</string>
+    <string name="collections_about_recent">Những game bạn chơi gần đây, mới nhất trước</string>
+    <string name="collections_about_most_played">Những game bạn chơi lâu nhất, tối đa 50</string>
+    <string name="collections_about_recently_added">Game được thêm trong 30 ngày qua, mới nhất trước</string>
+    <string name="collections_new_about">Danh sách game của riêng bạn, từ mọi hệ máy. Đặt tên ở đây, rồi thêm game bằng %1$s\u00A0› Thêm vào bộ sưu tập…</string>
     <string name="collections_rename">Đổi tên</string>
     <string name="collections_delete">Xoá…</string>
     <string name="collections_delete_title">Xoá %1$s?</string>
@@ -1618,6 +1617,7 @@
     <string name="collections_move_down">Xuống</string>
     <string name="collections_delete_confirm">Xoá</string>
     <string name="collections_settings_failed">Không lưu được thay đổi này. Hãy thử lại.</string>
+    <string name="collections_none">Chưa có bộ sưu tập nào</string>
     <plurals name="collections_count">
         <item quantity="other">%1$s bộ sưu tập</item>
     </plurals>
