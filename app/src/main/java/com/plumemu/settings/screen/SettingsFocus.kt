@@ -184,7 +184,7 @@ internal const val COLOR_SET_COLUMNS_WIDE = 3
 @Immutable
 internal data class SettingsGeometry(
     val isNarrow: Boolean,
-    /** Preset swatches per row in the panel (5 in the wide panel, 10 in the narrow stop). */
+    /** Preset swatches per row on the focused colour page, as it draws them (the page's width, not the panel beside the options). */
     val presetColumns: Int,
     /** The text size in use while the person has not picked one (it follows the screen width), so stepping starts from it. */
     val defaultTextSize: TextSizeSetting,
@@ -193,8 +193,8 @@ internal data class SettingsGeometry(
 )
 
 /**
- * The focusable items of a panel page as a grid: [count] items, [columns] per row. On a custom
- * page the last item is the hex row under the palette, reached by down from the last row.
+ * The focusable items of a panel page as a grid: [count] items, [columns] per row. A colour
+ * page's grid is its presets; Color, Shade and the Color code row under them are walked by the model.
  */
 internal data class PanelGrid(
     val count: Int,
@@ -219,7 +219,6 @@ internal data class PanelGrid(
             content: SettingsContent,
             focus: SettingsFocus,
             settings: PlumSettings,
-            paletteSize: Int = ColorPages.palette(page, ColorPages.backgroundOf(settings)).size,
             /** The sub-folders "Skip a sub-folder…" offers ([pickableSubfolders]); the model's, since the listing is its work's. */
             skipPickCount: Int = 0,
         ): PanelGrid? =
@@ -240,8 +239,6 @@ internal data class PanelGrid(
                 PanelPage.Collection -> PanelGrid(collectionPageItems(content, focus.collectionId).size, 1)
                 PanelPage.CollectionDelete -> PanelGrid(2, 2)
                 PanelPage.BackgroundPresets, PanelPage.AccentPresets, PanelPage.TextPresets -> PanelGrid(ColorPages.presetCount(page, ColorPages.backgroundOf(settings)), geometry.presetColumns)
-                PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom ->
-                    PanelGrid(paletteSize + ColorSlider.entries.size + 1, ColorPages.PALETTE_COLUMNS)
                 PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm, PanelPage.ResetRecentConfirm -> PanelGrid(2, 2)
                 PanelPage.Reset -> PanelGrid(ResetPanelItem.entries.size, 1)
                 PanelPage.BackupRestore -> PanelGrid(backupRestoreItems(content).size, 1)

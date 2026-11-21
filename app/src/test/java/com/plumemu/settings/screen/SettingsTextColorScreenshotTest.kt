@@ -12,7 +12,6 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.components.LocalScanPulsePhase
 import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.theme.CustomPalette
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.home.BOARD_BATTERY
 import com.plumemu.home.BOARD_CLOCK
@@ -64,23 +63,18 @@ class SettingsTextColorScreenshotTest {
         Shown(settings, model)
     }
 
-    /** Opens the page through the panel itself (the shot's model must know the colours it opened on), at the hex row when [toHex]. */
-    private fun SettingsModel.openCustomPage(
+    /** Opens the page through the panel itself (the shot's model must know the colours it opened on), at the Shade row, or the Color code row when [toHex]. */
+    private fun SettingsModel.openColourPage(
         settings: PlumSettings,
         geometry: SettingsGeometry,
         toHex: Boolean,
     ) {
-        // Taps reach "+" and the hex row whatever the colours: the cursor never walks onto a preset that does not read.
+        // Taps reach Color and the Color code row whatever the colours: the cursor never walks onto a preset that does not read.
         onAction(Action.Enter, settings, geometry)
-        onTapPanelItem(plusIndex(settings), settings, geometry)
-        // A first tap on a tile may only focus it.
-        if (focus.page == PanelPage.TextPresets) onTapPanelItem(plusIndex(settings), settings, geometry)
-        if (toHex) onTapPanelItem(paletteSize(settings), settings, geometry)
+        onTapPanelItem(colorIndex(PanelPage.TextPresets), settings, geometry)
+        onAction(Action.Move(Direction.Down), settings, geometry)
+        if (toHex) onTapPanelItem(hexIndex(PanelPage.TextPresets), settings, geometry)
     }
-
-    private fun plusIndex(settings: PlumSettings): Int = ColorPages.presetCount(PanelPage.TextPresets, settings.toThemeSettings().backgroundColor) - 1
-
-    private fun paletteSize(settings: PlumSettings): Int = PaletteCuration.curated(CustomPalette.textSwatchesOn(settings.toThemeSettings().backgroundColor)).size
 
     @Test
     fun presets() =
@@ -91,14 +85,14 @@ class SettingsTextColorScreenshotTest {
     @Test
     fun ownColourPage() =
         ReferenceShots.capture("settings_text_color_custom") {
-            TextPanel(PanelPage.TextCustom) { settings, geometry -> openCustomPage(settings, geometry, toHex = false) }
+            TextPanel(PanelPage.TextPresets) { settings, geometry -> openColourPage(settings, geometry, toHex = false) }
         }
 
     @Test
     fun hexRefused() =
         ReferenceShots.capture("settings_text_color_refused") {
-            TextPanel(PanelPage.TextCustom) { settings, geometry ->
-                openCustomPage(settings, geometry, toHex = true)
+            TextPanel(PanelPage.TextPresets) { settings, geometry ->
+                openColourPage(settings, geometry, toHex = true)
                 // Close to the background of either preset, so it cannot be read there.
                 val dark = settings.appearance.background != ColorSetting.Preset("Paper")
                 onHexTextChange(if (dark) "222222" else "EEEEEE")

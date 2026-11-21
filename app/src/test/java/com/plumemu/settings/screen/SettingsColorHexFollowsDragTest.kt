@@ -4,7 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
-import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
 import com.plumemu.coredata.settings.AppearanceSettings
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.KeyboardSetting
@@ -28,7 +29,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The "Color code" row on the "+" page shows the colour a finger is dragging, not the stored one:
+ * The name and code line and the "Color code" row of the colour page show the colour a finger is dragging, not the stored one:
  * the theme's colours follow the preview as States, so the row reads the preview itself.
  * Checked on the Background, Text color and Accent pages, and after the lift once the store has the colour.
  */
@@ -65,20 +66,11 @@ class SettingsColorHexFollowsDragTest {
             remember {
                 SettingsModel(actions, optionsAt(option)).also { model ->
                     model.onAction(Action.Enter, settings, geometry)
-                    val theme = settings.toThemeSettings()
-                    val current =
-                        when (presets) {
-                            PanelPage.TextPresets -> theme.textColor
-                            PanelPage.AccentPresets -> theme.accentColor
-                            else -> theme.backgroundColor
-                        }
-                    val plus = ColorPages.presetCount(presets, current) - 1
-                    model.onTapPanelItem(plus, settings, geometry)
-                    if (model.focus.page == presets) model.onTapPanelItem(plus, settings, geometry)
-                    model.onAction(Action.Move(Direction.Down), settings, geometry)
+                    var guard = 0
+                    while (model.colourPart != ColorPart.Color && guard++ < 40) model.onAction(Action.Move(Direction.Down), settings, geometry)
                 }
             }
-        SettingsLayout(settings, model, SettingsTouch({}, {}, {}, {}, {}, {}, {}, onSlider = { _, _ -> }, onSliderEnd = {}), TEST_VERSION, clock = { "21:40" }, battery = { "82%" })
+        SettingsLayout(settings, model, SettingsTouch({}, {}, {}, {}, {}, {}, {}), TEST_VERSION, clock = { "21:40" }, battery = { "82%" })
     }
 
     private fun open() {
@@ -91,8 +83,9 @@ class SettingsColorHexFollowsDragTest {
         compose.waitForIdle()
     }
 
+    /** Only the Color code row shows the code; the name line has the name alone. */
     private fun assertHexShown(hex: String) {
-        compose.onNodeWithText(hex, useUnmergedTree = true).assertExists()
+        compose.onAllNodesWithText(hex, useUnmergedTree = true).assertCountEquals(1)
     }
 
     @Test

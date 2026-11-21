@@ -53,11 +53,11 @@ internal class SettingsAccentBySystemTest : SettingsModelHarness() {
     }
 
     @Test
-    fun theTileComesAfterThePresetsAndBeforePlus() {
+    fun theTileComesRightAfterThePresetsAndColorFollowsIt() {
         assertEquals(AccentPreset.entries.size, bySystemIndex)
         val background = actions.settings.toThemeSettings().backgroundColor
-        assertEquals("presets, By system, +", AccentPreset.entries.size + 2, ColorPages.presetCount(PanelPage.AccentPresets, background))
-        assertEquals("the other panels are unchanged", BACKGROUND_COUNT + 1, ColorPages.presetCount(PanelPage.BackgroundPresets, background))
+        assertEquals("presets, then By system", AccentPreset.entries.size + 1, ColorPages.presetCount(PanelPage.AccentPresets, background))
+        assertEquals("the other pages are unchanged", BACKGROUND_COUNT, ColorPages.presetCount(PanelPage.BackgroundPresets, background))
     }
 
     @Test
@@ -77,11 +77,12 @@ internal class SettingsAccentBySystemTest : SettingsModelHarness() {
     @Test
     fun theTileIsReachedFromAnOwnColourAndKeepsItAsTheFallback() {
         useAccent(ColorSetting.Custom(0x336699))
-        // An own colour opens the palette page; B goes back to the presets page, on "+".
-        openAccentPanel(expect = PanelPage.AccentCustom)
-        press(Action.Back)
-        assertEquals(PanelPage.AccentPresets, model.focus.page)
-        walkTo(bySystemIndex)
+        // An own colour opens on its nearest shade; Up twice reaches the presets, on By system (the last one).
+        openAccentPanel()
+        assertEquals(ColorPart.Shade, model.colourPart)
+        move(Direction.Up)
+        move(Direction.Up)
+        assertEquals(bySystemIndex, model.focus.panelIndex)
         assertEquals(ColorSetting.BySystem(ColorSetting.Custom(0x336699)), appearance.accent)
         press(Action.Enter)
         assertEquals(ColorSetting.BySystem(ColorSetting.Custom(0x336699)), appearance.accent)
@@ -123,14 +124,6 @@ internal class SettingsAccentBySystemTest : SettingsModelHarness() {
         assertEquals("the accent the panel opened with", ColorSetting.BySystem(ColorSetting.Preset("Amber")), appearance.accent)
         press(Action.Back)
         assertEquals("B keeps what the cursor is on, as on any preset", ColorSetting.BySystem(ColorSetting.Preset("Amber")), appearance.accent)
-    }
-
-    @Test
-    fun plusStillOpensTheOwnColourPageAfterTheTile() {
-        openAccentPanel()
-        walkTo(bySystemIndex + 1)
-        press(Action.Enter)
-        assertEquals(PanelPage.AccentCustom, model.focus.page)
     }
 
     @Test

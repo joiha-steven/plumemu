@@ -131,7 +131,7 @@ screen, say yes when it asks, or press Home and choose Plumemu. More in [Install
 - **Colors.** Pick one of seventeen ready-made sets, each previewed first: Plumemu (a deep blue, the
   default), Daylight, Ultramarine, Magenta, Peach, Matcha, Mocha, Front loader, Spice cube, Pea
   green, Pocket, Lavender, Red and gold, Ivory, Clear grape, Cold grey and Banana. Or mix your own
-  background, text and accent with sliders that repaint the screen as you drag.
+  background, text and accent from presets, a strip of hues and its readable shades, or a color code.
 - **True black and classic keys.** On an OLED screen setup offers true black, and eight of the sets
   color the A, B, X and Y keys.
 - **Lists or covers.** Show any system or collection as a list or as a grid of covers in three

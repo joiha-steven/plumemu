@@ -175,7 +175,7 @@ internal fun PanelTitle(text: String) {
 }
 
 @Composable
-private fun panelTitleStyle() = PlumTheme.type.panelTitle.onBoard(SettingsPreviewDimens.BOARD_TITLE_SCALE)
+internal fun panelTitleStyle() = PlumTheme.type.panelTitle.onBoard(SettingsPreviewDimens.BOARD_TITLE_SCALE)
 
 /** A row's "…" says it opens something: the title and the crumb of what it opened have no dots. */
 internal fun String.withoutDots(): String = trimEnd('…', '.')

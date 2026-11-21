@@ -114,7 +114,12 @@ class FlatFace(
         const val ACCENT_SHADE = 0.12f
         const val OFF_DARK = 0.55f
         const val OFF_LIGHT = 0.40f
-        private val KNOB_FACE = Color(0xFFFAFAF8)
+        /** The pale knob face, the same on every colour set: the colour page loupe's glass rim. */
+        val KNOB_FACE = Color(0xFFFAFAF8)
+
+        /** The loupe's dark hairline between its rim and its lens, and its flat gloss. */
+        val LOUPE_LINE = Color.Black.copy(alpha = 0.28f)
+        val LOUPE_GLOSS = Color.White.copy(alpha = 0.22f)
     }
 }
 

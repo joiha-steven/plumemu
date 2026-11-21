@@ -994,20 +994,16 @@
     <string name="settings_page_grain_strong">强烈</string>
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
     <string name="settings_badge_current">当前</string>
-    <string name="settings_background_body">选择一种颜色，或选 + 自定义颜色。</string>
-    <string name="settings_custom_title">自定义颜色</string>
-    <string name="settings_slider_hue">色相</string>
-    <string name="settings_slider_saturation">饱和度</string>
-    <string name="settings_slider_lightness">亮度</string>
-    <string name="settings_slider_degrees">%1$d°</string>
-    <string name="settings_slider_percent">%1$d%%</string>
+    <string name="settings_background_body">选择一种颜色，或自定义颜色。</string>
     <!-- What a screen reader says for a slider: its name, then its value ("Hue 120°"). -->
-    <string name="settings_slider_spoken">%1$s %2$s</string>
+    <string name="settings_color_row_spoken">%1$s %2$s</string>
+    <string name="settings_color_strip_label">颜色</string>
+    <string name="settings_color_shade_label">深浅</string>
     <string name="settings_hex_label">颜色代码</string>
     <string name="settings_hex_hint">颜色（十六进制）</string>
     <string name="settings_hex_use">使用此颜色</string>
     <string name="settings_hex_error">请输入 6 位数字或字母 A–F，如 1A2B3C。</string>
-    <string name="settings_text_color_body">选择一种文字颜色，或选 + 自定义颜色。只显示清晰易读的颜色。</string>
+    <string name="settings_text_color_body">选择一种文字颜色，或自定义颜色。只显示清晰易读的颜色。</string>
     <string name="settings_text_color_blocked">此背景太灰，任何文字颜色都难以看清。请先更换背景。</string>
     <string name="settings_color_refused_text">与背景太接近，难以阅读。最接近的可读颜色：%1$s</string>
     <string name="settings_color_refused_accent">与背景太接近，难以看清。最接近的清晰颜色：%1$s</string>

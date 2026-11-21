@@ -1032,20 +1032,16 @@
     <string name="settings_page_grain_strong">Fort</string>
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
     <string name="settings_badge_current">Actuel</string>
-    <string name="settings_background_body">Choisissez une couleur, ou + pour créer la vôtre.</string>
-    <string name="settings_custom_title">Votre couleur</string>
-    <string name="settings_slider_hue">Teinte</string>
-    <string name="settings_slider_saturation">Saturation</string>
-    <string name="settings_slider_lightness">Luminosité</string>
-    <string name="settings_slider_degrees">%1$d°</string>
-    <string name="settings_slider_percent">%1$d %%</string>
+    <string name="settings_background_body">Choisissez une couleur, ou créez la vôtre.</string>
     <!-- What a screen reader says for a slider: its name, then its value ("Hue 120°"). -->
-    <string name="settings_slider_spoken">%1$s %2$s</string>
+    <string name="settings_color_row_spoken">%1$s %2$s</string>
+    <string name="settings_color_strip_label">Couleur</string>
+    <string name="settings_color_shade_label">Nuance</string>
     <string name="settings_hex_label">Code couleur</string>
     <string name="settings_hex_hint">Couleur (hexa)</string>
     <string name="settings_hex_use">Utiliser cette couleur</string>
     <string name="settings_hex_error">Six chiffres ou lettres de A à F, comme 1A2B3C.</string>
-    <string name="settings_text_color_body">Choisissez une couleur de texte, ou + pour créer la vôtre. Seules les couleurs bien lisibles sont proposées.</string>
+    <string name="settings_text_color_body">Choisissez une couleur de texte, ou créez la vôtre. Seules les couleurs bien lisibles sont proposées.</string>
     <string name="settings_text_color_blocked">Ce fond est trop gris pour un texte lisible. Changez d\'abord le fond.</string>
     <string name="settings_color_refused_text">Trop proche du fond pour être lisible. Couleur lisible la plus proche : %1$s</string>
     <string name="settings_color_refused_accent">Trop proche du fond pour être visible. Couleur visible la plus proche : %1$s</string>

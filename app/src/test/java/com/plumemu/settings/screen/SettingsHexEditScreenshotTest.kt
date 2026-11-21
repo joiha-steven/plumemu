@@ -9,7 +9,6 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.components.LocalScanPulsePhase
 import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.theme.CustomPalette
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.home.BOARD_BATTERY
 import com.plumemu.home.BOARD_CLOCK
@@ -34,8 +33,10 @@ class SettingsHexEditScreenshotTest {
         val geometry = settingsGeometry(PlumTheme.layout)
         val model =
             remember(steps) {
-                SettingsModel(NoActions, panelAt(SettingsOption.Accent, PanelPage.AccentCustom, PaletteCuration.curated(CustomPalette.accentSwatchesOn(settings.toThemeSettings().backgroundColor)).size)).also {
-                    it.onAction(Action.Enter, settings, geometry)
+                SettingsModel(NoActions, optionsAt(SettingsOption.Accent)).also {
+                    it.onAction(Action.Enter, settings, geometry) // Accent color's page
+                    repeat(12) { _ -> it.onAction(Action.Move(Direction.Down), settings, geometry) } // down to the Color code row
+                    it.onAction(Action.Enter, settings, geometry) // starts typing
                     it.onHexTextChange("1A2B3C")
                     it.steps(settings)
                 }

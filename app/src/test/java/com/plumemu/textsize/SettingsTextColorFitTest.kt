@@ -14,7 +14,7 @@ import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coreui.components.LocalScanPulsePhase
 import com.plumemu.coreui.testing.ReferenceShots
 import com.plumemu.coreui.theme.BackgroundPreset
-import com.plumemu.coreui.theme.CustomPalette
+import com.plumemu.coreui.theme.ColorShades
 import com.plumemu.coreui.theme.PlumFont
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
@@ -26,9 +26,7 @@ import com.plumemu.home.rulesAround
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.settings.screen.ColorPages
-import com.plumemu.settings.screen.ColorSlider
 import com.plumemu.settings.screen.NoActions
-import com.plumemu.settings.screen.PaletteCuration
 import com.plumemu.settings.screen.PanelPage
 import com.plumemu.settings.screen.NoTouch
 import com.plumemu.settings.screen.SettingsGeometry
@@ -97,65 +95,48 @@ abstract class SettingsTextColorFitBase(
         assertTrue(failures.size.toString() + " problems:\n" + failures.take(40).joinToString("\n"), failures.isEmpty())
     }
 
-    private fun plusIndex(settings: PlumSettings): Int = ColorPages.presetCount(PanelPage.TextPresets, settings.toThemeSettings().backgroundColor) - 1
+    /** The Color row's panel index: right after the presets (Text color on Graphite). */
+    private fun colorRow(): Int = ColorPages.presetCount(PanelPage.TextPresets, BackgroundPreset.Graphite.color)
 
-    private fun SettingsModel.openOwnColourPage(
+    /** Opens the page through the panel, then a tap on the Color row (no preset previewed on the way). */
+    private fun SettingsModel.openColourPage(
         settings: PlumSettings,
         geometry: SettingsGeometry,
     ) {
         onAction(Action.Enter, settings, geometry)
-        onTapPanelItem(plusIndex(settings), settings, geometry)
-        // A first tap on a tile may only focus it.
-        if (focus.page == PanelPage.TextPresets) onTapPanelItem(plusIndex(settings), settings, geometry)
+        onTapPanelItem(colorRow(), settings, geometry)
     }
 
     @Test
     fun presets() = check("text_color_presets", SettingsTags.panelItem(0)) { settings, geometry -> onAction(Action.Enter, settings, geometry) }
 
-    /** The page opens on the swatch nearest the current Light; the first cell is tapped. */
+    /** The focused row must be whole at every size: Color, the shade the cursor rests on, the Color code row. */
     @Test
-    fun ownColourPageOnTheFirstCell() =
-        check("text_color_custom", SettingsTags.panelItem(0)) { settings, geometry ->
-            openOwnColourPage(settings, geometry)
-            // The page may already open on the first cell (the lightest tile is nearest the default Light): a second tap would choose it and leave the page.
-            if (focus.panelIndex != 0) onTapPanelItem(0, settings, geometry)
+    fun colorRowFocused() = check("text_color_color", SettingsTags.panelItem(colorRow())) { settings, geometry -> openColourPage(settings, geometry) }
+
+    @Test
+    fun shadeRowFocused() =
+        check("text_color_shade", SettingsTags.panelItem(colorRow() + 1)) { settings, geometry ->
+            openColourPage(settings, geometry)
+            onAction(Action.Move(Direction.Down), settings, geometry)
+            // The cursor rests on the middle shade; the first one is the row's own first key.
+            repeat(ColorShades.SHADE_COUNT) { onAction(Action.Move(Direction.Left), settings, geometry) }
         }
 
     @Test
-    fun ownColourPageOnTheHexRow() = check("text_color_custom_hex", SettingsTags.HEX_ROW) { settings, geometry ->
-            openOwnColourPage(settings, geometry)
-            // Down to the hex row, the last one: the cursor is on it without the field open.
-            repeat(CustomPalette.ROWS + ColorSlider.entries.size + 1) { onAction(Action.Move(Direction.Down), settings, geometry) }
+    fun colorCodeRowFocused() =
+        check("text_color_hex", SettingsTags.HEX_ROW) { settings, geometry ->
+            openColourPage(settings, geometry)
+            // Down to the Color code row, the last one: the cursor is on it without the field open.
+            repeat(2) { onAction(Action.Move(Direction.Down), settings, geometry) }
         }
-
-    /** A tap on a slider's track focuses its row and moves the thumb: the focused row must be whole at every size (Hue, then Lightness, the one nearest the Color code row). */
-    @Test
-    fun hueSliderFocused() = check("text_color_slider_hue", SettingsTags.panelItem(textCells())) { settings, geometry -> sliderTapped(ColorSlider.Hue, settings, geometry) }
-
-    @Test
-    fun lightnessSliderFocused() = check("text_color_slider_lightness", SettingsTags.panelItem(textCells() + 2)) { settings, geometry -> sliderTapped(ColorSlider.Lightness, settings, geometry) }
-
-    private fun textCells(): Int = PaletteCuration.curated(CustomPalette.textSwatchesOn(BackgroundPreset.Graphite.color)).size
-
-    private fun SettingsModel.sliderTapped(
-        slider: ColorSlider,
-        settings: PlumSettings,
-        geometry: SettingsGeometry,
-    ) {
-        openOwnColourPage(settings, geometry)
-        onTouchSlider(PaletteCuration.curated(CustomPalette.textSwatchesOn(settings.toThemeSettings().backgroundColor)).size + slider.ordinal, 0.5f, settings, geometry)
-    }
 
     /** A code too close to the background: the two-line message and the "Use #…" row the cursor lands on. */
     @Test
     fun refusedHex() =
         check("text_color_refused", SettingsTags.HEX_USE) { settings, geometry ->
-            onAction(Action.Enter, settings, geometry)
-            onTapPanelItem(plusIndex(settings), settings, geometry)
-            // A first tap on a tile may only focus it.
-            if (focus.page == PanelPage.TextPresets) onTapPanelItem(plusIndex(settings), settings, geometry)
-            val hexRow = PaletteCuration.curated(CustomPalette.textSwatchesOn(settings.toThemeSettings().backgroundColor)).size + ColorSlider.entries.size
-            onTapPanelItem(hexRow, settings, geometry)
+            openColourPage(settings, geometry)
+            onTapPanelItem(hexIndex(PanelPage.TextPresets), settings, geometry)
             onHexTextChange("222222")
             onHexEntered(hexText)
         }

@@ -48,7 +48,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.plumemu.R
 import com.plumemu.coredata.settings.PlumSettings
 import com.plumemu.coredata.settings.SoundLevel
-import com.plumemu.coredata.settings.TextSizeSetting
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.InputRouter
 import com.plumemu.coreinput.TextEntry
@@ -76,7 +75,6 @@ import com.plumemu.sound.LocalUiSounds
 import com.plumemu.sound.Outcome
 import com.plumemu.usage.TrackScreen
 import com.plumemu.usage.screenIdOf
-import kotlin.math.floor
 
 /**
  * Settings: sections | options | panel on the
@@ -156,8 +154,9 @@ internal fun SettingsScreen(
                 onHexEntered = model::onHexEntered,
                 onHexText = model::onHexTextChange,
                 onHint = router::send,
-                onSlider = { index, fraction -> model.onTouchSlider(index, fraction, currentSettings, currentGeometry) },
-                onSliderEnd = model::onTouchSliderEnd,
+                onStop = { model.onTouchStop(it, currentSettings, currentGeometry) },
+                onStopDrag = { model.onTouchStop(it, currentSettings, currentGeometry, drag = true) },
+                onStopEnd = model::onTouchStopEnd,
             )
         }
     val clock = rememberClockText()
@@ -196,38 +195,13 @@ internal class SettingsTouch(
     val onHexEntered: (String) -> Unit,
     val onHexText: (String) -> Unit,
     val onHint: (Action) -> Unit,
-    /** A tap or drag on a colour slider's track: its panel index and where on the track (0..1). */
-    val onSlider: (Int, Float) -> Unit = { _, _ -> },
-    /** The finger lifted or was cancelled after [onSlider] calls (a tap too): the thumb settles. */
-    val onSliderEnd: () -> Unit = {},
+    /** A tap on the Color strip: the stop under the finger (an index of the strip). */
+    val onStop: (Int) -> Unit = {},
+    /** A finger dragging along the Color strip is on this stop: shown at once, stored by [onStopEnd]. */
+    val onStopDrag: (Int) -> Unit = {},
+    /** The finger of a strip drag lifted, was cancelled or lost its row: the colour it showed is stored once. */
+    val onStopEnd: () -> Unit = {},
 )
-
-/**
- * Preset swatches per row: what fits between the panel's text-column lines, 14 in on each side (4 in the wide 248, 10 in the narrow stop); Colors'
- * preview tiles per row: what fits on the row-text lines at the tile's least width for the text size.
- */
-internal fun settingsGeometry(layout: PlumLayout): SettingsGeometry {
-    val panel = settingsPanelWidth(layout)
-    val inner = panel - PlumDimens.settingsPanelRowPadding * 2
-    val columns = floor((inner + PlumDimens.settingsPresetSwatchGap) / (PlumDimens.settingsPresetSwatch + PlumDimens.settingsPresetSwatchGap)).toInt()
-    val tileGap = PlumDimens.settingsColorTileGap
-    val tiles = floor((colorTilesWidth(layout) + tileGap) / (PlumDimens.settingsColorTileMinWidth * layout.textScale + tileGap)).toInt()
-    return SettingsGeometry(isNarrow = layout.widthClass == WidthClass.Narrow, presetColumns = columns.coerceAtLeast(1),
-        defaultTextSize = TextSizeSetting.Default,
-        colorSetColumns = tiles.coerceIn(1, PlumDimens.SETTINGS_COLOR_TILE_MAX_COLUMNS),
-    )
-}
-
-/** Colors' tiles span the panel between its row-text lines (14 in on each side). */
-internal fun colorTilesWidth(layout: PlumLayout): Dp = settingsPanelWidth(layout) - PlumDimens.settingsPanelRowPadding * 2
-
-/** The panel: 248 beside the options on wide screens; the options' width as a further stop on narrow ones. */
-internal fun settingsPanelWidth(layout: PlumLayout): Dp =
-    when {
-        layout.isSettingsThreeColumns -> SettingsThreeDimens.panelWidth
-        layout.widthClass == WidthClass.Wide -> PlumDimens.settingsPanelWidth
-        else -> layout.settingsOptionsWidth
-    }
 
 /**
  * Where the strip rests for [column] (strip coordinates, as on the board): sections at 0; options
@@ -332,7 +306,9 @@ private fun SettingsStrip(
     // Only the column is read here: a move inside a column must not recompose the strip (sections,
     // every option row and the panel); each row reads the focus for its own look.
     val column by remember(model) { derivedStateOf { model.focus.column } }
-    val covered by remember(model, layout) { derivedStateOf { layout.isSettingsThreeColumns && model.focus.isWidePage() } }
+    // A wide page covers the options column at every wide width: three columns draw it over the right column's host, two over the panel's own box.
+    val covered by remember(model, layout) { derivedStateOf { layout.widthClass == WidthClass.Wide && model.focus.isWidePage() } }
+    val widePanel = covered && !layout.isSettingsThreeColumns
     val density = LocalDensity.current
     val targetPx = with(density) { settingsStripOffset(column, layout).toPx() }
     val offset = remember { Animatable(targetPx) }
@@ -356,14 +332,17 @@ private fun SettingsStrip(
             if (stage < SettingsOpening.SECTIONS) Spacer(Modifier.width(sectionsColumnWidth(layout))) else SectionsColumn(model, touch)
             if (layout.isSettingsThreeColumns) Spacer(Modifier.width(SettingsThreeDimens.optionsGap))
             // A wide page covers the options: they are not composed then, so no text of theirs lies under the page.
-            if (covered) Spacer(Modifier.width(layout.settingsOptionsWidth))
+            if (widePanel) Unit
+            else if (covered) Spacer(Modifier.width(layout.settingsOptionsWidth))
             else if (stage < SettingsOpening.OPTIONS) Spacer(Modifier.width(layout.settingsOptionsPreviewWidth)) else OptionsColumn(settings, model, touch, versionName)
             if (layout.isSettingsThreeColumns) Spacer(Modifier.width(SettingsThreeDimens.panelGap))
             if (layout.isSettingsThreeColumns) {
                 Spacer(Modifier.width(settingsPanelWidth(layout)))
             } else {
                 val panelVisible = column == SettingsColumn.Panel || (column == SettingsColumn.Options && layout.widthClass == WidthClass.Wide)
-                Box(Modifier.width(settingsPanelWidth(layout)).fillMaxHeight().clipPanel().testTag(SettingsTags.PANEL)) {
+                // Two columns, a wide page: the panel's box also holds the options' room (and the gap between), so the page reaches the right margin.
+                val width = if (widePanel) layout.settingsOptionsWidth + PlumDimens.columnGap + settingsPanelWidth(layout) else settingsPanelWidth(layout)
+                Box(Modifier.width(width).fillMaxHeight().clipPanel().then(if (widePanel) Modifier.pageBackground().pointerInput(Unit) {} else Modifier).testTag(SettingsTags.PANEL)) {
                     if (panelVisible) PanelHost(settings, model, touch, versionName)
                 }
             }

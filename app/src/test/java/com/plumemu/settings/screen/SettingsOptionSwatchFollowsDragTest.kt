@@ -56,7 +56,7 @@ class SettingsOptionSwatchFollowsDragTest {
         return Color(image.asAndroidBitmap().getPixel(x, image.height / 2))
     }
 
-    /** A finger on a slider means the "+" page is up, and that page covers the options column: no dot is on screen to follow it. */
+    /** A finger on the Color strip means the colour page is up, and that page covers the options column: no dot is on screen to follow it. */
     private fun assertNoRowDotOn(
         option: SettingsOption,
         page: PanelPage,
@@ -71,13 +71,13 @@ class SettingsOptionSwatchFollowsDragTest {
     }
 
     @Test
-    fun aFingerOnTheBackgroundsPlusPageHasNoRowDotToMove() = assertNoRowDotOn(SettingsOption.Background, PanelPage.BackgroundCustom)
+    fun aFingerOnTheBackgroundsColourPageHasNoRowDotToMove() = assertNoRowDotOn(SettingsOption.Background, PanelPage.BackgroundPresets)
 
     @Test
-    fun aFingerOnTheTextColorsPlusPageHasNoRowDotToMove() = assertNoRowDotOn(SettingsOption.TextColor, PanelPage.TextCustom)
+    fun aFingerOnTheTextColorsColourPageHasNoRowDotToMove() = assertNoRowDotOn(SettingsOption.TextColor, PanelPage.TextPresets)
 
     @Test
-    fun aFingerOnTheAccentsPlusPageHasNoRowDotToMove() = assertNoRowDotOn(SettingsOption.Accent, PanelPage.AccentCustom)
+    fun aFingerOnTheAccentsColourPageHasNoRowDotToMove() = assertNoRowDotOn(SettingsOption.Accent, PanelPage.AccentPresets)
 
     /** Should a preview reach the list, the Accent row reads it while drawing: exactly its colour, with no recomposition of the row. */
     @Test

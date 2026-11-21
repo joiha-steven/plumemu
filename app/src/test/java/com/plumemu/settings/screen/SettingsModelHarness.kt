@@ -13,7 +13,6 @@ import com.plumemu.coredata.settings.SetupFlags
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.theme.ColorSet
-import com.plumemu.coreui.theme.CustomPalette
 import org.junit.Assert.assertEquals
 
 /** A [SettingsModel] over fake, late-landing writes, and the presses its tests share. */
@@ -387,33 +386,47 @@ internal abstract class SettingsModelHarness {
         geometry: SettingsGeometry = wide,
     ) = model.onAction(action, actions.shown, geometry)
 
-    /** Walks the presets page to its "+" (the last item), bounded: Right stops at the end of a row, Down goes on. */
-    protected fun walkToPlus() {
-        val last = ColorPages.presetCount(model.focus.page!!, ColorPages.backgroundOf(actions.shown)) - 1
+    /** The open colour page's page id (its presets page). */
+    protected val colourPage: PanelPage get() = checkNotNull(model.focus.page) { "no panel page is open" }
+
+    /** Walks the colour page's presets to the last one, bounded: Right stops at the end of a row, Down goes on (never past the presets). */
+    protected fun walkToLastPreset() {
+        val last = ColorPages.presetCount(colourPage, ColorPages.backgroundOf(actions.shown)) - 1
         repeat(30) {
             if (model.focus.panelIndex == last) return
             val before = model.focus.panelIndex
             move(Direction.Right)
             if (model.focus.panelIndex == before) move(Direction.Down)
         }
-        assertEquals("reached +", last, model.focus.panelIndex)
+        assertEquals("reached the last preset", last, model.focus.panelIndex)
     }
 
-    /** Taps "+" of the open presets page (a first tap puts the cursor on it, a second opens the palette) without previewing the presets on the way. */
-    protected fun openPlus() {
-        val plus = ColorPages.presetCount(model.focus.page!!, ColorPages.backgroundOf(actions.shown)) - 1
-        repeat(2) { model.onTapPanelItem(plus, actions.shown, wide) }
+    /** Presses Down, bounded, until [reached] holds: a layout that does not lead there fails here instead of looping. */
+    private fun downUntil(
+        what: String,
+        reached: () -> Boolean,
+    ) {
+        repeat(40) {
+            if (reached()) return
+            move(Direction.Down)
+        }
+        assertEquals("Down did not reach $what", true, reached())
     }
 
-    /** On a custom colour page the cursor lands on a swatch; the hex code is the last row, below the grid and the three sliders. */
-    protected fun toHexRow() {
-        repeat(CustomPalette.ROWS + ColorSlider.entries.size + 1) { move(Direction.Down) }
+    /** From the presets down to the Color row. */
+    protected fun toColor() = downUntil("Color") { model.focus.panelIndex == model.colorIndex(colourPage) }
+
+    /** From the presets down to the Shade row (the cursor on the shade it rests on). */
+    protected fun toShade() {
+        toColor()
+        move(Direction.Down)
     }
 
-    /** From the hex row back up through the three sliders to the last row of swatches (its first one). */
-    protected fun upToGrid() {
-        repeat(ColorSlider.entries.size + 1) { move(Direction.Up) }
-    }
+    /** From the presets down to the Color code row, below Color and Shade. */
+    protected fun toHexRow() = downUntil("the Color code row") { model.isHexRow(colourPage, model.focus.panelIndex) }
+
+    /** The cursor's place on the open colour page (index of its part). */
+    protected val onPart: ColorPart? get() = model.colourPart
 
     protected fun move(
         direction: Direction,

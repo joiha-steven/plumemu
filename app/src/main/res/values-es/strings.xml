@@ -1021,20 +1021,16 @@
     <string name="settings_page_grain_strong">Intenso</string>
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
     <string name="settings_badge_current">Actual</string>
-    <string name="settings_background_body">Elige un color, o + para crear el tuyo.</string>
-    <string name="settings_custom_title">Color propio</string>
-    <string name="settings_slider_hue">Tono</string>
-    <string name="settings_slider_saturation">Saturación</string>
-    <string name="settings_slider_lightness">Luminosidad</string>
-    <string name="settings_slider_degrees">%1$d°</string>
-    <string name="settings_slider_percent">%1$d %%</string>
+    <string name="settings_background_body">Elige un color, o crea el tuyo.</string>
     <!-- What a screen reader says for a slider: its name, then its value ("Hue 120°"). -->
-    <string name="settings_slider_spoken">%1$s %2$s</string>
+    <string name="settings_color_row_spoken">%1$s %2$s</string>
+    <string name="settings_color_strip_label">Color</string>
+    <string name="settings_color_shade_label">Matiz</string>
     <string name="settings_hex_label">Código de color</string>
     <string name="settings_hex_hint">Color (hex)</string>
     <string name="settings_hex_use">Usar este color</string>
     <string name="settings_hex_error">Seis dígitos o letras de la A a la F, como 1A2B3C.</string>
-    <string name="settings_text_color_body">Elige un color de texto, o + para crear el tuyo. Solo se muestran los colores que se leen bien.</string>
+    <string name="settings_text_color_body">Elige un color de texto, o crea el tuyo. Solo se muestran los colores que se leen bien.</string>
     <string name="settings_text_color_blocked">Este fondo es demasiado gris para que el texto se lea bien. Cambia primero el fondo.</string>
     <string name="settings_color_refused_text">Demasiado parecido al fondo para leerse. El más cercano legible: %1$s</string>
     <string name="settings_color_refused_accent">Demasiado parecido al fondo para verse. El más cercano visible: %1$s</string>

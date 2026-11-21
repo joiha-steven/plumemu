@@ -310,11 +310,11 @@ class SettingsScreenTest {
             compose.onNodeWithTag(SettingsTags.panelItem(COLORS_BACKGROUND_ITEM)).performScrollTo().performClick()
             compose.waitForIdle()
         }
-        // Down to the last row and right to its end, the "+" (however many swatches a row holds), then into the palette and up onto a swatch.
-        send(*Array(6) { Action.Move(Direction.Down) }, *Array(6) { Action.Move(Direction.Right) })
-        val opening = settings.value.appearance.background // presets apply as the cursor reaches them
-        send(Action.Enter, Action.Move(Direction.Up))
-        assertTrue("a swatch is previewed", settings.value.appearance.background is ColorSetting.Custom)
+        // The 14 presets run across the wide page in rows of ten, from the cursor on Black (the start) one Down reaches the last row (each preset applies as the cursor reaches it); the next two reach Color and a shade.
+        send(Action.Move(Direction.Down))
+        val opening = settings.value.appearance.background // the colour in effect when the cursor comes down to Color
+        send(Action.Move(Direction.Down), Action.Move(Direction.Down))
+        assertTrue("a shade is previewed", settings.value.appearance.background != opening)
         compose.runOnIdle { present.value = false } // as when the Activity is recreated
         compose.waitForIdle()
         assertEquals(opening, settings.value.appearance.background)

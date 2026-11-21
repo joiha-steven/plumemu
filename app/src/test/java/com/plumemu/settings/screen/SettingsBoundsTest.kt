@@ -114,20 +114,21 @@ class SettingsBoundsTest {
 
     @Test
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
-    fun threeColumnsPresetsThreeARowOnTheTextColumn() {
+    fun threeColumnsColourPagePresetsStartOnTheWidePagesTextColumn() {
         show(panelAt(SettingsOption.Background, PanelPage.BackgroundPresets, 0))
-        // The right column's text column is 538.7 (the card's left edge) .. 744 - the row padding: three 40 dp swatches 10 apart fit (140), a fourth would pass its end.
-        val text = panelLeft
-        compose.onNodeWithTag(SettingsTags.panelItem(2)).assertLeftPositionInRootIsEqualTo(text + 100.dp)
-        compose.onNodeWithTag(SettingsTags.panelItem(3)).assertLeftPositionInRootIsEqualTo(text)
+        // The page covers the options and the right column: its presets start on the text column (the row padding in) and run on in rows wider than the old 205 dp column's three.
+        val text = optionsLeft + PlumDimens.gameRowPadding
+        compose.onNodeWithTag(SettingsTags.panelItem(0)).assertLeftPositionInRootIsEqualTo(text)
+        compose.onNodeWithTag(SettingsTags.panelItem(3)).assertLeftPositionInRootIsEqualTo(text + 150.dp)
     }
 
     @Test
     @Config(qualifiers = "w768dp-h432dp-land-xhdpi")
-    fun threeColumnsCustomPaletteIsEightTilesAcrossTheWidePage() {
-        show(panelAt(SettingsOption.Background, PanelPage.BackgroundCustom, 0))
-        // The page covers the options and the right column: 188.7..744; the grid's container is that wide and its tiles share what the padding leaves (edges: SettingsColorSliderAlign768Test).
-        compose.onNodeWithTag(PALETTE_GRID_TAG).assertLeftPositionInRootIsEqualTo(optionsLeft)
-        compose.onNodeWithTag(SettingsTags.panelItem(0)).assertLeftPositionInRootIsEqualTo(optionsLeft + PlumDimens.settingsPanelRowPadding)
+    fun threeColumnsColourPageCoversTheOptionsAndTheRightColumn() {
+        val first = ColorPages.presetCount(PanelPage.BackgroundPresets, PlumThemeSettings.Graphite.backgroundColor) + 1
+        show(panelAt(SettingsOption.Background, PanelPage.BackgroundPresets, first))
+        // The page covers the options and the right column: 188.7..744; its Shade row is that wide and the shades start inside its padding (edges: SettingsColorRowsAlign768Test).
+        compose.onNodeWithTag(SHADE_ROW_TAG).assertLeftPositionInRootIsEqualTo(optionsLeft)
+        compose.onNodeWithTag(SettingsTags.panelItem(first)).assertLeftPositionInRootIsEqualTo(optionsLeft + PlumDimens.settingsPanelRowPadding)
     }
 }

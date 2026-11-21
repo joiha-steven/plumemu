@@ -1,8 +1,6 @@
 package com.plumemu.coreui.components
 
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
@@ -16,7 +14,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.SlabDimens
-import com.plumemu.coreui.theme.PlumTheme
 import kotlin.math.min
 
 /**
@@ -140,18 +137,3 @@ fun Modifier.focusPill(
         mirror = mirror,
         stripe = stripe,
     ).then(if (stripe != null) stripe.card() else Modifier)
-
-/**
- * The focused row's look drawn as a picture only, for a sample row that shows what focus looks like (Settings' colour pages):
- * no press, no touch. Colours are read while drawing.
- */
-fun Modifier.focusPillSample(): Modifier =
-    composed {
-        val colors = PlumTheme.colors
-        drawBehind {
-            val outline = FocusPillShape.createOutline(size, layoutDirection, this)
-            drawSlabOutside(outline, colors.slab, colors.slabGlow, under = colors.bg)
-            drawSlabFill(outline, colors.slab, onCard = false)
-            drawSlabFace(outline, colors)
-        }
-    }

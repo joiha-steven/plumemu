@@ -152,9 +152,9 @@ class ReadmeMediaShots {
     private fun withDreamcastInfo(): HomeContent =
         library.withSystemInfo().let { c -> c.withEntries(c.entries.map { if (it.id == "dreamcast") it.copy(info = dreamcastInfo) else it }) }
 
-    @Test fun heroMain() = shoot("hero-main", stored(ColorSet.SpiceCube)) { HomeOf(metroidFocused) }
+    @Test fun heroMain() = shoot("hero-main", stored(ColorSet.Plumemu)) { HomeOf(metroidFocused) }
 
-    @Test fun heroGrid() = shoot("hero-grid", stored(ColorSet.Pocket)) {
+    @Test fun heroGrid() = shoot("hero-grid", stored(ColorSet.Daylight)) {
             val content = limitedTo(library, "snes", 12)
             ProvideGridSize(GridSize.Medium) {
                 ProvideHomeArt(rememberSource { posterCoverSource(library) }, content.hasBoxArt) {
@@ -168,7 +168,7 @@ class ReadmeMediaShots {
 
     @Test
     fun heroSearch() =
-        shoot("hero-search", stored(ColorSet.Ivory)) { HomeAt(library, metroidFocused, search = typingFor("super", library)) }
+        shoot("hero-search", stored(ColorSet.PeaGreen)) { HomeAt(library, metroidFocused, search = typingFor("super", library)) }
 
     /** Info's RetroAchievements section beside a list with trophies; made-up achievements, drawn badges. */
     @Test
@@ -298,6 +298,25 @@ class ReadmeMediaShots {
             }
         }
 
+    /** Collections' folders page: the cursor on the own "RPG" card (one justified cover row, name, counts, systems line). */
+    @Test
+    fun collectionsFolders() =
+        shoot("collections-folders", stored(ColorSet.Ivory)) {
+            ProvideGridSize(GridSize.Medium) {
+                ProvideHomeArt(rememberSource { posterCoverSource(withCollections) }, withCollections.hasBoxArt) { HomeAt(withCollections, collectionsRpg) }
+            }
+        }
+
+    /** Android games as a grid: made-up apps, every icon in the one launcher shape. */
+    @Test
+    fun androidGames() =
+        shoot("android-games", stored(ColorSet.Peach)) {
+            val content = remember { com.plumemu.home.appGamesBoard() }
+            CompositionLocalProvider(LocalHomeAppIcons provides remember { PosterAppIcons() }) {
+                HomeAt(content, gridActions(com.plumemu.home.ANDROID_GAMES_ENTRY, 1), gridIds = setOf("android"))
+            }
+        }
+
     /** START on Super Metroid: the game menu over the list. */
     @Test
     fun gameMenu() {
@@ -337,19 +356,19 @@ class ReadmeMediaShots {
     fun update() {
         val release =
             UpdateManifest(
-                versionCode = 2087,
-                versionName = "0.1.7",
+                versionCode = 2088,
+                versionName = "0.1.8",
                 apkUrl = "https://example.invalid/plumemu.apk",
                 size = 9_533_587,
                 sha256 = "ab".repeat(32),
                 minSdk = 23,
-                released = "2026-11-19",
-                notes = listOf("Collections sit between Favorites and Apps, beside the ones you make.", "Add a game to a collection from its game menu.", "Settings has six sections instead of ten."),
+                released = "2026-11-21",
+                notes = listOf("Collections shows the focused folder's covers.", "The focused row is one lifted card.", "Box covers have a soft shadow."),
                 notesUrl = null,
             )
-        val content = SettingsContent(update = UpdateView(lastCheck = LastCheck(1_794_216_600_000L, CheckOutcome.Found), found = release))
+        val content = SettingsContent(update = UpdateView(lastCheck = LastCheck(1_795_253_400_000L, CheckOutcome.Found), found = release))
         val row = SettingsFocus(column = SettingsColumn.Options, section = SettingsSection.About, rememberedOption = mapOf(SettingsSection.About to 0))
-        shoot("update", stored(ColorSet.Daylight)) { s -> SettingsAt(row.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0), s, content, version = "0.1.6") }
+        shoot("update", stored(ColorSet.Daylight)) { s -> SettingsAt(row.copy(column = SettingsColumn.Panel, page = PanelPage.Update, panelIndex = 0), s, content, version = "0.1.7") }
     }
 
     @Test
@@ -391,7 +410,7 @@ internal class PosterAppIcons : HomeAppIcons {
 
     override fun cached(rowId: String, sizePx: Int) = memory[rowId to sizePx]
 
-    override suspend fun load(rowId: String, sizePx: Int) = memory.getOrPut(rowId to sizePx) { draw(rowId.substringAfter('-').toInt(), sizePx) }
+    override suspend fun load(rowId: String, sizePx: Int) = memory.getOrPut(rowId to sizePx) { draw(rowId.takeLastWhile { it.isDigit() }.toInt(), sizePx) }
 
     private fun draw(n: Int, size: Int): androidx.compose.ui.graphics.ImageBitmap {
         val tops = intArrayOf(0xFFEF5350.toInt(), 0xFF42A5F5.toInt(), 0xFF66BB6A.toInt(), 0xFFAB47BC.toInt(), 0xFFFFA726.toInt(), 0xFF26C6DA.toInt(), 0xFFEC407A.toInt(), 0xFF7E57C2.toInt())

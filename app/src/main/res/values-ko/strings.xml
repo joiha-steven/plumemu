@@ -994,20 +994,16 @@
     <string name="settings_page_grain_strong">강하게</string>
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
     <string name="settings_badge_current">사용 중</string>
-    <string name="settings_background_body">색상을 고르거나 +를 눌러 직접 만드세요.</string>
-    <string name="settings_custom_title">사용자 지정 색상</string>
-    <string name="settings_slider_hue">색조</string>
-    <string name="settings_slider_saturation">채도</string>
-    <string name="settings_slider_lightness">밝기</string>
-    <string name="settings_slider_degrees">%1$d°</string>
-    <string name="settings_slider_percent">%1$d%%</string>
+    <string name="settings_background_body">색상을 고르거나 직접 만드세요.</string>
     <!-- What a screen reader says for a slider: its name, then its value ("Hue 120°"). -->
-    <string name="settings_slider_spoken">%1$s %2$s</string>
+    <string name="settings_color_row_spoken">%1$s %2$s</string>
+    <string name="settings_color_strip_label">색상</string>
+    <string name="settings_color_shade_label">명암</string>
     <string name="settings_hex_label">색상 코드</string>
     <string name="settings_hex_hint">색상(16진수)</string>
     <string name="settings_hex_use">이 색상 사용</string>
     <string name="settings_hex_error">1A2B3C처럼 숫자나 A~F 문자 6자리로 입력하세요.</string>
-    <string name="settings_text_color_body">글자 색상을 고르거나 +를 눌러 직접 만드세요. 잘 읽히는 색상만 표시돼요.</string>
+    <string name="settings_text_color_body">글자 색상을 고르거나 직접 만드세요. 잘 읽히는 색상만 표시돼요.</string>
     <string name="settings_text_color_blocked">이 배경은 회색에 너무 가까워 글자가 잘 읽히지 않아요. 배경부터 바꾸세요.</string>
     <string name="settings_color_refused_text">배경과 너무 비슷해서 읽기 어려워요. 가장 가까운 읽기 쉬운 색상: %1$s</string>
     <string name="settings_color_refused_accent">배경과 너무 비슷해서 잘 보이지 않아요. 가장 가까운 잘 보이는 색상: %1$s</string>

@@ -25,13 +25,10 @@ internal class SettingsSoundsTest : SettingsModelHarness() {
 
     @Test
     fun aWrongHexCodeTriedWithPlumemusDoneConfirmsAsUseThisColourDoes() {
-        startOnRed() // the "+" is six Rights past the Red-first accent presets
+        startOnRed()
         openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.Accent)
         press(Action.Enter)
-        repeat(6) { move(Direction.Right) }
-        move(Direction.Down)
-        press(Action.Enter) // "+": the accent palette, on a swatch
         toHexRow()
         press(Action.Enter) // Plumemu's tray up on the hex field
         press(Action.Typed(TypedKey.Text("zz")))

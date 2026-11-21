@@ -339,11 +339,8 @@ internal enum class PanelPage {
     /** Appearance › Colors: a preview tile per set (and Custom), A uses one ([colorSetsPanelEntries]). */
     ColorSets,
     BackgroundPresets,
-    BackgroundCustom,
     AccentPresets,
-    AccentCustom,
     TextPresets,
-    TextCustom,
 
     /** About › Reset…: Reset all settings, Reset library and Clear Recent…, each with what it does ([ResetPanelItem]). */
     Reset,

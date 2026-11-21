@@ -40,8 +40,8 @@ If you used Dot matrix, Super, Indigo, Charcoal or Cream, the app shows its clos
 What a set needs to get in:
 
 - **Readable.** Every set passes the same contrast checks: text at least 7:1 on the background
-  and 4.5:1 on the selected row, the accent at least 3.5:1 on the background and on the focused row's
-  tint (so its ring shows), the text on the accent at 4.7:1. If a suggestion falls short, its lightness is nudged until it passes, and the issue says
+  and 4.5:1 on the selected row, the accent at least 3.5:1 on the background and 2.5:1 on the focused row's
+  card (so its accent bar shows), the text on the accent at 4.7:1. If a suggestion falls short, its lightness is nudged until it passes, and the issue says
   what changed.
 - **Its own name.** Sets may be inspired by classic consoles and handhelds, but are never named after a console,
   a company or a brand.

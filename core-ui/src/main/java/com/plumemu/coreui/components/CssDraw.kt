@@ -60,9 +60,12 @@ internal fun DrawScope.drawCssShadows(
     val w = size.width.roundToInt()
     val h = size.height.roundToInt()
     if (w <= 0 || h <= 0) return
-    val layers = shadows.map { CssImages.Layer(it.color, it.y.toPx(), it.blur.toPx() / 2f, it.spread.toPx(), it.inset) }
+    // A lone glow is the accent's colour, which a colour page changes at every step: its image is built white and tinted here, so one image serves every colour.
+    val glow = shadows.singleOrNull()?.takeIf { it.glow && !it.inset }
+    val tint = glow?.color?.copy(alpha = 1f)
+    val layers = shadows.map { CssImages.Layer(if (glow != null) glow.color.copy(red = 1f, green = 1f, blue = 1f) else it.color, it.y.toPx(), it.blur.toPx() / 2f, it.spread.toPx(), it.inset) }
     val shown = CssImages.shown(w, h, min(corner, min(w, h) / 2f), layers) ?: return
-    with(shown) { drawIn(topLeft, w, h, alpha) }
+    with(shown) { drawIn(topLeft, w, h, alpha, tint) }
 }
 
 /**
@@ -130,11 +133,12 @@ internal object CssImages {
             bw: Int,
             bh: Int,
             alpha: Float,
+            tint: Color? = null,
         ) {
             val image = placed.image
             val x = axis(topLeft.x, placed.dx, image.width, w, bw, slicedX)
             val y = axis(topLeft.y, placed.dy, image.height, h, bh, slicedY)
-            drawSliced(image, if (x[2] == 1) keep else -1, if (y[2] == 1) keep else -1, 1, IntOffset(x[0], y[0]), IntSize(x[1], y[1]), alpha)
+            drawSliced(image, if (x[2] == 1) keep else -1, if (y[2] == 1) keep else -1, 1, IntOffset(x[0], y[0]), IntSize(x[1], y[1]), alpha, tint = tint)
         }
 
         /** Where one side is drawn: (start, length, 1 when sliced). A side built for another length and not sliced is stretched. */

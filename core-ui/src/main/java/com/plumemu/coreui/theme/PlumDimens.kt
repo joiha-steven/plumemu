@@ -303,18 +303,25 @@ object PlumDimens {
     val settingsHexRowHeight = 36.dp
 
     /**
-     * The Hue, Saturation and Lightness rows under the palette: the row fill
-     * and ring of the hex row; inside, a label line and the track, [settingsSliderRowPad] above and
-     * below. The track is a bar [settingsSliderTrack] high running from one row-text line to the
-     * other; the thumb is a dot [settingsSliderThumb] across with a [settingsSliderThumbRing]
-     * `strong` ring, its edges on the row-text lines at both ends. The part of a background's
-     * track that no text reads on is drawn at [SETTINGS_SLIDER_DIMMED_ALPHA].
+     * The Color row's strip (a colour page): the row fill and ring of the hex row; inside, a label line and the
+     * strip band, [settingsSliderRowPad] above and below. The band is as high as a preset key with its insets
+     * ([settingsStripBand]: the Shade row's keys fit it, so both rows are one height, and it is a touch target of
+     * the keys' size); the strip is a bar [settingsSliderTrack] high (a bit less than a key's 40, so the hues read
+     * as colour and not as a line) with round ends, centred in the band and running from one row-text line to the
+     * other; the loupe is a round lens [settingsSliderThumb] across (the band's height: 14 more than the bar, so
+     * it clearly stands over it), centred on the stop in effect and straddling the bar, its edges on the row-text
+     * lines at both end stops: a pale glass rim [settingsLoupeRim] wide round the colour shown, a pointer
+     * [settingsLoupeNotch] under it; on a finger's drag it lifts [settingsLoupeLift] (the label's line, the gap
+     * and the row's padding: its top stays inside the row) so the finger never covers it.
      */
     val settingsSliderRowPad = 6.dp
-    val settingsSliderTrack = 10.dp
-    val settingsSliderThumb = 20.dp
+    val settingsSliderTrack = 32.dp
     val settingsSliderThumbRing = 2.dp
-    const val SETTINGS_SLIDER_DIMMED_ALPHA = 0.3f
+    val settingsStripBand = settingsPresetSwatch + settingsSwatchInset * 2
+    val settingsSliderThumb = settingsStripBand
+    val settingsLoupeRim = 3.dp
+    val settingsLoupeNotch = 4.dp
+    val settingsLoupeLift = 26.dp
 
     /**
      * Inside a side panel's rows, left and right: the row-text line, the same as [gameRowPadding] so a
@@ -339,10 +346,6 @@ object PlumDimens {
 
     /** A system row's top and bottom padding in that panel (name over its game count). */
     val settingsSystemRowPadding = 6.dp
-
-    /** The sample game rows under the background swatches: 32 high, 2 apart, 4 above. */
-    val settingsPreviewRowHeight = 32.dp
-    val settingsPreviewTopPadding = 4.dp
 
     /** A text colour card ("Aa"): 12 inside, 6 between its lines, 10 apart. */
     val settingsInkCardPadding = 12.dp

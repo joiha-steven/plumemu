@@ -6,71 +6,69 @@ import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.theme.BackgroundPreset
-import com.plumemu.coreui.theme.CustomPalette
-import com.plumemu.coreui.theme.Rgb
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The "+" page opens with its ring on the swatch nearest the current colour, a swatch that was never
- * previewed: A before any move keeps the current colour, a tap on that swatch picks it, and once the
- * cursor moved A picks what it shows. Also the names of the tinted text presets.
+ * A colour page opens with its cursor on the shade nearest an own colour, a shade that was never
+ * previewed: A before any move keeps the current colour, a tap on that shade keeps it, and once the
+ * cursor moved A keeps what it shows. Also the names of the tinted text presets.
  */
 internal class SettingsColorPickTest : SettingsModelHarness() {
     private val typed = ColorSetting.Custom(0x123456)
 
-    private fun openBackgroundPlusPage() {
+    private fun openBackgroundOnTheTypedColour() {
         actions.settings = actions.settings.copy(appearance = appearance.copy(background = typed))
         model.forgetColorWrites()
         openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.Background)
         press(Action.Enter)
-        // A custom colour opens the palette page directly.
-        assertEquals(PanelPage.BackgroundCustom, model.focus.page)
+        // An own colour opens on its nearest shade.
+        assertEquals(PanelPage.BackgroundPresets, model.focus.page)
+        assertEquals(ColorPart.Shade, model.colourPart)
     }
 
+    private fun shadeUnderTheCursor() = model.colorShades(colourPage)[model.focus.panelIndex - model.colorIndex(colourPage) - 1]
+
     @Test
-    fun aAtOnceKeepsTheTypedColourInsteadOfTheSwatchUnderTheRing() {
-        openBackgroundPlusPage()
-        val ring = backgroundGrid[model.focus.panelIndex]
-        assertNotEquals("the ring sits on a different colour than the typed one", typed.rgb, ring.value)
+    fun aAtOnceKeepsTheTypedColourInsteadOfTheShadeUnderTheCursor() {
+        openBackgroundOnTheTypedColour()
+        assertNotEquals("the cursor sits on a different colour than the typed one", typed.rgb, shadeUnderTheCursor().value)
         press(Action.Enter)
         assertOnColorsRow(COLORS_BACKGROUND_ITEM, "the page closed")
         assertEquals(typed, appearance.background)
     }
 
     @Test
-    fun aTapOnTheSwatchUnderTheRingPicksThatSwatch() {
-        openBackgroundPlusPage()
-        val at = model.focus.panelIndex
-        model.onTapPanelItem(at, actions.shown, wide)
+    fun aTapOnTheShadeUnderTheCursorKeepsThatShade() {
+        openBackgroundOnTheTypedColour()
+        val shade = shadeUnderTheCursor()
+        model.onTapPanelItem(model.focus.panelIndex, actions.shown, wide)
         assertOnColorsRow(COLORS_BACKGROUND_ITEM, "the page closed")
-        assertEquals(ColorSetting.Custom(backgroundGrid[at].value), appearance.background)
+        assertEquals(ColorSetting.Custom(shade.value), appearance.background)
     }
 
     @Test
-    fun afterTheCursorMovedAPicksTheSwatchItShows() {
-        openBackgroundPlusPage()
+    fun afterTheCursorMovedAKeepsTheShadeItShows() {
+        openBackgroundOnTheTypedColour()
         val from = model.focus.panelIndex
-        move(if (from % ColorPages.PALETTE_COLUMNS == 0) Direction.Right else Direction.Left)
-        val at = model.focus.panelIndex
-        assertNotEquals(from, at)
+        move(if (from == model.shadeIndex(colourPage, 0)) Direction.Right else Direction.Left)
+        assertNotEquals(from, model.focus.panelIndex)
+        val shade = shadeUnderTheCursor()
         press(Action.Enter)
-        assertEquals(ColorSetting.Custom(backgroundGrid[at].value), appearance.background)
+        assertEquals(ColorSetting.Custom(shade.value), appearance.background)
     }
 
     @Test
-    fun reopeningPlusAfterAMoveAndBackKeepsTheCurrentColourOnAAtOnce() {
-        openBackgroundPlusPage()
+    fun reopeningAfterAMoveAndBackKeepsTheCurrentColourOnAAtOnce() {
+        openBackgroundOnTheTypedColour()
         move(Direction.Right)
         press(Action.Back)
-        assertEquals(PanelPage.BackgroundPresets, model.focus.page)
-        // B puts the focus back on "+", so A opens it (openPlus would also tap a swatch of the page it opens).
+        assertOnColorsRow(COLORS_BACKGROUND_ITEM)
         press(Action.Enter)
-        assertEquals(PanelPage.BackgroundCustom, model.focus.page)
+        assertEquals(ColorPart.Shade, model.colourPart)
         // The cursor moved on the first visit; the reopened page must not remember it.
         press(Action.Enter)
         assertOnColorsRow(COLORS_BACKGROUND_ITEM, "the page closed")
@@ -79,9 +77,9 @@ internal class SettingsColorPickTest : SettingsModelHarness() {
 
     @Test
     fun movingThenBackBringsTheColourFromBeforeThePageBack() {
-        openBackgroundPlusPage()
+        openBackgroundOnTheTypedColour()
         move(Direction.Right)
-        assertNotEquals("the move previewed a swatch", typed, appearance.background)
+        assertNotEquals("the move previewed a shade", typed, appearance.background)
         press(Action.Back)
         assertEquals(typed, appearance.background)
     }

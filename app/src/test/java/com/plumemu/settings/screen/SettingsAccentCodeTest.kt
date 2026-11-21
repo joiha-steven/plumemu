@@ -16,40 +16,25 @@ internal class SettingsAccentCodeTest : SettingsModelHarness() {
         openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.Accent)
         press(Action.Enter)
-        openPlus()
-        assertEquals(PanelPage.AccentCustom, model.focus.page)
+        assertEquals(PanelPage.AccentPresets, model.focus.page)
     }
 
-    private val cells: Int get() = ColorPages.palette(model.focus.page!!, actions.settings.toThemeSettings().backgroundColor).size
+    private fun shown(): Rgb = actions.settings.toThemeSettings().accentColor
 
-    private fun onSlider(slider: ColorSlider) {
-        var guard = 0
-        while (model.focus.panelIndex != cells + slider.ordinal && guard++ < MAX_MOVES) move(Direction.Down)
-        assertEquals(cells + slider.ordinal, model.focus.panelIndex)
-    }
-
-    /** With a store that writes, what the sliders stand on and what the Color code row shows are one colour after every kind of move on the Accent page. */
+    /** With a store that writes, the accent in effect (what the Color code row shows) is the shade the cursor or strip stands on after every kind of move on the Accent page. */
     @Test
-    fun accentSlidersAndTheColorCodeNeverDisagree() {
+    fun theAccentShownIsAlwaysTheShadeTheCursorStandsOn() {
         openAccent()
-        fun assertTheyAgree(what: String) = assertEquals(what, actions.settings.toThemeSettings().accentColor.value, Rgb(model.sliderHsl.rgb().value).value)
-        repeat(2) {
-            move(Direction.Right)
-            assertTheyAgree("a step on the grid")
-        }
-        for (slider in listOf(ColorSlider.Hue, ColorSlider.Saturation, ColorSlider.Lightness)) {
-            onSlider(slider)
-            assertTheyAgree("arriving on $slider")
-            move(Direction.Right)
-            assertTheyAgree("a step of $slider")
-            move(Direction.Left)
-            assertTheyAgree("back a step of $slider")
-        }
-        repeat(ColorSlider.entries.size + 1) { move(Direction.Up) }
-        assertTheyAgree("up on the grid")
-    }
-
-    private companion object {
-        const val MAX_MOVES = 20
+        toShade()
+        val shades = model.colorShades(colourPage)
+        assertEquals("arriving on a shade", shades[model.shadePlaceOf(colourPage)], shown())
+        move(Direction.Right)
+        assertEquals("a step among the shades", shades[model.focus.panelIndex - model.colorIndex(colourPage) - 1], shown())
+        move(Direction.Up)
+        move(Direction.Right)
+        val onColor = model.colorShades(colourPage)
+        assertEquals("a step on Color", onColor[model.shadePlaceOf(colourPage)], shown())
+        toHexRow()
+        assertEquals("arriving on the Color code row keeps it", onColor[model.shadePlaceOf(colourPage)], shown())
     }
 }

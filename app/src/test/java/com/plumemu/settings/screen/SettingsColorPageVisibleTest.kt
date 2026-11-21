@@ -22,7 +22,6 @@ import com.plumemu.home.BOARD_BATTERY
 import com.plumemu.home.BOARD_CLOCK
 import com.plumemu.home.appComposeRule
 import com.plumemu.home.rulesAround
-import com.plumemu.settings.toThemeSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -32,17 +31,18 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** "Your own color": with the focus on each slider in turn, that row lies wholly inside the scrolling area (the panel scrolls it in). */
-abstract class SettingsOwnColorSlidersVisibleBase {
+/** The colour page: with the focus on Color, a shade and the Color code row in turn, that row lies wholly inside the scrolling area (the panel scrolls it in). */
+abstract class SettingsColorPageVisibleBase {
     private val compose: ComposeContentTestRule = appComposeRule()
 
     @get:Rule
     val rules = rulesAround(compose)
 
-    private var swatchCount = 0
+    /** The test tag of the row for [part] on the page being shown. */
+    private var tags = mapOf<ColorPart, String>()
 
     @Composable
-    private fun Page(slider: ColorSlider, toSwatch: Boolean = false) {
+    private fun Page(part: ColorPart) {
         val base = settingsForShot()
         val settings: PlumSettings = base.copy(controls = base.controls.copy(keyboard = KeyboardSetting.Android))
         val geometry = settingsGeometry(PlumTheme.layout)
@@ -50,14 +50,15 @@ abstract class SettingsOwnColorSlidersVisibleBase {
             remember {
                 SettingsModel(NoActions, optionsAt(SettingsOption.Background)).also { model ->
                     model.onAction(Action.Enter, settings, geometry)
-                    val presets = PanelPage.BackgroundPresets
-                    val plus = ColorPages.presetCount(presets, settings.toThemeSettings().backgroundColor) - 1
-                    model.onTapPanelItem(plus, settings, geometry)
-                    if (model.focus.page == presets) model.onTapPanelItem(plus, settings, geometry)
-                    val swatches = ColorPages.palette(model.focus.page!!, settings.toThemeSettings().backgroundColor).size
-                    swatchCount = swatches
                     var guard = 0
-                    while (!toSwatch && model.focus.panelIndex < swatches + slider.ordinal && guard++ < 30) model.onAction(Action.Move(Direction.Down), settings, geometry)
+                    while (model.colourPart != part && guard++ < 40) model.onAction(Action.Move(Direction.Down), settings, geometry)
+                    val page = checkNotNull(model.focus.page)
+                    tags =
+                        mapOf(
+                            ColorPart.Color to SettingsTags.panelItem(model.colorIndex(page)),
+                            ColorPart.Shade to SettingsTags.panelItem(model.colorIndex(page) + 1),
+                            ColorPart.Hex to SettingsTags.HEX_ROW,
+                        )
                 }
             }
         CompositionLocalProvider(LocalScanPulsePhase provides 0.5f) {
@@ -65,34 +66,28 @@ abstract class SettingsOwnColorSlidersVisibleBase {
         }
     }
 
-    /** The page opens at its top; when every row fits the viewport, all of them (the sliders and the hex row included) are visible then. */
+    /** The page opens at its top (the presets) in the scrolling area. */
     @Test
-    fun thePageOpensAtItsTopAndShowsEveryRowWhenTheyFit() {
-        compose.setContent { PlumTheme(ReferenceShots.Preset.Graphite.settings) { Page(ColorSlider.Hue, toSwatch = true) } }
+    fun thePageOpensAtItsTop() {
+        compose.setContent { PlumTheme(ReferenceShots.Preset.Graphite.settings) { Page(ColorPart.Preset) } }
         compose.waitForIdle()
         val scroll = compose.onNodeWithTag(SettingsTags.COLOR_SCROLL, useUnmergedTree = true).fetchSemanticsNode()
         val range = scroll.config[SemanticsProperties.VerticalScrollAxisRange]
-        val area = compose.onNodeWithTag(SettingsTags.COLOR_SCROLL, useUnmergedTree = true).getUnclippedBoundsInRoot()
         assertEquals("opens at the top (max scroll ${range.maxValue()})", 0f, range.value(), 0.5f)
-        if (range.maxValue() > 0f) return
-        for (slider in ColorSlider.entries) {
-            val row = compose.onNodeWithTag(SettingsTags.panelItem(swatchCount + slider.ordinal), useUnmergedTree = true).getUnclippedBoundsInRoot()
-            assertTrue("${slider.name} ${row.top}..${row.bottom} is inside ${area.top}..${area.bottom}", row.top >= area.top && row.bottom <= area.bottom)
-        }
     }
 
     @Test
-    fun everySliderRowIsInsideTheScrollingAreaWhenFocused() {
-        var look by mutableStateOf(Pair(ReferenceShots.Preset.Graphite, ColorSlider.Hue))
+    fun everyRowUnderThePresetsIsInsideTheScrollingAreaWhenFocused() {
+        var look by mutableStateOf(Pair(ReferenceShots.Preset.Graphite, ColorPart.Color))
         compose.setContent { PlumTheme(look.first.settings) { key(look) { Page(look.second) } } }
         for (preset in ReferenceShots.Preset.entries) {
-            for (slider in ColorSlider.entries) {
-                look = Pair(preset, slider)
+            for (part in listOf(ColorPart.Color, ColorPart.Shade, ColorPart.Hex)) {
+                look = Pair(preset, part)
                 compose.waitForIdle()
                 val area = compose.onNodeWithTag(SettingsTags.COLOR_SCROLL, useUnmergedTree = true).getUnclippedBoundsInRoot()
-                val row = compose.onNodeWithTag(SettingsTags.panelItem(swatchCount + slider.ordinal), useUnmergedTree = true).getUnclippedBoundsInRoot()
+                val row = compose.onNodeWithTag(checkNotNull(tags[part]), useUnmergedTree = true).getUnclippedBoundsInRoot()
                 assertTrue(
-                    "${preset.name} ${slider.name} focused: row ${row.top}..${row.bottom} lies inside the area ${area.top}..${area.bottom}",
+                    "${preset.name} ${part.name} focused: row ${row.top}..${row.bottom} lies inside the area ${area.top}..${area.bottom}",
                     row.top >= area.top && row.bottom <= area.bottom,
                 )
             }
@@ -103,14 +98,14 @@ abstract class SettingsOwnColorSlidersVisibleBase {
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w853dp-h480dp-land-360dpi")
-class SettingsOwnColorSliders853VisibleTest : SettingsOwnColorSlidersVisibleBase()
+class SettingsColorPage853VisibleTest : SettingsColorPageVisibleBase()
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w768dp-h432dp-land-xhdpi")
-class SettingsOwnColorSliders768VisibleTest : SettingsOwnColorSlidersVisibleBase()
+class SettingsColorPage768VisibleTest : SettingsColorPageVisibleBase()
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ReferenceShots.ROBOLECTRIC_SDK], qualifiers = "w576dp-h432dp-land-xhdpi")
-class SettingsOwnColorSliders576VisibleTest : SettingsOwnColorSlidersVisibleBase()
+class SettingsColorPage576VisibleTest : SettingsColorPageVisibleBase()

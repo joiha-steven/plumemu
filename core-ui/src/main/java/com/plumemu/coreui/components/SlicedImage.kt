@@ -2,6 +2,8 @@ package com.plumemu.coreui.components
 
 import android.graphics.Rect
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
@@ -42,6 +44,8 @@ internal fun DrawScope.drawSliced(
     dstSize: IntSize,
     alpha: Float = 1f,
     blendMode: BlendMode = DrawScope.DefaultBlendMode,
+    /** An opaque colour the image's alpha is filled with (the image is white); null draws the image as it is. */
+    tint: Color? = null,
 ) {
     val xs = pieces(image.width, keepX, scale, dstSize.width)
     val ys = pieces(image.height, keepY, scale, dstSize.height)
@@ -49,6 +53,8 @@ internal fun DrawScope.drawSliced(
     val slicePaint = slicePaints.get()!!
     slicePaint.alpha = alpha
     slicePaint.blendMode = blendMode
+    // The paint is shared by every draw of the thread: the filter is always set, so a tint never leaks into the next draw.
+    slicePaint.colorFilter = tint?.let { ColorFilter.tint(it, BlendMode.SrcIn) }
     val bitmap = image.asAndroidBitmap()
     val src = Rect()
     val to = Rect()

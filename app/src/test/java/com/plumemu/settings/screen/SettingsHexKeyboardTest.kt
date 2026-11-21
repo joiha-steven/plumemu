@@ -38,7 +38,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [28], qualifiers = "w768dp-h432dp-land-xhdpi")
 internal class SettingsHexKeyboardTest : SettingsModelHarness() {
     init {
-        startOnRed() // the "+" is reached by walking the accent presets from Red
+        startOnRed() // the accent presets are walked from Red
     }
 
     private val compose = appComposeRule()
@@ -57,11 +57,9 @@ internal class SettingsHexKeyboardTest : SettingsModelHarness() {
         openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.Accent)
         press(Action.Enter)
-        repeat(6) { press(Action.Move(Direction.Right)) }
-        press(Action.Move(Direction.Down))
-        press(Action.Enter) // "+": the accent palette, on a swatch
         repeat(10) { press(Action.Move(Direction.Down)) } // the hex code is the last row
-        assertEquals(PanelPage.AccentCustom, model.focus.page)
+        assertEquals(PanelPage.AccentPresets, model.focus.page)
+        assertEquals(ColorPart.Hex, model.colourPart)
         val touch =
             SettingsTouch(
                 onSection = {},

@@ -18,6 +18,7 @@ import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.components.FieldTags
 import com.plumemu.coreui.testing.ReferenceShots
+import com.plumemu.coreui.theme.PlumDimens
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.PlumThemeSettings
 import com.plumemu.coreui.theme.TextSize
@@ -109,7 +110,11 @@ class SettingsLargestRestsTest {
             val width = (panel.right - panel.left).value
             val fields = compose.onAllNodesWithTag(FieldTags.BOX, useUnmergedTree = true).fetchSemanticsNodes()
             assertEquals(2, fields.size)
-            for (field in fields) assertTrue("a field ${field.size.width} px wide in a $width dp panel", field.size.width / DENSITY >= width * 0.9f)
+            // The page is whole-width now (the options' room too), with its labels beside the fields: what must hold is that every field reaches the panel's right text line.
+            for (field in fields) {
+                val right = (field.positionInRoot.x + field.size.width) / DENSITY
+                assertTrue("a field ends at $right dp in a $width dp panel ending at ${panel.right.value}", right >= panel.right.value - PlumDimens.settingsPanelRowPadding.value - 1f && field.size.width / DENSITY >= width * 0.8f)
+            }
         }
 
     @Test

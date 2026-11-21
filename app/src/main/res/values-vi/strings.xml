@@ -994,20 +994,16 @@
     <string name="settings_page_grain_strong">Mạnh</string>
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
     <string name="settings_badge_current">Đang dùng</string>
-    <string name="settings_background_body">Chọn một màu, hoặc chọn + để tự tạo màu.</string>
-    <string name="settings_custom_title">Màu tự chọn</string>
-    <string name="settings_slider_hue">Tông màu</string>
-    <string name="settings_slider_saturation">Độ bão hòa</string>
-    <string name="settings_slider_lightness">Độ sáng</string>
-    <string name="settings_slider_degrees">%1$d°</string>
-    <string name="settings_slider_percent">%1$d%%</string>
+    <string name="settings_background_body">Chọn một màu, hoặc tự tạo màu.</string>
     <!-- What a screen reader says for a slider: its name, then its value ("Hue 120°"). -->
-    <string name="settings_slider_spoken">%1$s %2$s</string>
+    <string name="settings_color_row_spoken">%1$s %2$s</string>
+    <string name="settings_color_strip_label">Màu</string>
+    <string name="settings_color_shade_label">Sắc độ</string>
     <string name="settings_hex_label">Mã màu</string>
     <string name="settings_hex_hint">Màu (hex)</string>
     <string name="settings_hex_use">Dùng màu này</string>
     <string name="settings_hex_error">Gồm sáu chữ số hoặc chữ cái từ A đến F, ví dụ 1A2B3C.</string>
-    <string name="settings_text_color_body">Chọn màu chữ, hoặc chọn + để tự tạo màu. Chỉ hiện những màu dễ đọc.</string>
+    <string name="settings_text_color_body">Chọn màu chữ, hoặc tự tạo màu. Chỉ hiện những màu dễ đọc.</string>
     <string name="settings_text_color_blocked">Nền này quá xám nên chữ khó đọc. Hãy đổi màu nền trước.</string>
     <string name="settings_color_refused_text">Quá gần màu nền nên khó đọc. Màu dễ đọc gần nhất: %1$s</string>
     <string name="settings_color_refused_accent">Quá gần màu nền nên khó thấy. Màu dễ thấy gần nhất: %1$s</string>

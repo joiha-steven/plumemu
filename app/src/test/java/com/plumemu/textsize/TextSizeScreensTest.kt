@@ -288,7 +288,7 @@ abstract class TextSizeScreensBase(
 
     @Test
     fun settingsBackgroundPanel() =
-        check("settings_background", Spec(scrollTags = settingsLists, focused = tagged(SettingsTags.panelItem(0)), shoot = true)) { SettingsAt(com.plumemu.settings.screen.colorPageAt(SettingsOption.Background)) }
+        check("settings_background", Spec(scrollTags = settingsLists + SettingsTags.COLOR_SCROLL, focused = tagged(SettingsTags.panelItem(0)), shoot = true)) { SettingsAt(com.plumemu.settings.screen.colorPageAt(SettingsOption.Background)) }
 
     @Test
     fun settingsAdvanced() =

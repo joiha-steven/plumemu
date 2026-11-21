@@ -994,20 +994,16 @@
     <string name="settings_page_grain_strong">強</string>
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
     <string name="settings_badge_current">使用中</string>
-    <string name="settings_background_body">色を選ぶか、+を選んで自分で作れます。</string>
-    <string name="settings_custom_title">オリジナルの色</string>
-    <string name="settings_slider_hue">色相</string>
-    <string name="settings_slider_saturation">彩度</string>
-    <string name="settings_slider_lightness">明度</string>
-    <string name="settings_slider_degrees">%1$d°</string>
-    <string name="settings_slider_percent">%1$d%%</string>
+    <string name="settings_background_body">色を選ぶか、自分で作れます。</string>
     <!-- What a screen reader says for a slider: its name, then its value ("Hue 120°"). -->
-    <string name="settings_slider_spoken">%1$s %2$s</string>
+    <string name="settings_color_row_spoken">%1$s %2$s</string>
+    <string name="settings_color_strip_label">色</string>
+    <string name="settings_color_shade_label">濃淡</string>
     <string name="settings_hex_label">カラーコード</string>
     <string name="settings_hex_hint">色（16進数）</string>
     <string name="settings_hex_use">この色を使う</string>
     <string name="settings_hex_error">数字またはA〜Fの英字6文字で入力してください（例：1A2B3C）。</string>
-    <string name="settings_text_color_body">文字の色を選ぶか、+を選んで自分で作れます。表示されるのは読みやすい色だけです。</string>
+    <string name="settings_text_color_body">文字の色を選ぶか、自分で作れます。表示されるのは読みやすい色だけです。</string>
     <string name="settings_text_color_blocked">この背景はグレーに近すぎて、読みやすい文字の色がありません。先に背景を変更してください。</string>
     <string name="settings_color_refused_text">背景に近すぎて読めません。読みやすい近い色：%1$s</string>
     <string name="settings_color_refused_accent">背景に近すぎて見えません。見やすい近い色：%1$s</string>

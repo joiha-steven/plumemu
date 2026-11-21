@@ -66,6 +66,9 @@ class SettingsPanelTextLineTest {
 
     private fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot()
 
+    private fun textRight(text: String) =
+        compose.onNode(hasText(text) and hasAnyAncestor(hasTestTag(SettingsTags.PANEL)), useUnmergedTree = true).getUnclippedBoundsInRoot().right.value
+
     private fun textLeft(text: String) =
         compose.onNode(hasText(text) and hasAnyAncestor(hasTestTag(SettingsTags.PANEL)), useUnmergedTree = true).getUnclippedBoundsInRoot().left.value
 
@@ -86,9 +89,6 @@ class SettingsPanelTextLineTest {
         val cases =
             listOf(
                 optionsAt(SettingsOption.PushRightToPlay) to listOf("Push right twice to play"),
-                panelAt(SettingsOption.Background, PanelPage.BackgroundPresets, 0) to listOf("Background", "Graphite"),
-                // The Accent page names the focused accent under the swatches, like Background and Text color.
-                panelAt(SettingsOption.Accent, PanelPage.AccentPresets, com.plumemu.coreui.theme.AccentPreset.Red.ordinal) to listOf("Red"),
                 optionsAt(SettingsOption.Version) to
                     // A note's text hangs one indent past the line, after its dot (SettingsUpdateNotesAlignTest).
                     listOf(if (size == com.plumemu.coreui.theme.TextSize.Small) "Plumemu 0.0.2-alpha → 0.0.3-alpha" else "0.0.2-alpha → 0.0.3-alpha"),
@@ -103,6 +103,37 @@ class SettingsPanelTextLineTest {
             }
         }
         assertTrue(problems.joinToString("\n"), problems.isEmpty())
+    }
+
+    /** The colour page covers the options too (a whole-width page): its title starts where the Color row's label does and the colour's name ends on the row-text line at the right end of the title row. */
+    @Test
+    fun theColourPagesTitleAndNameLineStartOnTheRowTextLineOfItsRows() {
+        compose.setContent { PlumTheme(PlumThemeSettings.Graphite) { SettingsAt(panelAt(SettingsOption.Background, PanelPage.BackgroundPresets, 0), settingsForShot()) } }
+        compose.waitForIdle()
+        val label = textLeft("Color") - bounds(SettingsTags.panelItem(ColorPages.presetCount(PanelPage.BackgroundPresets, PlumThemeSettings.Graphite.backgroundColor))).left.value
+        assertTrue("the Color label sits ${PlumDimens.settingsPanelRowPadding} in its row (got $label)", kotlin.math.abs(label - PlumDimens.settingsPanelRowPadding.value) <= TOLERANCE)
+        val title = textLeft("Background")
+        val row = bounds(SettingsTags.panelItem(ColorPages.presetCount(PanelPage.BackgroundPresets, PlumThemeSettings.Graphite.backgroundColor)))
+        assertTrue("the title ($title) starts on the row-text line", kotlin.math.abs(title - (row.left.value + PlumDimens.settingsPanelRowPadding.value)) <= TOLERANCE)
+        val name = textRight("Graphite")
+        assertTrue("the name ends at $name, not on the row-text line ${row.right.value - PlumDimens.settingsPanelRowPadding.value}", kotlin.math.abs(name - (row.right.value - PlumDimens.settingsPanelRowPadding.value)) <= TOLERANCE)
+    }
+
+    /** The Accent page names the accent in effect at the right end of its title row, like Background and Text color. */
+    @Test
+    fun theAccentPagesNameLineStartsWhereItsTitleDoes() {
+        compose.setContent {
+            PlumTheme(PlumThemeSettings.Graphite) {
+                val settings = settingsForShot().let { it.copy(appearance = it.appearance.copy(accent = ColorSetting.Preset("Red"))) }
+                SettingsAt(panelAt(SettingsOption.Accent, PanelPage.AccentPresets, com.plumemu.coreui.theme.AccentPreset.Red.ordinal), settings)
+            }
+        }
+        compose.waitForIdle()
+        val title = textLeft("Accent color")
+        val row = bounds(SettingsTags.panelItem(ColorPages.presetCount(PanelPage.AccentPresets, PlumThemeSettings.Graphite.backgroundColor)))
+        val name = textRight("Red")
+        assertTrue("the title ($title) starts on the row-text line", kotlin.math.abs(title - (row.left.value + PlumDimens.settingsPanelRowPadding.value)) <= TOLERANCE)
+        assertTrue("the name ends at $name, not on the row-text line ${row.right.value - PlumDimens.settingsPanelRowPadding.value}", kotlin.math.abs(name - (row.right.value - PlumDimens.settingsPanelRowPadding.value)) <= TOLERANCE)
     }
 
     @Test

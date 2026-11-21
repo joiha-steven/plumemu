@@ -119,26 +119,33 @@ class SettingsPressFeelTest {
     }
 
     @Test
-    fun thePlusTileDips() {
-        show { SettingsAt(panelAt(SettingsOption.Accent, PanelPage.AccentPresets, ColorPages.bySystemIndex + 1)) }
-        checkDips(SettingsTags.panelItem(ColorPages.bySystemIndex + 1), SettingsTags.panelItem(0))
+    fun aShadeKeyDips() {
+        val first = ColorPages.presetCount(PanelPage.BackgroundPresets, PlumThemeSettings.Graphite.backgroundColor) + 1
+        show { SettingsAt(panelAt(SettingsOption.Background, PanelPage.BackgroundPresets, first)) }
+        checkDips(SettingsTags.panelItem(first), SettingsTags.panelItem(0))
     }
 
-    /** The accent's own-colour page with the cursor on the Color code row, then [steps]; Android's keyboard, so no tray. */
+    /** The accent's page with the cursor on the Color code row, then [steps]; Android's keyboard, so no tray. */
     @Composable
     private fun ColorCode(steps: SettingsModel.(PlumSettings, SettingsGeometry) -> Unit) {
         val base = settingsForShot()
         val settings = base.copy(controls = base.controls.copy(keyboard = KeyboardSetting.Android))
         val geometry = settingsGeometry(PlumTheme.layout)
-        val row = PaletteCuration.curated(CustomPalette.accentSwatchesOn(settings.toThemeSettings().backgroundColor)).size + ColorSlider.entries.size
-        val model = remember { SettingsModel(NoActions, panelAt(SettingsOption.Accent, PanelPage.AccentCustom, row)).also { it.steps(settings, geometry) } }
+        val model =
+            remember {
+                SettingsModel(NoActions, optionsAt(SettingsOption.Accent)).also {
+                    it.onAction(Action.Enter, settings, geometry) // Accent color's page
+                    repeat(12) { _ -> it.onAction(Action.Move(Direction.Down), settings, geometry) } // down to the Color code row
+                    it.steps(settings, geometry)
+                }
+            }
         SettingsLayout(settings, model, NoTouch, TEST_VERSION, clock = { BOARD_CLOCK }, battery = { BOARD_BATTERY })
     }
 
     @Test
     fun theColorCodeRowDips() {
         show { ColorCode { _, _ -> } }
-        checkDips(SettingsTags.HEX_ROW, SettingsTags.panelItem(PaletteCuration.curated(CustomPalette.accentSwatchesOn(PlumThemeSettings.Graphite.backgroundColor)).size - 1))
+        checkDips(SettingsTags.HEX_ROW, SettingsTags.panelItem(0))
     }
 
     @Test
@@ -150,8 +157,8 @@ class SettingsPressFeelTest {
                 onAction(Action.Move(Direction.Down), settings, geometry)
             }
         }
-        // Not the Color code row: the Use row's glow reaches into it. A slider, not a swatch: the panel has scrolled the swatches past its top.
-        checkDips(SettingsTags.HEX_USE, SettingsTags.panelItem(PaletteCuration.curated(CustomPalette.accentSwatchesOn(PlumThemeSettings.Graphite.backgroundColor)).size + 1))
+        // Not the Color code row: the Use row's glow reaches into it. The Color row, not a preset: the panel has scrolled the presets past its top.
+        checkDips(SettingsTags.HEX_USE, SettingsTags.panelItem(ColorPages.presetCount(PanelPage.AccentPresets, PlumThemeSettings.Graphite.backgroundColor)))
     }
 
     /** The Color code row with Plumemu's own keyboard: A on the row brings the tray up; [steps] then run on the model. */
@@ -165,11 +172,12 @@ class SettingsPressFeelTest {
         val geometry = settingsGeometry(PlumTheme.layout)
         ownGeometry = geometry
         ownSettings = settings
-        val row = PaletteCuration.curated(CustomPalette.accentSwatchesOn(settings.toThemeSettings().backgroundColor)).size + ColorSlider.entries.size
         val model =
             remember {
-                SettingsModel(NoActions, panelAt(SettingsOption.Accent, PanelPage.AccentCustom, row)).also {
-                    it.onAction(Action.Enter, settings, geometry)
+                SettingsModel(NoActions, optionsAt(SettingsOption.Accent)).also {
+                    it.onAction(Action.Enter, settings, geometry) // Accent color's page
+                    repeat(12) { _ -> it.onAction(Action.Move(Direction.Down), settings, geometry) } // down to the Color code row
+                    it.onAction(Action.Enter, settings, geometry) // starts typing
                     ownModel = it
                 }
             }

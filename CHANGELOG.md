@@ -15,10 +15,10 @@ A calmer, more finished look: one clear focus card, covers that stand off the pa
 
 ### Improved
 
+- Picking a colour is one page with no sliders: presets, a strip of hues under a loupe, its readable shades and the colour code.
 - The focused row is one lifted card with a soft shadow on every colour set, with no outline or lines around it.
 - Buttons, keys and cards are flat and read as clearly raised or sunken, with no gradients on any surface.
-- Box covers have a soft shadow under them, so they stand off the page.
-- Every app icon has the same rounded square shape, in Apps, Android games, Ports and on the second screen.
+- Box covers have a soft shadow under them, and every app icon has the same rounded square shape, in Apps, Android games and Ports.
 - The hint bar follows one order on every home screen, shows B Back on the games list and drops the R3 Sort hint.
 - The header names the sort, long titles split into two lines, details show one fact per line and ratings read 8.5/10.
 - On a small screen the details stop no longer shows a strip of the list beside it.
@@ -29,8 +29,8 @@ A calmer, more finished look: one clear focus card, covers that stand off the pa
 - Recently added now lists games by the date they were added, newest first.
 - A game whose file is gone says so instead of a general error.
 - When an emulator closes at once, Play with... offers another emulator.
-- The second screen no longer shows an empty play time box or a stale folder name.
-- The Apps card on the second screen keeps its last row in line with the rows above.
+- The second screen no longer shows a stale folder name, and its Apps card keeps the last row in line with the rows above.
+- On the Accent color page, Up from the colours under the presets reaches the presets again.
 
 ### Known issues
 

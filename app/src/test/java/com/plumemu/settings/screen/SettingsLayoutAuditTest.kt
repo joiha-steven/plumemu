@@ -126,40 +126,21 @@ abstract class SettingsLayoutAuditBase {
         // Narrow screens show the panel as a further stop, opened.
         val (page, startIndex) = ColorPages.openingFor(SettingsOption.Background, PlumSettings(appearance = AppearanceSettings(background = ColorSetting.Preset("Graphite"))))
         inBothThemes(panelAt(SettingsOption.Background, page, startIndex)) { name ->
-            val panel = bounds(SettingsTags.PANEL)
             val first = bounds(SettingsTags.panelItem(0))
             val title = textBounds(hasText(context.getString(SettingsOption.Background.label)) and hasAnyAncestor(hasTestTag(SettingsTags.PANEL)))
             assertEquals("$name: grid starts where the title does", title.left.value, first.left.value, 0.51f)
+            // The colour page is a wide page in three columns: its panel node is the page, and the grid stays inside its own text column.
+            val panel = bounds(SettingsTags.PANEL)
             val textRight = panel.right.value - PlumDimens.gameRowPadding.value
+            // The presets only: Color, Shade and the Color code row under them run the page's width.
             var index = 0
             var rightmost = first.right.value
-            while (compose.onAllNodes(hasTestTag(SettingsTags.panelItem(index))).fetchSemanticsNodes().isNotEmpty()) {
+            while (index < ColorPages.presetCount(page, PlumThemeSettings.Graphite.backgroundColor) && compose.onAllNodes(hasTestTag(SettingsTags.panelItem(index))).fetchSemanticsNodes().isNotEmpty()) {
                 rightmost = maxOf(rightmost, bounds(SettingsTags.panelItem(index)).right.value)
                 index++
             }
             assertTrue("$name: grid right $rightmost within the text column's $textRight", rightmost <= textRight + 0.01f)
         }
-    }
-
-    /** Sample rows shown under the Background panel's colour name at each text size; printed for the report. */
-    @Test
-    fun theBackgroundPanelShowsSampleRowsOneByOneAsTheTextGrows() {
-        val (page, startIndex) = ColorPages.openingFor(SettingsOption.Background, PlumSettings(appearance = AppearanceSettings(background = ColorSetting.Preset("Graphite"))))
-        var size by mutableStateOf(TextSize.Small)
-        compose.setContent { PlumTheme(TableText.Graphite.copy(textSize = size)) { SettingsAt(panelAt(SettingsOption.Background, page, startIndex)) } }
-        val counts = mutableMapOf<TextSize, Int>()
-        for (each in listOf(TextSize.Small, TextSize.Large, TextSize.Largest)) {
-            size = each
-            compose.waitForIdle()
-            // On the wide screen the swatch rows leave no room even for the name (five rows of three in the 205 dp right column, four of four in the 248 dp panel at Largest): it is left out whole (keeping it clipped and overlapped "+", TextSizeScreens768Test).
-            val nameShown = compose.onAllNodes(hasText("#111214", substring = true), useUnmergedTree = true).fetchSemanticsNodes().any { n -> n.layoutInfo.isPlaced }
-            if (narrow) assertTrue("the colour name shows at $each", nameShown)
-            counts[each] = listOf("Mega Man X", "Super Metroid", "Yoshi's Island").count { compose.onAllNodes(hasText(it), useUnmergedTree = true).fetchSemanticsNodes().any { n -> n.layoutInfo.isPlaced } }
-        }
-        println("SAMPLE_ROWS narrow=$narrow $counts")
-        // 768 wide: four rows of swatches leave about 25 below them, room for the name and no sample row; 576 wide: three rows of swatches leave room for rows.
-        if (narrow) assertTrue("at least one sample row shows at Small when there is room: $counts", counts.getValue(TextSize.Small) >= 1)
-        assertTrue("rows only drop as text grows: $counts", counts.getValue(TextSize.Small) >= counts.getValue(TextSize.Large) && counts.getValue(TextSize.Large) >= counts.getValue(TextSize.Largest))
     }
 
     @Test

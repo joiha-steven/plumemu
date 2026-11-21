@@ -8,9 +8,11 @@ import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coreui.theme.AccentPreset
 import com.plumemu.coreui.theme.BackgroundPreset
 import com.plumemu.coreui.theme.ColorRole
+import com.plumemu.coreui.theme.ColorShades
 import com.plumemu.coreui.theme.CustomPalette
 import com.plumemu.coreui.theme.Readability
 import com.plumemu.coreui.theme.Rgb
+import com.plumemu.coreui.theme.ShadeRole
 import com.plumemu.coreui.theme.TextMode
 import com.plumemu.settings.ColorWrite
 import com.plumemu.settings.checkBackground
@@ -22,14 +24,14 @@ import com.plumemu.settings.writeAccent
 import com.plumemu.settings.writeBackground
 import com.plumemu.settings.writeText
 
-/** The three colour settings that have a presets page and a palette page (Background, Text color, Accent color). */
+/** The three colour settings that have a colour page (Background, Text color, Accent color). */
 internal enum class ColorKind { Background, Text, Accent }
 
 /**
- * The colour panels: presets (the last item is "+", your own colour) and the custom palette, the
- * same for the three settings. A text colour travels as a [ColorSetting.Custom] holding its colour
+ * The colour pages, the same for the three settings: the presets, then Color, Shade and the Color
+ * code row (items in that order; Shade has one item per shade). A text colour travels as a [ColorSetting.Custom] holding its colour
  * (Light and Dark are `Custom` of their colours here) and is turned into a [TextColorSetting] only
- * when written. The palettes offer only colours that pass [Readability] on the background shown,
+ * when written. The shades offer only colours that pass [Readability] on the background shown.
  * filled row by row so every cell can take the focus.
  */
 internal object ColorPages {
@@ -56,13 +58,11 @@ internal object ColorPages {
     /** Every background swatch of the first page, in order. */
     val backgroundSwatchCount: Int get() = backgroundPresets.size + vividBackgrounds.size
 
-    const val PALETTE_COLUMNS = 8
-
     fun kindOf(page: PanelPage): ColorKind? =
         when (page) {
-            PanelPage.BackgroundPresets, PanelPage.BackgroundCustom -> ColorKind.Background
-            PanelPage.TextPresets, PanelPage.TextCustom -> ColorKind.Text
-            PanelPage.AccentPresets, PanelPage.AccentCustom -> ColorKind.Accent
+            PanelPage.BackgroundPresets -> ColorKind.Background
+            PanelPage.TextPresets -> ColorKind.Text
+            PanelPage.AccentPresets -> ColorKind.Accent
             else -> null
         }
 
@@ -81,12 +81,26 @@ internal object ColorPages {
             ColorKind.Accent -> PanelPage.AccentPresets
         }
 
-    fun customOf(kind: ColorKind): PanelPage =
+    fun roleOf(kind: ColorKind): ShadeRole =
         when (kind) {
-            ColorKind.Background -> PanelPage.BackgroundCustom
-            ColorKind.Text -> PanelPage.TextCustom
-            ColorKind.Accent -> PanelPage.AccentCustom
+            ColorKind.Background -> ShadeRole.Background
+            ColorKind.Text -> ShadeRole.Text
+            ColorKind.Accent -> ShadeRole.Accent
         }
+
+    @Volatile
+    private var lastShades: Pair<Triple<ShadeRole, Int, Rgb>, List<Rgb>>? = null
+
+    /** The shades of strip [stop] for [role] on [background] ([ColorShades.shades]); the panel asks on every frame, so the last answer is kept. */
+    fun shades(
+        role: ShadeRole,
+        stop: Int,
+        background: Rgb,
+    ): List<Rgb> {
+        val key = Triple(role, stop, background)
+        lastShades?.takeIf { it.first == key }?.let { return it.second }
+        return ColorShades.shades(role, stop, background).also { lastShades = key to it }
+    }
 
     // Hand-picked tinted near-blacks and near-whites (shell and ink colours); each is moved in lightness
     // only as far as it must to reach 7:1 on the background, so the same list serves every background. The list is long because on a bright background the first picks all
@@ -179,8 +193,8 @@ internal object ColorPages {
     fun textBlockedOn(background: Rgb): Boolean = !Readability.backgroundAllowsText(background)
 
     /**
-     * Items of a presets page: the presets and "+" (the Text page shows only the presets that read on
-     * [background]; on a background nothing reads on it has one item, which does nothing).
+     * Presets of a colour page (the Text page shows only the presets that read on [background]; on a
+     * background nothing reads on it has one item, which does nothing). Color comes right after them.
      */
     fun presetCount(
         page: PanelPage,
@@ -189,44 +203,16 @@ internal object ColorPages {
         if (kindOf(page) == ColorKind.Text && textBlockedOn(background)) {
             1
         } else {
-            1 +
-                when (kindOf(page)) {
-                    ColorKind.Background -> backgroundSwatchCount
-                    ColorKind.Text -> textPresetsOn(background).size
-                    // The accent's presets are followed by the By system tile, then "+".
-                    else -> accentPresets.size + 1
-                }
+            when (kindOf(page)) {
+                ColorKind.Background -> backgroundSwatchCount
+                ColorKind.Text -> textPresetsOn(background).size
+                // The accent's presets are followed by the By system tile.
+                else -> accentPresets.size + 1
+            }
         }
 
-    /** The index of the By system tile on the accent presets page (right after the presets, before "+"). */
+    /** The index of the By system tile on the accent presets page (right after the presets). */
     val bySystemIndex: Int get() = accentPresets.size
-
-    /** The swatches of a custom page on [background]: [PaletteCuration]'s 3 rows of 8 out of the full palette; its last item, after them, is the hex code row. */
-    fun palette(
-        page: PanelPage,
-        background: Rgb,
-    ): List<Rgb> =
-        PaletteCuration.curated(
-            when (kindOf(page)) {
-                ColorKind.Background -> CustomPalette.backgroundSwatches
-                ColorKind.Text -> CustomPalette.textSwatchesOn(background)
-                else -> CustomPalette.accentSwatchesOn(background)
-            },
-        )
-
-    /**
-     * Where the cursor lands on [palette] for [rgb]: the swatch of that colour, else the nearest one,
-     * never the hex row (the hex code is the last row, reached on purpose). An empty palette has
-     * only the hex row, index 0.
-     */
-    fun indexOfNearest(
-        palette: List<Rgb>,
-        rgb: Int,
-    ): Int {
-        val target = Rgb(rgb and RGB_MASK)
-        fun distance(a: Rgb) = (a.red - target.red).let { it * it } + (a.green - target.green).let { it * it } + (a.blue - target.blue).let { it * it }
-        return palette.indices.minByOrNull { distance(palette[it]) } ?: 0
-    }
 
     /** The colour [kind] is drawn in under [settings], whether it is stored as a preset or as the person's own. */
     fun drawnColor(
@@ -241,41 +227,46 @@ internal object ColorPages {
             }
         }
 
-    /** The background [settings] draw: what the Text and Accent palettes must read on. */
+    /** The background [settings] draw: what the Text and Accent colours must read on. */
     fun backgroundOf(settings: PlumSettings): Rgb = settings.toThemeSettings().backgroundColor
 
-    /** The page and item the panel opens at for [option]: the current colour, or the hex row for a typed one. */
+    /**
+     * The page and item the panel opens at for [option]: the preset in effect, else (an own colour) the
+     * shade nearest it, or Color when no shade reads.
+     */
     fun openingFor(
         option: SettingsOption,
         settings: PlumSettings,
     ): Pair<PanelPage, Int> {
         val kind = kindOf(option) ?: error("$option has no colour panel")
-        val presets = presetsOf(kind)
-        val custom = customOf(kind)
-        val setting = settingOf(presets, settings)
-        val inPalette = { page: PanelPage, rgb: Int -> indexOfNearest(palette(page, backgroundOf(settings)), rgb) }
+        val page = presetsOf(kind)
+        val background = backgroundOf(settings)
+        val own = {
+            val (stop, shade) = ColorShades.nearestStopAndShade(roleOf(kind), drawnColor(kind, settings), background)
+            val count = shades(roleOf(kind), stop, background).size
+            page to presetCount(page, background) + if (count == 0) 0 else 1 + shade
+        }
         return when (kind) {
             ColorKind.Text -> {
                 val text = settings.appearance.textColor
-                val background = backgroundOf(settings)
                 when {
-                    textBlockedOn(background) -> presets to 0
-                    text is TextColorSetting.Custom && textPresetsOn(background).contains(text) -> presets to textPresetsOn(background).indexOf(text)
-                    text is TextColorSetting.Custom -> custom to inPalette(custom, text.rgb)
-                    else -> presets to textPresetsOn(background).indexOf(text).coerceAtLeast(0)
+                    textBlockedOn(background) -> page to 0
+                    text is TextColorSetting.Custom && textPresetsOn(background).contains(text) -> page to textPresetsOn(background).indexOf(text)
+                    text is TextColorSetting.Custom -> own()
+                    else -> page to textPresetsOn(background).indexOf(text).coerceAtLeast(0)
                 }
             }
             else ->
-                when (setting) {
+                when (val setting = settingOf(page, settings)) {
                     is ColorSetting.Preset -> {
                         val names = if (kind == ColorKind.Background) backgroundPresets.map { it.name } else accentPresets.map { it.name }
-                        presets to names.indexOf(setting.name).coerceAtLeast(0)
+                        page to names.indexOf(setting.name).coerceAtLeast(0)
                     }
                     is ColorSetting.Custom -> {
                         val vivid = if (kind == ColorKind.Background) vividBackgrounds.indexOfFirst { it.color.value == setting.rgb and RGB_MASK } else -1
-                        if (vivid >= 0) presets to backgroundPresets.size + vivid else custom to inPalette(custom, setting.rgb)
+                        if (vivid >= 0) page to backgroundPresets.size + vivid else own()
                     }
-                    is ColorSetting.BySystem -> presets to bySystemIndex
+                    is ColorSetting.BySystem -> page to bySystemIndex
                 }
         }
     }
@@ -291,7 +282,7 @@ internal object ColorPages {
             else -> settings.appearance.accent
         }
 
-    /** The colour at [index] of [page] (palettes read on [background]); null for "+", the hex row and pages without colours. */
+    /** The colour of preset [index] of [page] (the Text presets read on [background]); null past the presets and for pages without colours. */
     fun colorAt(
         page: PanelPage,
         index: Int,
@@ -313,42 +304,10 @@ internal object ColorPages {
                     accentPresets.getOrNull(index)?.let { ColorSetting.Preset(it.name) }
                 }
             PanelPage.TextPresets -> textPresetsOn(background).getOrNull(index)?.let { ColorSetting.Custom(it.toRgb().value) }
-            PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom -> palette(page, background).getOrNull(index)?.let { ColorSetting.Custom(it.value) }
             else -> null
         }
 
     fun isBackground(page: PanelPage): Boolean = kindOf(page) == ColorKind.Background
-
-    private class ReachKey(
-        val kind: ColorKind?,
-        val background: Rgb,
-        val reach: SliderReach,
-    )
-
-    @Volatile
-    private var lastReach: ReachKey? = null
-
-    /**
-     * The slider values of [page] that may be stopped on, read on [background] (the one the panel opened on): the same check that refuses a pick.
-     * The same object for the same page kind and background, so what it has worked out for a drag (`SliderReach.units`) is shared by the track and the finger.
-     */
-    fun sliderReach(
-        page: PanelPage,
-        background: Rgb,
-    ): SliderReach {
-        val kind = kindOf(page)
-        lastReach?.takeIf { it.kind == kind && it.background == background }?.let { return it.reach }
-        val reach =
-            SliderReach(
-                when (kind) {
-                    ColorKind.Text -> { c: Rgb -> Readability.passes(c, background, ColorRole.Text) }
-                    ColorKind.Accent -> { c: Rgb -> Readability.passes(c, background, ColorRole.Accent) }
-                    else -> { c: Rgb -> Readability.backgroundAllowsText(c) }
-                },
-            )
-        lastReach = ReachKey(kind, background, reach)
-        return reach
-    }
 
     /** The text [background] leaves of [current]: kept if it still reads, else moved. */
     fun textFor(

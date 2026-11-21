@@ -25,7 +25,7 @@ sources where colour, dp and sp literals may appear.
 | `theme/ColorChoices.kt` | `BackgroundChoice` and `AccentChoice`: a preset or the person's own colour |
 | `theme/ColorSets.kt` | `ColorSet`: the ten ready-made sets of Settings › Appearance › Colors, `matching` (the current set, derived from the three colours), A/B/X/Y glyph colours by letter (`ButtonColors`), drawn on the hint key caps through `PlumTheme.buttons` while the set is current (`keyCapLook` in `components/Bars.kt`); tests `ColorSetsTest`, `KeyCapLookTest` |
 | `theme/PlumColors.kt` | `PlumColors.derive(background, textMode, accent)`: every colour token (with the keyboard's `tray`, `trayKey`, `trayEdge`, shadow) |
-| `theme/CustomPalette.kt` | The 48-swatch "your own colour" palette of the background (8 hues × 6 shades) and the 40-swatch one of the accent (8 hues × 5 shades, not on the board) |
+| `theme/CustomPalette.kt` | The 48 hand-picked backgrounds (8 hues × 6 shades) that Settings' Background page offers after its presets |
 | `theme/PlumComposeColors.kt` | Tokens as Compose `Color`, plus the focus glow |
 | `theme/PlumFont.kt` | `PlumFont` (Sans, Serif, Mono) and its tuning row: size factor, line height, weight adjustment |
 | `theme/PlumFonts.kt` | Compose `FontFamily` per font; which real face draws each design weight |

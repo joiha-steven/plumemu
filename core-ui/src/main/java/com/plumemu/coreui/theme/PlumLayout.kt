@@ -271,7 +271,6 @@ data class PlumLayout(
     val systemsColumnWidth: Dp = PlumDimens.systemsColumnWidth * textScale
     val keyCapHeight: Dp = PlumDimens.keyCapHeight * hintScale
     val settingsHexRowHeight: Dp = PlumDimens.settingsHexRowHeight * textScale
-    val settingsPreviewRowHeight: Dp = PlumDimens.settingsPreviewRowHeight * textScale
     val setupPointHeight: Dp = PlumDimens.setupPointHeight * textScale
     val setupButtonHeight: Dp = PlumDimens.setupButtonHeight * textScale
     val setupChoiceMinHeight: Dp = PlumDimens.setupChoiceMinHeight * textScale

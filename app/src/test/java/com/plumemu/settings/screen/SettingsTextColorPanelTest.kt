@@ -9,7 +9,8 @@ import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.theme.BackgroundPreset
 import com.plumemu.coreui.theme.ColorRole
 import com.plumemu.coreui.theme.ColorSet
-import com.plumemu.coreui.theme.CustomPalette
+import com.plumemu.coreui.theme.ColorShades
+import com.plumemu.coreui.theme.ShadeRole
 import com.plumemu.coreui.theme.Readability
 import com.plumemu.coreui.theme.Rgb
 import com.plumemu.settings.toRgb
@@ -23,8 +24,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The Text color panel and the readable-only palettes of Background, Text color and Accent color:
- * what the palettes offer, refused hex codes with the nearest
+ * The Text color panel and the readable-only shades of Background, Text color and Accent color:
+ * what the shades offer, refused hex codes with the nearest
  * colour, backgrounds nothing reads on, and the notice when a background moved the text or accent.
  */
 internal class SettingsTextColorPanelTest : SettingsModelHarness() {
@@ -57,12 +58,10 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
         press(Action.Enter)
     }
 
-    /** Text color's own-colour page, at the hex row (the current text is a preset, so it is not in the grid). */
+    /** Text color's page, at the Color code row. */
     private fun openTextPalette(onHexRow: Boolean = true) {
         openTextPanel()
         assertEquals(PanelPage.TextPresets, model.focus.page)
-        openPlus()
-        assertEquals(PanelPage.TextCustom, model.focus.page)
         if (onHexRow) toHexRow()
     }
 
@@ -70,8 +69,7 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
         enterAppearance()
         focusOptionFromTop(SettingsOption.Accent)
         press(Action.Enter)
-        openPlus()
-        assertEquals(PanelPage.AccentCustom, model.focus.page)
+        assertEquals(PanelPage.AccentPresets, model.focus.page)
         toHexRow()
     }
 
@@ -132,27 +130,33 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
         assertEquals(TextColorSetting.Light, appearance.textColor)
     }
 
-    // The palettes show only what passes.
+    // The shades show only what passes.
+
+    /** Taps the Color row of the open page: the cursor goes under the presets with no preset previewed on the way. */
+    private fun tapColorRow() = model.onTapPanelItem(model.colorIndex(colourPage), actions.settings, wide)
 
     @Test
-    fun theTextPaletteShowsOnlyPassingColoursOnBlackPaperAndBanana() {
+    fun theTextShadesOfEveryStopPassOnBlackPaperAndBananaAndTheColorRowWritesThemUnrefused() {
         val cases = listOf("Black" to ColorSetting.Preset("Black"), "Paper" to ColorSetting.Preset("Paper"), "Banana" to banana)
         for ((name, background) in cases) {
             val text = if (name == "Black") TextColorSetting.Light else TextColorSetting.Dark
             use(background, text)
-            openTextPalette()
+            openTextPanel()
             val bg = shownBackground()
-            val cells = PaletteCuration.curated(CustomPalette.textSwatchesOn(bg))
-            assertTrue("$name offers cells", cells.size >= 8)
-            assertEquals("$name: the grid is the passing cells and the hex row", cells.size + ColorSlider.entries.size + 1, PanelGrid.of(PanelPage.TextCustom, wide, com.plumemu.settings.screen.SettingsContent(), model.focus, actions.settings)?.count)
-            // Touch: a tap on each cell takes it, and none is ever refused.
-            for ((i, cell) in cells.withIndex()) {
-                model.onTapPanelItem(i, actions.settings, wide)
-                assertEquals("$name cell $i", cell, appearance.textColor.toRgb())
-                assertNull("$name cell ${cell.toHex()} is never refused", model.colorWrite?.refusal)
-                assertTrue("$name ${cell.toHex()} reads", Readability.passes(cell, bg, ColorRole.Text))
+            tapColorRow()
+            val stops = ColorShades.stopCount(ShadeRole.Text)
+            repeat(stops) { move(Direction.Left) }
+            var withShades = 0
+            repeat(stops) { stop ->
+                val shades = model.colorShades(colourPage)
+                for (shade in shades) assertTrue("$name stop $stop ${shade.toHex()} reads", Readability.passes(shade, bg, ColorRole.Text))
+                if (shades.isNotEmpty()) withShades++
+                // The first stop was where the strip already stood: no move wrote it.
+                if (stop > 0 && shades.isNotEmpty()) assertEquals("$name stop $stop previews its shade of the same place", shades[model.shadePlaceOf(colourPage)], appearance.textColor.toRgb())
+                assertNull("$name stop $stop is never refused", model.colorWrite?.refusal)
+                move(Direction.Right)
             }
-            press(Action.Back)
+            assertEquals("$name: every stop offers shades", stops, withShades)
             press(Action.Back)
             assertOnColorsRow(COLORS_TEXT_ITEM, "$name: B closes the page")
             press(Action.Back)
@@ -160,41 +164,40 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
     }
 
     @Test
-    fun theDPadWalksTheTextPaletteAndEveryStepIsAPreview() {
+    fun theDPadWalksTheTextShadesAndEveryStepIsAPreview() {
         use(ColorSetting.Preset("Black"), TextColorSetting.Light)
-        openTextPalette(onHexRow = false)
-        val cells = PaletteCuration.curated(CustomPalette.textSwatchesOn(shownBackground()))
-        // Light #EBE7DD is not a cell: the page opens on the nearest swatch, not on the hex row.
-        val start = model.focus.panelIndex
-        assertTrue("on a swatch, not the hex row", start < cells.size)
-        val sideways = if (start % 8 == 7) -1 else 1
-        move(if (sideways > 0) Direction.Right else Direction.Left)
-        assertEquals(start + sideways, model.focus.panelIndex)
-        assertEquals(cells[start + sideways], appearance.textColor.toRgb())
-        val vertical = if (start + sideways >= 8) -8 else 8
-        move(if (vertical < 0) Direction.Up else Direction.Down)
-        assertEquals(start + sideways + vertical, model.focus.panelIndex)
-        assertEquals(cells[start + sideways + vertical], appearance.textColor.toRgb())
+        openTextPanel()
+        tapColorRow()
+        move(Direction.Down)
+        val first = model.shadeIndex(colourPage, 0)
+        val shades = model.colorShades(colourPage)
+        assertEquals("the cursor rests on a shade", ColorPart.Shade, model.colourPart)
+        repeat(shades.size) { move(Direction.Left) }
+        assertEquals(first, model.focus.panelIndex)
+        assertEquals(shades[0], appearance.textColor.toRgb())
+        move(Direction.Right)
+        assertEquals(shades[1], appearance.textColor.toRgb())
         repeat(10) { move(Direction.Down) }
-        assertEquals("Down runs through the sliders and stops on the hex row", cells.size + ColorSlider.entries.size, model.focus.panelIndex)
+        assertEquals("Down stops on the Color code row", ColorPart.Hex, model.colourPart)
         press(Action.Back)
         assertEquals("B restores the text the page opened with", TextColorSetting.Light, appearance.textColor)
     }
 
     @Test
-    fun theAccentPaletteOffersOnlyThreeToOneColoursOnBlackPaperAndBanana() {
+    fun theAccentShadesOfEveryStopPassOnBlackPaperAndBananaAndNoneIsRefused() {
         for (background in listOf(ColorSetting.Preset("Black"), ColorSetting.Preset("Paper"), banana)) {
             val text = if (background == ColorSetting.Preset("Black")) TextColorSetting.Light else TextColorSetting.Dark
             use(background, text)
-            openAccentPalette()
+            enterAppearance()
+            focusOptionFromTop(SettingsOption.Accent)
+            press(Action.Enter)
+            tapColorRow()
             val bg = shownBackground()
-            val cells = PaletteCuration.curated(CustomPalette.accentSwatchesOn(bg))
-            assertTrue(cells.isNotEmpty())
-            assertEquals(cells.size + ColorSlider.entries.size + 1, PanelGrid.of(PanelPage.AccentCustom, wide, SettingsContent(), model.focus, actions.settings)?.count)
-            for ((i, cell) in cells.withIndex()) {
-                model.onTapPanelItem(i, actions.settings, wide)
-                assertEquals(ColorSetting.Custom(cell.value), appearance.accent)
+            repeat(ColorShades.stopCount(ShadeRole.Accent)) { move(Direction.Left) }
+            repeat(ColorShades.stopCount(ShadeRole.Accent)) {
+                for (shade in model.colorShades(colourPage)) assertTrue("${shade.toHex()} reads", Readability.passes(shade, bg, ColorRole.Accent))
                 assertNull(model.colorWrite?.refusal)
+                move(Direction.Right)
             }
             press(Action.Back)
             press(Action.Back)
@@ -202,15 +205,10 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
     }
 
     @Test
-    fun theBackgroundPaletteLeavesOutBackgroundsNoTextReadsOn() {
-        openSection(SettingsSection.Appearance)
-        focusOption(SettingsOption.Background)
-        press(Action.Enter)
-        walkToPlus()
-        press(Action.Enter)
-        val grid = PanelGrid.of(PanelPage.BackgroundCustom, wide, SettingsContent(), model.focus, actions.settings)
-        assertEquals(backgroundGrid.size + ColorSlider.entries.size + 1, grid?.count)
-        for (cell in backgroundGrid) assertTrue(cell.toHex(), Readability.backgroundAllowsText(cell))
+    fun theBackgroundShadesAreAllBackgroundsTextReadsOn() {
+        for (stop in 0 until ColorShades.stopCount(ShadeRole.Background)) {
+            for (shade in ColorShades.shades(ShadeRole.Background, stop, Rgb(0))) assertTrue("stop $stop ${shade.toHex()}", Readability.backgroundAllowsText(shade))
+        }
     }
 
     // Hex codes that do not read.
@@ -279,7 +277,6 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
         openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.Background)
         press(Action.Enter)
-        openPlus()
         toHexRow()
         val opening = appearance.background
         typeHex("808080")
@@ -333,13 +330,10 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
     @Test
     fun reopeningBackgroundAfterOneThatMovedTheAccentStartsFromTheStoredAccentNotTheOneWrittenBefore() {
         use(ColorSetting.Preset("Graphite"), TextColorSetting.Light)
-        val onGraphite = PaletteCuration.curated(CustomPalette.accentSwatchesOn(BackgroundPreset.Graphite.color))
-        val greyish = onGraphite.first { !Readability.passes(it, BackgroundPreset.Paper.color, ColorRole.Accent) }
-        openAccentPalette()
-        model.onTapPanelItem(onGraphite.indexOf(greyish), actions.settings, wide)
-        assertEquals(ColorSetting.Custom(greyish.value), appearance.accent)
-        press(Action.Back)
-        press(Action.Back)
+        val greyish = Rgb(0x909090) // reads on Graphite, not on Paper
+        assertFalse(Readability.passes(greyish, BackgroundPreset.Paper.color, ColorRole.Accent))
+        use(ColorSetting.Preset("Graphite"), TextColorSetting.Light, accent = ColorSetting.Custom(greyish.value))
+        enterAppearance()
         focusOptionFromTop(SettingsOption.Background)
         press(Action.Enter)
         move(Direction.Down) // Paper: the accent no longer reads and moves
@@ -370,12 +364,6 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
 
     // The review of 2b: restore, stored text, presets that do not read, a grey stored background.
 
-    /** A tap on "+" of the open presets page: no preview of the presets on the way, unlike walking there. */
-    private fun tapPlus() {
-        val page = model.focus.page!!
-        repeat(2) { if (model.focus.page == page) model.onTapPanelItem(ColorPages.presetCount(page, shownBackground()) - 1, actions.settings, wide) }
-    }
-
     private fun backToSections() {
         repeat(6) { if (model.focus.column != SettingsColumn.Sections) press(Action.Back) }
         assertEquals(SettingsColumn.Sections, model.focus.column)
@@ -387,7 +375,7 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
         enterAppearance()
         focusOptionFromTop(SettingsOption.Background)
         press(Action.Enter)
-        tapPlus()
+        tapColorRow()
         press(Action.Back)
         backToSections()
         // Restore a backup: the confirm, then Restore (the graph replaces the settings after).
@@ -405,7 +393,7 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
         press(Action.Enter)
         focusOptionFromTop(SettingsOption.Background)
         press(Action.Enter)
-        tapPlus()
+        tapColorRow()
         press(Action.Back)
         assertEquals("B on the page writes the restored background, not the one before the restore", ColorSetting.Preset("Paper"), appearance.background)
         assertEquals(TextColorSetting.Dark, appearance.textColor)
@@ -418,8 +406,8 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
         enterAppearance()
         focusOptionFromTop(SettingsOption.Background)
         press(Action.Enter)
-        tapPlus()
-        move(Direction.Up) // a cell of the palette: previewed
+        tapColorRow()
+        move(Direction.Right) // a shade of the next stop: previewed
         press(Action.Back)
         assertEquals(ColorSetting.Preset("Paper"), appearance.background)
         assertEquals(TextColorSetting.Custom(0xC8E6C9), appearance.textColor)
@@ -428,7 +416,8 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
     @Test
     fun theTextPresetsAreSixToEightColoursThatAllReadOnTheBackground() {
         // Every background a person can pick: the palette, the presets and the colour sets.
-        val backgrounds = (backgroundGrid + BackgroundPreset.entries.map { it.color } + ColorSet.entries.map { it.backgroundColor }).distinct()
+        val shades = (0 until ColorShades.stopCount(ShadeRole.Background)).flatMap { ColorShades.shades(ShadeRole.Background, it, Rgb(0)) }
+        val backgrounds = (shades + BackgroundPreset.entries.map { it.color } + ColorSet.entries.map { it.backgroundColor }).distinct()
         for (bg in backgrounds) {
             val presets = ColorPages.textPresetsOn(bg)
             if (!Readability.backgroundAllowsText(bg)) {
@@ -444,14 +433,14 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
     }
 
     @Test
-    fun theCursorOnTheTextPresetsNeverStopsOnARefusedColourAndEndsOnPlus() {
+    fun theCursorOnTheTextPresetsNeverStopsOnARefusedColourAndEndsOnTheLastPreset() {
         use(ColorSetting.Preset("Black"), TextColorSetting.Light)
         assertEquals(TextColorSetting.Light, ColorPages.textPresetsOn(shownBackground()).first())
         openTextPanel()
-        val plus = ColorPages.presetCount(PanelPage.TextPresets, shownBackground()) - 1
-        repeat(plus + 4) { move(Direction.Right) }
+        val last = ColorPages.presetCount(PanelPage.TextPresets, shownBackground()) - 1
+        repeat(last + 4) { move(Direction.Right) }
         assertNull(model.colorWrite?.refusal)
-        assertTrue(model.focus.panelIndex in 0..plus)
+        assertTrue(model.focus.panelIndex in 0..last)
         use(ColorSetting.Preset("Paper"), TextColorSetting.Dark)
         assertEquals(TextColorSetting.Dark, ColorPages.textPresetsOn(shownBackground()).first())
     }
@@ -464,7 +453,9 @@ internal class SettingsTextColorPanelTest : SettingsModelHarness() {
         assertEquals(PanelPage.TextPresets, model.focus.page)
         assertEquals("nothing to pick", 1, ColorPages.presetCount(PanelPage.TextPresets, shownBackground()))
         press(Action.Enter)
-        assertEquals("A does nothing and does not open the palette", PanelPage.TextPresets, model.focus.page)
+        assertEquals("A does nothing", PanelPage.TextPresets, model.focus.page)
+        move(Direction.Down)
+        assertEquals("there is no Color row to go down to", 0, model.focus.panelIndex)
         assertEquals(TextColorSetting.Light, appearance.textColor)
     }
 }

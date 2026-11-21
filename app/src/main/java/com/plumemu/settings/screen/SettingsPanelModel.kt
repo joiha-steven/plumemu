@@ -77,9 +77,9 @@ internal abstract class SettingsPanelModel(
             return
         }
         if (page == PanelPage.Update) return moveInUpdatePage(direction, settings, geometry)
-        if (SettingsCustomColor.isCustomPage(page)) return moveInCustomPage(page, direction)
+        if (ColorPages.kindOf(page) != null) return moveInColourPage(page, direction, geometry)
         if (page == PanelPage.ColorSets) return moveInColorSets(direction, settings, geometry)
-        val grid = PanelGrid.of(page, geometry, content, focus, settings, custom.palette(page).size, pickableSubfolders(work.subfolders, content).size) ?: return
+        val grid = PanelGrid.of(page, geometry, content, focus, settings, pickableSubfolders(work.subfolders, content).size) ?: return
         var next = grid.move(focus.panelIndex, direction)
         // Two buttons side by side stack when the text is large, so Down and Up walk them too.
         if (page in TWO_BUTTON_PAGES && next == focus.panelIndex) {
@@ -96,7 +96,6 @@ internal abstract class SettingsPanelModel(
             if (content.notAdded.getOrNull(next) is NotAddedItem.Heading) return
         }
         if (next != focus.panelIndex) return focusPanelItem(next)
-        if (direction == Direction.Left && ColorPages.kindOf(page) != null) leaveColourPageToItsRow(page)
     }
 
     /** Version's panel: Up and Down walk its items; past the first item, and past the update's last button while the notes run on, they scroll the notes. */
@@ -123,8 +122,7 @@ internal abstract class SettingsPanelModel(
         val index = focus.panelIndex
         when (page) {
             PanelPage.ColorSets -> onColorSetsEnter(index, settings)
-            PanelPage.BackgroundPresets, PanelPage.AccentPresets, PanelPage.TextPresets -> onPresetsEnter(page, index, settings)
-            PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom -> onCustomPageEnter(page, index)
+            PanelPage.BackgroundPresets, PanelPage.AccentPresets, PanelPage.TextPresets -> onColourPageEnter(page, index)
             // A applies the language under the cursor (the screen recreates itself as it always did); B closes with no change.
             PanelPage.Language -> {
                 val tag = languagePanelTag(index)
@@ -181,10 +179,6 @@ internal abstract class SettingsPanelModel(
 
     final override fun onPanelBack(page: PanelPage) {
         when (page) {
-            PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom -> {
-                val presets = ColorPages.presetsOf(ColorPages.kindOf(page) ?: return)
-                moveTo(focus.copy(page = presets, panelIndex = custom.presetCount(presets) - 1))
-            }
             PanelPage.BackgroundPresets, PanelPage.AccentPresets, PanelPage.TextPresets -> closeColourPage(page)
             PanelPage.LicenseText -> moveTo(focus.copy(page = PanelPage.Licenses, panelIndex = focus.licenseIndex))
             PanelPage.RemoveFolder -> backToFolderPage(FolderPageItem.Remove)
@@ -583,12 +577,12 @@ internal abstract class SettingsPanelModel(
         feel.report(Outcome.Activated)
     }
 
-    /** Leaving a page stops the hex field; a custom page left without A puts back its opening colour. */
+    /** Leaving a page stops the hex field; a colour page left from below its presets without A puts back the colour in effect when the cursor came down. */
     override fun onFocusChanging(next: SettingsFocus) {
         if (focus.page == PanelPage.Systems && next.page != PanelPage.Systems) systems.leave()
         if (next.page != focus.page || next.panelIndex != focus.panelIndex) custom.stopEditingHex()
         val leaving = focus.page
-        if (next.page != leaving && leaving != null && SettingsCustomColor.isCustomPage(leaving)) custom.leave(leaving)
+        if (next.page != leaving && leaving != null && ColorPages.kindOf(leaving) != null) custom.leave(leaving, custom.partOf(leaving, focus.panelIndex) == ColorPart.Preset)
     }
 }
 

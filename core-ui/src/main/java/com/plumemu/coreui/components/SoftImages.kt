@@ -185,7 +185,10 @@ internal object SoftImages {
             latest.clear()
             cachedBytes = 0L
         }
-        synchronized(dropCache) { dropCache.clear() }
+        synchronized(dropCache) {
+            dropCache.clear()
+            dropLatest.clear()
+        }
         synchronized(insetCache) { insetCache.clear() }
     }
 
@@ -194,7 +197,7 @@ internal object SoftImages {
         get() =
             synchronized(cache) { distinctBytes(cache.values.toList()) } +
                 synchronized(shades) { distinctBytes(shades.values.map { it.image } + latest.values.map { it.image }) } +
-                synchronized(dropCache) { distinctBytes(dropCache.values.map { it.image }) } +
+                synchronized(dropCache) { distinctBytes((dropCache.values + dropLatest.values).map { it.image }) } +
                 synchronized(insetCache) { distinctBytes(insetCache.values.map { it.image }) }
 
     /** How many shadows are kept (tests). */
@@ -345,11 +348,46 @@ internal object SoftImages {
         // Sliced by the look, not by this box: the box that builds the image can be exactly as wide as it, and a wider one takes it from the cache.
         val widest = sharedWidth(Int.MAX_VALUE, corner.coerceIn(0f, min(w, h) / 2f), listOfNotNull(near, far, glow).maxOf { REACH_SIGMAS * it.sigma })
         val key = DropKey(shared, sharedH, (corner * 100).roundToInt(), layerKey(near), layerKey(far), glow?.let { layerKey(it) }, under.toArgb(), sliceHeight)
-        synchronized(dropCache) { dropCache[key] }?.let { return it }
+        // The look without the glow's colour and the colour under it (the slab's fill follows the accent too): the accent moves at every step of a colour page, and its image costs 60 ms to build on the emulator.
+        val look = key.copy(glow = key.glow?.let { listOf(0) + it.drop(1) }, under = 0)
+        fun build() = traceMiss("Plum:drops") { dropsBuilds.incrementAndGet(); dropsBuild(shared, sharedH, corner, near, far, glow, under, sliced = shared == widest, symmetric = sliceHeight, slicedY = sliceHeight && sharedH == widestH) }
+        var stale: Placed? = null
+        synchronized(dropCache) {
+            dropCache[key]?.let { return it }
+            if (ImageBuilding.inBackground && !BackgroundBuilds.onBuildThread && glow != null) stale = dropLatest[look]
+            if (stale != null && key !in dropPending) {
+                dropPending.add(key)
+                val queued =
+                    BackgroundBuilds.submit {
+                        try {
+                            val built = build()
+                            if (built != null) synchronized(dropCache) { dropCache.getOrPut(key) { built }; dropLatest[look] = built }
+                            built?.image
+                        } finally {
+                            synchronized(dropCache) { dropPending.remove(key) }
+                        }
+                    }
+                if (!queued) {
+                    dropPending.remove(key)
+                    stale = null
+                }
+            }
+        }
+        // The last image of this look in another colour is drawn until the exact one lands: a glow one step off in hue for a few frames, not a 60 ms frame.
+        stale?.let {
+            BackgroundBuilds.watchLanding()
+            return it
+        }
         // Built outside the lock: a background warm-up must not make a draw on the main thread wait for a cached image.
-        val built = traceMiss("Plum:drops") { dropsBuilds.incrementAndGet(); dropsBuild(shared, sharedH, corner, near, far, glow, under, sliced = shared == widest, symmetric = sliceHeight, slicedY = sliceHeight && sharedH == widestH) } ?: return null
-        return synchronized(dropCache) { dropCache.getOrPut(key) { built } }
+        val built = build() ?: return null
+        return synchronized(dropCache) { dropCache.getOrPut(key) { built }.also { dropLatest[look] = it } }
     }
+
+    /** The last image of each drops look whatever the glow's colour, and the keys being built in the background. */
+    private val dropLatest = object : LinkedHashMap<DropKey, Placed>(8, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<DropKey, Placed>?) = size > MAX_INSETS
+    }
+    private val dropPending = HashSet<DropKey>()
 
     /** The box height to build a look's image for with `sliceHeight`: a box row is the same from its middle out as far as the corner, the blur and the layers' drop reach. */
     private fun sharedHeight(

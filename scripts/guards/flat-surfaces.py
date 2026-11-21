@@ -30,7 +30,6 @@ ALLOWED = {
     "core-ui/src/main/java/com/plumemu/coreui/components/GlidingPill.kt": "the pill's shadow tails fading at a clip (an alpha mask)",
     "core-ui/src/main/java/com/plumemu/coreui/components/keyboard/PlumKeyboard.kt": "the tray's upward shadow",
     "core-ui/src/main/java/com/plumemu/coreui/theme/FocusSlab.kt": "the slab's top line fading down its corners (an edge, not a face)",
-    "app/src/main/java/com/plumemu/settings/screen/SettingsColorSliderRows.kt": "a colour slider's spectrum: the values it picks",
     "core-ui/src/main/java/com/plumemu/coreui/components/PlumSlider.kt": "the hue slider's spectrum: the values it picks",
     "app/src/main/java/com/plumemu/update/ui/ReleaseNotes.kt": "the notes' fade at a scrolled edge (an alpha mask)",
     "app/src/main/java/com/plumemu/setup/SetupScreen.kt": "setup's fade at a scrolled edge (an alpha mask)",

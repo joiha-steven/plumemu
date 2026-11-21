@@ -1034,7 +1034,6 @@
     <string name="settings_accent_by_system_description">By system, each system in its own color</string>
     <string name="settings_choice_missing" translatable="false">?</string>
     <string name="settings_color_custom">Custom</string>
-    <string name="settings_color_add_glyph" translatable="false">+</string>
     <!-- Text color preset: light text (for dark backgrounds). -->
     <string name="settings_text_light">Light</string>
     <string name="settings_text_navy">Navy</string>
@@ -1079,20 +1078,16 @@
     <string name="settings_page_grain_strong">Strong</string>
     <!-- A badge in a small pill (11 sp): keep it to one short word. -->
     <string name="settings_badge_current">Current</string>
-    <string name="settings_background_body">Pick a color, or + to make your own.</string>
-    <string name="settings_custom_title">Your own color</string>
-    <string name="settings_slider_hue">Hue</string>
-    <string name="settings_slider_saturation">Saturation</string>
-    <string name="settings_slider_lightness">Lightness</string>
-    <string name="settings_slider_degrees">%1$d°</string>
-    <string name="settings_slider_percent">%1$d%%</string>
-    <!-- What a screen reader says for a slider: its name, then its value ("Hue 120°"). -->
-    <string name="settings_slider_spoken">%1$s %2$s</string>
+    <string name="settings_background_body">Pick a color, or make your own.</string>
+    <!-- What a screen reader says for the Color row: its name, then the code of the colour shown. -->
+    <string name="settings_color_row_spoken">%1$s %2$s</string>
+    <string name="settings_color_strip_label">Color</string>
+    <string name="settings_color_shade_label">Shade</string>
     <string name="settings_hex_label">Color code</string>
     <string name="settings_hex_hint">Color (hex)</string>
     <string name="settings_hex_use">Use this color</string>
     <string name="settings_hex_error">Six digits or letters A to F, like 1A2B3C.</string>
-    <string name="settings_text_color_body">Pick a text color, or + to make your own. Only colors that read well are shown.</string>
+    <string name="settings_text_color_body">Pick a text color, or make your own. Only colors that read well are shown.</string>
     <string name="settings_text_color_blocked">This background is too gray for readable text. Change the background first.</string>
     <string name="settings_color_refused_text">Too close to the background to read. Nearest readable: %1$s</string>
     <string name="settings_color_refused_accent">Too close to the background to see. Nearest visible: %1$s</string>
@@ -1105,13 +1100,7 @@
     <string name="settings_text_size_body">Changes all text in Plumemu. Android\'s own font size applies on top.</string>
     <string name="settings_page_grain_body">A fine grain over the page colour, like paper. Off keeps the page flat, Light is barely there, Strong shows on every screen.</string>
     <!-- Sample lines in the colour panel (the board's). -->
-    <string name="settings_sample_game_1" translatable="false">Mega Man X</string>
     <string name="settings_sample_game_2" translatable="false">Super Metroid</string>
-    <string name="settings_sample_game_2_short" translatable="false">Metroid</string>
-    <string name="settings_sample_game_3" translatable="false">Yoshi\'s Island</string>
-    <string name="settings_sample_year_1" translatable="false">1993</string>
-    <string name="settings_sample_year_2" translatable="false">1994</string>
-    <string name="settings_sample_year_3" translatable="false">1995</string>
 
     <!-- Controls (the confirm button, Button sounds, Vibration) and Appearance (Animations); Send usage statistics is under About -->
     <string name="settings_confirm_bottom">Confirm with B</string>

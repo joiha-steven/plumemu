@@ -5,7 +5,8 @@ import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coreinput.Action
 import com.plumemu.coreinput.Direction
 import com.plumemu.coreui.theme.BackgroundPreset
-import com.plumemu.coreui.theme.CustomPalette
+import com.plumemu.coreui.theme.ColorShades
+import com.plumemu.coreui.theme.ShadeRole
 import com.plumemu.coreui.theme.TextMode
 import com.plumemu.R
 import org.junit.Assert.assertEquals
@@ -20,7 +21,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The colour pages of Settings: presets, the custom palette's preview and choice, the hex code field. */
+/** The colour pages of Settings: presets, Color, Shade and the Color code row (their walk, preview, put-back and choice), the hex code field. */
 internal class SettingsColorPagesTest : SettingsModelHarness() {
     init {
         startOnRed() // these tests walk the accent presets from Red
@@ -45,78 +46,140 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
     }
 
     @Test
-    fun plusOpensTheCustomPaletteOnTheNearestSwatchNotTheHexRowWithoutChangingTheColour() {
-        openSection(SettingsSection.Appearance)
-        focusOption(SettingsOption.Background) // under Colors
+    fun anOwnColourOpensOnItsNearestShadeWithoutChangingTheColour() {
+        actions.settings = actions.settings.copy(appearance = appearance.copy(background = ColorSetting.Custom(0x0F2B7A), textColor = TextColorSetting.Light))
+        openBackgroundPanel()
+        val (stop, shade) = ColorShades.nearestStopAndShade(ShadeRole.Background, Rgb(0x0F2B7A), Rgb(0))
+        assertEquals(PanelPage.BackgroundPresets, model.focus.page)
+        assertEquals(ColorPart.Shade, model.colourPart)
+        assertEquals("the strip is at the nearest stop", stop, model.colorStop)
+        assertEquals("the cursor is on the nearest shade", model.shadeIndex(PanelPage.BackgroundPresets, shade), model.focus.panelIndex)
+        assertEquals("opening keeps the colour exactly", ColorSetting.Custom(0x0F2B7A), appearance.background)
         press(Action.Enter)
-        openPlus()
-        assertEquals(PanelPage.BackgroundCustom, model.focus.page)
-        val nearest = ColorPages.indexOfNearest(backgroundGrid, BackgroundPreset.Graphite.color.value)
-        assertEquals("Graphite is not in the grid: its nearest swatch, not the hex row", nearest, model.focus.panelIndex)
-        assertTrue(model.focus.panelIndex < backgroundGrid.size)
-        assertEquals("opening keeps the colour", ColorSetting.Preset("Graphite"), appearance.background)
+        assertOnColorsRow(COLORS_BACKGROUND_ITEM, "A before any move keeps the colour and goes back")
+        assertEquals(ColorSetting.Custom(0x0F2B7A), appearance.background)
     }
 
     @Test
-    fun walkingThePaletteIsAPreviewThatBackPutsBack() {
-        openSection(SettingsSection.Appearance)
-        focusOption(SettingsOption.Background) // under Colors
-        press(Action.Enter)
-        openPlus() // the palette, on a swatch
-        toHexRow()
-        upToGrid()
-        assertEquals(ColorSetting.Custom(backgroundGrid[backgroundGrid.size - ColorPages.PALETTE_COLUMNS].value), appearance.background)
-        press(Action.Back)
-        assertEquals("back to the presets", PanelPage.BackgroundPresets, model.focus.page)
-        assertEquals("the colour the page opened with comes back", ColorSetting.Preset("Graphite"), appearance.background)
-
-        press(Action.Enter)
+    fun downFromThePresetsWalksColorShadeAndTheColorCodeRowAndUpWalksBack() {
+        openBackgroundPanel()
+        val page = colourPage
+        val presets = ColorPages.presetCount(page, ColorPages.backgroundOf(actions.shown))
+        toColor()
+        assertEquals(ColorPart.Color, model.colourPart)
+        assertEquals("Color comes right after the presets", presets, model.focus.panelIndex)
+        move(Direction.Down)
+        assertEquals(ColorPart.Shade, model.colourPart)
+        val shades = model.colorShades(page)
+        assertTrue("up to five shades", shades.size in 2..ColorShades.SHADE_COUNT)
+        move(Direction.Down)
+        assertEquals(ColorPart.Hex, model.colourPart)
+        assertEquals("the Color code row is after the last shade", presets + 1 + shades.size, model.focus.panelIndex)
         move(Direction.Up)
-        toHexRow()
-        // The walk down passes the sliders, which keep the colour shown; only B puts the opening one back.
-        press(Action.Back)
-        press(Action.Back)
-        assertEquals("B puts the opening colour back", ColorSetting.Preset("Graphite"), appearance.background)
+        assertEquals(ColorPart.Shade, model.colourPart)
+        move(Direction.Up)
+        assertEquals(ColorPart.Color, model.colourPart)
+        move(Direction.Up)
+        assertEquals("up from Color reaches the presets again", ColorPart.Preset, model.colourPart)
     }
 
     @Test
-    fun aChoosesASwatchOfThePalette() {
-        openSection(SettingsSection.Appearance)
-        focusOption(SettingsOption.Background) // under Colors
-        press(Action.Enter)
-        openPlus()
-        toHexRow()
-        upToGrid()
+    fun upFromTheTopRowOfThePresetsDoesNothingAndAHeldDownNeverEntersColor() {
+        openBackgroundPanel()
         move(Direction.Up)
+        assertEquals(0, model.focus.panelIndex)
+        assertEquals(PanelPage.BackgroundPresets, model.focus.page)
+        repeat(6) { press(Action.Move(Direction.Down, isRepeat = true)) }
+        assertEquals("a held Down walks the presets and stops at their last row", ColorPart.Preset, model.colourPart)
+    }
+
+    @Test
+    fun bPutsBackTheColourInEffectWhenTheCursorCameDownButKeepsABrowsedPreset() {
+        openBackgroundPanel()
+        move(Direction.Down) // Paper, on the second row of presets
+        assertEquals(ColorSetting.Preset("Paper"), appearance.background)
+        press(Action.Back)
+        assertOnColorsRow(COLORS_BACKGROUND_ITEM, "B on a preset keeps the one reached")
+        assertEquals(ColorSetting.Preset("Paper"), appearance.background)
+
+        press(Action.Enter)
+        toColor()
+        val reached = appearance.background
         move(Direction.Right)
+        assertNotEquals("Color previews", reached, appearance.background)
+        press(Action.Back)
+        assertOnColorsRow(COLORS_BACKGROUND_ITEM)
+        assertEquals("B from Color puts back the colour in effect when the cursor came down", reached, appearance.background)
+
+        press(Action.Enter)
+        toShade()
         move(Direction.Right)
+        press(Action.Back)
+        assertEquals("B from Shade does too", reached, appearance.background)
+
+        press(Action.Enter)
+        toHexRow()
+        press(Action.Back)
+        assertEquals("and from the Color code row", reached, appearance.background)
+    }
+
+    @Test
+    fun aKeepsWhatColorAndShadeShowAndGoesBackToItsRow() {
+        openBackgroundPanel()
+        toShade()
+        move(Direction.Right)
+        val shown = appearance.background
+        assertTrue(shown is ColorSetting.Custom)
         press(Action.Enter)
         assertOnColorsRow(COLORS_BACKGROUND_ITEM)
-        val chosen = backgroundGrid.size - 2 * ColorPages.PALETTE_COLUMNS + 2
-        assertEquals(ColorSetting.Custom(backgroundGrid[chosen].value), appearance.background)
+        assertEquals(shown, appearance.background)
         press(Action.Enter)
-        assertEquals("a custom colour opens on the palette, at it", PanelPage.BackgroundCustom, model.focus.page)
-        assertEquals(chosen, model.focus.panelIndex)
+        assertEquals("an own colour opens on a shade", ColorPart.Shade, model.colourPart)
     }
 
     @Test
-    fun tappingASwatchWhileTypingLeavesTheField() {
+    fun leftFromColorAndShadeDoesNothingAndFromTheColorCodeRowLeavesToColorsRow() {
+        openBackgroundPanel()
+        toColor()
+        repeat(3) { move(Direction.Left) }
+        assertEquals(PanelPage.BackgroundPresets, model.focus.page)
+        move(Direction.Down)
+        repeat(6) { move(Direction.Left) }
+        assertEquals(PanelPage.BackgroundPresets, model.focus.page)
+        assertEquals(ColorPart.Shade, model.colourPart)
+        toHexRow()
+        move(Direction.Left)
+        assertOnColorsRow(COLORS_BACKGROUND_ITEM)
+    }
+
+    @Test
+    fun aHeldUpFromShadeStopsAtColorAndNeverReachesThePresets() {
+        openBackgroundPanel()
+        toShade()
+        repeat(5) { press(Action.Move(Direction.Up, isRepeat = true)) }
+        assertEquals(ColorPart.Color, model.colourPart)
+        assertEquals(PanelPage.BackgroundPresets, model.focus.page)
+        move(Direction.Up)
+        assertEquals("a fresh Up goes on to the presets", ColorPart.Preset, model.colourPart)
+    }
+
+    @Test
+    fun tappingAShadeWhileTypingLeavesTheField() {
         openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.Accent)
         press(Action.Enter)
-        repeat(4) { move(Direction.Right) }
-        move(Direction.Down)
-        press(Action.Enter) // "+": the accent palette, on a swatch
         toHexRow()
         press(Action.Enter)
         assertTrue(model.isEditingHex)
-        model.onTapPanelItem(3, actions.shown, wide)
+        val first = model.shadeIndex(colourPage, 0)
+        model.onTapPanelItem(first, actions.shown, wide)
         assertFalse(model.isEditingHex)
-        assertEquals(3, model.focus.panelIndex)
-        val cell = PaletteCuration.curated(CustomPalette.accentSwatchesOn(BackgroundPreset.Graphite.color))[3]
-        assertEquals("a tapped swatch is chosen", ColorSetting.Custom(cell.value), appearance.accent)
-        press(Action.Back)
-        assertEquals("and kept when the page is left", ColorSetting.Custom(cell.value), appearance.accent)
+        assertEquals(first, model.focus.panelIndex)
+        val shade = model.colorShades(colourPage)[0]
+        assertEquals("a first tap on a shade previews it", ColorSetting.Custom(shade.value), appearance.accent)
+        model.onTapPanelItem(first, actions.shown, wide)
+        assertOnColorsRow(COLORS_ACCENT_ITEM, "a second tap keeps it")
+        assertEquals(ColorSetting.Custom(shade.value), appearance.accent)
     }
 
     /** Typed accents are dark codes (#1A2B3C …): they read on Paper, not on the Graphite these tests start on (accents under 3:1 are refused). */
@@ -129,9 +192,6 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
         openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.Accent)
         press(Action.Enter)
-        repeat(6) { move(Direction.Right) }
-        move(Direction.Down)
-        press(Action.Enter) // + → the accent palette, on a swatch
         toHexRow()
     }
 
@@ -144,7 +204,7 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
         assertEquals("on the hex row A starts typing", R.string.account_hint_type, confirmHint(model))
         press(Action.Enter)
         assertTrue(model.isEditingHex)
-        val beforeTyping = appearance.accent // the swatch the walk down previewed: the sliders keep it
+        val beforeTyping = appearance.accent // the shade the walk down rests on previewed it: the Color code row keeps it
         model.onHexTextChange("1A2B3C")
         press(Action.Enter)
         assertTrue("A on the field only brings the keyboard back", model.isEditingHex)
@@ -182,19 +242,14 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
         // Android's keyboard (A on the field asks for it again, Down leaves the field); Plumemu's: SettingsHexOwnKeyboardTest.
         useAndroidKeyboard()
         useDarkOnPaper()
-        val onPaper = PaletteCuration.curated(CustomPalette.accentSwatchesOn(BackgroundPreset.Paper.color)).size
         openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.Accent)
         press(Action.Enter)
         assertEquals(PanelPage.AccentPresets, model.focus.page)
         assertEquals(0, model.focus.panelIndex)
-        repeat(6) { move(Direction.Right) }
-        move(Direction.Down)
-        press(Action.Enter) // + → the accent palette, at the hex row (Green is a preset)
-        assertEquals(PanelPage.AccentCustom, model.focus.page)
-        assertTrue("opens on a swatch, not the hex row", model.focus.panelIndex < onPaper)
         toHexRow()
-        assertEquals(onPaper + ColorSlider.entries.size, model.focus.panelIndex)
+        val hexRow = model.focus.panelIndex
+        assertEquals(model.hexIndex(colourPage), hexRow)
         press(Action.Enter)
         assertTrue(model.isEditingHex)
 
@@ -220,10 +275,10 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
         press(Action.Enter)
         assertTrue(model.isEditingHex)
         press(Action.Move(Direction.Up))
-        assertEquals("moves are ignored while typing", onPaper + ColorSlider.entries.size, model.focus.panelIndex)
+        assertEquals("moves are ignored while typing", hexRow, model.focus.panelIndex)
         press(Action.Back)
         assertFalse("Back leaves the field first", model.isEditingHex)
-        assertEquals(PanelPage.AccentCustom, model.focus.page)
+        assertEquals(PanelPage.AccentPresets, model.focus.page)
     }
 
     @Test
@@ -252,101 +307,35 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
     }
 
     @Test
-    fun tappingTheHexRowPutsBackTheOpeningColourLikeTheDPad() {
+    fun tappingTheColorCodeRowKeepsTheColourShownLikeTheDPad() {
         openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.Background) // under Colors
         press(Action.Enter)
-        openPlus() // the palette, on a swatch
-        toHexRow()
-        upToGrid()
-        assertEquals(ColorSetting.Custom(backgroundGrid[backgroundGrid.size - ColorPages.PALETTE_COLUMNS].value), appearance.background)
-        model.onTapPanelItem(backgroundGrid.size + ColorSlider.entries.size, actions.shown, wide)
+        toShade()
+        move(Direction.Right)
+        val shown = appearance.background
+        model.onTapPanelItem(model.hexIndex(colourPage), actions.shown, wide)
         assertTrue(model.isEditingHex)
-        assertEquals("the colour the page opened with", ColorSetting.Preset("Graphite"), appearance.background)
+        assertEquals("the colour shown stays", shown, appearance.background)
     }
 
     @Test
-    fun leavingTheCompositionOnACustomPagePutsBackTheOpeningColour() {
+    fun leavingTheCompositionBelowThePresetsPutsBackTheColourInEffectWhenTheCursorCameDown() {
         openSection(SettingsSection.Appearance)
         focusOption(SettingsOption.Background) // under Colors
         press(Action.Enter)
-        openPlus()
-        toHexRow()
-        move(Direction.Up)
+        toColor()
+        val reached = appearance.background
+        move(Direction.Right)
+        assertNotEquals(reached, appearance.background)
         model.onDispose()
-        assertEquals("no preview stays stored", ColorSetting.Preset("Graphite"), appearance.background)
+        assertEquals("no preview stays stored", reached, appearance.background)
         model.onDispose()
-        assertEquals("a second dispose writes nothing more", ColorSetting.Preset("Graphite"), appearance.background)
-    }
-
-    /** Walks the palette cursor to [target] (rows of eight), previewing each cell on the way. */
-    private fun moveToCell(target: Int) {
-        repeat(60) {
-            val at = model.focus.panelIndex
-            if (at == target) return
-            val swatches = ColorPages.palette(model.focus.page!!, ColorPages.backgroundOf(actions.settings)).size
-            if (at >= swatches) {
-                move(Direction.Up) // from a slider or the code row back to the grid
-                return@repeat
-            }
-            val rowDiff = target / ColorPages.PALETTE_COLUMNS - at / ColorPages.PALETTE_COLUMNS
-            move(
-                when {
-                    rowDiff < 0 -> Direction.Up
-                    rowDiff > 0 -> Direction.Down
-                    target < at -> Direction.Left
-                    else -> Direction.Right
-                },
-            )
-        }
+        assertEquals("a second dispose writes nothing more", reached, appearance.background)
     }
 
     /** A grey accent: it reads on Graphite and on the dark backgrounds, but not on the light ones. */
     private val grey = Rgb(0x909090)
-    private val greyMoves = backgroundGrid.indices.filter { !Readability.passes(grey, backgroundGrid[it], ColorRole.Accent) }
-    private val greyReads = backgroundGrid.indices.filter { it !in greyMoves }
-
-    private fun openPaletteWithGreyAccent() {
-        actions.settings = actions.settings.copy(appearance = appearance.copy(accent = ColorSetting.Custom(grey.value)))
-        openPalette()
-    }
-
-    @Test
-    fun browsingToACellThatMovesTheAccentAndCancellingPutsTheOpeningAccentBack() {
-        openPaletteWithGreyAccent()
-        val openingBackground = appearance.background // Plum: openPalette previews presets on the way
-        assertTrue("precondition: some offered background moves the grey", greyMoves.isNotEmpty())
-        moveToCell(greyMoves.first())
-        assertNotEquals(ColorSetting.Custom(grey.value), appearance.accent)
-        assertTrue("and the person is told", model.colorWrite?.accentAdjusted == true)
-        press(Action.Back)
-        assertEquals(openingBackground, appearance.background)
-        assertEquals("the opening accent is back", ColorSetting.Custom(grey.value), appearance.accent)
-    }
-
-    @Test
-    fun browsingOnToACellWhereTheAccentReadsGivesTheOpeningAccentAgain() {
-        openPaletteWithGreyAccent()
-        moveToCell(greyMoves.first())
-        assertNotEquals(ColorSetting.Custom(grey.value), appearance.accent)
-        moveToCell(greyReads.first())
-        assertEquals(ColorSetting.Custom(grey.value), appearance.accent)
-        assertNull("nothing to tell once it reads again", model.colorWrite?.takeIf { it.adjusted })
-    }
-
-    @Test
-    fun theAccentPaletteOffersOnlyCellsThatReadSoNoCellIsRefused() {
-        openAccentHexRow() // Paper, Dark text
-        val opening = ColorSetting.Preset("Green") // what the accent was when the page opened (the walk to the hex row previewed a swatch)
-        val cells = PaletteCuration.curated(CustomPalette.accentSwatchesOn(BackgroundPreset.Paper.color))
-        assertTrue("two or three rows of 8, got ${cells.size}", cells.size in 2 * PaletteCuration.COLUMNS..PaletteCuration.COLUMNS * PaletteCuration.ROWS)
-        for (cell in cells) assertTrue("${cell.toHex()} reads on Paper", Readability.passes(cell, BackgroundPreset.Paper.color, ColorRole.Accent))
-        move(Direction.Up) // off the hex row, so the cursor is on a swatch
-        moveToCell(cells.size - 1)
-        assertEquals(ColorSetting.Custom(cells.last().value), appearance.accent)
-        press(Action.Back)
-        assertEquals("leaving puts the opening accent back", opening, appearance.accent)
-    }
 
     private fun openBackgroundPanel() {
         openSection(SettingsSection.Appearance)
@@ -354,11 +343,52 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
         press(Action.Enter)
     }
 
-    /** From the presets, "+" opens the palette (on a swatch), then down to the hex row. */
-    private fun openPalette() {
+    /** Background's page with the grey accent, the cursor on the lightest shade of the strip's stop (a light background the grey does not read on). */
+    private fun onLightestShadeWithGreyAccent() {
+        actions.settings = actions.settings.copy(appearance = appearance.copy(accent = ColorSetting.Custom(grey.value)))
         openBackgroundPanel()
-        openPlus()
-        toHexRow()
+        toShade()
+        repeat(ColorShades.SHADE_COUNT) { move(Direction.Left) }
+    }
+
+    @Test
+    fun browsingToAShadeThatMovesTheAccentAndCancellingPutsTheOpeningAccentBack() {
+        actions.settings = actions.settings.copy(appearance = appearance.copy(accent = ColorSetting.Custom(grey.value)))
+        openBackgroundPanel()
+        toColor()
+        val cameDown = appearance
+        move(Direction.Down)
+        repeat(ColorShades.SHADE_COUNT) { move(Direction.Left) }
+        assertNotEquals(ColorSetting.Custom(grey.value), appearance.accent)
+        assertTrue("and the person is told", model.colorWrite?.accentAdjusted == true)
+        press(Action.Back)
+        assertEquals(cameDown.background, appearance.background)
+        assertEquals("the accent in effect when the cursor came down is back", cameDown.accent, appearance.accent)
+    }
+
+    @Test
+    fun browsingOnToAShadeWhereTheAccentReadsGivesTheOpeningAccentAgain() {
+        onLightestShadeWithGreyAccent()
+        assertNotEquals(ColorSetting.Custom(grey.value), appearance.accent)
+        repeat(ColorShades.SHADE_COUNT) { move(Direction.Right) } // the darkest shade
+        assertEquals(ColorSetting.Custom(grey.value), appearance.accent)
+        assertNull("nothing to tell once it reads again", model.colorWrite?.takeIf { it.adjusted })
+    }
+
+    @Test
+    fun theAccentShadesOfEveryStopReadSoNothingIsRefused() {
+        openAccentHexRow() // Paper, Dark text
+        move(Direction.Up) // Shade
+        move(Direction.Up) // Color
+        val stops = ColorShades.stopCount(ShadeRole.Accent)
+        repeat(stops) { move(Direction.Left) } // the first stop
+        repeat(stops) {
+            val shades = model.colorShades(colourPage)
+            assertTrue("every stop has shades on Paper", shades.isNotEmpty())
+            for (shade in shades) assertTrue("${shade.toHex()} reads on Paper", Readability.passes(shade, BackgroundPreset.Paper.color, ColorRole.Accent))
+            assertNull("no refusal on stop ${model.colorStop}", model.colorWrite?.refusal)
+            move(Direction.Right)
+        }
     }
 
     @Test
@@ -394,35 +424,35 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
     }
 
     @Test
-    fun aLightPaletteColourAndAWhiteHexCodeGiveDarkTextADarkHexGivesLight() {
-        openPalette()
-        upToGrid()
-        move(Direction.Up)
-        val light = backgroundGrid.indexOfFirst { it.value > 0xE0E0E0 }
-        model.onTapPanelItem(light, actions.shown, wide)
+    fun aLightShadeAndAWhiteHexCodeGiveDarkTextADarkHexGivesLight() {
+        openBackgroundPanel()
+        toShade()
+        repeat(ColorShades.SHADE_COUNT) { move(Direction.Left) } // the lightest shade
+        assertTrue(appearance.background is ColorSetting.Custom)
         assertEquals(TextColorSetting.Dark, appearance.textColor)
-        model.onTapPanelItem(backgroundGrid.size + ColorSlider.entries.size, actions.shown, wide)
+        val hexRow = model.hexIndex(colourPage)
+        move(Direction.Down)
+        model.onTapPanelItem(hexRow, actions.shown, wide)
         model.onHexEntered("#FFFFFF")
         assertEquals(ColorSetting.Custom(0xFFFFFF), appearance.background)
         assertEquals(TextColorSetting.Dark, appearance.textColor)
-        model.onTapPanelItem(backgroundGrid.size + ColorSlider.entries.size, actions.shown, wide)
+        model.onTapPanelItem(model.hexIndex(colourPage), actions.shown, wide)
         model.onHexEntered("#101010")
         assertEquals(TextColorSetting.Light, appearance.textColor)
     }
 
     @Test
-    fun leavingThePaletteWithoutChoosingPutsBackTheBackgroundAndTheTextTogether() {
-        // The person's own pale-green text on Plum: it reads there, but not on a light swatch.
+    fun leavingBelowThePresetsWithoutChoosingPutsBackTheBackgroundAndTheTextTogether() {
+        // The person's own pale-green text on their own plum: it reads there, but not on a light shade.
         val pale = TextColorSetting.Custom(0xC8E6C9)
-        actions.settings = actions.settings.copy(appearance = appearance.copy(background = ColorSetting.Preset("Plum"), textColor = pale))
-        openBackgroundPanel() // opens at Plum
-        openPlus() // the palette, on a swatch
-        toHexRow()
-        moveToCell(0) // the palest tile (first row is the lightest of each column) previews: the pale text moves darker so it reads
-        assertTrue(appearance.background is ColorSetting.Custom)
+        val plum = ColorSetting.Custom(0x4A1D4F)
+        actions.settings = actions.settings.copy(appearance = appearance.copy(background = plum, textColor = pale))
+        openBackgroundPanel() // opens on the plum's nearest shade
+        repeat(ColorShades.SHADE_COUNT) { move(Direction.Left) } // the lightest: the pale text moves darker so it reads
+        assertNotEquals(plum, appearance.background)
         assertNotEquals(pale, appearance.textColor)
         press(Action.Back)
-        assertEquals(ColorSetting.Preset("Plum"), appearance.background)
+        assertEquals(plum, appearance.background)
         assertEquals("the person's own text is back, exactly", pale, appearance.textColor)
     }
 
@@ -489,8 +519,8 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
             press(Action.Enter)
             assertLeftReturnsToItsRowInColors(option, item, "presets")
             press(Action.Enter)
-            openPlus()
-            assertLeftReturnsToItsRowInColors(option, item, "custom grid")
+            toHexRow()
+            assertLeftReturnsToItsRowInColors(option, item, "Color code row")
             move(Direction.Left) // out of Colors' panel, to the Colors row
             assertEquals(SettingsOption.Colors, model.focusedOption)
             assertEquals(SettingsColumn.Options, model.focus.column)
@@ -508,5 +538,5 @@ internal class SettingsColorPagesTest : SettingsModelHarness() {
     }
 
     /** Enough Lefts to cross any colour page's widest row. */
-    private val geometryColumnsReach = ColorPages.PALETTE_COLUMNS + 1
+    private val geometryColumnsReach = 11
 }

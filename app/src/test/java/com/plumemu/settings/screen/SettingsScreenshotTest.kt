@@ -3,7 +3,6 @@ package com.plumemu.settings.screen
 import com.plumemu.coredata.settings.ColorSetting
 import com.plumemu.coredata.settings.TextColorSetting
 import com.plumemu.coreui.testing.ReferenceShots
-import com.plumemu.coreui.theme.CustomPalette
 import com.plumemu.coreui.theme.PlumTheme
 import com.plumemu.coreui.theme.WidthClass
 import org.junit.Test
@@ -44,9 +43,10 @@ class SettingsScreenshotTest {
         ReferenceShots.capture("settings_custom_colour") {
             // A dark blue with light text, a pale blue with dark text: stored as the person's own colour.
             val base = settingsForShot()
-            val index = if (base.appearance.textColor == TextColorSetting.Dark) CUSTOM_LIGHT else CUSTOM_DARK
-            val settings = base.copy(appearance = base.appearance.copy(background = ColorSetting.Custom(backgroundGrid[index].value)))
-            SettingsAt(panelAt(SettingsOption.Background, PanelPage.BackgroundCustom, index), settings)
+            val rgb = if (base.appearance.textColor == TextColorSetting.Dark) 0xD3EFFE else 0x0F2B7A
+            val settings = base.copy(appearance = base.appearance.copy(background = ColorSetting.Custom(rgb)))
+            // An own colour opens the page on its nearest shade.
+            SettingsAt(colorPageAt(SettingsOption.Background, settings), settings)
         }
 
     @Test
@@ -58,15 +58,4 @@ class SettingsScreenshotTest {
 
     @Test
     fun aboutLicenses() = ReferenceShots.capture("settings_about_licenses") { SettingsAt(panelAt(SettingsOption.Licenses, PanelPage.Licenses, 0)) }
-
-    private companion object {
-        // A dark and a pale blue, found by nearest colour in the curated grid so a reshuffle of it
-        // cannot pair a text colour with the wrong background.
-
-        /** A darker blue, which carries light text. */
-        val CUSTOM_DARK = ColorPages.indexOfNearest(backgroundGrid, 0x0F2B7A)
-
-        /** A pale blue, which carries dark text. */
-        val CUSTOM_LIGHT = ColorPages.indexOfNearest(backgroundGrid, 0xD3EFFE)
-    }
 }

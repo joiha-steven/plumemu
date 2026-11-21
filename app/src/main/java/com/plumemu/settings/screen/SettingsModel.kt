@@ -46,11 +46,8 @@ internal class SettingsModel(
 
     val isTypingHex: Boolean get() = custom.isTypingHex
 
-    /** What a finger on a colour slider shows before the store has it; the "Color code" row follows it. */
+    /** What a finger on the colour strip shows before the store has it; the "Color code" row follows it. */
     val colorPreview: ColorPreview get() = actions.colorPreview
-
-    /** The colour the "+" page's Hue, Saturation and Lightness sliders hold. */
-    val sliderHsl: Hsl get() = custom.hsl
 
     /** A tap on the hex field: back to typing there. */
     fun askHexKeyboard() = custom.askHexKeyboard()
@@ -89,7 +86,7 @@ internal class SettingsModel(
                         nameFix.open?.let { open -> (open.screen as? TypingScreen)?.let { SettingsTypingField(it.typing, typingActionWord(it)) } }
                     page == PanelPage.CollectionRename -> collectionRename.open?.let { SettingsTypingField(it.typing, typingActionWord(it.screen)) }
                     // Kept after the code is used, so the tray slides down rather than vanishing.
-                    SettingsCustomColor.isCustomPage(page) -> custom.hexTyping?.let { SettingsTypingField(it, R.string.settings_hint_done, KeyboardPage.Symbols) }
+                    ColorPages.kindOf(page) != null -> custom.hexTyping?.let { SettingsTypingField(it, R.string.settings_hint_done, KeyboardPage.Symbols) }
                     // One state for both fields: "Next" keeps the same tray up on the password.
                     page == PanelPage.ScraperSignIn -> signIn.form?.let { form -> form.typing?.let { SettingsTypingField(it, signInActionWord(form)) } }
                     page == PanelPage.ProblemReport -> report.form?.let { form -> form.typing?.let { SettingsTypingField(it, reportActionWord(form)) } }
@@ -142,9 +139,14 @@ internal class SettingsModel(
     /** The settings of a press or tap: what it may need beyond the focus (which keyboard a field opens with). */
     private fun follow(settings: PlumSettings) {
         keyboardChoice = settings.controls.toKeyboardChoice()
-        // Text and Accent palettes are the colours that read on the background shown (a model made on a page, in a test or a shot, never opened it).
-        if (SettingsCustomColor.isCustomPage(focus.page)) custom.followBackground(settings)
+        val page = focus.page
+        if (page == null || ColorPages.kindOf(page) == null) return
+        // Text and Accent shades are the colours that read on the background shown; a model made on a page (a test, a shot) opens it now.
+        if (custom.openedPage == page) custom.followBackground(settings) else custom.open(page, focus.panelIndex, settings)
     }
+
+    /** Takes [settings] as a press would: a model made on a colour page opens it. */
+    fun settle(settings: PlumSettings) = follow(settings)
 
     fun onAction(
         action: Action,
@@ -166,10 +168,13 @@ internal class SettingsModel(
         val before = focus
         if (move != null && before.column == SettingsColumn.Panel) panelPresses++
         handle(action, settings, geometry)
-        if (move != null && !move.isRepeat) hasPressCrossed = focus.column != before.column || focus.page != before.page
+        if (move != null && !move.isRepeat) hasPressCrossed = focus.column != before.column || focus.page != before.page || colourGroup(focus) != colourGroup(before)
     }
 
-    /** The last press of a direction changed column or page: its repeats do nothing. */
+    /** On a colour page: true on its presets, false on what is under them (Color, Shade, Color code); null elsewhere. A press from one to the other drops its repeats. */
+    private fun colourGroup(at: SettingsFocus): Boolean? = custom.partOf(at.page, at.panelIndex)?.let { it == ColorPart.Preset }
+
+    /** The last press of a direction changed column, page or the colour page's part: its repeats do nothing. */
     private var hasPressCrossed = false
 
     private fun handle(
@@ -296,38 +301,19 @@ internal class SettingsModel(
             onPanelEnter(settings)
             return@tapped
         }
-        if (focus.panelIndex == index && !SettingsCustomColor.isCustomPage(page)) {
-            onPanelEnter(settings)
-            return@tapped
-        }
-        if (isHexRow(page, index)) {
-            // Like reaching it with the D-pad: the colour the page opened with comes back.
-            focusPanelItem(index)
-            // Already typing: a tap on the field goes back to it with what was typed.
-            if (isEditingHex) custom.askHexKeyboard() else startEditingHex()
-            return@tapped
-        }
-        if (focus.panelIndex == index) {
-            // The ring opened on this swatch without previewing it: a tap picks it (A before any move keeps the current colour).
-            if (!custom.cursorMoved) custom.focus(page, index)
-            onPanelEnter(settings)
-            return@tapped
-        }
-        focusPanelItem(index)
-        // A tap on a swatch chooses it (the page then keeps it when left).
-        if (SettingsCustomColor.isCustomPage(page)) custom.choose(page, custom.palette(page).getOrNull(index)?.let { ColorSetting.Custom(it.value) })
+        onPanelItemTapped(page, index) { onPanelEnter(settings) }
     }
 
     /**
-     * A tap or drag on a colour slider's track at [fraction] (0..1): the row takes the focus, the
-     * thumb goes to the nearest value that reads and the colour previews. The panel opens first
-     * when it only previews.
+     * A tap on the Color strip at stop [stop]: the row takes the focus and the stop is set, the shade
+     * of the same place in the row previewing. The panel opens first when it only previews. A [drag]
+     * shows the colour through [ColorPreview] and stores it on [onTouchStopEnd].
      */
-    fun onTouchSlider(
-        index: Int,
-        fraction: Float,
+    fun onTouchStop(
+        stop: Int,
         settings: PlumSettings,
         geometry: SettingsGeometry,
+        drag: Boolean = false,
     ) = tapped {
         isNarrow = geometry.isNarrow
         follow(settings)
@@ -336,16 +322,13 @@ internal class SettingsModel(
             if (!openPanel(option, settings, geometry)) return@tapped
         }
         val page = focus.page ?: return@tapped
-        val slider = custom.sliderAt(page, index) ?: return@tapped
-        if (focus.panelIndex != index) focusPanelItem(index)
-        if (custom.setSlider(page, slider, fraction)) feel.report(Outcome.Moved)
+        if (ColorPages.kindOf(page) == null || custom.textBlocked) return@tapped
+        if (custom.partOf(page, focus.panelIndex) != ColorPart.Color) focusPanelItem(custom.colorIndex(page))
+        if (custom.setStop(page, stop, drag)) feel.report(Outcome.Moved)
     }
 
-    /** The finger on a colour slider lifted or was cancelled: the thumb settles on the value in effect. */
-    fun onTouchSliderEnd() = custom.releaseSlider()
-
-    /** The slider a finger holds and where on its track the thumb is drawn; null when no finger is down. */
-    val sliderFinger: Pair<ColorSlider, Float>? get() = custom.fingerOn
+    /** The finger on the Color strip lifted or was cancelled: the colour it showed is stored. */
+    fun onTouchStopEnd() = custom.releaseDrag()
 
     // Library › Systems by touch: a tap focuses a system, a tap on "Hidden" shows it again, a long
     // press on the handle picks it up and the drag carries it.
@@ -437,14 +420,14 @@ internal class SettingsModel(
     fun stopEditingHex() = custom.stopEditingHex()
 
     /**
-     * Settings leaves the composition (closed, or the Activity recreated) on a custom page: the
-     * colour previewed there must not stay as the stored one, so the opening colour is written back.
+     * Settings leaves the composition (closed, or the Activity recreated) on a colour page: a colour
+     * previewed below its presets must not stay as the stored one, so the colour in effect when the cursor came down is written back.
      */
     fun onDispose() {
         if (focusedOption == SettingsOption.RomFolders) work.leaveFolders()
         val page = focus.page
         // A finger still down when the screen goes: its colour is written (if chosen) or put back, never lost or left as an overlay.
-        if (page != null && SettingsCustomColor.isCustomPage(page)) custom.leaveAndRelease(page) else custom.releaseSlider()
+        if (page != null && ColorPages.kindOf(page) != null) custom.leaveAndRelease(page, custom.partOf(page, focus.panelIndex) == ColorPart.Preset) else custom.releaseDrag()
     }
 
     private fun onSections(action: Action) {

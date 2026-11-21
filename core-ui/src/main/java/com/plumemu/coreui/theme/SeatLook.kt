@@ -15,7 +15,7 @@ class CssShadow(
     val spread: Dp = 0.dp,
     val inset: Boolean = false,
     /** A focus glow: its colour and blur already are at their [Depth]. */
-    glow: Boolean = false,
+    val glow: Boolean = false,
 ) {
     /** A soft outer shadow, or the highlights, insets and thicknesses that make a part look raised: each at its [Depth]. */
     private val isSoft = !glow && !inset && blur > 0.dp

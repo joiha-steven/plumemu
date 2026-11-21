@@ -72,9 +72,9 @@ internal abstract class SettingsNavigation(
     val panelOption: SettingsOption?
         get() =
             when (focus.page) {
-                PanelPage.BackgroundPresets, PanelPage.BackgroundCustom -> SettingsOption.Background
-                PanelPage.TextPresets, PanelPage.TextCustom -> SettingsOption.TextColor
-                PanelPage.AccentPresets, PanelPage.AccentCustom -> SettingsOption.Accent
+                PanelPage.BackgroundPresets -> SettingsOption.Background
+                PanelPage.TextPresets -> SettingsOption.TextColor
+                PanelPage.AccentPresets -> SettingsOption.Accent
                 PanelPage.Backup -> SettingsOption.Backup
                 PanelPage.Restore -> SettingsOption.Restore
                 PanelPage.UndoRestore -> SettingsOption.UndoRestore
@@ -386,12 +386,12 @@ internal abstract class SettingsNavigation(
 
     internal companion object {
         /** Pages one step deeper because Colors' panel opened them. */
-        private val PAGES_UNDER_COLORS = setOf(PanelPage.BackgroundPresets, PanelPage.TextPresets, PanelPage.AccentPresets, PanelPage.BackgroundCustom, PanelPage.TextCustom, PanelPage.AccentCustom)
+        private val PAGES_UNDER_COLORS = setOf(PanelPage.BackgroundPresets, PanelPage.TextPresets, PanelPage.AccentPresets)
 
         /** Pages one step deeper because the list of Emulators', Back up and restore's or Reset…'s panel opened them; they keep the column, unlike [DEEP_PAGES]. */
         private val PAGES_UNDER_LISTS = setOf(PanelPage.Emulators, PanelPage.Collection, PanelPage.CollectionRename, PanelPage.CollectionDelete, PanelPage.Backup, PanelPage.Restore, PanelPage.UndoRestore, PanelPage.ResetAllConfirm, PanelPage.ResetLibraryConfirm, PanelPage.ResetRecentConfirm)
 
-        /** Pages one step deeper than their column (a colour's custom page, a licence text, a confirm, Fix name…). */
-        val DEEP_PAGES = setOf(PanelPage.BackgroundCustom, PanelPage.AccentCustom, PanelPage.TextCustom, PanelPage.LicenseText, PanelPage.Folder, PanelPage.SkipSubfolder, PanelPage.RemoveFolder, PanelPage.FixName, PanelPage.CollectionRename, PanelPage.ScraperSignIn, PanelPage.ProblemReport, PanelPage.ScraperSystems, PanelPage.ScraperConfirm, PanelPage.ScraperSignOutConfirm, PanelPage.RaSignOutConfirm, PanelPage.ScraperClearConfirm, PanelPage.UnknownFolder)
+        /** Pages one step deeper than their column (a colour page, a licence text, a confirm, Fix name…). */
+        val DEEP_PAGES = setOf(PanelPage.BackgroundPresets, PanelPage.TextPresets, PanelPage.AccentPresets, PanelPage.LicenseText, PanelPage.Folder, PanelPage.SkipSubfolder, PanelPage.RemoveFolder, PanelPage.FixName, PanelPage.CollectionRename, PanelPage.ScraperSignIn, PanelPage.ProblemReport, PanelPage.ScraperSystems, PanelPage.ScraperConfirm, PanelPage.ScraperSignOutConfirm, PanelPage.RaSignOutConfirm, PanelPage.ScraperClearConfirm, PanelPage.UnknownFolder)
     }
 }

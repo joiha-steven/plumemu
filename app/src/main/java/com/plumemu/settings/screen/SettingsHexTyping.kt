@@ -37,7 +37,7 @@ internal class HexTyping(
 
     override fun replaceText(text: String) = custom.onHexTextChange(text)
 
-    override val maxLength: Int get() = SettingsCustomColor.HEX_TEXT_MAX
+    override val maxLength: Int get() = HexFieldState.HEX_TEXT_MAX
 
     override val fieldKeys = FieldKeys("", hasShift = false, startPage = KeyboardPage.Symbols)
 

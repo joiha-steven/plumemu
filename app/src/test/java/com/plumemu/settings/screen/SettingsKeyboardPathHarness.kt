@@ -178,7 +178,7 @@ internal abstract class SettingsKeyboardPathHarness : SettingsModelHarness() {
 
     protected fun textEntry(): TextEntry = compose.runOnIdle { router.textEntry }
 
-    /** Appearance › Colors › Accent color › "+": the accent palette, the cursor on its hex row (the stored accent is a preset). */
+    /** Appearance › Colors › Accent color: its page, the cursor on the Color code row (the stored accent is a preset). */
     protected fun openAccentHexRow() {
         repeat(SettingsSection.Appearance.shownIndex) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
@@ -187,12 +187,9 @@ internal abstract class SettingsKeyboardPathHarness : SettingsModelHarness() {
         // Colors' panel: down through the tiles to its last row, Accent color.
         repeat(40) { send(Action.Move(Direction.Down)) }
         send(Action.Enter)
-        // The "+" tile is the last one of the presets: down to the last row, then right to its end (the columns depend on the width).
+        // Down through the presets (the rows depend on the width), Color and Shade to the Color code row, the last one.
         repeat(12) { send(Action.Move(Direction.Down)) }
-        repeat(6) { send(Action.Move(Direction.Right)) }
-        send(Action.Enter)
-        repeat(7) { send(Action.Move(Direction.Down)) } // the hex code is the last row, below the swatches
-        assertTrue("on the accent palette's hex row", exists(SettingsTags.HEX_ROW))
+        assertTrue("on the accent page's Color code row", exists(SettingsTags.HEX_ROW))
     }
 
     /** Library › Unidentified games, then A on game [index] (0: Fix name… with a list; 2: Use my own name, no list). */

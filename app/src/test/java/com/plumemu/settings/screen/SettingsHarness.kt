@@ -46,6 +46,7 @@ internal fun SettingsAt(
             val actions = if (busyPress) BusyScanActions else subfolders?.let { ListingActions(it.getOrNull()) } ?: NoActions
             SettingsModel(actions, focus).also {
                 it.content = content.withGamesListed()
+                it.settle(settings)
                 if (busyPress) it.work.rescan()
                 focus.folderId?.takeIf { focus.page == PanelPage.SkipSubfolder }?.let(it.work::listSubfolders)
             }

@@ -1,6 +1,5 @@
 package com.plumemu.settings.screen
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,24 +13,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.unit.Constraints
+import com.plumemu.coreui.theme.Rgb
+import com.plumemu.coreui.theme.toComposeColor
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -98,8 +97,7 @@ private fun HexRowLine(
  */
 @Composable
 internal fun HexRow(
-    color: Color,
-    hex: String,
+    shown: () -> Rgb,
     isFocused: Boolean,
     model: SettingsModel,
     touch: SettingsTouch,
@@ -107,6 +105,8 @@ internal fun HexRow(
 ) {
     val colors = PlumTheme.colors
     val type = PlumTheme.type
+    // Read here, not by the page: a finger on the strip recomposes this row and not the page around it.
+    val hex = shown().toHex()
     val ownKeyboard = model.hexTyping?.takeIf { it.keyboardKind == KeyboardChoice.Plumemu }
     val editing = model.isEditingHex && isFocused
     Column(verticalArrangement = Arrangement.spacedBy(PlumDimens.titleLineGap)) {
@@ -125,8 +125,8 @@ internal fun HexRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             HexRowLine(Modifier.weight(1f)) {
-                Box(Modifier.size(PlumDimens.settingsValueDot).background(color, CircleShape).border(PlumDimens.switchOffRing, colors.chip, CircleShape))
-                BasicText(stringResource(R.string.settings_hex_label), style = type.meta.copy(color = colors.muted), maxLines = 2)
+                Box(Modifier.size(PlumDimens.settingsValueDot).drawBehind { drawCircle(shown().toComposeColor()) }.border(PlumDimens.switchOffRing, colors.chip, CircleShape))
+                RowLabel(stringResource(R.string.settings_hex_label), maxLines = 2)
                 when {
                     !model.isEditingHex || !isFocused -> BasicText(hex, style = type.meta.copy(color = colors.text), maxLines = 1)
                     ownKeyboard != null -> HexWell(lit = !model.hexOnUse) { HexOwnKeyboardField(hex, ownKeyboard, model.hexText) }
